@@ -1,17 +1,30 @@
+from pathlib import Path
+from typing import Any, Union
 import yaml
 
-def load_yaml(file_path):
+def load_yaml(file_path: Union[str, Path]) -> Any:
     """
-    Load a YAML file and return its content.
-    
-    :param file_path: Path to the YAML file.
-    :return: Content of the YAML file.
+    Load and parse a YAML file for CLI usage.
+
+    :param file_path: Path to the YAML file (as string or Path).
+    :return: Parsed content of the YAML file.
+    :raises SystemExit: If the file doesn't exist, is empty, or contains invalid YAML.
     """
-    with open(file_path, 'r', encoding='utf-8') as file:
-        return yaml.safe_load(file)
-    # Load the YAML file
-    data = yaml.safe_load(file)
-    
-    # Check if the file is empty
+    path = Path(file_path)
+
+    if not path.exists():
+        print(f"Error: File not found: {path}")
+        raise SystemExit(1)
+
+    try:
+        with path.open('r', encoding='utf-8') as file:
+            data = yaml.safe_load(file)
+    except yaml.YAMLError as e:
+        print(f"Error parsing YAML file '{path}': {e}")
+        raise SystemExit(1)
+
     if not data:
-        raise ValueError("The YAML file is empty.")
+        print(f"Error: YAML file '{path}' is empty or invalid.")
+        raise SystemExit(1)
+
+    return data
