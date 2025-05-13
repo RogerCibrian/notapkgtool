@@ -28,3 +28,4 @@ def load_yaml(file_path: Union[str, Path]) -> Any:
         raise SystemExit(1)
 
     return data
+
