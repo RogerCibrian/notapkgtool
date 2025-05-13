@@ -7,7 +7,7 @@ authors = [
 ]
 license = {text = "GPL-3.0-only"}
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "pyyaml (>=6.0.2,<7.0.0)"
 ]
