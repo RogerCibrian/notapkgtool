@@ -9,7 +9,8 @@ license = {text = "GPL-3.0-only"}
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "pyyaml (>=6.0.2,<7.0.0)"
+    "pyyaml (>=6.0.2,<7.0.0)",
+    "packaging (>=25.0,<26.0)"
 ]
 
 
