@@ -1,4 +1,5 @@
 from packaging import version
+import subprocess
 
 def check_from_filename(source_url: str) -> str:
     """
@@ -16,14 +17,19 @@ def check_from_folder_name(source_url: str) -> str:
     version_str = folder_name.split('-')[1]  # Assuming format like 'intune-<version>'
     return version_str
 
-def check_from_metadata_after_download(source_url: str) -> str:
-    """
-    Downloads the file and checks its metadata for the version.
-    This is a placeholder function; actual implementation would depend on the source.
-    """
-    # Simulate downloading and checking metadata
-    # In a real implementation, you would download the file and read its metadata
-    raise NotImplementedError("This method is not implemented yet")
+def check_from_metadata_after_download(msi_path: str) -> str | None:
+    result = subprocess.run(
+        ["msiinfo", "export", msi_path, "Property"],
+        capture_output=True,
+        text=True
+    )
+    if result.returncode != 0:
+        raise RuntimeError("msiinfo failed to read MSI file.")
+
+    for line in result.stdout.splitlines():
+        if line.startswith("ProductVersion"):
+            return line.split()[1]
+    return None
 
 
 def is_newer_version(current_version: str, remote_version: str) -> bool:
