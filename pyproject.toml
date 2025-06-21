@@ -1,7 +1,7 @@
 [project]
-name = "intunepackager"
+name = "notapkgtool"
 version = "0.1.0"
-description = "\"A package for creating Intune packages.\""
+description = "\"A tool for creating Intune packages.\""
 authors = [
     {name = "Roger Cibrian"}
 ]
