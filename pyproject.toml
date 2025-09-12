@@ -1,17 +1,16 @@
 [project]
-name = "intunepackager"
+name = "Not A Pkg Tool"
 version = "0.1.0"
 description = "\"A package for creating Intune packages.\""
 authors = [
-    {name = "Roger Cibrian"}
+    { name = "Roger Cibrian" }
 ]
-license = {text = "GPL-3.0-only"}
+license = { text = "GPL-3.0-only" }
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "pyyaml (>=6.0.2,<7.0.0)"
 ]
-
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
@@ -19,4 +18,45 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
+ruff = "^0.6.9"
+black = "^24.8.0"
 
+# -----------------------------
+# Formatting (Black)
+# -----------------------------
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+# -----------------------------
+# Linting (Ruff - Rust server)
+# -----------------------------
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+# E,F: core errors; I: import sorting; B: bugbear; UP: pyupgrade
+select = ["E", "F", "I", "B", "UP"]
+
+# Avoid style conflicts with Black
+extend-ignore = [
+  "E203",  # whitespace before ':'
+  "E501"   # line length (Black handles wrapping)
+]
+
+# Tweak per-file behavior
+per-file-ignores = {
+  "__init__.py" = ["F401"]  # allow re-exports
+}
+
+[tool.ruff.lint.isort]
+known-first-party = ["intunepackager"]
+combine-as-imports = true
+force-sort-within-sections = true
+
+# If you ever let Ruff handle formatting (you're using Black now),
+# you can still keep these defaults for consistency.
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
