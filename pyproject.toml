@@ -1,16 +1,16 @@
 [project]
-name = "Not A Pkg Tool"
+name = "Not-A-Pkg-Tool"
 version = "0.1.0"
 description = "\"A package for creating Intune packages.\""
-authors = [
-    { name = "Roger Cibrian" }
-]
+authors = [{ name = "Roger Cibrian" }]
 license = { text = "GPL-3.0-only" }
 readme = "README.md"
-requires-python = ">=3.12"
-dependencies = [
-    "pyyaml (>=6.0.2,<7.0.0)"
-]
+
+# If your code uses Python 3.13-only features, set this to ">=3.13".
+# If you want to allow Python 3.12 users, keep ">=3.12".
+requires-python = ">=3.13"
+
+dependencies = ["pyyaml (>=6.0.2,<7.0.0)"]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
@@ -18,45 +18,48 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
-ruff = "^0.6.9"
-black = "^24.8.0"
+ruff = "^0.13.0"
+black = "^25.1.0"
 
 # -----------------------------
 # Formatting (Black)
 # -----------------------------
 [tool.black]
 line-length = 88
-target-version = ["py312"]
+target-version = ["py313"]  # Match your runtime
 
 # -----------------------------
-# Linting (Ruff - Rust server)
+# Linting (Ruff)
 # -----------------------------
 [tool.ruff]
-line-length = 88
-target-version = "py312"
+# You can keep this list or rely on Ruff's defaults; both are fine.
+exclude = [
+    ".bzr", ".direnv", ".eggs", ".git", ".git-rewrite", ".hg", ".ipynb_checkpoints",
+    ".mypy_cache", ".nox", ".pants.d", ".pyenv", ".pytest_cache", ".pytype", ".ruff_cache",
+    ".svn", ".tox", ".venv", ".vscode", "__pypackages__", "_build", "buck-out", "build",
+    "dist", "node_modules", "site-packages", "venv",
+]
+
+line-length = 88            # Keep in sync with Black
+target-version = "py313"    # (fixes the stray “Assume Python 3.9” comment)
 
 [tool.ruff.lint]
 # E,F: core errors; I: import sorting; B: bugbear; UP: pyupgrade
 select = ["E", "F", "I", "B", "UP"]
-
 # Avoid style conflicts with Black
-extend-ignore = [
-  "E203",  # whitespace before ':'
-  "E501"   # line length (Black handles wrapping)
-]
+extend-ignore = ["E203", "E501"]
 
-# Tweak per-file behavior
-per-file-ignores = {
-  "__init__.py" = ["F401"]  # allow re-exports
-}
+# Per-file ignores:
+# - F401 in __init__.py (re-exports): VERY common
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
 
+# isort behavior via Ruff: tell it what your own package is, so imports sort correctly.
+# Replace "notapkgtool" with the real importable package name (folder name).
 [tool.ruff.lint.isort]
-known-first-party = ["intunepackager"]
+known-first-party = ["notapkgtool"]
 combine-as-imports = true
 force-sort-within-sections = true
 
-# If you ever let Ruff handle formatting (you're using Black now),
-# you can still keep these defaults for consistency.
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
+[tool.pytest.ini_options]
+testpaths = ["tests"]
