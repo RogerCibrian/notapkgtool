@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Union
+from typing import Any
 
 import yaml
 
@@ -21,9 +21,9 @@ def load_yaml(file_path: str | Path) -> Any:
     try:
         with path.open("r", encoding="utf-8") as file:
             data = yaml.safe_load(file)
-    except yaml.YAMLError as e:
-        print(f"Error parsing YAML file '{path}': {e}")
-        raise SystemExit(1)
+    except yaml.YAMLError as err:
+        print(f"Error parsing YAML file '{path}': {err}")
+        raise SystemExit(1) from err  # chain the parsing error
 
     if not data:
         print(f"Error: YAML file '{path}' is empty or invalid.")

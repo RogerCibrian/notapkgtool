@@ -15,6 +15,11 @@ def test_is_newer_semver_prerelease_ordering():
     assert vc.is_newer("build-2025-09-01", "build-2025-08-30", "semver")
 
 
+def test_semver_release_vs_prerelease() -> None:
+    assert vc.is_newer("1.2.0", "1.2.0-rc.1", "semver")
+    assert not vc.is_newer("1.2.0-rc.1", "1.2.0", "semver")
+
+
 def test_is_newer_lexicographic():
     assert vc.is_newer("b", "a", "lexicographic")
     assert not vc.is_newer("1.0", "9.0", "lexicographic")

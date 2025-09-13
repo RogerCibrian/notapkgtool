@@ -15,7 +15,7 @@ from typing import Literal
 
 Comparator = Literal["semver", "lexicographic"]
 
-# Regex for strict semver parsing
+# Strict SemVer: build metadata is parsed but ignored for ordering.
 SEMVER_RE = re.compile(
     r"^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)"
     r"(?:-(?P<prerelease>[0-9A-Za-z.-]+))?"
@@ -23,34 +23,36 @@ SEMVER_RE = re.compile(
 )
 
 
-def _semver_key(v: str):
+def _semver_key(v: str) -> tuple:
     """
-    Parse a semver string into a tuple for comparison.
-    Falls back to lexicographic if not valid semver.
+    Turn a semver-ish string into a key that sorts correctly:
+    - Releases sort AFTER prereleases (i.e., greater).
+    - Build metadata (+foo) is ignored for precedence.
+    - If not valid semver, fall back to a tuple that preserves original string ordering.
     """
     m = SEMVER_RE.match(v)
     if not m:
-        return (v,)  # fallback
-    return (
-        int(m.group("major")),
-        int(m.group("minor")),
-        int(m.group("patch")),
-        m.group("prerelease") or "",
-    )
+        # Fallback: single-element tuple keeps lexicographic behavior when needed.
+        return (v,)
+
+    major = int(m.group("major"))
+    minor = int(m.group("minor"))
+    patch = int(m.group("patch"))
+    prerelease = m.group("prerelease")
+
+    # prerelease_flag: 0 = prerelease, 1 = final release (so finals sort higher)
+    release_flag = 1 if prerelease is None else 0
+    prerelease_str = prerelease or ""
+
+    # Key ordering:
+    #   major, minor, patch, release_flag (final > prerelease), prerelease string
+    return (major, minor, patch, release_flag, prerelease_str)
 
 
 def is_newer(
     remote: str, current: str | None, comparator: Comparator = "semver"
 ) -> bool:
-    """
-    Determine if remote version is newer than current.
-
-    :param remote: Remote/discovered version string.
-    :param current: Currently deployed version string (or None).
-    :param comparator: "semver" or "lexicographic".
-    :return: True if remote is newer.
-    """
-    if not current:
+    if current is None:
         return True
     if comparator == "semver":
         return _semver_key(remote) > _semver_key(current)
@@ -59,22 +61,11 @@ def is_newer(
 
 @dataclass
 class DiscoveredVersion:
-    """
-    Represents a discovered version value and its source.
-    """
-
     version: str
-    source: str  # e.g. "regex_in_url", "msi_product_version_from_file"
+    source: str  # e.g., "regex_in_url", "msi_product_version_from_file"
 
 
 def version_from_regex_in_url(url: str, pattern: str) -> DiscoveredVersion:
-    """
-    Extract a version string from a URL using regex.
-
-    :param url: Full URL string.
-    :param pattern: Regex pattern with optional (?P<version>) group.
-    :return: DiscoveredVersion
-    """
     m = re.search(pattern, url)
     if not m:
         raise ValueError(f"could not extract version from url with pattern: {pattern}")
@@ -83,10 +74,4 @@ def version_from_regex_in_url(url: str, pattern: str) -> DiscoveredVersion:
 
 
 def version_from_msi_product_version(file_path: str) -> DiscoveredVersion:
-    """
-    Placeholder: Extract ProductVersion from an MSI file.
-
-    On Windows: can use 'msilib' or 'msiinfo' from msitools.
-    For now: raises NotImplementedError.
-    """
     raise NotImplementedError("msi version extraction to be implemented")
