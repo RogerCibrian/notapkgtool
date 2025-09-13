@@ -1,0 +1,49 @@
+apiVersion: napt/v1
+project: "napt - Windows Apps"
+
+defaults:
+  comparator: semver
+  psadt:
+    template_version: "4.1.5"
+    brand_pack:
+      path: ../../branding/napt
+      mappings:
+        - source: "AppIcon.*"
+          target: "Assets/AppIcon"
+        - source: "Banner.Classic.*"
+          target: "Assets/Banner.Classic"
+    app_vars:
+      AppLang: "EN"
+      AppRevision: "01"
+      AppSuccessExitCodes: [0]
+      AppRebootExitCodes: [1641, 3010]
+      AppProcessesToClose: []
+      AppScriptVersion: "1.0.0"
+      AppScriptAuthor: "napt"
+      RequireAdmin: true
+
+  package:
+    type: win32
+    setup_file: "Invoke-AppDeployToolkit.exe"
+    install_command: "Invoke-AppDeployToolkit.exe -DeploymentType Install -DeployMode Silent"
+    uninstall_command: "Invoke-AppDeployToolkit.exe -DeploymentType Uninstall -DeployMode Silent"
+    requirements:
+      architecture: x64
+      min_os_version: "10.0.17763.0"
+    return_codes:
+      success: [0]
+      soft_reboot: [3010]
+      retryable: []
+
+  assignments:
+    waves:
+      - name: "Ring 0 - Pilot (IT)"
+        groups: { included: ["grp-it-pilot"] }
+        intent: required
+        availability: { start: "immediate" }
+      - name: "Ring 1 - Canary"
+        groups: { included: ["grp-canary"] }
+        delay_after_previous: "2d"
+      - name: "Ring 2 - Production"
+        groups: { included: ["grp-all-windows"] }
+        delay_after_previous: "5d"

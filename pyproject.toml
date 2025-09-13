@@ -1,65 +1,66 @@
-[project]
-name = "Not-A-Pkg-Tool"
+[tool.poetry]
+name = "notapkgtool"
 version = "0.1.0"
-description = "\"A package for creating Intune packages.\""
-authors = [{ name = "Roger Cibrian" }]
-license = { text = "GPL-3.0-only" }
+description = "NAPT - Not a Pkg Tool for Windows/Intune packaging with PSADT"
+authors = ["Roger Cibrian"]
+license = "GPL-3.0-only"
 readme = "README.md"
+packages = [{ include = "notapkgtool" }]
 
-# If your code uses Python 3.13-only features, set this to ">=3.13".
-# If you want to allow Python 3.12 users, keep ">=3.12".
-requires-python = ">=3.13"
-
-dependencies = ["pyyaml (>=6.0.2,<7.0.0)"]
-
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+[tool.poetry.dependencies]
+# support 3.11+ and guard against brand-new releases
+python = ">=3.11,<3.14"
+requests = "^2.32"
+pyyaml = ">=6.0.2,<7.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
 ruff = "^0.13.0"
 black = "^25.1.0"
+requests-mock = "^1.12.1"
+
+[tool.poetry.scripts]
+napt = "notapkgtool.cli:main"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
 
 # -----------------------------
 # Formatting (Black)
 # -----------------------------
 [tool.black]
 line-length = 88
-target-version = ["py313"]  # Match your runtime
+# match your supported range so Black doesn't emit 3.13-only syntax
+target-version = ["py311"]
 
 # -----------------------------
 # Linting (Ruff)
 # -----------------------------
 [tool.ruff]
-# You can keep this list or rely on Ruff's defaults; both are fine.
 exclude = [
     ".bzr", ".direnv", ".eggs", ".git", ".git-rewrite", ".hg", ".ipynb_checkpoints",
     ".mypy_cache", ".nox", ".pants.d", ".pyenv", ".pytest_cache", ".pytype", ".ruff_cache",
     ".svn", ".tox", ".venv", ".vscode", "__pypackages__", "_build", "buck-out", "build",
     "dist", "node_modules", "site-packages", "venv",
 ]
-
-line-length = 88            # Keep in sync with Black
-target-version = "py313"    # (fixes the stray “Assume Python 3.9” comment)
+line-length = 88
+target-version = "py311"
 
 [tool.ruff.lint]
-# E,F: core errors; I: import sorting; B: bugbear; UP: pyupgrade
 select = ["E", "F", "I", "B", "UP"]
-# Avoid style conflicts with Black
 extend-ignore = ["E203", "E501"]
 
-# Per-file ignores:
-# - F401 in __init__.py (re-exports): VERY common
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 
-# isort behavior via Ruff: tell it what your own package is, so imports sort correctly.
-# Replace "notapkgtool" with the real importable package name (folder name).
 [tool.ruff.lint.isort]
 known-first-party = ["notapkgtool"]
 combine-as-imports = true
 force-sort-within-sections = true
 
+# -----------------------------
+# Pytest
+# -----------------------------
 [tool.pytest.ini_options]
 testpaths = ["tests"]

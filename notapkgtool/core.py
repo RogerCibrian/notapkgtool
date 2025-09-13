@@ -1,8 +1,10 @@
 from pathlib import Path
 from typing import Any, Union
+
 import yaml
 
-def load_yaml(file_path: Union[str, Path]) -> Any:
+
+def load_yaml(file_path: str | Path) -> Any:
     """
     Load and parse a YAML file for CLI usage.
 
@@ -17,7 +19,7 @@ def load_yaml(file_path: Union[str, Path]) -> Any:
         raise SystemExit(1)
 
     try:
-        with path.open('r', encoding='utf-8') as file:
+        with path.open("r", encoding="utf-8") as file:
             data = yaml.safe_load(file)
     except yaml.YAMLError as e:
         print(f"Error parsing YAML file '{path}': {e}")
@@ -28,4 +30,3 @@ def load_yaml(file_path: Union[str, Path]) -> Any:
         raise SystemExit(1)
 
     return data
-
