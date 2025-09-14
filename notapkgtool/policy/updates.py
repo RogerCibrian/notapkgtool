@@ -23,7 +23,6 @@ from typing import Literal
 
 from notapkgtool.processors.version_check import is_newer
 
-
 Strategy = Literal["version_only", "version_then_hash", "hash_or_version", "hash_only"]
 Comparator = Literal["semver", "lexicographic"]
 
