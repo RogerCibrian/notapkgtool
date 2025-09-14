@@ -1,49 +1,98 @@
+# Top-level API version (used to validate schema in the future)
 apiVersion: napt/v1
+
+# Friendly project name (appears in logs/reports)
 project: "napt - Windows Apps"
 
 defaults:
+  # How to compare versions by default.
+  # Options: "semver" (semantic versioning, recommended), "lexicographic" (string compare).
   comparator: semver
+
+  updates:
+    # Policy for deciding when to stage new builds.
+    # - version_only: only when version number increases
+    # - version_then_hash: prefer version, but also stage if bits changed (repack)
+    # - hash_or_version: stage if version OR hash differs
+    # - hash_only: only when hash changes, ignore version strings
+    strategy: "version_then_hash"
+
+    # If true, stage repacks where the version is unchanged but the hash differs.
+    allow_same_version_hash_change: true
+
+    # Comparator to use when evaluating versions: "semver" or "lexicographic".
+    comparator: "semver"
+
+    # Use conditional HTTP requests (ETag / Last-Modified) to avoid redundant downloads.
+    use_conditional_requests: true
+
+    # Security settings (future use):
+    # - verify_signature: enforce Authenticode signature check
+    # - enforce_vendor_cn: restrict signer common name (e.g. "Google LLC")
+    verify_signature: false
+    enforce_vendor_cn: null
+
   psadt:
+    # Version of the PSAppDeployToolkit (PSADT) template to use.
     template_version: "4.1.5"
+
+    # Brand pack replaces default PSADT assets (logo/banner) with custom ones.
     brand_pack:
+      # Relative path to folder containing your replacement assets.
       path: ../../branding/napt
+
+      # Mapping rules: local source → template target location.
       mappings:
-        - source: "AppIcon.*"
-          target: "Assets/AppIcon"
+        - source: "AppIcon.*"        # Any file matching AppIcon.*
+          target: "Assets/AppIcon"   # Replaces the template's AppIcon
         - source: "Banner.Classic.*"
           target: "Assets/Banner.Classic"
+
+    # Default app variables injected into Invoke-AppDeployToolkit.ps1
     app_vars:
-      AppLang: "EN"
-      AppRevision: "01"
-      AppSuccessExitCodes: [0]
-      AppRebootExitCodes: [1641, 3010]
-      AppProcessesToClose: []
-      AppScriptVersion: "1.0.0"
-      AppScriptAuthor: "napt"
-      RequireAdmin: true
+      AppLang: "EN"                       # Language (EN = English)
+      AppRevision: "01"                   # Revision counter for same version
+      AppSuccessExitCodes: [0]            # Exit codes treated as success
+      AppRebootExitCodes: [1641, 3010]    # Codes that require reboot
+      AppProcessesToClose: []             # Processes to close before install
+      AppScriptVersion: "1.0.0"           # Script version metadata
+      AppScriptAuthor: "napt"             # Author name shown in script header
+      RequireAdmin: true                  # Require admin privileges
 
   package:
+    # Package type. Win32 = Intune Win32 package.
     type: win32
+
+    # Path to the installer executable inside the PSADT package.
     setup_file: "Invoke-AppDeployToolkit.exe"
+
+    # Default install/uninstall commands for PSADT packages.
     install_command: "Invoke-AppDeployToolkit.exe -DeploymentType Install -DeployMode Silent"
     uninstall_command: "Invoke-AppDeployToolkit.exe -DeploymentType Uninstall -DeployMode Silent"
+
+    # System requirements for the package.
     requirements:
-      architecture: x64
-      min_os_version: "10.0.17763.0"
+      architecture: x64                   # x64 architecture only
+      min_os_version: "10.0.17763.0"      # Minimum Windows build number (17763 = 1809)
+
+    # Return code mapping for Intune to interpret deployment outcomes.
     return_codes:
-      success: [0]
-      soft_reboot: [3010]
-      retryable: []
+      success: [0]                        # Exit code(s) considered success
+      soft_reboot: [3010]                 # Exit code(s) that mean reboot required
+      retryable: []                       # Exit code(s) to retry on
 
   assignments:
+    # Deployment waves/rings, applied in sequence.
     waves:
-      - name: "Ring 0 - Pilot (IT)"
-        groups: { included: ["grp-it-pilot"] }
-        intent: required
-        availability: { start: "immediate" }
-      - name: "Ring 1 - Canary"
+      - name: "Ring 0 - Pilot (IT)"       # First wave, internal IT
+        groups: { included: ["grp-it-pilot"] }  # Targeted Azure AD groups
+        intent: required                  # Required install (not available/optional)
+        availability: { start: "immediate" }  # Start immediately after approval
+
+      - name: "Ring 1 - Canary"           # Early adopters ring
         groups: { included: ["grp-canary"] }
-        delay_after_previous: "2d"
-      - name: "Ring 2 - Production"
+        delay_after_previous: "2d"        # Wait 2 days after Ring 0 before rollout
+
+      - name: "Ring 2 - Production"       # Broadest deployment ring
         groups: { included: ["grp-all-windows"] }
-        delay_after_previous: "5d"
+        delay_after_previous: "5d"        # Wait 5 days after Canary before rollout
