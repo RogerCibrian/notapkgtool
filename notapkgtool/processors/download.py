@@ -16,14 +16,15 @@ Conventions
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 import hashlib
 from pathlib import Path
 import time
-from typing import Iterable
 from urllib.parse import urlparse
 
 import requests
-from requests.adapters import HTTPAdapter, Retry
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # Stream size per chunk (1 MiB). Tune up/down if needed.
 DEFAULT_CHUNK = 1024 * 1024
@@ -78,6 +79,13 @@ def make_session() -> requests.Session:
     - Retries on common transient status codes.
     - Applies exponential backoff.
     - Sets a helpful User-Agent to avoid being blocked.
+
+    Notes on Accept-Encoding:
+    - We force 'Accept-Encoding: identity' to request the raw (uncompressed) bytes.
+    - Many CDNs compute representation-specific ETags (e.g., gzip vs identity).
+      That can cause conditional requests (If-None-Match) to miss and trigger
+      unnecessary re-downloads. Pinning identity stabilizes ETags for binary
+      installers (MSI/EXE/MSIX/ZIP), which are already compressed.
     """
     s = requests.Session()
     retries = Retry(
@@ -88,7 +96,12 @@ def make_session() -> requests.Session:
         raise_on_status=False,
     )
     s.headers.update(
-        {"User-Agent": "napt/0.1 (+https://github.com/yourorg/notapkgtool)"}
+        {
+            "User-Agent": "napt/0.1 (+https://github.com/RogerCibrian/notapkgtool)",
+            # Request the raw, uncompressed representation to keep ETags stable
+            # across runs and avoid spurious 200s when a CDN flips to gzip.
+            "Accept-Encoding": "identity",
+        }
     )
     s.mount("http://", HTTPAdapter(max_retries=retries))
     s.mount("https://", HTTPAdapter(max_retries=retries))
