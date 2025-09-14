@@ -14,14 +14,13 @@ Highlights
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from pathlib import Path
 import re
 import shutil
 import subprocess
 import sys
-from dataclasses import dataclass
-from pathlib import Path
 from typing import Literal
-
 
 Comparator = Literal["semver", "lexicographic"]
 
@@ -156,6 +155,8 @@ def version_from_msi_product_version(file_path: str | Path) -> DiscoveredVersion
             if rec is None:
                 raise RuntimeError("ProductVersion not found in MSI Property table.")
             version = rec.GetString(1)
+            if version is None:
+                raise RuntimeError("Empty ProductVersion in MSI Property table.")
             view.Close()
             db.Close()
             return DiscoveredVersion(
