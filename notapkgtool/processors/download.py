@@ -152,7 +152,7 @@ def download_file(
     headers: dict[str, str] = {}
     if etag:
         headers["If-None-Match"] = etag
-    if last_modified:
+    elif last_modified:
         headers["If-Modified-Since"] = last_modified
 
     with make_session() as session:
