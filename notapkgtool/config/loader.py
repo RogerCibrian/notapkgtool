@@ -34,7 +34,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import yaml
 
@@ -255,7 +255,7 @@ def load_effective_config(
     merged: dict[str, Any] = {}
 
     org_defaults_path: Path | None = None
-    vendor_defaults_path: Path | None = None
+    # vendor_defaults_path: Path | None = None
     vendor_name: str | None = vendor
 
     if defaults_root:
@@ -274,7 +274,7 @@ def load_effective_config(
         if vendor_name:
             candidate = defaults_root / "vendors" / f"{vendor_name}.yaml"
             if candidate.exists():
-                vendor_defaults_path = candidate
+                # vendor_defaults_path = candidate
                 vendor_defaults = _load_yaml_file(candidate)
                 if isinstance(vendor_defaults, dict):
                     merged = _deep_merge_dicts(merged, vendor_defaults)
