@@ -21,7 +21,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from notapkgtool.processors.version_check import is_newer
+from notapkgtool.versioning import is_newer_any
 
 Strategy = Literal["version_only", "version_then_hash", "hash_or_version", "hash_only"]
 Comparator = Literal["semver", "lexicographic"]
@@ -63,7 +63,7 @@ def should_stage(
     version_changed = (
         True
         if current_version is None
-        else is_newer(remote_version, current_version, policy.comparator)
+        else is_newer_any(remote_version, current_version, policy.comparator)
         or remote_version != current_version
         # Treat "different version string" as change even if comparator treats them equal
     )
