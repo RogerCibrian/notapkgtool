@@ -1,17 +1,111 @@
 """
-Download processor for NAPT.
+Robust HTTP(S) file download for NAPT.
 
-Responsibilities
-- Safely download files over HTTP(S) with retries, redirects, and timeouts.
-- Support conditional requests (ETag / Last-Modified) to skip unchanged downloads.
-- Choose a sane filename from Content-Disposition or URL path.
-- Write atomically: stream to .part and rename on success to avoid partial artifacts.
-- Compute and (optionally) validate SHA-256 checksums for reproducibility.
+This module provides production-grade file downloading with features designed
+for reliability, reproducibility, and efficiency in automated packaging workflows.
 
-Conventions
-- Modern type hints (X | None; tuple[...] etc.).
-- Organized imports: stdlib -> third-party -> first-party.
-- Exceptions are chained (raise ... from err) for better tracebacks.
+Key Features
+------------
+1. **Retry Logic with Exponential Backoff**
+   - Automatically retries on transient failures (429, 500, 502, 503, 504)
+   - Exponential backoff prevents overwhelming failing servers
+   - Configurable via urllib3.util.Retry
+
+2. **Conditional Requests (HTTP 304 Not Modified)**
+   - Supports ETag and Last-Modified headers
+   - Avoids re-downloading unchanged files
+   - Essential for incremental builds and bandwidth efficiency
+
+3. **Atomic Writes**
+   - Downloads to temporary .part files
+   - Atomic rename on success prevents partial files
+   - Safe for concurrent or interrupted operations
+
+4. **Integrity Verification**
+   - SHA-256 hashing during download (no extra file read)
+   - Optional checksum validation
+   - Corrupted files are automatically removed
+
+5. **Smart Filename Detection**
+   - Respects Content-Disposition headers
+   - Falls back to URL path
+   - Handles edge cases (empty paths, query strings)
+
+6. **Stable ETags**
+   - Forces Accept-Encoding: identity to avoid representation-specific ETags
+   - Prevents false cache misses when CDN switches compression
+
+Functions
+---------
+download_file : function
+    Main entry point for downloading files with all features.
+make_session : function
+    Create a requests.Session with sane retry/backoff defaults.
+
+Exceptions
+----------
+NotModifiedError : exception
+    Raised when conditional request returns HTTP 304 (not an error condition).
+
+Constants
+---------
+DEFAULT_CHUNK : int
+    Stream chunk size (1 MiB). Balance memory vs. progress granularity.
+
+Examples
+--------
+Basic download:
+
+    >>> from pathlib import Path
+    >>> from notapkgtool.io import download_file
+    >>> path, sha256, headers = download_file(
+    ...     url="https://example.com/installer.msi",
+    ...     destination_folder=Path("./downloads"),
+    ... )
+    >>> print(f"Downloaded to {path}")
+    >>> print(f"SHA-256: {sha256}")
+
+Conditional download (avoid re-downloading):
+
+    >>> try:
+    ...     path, sha256, headers = download_file(
+    ...         url="https://example.com/installer.msi",
+    ...         destination_folder=Path("./downloads"),
+    ...         etag=previous_etag,
+    ...     )
+    ... except NotModifiedError:
+    ...     print("File unchanged, using cached version")
+
+Checksum validation:
+
+    >>> try:
+    ...     path, sha256, headers = download_file(
+    ...         url="https://example.com/installer.msi",
+    ...         destination_folder=Path("./downloads"),
+    ...         expected_sha256="abc123...",
+    ...     )
+    ... except ValueError as e:
+    ...     print(f"Checksum mismatch: {e}")
+
+Design Decisions
+----------------
+- **Why identity encoding?** CDNs like Cloudflare compute representation-specific
+  ETags. Requesting gzip vs identity yields different ETags for the same content,
+  causing unnecessary re-downloads. We pin to identity for stability.
+
+- **Why atomic writes?** Prevents partial files from appearing in the destination.
+  Critical for automation where another process might start using a file before
+  download completes.
+
+- **Why stream hashing?** Computing SHA-256 while streaming avoids a second
+  file read, improving I/O efficiency especially for large installers.
+
+Notes
+-----
+- Progress output goes to stdout (can be captured/redirected)
+- User-Agent identifies NAPT to help with debugging/support
+- All HTTP errors are chained for better debugging
+- Timeouts are per-request, not total download time
 """
 
 from __future__ import annotations
