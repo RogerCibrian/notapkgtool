@@ -1,32 +1,95 @@
 """
-Config loader for NAPT.
+Configuration loading and merging for NAPT.
 
-Responsibilities
-- Load and merge layered configuration for a recipe:
-    1) defaults/org.yaml
-    2) defaults/vendors/<Vendor>.yaml (optional)
-    3) recipes/.../<recipe>.yaml (required)
-  The merge rule is "last wins":
-    - dicts are deep-merged
-    - lists are REPLACED (not extended)
-    - scalars are overwritten
+This module implements a sophisticated three-layer configuration system that
+allows organization-wide defaults to be overridden by vendor-specific settings
+and finally by recipe-specific configuration. This design promotes DRY
+(Don't Repeat Yourself) principles and makes recipes easier to maintain.
 
-- Resolve relative paths (e.g., psadt.brand_pack.path) relative to the RECIPE FILE,
-  so recipes are relocatable.
+Configuration Layers
+--------------------
+1. **Organization defaults** (defaults/org.yaml)
+   - Base configuration for all apps
+   - Defines PSADT settings, update policies, deployment waves, etc.
+   - Required if a defaults directory is found
 
-- Inject dynamic fields (e.g., today's date for PSADT: AppScriptDate).
+2. **Vendor defaults** (defaults/vendors/<Vendor>.yaml)
+   - Vendor-specific overrides (e.g., Google-specific settings)
+   - Optional; only loaded if vendor is detected
+   - Overrides organization defaults
 
-Conventions
-- ASCII only.
-- Exceptions are chained with "from err" for better tracebacks.
+3. **Recipe configuration** (recipes/<Vendor>/<app>.yaml)
+   - App-specific configuration
+   - Always required; defines the app itself
+   - Overrides vendor and organization defaults
 
-Typical usage
-    from pathlib import Path
-    from notapkgtool.config.loader import load_effective_config
+Merge Behavior
+--------------
+The loader performs deep merging with "last wins" semantics:
+  - **Dicts**: Recursively merged (keys from overlay override base)
+  - **Lists**: Completely replaced (NOT appended/extended)
+  - **Scalars**: Overwritten (strings, numbers, booleans)
 
-    cfg = load_effective_config(Path("recipes/Google/chrome.yaml"))
-    # cfg is a nested dict with defaults and recipe merged, paths resolved,
-    # and PSADT AppScriptDate injected.
+Path Resolution
+---------------
+Relative paths in configuration are resolved against the RECIPE FILE location,
+making recipes relocatable and portable. Currently resolved paths:
+  - defaults.psadt.brand_pack.path
+
+Dynamic Injection
+-----------------
+Some fields are injected at load time:
+  - defaults.psadt.app_vars.AppScriptDate: Today's date (YYYY-MM-DD)
+
+Functions
+---------
+load_effective_config : function
+    Load and merge configuration for a recipe (main public API).
+
+Private Helpers
+---------------
+_load_yaml_file : Load YAML with error handling
+_deep_merge_dicts : Recursive dict merging
+_find_defaults_root : Locate defaults directory
+_detect_vendor : Determine vendor from recipe location or content
+_resolve_known_paths : Resolve relative paths to absolute
+_inject_dynamic_values : Add runtime-determined fields
+
+Error Handling
+--------------
+- FileNotFoundError: Recipe file doesn't exist
+- SystemExit: YAML parse errors or empty files
+- All errors are chained with "from err" for better debugging
+
+Examples
+--------
+Basic usage:
+
+    >>> from pathlib import Path
+    >>> from notapkgtool.config import load_effective_config
+    >>> cfg = load_effective_config(Path("recipes/Google/chrome.yaml"))
+    >>> print(cfg["apps"][0]["name"])
+    Google Chrome
+
+Access merged defaults:
+
+    >>> psadt_version = cfg["defaults"]["psadt"]["template_version"]
+    >>> print(psadt_version)
+    4.1.5
+
+Override vendor detection:
+
+    >>> cfg = load_effective_config(
+    ...     Path("recipes/Google/chrome.yaml"),
+    ...     vendor="CustomVendor"
+    ... )
+
+Notes
+-----
+- The loader walks upward from the recipe to find defaults/org.yaml
+- Vendor is detected from directory name (recipes/Google/) or recipe content
+- Paths are resolved relative to the recipe, not the working directory
+- Dynamic fields are best-effort (warnings on failure, not errors)
 """
 
 from __future__ import annotations
