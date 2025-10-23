@@ -1,0 +1,178 @@
+"""
+Command-line interface for NAPT.
+
+This module provides the main CLI entry point for the napt tool, offering
+commands for recipe validation, package building, and deployment management.
+
+Commands
+--------
+check : command
+    Validate a recipe by downloading the installer and extracting version info.
+    This command verifies that a recipe is correctly configured and that the
+    source URL is accessible.
+
+Future commands:
+    build  : Build a PSADT package from a recipe
+    upload : Upload a package to Microsoft Intune
+    sync   : Full workflow (check -> build -> upload)
+
+Usage Examples
+--------------
+Validate a recipe:
+    $ napt check recipes/Google/chrome.yaml
+
+Validate with custom output directory:
+    $ napt check recipes/Google/chrome.yaml --output-dir ./cache
+
+Enable verbose error output:
+    $ napt check recipes/Google/chrome.yaml --verbose
+
+Exit Codes
+----------
+0 : Success
+1 : Error (configuration, download, or validation failure)
+
+Notes
+-----
+- The CLI uses argparse for command parsing (stdlib, zero dependencies).
+- Commands are registered with subparsers for clean organization.
+- Each command has its own handler function (cmd_<command>).
+- Verbose mode shows full tracebacks on errors for debugging.
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+from notapkgtool.core import check_recipe
+
+
+def cmd_check(args: argparse.Namespace) -> int:
+    """
+    Handler for 'napt check' command.
+
+    Downloads the installer specified in a recipe and extracts version
+    information. This validates that:
+      - The recipe YAML is correctly formatted
+      - Configuration merging works properly
+      - The source URL is accessible
+      - The version can be extracted from the downloaded file
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Parsed command-line arguments containing:
+        - recipe : Path to recipe YAML file
+        - output_dir : Directory for downloaded files
+        - verbose : Whether to show full tracebacks
+
+    Returns
+    -------
+    int
+        Exit code: 0 for success, 1 for failure.
+
+    Side Effects
+    ------------
+    - Downloads installer file to output_dir
+    - Prints progress and results to stdout
+    - Prints errors to stdout (with optional traceback if verbose)
+    """
+    recipe_path = Path(args.recipe).resolve()
+    output_dir = Path(args.output_dir).resolve()
+
+    if not recipe_path.exists():
+        print(f"Error: Recipe file not found: {recipe_path}")
+        return 1
+
+    print(f"Checking recipe: {recipe_path}")
+    print(f"Output directory: {output_dir}")
+    print()
+
+    try:
+        result = check_recipe(recipe_path, output_dir)
+    except Exception as err:
+        print(f"Error: {err}")
+        if args.verbose:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+
+    # Display results
+    print("=" * 70)
+    print("CHECK RESULTS")
+    print("=" * 70)
+    print(f"App Name:        {result['app_name']}")
+    print(f"App ID:          {result['app_id']}")
+    print(f"Strategy:        {result['strategy']}")
+    print(f"Version:         {result['version']}")
+    print(f"Version Source:  {result['version_source']}")
+    print(f"File Path:       {result['file_path']}")
+    print(f"SHA-256:         {result['sha256']}")
+    print(f"Status:          {result['status']}")
+    print("=" * 70)
+    print()
+    print("[SUCCESS] Recipe validated successfully!")
+
+    return 0
+
+
+def main() -> None:
+    """
+    Main entry point for the napt CLI.
+
+    This function is registered as the 'napt' console script in pyproject.toml.
+    """
+    parser = argparse.ArgumentParser(
+        prog="napt",
+        description="NAPT - Not a Pkg Tool for Windows/Intune packaging with PSADT",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
+    parser.add_argument(
+        "--version",
+        action="version",
+        version="napt 0.1.0",
+    )
+
+    subparsers = parser.add_subparsers(
+        dest="command",
+        help="Available commands",
+        required=True,
+    )
+
+    # 'check' command
+    parser_check = subparsers.add_parser(
+        "check",
+        help="Validate a recipe by downloading and extracting version",
+        description="Download the installer specified in a recipe and extract its version.",
+    )
+    parser_check.add_argument(
+        "recipe",
+        help="Path to the recipe YAML file",
+    )
+    parser_check.add_argument(
+        "--output-dir",
+        default="./downloads",
+        help="Directory to save downloaded files (default: ./downloads)",
+    )
+    parser_check.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose output (show tracebacks on errors)",
+    )
+    parser_check.set_defaults(func=cmd_check)
+
+    # Parse and dispatch
+    args = parser.parse_args()
+
+    # Call the appropriate command handler
+    exit_code = args.func(args)
+    sys.exit(exit_code)
+
+
+if __name__ == "__main__":
+    main()
