@@ -77,7 +77,9 @@ except ImportError:
 from .keys import DiscoveredVersion  # reuse the shared DTO
 
 
-def version_from_msi_product_version(file_path: str | Path) -> DiscoveredVersion:
+def version_from_msi_product_version(
+    file_path: str | Path, verbose: bool = False
+) -> DiscoveredVersion:
     """
     Extract ProductVersion from an MSI file.
 
@@ -91,12 +93,18 @@ def version_from_msi_product_version(file_path: str | Path) -> DiscoveredVersion
     ------
     FileNotFoundError | RuntimeError | NotImplementedError
     """
+    from notapkgtool.cli import print_verbose
+
     p = Path(file_path)
     if not p.exists():
         raise FileNotFoundError(f"MSI not found: {p}")
 
+    print_verbose("VERSION", "Strategy: msi_product_version_from_file")
+    print_verbose("VERSION", f"Extracting version from: {p.name}")
+
     # Try msilib first (standard library on Windows)
     if sys.platform.startswith("win") and msilib is not None:
+        print_verbose("VERSION", "Trying backend: msilib...")
         try:
             db = msilib.OpenDatabase(str(p), msilib.MSIDBOPEN_READONLY)
             view = db.OpenView(
@@ -111,20 +119,24 @@ def version_from_msi_product_version(file_path: str | Path) -> DiscoveredVersion
             db.Close()
             if not version:
                 raise RuntimeError("Empty ProductVersion in MSI Property table.")
+            print_verbose("VERSION", f"Success! Extracted: {version} (via msilib)")
             return DiscoveredVersion(
                 version=version, source="msi_product_version_from_file"
             )
         except Exception as err:
+            print_verbose("VERSION", "msilib failed, trying next backend...")
             raise RuntimeError(
                 f"failed to read MSI ProductVersion via msilib: {err}"
             ) from err
 
     # Try _msi module (alternative Windows approach)
     if sys.platform.startswith("win"):
+        print_verbose("VERSION", "Trying backend: _msi...")
         try:
             import _msi  # type: ignore
         except ImportError:
             # _msi not available, fall through to msiinfo
+            print_verbose("VERSION", "_msi not available, trying next backend...")
             pass
         else:
             try:
@@ -143,16 +155,19 @@ def version_from_msi_product_version(file_path: str | Path) -> DiscoveredVersion
                     raise RuntimeError("Empty ProductVersion in MSI Property table.")
                 view.Close()
                 db.Close()
+                print_verbose("VERSION", f"Success! Extracted: {version} (via _msi)")
                 return DiscoveredVersion(
                     version=version, source="msi_product_version_from_file"
                 )
             except Exception as err:
+                print_verbose("VERSION", "_msi failed, trying next backend...")
                 raise RuntimeError(
                     f"failed to read MSI ProductVersion via _msi: {err}"
                 ) from err
 
     # Try PowerShell with Windows Installer COM on Windows
     if sys.platform.startswith("win"):
+        print_verbose("VERSION", "Trying backend: PowerShell COM...")
         try:
             ps_script = f"""
 $installer = New-Object -ComObject WindowsInstaller.Installer
@@ -176,17 +191,23 @@ if ($record) {{
             )
             version = result.stdout.strip()
             if version:
+                print_verbose(
+                    "VERSION", f"Success! Extracted: {version} (via PowerShell COM)"
+                )
                 return DiscoveredVersion(
                     version=version, source="msi_product_version_from_file"
                 )
         except subprocess.CalledProcessError as err:
+            print_verbose("VERSION", "PowerShell COM failed, trying next backend...")
             raise RuntimeError(f"PowerShell MSI query failed: {err}") from err
         except subprocess.TimeoutExpired:
+            print_verbose("VERSION", "PowerShell COM timed out, trying next backend...")
             raise RuntimeError("PowerShell MSI query timed out") from None
 
     # Try msiinfo on Linux/macOS
     msiinfo = shutil.which("msiinfo")
     if msiinfo:
+        print_verbose("VERSION", "Trying backend: msiinfo (msitools)...")
         try:
             # msiinfo export <package> Property -> stdout (tab-separated)
             result = subprocess.run(
@@ -203,12 +224,15 @@ if ($record) {{
                     break
             if not version_str:
                 raise RuntimeError("ProductVersion not found in MSI Property output.")
+            print_verbose("VERSION", f"Success! Extracted: {version_str} (via msiinfo)")
             return DiscoveredVersion(
                 version=version_str, source="msi_product_version_from_file"
             )
         except subprocess.CalledProcessError as err:
+            print_verbose("VERSION", "msiinfo failed")
             raise RuntimeError(f"msiinfo failed: {err}") from err
 
+    print_verbose("VERSION", "No MSI extraction backend available on this system")
     raise NotImplementedError(
         "MSI version extraction is not available on this host. "
         "On Windows, ensure PowerShell is available. "

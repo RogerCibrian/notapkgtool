@@ -98,7 +98,7 @@ class HttpStaticStrategy:
     """
 
     def discover_version(
-        self, app_config: dict[str, Any], output_dir: Path
+        self, app_config: dict[str, Any], output_dir: Path, verbose: bool = False
     ) -> tuple[DiscoveredVersion, Path, str]:
         """
         Download from static URL and extract version from the file.
@@ -122,6 +122,8 @@ class HttpStaticStrategy:
         RuntimeError
             If download or version extraction fails.
         """
+        from notapkgtool.cli import print_verbose
+
         source = app_config.get("source", {})
         url = source.get("url")
         if not url:
@@ -134,16 +136,24 @@ class HttpStaticStrategy:
                 "http_static strategy requires 'source.version.type' in config"
             )
 
+        print_verbose("DISCOVERY", "Strategy: http_static")
+        print_verbose("DISCOVERY", f"Source URL: {url}")
+        print_verbose("DISCOVERY", f"Version extraction: {version_type}")
+
         # Download the file
         try:
-            file_path, sha256, _headers = download_file(url, output_dir)
+            file_path, sha256, _headers = download_file(
+                url, output_dir, verbose=verbose
+            )
         except Exception as err:
             raise RuntimeError(f"Failed to download {url}: {err}") from err
 
         # Extract version based on type
         if version_type == "msi_product_version_from_file":
             try:
-                discovered = version_from_msi_product_version(file_path)
+                discovered = version_from_msi_product_version(
+                    file_path, verbose=verbose
+                )
             except Exception as err:
                 raise RuntimeError(
                     f"Failed to extract MSI ProductVersion from {file_path}: {err}"
