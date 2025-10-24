@@ -404,6 +404,9 @@ def load_effective_config(
             "CONFIG",
             f"Final config has {len(top_level_keys)} top-level keys: {', '.join(top_level_keys)}",
         )
+        # Show the complete merged configuration
+        print_verbose("CONFIG", "--- Final Merged Configuration ---")
+        _print_yaml_content(merged, verbose)
 
     # 7) Resolve relative paths against the RECIPE directory
     _resolve_known_paths(merged, recipe_dir)
