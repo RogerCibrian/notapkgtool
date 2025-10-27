@@ -172,3 +172,7 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+tests/__pycache__/
+artifacts/
+
+.DS_Store

@@ -1,0 +1,4 @@
+defaults:
+  psadt:
+    app_vars:
+      AppVendor: "Google"

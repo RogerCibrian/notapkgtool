@@ -1,0 +1,36 @@
+apiVersion: napt/v1
+project: "napt - Windows Apps"
+
+apps:
+  - name: "Google Chrome"
+    id: "napt-chrome"
+
+    source:
+      strategy: http_static
+      url: "https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi"
+      version:
+        type: msi_product_version_from_file
+        file: "googlechromestandaloneenterprise64.msi"
+
+    psadt:
+      app_vars:
+        AppName: "Google Chrome"
+        AppVersion: "${discovered_version}"
+        AppArch: "x64"
+      install: |
+        Start-ADTMsiProcess `
+          -Path "$dirFiles\googlechromestandaloneenterprise64.msi" `
+          -Parameters "ALLUSERS=1" `
+          -MsiParameters "/qn /norestart"
+      uninstall: |
+        $app = Get-InstalledApplication -Name "Google Chrome" -Exact
+        if ($app -and $app.ProductCode) {
+          Start-ADTMsiProcess -ProductCode $app.ProductCode -MsiParameters "/qn /norestart" -Action Uninstall
+        } elseif ($app -and $app.UninstallString) {
+          if ($app.UninstallString -match '^\s*"(.*?)"\s*(.*)$') {
+            Execute-Process -Path $matches[1] -Parameters ($matches[2] + " --force-uninstall --system-level") -WindowStyle Hidden
+          } else {
+            Execute-Process -Path "cmd.exe" -Parameters "/c $($app.UninstallString)"
+          }
+        } else {
+          Write-Log -Message "Chrome not found; nothing to uninstall."
