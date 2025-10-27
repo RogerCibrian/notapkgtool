@@ -43,6 +43,7 @@ Notes
 from __future__ import annotations
 
 import argparse
+from importlib.metadata import version
 from pathlib import Path
 import sys
 
@@ -186,7 +187,7 @@ def main() -> None:
     parser.add_argument(
         "--version",
         action="version",
-        version="napt 0.1.0",
+        version=f"napt {version('notapkgtool')}",
     )
 
     subparsers = parser.add_subparsers(

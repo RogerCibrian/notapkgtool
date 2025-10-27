@@ -8,8 +8,8 @@ readme = "README.md"
 packages = [{ include = "notapkgtool" }]
 
 [tool.poetry.dependencies]
-# support 3.11+ and guard against brand-new releases
-python = ">=3.11,<3.14"
+# support 3.11+ with no upper bound - the codebase uses stable APIs
+python = ">=3.11"
 requests = "^2.32"
 pyyaml = ">=6.0.2,<7.0.0"
 
