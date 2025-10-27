@@ -215,6 +215,90 @@ git commit
 git push origin feature/your-feature
 ```
 
+## Merge Strategy
+
+**Default: Squash and Merge**
+
+NAPT uses **squash and merge** for most Pull Requests to maintain a clean, readable history in `main`.
+
+### Why Squash and Merge?
+
+- ✅ **Clean history**: One commit per feature/fix in `main`
+- ✅ **Conventional commits**: Each merge becomes a properly formatted commit
+- ✅ **Easy rollback**: Revert entire features with one command
+- ✅ **Better changelogs**: No noise from "WIP" or "fix typo" commits
+- ✅ **Simple bisecting**: Each commit represents a complete, working change
+
+### GitHub Settings
+
+**Recommended repository settings:**
+
+- ✅ **Allow squash merging** (default method)
+- ✅ **Allow merge commits** (for exceptional cases)
+- ❌ **Disable rebase merging** (can rewrite history, adds complexity)
+
+To configure on GitHub:
+1. Go to Settings → General → Pull Requests
+2. Check "Allow squash merging" (set as default)
+3. Check "Allow merge commits"
+4. Uncheck "Allow rebase merging"
+5. Check "Automatically delete head branches"
+
+### When to Use Each Strategy
+
+**Squash and Merge (Default - 95% of PRs)**
+
+Use for:
+- Feature additions
+- Bug fixes
+- Documentation updates
+- Refactoring
+- Chores and maintenance
+
+When merging on GitHub:
+1. Click "Squash and merge"
+2. Edit the commit message to follow conventional commit format
+3. Summarize all changes in the commit body
+4. Reference any issues with `Closes #XX`
+
+**Example:**
+```
+feat: add RPM version extraction support
+
+- Implement RPM ProductVersion parser using rpm-py-installer
+- Add cross-platform support for RPM files (Linux/macOS)
+- Add comprehensive test coverage with mock RPM files
+- Update documentation with RPM examples
+
+Closes #42
+```
+
+**Regular Merge (Exceptional Cases)**
+
+Use only when:
+- Multiple authors need attribution for distinct contributions
+- Release PRs where version bump history should be preserved
+- Large features with logically separate commits worth keeping
+
+**Example scenarios:**
+- Version bump PRs (preserve "bump version" + "update changelog" as separate commits)
+- Community contributions with multiple meaningful commits
+- Complex refactors where commit-by-commit history aids debugging
+
+### Workflow
+
+1. **Before creating PR**: Clean up your branch commits if needed
+2. **During review**: Add commits normally (don't squash yet)
+3. **When merging**: Use GitHub's "Squash and merge" button
+4. **After merge**: Branch is auto-deleted, pull latest `main`
+
+### Tips
+
+- Don't worry about messy commits in your branch - they'll be squashed
+- Focus on clear PR descriptions - they become the squash commit message
+- Use conventional commit prefixes in PR titles for easy squashing
+- If you accidentally use wrong merge method, you can revert and redo
+
 ## Versioning and Releases
 
 When ready to release a new version:
@@ -283,6 +367,6 @@ git push origin hotfix/fix-security-vulnerability
 
 ---
 
-**Last Updated**: 2025-10-24
-**Strategy**: GitHub Flow
+**Last Updated**: 2025-10-27
+**Strategy**: GitHub Flow with Squash and Merge
 
