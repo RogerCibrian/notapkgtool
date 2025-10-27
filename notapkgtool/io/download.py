@@ -212,6 +212,7 @@ def download_file(
     etag: str | None = None,
     last_modified: str | None = None,
     verbose: bool = False,
+    debug: bool = False,
 ) -> tuple[Path, str, dict]:
     """
     Download a URL to destination_folder with robustness and reproducibility.

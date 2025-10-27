@@ -48,8 +48,9 @@ import sys
 
 from notapkgtool.core import check_recipe
 
-# Global verbose flag set from CLI args
+# Global verbose and debug flags set from CLI args
 _verbose = False
+_debug = False
 
 
 def set_verbose(enabled: bool) -> None:
@@ -63,6 +64,19 @@ def is_verbose() -> bool:
     return _verbose
 
 
+def set_debug(enabled: bool) -> None:
+    """Set the global debug flag. Debug mode implies verbose mode."""
+    global _debug, _verbose
+    _debug = enabled
+    if enabled:
+        _verbose = True  # Debug implies verbose
+
+
+def is_debug() -> bool:
+    """Check if debug mode is enabled."""
+    return _debug
+
+
 def print_step(step: int, total: int, message: str) -> None:
     """Print a step indicator for non-verbose mode."""
     print(f"[{step}/{total}] {message}")
@@ -71,6 +85,12 @@ def print_step(step: int, total: int, message: str) -> None:
 def print_verbose(prefix: str, message: str) -> None:
     """Print a verbose log message (only when verbose mode is active)."""
     if _verbose:
+        print(f"[{prefix}] {message}")
+
+
+def print_debug(prefix: str, message: str) -> None:
+    """Print a debug log message (only when debug mode is active)."""
+    if _debug:
         print(f"[{prefix}] {message}")
 
 
@@ -91,7 +111,8 @@ def cmd_check(args: argparse.Namespace) -> int:
         Parsed command-line arguments containing:
         - recipe : Path to recipe YAML file
         - output_dir : Directory for downloaded files
-        - verbose : Whether to show full tracebacks
+        - verbose : Whether to show progress updates
+        - debug : Whether to show detailed debugging output
 
     Returns
     -------
@@ -102,10 +123,11 @@ def cmd_check(args: argparse.Namespace) -> int:
     ------------
     - Downloads installer file to output_dir
     - Prints progress and results to stdout
-    - Prints errors to stdout (with optional traceback if verbose)
+    - Prints errors to stdout (with optional traceback if verbose/debug)
     """
-    # Set global verbose flag
+    # Set global verbose and debug flags
     set_verbose(args.verbose)
+    set_debug(args.debug)
 
     recipe_path = Path(args.recipe).resolve()
     output_dir = Path(args.output_dir).resolve()
@@ -119,10 +141,12 @@ def cmd_check(args: argparse.Namespace) -> int:
     print()
 
     try:
-        result = check_recipe(recipe_path, output_dir, verbose=args.verbose)
+        result = check_recipe(
+            recipe_path, output_dir, verbose=args.verbose, debug=args.debug
+        )
     except Exception as err:
         print(f"Error: {err}")
-        if args.verbose:
+        if args.verbose or args.debug:
             import traceback
 
             traceback.print_exc()
@@ -190,7 +214,13 @@ def main() -> None:
         "-v",
         "--verbose",
         action="store_true",
-        help="Enable verbose output (show tracebacks on errors)",
+        help="Show progress and high-level status updates",
+    )
+    parser_check.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="Show detailed debugging output (implies --verbose)",
     )
     parser_check.set_defaults(func=cmd_check)
 

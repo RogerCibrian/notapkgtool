@@ -38,14 +38,38 @@ sudo apt-get install msitools  # Debian/Ubuntu
 
 ```bash
 # Check a recipe (downloads installer and extracts version)
-python -m notapkgtool.cli check recipes/Google/chrome.yaml
+napt check recipes/Google/chrome.yaml
 
 # Specify custom output directory
-python -m notapkgtool.cli check recipes/Google/chrome.yaml --output-dir ./cache
+napt check recipes/Google/chrome.yaml --output-dir ./cache
 
-# Show detailed errors
-python -m notapkgtool.cli check recipes/Google/chrome.yaml --verbose
+# Show verbose output with progress details
+napt check recipes/Google/chrome.yaml --verbose
+
+# Show debug output with full configuration dumps
+napt check recipes/Google/chrome.yaml --debug
 ```
+
+### Output Modes
+
+NAPT supports three output verbosity levels:
+
+**Normal Mode** (default):
+- Clean, minimal output with step indicators
+- Download progress bar
+- Final results summary
+
+**Verbose Mode** (`-v` or `--verbose`):
+- Configuration loading details
+- HTTP request/response information
+- File operations and SHA-256 hashes
+- Version extraction details
+
+**Debug Mode** (`-d` or `--debug`):
+- All verbose output
+- Complete YAML configuration dumps
+- Backend selection details (e.g., MSI extraction methods)
+- Full troubleshooting information
 
 ### Example Output
 
@@ -127,12 +151,20 @@ from notapkgtool.core import check_recipe
 from notapkgtool.config import load_effective_config
 from notapkgtool.versioning import compare_any, is_newer_any
 
-# Validate a recipe
+# Validate a recipe (with verbose output)
 result = check_recipe(
     recipe_path=Path("recipes/Google/chrome.yaml"),
-    output_dir=Path("./downloads")
+    output_dir=Path("./downloads"),
+    verbose=True
 )
 print(f"Version: {result['version']}")
+
+# Validate with debug output
+result = check_recipe(
+    recipe_path=Path("recipes/Google/chrome.yaml"),
+    output_dir=Path("./downloads"),
+    debug=True
+)
 
 # Load configuration
 config = load_effective_config(Path("recipes/Google/chrome.yaml"))
@@ -220,6 +252,7 @@ apps:
 
 ### v0.1.0 (Current)
 - ✅ CLI with `check` command
+- ✅ Verbose and debug output modes
 - ✅ Configuration system with 3-layer merging
 - ✅ HTTP static discovery strategy
 - ✅ MSI ProductVersion extraction
