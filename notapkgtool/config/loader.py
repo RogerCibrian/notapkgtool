@@ -275,12 +275,31 @@ def _inject_dynamic_values(cfg: dict[str, Any]) -> None:
 
 
 # -------------------------------
+# Verbose helpers
+# -------------------------------
+
+
+def _print_yaml_content(data: dict[str, Any], verbose: bool, indent: int = 0) -> None:
+    """Print YAML content in a readable format for verbose mode."""
+    if not verbose:
+        return
+
+    import yaml
+
+    # Convert to YAML string and print with indentation
+    yaml_str = yaml.dump(data, default_flow_style=False, sort_keys=False)
+    for line in yaml_str.split("\n"):
+        if line.strip():  # Skip empty lines
+            print(" " * indent + line)
+
+
+# -------------------------------
 # Public API
 # -------------------------------
 
 
 def load_effective_config(
-    recipe_path: Path, *, vendor: str | None = None
+    recipe_path: Path, *, vendor: str | None = None, verbose: bool = False
 ) -> dict[str, Any]:
     """
     Load and merge the effective configuration for a recipe.
@@ -303,8 +322,12 @@ def load_effective_config(
       SystemExit on YAML parse errors (with chained context),
       FileNotFoundError if the recipe file itself is missing.
     """
+    from notapkgtool.cli import print_verbose
+
     recipe_path = recipe_path.resolve()
     recipe_dir = recipe_path.parent
+
+    print_verbose("CONFIG", f"Loading recipe: {recipe_path}")
 
     # 1) Read recipe
     recipe_obj = _load_yaml_file(recipe_path)
@@ -314,36 +337,76 @@ def load_effective_config(
 
     # 2) Find defaults root
     defaults_root = _find_defaults_root(recipe_dir)
+    if defaults_root and verbose:
+        print_verbose("CONFIG", f"Found defaults root: {defaults_root}")
 
     merged: dict[str, Any] = {}
+    layers_merged = 0
 
     org_defaults_path: Path | None = None
-    # vendor_defaults_path: Path | None = None
     vendor_name: str | None = vendor
 
     if defaults_root:
         # 3) Load org defaults
         org_defaults_path = defaults_root / "org.yaml"
         if org_defaults_path.exists():
+            print_verbose(
+                "CONFIG",
+                f"Loading: {org_defaults_path.relative_to(defaults_root.parent)}",
+            )
             org_defaults = _load_yaml_file(org_defaults_path)
             if isinstance(org_defaults, dict):
+                if verbose:
+                    print_verbose("CONFIG", "--- Content from org.yaml ---")
+                    _print_yaml_content(org_defaults, verbose)
                 merged = _deep_merge_dicts(merged, org_defaults)
+                layers_merged += 1
 
         # 4) Determine vendor
         if vendor_name is None:
             vendor_name = _detect_vendor(recipe_path, recipe_obj)
 
+        if vendor_name and verbose:
+            print_verbose("CONFIG", f"Detected vendor: {vendor_name}")
+
         # 5) Load vendor defaults if present
         if vendor_name:
             candidate = defaults_root / "vendors" / f"{vendor_name}.yaml"
             if candidate.exists():
-                # vendor_defaults_path = candidate
+                print_verbose(
+                    "CONFIG", f"Loading: {candidate.relative_to(defaults_root.parent)}"
+                )
                 vendor_defaults = _load_yaml_file(candidate)
                 if isinstance(vendor_defaults, dict):
+                    if verbose:
+                        print_verbose(
+                            "CONFIG", f"--- Content from {vendor_name}.yaml ---"
+                        )
+                        _print_yaml_content(vendor_defaults, verbose)
                     merged = _deep_merge_dicts(merged, vendor_defaults)
+                    layers_merged += 1
+
+    # Show recipe content if verbose
+    if verbose:
+        print_verbose("CONFIG", f"Loading: {recipe_path.name}")
+        print_verbose("CONFIG", f"--- Content from {recipe_path.name} ---")
+        _print_yaml_content(recipe_obj, verbose)
 
     # 6) Merge recipe on top
     merged = _deep_merge_dicts(merged, recipe_obj)
+    layers_merged += 1
+
+    if verbose:
+        print_verbose("CONFIG", f"Deep merging {layers_merged} layer(s)")
+        # Show final config structure
+        top_level_keys = list(merged.keys())
+        print_verbose(
+            "CONFIG",
+            f"Final config has {len(top_level_keys)} top-level keys: {', '.join(top_level_keys)}",
+        )
+        # Show the complete merged configuration
+        print_verbose("CONFIG", "--- Final Merged Configuration ---")
+        _print_yaml_content(merged, verbose)
 
     # 7) Resolve relative paths against the RECIPE directory
     _resolve_known_paths(merged, recipe_dir)

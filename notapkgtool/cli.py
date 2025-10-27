@@ -43,10 +43,35 @@ Notes
 from __future__ import annotations
 
 import argparse
-import sys
 from pathlib import Path
+import sys
 
 from notapkgtool.core import check_recipe
+
+# Global verbose flag set from CLI args
+_verbose = False
+
+
+def set_verbose(enabled: bool) -> None:
+    """Set the global verbose flag."""
+    global _verbose
+    _verbose = enabled
+
+
+def is_verbose() -> bool:
+    """Check if verbose mode is enabled."""
+    return _verbose
+
+
+def print_step(step: int, total: int, message: str) -> None:
+    """Print a step indicator for non-verbose mode."""
+    print(f"[{step}/{total}] {message}")
+
+
+def print_verbose(prefix: str, message: str) -> None:
+    """Print a verbose log message (only when verbose mode is active)."""
+    if _verbose:
+        print(f"[{prefix}] {message}")
 
 
 def cmd_check(args: argparse.Namespace) -> int:
@@ -79,6 +104,9 @@ def cmd_check(args: argparse.Namespace) -> int:
     - Prints progress and results to stdout
     - Prints errors to stdout (with optional traceback if verbose)
     """
+    # Set global verbose flag
+    set_verbose(args.verbose)
+
     recipe_path = Path(args.recipe).resolve()
     output_dir = Path(args.output_dir).resolve()
 
@@ -91,7 +119,7 @@ def cmd_check(args: argparse.Namespace) -> int:
     print()
 
     try:
-        result = check_recipe(recipe_path, output_dir)
+        result = check_recipe(recipe_path, output_dir, verbose=args.verbose)
     except Exception as err:
         print(f"Error: {err}")
         if args.verbose:

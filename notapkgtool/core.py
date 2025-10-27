@@ -56,7 +56,9 @@ from notapkgtool.config.loader import load_effective_config
 from notapkgtool.discovery import get_strategy
 
 
-def check_recipe(recipe_path: Path, output_dir: Path) -> dict[str, Any]:
+def check_recipe(
+    recipe_path: Path, output_dir: Path, verbose: bool = False
+) -> dict[str, Any]:
     """
     Validate a recipe by loading config, discovering version, and downloading.
 
@@ -136,10 +138,14 @@ def check_recipe(recipe_path: Path, output_dir: Path) -> dict[str, Any]:
     - Downloaded files are written atomically (.part then renamed)
     - Progress output goes to stdout via the download module
     """
+    from notapkgtool.cli import print_step
+
     # 1. Load and merge configuration
-    config = load_effective_config(recipe_path)
+    print_step(1, 4, "Loading configuration...")
+    config = load_effective_config(recipe_path, verbose=verbose)
 
     # 2. Extract the first app (for now we only process one app per recipe)
+    print_step(2, 4, "Discovering version...")
     apps = config.get("apps", [])
     if not apps:
         raise ValueError(f"No apps defined in recipe: {recipe_path}")
@@ -161,7 +167,12 @@ def check_recipe(recipe_path: Path, output_dir: Path) -> dict[str, Any]:
     strategy = get_strategy(strategy_name)
 
     # 5. Run discovery: download and extract version
-    discovered_version, file_path, sha256 = strategy.discover_version(app, output_dir)
+    print_step(3, 4, "Downloading installer...")
+    discovered_version, file_path, sha256 = strategy.discover_version(
+        app, output_dir, verbose=verbose
+    )
+
+    print_step(4, 4, "Extracting version...")
 
     # 6. Return results
     return {
