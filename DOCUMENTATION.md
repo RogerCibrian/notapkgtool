@@ -133,6 +133,7 @@ config = load_effective_config(Path("recipes/Google/chrome.yaml"))
 
 ### ✅ Implemented
 - CLI with `check` command
+- Three output modes: normal, verbose, and debug
 - Config loading and merging
 - HTTP static discovery strategy
 - Robust file downloads
@@ -162,15 +163,45 @@ sudo apt-get install msitools
 ### Usage
 
 ```bash
-# Validate a recipe
-python -m notapkgtool.cli check recipes/Google/chrome.yaml
+# Validate a recipe (normal output)
+napt check recipes/Google/chrome.yaml
 
 # Custom output directory
-python -m notapkgtool.cli check recipes/Google/chrome.yaml --output-dir ./cache
+napt check recipes/Google/chrome.yaml --output-dir ./cache
 
-# Verbose errors
-python -m notapkgtool.cli check recipes/Google/chrome.yaml --verbose
+# Verbose output (shows progress details and operations)
+napt check recipes/Google/chrome.yaml --verbose
+
+# Debug output (shows full config dumps and backend details)
+napt check recipes/Google/chrome.yaml --debug
 ```
+
+### Output Verbosity Modes
+
+NAPT supports three output modes to suit different debugging needs:
+
+**1. Normal Mode** (default - no flags)
+- Minimal, clean output with progress steps
+- Download progress percentage
+- Final validation results
+- Suitable for production automation
+
+**2. Verbose Mode** (`-v` or `--verbose`)
+- All normal output plus:
+  - `[CONFIG]` Configuration loading and merging details
+  - `[DISCOVERY]` Discovery strategy selection
+  - `[HTTP]` HTTP request/response status, headers, redirects
+  - `[FILE]` File operations, paths, SHA-256 hashes
+  - `[VERSION]` Version extraction methods and results
+- Useful for understanding workflow and troubleshooting issues
+
+**3. Debug Mode** (`-d` or `--debug`)
+- All verbose output plus:
+  - Complete YAML content from all configuration layers
+  - Final merged configuration structure
+  - Backend selection attempts (e.g., msilib vs PowerShell COM)
+  - Maximum detail for deep troubleshooting
+- Note: Debug mode automatically enables verbose mode
 
 ### Programmatic API
 
@@ -178,9 +209,24 @@ python -m notapkgtool.cli check recipes/Google/chrome.yaml --verbose
 from pathlib import Path
 from notapkgtool.core import check_recipe
 
+# Normal mode
 result = check_recipe(
     recipe_path=Path("recipes/Google/chrome.yaml"),
     output_dir=Path("./downloads"),
+)
+
+# Verbose mode
+result = check_recipe(
+    recipe_path=Path("recipes/Google/chrome.yaml"),
+    output_dir=Path("./downloads"),
+    verbose=True,
+)
+
+# Debug mode
+result = check_recipe(
+    recipe_path=Path("recipes/Google/chrome.yaml"),
+    output_dir=Path("./downloads"),
+    debug=True,
 )
 
 print(f"App: {result['app_name']}")

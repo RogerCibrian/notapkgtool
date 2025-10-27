@@ -279,9 +279,9 @@ def _inject_dynamic_values(cfg: dict[str, Any]) -> None:
 # -------------------------------
 
 
-def _print_yaml_content(data: dict[str, Any], verbose: bool, indent: int = 0) -> None:
-    """Print YAML content in a readable format for verbose mode."""
-    if not verbose:
+def _print_yaml_content(data: dict[str, Any], debug: bool, indent: int = 0) -> None:
+    """Print YAML content in a readable format for debug mode."""
+    if not debug:
         return
 
     import yaml
@@ -299,7 +299,11 @@ def _print_yaml_content(data: dict[str, Any], verbose: bool, indent: int = 0) ->
 
 
 def load_effective_config(
-    recipe_path: Path, *, vendor: str | None = None, verbose: bool = False
+    recipe_path: Path,
+    *,
+    vendor: str | None = None,
+    verbose: bool = False,
+    debug: bool = False,
 ) -> dict[str, Any]:
     """
     Load and merge the effective configuration for a recipe.
@@ -322,7 +326,7 @@ def load_effective_config(
       SystemExit on YAML parse errors (with chained context),
       FileNotFoundError if the recipe file itself is missing.
     """
-    from notapkgtool.cli import print_verbose
+    from notapkgtool.cli import print_debug, print_verbose
 
     recipe_path = recipe_path.resolve()
     recipe_dir = recipe_path.parent
@@ -356,9 +360,9 @@ def load_effective_config(
             )
             org_defaults = _load_yaml_file(org_defaults_path)
             if isinstance(org_defaults, dict):
-                if verbose:
-                    print_verbose("CONFIG", "--- Content from org.yaml ---")
-                    _print_yaml_content(org_defaults, verbose)
+                if debug:
+                    print_debug("CONFIG", "--- Content from org.yaml ---")
+                    _print_yaml_content(org_defaults, debug)
                 merged = _deep_merge_dicts(merged, org_defaults)
                 layers_merged += 1
 
@@ -378,19 +382,20 @@ def load_effective_config(
                 )
                 vendor_defaults = _load_yaml_file(candidate)
                 if isinstance(vendor_defaults, dict):
-                    if verbose:
-                        print_verbose(
+                    if debug:
+                        print_debug(
                             "CONFIG", f"--- Content from {vendor_name}.yaml ---"
                         )
-                        _print_yaml_content(vendor_defaults, verbose)
+                        _print_yaml_content(vendor_defaults, debug)
                     merged = _deep_merge_dicts(merged, vendor_defaults)
                     layers_merged += 1
 
     # Show recipe content if verbose
     if verbose:
         print_verbose("CONFIG", f"Loading: {recipe_path.name}")
-        print_verbose("CONFIG", f"--- Content from {recipe_path.name} ---")
-        _print_yaml_content(recipe_obj, verbose)
+    if debug:
+        print_debug("CONFIG", f"--- Content from {recipe_path.name} ---")
+        _print_yaml_content(recipe_obj, debug)
 
     # 6) Merge recipe on top
     merged = _deep_merge_dicts(merged, recipe_obj)
@@ -404,9 +409,10 @@ def load_effective_config(
             "CONFIG",
             f"Final config has {len(top_level_keys)} top-level keys: {', '.join(top_level_keys)}",
         )
-        # Show the complete merged configuration
-        print_verbose("CONFIG", "--- Final Merged Configuration ---")
-        _print_yaml_content(merged, verbose)
+    # Show the complete merged configuration in debug mode
+    if debug:
+        print_debug("CONFIG", "--- Final Merged Configuration ---")
+        _print_yaml_content(merged, debug)
 
     # 7) Resolve relative paths against the RECIPE directory
     _resolve_known_paths(merged, recipe_dir)

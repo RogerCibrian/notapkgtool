@@ -57,7 +57,7 @@ from notapkgtool.discovery import get_strategy
 
 
 def check_recipe(
-    recipe_path: Path, output_dir: Path, verbose: bool = False
+    recipe_path: Path, output_dir: Path, verbose: bool = False, debug: bool = False
 ) -> dict[str, Any]:
     """
     Validate a recipe by loading config, discovering version, and downloading.
@@ -142,7 +142,7 @@ def check_recipe(
 
     # 1. Load and merge configuration
     print_step(1, 4, "Loading configuration...")
-    config = load_effective_config(recipe_path, verbose=verbose)
+    config = load_effective_config(recipe_path, verbose=verbose, debug=debug)
 
     # 2. Extract the first app (for now we only process one app per recipe)
     print_step(2, 4, "Discovering version...")
@@ -169,7 +169,7 @@ def check_recipe(
     # 5. Run discovery: download and extract version
     print_step(3, 4, "Downloading installer...")
     discovered_version, file_path, sha256 = strategy.discover_version(
-        app, output_dir, verbose=verbose
+        app, output_dir, verbose=verbose, debug=debug
     )
 
     print_step(4, 4, "Extracting version...")

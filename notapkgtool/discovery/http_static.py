@@ -98,7 +98,11 @@ class HttpStaticStrategy:
     """
 
     def discover_version(
-        self, app_config: dict[str, Any], output_dir: Path, verbose: bool = False
+        self,
+        app_config: dict[str, Any],
+        output_dir: Path,
+        verbose: bool = False,
+        debug: bool = False,
     ) -> tuple[DiscoveredVersion, Path, str]:
         """
         Download from static URL and extract version from the file.
@@ -143,7 +147,7 @@ class HttpStaticStrategy:
         # Download the file
         try:
             file_path, sha256, _headers = download_file(
-                url, output_dir, verbose=verbose
+                url, output_dir, verbose=verbose, debug=debug
             )
         except Exception as err:
             raise RuntimeError(f"Failed to download {url}: {err}") from err
@@ -152,7 +156,7 @@ class HttpStaticStrategy:
         if version_type == "msi_product_version_from_file":
             try:
                 discovered = version_from_msi_product_version(
-                    file_path, verbose=verbose
+                    file_path, verbose=verbose, debug=debug
                 )
             except Exception as err:
                 raise RuntimeError(
