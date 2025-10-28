@@ -1,0 +1,102 @@
+apiVersion: napt/v1
+project: "napt - Example Apps"
+
+apps:
+  - name: "Fictional App via JSON API"
+    id: "napt-json-api-example"
+
+    source:
+      strategy: http_json
+      api_url: "https://api.vendor.com/latest"
+      version_path: "version"
+      download_url_path: "download_url"
+      headers:
+        Accept: "application/json"
+        # Optional authentication (uncomment if needed)
+        # Authorization: "Bearer ${API_TOKEN}"
+
+    psadt:
+      app_vars:
+        AppName: "Fictional App"
+        AppVersion: "${discovered_version}"
+        AppArch: "x64"
+      install: |
+        # Example install for MSI from JSON API
+        Execute-Process `
+          -Path "$dirFiles\app-${discovered_version}.msi" `
+          -Parameters "/qn /norestart" `
+          -WindowStyle Hidden
+      uninstall: |
+        # Example uninstall
+        $app = Get-InstalledApplication -Name "Fictional App" -Exact
+        if ($app -and $app.ProductCode) {
+          Execute-Process -Path "msiexec.exe" `
+            -Parameters "/x $($app.ProductCode) /qn /norestart" `
+            -WindowStyle Hidden
+        } else {
+          Write-Log -Message "App not found; nothing to uninstall."
+        }
+
+---
+# Example 2: Nested JSON structure
+apiVersion: napt/v1
+project: "napt - Example Apps"
+
+apps:
+  - name: "Nested JSON API Example"
+    id: "napt-nested-json-example"
+
+    source:
+      strategy: http_json
+      api_url: "https://api.vendor.com/releases"
+      version_path: "release.stable.version"
+      download_url_path: "release.stable.platforms.windows.x64"
+      method: "GET"
+      headers:
+        Accept: "application/json"
+
+    psadt:
+      app_vars:
+        AppName: "Nested API App"
+        AppVersion: "${discovered_version}"
+        AppArch: "x64"
+      install: |
+        Execute-Process `
+          -Path "$dirFiles\installer.exe" `
+          -Parameters "/S" `
+          -WindowStyle Hidden
+
+---
+# Example 3: POST request with body
+apiVersion: napt/v1
+project: "napt - Example Apps"
+
+apps:
+  - name: "POST API Example"
+    id: "napt-post-api-example"
+
+    source:
+      strategy: http_json
+      api_url: "https://api.vendor.com/query"
+      version_path: "result.version"
+      download_url_path: "result.download.url"
+      method: "POST"
+      headers:
+        Accept: "application/json"
+        Content-Type: "application/json"
+      body:
+        platform: "windows"
+        arch: "x64"
+        channel: "stable"
+
+    psadt:
+      app_vars:
+        AppName: "POST API App"
+        AppVersion: "${discovered_version}"
+        AppArch: "x64"
+      install: |
+        Execute-Process `
+          -Path "$dirFiles\setup.exe" `
+          -Parameters "--silent --install" `
+          -WindowStyle Hidden
+

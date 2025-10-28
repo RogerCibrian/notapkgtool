@@ -139,6 +139,7 @@ Strategies are registered at module import time and dynamically loaded based on 
 | **http_static** | File metadata | Fixed URLs with embedded versions | Medium | Medium |
 | **url_regex** | URL pattern | Version-encoded URLs | Low | Fast |
 | **github_release** | Git tags | GitHub-hosted releases | Medium | Medium |
+| **http_json** | JSON API | Programmatic APIs with metadata | Low | Fast |
 
 ### Strategy Comparison
 
@@ -233,6 +234,42 @@ source:
 
 **See also:** [`notapkgtool/discovery/github_release.py`](notapkgtool/discovery/github_release.py)
 
+#### http_json
+
+**Best for:**
+- Vendors with JSON REST APIs (Microsoft, Mozilla, etc.)
+- Cloud services with version endpoints
+- CDNs that provide metadata APIs
+- APIs requiring authentication or custom headers
+
+**Pros:**
+- Fast version discovery (no download needed)
+- Handles complex JSON structures with JSONPath
+- Support for POST requests and custom headers
+- Environment variable expansion for tokens
+- Works with any file type
+
+**Cons:**
+- Requires vendor to provide JSON API
+- Need to understand API response structure
+- JSONPath expressions can be complex for nested data
+
+**Configuration:**
+```yaml
+source:
+  strategy: http_json
+  api_url: "https://api.vendor.com/latest"
+  version_path: "version"
+  download_url_path: "download_url"
+  method: "GET"                          # Optional
+  headers:                               # Optional
+    Authorization: "Bearer ${API_TOKEN}"
+  body:                                  # Optional (for POST)
+    platform: "windows"
+```
+
+**See also:** [`notapkgtool/discovery/http_json.py`](notapkgtool/discovery/http_json.py)
+
 ### Decision Guide
 
 Use this flowchart to choose the right strategy:
@@ -242,19 +279,24 @@ Is the app on GitHub with releases?
 ├─ YES → Use github_release
 │         (easiest for OSS projects)
 │
-└─ NO → Does the URL contain the version?
-        ├─ YES → Use url_regex
-        │         (fast, no download needed)
+└─ NO → Does the vendor provide a JSON API?
+        ├─ YES → Use http_json
+        │         (fast, flexible, modern)
         │
-        └─ NO → Use http_static
-                  (reliable, version from file)
+        └─ NO → Does the URL contain the version?
+                ├─ YES → Use url_regex
+                │         (fast, no download needed)
+                │
+                └─ NO → Use http_static
+                          (reliable, version from file)
 ```
 
 **Additional considerations:**
 
+- **Modern APIs**: If vendor provides JSON API, prefer `http_json` (fastest, most flexible)
 - **Rate limits**: If checking GitHub frequently, use `github_release` with a token
 - **Accuracy**: If version accuracy is critical, prefer `http_static` (version from actual file)
-- **Performance**: If you need to check versions without downloading, prefer `url_regex`
+- **Performance**: For version checks without downloading, prefer `url_regex` or `http_json`
 - **Future-proofing**: `http_static` is most resilient to URL changes
 
 ### Configuration Reference
@@ -341,6 +383,35 @@ source:
   token: "${GITHUB_TOKEN}"
 ```
 
+#### http_json Configuration
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `api_url` | string | ✅ Yes | - | JSON API endpoint URL |
+| `version_path` | string | ✅ Yes | - | JSONPath to version field |
+| `download_url_path` | string | ✅ Yes | - | JSONPath to download URL |
+| `method` | string | ❌ No | `"GET"` | HTTP method (GET or POST) |
+| `headers` | dict | ❌ No | `{}` | Custom HTTP headers |
+| `body` | dict | ❌ No | `{}` | Request body (for POST) |
+| `timeout` | int | ❌ No | `30` | Request timeout in seconds |
+
+**JSONPath syntax:**
+- Simple: `version` → `{"version": "1.2.3"}`
+- Nested: `release.version` → `{"release": {"version": "1.2.3"}}`
+- Array: `[0].version` → `[{"version": "1.2.3"}]`
+- Deep: `data.stable.platforms.windows.x64`
+
+**Example:**
+```yaml
+source:
+  strategy: http_json
+  api_url: "https://api.vendor.com/releases"
+  version_path: "release.stable.version"
+  download_url_path: "release.stable.platforms.windows.x64"
+  headers:
+    Authorization: "Bearer ${API_TOKEN}"
+```
+
 ### Common Patterns
 
 #### Pattern 1: Simple Fixed URL (Chrome)
@@ -387,6 +458,40 @@ source:
   repo: "vendor/app"
   prerelease: true  # Include beta/RC versions
   version_pattern: "v?([0-9.]+-[a-z0-9]+)"  # Capture prerelease suffix
+```
+
+#### Pattern 6: Simple JSON API
+```yaml
+source:
+  strategy: http_json
+  api_url: "https://api.vendor.com/latest"
+  version_path: "version"
+  download_url_path: "download_url"
+```
+
+#### Pattern 7: Nested JSON with Authentication
+```yaml
+source:
+  strategy: http_json
+  api_url: "https://api.vendor.com/releases"
+  version_path: "stable.version"
+  download_url_path: "stable.platforms.windows.x64"
+  headers:
+    Authorization: "Bearer ${API_TOKEN}"
+```
+
+#### Pattern 8: POST Request with Query Parameters
+```yaml
+source:
+  strategy: http_json
+  api_url: "https://api.vendor.com/query"
+  version_path: "result.version"
+  download_url_path: "result.url"
+  method: "POST"
+  body:
+    platform: "windows"
+    arch: "x64"
+    channel: "stable"
 ```
 
 ### Error Handling
@@ -469,13 +574,13 @@ source:
 - HTTP static discovery strategy
 - URL regex discovery strategy
 - GitHub release discovery strategy
+- HTTP JSON API discovery strategy
 - Robust file downloads
 - Version comparison (semver, numeric, lexicographic)
 - MSI ProductVersion extraction
 - Cross-platform support
 
 ### 🚧 Planned
-- Additional discovery strategies (http_json)
 - PSADT package building
 - Intune upload
 - Deployment wave management
