@@ -229,21 +229,6 @@ NAPT uses **squash and merge** for most Pull Requests to maintain a clean, reada
 - ✅ **Better changelogs**: No noise from "WIP" or "fix typo" commits
 - ✅ **Simple bisecting**: Each commit represents a complete, working change
 
-### GitHub Settings
-
-**Recommended repository settings:**
-
-- ✅ **Allow squash merging** (default method)
-- ✅ **Allow merge commits** (for exceptional cases)
-- ❌ **Disable rebase merging** (can rewrite history, adds complexity)
-
-To configure on GitHub:
-1. Go to Settings → General → Pull Requests
-2. Check "Allow squash merging" (set as default)
-3. Check "Allow merge commits"
-4. Uncheck "Allow rebase merging"
-5. Check "Automatically delete head branches"
-
 ### When to Use Each Strategy
 
 **Squash and Merge (Default - 95% of PRs)**

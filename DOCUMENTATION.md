@@ -17,7 +17,8 @@ notapkgtool/
 ├── discovery/
 │   ├── __init__.py          # Discovery package exports
 │   ├── base.py              # Strategy protocol and registry
-│   └── http_static.py       # Static URL download strategy
+│   ├── http_static.py       # Static URL download strategy
+│   └── url_regex.py         # URL regex discovery strategy
 ├── io/
 │   ├── __init__.py          # I/O package exports
 │   ├── download.py          # Robust HTTP downloads
@@ -29,7 +30,7 @@ notapkgtool/
     ├── __init__.py          # Versioning package exports
     ├── keys.py              # Version comparison logic
     ├── msi.py               # MSI ProductVersion extraction
-    └── url_regex.py         # URL regex extraction (planned)
+    └── url_regex.py         # URL regex extraction helper
 ```
 
 ## Documentation Standards
@@ -136,13 +137,14 @@ config = load_effective_config(Path("recipes/Google/chrome.yaml"))
 - Three output modes: normal, verbose, and debug
 - Config loading and merging
 - HTTP static discovery strategy
+- URL regex discovery strategy
 - Robust file downloads
 - Version comparison (semver, numeric, lexicographic)
 - MSI ProductVersion extraction
 - Cross-platform support
 
 ### 🚧 Planned
-- Additional discovery strategies (url_regex, github_release, http_json)
+- Additional discovery strategies (github_release, http_json)
 - PSADT package building
 - Intune upload
 - Deployment wave management

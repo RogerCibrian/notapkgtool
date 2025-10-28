@@ -18,10 +18,12 @@ Available Strategies
 http_static : HttpStaticStrategy
     Download from a fixed URL and extract version from the file itself.
     Supports MSI ProductVersion extraction.
+url_regex : UrlRegexStrategy
+    Extract version from URL patterns using regex, then download.
+    Fast version discovery without downloading first.
 
 Planned Strategies
 ------------------
-url_regex : Parse version from URL patterns using regex
 github_release : Fetch from GitHub releases API
 http_json : Query JSON API endpoints for version and download URL
 
@@ -58,5 +60,9 @@ Register and use a custom strategy:
 """
 
 from .base import DiscoveryStrategy, get_strategy
+
+# Import strategy modules to trigger self-registration
+from . import http_static  # noqa: F401
+from . import url_regex  # noqa: F401
 
 __all__ = ["DiscoveryStrategy", "get_strategy"]

@@ -113,10 +113,12 @@ notapkgtool/
 │   └── loader.py          # YAML loading and 3-layer merging
 ├── discovery/
 │   ├── base.py            # Strategy protocol and registry
-│   └── http_static.py     # Static URL downloads
+│   ├── http_static.py     # Static URL downloads
+│   └── url_regex.py       # URL regex discovery strategy
 ├── versioning/
 │   ├── keys.py            # Version comparison (semver, numeric)
-│   └── msi.py             # MSI ProductVersion extraction
+│   ├── msi.py             # MSI ProductVersion extraction
+│   └── url_regex.py       # URL regex extraction helper
 ├── io/
 │   ├── download.py        # Robust HTTP downloads with retries
 │   └── upload.py          # Upload adapters (planned)
@@ -138,8 +140,8 @@ Configurations are deep-merged with "last wins" semantics.
 
 Pluggable strategies for obtaining application installers:
 
-- **`http_static`** ✅ - Download from fixed URLs
-- **`url_regex`** 🚧 - Extract version from URL patterns
+- **`http_static`** ✅ - Download from fixed URLs, extract version from file
+- **`url_regex`** ✅ - Extract version from URL patterns before download
 - **`github_release`** 🚧 - Fetch from GitHub releases
 - **`http_json`** 🚧 - Query JSON API endpoints
 
@@ -255,12 +257,13 @@ apps:
 - ✅ Verbose and debug output modes
 - ✅ Configuration system with 3-layer merging
 - ✅ HTTP static discovery strategy
+- ✅ URL regex discovery strategy
 - ✅ MSI ProductVersion extraction
 - ✅ Version comparison utilities
 - ✅ Cross-platform support
 
 ### v0.2.0 (Planned)
-- 🚧 Additional discovery strategies (url_regex, github_release)
+- 🚧 Additional discovery strategies (github_release, http_json)
 - 🚧 PSADT package building
 - 🚧 .intunewin generation
 
