@@ -17,6 +17,7 @@ import requests_mock
 
 from notapkgtool.discovery.base import get_strategy, register_strategy
 from notapkgtool.discovery.github_release import GithubReleaseStrategy
+from notapkgtool.discovery.http_json import HttpJsonStrategy
 from notapkgtool.discovery.http_static import HttpStaticStrategy
 from notapkgtool.versioning import DiscoveredVersion
 
@@ -669,3 +670,351 @@ class TestGithubReleaseStrategy:
             )
 
         assert discovered.version == "2.0.0-rc1"
+
+
+class TestHttpJsonStrategy:
+    """Tests for HTTP JSON API discovery strategy."""
+
+    def test_discover_version_simple_json(self, tmp_test_dir):
+        """Test discovering version from simple flat JSON response."""
+        app_config = {
+            "source": {
+                "api_url": "https://api.vendor.com/latest",
+                "version_path": "version",
+                "download_url_path": "download_url",
+            }
+        }
+
+        strategy = HttpJsonStrategy()
+
+        mock_api_response = {
+            "version": "1.2.3",
+            "download_url": "https://cdn.vendor.com/app-1.2.3.msi",
+        }
+
+        fake_installer = b"fake installer content"
+
+        with requests_mock.Mocker() as m:
+            # Mock API
+            m.get("https://api.vendor.com/latest", json=mock_api_response)
+            # Mock download
+            m.get(
+                "https://cdn.vendor.com/app-1.2.3.msi",
+                content=fake_installer,
+                headers={"Content-Length": str(len(fake_installer))},
+            )
+
+            discovered, file_path, sha256 = strategy.discover_version(
+                app_config, tmp_test_dir
+            )
+
+        assert discovered.version == "1.2.3"
+        assert discovered.source == "http_json"
+        assert file_path.exists()
+        assert isinstance(sha256, str)
+        assert len(sha256) == 64
+
+    def test_discover_version_nested_json(self, tmp_test_dir):
+        """Test discovering version from nested JSON structure."""
+        app_config = {
+            "source": {
+                "api_url": "https://api.vendor.com/releases",
+                "version_path": "release.stable.version",
+                "download_url_path": "release.stable.platforms.windows.x64",
+            }
+        }
+
+        strategy = HttpJsonStrategy()
+
+        mock_api_response = {
+            "release": {
+                "stable": {
+                    "version": "2024.10.28",
+                    "platforms": {
+                        "windows": {"x64": "https://cdn.vendor.com/win-x64.msi"}
+                    },
+                }
+            }
+        }
+
+        fake_installer = b"fake nested installer"
+
+        with requests_mock.Mocker() as m:
+            m.get("https://api.vendor.com/releases", json=mock_api_response)
+            m.get(
+                "https://cdn.vendor.com/win-x64.msi",
+                content=fake_installer,
+                headers={"Content-Length": str(len(fake_installer))},
+            )
+
+            discovered, file_path, sha256 = strategy.discover_version(
+                app_config, tmp_test_dir
+            )
+
+        assert discovered.version == "2024.10.28"
+
+    def test_discover_version_array_indexing(self, tmp_test_dir):
+        """Test extracting from JSON arrays using array indexing."""
+        app_config = {
+            "source": {
+                "api_url": "https://api.vendor.com/releases",
+                "version_path": "releases[0].version",
+                "download_url_path": "releases[0].url",
+            }
+        }
+
+        strategy = HttpJsonStrategy()
+
+        mock_api_response = {
+            "releases": [
+                {"version": "3.0.0", "url": "https://cdn.vendor.com/v3.msi"},
+                {"version": "2.9.9", "url": "https://cdn.vendor.com/v2.msi"},
+            ]
+        }
+
+        fake_installer = b"fake v3 installer"
+
+        with requests_mock.Mocker() as m:
+            m.get("https://api.vendor.com/releases", json=mock_api_response)
+            m.get(
+                "https://cdn.vendor.com/v3.msi",
+                content=fake_installer,
+                headers={"Content-Length": str(len(fake_installer))},
+            )
+
+            discovered, file_path, sha256 = strategy.discover_version(
+                app_config, tmp_test_dir
+            )
+
+        assert discovered.version == "3.0.0"
+
+    def test_discover_version_with_custom_headers(self, tmp_test_dir):
+        """Test that custom headers are sent with API request."""
+        app_config = {
+            "source": {
+                "api_url": "https://api.vendor.com/latest",
+                "version_path": "version",
+                "download_url_path": "download_url",
+                "headers": {
+                    "Authorization": "Bearer test_token_123",
+                    "Accept": "application/json",
+                },
+            }
+        }
+
+        strategy = HttpJsonStrategy()
+
+        mock_api_response = {
+            "version": "1.0.0",
+            "download_url": "https://cdn.vendor.com/app.msi",
+        }
+
+        fake_installer = b"fake content"
+
+        with requests_mock.Mocker() as m:
+            api_mock = m.get("https://api.vendor.com/latest", json=mock_api_response)
+            m.get(
+                "https://cdn.vendor.com/app.msi",
+                content=fake_installer,
+                headers={"Content-Length": str(len(fake_installer))},
+            )
+
+            discovered, file_path, sha256 = strategy.discover_version(
+                app_config, tmp_test_dir
+            )
+
+            # Verify headers were sent
+            assert api_mock.called
+            assert "Authorization" in api_mock.last_request.headers
+            assert (
+                api_mock.last_request.headers["Authorization"]
+                == "Bearer test_token_123"
+            )
+            assert api_mock.last_request.headers["Accept"] == "application/json"
+
+        assert discovered.version == "1.0.0"
+
+    def test_discover_version_post_request(self, tmp_test_dir):
+        """Test POST requests with JSON body."""
+        app_config = {
+            "source": {
+                "api_url": "https://api.vendor.com/query",
+                "version_path": "version",
+                "download_url_path": "url",
+                "method": "POST",
+                "body": {"platform": "windows", "arch": "x64"},
+            }
+        }
+
+        strategy = HttpJsonStrategy()
+
+        mock_api_response = {
+            "version": "2.0.0",
+            "url": "https://cdn.vendor.com/win-x64.msi",
+        }
+
+        fake_installer = b"fake post installer"
+
+        with requests_mock.Mocker() as m:
+            api_mock = m.post("https://api.vendor.com/query", json=mock_api_response)
+            m.get(
+                "https://cdn.vendor.com/win-x64.msi",
+                content=fake_installer,
+                headers={"Content-Length": str(len(fake_installer))},
+            )
+
+            discovered, file_path, sha256 = strategy.discover_version(
+                app_config, tmp_test_dir
+            )
+
+            # Verify POST body was sent
+            assert api_mock.called
+            assert api_mock.last_request.json() == {
+                "platform": "windows",
+                "arch": "x64",
+            }
+
+        assert discovered.version == "2.0.0"
+
+    def test_discover_version_missing_api_url_raises(self, tmp_test_dir):
+        """Test that missing api_url raises ValueError."""
+        app_config = {"source": {}}
+
+        strategy = HttpJsonStrategy()
+
+        with pytest.raises(ValueError, match="requires 'source.api_url'"):
+            strategy.discover_version(app_config, tmp_test_dir)
+
+    def test_discover_version_missing_version_path_raises(self, tmp_test_dir):
+        """Test that missing version_path raises ValueError."""
+        app_config = {
+            "source": {
+                "api_url": "https://api.vendor.com/latest",
+            }
+        }
+
+        strategy = HttpJsonStrategy()
+
+        with pytest.raises(ValueError, match="requires 'source.version_path'"):
+            strategy.discover_version(app_config, tmp_test_dir)
+
+    def test_discover_version_missing_download_url_path_raises(self, tmp_test_dir):
+        """Test that missing download_url_path raises ValueError."""
+        app_config = {
+            "source": {
+                "api_url": "https://api.vendor.com/latest",
+                "version_path": "version",
+            }
+        }
+
+        strategy = HttpJsonStrategy()
+
+        with pytest.raises(ValueError, match="requires 'source.download_url_path'"):
+            strategy.discover_version(app_config, tmp_test_dir)
+
+    def test_discover_version_invalid_method_raises(self, tmp_test_dir):
+        """Test that invalid HTTP method raises ValueError."""
+        app_config = {
+            "source": {
+                "api_url": "https://api.vendor.com/latest",
+                "version_path": "version",
+                "download_url_path": "download_url",
+                "method": "DELETE",
+            }
+        }
+
+        strategy = HttpJsonStrategy()
+
+        with pytest.raises(ValueError, match="Invalid method"):
+            strategy.discover_version(app_config, tmp_test_dir)
+
+    def test_discover_version_api_404_raises(self, tmp_test_dir):
+        """Test that API 404 error raises RuntimeError."""
+        app_config = {
+            "source": {
+                "api_url": "https://api.vendor.com/nonexistent",
+                "version_path": "version",
+                "download_url_path": "download_url",
+            }
+        }
+
+        strategy = HttpJsonStrategy()
+
+        with requests_mock.Mocker() as m:
+            m.get("https://api.vendor.com/nonexistent", status_code=404)
+
+            with pytest.raises(RuntimeError, match="API request failed"):
+                strategy.discover_version(app_config, tmp_test_dir)
+
+    def test_discover_version_invalid_json_raises(self, tmp_test_dir):
+        """Test that invalid JSON response raises RuntimeError."""
+        app_config = {
+            "source": {
+                "api_url": "https://api.vendor.com/latest",
+                "version_path": "version",
+                "download_url_path": "download_url",
+            }
+        }
+
+        strategy = HttpJsonStrategy()
+
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://api.vendor.com/latest",
+                text="This is not JSON",
+                headers={"Content-Type": "text/html"},
+            )
+
+            with pytest.raises(RuntimeError, match="Invalid JSON response"):
+                strategy.discover_version(app_config, tmp_test_dir)
+
+    def test_discover_version_version_path_not_found_raises(self, tmp_test_dir):
+        """Test that missing version path in response raises ValueError."""
+        app_config = {
+            "source": {
+                "api_url": "https://api.vendor.com/latest",
+                "version_path": "nonexistent.version",
+                "download_url_path": "download_url",
+            }
+        }
+
+        strategy = HttpJsonStrategy()
+
+        mock_api_response = {
+            "version": "1.0.0",
+            "download_url": "https://cdn.vendor.com/app.msi",
+        }
+
+        with requests_mock.Mocker() as m:
+            m.get("https://api.vendor.com/latest", json=mock_api_response)
+
+            with pytest.raises(ValueError, match="did not match anything"):
+                strategy.discover_version(app_config, tmp_test_dir)
+
+    def test_discover_version_download_url_path_not_found_raises(self, tmp_test_dir):
+        """Test that missing download URL path in response raises ValueError."""
+        app_config = {
+            "source": {
+                "api_url": "https://api.vendor.com/latest",
+                "version_path": "version",
+                "download_url_path": "nonexistent.url",
+            }
+        }
+
+        strategy = HttpJsonStrategy()
+
+        mock_api_response = {
+            "version": "1.0.0",
+            "download_url": "https://cdn.vendor.com/app.msi",
+        }
+
+        with requests_mock.Mocker() as m:
+            m.get("https://api.vendor.com/latest", json=mock_api_response)
+
+            with pytest.raises(ValueError, match="did not match anything"):
+                strategy.discover_version(app_config, tmp_test_dir)
+
+    def test_get_http_json_strategy(self):
+        """Test that http_json strategy can be retrieved from registry."""
+        strategy = get_strategy("http_json")
+        assert isinstance(strategy, HttpJsonStrategy)
