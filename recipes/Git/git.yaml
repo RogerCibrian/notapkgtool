@@ -1,0 +1,37 @@
+apiVersion: napt/v1
+project: "napt - Windows Apps"
+
+apps:
+  - name: "Git for Windows"
+    id: "napt-git"
+
+    source:
+      strategy: github_release
+      repo: "git-for-windows/git"
+      asset_pattern: "Git-.*-64-bit\\.exe$"
+      version_pattern: "v?([0-9.]+)\\.windows"
+
+    psadt:
+      app_vars:
+        AppName: "Git for Windows"
+        AppVersion: "${discovered_version}"
+        AppArch: "x64"
+      install: |
+        # Git for Windows silent install with default options
+        Execute-Process `
+          -Path "$dirFiles\Git-${discovered_version}-64-bit.exe" `
+          -Parameters "/VERYSILENT /NORESTART /NOCANCEL /SP- /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS /COMPONENTS=`"icons,ext\reg\shellhere,assoc,assoc_sh`"" `
+          -WindowStyle Hidden
+      uninstall: |
+        # Git for Windows uninstall
+        $app = Get-InstalledApplication -Name "Git" -Exact
+        if ($app -and $app.UninstallString) {
+          if ($app.UninstallString -match '^\s*"(.*?)"\s*(.*)$') {
+            Execute-Process -Path $matches[1] -Parameters "/VERYSILENT /NORESTART /SP-" -WindowStyle Hidden
+          } else {
+            Execute-Process -Path $app.UninstallString -Parameters "/VERYSILENT /NORESTART" -WindowStyle Hidden
+          }
+        } else {
+          Write-Log -Message "Git for Windows not found; nothing to uninstall."
+        }
+
