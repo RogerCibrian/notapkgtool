@@ -24,10 +24,9 @@ url_regex : UrlRegexStrategy
 github_release : GithubReleaseStrategy
     Fetch from GitHub releases API and extract version from tags.
     Supports asset pattern matching and authentication.
-
-Planned Strategies
-------------------
-http_json : Query JSON API endpoints for version and download URL
+http_json : HttpJsonStrategy
+    Query JSON API endpoints for version and download URL.
+    Supports JSONPath navigation and custom headers.
 
 Public API
 ----------
@@ -65,6 +64,7 @@ from .base import DiscoveryStrategy, get_strategy
 
 # Import strategy modules to trigger self-registration
 from . import github_release  # noqa: F401
+from . import http_json  # noqa: F401
 from . import http_static  # noqa: F401
 from . import url_regex  # noqa: F401
 
