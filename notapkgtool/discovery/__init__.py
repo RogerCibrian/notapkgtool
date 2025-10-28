@@ -21,10 +21,12 @@ http_static : HttpStaticStrategy
 url_regex : UrlRegexStrategy
     Extract version from URL patterns using regex, then download.
     Fast version discovery without downloading first.
+github_release : GithubReleaseStrategy
+    Fetch from GitHub releases API and extract version from tags.
+    Supports asset pattern matching and authentication.
 
 Planned Strategies
 ------------------
-github_release : Fetch from GitHub releases API
 http_json : Query JSON API endpoints for version and download URL
 
 Public API
@@ -62,6 +64,7 @@ Register and use a custom strategy:
 from .base import DiscoveryStrategy, get_strategy
 
 # Import strategy modules to trigger self-registration
+from . import github_release  # noqa: F401
 from . import http_static  # noqa: F401
 from . import url_regex  # noqa: F401
 
