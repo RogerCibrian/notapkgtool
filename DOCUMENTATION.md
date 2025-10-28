@@ -18,7 +18,8 @@ notapkgtool/
 │   ├── __init__.py          # Discovery package exports
 │   ├── base.py              # Strategy protocol and registry
 │   ├── http_static.py       # Static URL download strategy
-│   └── url_regex.py         # URL regex discovery strategy
+│   ├── url_regex.py         # URL regex discovery strategy
+│   └── github_release.py    # GitHub releases API strategy
 ├── io/
 │   ├── __init__.py          # I/O package exports
 │   ├── download.py          # Robust HTTP downloads
@@ -118,6 +119,335 @@ config = load_effective_config(Path("recipes/Google/chrome.yaml"))
 - ETag and Last-Modified headers
 - Bandwidth-efficient incremental builds
 
+## Discovery Strategies
+
+Discovery strategies are the core mechanism for obtaining application installers and extracting version information. NAPT uses a pluggable strategy pattern that allows different approaches based on vendor requirements.
+
+### Overview
+
+Each strategy implements the `DiscoveryStrategy` protocol and provides a `discover_version()` method that:
+1. Downloads or locates an installer
+2. Extracts version information
+3. Returns a `DiscoveredVersion` object, file path, and SHA-256 hash
+
+Strategies are registered at module import time and dynamically loaded based on the recipe configuration.
+
+### Available Strategies
+
+| Strategy | Version Source | Use Case | Bandwidth | Speed |
+|----------|---------------|----------|-----------|-------|
+| **http_static** | File metadata | Fixed URLs with embedded versions | Medium | Medium |
+| **url_regex** | URL pattern | Version-encoded URLs | Low | Fast |
+| **github_release** | Git tags | GitHub-hosted releases | Medium | Medium |
+
+### Strategy Comparison
+
+#### http_static
+
+**Best for:**
+- Vendors with stable download URLs (e.g., Chrome, Firefox enterprise)
+- MSI installers with ProductVersion embedded
+- When version isn't in URL or easily parseable
+
+**Pros:**
+- Simple and reliable
+- Version directly from installer (most accurate)
+- Works with any URL structure
+
+**Cons:**
+- Must download file before knowing version
+- Requires version extraction from file format
+- Currently only supports MSI ProductVersion
+
+**Configuration:**
+```yaml
+source:
+  strategy: http_static
+  url: "https://vendor.com/installer.msi"
+  version:
+    type: msi_product_version_from_file
+    file: "installer.msi"  # Optional
+```
+
+**See also:** [`notapkgtool/discovery/http_static.py`](notapkgtool/discovery/http_static.py)
+
+#### url_regex
+
+**Best for:**
+- URLs with version numbers embedded (e.g., `app-v1.2.3.msi`)
+- API endpoints that return versioned download URLs
+- When you need to check version without downloading
+
+**Pros:**
+- Fast version discovery (no download needed)
+- Bandwidth-efficient
+- File format agnostic
+- Can decide whether to download before fetching
+
+**Cons:**
+- Requires predictable URL patterns
+- Version may not match actual file version
+- Regex patterns can be complex
+
+**Configuration:**
+```yaml
+source:
+  strategy: url_regex
+  url: "https://vendor.com/app-v1.2.3-setup.msi"
+  version:
+    type: regex_in_url
+    pattern: "app-v(?P<version>[0-9.]+)-setup"
+```
+
+**See also:** [`notapkgtool/discovery/url_regex.py`](notapkgtool/discovery/url_regex.py)
+
+#### github_release
+
+**Best for:**
+- Open-source projects on GitHub (Git, VS Code, Node.js)
+- Projects with semantic versioned tags
+- Multi-platform releases with multiple assets
+
+**Pros:**
+- Direct API access (no web scraping)
+- Automatic latest release detection
+- Asset pattern matching for platform selection
+- Optional authentication for rate limits
+- Prerelease control
+
+**Cons:**
+- Requires GitHub-hosted releases
+- Subject to API rate limits (60/hr unauth, 5000/hr with token)
+- Needs asset pattern for multi-asset releases
+
+**Configuration:**
+```yaml
+source:
+  strategy: github_release
+  repo: "owner/repository"
+  asset_pattern: ".*-64-bit\\.exe$"       # Optional
+  version_pattern: "v?([0-9.]+)"          # Optional
+  prerelease: false                       # Optional
+  token: "${GITHUB_TOKEN}"                # Optional
+```
+
+**See also:** [`notapkgtool/discovery/github_release.py`](notapkgtool/discovery/github_release.py)
+
+### Decision Guide
+
+Use this flowchart to choose the right strategy:
+
+```
+Is the app on GitHub with releases?
+├─ YES → Use github_release
+│         (easiest for OSS projects)
+│
+└─ NO → Does the URL contain the version?
+        ├─ YES → Use url_regex
+        │         (fast, no download needed)
+        │
+        └─ NO → Use http_static
+                  (reliable, version from file)
+```
+
+**Additional considerations:**
+
+- **Rate limits**: If checking GitHub frequently, use `github_release` with a token
+- **Accuracy**: If version accuracy is critical, prefer `http_static` (version from actual file)
+- **Performance**: If you need to check versions without downloading, prefer `url_regex`
+- **Future-proofing**: `http_static` is most resilient to URL changes
+
+### Configuration Reference
+
+#### Common Fields
+
+All strategies support these standard fields:
+
+```yaml
+source:
+  strategy: "<strategy_name>"  # Required: http_static, url_regex, or github_release
+  # Strategy-specific fields below
+```
+
+#### http_static Configuration
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `url` | string | ✅ Yes | - | Direct download URL |
+| `version.type` | string | ✅ Yes | - | Version extraction method |
+| `version.file` | string | ❌ No | (from URL) | Target file for version extraction |
+
+**Supported version types:**
+- `msi_product_version_from_file`: Extract from MSI ProductVersion property
+
+**Example:**
+```yaml
+source:
+  strategy: http_static
+  url: "https://dl.google.com/chrome/install/googlechromestandaloneenterprise64.msi"
+  version:
+    type: msi_product_version_from_file
+```
+
+#### url_regex Configuration
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `url` | string | ✅ Yes | - | URL containing version |
+| `version.type` | string | ✅ Yes | - | Must be `regex_in_url` |
+| `version.pattern` | string | ✅ Yes | - | Regex pattern to extract version |
+
+**Pattern syntax:**
+- Use named capture group: `(?P<version>...)`
+- Or use first capture group: `(...)`
+- Full Python regex syntax supported
+
+**Example:**
+```yaml
+source:
+  strategy: url_regex
+  url: "https://vendor.com/downloads/app-v1.2.3-setup.msi"
+  version:
+    type: regex_in_url
+    pattern: "app-v(?P<version>[0-9.]+)-setup"
+```
+
+#### github_release Configuration
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `repo` | string | ✅ Yes | - | GitHub repo (owner/name) |
+| `asset_pattern` | string | ❌ No | (first asset) | Regex to match asset filename |
+| `version_pattern` | string | ❌ No | `v?([0-9.]+)` | Regex to extract version from tag |
+| `prerelease` | boolean | ❌ No | `false` | Include pre-release versions |
+| `token` | string | ❌ No | - | GitHub auth token (increases rate limit) |
+
+**Pattern syntax:**
+- `asset_pattern`: Standard regex, matches against asset filenames
+- `version_pattern`: Extracts from tag name, supports named groups
+- `token`: Can use environment variables: `${GITHUB_TOKEN}`
+
+**Rate limits:**
+- Unauthenticated: 60 requests/hour per IP
+- Authenticated: 5000 requests/hour per token
+
+**Example:**
+```yaml
+source:
+  strategy: github_release
+  repo: "git-for-windows/git"
+  asset_pattern: "Git-.*-64-bit\\.exe$"
+  version_pattern: "v?([0-9.]+)\\.windows"
+  token: "${GITHUB_TOKEN}"
+```
+
+### Common Patterns
+
+#### Pattern 1: Simple Fixed URL (Chrome)
+```yaml
+source:
+  strategy: http_static
+  url: "https://dl.google.com/chrome/install/googlechromestandaloneenterprise64.msi"
+  version:
+    type: msi_product_version_from_file
+```
+
+#### Pattern 2: Version in URL
+```yaml
+source:
+  strategy: url_regex
+  url: "https://vendor.com/app-1.2.3-installer.msi"
+  version:
+    type: regex_in_url
+    pattern: "app-([0-9.]+)-installer"
+```
+
+#### Pattern 3: GitHub Release (Git for Windows)
+```yaml
+source:
+  strategy: github_release
+  repo: "git-for-windows/git"
+  asset_pattern: "Git-.*-64-bit\\.exe$"
+  version_pattern: "v?([0-9.]+)\\.windows"
+```
+
+#### Pattern 4: Multiple Assets with Platform Selection
+```yaml
+source:
+  strategy: github_release
+  repo: "vendor/app"
+  asset_pattern: "app-windows-x64\\.zip$"  # Select specific platform
+  version_pattern: "v([0-9.]+)"
+```
+
+#### Pattern 5: Pre-release Channels
+```yaml
+source:
+  strategy: github_release
+  repo: "vendor/app"
+  prerelease: true  # Include beta/RC versions
+  version_pattern: "v?([0-9.]+-[a-z0-9]+)"  # Capture prerelease suffix
+```
+
+### Error Handling
+
+All strategies follow consistent error handling patterns:
+
+**ValueError:**
+- Missing required configuration fields
+- Invalid configuration values
+- Pattern match failures
+
+**RuntimeError:**
+- Download failures (network, HTTP errors)
+- API failures (GitHub rate limits, 404s)
+- Version extraction failures
+
+Errors are always chained with `from err` for better debugging:
+```python
+try:
+    strategy.discover_version(config, output_dir)
+except RuntimeError as e:
+    print(f"Discovery failed: {e}")
+    print(f"Caused by: {e.__cause__}")
+```
+
+### Extending with Custom Strategies
+
+To add a custom strategy:
+
+1. **Implement the protocol:**
+```python
+from notapkgtool.discovery.base import register_strategy
+from notapkgtool.versioning.keys import DiscoveredVersion
+from pathlib import Path
+
+class MyStrategy:
+    def discover_version(self, app_config, output_dir):
+        # Your implementation
+        version = "1.0.0"
+        file_path = output_dir / "installer.msi"
+        sha256 = "abc123..."
+        
+        discovered = DiscoveredVersion(
+            version=version,
+            source="my_strategy"
+        )
+        return discovered, file_path, sha256
+```
+
+2. **Register the strategy:**
+```python
+register_strategy("my_strategy", MyStrategy)
+```
+
+3. **Use in recipes:**
+```yaml
+source:
+  strategy: my_strategy
+  # Your custom fields
+```
+
 ## Cross-Platform Support
 
 ### Windows
@@ -138,13 +468,14 @@ config = load_effective_config(Path("recipes/Google/chrome.yaml"))
 - Config loading and merging
 - HTTP static discovery strategy
 - URL regex discovery strategy
+- GitHub release discovery strategy
 - Robust file downloads
 - Version comparison (semver, numeric, lexicographic)
 - MSI ProductVersion extraction
 - Cross-platform support
 
 ### 🚧 Planned
-- Additional discovery strategies (github_release, http_json)
+- Additional discovery strategies (http_json)
 - PSADT package building
 - Intune upload
 - Deployment wave management
@@ -261,5 +592,5 @@ GPL-3.0-only - See LICENSE file for details
 ---
 
 *This documentation reflects the state of NAPT v0.1.0*
-*Last updated: 2025-10-23*
+*Last updated: 2025-10-28*
 

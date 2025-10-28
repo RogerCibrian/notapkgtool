@@ -142,8 +142,10 @@ Pluggable strategies for obtaining application installers:
 
 - **`http_static`** ✅ - Download from fixed URLs, extract version from file
 - **`url_regex`** ✅ - Extract version from URL patterns before download
-- **`github_release`** 🚧 - Fetch from GitHub releases
+- **`github_release`** ✅ - Fetch from GitHub releases API with asset matching
 - **`http_json`** 🚧 - Query JSON API endpoints
+
+> **📚 For detailed comparison, configuration reference, and decision guide, see the [Discovery Strategies](DOCUMENTATION.md#discovery-strategies) section in DOCUMENTATION.md**
 
 ## 💻 Programmatic API
 
@@ -219,6 +221,8 @@ pytest tests/
 
 Create a recipe YAML file in `recipes/<Vendor>/<app>.yaml`:
 
+### HTTP Static Strategy
+
 ```yaml
 apiVersion: napt/v1
 
@@ -250,6 +254,33 @@ apps:
         }
 ```
 
+### GitHub Release Strategy
+
+```yaml
+apiVersion: napt/v1
+
+apps:
+  - name: "Git for Windows"
+    id: "napt-git"
+    
+    source:
+      strategy: github_release
+      repo: "git-for-windows/git"
+      asset_pattern: "Git-.*-64-bit\\.exe$"
+      version_pattern: "v?([0-9.]+)\\.windows"
+    
+    psadt:
+      app_vars:
+        AppName: "Git for Windows"
+        AppVersion: "${discovered_version}"
+        AppArch: "x64"
+      install: |
+        Execute-Process `
+          -Path "$dirFiles\Git-${discovered_version}-64-bit.exe" `
+          -Parameters "/VERYSILENT /NORESTART" `
+          -WindowStyle Hidden
+```
+
 ## 🗺️ Roadmap
 
 ### v0.1.0 (Current)
@@ -258,12 +289,13 @@ apps:
 - ✅ Configuration system with 3-layer merging
 - ✅ HTTP static discovery strategy
 - ✅ URL regex discovery strategy
+- ✅ GitHub release discovery strategy
 - ✅ MSI ProductVersion extraction
 - ✅ Version comparison utilities
 - ✅ Cross-platform support
 
 ### v0.2.0 (Planned)
-- 🚧 Additional discovery strategies (github_release, http_json)
+- 🚧 Additional discovery strategies (http_json)
 - 🚧 PSADT package building
 - 🚧 .intunewin generation
 
