@@ -143,7 +143,7 @@ Pluggable strategies for obtaining application installers:
 - **`http_static`** ✅ - Download from fixed URLs, extract version from file
 - **`url_regex`** ✅ - Extract version from URL patterns before download
 - **`github_release`** ✅ - Fetch from GitHub releases API with asset matching
-- **`http_json`** 🚧 - Query JSON API endpoints
+- **`http_json`** ✅ - Query JSON API endpoints with JSONPath navigation
 
 > **📚 For detailed comparison, configuration reference, and decision guide, see the [Discovery Strategies](DOCUMENTATION.md#discovery-strategies) section in DOCUMENTATION.md**
 
@@ -295,7 +295,6 @@ apps:
 - ✅ Cross-platform support
 
 ### v0.2.0 (Planned)
-- 🚧 Additional discovery strategies (http_json)
 - 🚧 PSADT package building
 - 🚧 .intunewin generation
 
