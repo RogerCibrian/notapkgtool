@@ -114,7 +114,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from notapkgtool.io.download import download_file
+from notapkgtool.io import NotModifiedError, download_file
 from notapkgtool.versioning.keys import DiscoveredVersion
 from notapkgtool.versioning.url_regex import version_from_regex_in_url
 
@@ -138,6 +138,7 @@ class UrlRegexStrategy:
         self,
         app_config: dict[str, Any],
         output_dir: Path,
+        cache: dict[str, Any] | None = None,
         verbose: bool = False,
         debug: bool = False,
     ) -> tuple[DiscoveredVersion, Path, str]:
@@ -155,6 +156,9 @@ class UrlRegexStrategy:
             and source.version.pattern.
         output_dir : Path
             Directory to save the downloaded file.
+        cache : dict, optional
+            Cached state with etag, last_modified, file_path, and sha256
+            for conditional requests.
         verbose : bool, optional
             If True, print verbose logging messages. Default is False.
         debug : bool, optional
@@ -238,13 +242,47 @@ class UrlRegexStrategy:
 
         print_verbose("DISCOVERY", f"Discovered version: {discovered.version}")
 
-        # Now download the file
+        # Extract ETag/Last-Modified from cache if available
+        etag = cache.get("etag") if cache else None
+        last_modified = cache.get("last_modified") if cache else None
+
+        if etag:
+            print_verbose("DISCOVERY", f"Using cached ETag: {etag}")
+        if last_modified:
+            print_verbose("DISCOVERY", f"Using cached Last-Modified: {last_modified}")
+
+        # Now download the file (with conditional request if cache available)
         print_verbose("DISCOVERY", "Downloading installer...")
         try:
-            file_path, sha256, _headers = download_file(
-                url, output_dir, verbose=verbose, debug=debug
+            file_path, sha256, headers = download_file(
+                url,
+                output_dir,
+                etag=etag,
+                last_modified=last_modified,
+                verbose=verbose,
+                debug=debug,
             )
+        except NotModifiedError:
+            # File unchanged (HTTP 304), use cached version
+            print_verbose("DISCOVERY", "File not modified (HTTP 304), using cached version")
+
+            if not cache or "file_path" not in cache or "sha256" not in cache:
+                raise RuntimeError(
+                    "Cache indicates file not modified, but missing cached file info. "
+                    "Try running with --stateless to force re-download."
+                )
+
+            cached_file = Path(cache["file_path"])
+            if not cached_file.exists():
+                raise RuntimeError(
+                    f"Cached file {cached_file} not found. "
+                    f"File may have been deleted. Try running with --stateless."
+                )
+
+            return discovered, cached_file, cache["sha256"]
         except Exception as err:
+            if isinstance(err, RuntimeError):
+                raise
             raise RuntimeError(f"Failed to download {url}: {err}") from err
 
         print_verbose("DISCOVERY", f"Download complete: {file_path.name}")
