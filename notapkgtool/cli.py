@@ -143,7 +143,12 @@ def cmd_check(args: argparse.Namespace) -> int:
 
     try:
         result = check_recipe(
-            recipe_path, output_dir, verbose=args.verbose, debug=args.debug
+            recipe_path,
+            output_dir,
+            state_file=args.state_file if not args.stateless else None,
+            stateless=args.stateless,
+            verbose=args.verbose,
+            debug=args.debug,
         )
     except Exception as err:
         print(f"Error: {err}")
@@ -210,6 +215,17 @@ def main() -> None:
         "--output-dir",
         default="./downloads",
         help="Directory to save downloaded files (default: ./downloads)",
+    )
+    parser_check.add_argument(
+        "--state-file",
+        type=Path,
+        default=Path("state/versions.json"),
+        help="State file for version tracking and ETag caching (default: state/versions.json)",
+    )
+    parser_check.add_argument(
+        "--stateless",
+        action="store_true",
+        help="Disable state tracking (no caching, always download full files)",
     )
     parser_check.add_argument(
         "-v",
