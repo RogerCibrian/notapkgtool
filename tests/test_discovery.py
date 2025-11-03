@@ -1018,3 +1018,215 @@ class TestHttpJsonStrategy:
         """Test that http_json strategy can be retrieved from registry."""
         strategy = get_strategy("http_json")
         assert isinstance(strategy, HttpJsonStrategy)
+
+
+class TestCacheAndETagSupport:
+    """Tests for cache parameter and ETag-based conditional downloads."""
+
+    def test_http_static_with_cache_not_modified(self, tmp_test_dir):
+        """Test http_static with cache when file not modified (HTTP 304)."""
+        from notapkgtool.io import NotModifiedError
+
+        app_config = {
+            "source": {
+                "url": "https://example.com/installer.msi",
+                "version": {"type": "msi_product_version_from_file"},
+            }
+        }
+
+        strategy = HttpStaticStrategy()
+
+        # Create a fake cached file
+        cached_file = tmp_test_dir / "installer.msi"
+        cached_file.write_bytes(b"fake cached msi")
+
+        cache = {
+            "version": "1.0.0",
+            "etag": 'W/"abc123"',
+            "file_path": str(cached_file),
+            "sha256": "cached_sha256",
+        }
+
+        with requests_mock.Mocker() as m:
+            # Mock 304 Not Modified response
+            m.get("https://example.com/installer.msi", status_code=304)
+
+            with patch(
+                "notapkgtool.discovery.http_static.version_from_msi_product_version"
+            ) as mock_extract:
+                mock_extract.return_value = DiscoveredVersion(
+                    version="1.0.0", source="msi_product_version_from_file"
+                )
+
+                discovered, file_path, sha256 = strategy.discover_version(
+                    app_config, tmp_test_dir, cache=cache
+                )
+
+        # Should use cached file
+        assert file_path == cached_file
+        assert sha256 == "cached_sha256"
+        assert discovered.version == "1.0.0"
+
+    def test_github_release_with_cache_not_modified(self, tmp_test_dir):
+        """Test github_release with cache when asset not modified."""
+        from notapkgtool.io import NotModifiedError
+
+        app_config = {
+            "source": {
+                "repo": "owner/repo",
+            }
+        }
+
+        strategy = GithubReleaseStrategy()
+
+        # Create cached file
+        cached_file = tmp_test_dir / "installer.msi"
+        cached_file.write_bytes(b"fake cached installer")
+
+        cache = {
+            "version": "1.2.3",
+            "etag": 'W/"xyz789"',
+            "file_path": str(cached_file),
+            "sha256": "cached_sha_for_github",
+        }
+
+        mock_release = {
+            "tag_name": "v1.2.3",
+            "prerelease": False,
+            "assets": [
+                {
+                    "name": "installer.msi",
+                    "browser_download_url": "https://github.com/owner/repo/releases/download/v1.2.3/installer.msi",
+                }
+            ],
+        }
+
+        with requests_mock.Mocker() as m:
+            # Mock GitHub API
+            m.get(
+                "https://api.github.com/repos/owner/repo/releases/latest",
+                json=mock_release,
+            )
+            # Mock 304 for asset download
+            m.get(
+                "https://github.com/owner/repo/releases/download/v1.2.3/installer.msi",
+                status_code=304,
+            )
+
+            discovered, file_path, sha256 = strategy.discover_version(
+                app_config, tmp_test_dir, cache=cache
+            )
+
+        # Should use cached file
+        assert file_path == cached_file
+        assert sha256 == "cached_sha_for_github"
+        assert discovered.version == "1.2.3"
+
+    def test_http_static_with_cache_modified(self, tmp_test_dir):
+        """Test http_static downloads when file modified (HTTP 200)."""
+        app_config = {
+            "source": {
+                "url": "https://example.com/installer.msi",
+                "version": {"type": "msi_product_version_from_file"},
+            }
+        }
+
+        strategy = HttpStaticStrategy()
+
+        cache = {
+            "version": "1.0.0",
+            "etag": 'W/"old_etag"',
+            "file_path": str(tmp_test_dir / "old_installer.msi"),
+            "sha256": "old_sha256",
+        }
+
+        fake_msi = b"new fake MSI content"
+
+        with requests_mock.Mocker() as m:
+            # Mock 200 response (file changed)
+            m.get(
+                "https://example.com/installer.msi",
+                content=fake_msi,
+                headers={
+                    "Content-Length": str(len(fake_msi)),
+                    "ETag": 'W/"new_etag"',
+                },
+            )
+
+            with patch(
+                "notapkgtool.discovery.http_static.version_from_msi_product_version"
+            ) as mock_extract:
+                mock_extract.return_value = DiscoveredVersion(
+                    version="2.0.0", source="msi_product_version_from_file"
+                )
+
+                discovered, file_path, sha256 = strategy.discover_version(
+                    app_config, tmp_test_dir, cache=cache
+                )
+
+        # Should download new file
+        assert file_path.exists()
+        assert file_path.name == "installer.msi"
+        assert discovered.version == "2.0.0"
+        assert len(sha256) == 64
+
+    def test_strategy_without_cache_works(self, tmp_test_dir):
+        """Test that strategies work without cache (backward compatible)."""
+        app_config = {
+            "source": {
+                "url": "https://example.com/installer.msi",
+                "version": {"type": "msi_product_version_from_file"},
+            }
+        }
+
+        strategy = HttpStaticStrategy()
+
+        fake_msi = b"fake MSI no cache"
+
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://example.com/installer.msi",
+                content=fake_msi,
+                headers={"Content-Length": str(len(fake_msi))},
+            )
+
+            with patch(
+                "notapkgtool.discovery.http_static.version_from_msi_product_version"
+            ) as mock_extract:
+                mock_extract.return_value = DiscoveredVersion(
+                    version="1.0.0", source="msi_product_version_from_file"
+                )
+
+                # Call without cache parameter (None is default)
+                discovered, file_path, sha256 = strategy.discover_version(
+                    app_config, tmp_test_dir
+                )
+
+        assert discovered.version == "1.0.0"
+        assert file_path.exists()
+
+    def test_cache_with_missing_file_raises(self, tmp_test_dir):
+        """Test that cache with missing file raises helpful error."""
+        app_config = {
+            "source": {
+                "url": "https://example.com/installer.msi",
+                "version": {"type": "msi_product_version_from_file"},
+            }
+        }
+
+        strategy = HttpStaticStrategy()
+
+        # Cache points to non-existent file
+        cache = {
+            "version": "1.0.0",
+            "etag": 'W/"abc123"',
+            "file_path": str(tmp_test_dir / "nonexistent.msi"),
+            "sha256": "cached_sha",
+        }
+
+        with requests_mock.Mocker() as m:
+            # Mock 304 response
+            m.get("https://example.com/installer.msi", status_code=304)
+
+            with pytest.raises(RuntimeError, match="Cached file.*not found"):
+                strategy.discover_version(app_config, tmp_test_dir, cache=cache)
