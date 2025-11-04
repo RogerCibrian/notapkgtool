@@ -429,6 +429,69 @@ class GithubReleaseStrategy:
 
         return discovered, file_path, sha256, headers
 
+    def validate_config(self, app_config: dict[str, Any]) -> list[str]:
+        """
+        Validate github_release strategy configuration.
+        
+        Checks for required fields and correct types without making network calls.
+        
+        Parameters
+        ----------
+        app_config : dict
+            The app configuration from the recipe.
+        
+        Returns
+        -------
+        list[str]
+            List of error messages (empty if valid).
+        """
+        errors = []
+        source = app_config.get("source", {})
+        
+        # Check required fields
+        if "repo" not in source:
+            errors.append("Missing required field: source.repo")
+        elif not isinstance(source["repo"], str):
+            errors.append("source.repo must be a string")
+        elif not source["repo"].strip():
+            errors.append("source.repo cannot be empty")
+        else:
+            # Validate repo format
+            repo = source["repo"]
+            if repo.count("/") != 1:
+                errors.append(
+                    "source.repo must be in format 'owner/repo' (e.g., 'git/git')"
+                )
+        
+        if "asset_pattern" not in source:
+            errors.append("Missing required field: source.asset_pattern")
+        elif not isinstance(source["asset_pattern"], str):
+            errors.append("source.asset_pattern must be a string")
+        elif not source["asset_pattern"].strip():
+            errors.append("source.asset_pattern cannot be empty")
+        else:
+            # Validate regex pattern syntax
+            pattern = source["asset_pattern"]
+            import re
+            try:
+                re.compile(pattern)
+            except re.error as err:
+                errors.append(f"Invalid asset_pattern regex: {err}")
+        
+        # Optional fields validation
+        if "version_pattern" in source:
+            if not isinstance(source["version_pattern"], str):
+                errors.append("source.version_pattern must be a string")
+            else:
+                pattern = source["version_pattern"]
+                import re
+                try:
+                    re.compile(pattern)
+                except re.error as err:
+                    errors.append(f"Invalid version_pattern regex: {err}")
+        
+        return errors
+
 
 # Register this strategy when the module is imported
 register_strategy("github_release", GithubReleaseStrategy)

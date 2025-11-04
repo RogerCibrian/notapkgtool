@@ -47,7 +47,8 @@ from importlib.metadata import version
 from pathlib import Path
 import sys
 
-from notapkgtool.core import check_recipe
+from notapkgtool.core import discover_recipe
+from notapkgtool.validation import validate_recipe
 
 # Global verbose and debug flags set from CLI args
 _verbose = False
@@ -95,16 +96,88 @@ def print_debug(prefix: str, message: str) -> None:
         print(f"[{prefix}] {message}")
 
 
-def cmd_check(args: argparse.Namespace) -> int:
+def cmd_validate(args: argparse.Namespace) -> int:
     """
-    Handler for 'napt check' command.
+    Handler for 'napt validate' command.
 
-    Downloads the installer specified in a recipe and extracts version
-    information. This validates that:
-      - The recipe YAML is correctly formatted
-      - Configuration merging works properly
-      - The source URL is accessible
-      - The version can be extracted from the downloaded file
+    Validates recipe syntax and configuration without downloading files or
+    making network calls. This is useful for quick feedback during recipe
+    development and for CI/CD pre-checks.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Parsed command-line arguments containing:
+        - recipe : Path to recipe YAML file
+        - verbose : Whether to show validation progress
+
+    Returns
+    -------
+    int
+        Exit code: 0 for valid recipe, 1 for invalid.
+
+    Side Effects
+    ------------
+    - Prints validation results to stdout
+    - Prints errors/warnings to stdout
+    """
+    # Set global verbose flag
+    set_verbose(args.verbose)
+
+    recipe_path = Path(args.recipe).resolve()
+
+    print(f"Validating recipe: {recipe_path}")
+    print()
+
+    # Validate the recipe
+    result = validate_recipe(recipe_path, verbose=args.verbose)
+
+    # Display results
+    print("=" * 70)
+    print("VALIDATION RESULTS")
+    print("=" * 70)
+    print(f"Recipe:      {result['recipe_path']}")
+    print(f"Status:      {result['status'].upper()}")
+    print(f"App Count:   {result['app_count']}")
+    print()
+
+    # Show warnings if any
+    if result["warnings"]:
+        print(f"Warnings ({len(result['warnings'])}):")
+        for warning in result["warnings"]:
+            print(f"  ⚠ {warning}")
+        print()
+
+    # Show errors if any
+    if result["errors"]:
+        print(f"Errors ({len(result['errors'])}):")
+        for error in result["errors"]:
+            print(f"  ✗ {error}")
+        print()
+
+    print("=" * 70)
+
+    if result["status"] == "valid":
+        print()
+        print("[SUCCESS] Recipe is valid!")
+        return 0
+    else:
+        print()
+        print(f"[FAILED] Recipe validation failed with {len(result['errors'])} error(s).")
+        return 1
+
+
+def cmd_discover(args: argparse.Namespace) -> int:
+    """
+    Handler for 'napt discover' command.
+
+    Discovers the latest version of an application by querying the source
+    and downloading the installer. This command:
+      - Validates the recipe YAML is correctly formatted
+      - Uses the configured discovery strategy to find the latest version
+      - Downloads the installer (or uses cached version via ETag)
+      - Extracts version information from the downloaded file
+      - Updates the state file with version and caching info
 
     Parameters
     ----------
@@ -112,6 +185,8 @@ def cmd_check(args: argparse.Namespace) -> int:
         Parsed command-line arguments containing:
         - recipe : Path to recipe YAML file
         - output_dir : Directory for downloaded files
+        - state_file : Path to state file for caching
+        - stateless : Whether to disable state tracking
         - verbose : Whether to show progress updates
         - debug : Whether to show detailed debugging output
 
@@ -122,7 +197,8 @@ def cmd_check(args: argparse.Namespace) -> int:
 
     Side Effects
     ------------
-    - Downloads installer file to output_dir
+    - Downloads installer file to output_dir (or uses cached version)
+    - Updates state file with version and ETag information
     - Prints progress and results to stdout
     - Prints errors to stdout (with optional traceback if verbose/debug)
     """
@@ -137,12 +213,12 @@ def cmd_check(args: argparse.Namespace) -> int:
         print(f"Error: Recipe file not found: {recipe_path}")
         return 1
 
-    print(f"Checking recipe: {recipe_path}")
+    print(f"Discovering version for recipe: {recipe_path}")
     print(f"Output directory: {output_dir}")
     print()
 
     try:
-        result = check_recipe(
+        result = discover_recipe(
             recipe_path,
             output_dir,
             state_file=args.state_file if not args.stateless else None,
@@ -160,7 +236,7 @@ def cmd_check(args: argparse.Namespace) -> int:
 
     # Display results
     print("=" * 70)
-    print("CHECK RESULTS")
+    print("DISCOVERY RESULTS")
     print("=" * 70)
     print(f"App Name:        {result['app_name']}")
     print(f"App ID:          {result['app_id']}")
@@ -172,7 +248,7 @@ def cmd_check(args: argparse.Namespace) -> int:
     print(f"Status:          {result['status']}")
     print("=" * 70)
     print()
-    print("[SUCCESS] Recipe validated successfully!")
+    print("[SUCCESS] Version discovered successfully!")
 
     return 0
 
@@ -201,45 +277,63 @@ def main() -> None:
         required=True,
     )
 
-    # 'check' command
-    parser_check = subparsers.add_parser(
-        "check",
-        help="Validate a recipe by downloading and extracting version",
-        description="Download the installer specified in a recipe and extract its version.",
+    # 'validate' command
+    parser_validate = subparsers.add_parser(
+        "validate",
+        help="Validate recipe syntax and configuration (no downloads)",
+        description="Check recipe YAML for syntax errors and configuration issues without making network calls.",
     )
-    parser_check.add_argument(
+    parser_validate.add_argument(
         "recipe",
         help="Path to the recipe YAML file",
     )
-    parser_check.add_argument(
+    parser_validate.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Show validation progress and details",
+    )
+    parser_validate.set_defaults(func=cmd_validate)
+
+    # 'discover' command
+    parser_discover = subparsers.add_parser(
+        "discover",
+        help="Discover latest version and download installer",
+        description="Find the latest version using the configured discovery strategy and download the installer.",
+    )
+    parser_discover.add_argument(
+        "recipe",
+        help="Path to the recipe YAML file",
+    )
+    parser_discover.add_argument(
         "--output-dir",
         default="./downloads",
         help="Directory to save downloaded files (default: ./downloads)",
     )
-    parser_check.add_argument(
+    parser_discover.add_argument(
         "--state-file",
         type=Path,
         default=Path("state/versions.json"),
         help="State file for version tracking and ETag caching (default: state/versions.json)",
     )
-    parser_check.add_argument(
+    parser_discover.add_argument(
         "--stateless",
         action="store_true",
         help="Disable state tracking (no caching, always download full files)",
     )
-    parser_check.add_argument(
+    parser_discover.add_argument(
         "-v",
         "--verbose",
         action="store_true",
         help="Show progress and high-level status updates",
     )
-    parser_check.add_argument(
+    parser_discover.add_argument(
         "-d",
         "--debug",
         action="store_true",
         help="Show detailed debugging output (implies --verbose)",
     )
-    parser_check.set_defaults(func=cmd_check)
+    parser_discover.set_defaults(func=cmd_discover)
 
     # Parse and dispatch
     args = parser.parse_args()

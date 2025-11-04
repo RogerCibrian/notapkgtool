@@ -13,14 +13,15 @@ The orchestration follows this pipeline:
 
 Functions
 ---------
-check_recipe : function
-    Validate a recipe by downloading and extracting version information.
-    This is the entry point for the 'napt check' command.
+discover_recipe : function
+    Discover the latest version and download installer.
+    This is the entry point for the 'napt discover' command.
 
 Future functions:
+    validate_recipe : Validate recipe syntax without downloading
     build_package : Build a PSADT package from a validated recipe
     upload_package : Upload a built package to Microsoft Intune
-    sync_recipe : Full workflow (check -> build -> upload)
+    update_recipe : Full workflow (discover -> compare -> build -> upload)
 
 Design Principles
 -----------------
@@ -35,9 +36,9 @@ Example
 Programmatic usage:
 
     from pathlib import Path
-    from notapkgtool.core import check_recipe
+    from notapkgtool.core import discover_recipe
 
-    result = check_recipe(
+    result = discover_recipe(
         recipe_path=Path("recipes/Google/chrome.yaml"),
         output_dir=Path("./downloads"),
     )
@@ -57,7 +58,7 @@ from notapkgtool.discovery import get_strategy
 from notapkgtool.state import load_state, save_state
 
 
-def check_recipe(
+def discover_recipe(
     recipe_path: Path,
     output_dir: Path,
     state_file: Path | None = Path("state/versions.json"),
@@ -66,10 +67,10 @@ def check_recipe(
     debug: bool = False,
 ) -> dict[str, Any]:
     """
-    Validate a recipe by loading config, discovering version, and downloading.
+    Discover the latest version by loading config and downloading installer.
 
-    This is the main entry point for the 'napt check' command. It orchestrates
-    the entire validation flow without uploading or packaging.
+    This is the main entry point for the 'napt discover' command. It orchestrates
+    the entire discovery workflow including version detection and file download.
 
     The function performs these steps:
       1. Load effective configuration (org + vendor + recipe merged)
@@ -124,10 +125,10 @@ def check_recipe(
 
     Examples
     --------
-    Basic validation:
+    Basic version discovery:
 
         >>> from pathlib import Path
-        >>> result = check_recipe(
+        >>> result = discover_recipe(
         ...     Path("recipes/Google/chrome.yaml"),
         ...     Path("./downloads")
         ... )
@@ -137,7 +138,7 @@ def check_recipe(
     Handling errors:
 
         >>> try:
-        ...     result = check_recipe(Path("invalid.yaml"), Path("."))
+        ...     result = discover_recipe(Path("invalid.yaml"), Path("."))
         ... except ValueError as e:
         ...     print(f"Config error: {e}")
         ... except RuntimeError as e:

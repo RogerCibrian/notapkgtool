@@ -15,15 +15,15 @@ from unittest.mock import patch
 import pytest
 import requests_mock
 
-from notapkgtool.core import check_recipe
+from notapkgtool.core import discover_recipe
 from notapkgtool.versioning import DiscoveredVersion
 
 
 class TestEndToEndWorkflow:
     """Integration tests for complete workflows."""
 
-    def test_check_recipe_end_to_end(self, tmp_test_dir, create_yaml_file):
-        """Test complete check_recipe workflow with mocked network."""
+    def test_discover_recipe_end_to_end(self, tmp_test_dir, create_yaml_file):
+        """Test complete discover_recipe workflow with mocked network."""
         # Create directory structure with defaults
         defaults_dir = tmp_test_dir / "defaults"
         defaults_dir.mkdir()
@@ -79,7 +79,7 @@ class TestEndToEndWorkflow:
                     source="msi_product_version_from_file"
                 )
                 
-                result = check_recipe(recipe_path, output_dir)
+                result = discover_recipe(recipe_path, output_dir)
         
         # Verify complete workflow results
         assert result["app_name"] == "Test App"
@@ -120,7 +120,7 @@ class TestConfigAndDiscoveryIntegration:
             with patch("notapkgtool.discovery.http_static.version_from_msi_product_version") as mock_extract:
                 mock_extract.return_value = DiscoveredVersion(version="1.0.0", source="msi")
                 
-                result = check_recipe(recipe_path, tmp_test_dir)
+                result = discover_recipe(recipe_path, tmp_test_dir)
                 
                 # Verify config was properly passed to discovery
                 assert result["version"] == "1.0.0"
@@ -150,7 +150,7 @@ class TestErrorPropagation:
             m.get("https://test.com/app.msi", status_code=404)
             
             with pytest.raises(RuntimeError, match="Failed to download"):
-                check_recipe(recipe_path, tmp_test_dir)
+                discover_recipe(recipe_path, tmp_test_dir)
 
     def test_version_extraction_error_propagates(self, tmp_test_dir, create_yaml_file):
         """Test that version extraction errors propagate with context."""
@@ -176,5 +176,5 @@ class TestErrorPropagation:
                 mock_extract.side_effect = RuntimeError("Invalid MSI")
                 
                 with pytest.raises(RuntimeError, match="Failed to extract"):
-                    check_recipe(recipe_path, tmp_test_dir)
+                    discover_recipe(recipe_path, tmp_test_dir)
 

@@ -15,13 +15,17 @@ NAPT provides:
 
 Quick Start
 -----------
-Validate a recipe and download the installer:
+Validate recipe syntax:
 
-    $ python -m notapkgtool.cli check recipes/Google/chrome.yaml
+    $ napt validate recipes/Google/chrome.yaml
+
+Discover latest version and download installer:
+
+    $ napt discover recipes/Google/chrome.yaml
 
 For full CLI documentation:
 
-    $ python -m notapkgtool.cli --help
+    $ napt --help
 
 Package Structure
 -----------------
@@ -45,7 +49,8 @@ Public API
 The primary interface is the CLI, but key functions are exported for
 programmatic use:
 
-    from notapkgtool.core import check_recipe
+    from notapkgtool.core import discover_recipe
+    from notapkgtool.validation import validate_recipe
     from notapkgtool.config import load_effective_config
     from notapkgtool.versioning import compare_any, is_newer_any
     from notapkgtool.io import download_file
@@ -66,8 +71,9 @@ __description__ = "Not a Pkg Tool - Windows/Intune packaging with PSADT"
 
 # Re-export commonly used functions for convenience
 from notapkgtool.config import load_effective_config
-from notapkgtool.core import check_recipe
+from notapkgtool.core import discover_recipe
 from notapkgtool.io import download_file
+from notapkgtool.validation import validate_recipe
 from notapkgtool.versioning import DiscoveredVersion, compare_any, is_newer_any
 
 __all__ = [
@@ -75,7 +81,8 @@ __all__ = [
     "__author__",
     "__license__",
     "__description__",
-    "check_recipe",
+    "discover_recipe",
+    "validate_recipe",
     "load_effective_config",
     "download_file",
     "compare_any",

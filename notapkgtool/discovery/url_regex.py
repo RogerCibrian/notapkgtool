@@ -289,6 +289,56 @@ class UrlRegexStrategy:
 
         return discovered, file_path, sha256, headers
 
+    def validate_config(self, app_config: dict[str, Any]) -> list[str]:
+        """
+        Validate url_regex strategy configuration.
+        
+        Checks for required fields and correct types without making network calls.
+        
+        Parameters
+        ----------
+        app_config : dict
+            The app configuration from the recipe.
+        
+        Returns
+        -------
+        list[str]
+            List of error messages (empty if valid).
+        """
+        errors = []
+        source = app_config.get("source", {})
+        
+        # Check required fields
+        if "url" not in source:
+            errors.append("Missing required field: source.url")
+        elif not isinstance(source["url"], str):
+            errors.append("source.url must be a string")
+        elif not source["url"].strip():
+            errors.append("source.url cannot be empty")
+        
+        if "pattern" not in source:
+            errors.append("Missing required field: source.pattern")
+        elif not isinstance(source["pattern"], str):
+            errors.append("source.pattern must be a string")
+        elif not source["pattern"].strip():
+            errors.append("source.pattern cannot be empty")
+        else:
+            # Validate regex pattern syntax
+            pattern = source["pattern"]
+            if "(?P<version>" not in pattern:
+                errors.append(
+                    "source.pattern must contain named group (?P<version>...)"
+                )
+            else:
+                # Try to compile the regex to check syntax
+                import re
+                try:
+                    re.compile(pattern)
+                except re.error as err:
+                    errors.append(f"Invalid regex pattern: {err}")
+        
+        return errors
+
 
 # Register this strategy when the module is imported
 register_strategy("url_regex", UrlRegexStrategy)

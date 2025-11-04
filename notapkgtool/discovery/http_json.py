@@ -437,6 +437,77 @@ class HttpJsonStrategy:
 
         return discovered, file_path, sha256, headers
 
+    def validate_config(self, app_config: dict[str, Any]) -> list[str]:
+        """
+        Validate http_json strategy configuration.
+        
+        Checks for required fields and correct types without making network calls.
+        
+        Parameters
+        ----------
+        app_config : dict
+            The app configuration from the recipe.
+        
+        Returns
+        -------
+        list[str]
+            List of error messages (empty if valid).
+        """
+        errors = []
+        source = app_config.get("source", {})
+        
+        # Check required fields
+        if "api_url" not in source:
+            errors.append("Missing required field: source.api_url")
+        elif not isinstance(source["api_url"], str):
+            errors.append("source.api_url must be a string")
+        elif not source["api_url"].strip():
+            errors.append("source.api_url cannot be empty")
+        
+        if "version_path" not in source:
+            errors.append("Missing required field: source.version_path")
+        elif not isinstance(source["version_path"], str):
+            errors.append("source.version_path must be a string")
+        elif not source["version_path"].strip():
+            errors.append("source.version_path cannot be empty")
+        else:
+            # Validate JSONPath syntax
+            from jsonpath_ng import parse as jsonpath_parse
+            try:
+                jsonpath_parse(source["version_path"])
+            except Exception as err:
+                errors.append(f"Invalid version_path JSONPath: {err}")
+        
+        if "download_url_path" not in source:
+            errors.append("Missing required field: source.download_url_path")
+        elif not isinstance(source["download_url_path"], str):
+            errors.append("source.download_url_path must be a string")
+        elif not source["download_url_path"].strip():
+            errors.append("source.download_url_path cannot be empty")
+        else:
+            # Validate JSONPath syntax
+            from jsonpath_ng import parse as jsonpath_parse
+            try:
+                jsonpath_parse(source["download_url_path"])
+            except Exception as err:
+                errors.append(f"Invalid download_url_path JSONPath: {err}")
+        
+        # Optional fields validation
+        if "method" in source:
+            method = source["method"]
+            if not isinstance(method, str):
+                errors.append("source.method must be a string")
+            elif method.upper() not in ["GET", "POST"]:
+                errors.append("source.method must be 'GET' or 'POST'")
+        
+        if "headers" in source and not isinstance(source["headers"], dict):
+            errors.append("source.headers must be a dictionary")
+        
+        if "body" in source and not isinstance(source["body"], dict):
+            errors.append("source.body must be a dictionary")
+        
+        return errors
+
 
 # Register this strategy when the module is imported
 register_strategy("http_json", HttpJsonStrategy)
