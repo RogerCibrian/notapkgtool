@@ -6,26 +6,37 @@ commands for recipe validation, package building, and deployment management.
 
 Commands
 --------
-check : command
-    Validate a recipe by downloading the installer and extracting version info.
-    This command verifies that a recipe is correctly configured and that the
-    source URL is accessible.
+validate : command
+    Validate recipe syntax and configuration without making network calls.
+    This command checks that a recipe is correctly formatted and that all
+    required fields are present.
+
+discover : command
+    Discover the latest version by downloading the installer and extracting
+    version information. This command verifies that a recipe is correctly
+    configured, that the source is accessible, and tracks state for caching.
 
 Future commands:
     build  : Build a PSADT package from a recipe
     upload : Upload a package to Microsoft Intune
-    sync   : Full workflow (check -> build -> upload)
+    sync   : Full workflow (discover -> build -> upload)
 
 Usage Examples
 --------------
-Validate a recipe:
-    $ napt check recipes/Google/chrome.yaml
+Validate recipe syntax:
+    $ napt validate recipes/Google/chrome.yaml
 
-Validate with custom output directory:
-    $ napt check recipes/Google/chrome.yaml --output-dir ./cache
+Discover latest version:
+    $ napt discover recipes/Google/chrome.yaml
 
-Enable verbose error output:
-    $ napt check recipes/Google/chrome.yaml --verbose
+Discover with custom output directory:
+    $ napt discover recipes/Google/chrome.yaml --output-dir ./cache
+
+Enable verbose output:
+    $ napt discover recipes/Google/chrome.yaml --verbose
+
+Enable debug output:
+    $ napt discover recipes/Google/chrome.yaml --debug
 
 Exit Codes
 ----------
@@ -38,6 +49,7 @@ Notes
 - Commands are registered with subparsers for clean organization.
 - Each command has its own handler function (cmd_<command>).
 - Verbose mode shows full tracebacks on errors for debugging.
+- Debug mode implies verbose mode and shows detailed configuration dumps.
 """
 
 from __future__ import annotations

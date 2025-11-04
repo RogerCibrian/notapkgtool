@@ -894,23 +894,31 @@ Both commands support multiple output modes to suit different debugging needs:
 
 ```python
 from pathlib import Path
-from notapkgtool.core import check_recipe
+from notapkgtool.core import discover_recipe
+from notapkgtool.validation import validate_recipe
 
-# Normal mode
-result = check_recipe(
+# Validate recipe (no downloads)
+result = validate_recipe(
+    recipe_path=Path("recipes/Google/chrome.yaml"),
+    verbose=True,
+)
+print(f"Status: {result['status']}")
+
+# Discover version - Normal mode
+result = discover_recipe(
     recipe_path=Path("recipes/Google/chrome.yaml"),
     output_dir=Path("./downloads"),
 )
 
-# Verbose mode
-result = check_recipe(
+# Discover version - Verbose mode
+result = discover_recipe(
     recipe_path=Path("recipes/Google/chrome.yaml"),
     output_dir=Path("./downloads"),
     verbose=True,
 )
 
-# Debug mode
-result = check_recipe(
+# Discover version - Debug mode
+result = discover_recipe(
     recipe_path=Path("recipes/Google/chrome.yaml"),
     output_dir=Path("./downloads"),
     debug=True,

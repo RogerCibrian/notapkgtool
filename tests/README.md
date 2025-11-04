@@ -92,7 +92,7 @@ pytest tests/ --cov=notapkgtool --cov-report=html
 **11 tests covering download functionality**
 
 ### Integration Tests (`test_integration.py`)
-- ✅ End-to-end check_recipe workflow
+- ✅ End-to-end discover_recipe workflow
 - ✅ Config + discovery integration
 - ✅ Download error propagation
 - ✅ Version extraction error propagation
