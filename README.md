@@ -15,6 +15,7 @@ NAPT is a Python-based CLI tool that automates the entire workflow for packaging
 - ✅ **Declarative YAML recipes** - Define app packaging once, run everywhere
 - ✅ **Automatic version discovery** - Extract versions from MSI, EXE, URLs, or APIs
 - ✅ **Robust downloads** - Retry logic, conditional requests (ETags), atomic writes
+- ✅ **Intelligent caching** - State tracking with ETag-based conditional downloads
 - ✅ **Intelligent updates** - Version-based, hash-based, or combined strategies
 - ✅ **Cross-platform support** - Windows, Linux, and macOS
 - ✅ **Layered configuration** - Organization → Vendor → Recipe inheritance
@@ -38,6 +39,7 @@ sudo apt-get install msitools  # Debian/Ubuntu
 
 ```bash
 # Check a recipe (downloads installer and extracts version)
+# State tracking enabled by default for efficient re-runs
 napt check recipes/Google/chrome.yaml
 
 # Specify custom output directory
@@ -45,6 +47,9 @@ napt check recipes/Google/chrome.yaml --output-dir ./cache
 
 # Show verbose output with progress details
 napt check recipes/Google/chrome.yaml --verbose
+
+# Disable state tracking (always download, no caching)
+napt check recipes/Google/chrome.yaml --stateless
 
 # Show debug output with full configuration dumps
 napt check recipes/Google/chrome.yaml --debug
@@ -292,6 +297,7 @@ apps:
 - ✅ GitHub release discovery strategy
 - ✅ MSI ProductVersion extraction
 - ✅ Version comparison utilities
+- ✅ State tracking with ETag caching
 - ✅ Cross-platform support
 
 ### v0.2.0 (Planned)

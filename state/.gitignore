@@ -1,0 +1,4 @@
+# This directory stores state files for NAPT version tracking
+# State files are machine-managed and regenerated from discovery
+# They are gitignored by default but can be version controlled for audit trails
+

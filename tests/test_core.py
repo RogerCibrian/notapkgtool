@@ -47,6 +47,7 @@ class TestCheckRecipe:
                 DiscoveredVersion(version="1.2.3", source="msi_product_version_from_file"),
                 tmp_test_dir / "test.msi",
                 "abc123" * 8,  # fake SHA-256
+                {"ETag": 'W/"test123"'},  # HTTP headers
             )
             
             result = check_recipe(recipe_path, tmp_test_dir)

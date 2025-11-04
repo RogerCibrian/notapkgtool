@@ -74,7 +74,7 @@ class DiscoveryStrategy(Protocol):
 
     def discover_version(
         self, app_config: dict[str, Any], output_dir: Path
-    ) -> tuple[DiscoveredVersion, Path, str]:
+    ) -> tuple[DiscoveredVersion, Path, str, dict]:
         """
         Discover and download an application version.
 
@@ -87,10 +87,11 @@ class DiscoveryStrategy(Protocol):
 
         Returns
         -------
-        tuple[DiscoveredVersion, Path, str]
+        tuple[DiscoveredVersion, Path, str, dict]
             - DiscoveredVersion: version info
             - Path: path to downloaded file
             - str: SHA-256 hash of the file
+            - dict: HTTP response headers (for ETag/Last-Modified caching)
 
         Raises
         ------

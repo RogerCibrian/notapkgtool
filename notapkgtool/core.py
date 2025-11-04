@@ -54,10 +54,16 @@ from typing import Any
 
 from notapkgtool.config.loader import load_effective_config
 from notapkgtool.discovery import get_strategy
+from notapkgtool.state import load_state, save_state
 
 
 def check_recipe(
-    recipe_path: Path, output_dir: Path, verbose: bool = False, debug: bool = False
+    recipe_path: Path,
+    output_dir: Path,
+    state_file: Path | None = Path("state/versions.json"),
+    stateless: bool = False,
+    verbose: bool = False,
+    debug: bool = False,
 ) -> dict[str, Any]:
     """
     Validate a recipe by loading config, discovering version, and downloading.
@@ -82,6 +88,12 @@ def check_recipe(
         Directory to download the installer to. Created if it doesn't exist.
         The downloaded file will be named based on Content-Disposition header
         or URL path.
+    state_file : Path, optional
+        Path to state file for version tracking and ETag caching.
+        Default is "state/versions.json". Set to None to disable.
+    stateless : bool, optional
+        If True, disable state tracking (no caching, always download).
+        Default is False.
 
     Returns
     -------
@@ -138,7 +150,24 @@ def check_recipe(
     - Downloaded files are written atomically (.part then renamed)
     - Progress output goes to stdout via the download module
     """
-    from notapkgtool.cli import print_step
+    from notapkgtool.cli import print_step, print_verbose
+
+    # Load state file unless running in stateless mode
+    state = None
+    if not stateless and state_file:
+        try:
+            state = load_state(state_file)
+            print_verbose("STATE", f"Loaded state from {state_file}")
+        except FileNotFoundError:
+            print_verbose("STATE", f"State file not found, will create: {state_file}")
+            state = {
+                "metadata": {"napt_version": "0.1.0", "schema_version": "1"},
+                "apps": {},
+            }
+        except Exception as err:
+            print_verbose("STATE", f"Warning: Failed to load state: {err}")
+            print_verbose("STATE", "Continuing without state tracking")
+            state = None
 
     # 1. Load and merge configuration
     print_step(1, 4, "Loading configuration...")
@@ -161,18 +190,69 @@ def check_recipe(
         raise ValueError(f"No 'source.strategy' defined for app: {app_name}")
 
     # 4. Get the strategy implementation
-    # Import http_static to ensure it's registered
+    # Import strategies to ensure they're registered
+    import notapkgtool.discovery.github_release  # noqa: F401
+    import notapkgtool.discovery.http_json  # noqa: F401
     import notapkgtool.discovery.http_static  # noqa: F401
+    import notapkgtool.discovery.url_regex  # noqa: F401
 
     strategy = get_strategy(strategy_name)
 
+    # Get cache for this recipe from state
+    cache = None
+    if state and app_id:
+        cache = state.get("apps", {}).get(app_id)
+        if cache:
+            print_verbose("STATE", f"Using cache for {app_id}")
+            print_verbose("STATE", f"  Cached version: {cache.get('version')}")
+            if cache.get("etag"):
+                print_verbose("STATE", f"  Cached ETag: {cache.get('etag')}")
+
     # 5. Run discovery: download and extract version
     print_step(3, 4, "Downloading installer...")
-    discovered_version, file_path, sha256 = strategy.discover_version(
-        app, output_dir, verbose=verbose, debug=debug
+    discovered_version, file_path, sha256, headers = strategy.discover_version(
+        app, output_dir, cache=cache, verbose=verbose, debug=debug
     )
 
     print_step(4, 4, "Extracting version...")
+
+    # Update state with discovered information
+    if state and app_id and state_file:
+        from datetime import datetime, timezone
+
+        if "apps" not in state:
+            state["apps"] = {}
+
+        # Extract ETag and Last-Modified from headers for next run
+        etag = headers.get("ETag")
+        last_modified = headers.get("Last-Modified")
+
+        if etag:
+            print_verbose("STATE", f"Saving ETag for next run: {etag}")
+        if last_modified:
+            print_verbose("STATE", f"Saving Last-Modified for next run: {last_modified}")
+
+        state["apps"][app_id] = {
+            "version": discovered_version.version,
+            "etag": etag,
+            "last_modified": last_modified,
+            "file_path": str(file_path),
+            "sha256": sha256,
+            "last_checked": datetime.now(timezone.utc).isoformat(),
+            "source": discovered_version.source,
+        }
+
+        state["metadata"] = {
+            "napt_version": "0.1.0",
+            "last_updated": datetime.now(timezone.utc).isoformat(),
+            "schema_version": "1",
+        }
+
+        try:
+            save_state(state, state_file)
+            print_verbose("STATE", f"Updated state file: {state_file}")
+        except Exception as err:
+            print_verbose("STATE", f"Warning: Failed to save state: {err}")
 
     # 6. Return results
     return {

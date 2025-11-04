@@ -133,7 +133,7 @@ from typing import Any
 
 import requests
 
-from notapkgtool.io.download import download_file
+from notapkgtool.io import NotModifiedError, download_file
 from notapkgtool.versioning.keys import DiscoveredVersion
 
 from .base import register_strategy
@@ -157,9 +157,10 @@ class GithubReleaseStrategy:
         self,
         app_config: dict[str, Any],
         output_dir: Path,
+        cache: dict[str, Any] | None = None,
         verbose: bool = False,
         debug: bool = False,
-    ) -> tuple[DiscoveredVersion, Path, str]:
+    ) -> tuple[DiscoveredVersion, Path, str, dict]:
         """
         Fetch latest release from GitHub and download matching asset.
 
@@ -172,6 +173,9 @@ class GithubReleaseStrategy:
             App configuration containing source.repo and optional fields.
         output_dir : Path
             Directory to save the downloaded file.
+        cache : dict, optional
+            Cached state with etag, last_modified, file_path, and sha256
+            for conditional requests.
         verbose : bool, optional
             If True, print verbose logging messages. Default is False.
         debug : bool, optional
@@ -179,8 +183,8 @@ class GithubReleaseStrategy:
 
         Returns
         -------
-        tuple[DiscoveredVersion, Path, str]
-            Version info, file path to downloaded installer, and SHA-256 hash.
+        tuple[DiscoveredVersion, Path, str, dict]
+            Version info, file path, SHA-256 hash, and HTTP response headers.
 
         Raises
         ------
@@ -376,25 +380,54 @@ class GithubReleaseStrategy:
 
         print_verbose("DISCOVERY", f"Download URL: {download_url}")
 
-        # Download the asset
+        # Extract ETag/Last-Modified from cache if available
+        etag = cache.get("etag") if cache else None
+        last_modified = cache.get("last_modified") if cache else None
+
+        if etag:
+            print_verbose("DISCOVERY", f"Using cached ETag: {etag}")
+        if last_modified:
+            print_verbose("DISCOVERY", f"Using cached Last-Modified: {last_modified}")
+
+        # Download the asset (with conditional request if cache available)
         print_verbose("DISCOVERY", "Downloading asset...")
         try:
-            # Pass token as header if available for download
-            extra_headers = {}
-            if token:
-                extra_headers["Authorization"] = f"token {token}"
-
-            file_path, sha256, _headers = download_file(
-                download_url, output_dir, verbose=verbose, debug=debug
+            file_path, sha256, headers = download_file(
+                download_url,
+                output_dir,
+                etag=etag,
+                last_modified=last_modified,
+                verbose=verbose,
+                debug=debug,
             )
+        except NotModifiedError:
+            # File unchanged (HTTP 304), use cached version
+            print_verbose("DISCOVERY", "File not modified (HTTP 304), using cached version")
+
+            if not cache or "file_path" not in cache or "sha256" not in cache:
+                raise RuntimeError(
+                    "Cache indicates file not modified, but missing cached file info. "
+                    "Try running with --stateless to force re-download."
+                )
+
+            cached_file = Path(cache["file_path"])
+            if not cached_file.exists():
+                raise RuntimeError(
+                    f"Cached file {cached_file} not found. "
+                    f"File may have been deleted. Try running with --stateless."
+                )
+
+            return discovered, cached_file, cache["sha256"], {}
         except Exception as err:
+            if isinstance(err, RuntimeError):
+                raise
             raise RuntimeError(
                 f"Failed to download asset from {download_url}: {err}"
             ) from err
 
         print_verbose("DISCOVERY", f"Download complete: {file_path.name}")
 
-        return discovered, file_path, sha256
+        return discovered, file_path, sha256, headers
 
 
 # Register this strategy when the module is imported

@@ -19,7 +19,11 @@ notapkgtool/
 │   ├── base.py              # Strategy protocol and registry
 │   ├── http_static.py       # Static URL download strategy
 │   ├── url_regex.py         # URL regex discovery strategy
-│   └── github_release.py    # GitHub releases API strategy
+│   ├── github_release.py    # GitHub releases API strategy
+│   └── http_json.py         # HTTP JSON API strategy
+├── state/
+│   ├── __init__.py          # State tracking exports
+│   └── tracker.py           # Version and ETag caching
 ├── io/
 │   ├── __init__.py          # I/O package exports
 │   ├── download.py          # Robust HTTP downloads
@@ -118,6 +122,114 @@ config = load_effective_config(Path("recipes/Google/chrome.yaml"))
 - HTTP 304 Not Modified support
 - ETag and Last-Modified headers
 - Bandwidth-efficient incremental builds
+
+### 5. State Tracking
+
+- JSON-based state file for version and ETag persistence
+- Automatic conditional downloads using cached ETags
+- Enabled by default with `--stateless` opt-out
+- Prevents re-downloading unchanged files
+
+## State Management & Caching
+
+NAPT automatically tracks discovered versions and uses HTTP ETags for efficient conditional downloads. This prevents re-downloading unchanged files and enables fast scheduled checks.
+
+### How It Works
+
+1. **First Run**: Downloads file, saves ETag and version to `state/versions.json`
+2. **Second Run**: Sends `If-None-Match` header with cached ETag
+3. **Server Response**:
+   - `HTTP 304 Not Modified` → Uses cached file (instant!)
+   - `HTTP 200 OK` → Downloads new version, updates state
+
+### Default Behavior (Stateful)
+
+```bash
+# State tracking enabled by default
+napt check recipes/Google/chrome.yaml
+
+# Creates/updates: state/versions.json
+```
+
+### Stateless Mode
+
+```bash
+# Disable state tracking for one-off checks
+napt check recipes/Google/chrome.yaml --stateless
+
+# Always downloads, no caching
+# Useful for CI/CD clean builds
+```
+
+### Custom State File
+
+```bash
+# Use different state file per environment
+napt check recipes/Google/chrome.yaml --state-file production-state.json
+napt check recipes/Google/chrome.yaml --state-file staging-state.json
+```
+
+### State File Structure
+
+The state file is JSON with this schema:
+
+```json
+{
+  "metadata": {
+    "napt_version": "0.1.0",
+    "schema_version": "1",
+    "last_updated": "2024-10-28T10:30:00Z"
+  },
+  "apps": {
+    "napt-chrome": {
+      "version": "130.0.6723.117",
+      "etag": "W/\"abc123\"",
+      "last_modified": "Mon, 28 Oct 2024 10:30:00 GMT",
+      "file_path": "downloads/googlechromestandaloneenterprise64.msi",
+      "sha256": "def456...",
+      "last_checked": "2024-10-28T10:30:00Z",
+      "source": "http_static"
+    }
+  }
+}
+```
+
+### Benefits
+
+- **Bandwidth efficiency**: Avoid downloading unchanged files (especially important for scheduled checks)
+- **Speed**: HTTP 304 responses are instant vs. downloading 60+ MB installers
+- **Server-friendly**: Reduces load on vendor CDNs
+- **Cost savings**: Important when using metered bandwidth
+
+### When Files Are Re-Downloaded
+
+Files are only re-downloaded when:
+- First time checking a recipe
+- Server's ETag changed (file content changed)
+- ETag not supported by server (falls back to full download)
+- Running in `--stateless` mode
+- Cached file was deleted
+
+### Troubleshooting
+
+**Corrupted state file:**
+```bash
+# NAPT automatically creates backup and fresh state
+# Backup saved to: state/versions.json.backup
+```
+
+**Cached file deleted:**
+```bash
+# Run with --stateless to force re-download
+napt check recipes/Google/chrome.yaml --stateless
+```
+
+**State file location:**
+```bash
+# Default: state/versions.json
+# Custom: --state-file path/to/custom.json
+# None: --stateless
+```
 
 ## Discovery Strategies
 
@@ -575,7 +687,8 @@ source:
 - URL regex discovery strategy
 - GitHub release discovery strategy
 - HTTP JSON API discovery strategy
-- Robust file downloads
+- State tracking with ETag-based caching
+- Robust file downloads with conditional requests
 - Version comparison (semver, numeric, lexicographic)
 - MSI ProductVersion extraction
 - Cross-platform support

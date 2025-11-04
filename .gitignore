@@ -176,4 +176,9 @@ tests/__pycache__/
 artifacts/
 test_downloads/
 
+# NAPT state files (machine-managed, regenerate from discovery)
+state/versions.json
+state/*.json
+!state/.gitignore
+
 .DS_Store
