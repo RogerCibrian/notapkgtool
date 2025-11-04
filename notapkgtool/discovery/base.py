@@ -70,6 +70,9 @@ class DiscoveryStrategy(Protocol):
 
     Each strategy must implement discover_version() which downloads
     and extracts version information based on the app config.
+    
+    Strategies may optionally implement validate_config() to provide
+    strategy-specific configuration validation without network calls.
     """
 
     def discover_version(
@@ -97,6 +100,45 @@ class DiscoveryStrategy(Protocol):
         ------
         ValueError, RuntimeError
             On discovery or download failures.
+        """
+        ...
+
+    def validate_config(self, app_config: dict[str, Any]) -> list[str]:
+        """
+        Validate strategy-specific configuration (optional).
+        
+        This method validates the app configuration for strategy-specific
+        requirements without making network calls or downloading files.
+        Useful for quick feedback during recipe development.
+        
+        Parameters
+        ----------
+        app_config : dict
+            The app configuration from the recipe (config["apps"][0]).
+        
+        Returns
+        -------
+        list[str]
+            List of error messages. Empty list if configuration is valid.
+            Each error should be a human-readable description of the issue.
+        
+        Examples
+        --------
+        Check required fields:
+        
+            >>> def validate_config(self, app_config):
+            ...     errors = []
+            ...     source = app_config.get("source", {})
+            ...     if "url" not in source:
+            ...         errors.append("Missing required field: source.url")
+            ...     return errors
+        
+        Notes
+        -----
+        - This method is optional; strategies without it will skip validation
+        - Should NOT make network calls or download files
+        - Should check field presence, types, and format only
+        - Used by 'napt validate' command for fast recipe checking
         """
         ...
 

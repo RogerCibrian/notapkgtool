@@ -226,6 +226,57 @@ class HttpStaticStrategy:
 
         return discovered, file_path, sha256, headers
 
+    def validate_config(self, app_config: dict[str, Any]) -> list[str]:
+        """
+        Validate http_static strategy configuration.
+        
+        Checks for required fields and correct types without making network calls.
+        
+        Parameters
+        ----------
+        app_config : dict
+            The app configuration from the recipe.
+        
+        Returns
+        -------
+        list[str]
+            List of error messages (empty if valid).
+        """
+        errors = []
+        source = app_config.get("source", {})
+        
+        # Check required fields
+        if "url" not in source:
+            errors.append("Missing required field: source.url")
+        elif not isinstance(source["url"], str):
+            errors.append("source.url must be a string")
+        elif not source["url"].strip():
+            errors.append("source.url cannot be empty")
+        
+        # Check version configuration
+        if "version" not in source:
+            errors.append("Missing required field: source.version")
+        elif not isinstance(source["version"], dict):
+            errors.append("source.version must be a dictionary")
+        else:
+            version_config = source["version"]
+            
+            # Check version.type
+            if "type" not in version_config:
+                errors.append("Missing required field: source.version.type")
+            elif not isinstance(version_config["type"], str):
+                errors.append("source.version.type must be a string")
+            else:
+                version_type = version_config["type"]
+                supported_types = ["msi_product_version_from_file"]
+                if version_type not in supported_types:
+                    errors.append(
+                        f"Unsupported source.version.type: {version_type!r}. "
+                        f"Supported: {', '.join(supported_types)}"
+                    )
+        
+        return errors
+
 
 # Register this strategy when the module is imported
 register_strategy("http_static", HttpStaticStrategy)

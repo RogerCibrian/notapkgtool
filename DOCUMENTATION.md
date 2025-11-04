@@ -11,6 +11,7 @@ notapkgtool/
 ├── __init__.py              # Main package exports
 ├── cli.py                   # Command-line interface (argparse)
 ├── core.py                  # High-level orchestration
+├── validation.py            # Recipe validation (no downloads)
 ├── config/
 │   ├── __init__.py          # Config package exports
 │   └── loader.py            # YAML loading and merging
@@ -146,7 +147,7 @@ NAPT automatically tracks discovered versions and uses HTTP ETags for efficient 
 
 ```bash
 # State tracking enabled by default
-napt check recipes/Google/chrome.yaml
+napt discover recipes/Google/chrome.yaml
 
 # Creates/updates: state/versions.json
 ```
@@ -155,7 +156,7 @@ napt check recipes/Google/chrome.yaml
 
 ```bash
 # Disable state tracking for one-off checks
-napt check recipes/Google/chrome.yaml --stateless
+napt discover recipes/Google/chrome.yaml --stateless
 
 # Always downloads, no caching
 # Useful for CI/CD clean builds
@@ -165,8 +166,8 @@ napt check recipes/Google/chrome.yaml --stateless
 
 ```bash
 # Use different state file per environment
-napt check recipes/Google/chrome.yaml --state-file production-state.json
-napt check recipes/Google/chrome.yaml --state-file staging-state.json
+napt discover recipes/Google/chrome.yaml --state-file production-state.json
+napt discover recipes/Google/chrome.yaml --state-file staging-state.json
 ```
 
 ### State File Structure
@@ -221,7 +222,7 @@ Files are only re-downloaded when:
 **Cached file deleted:**
 ```bash
 # Run with --stateless to force re-download
-napt check recipes/Google/chrome.yaml --stateless
+napt discover recipes/Google/chrome.yaml --stateless
 ```
 
 **State file location:**
@@ -711,25 +712,160 @@ pip install pyyaml requests
 sudo apt-get install msitools
 ```
 
+### Commands Overview
+
+NAPT provides two primary commands for working with recipes:
+
+| Command | Purpose | Network | Download | Use Case |
+|---------|---------|---------|----------|----------|
+| `validate` | Check recipe syntax | No | No | Development, CI/CD pre-checks |
+| `discover` | Find latest version | Yes | Yes | Production runs, version discovery |
+
 ### Usage
 
+**Validate recipe syntax (fast, no downloads):**
 ```bash
-# Validate a recipe (normal output)
-napt check recipes/Google/chrome.yaml
+# Basic validation
+napt validate recipes/Google/chrome.yaml
+
+# Verbose validation (shows validation progress)
+napt validate recipes/Google/chrome.yaml --verbose
+```
+
+**Discover latest version (downloads installer):**
+```bash
+# Basic discovery
+napt discover recipes/Google/chrome.yaml
 
 # Custom output directory
-napt check recipes/Google/chrome.yaml --output-dir ./cache
+napt discover recipes/Google/chrome.yaml --output-dir ./cache
 
 # Verbose output (shows progress details and operations)
-napt check recipes/Google/chrome.yaml --verbose
+napt discover recipes/Google/chrome.yaml --verbose
 
 # Debug output (shows full config dumps and backend details)
-napt check recipes/Google/chrome.yaml --debug
+napt discover recipes/Google/chrome.yaml --debug
+
+# Stateless mode (no caching)
+napt discover recipes/Google/chrome.yaml --stateless
 ```
+
+## Commands Reference
+
+### `napt validate`
+
+Validates recipe syntax and configuration without making network calls or downloading files. This is the fastest way to check if your recipe is properly formatted.
+
+**Purpose:**
+- Development workflow (check recipes as you edit them)
+- CI/CD pre-checks (validate all recipes on every commit)
+- Quick syntax verification
+
+**Features:**
+- ✅ Validates YAML syntax
+- ✅ Checks required fields (apiVersion, apps, source, etc.)
+- ✅ Validates strategy-specific configuration
+- ✅ No network calls
+- ✅ No downloads
+- ✅ Instant feedback
+
+**Usage:**
+```bash
+napt validate <recipe-file> [options]
+```
+
+**Options:**
+- `-v, --verbose` - Show validation progress and details
+
+**Example Output:**
+```
+Validating recipe: recipes/Google/chrome.yaml
+
+======================================================================
+VALIDATION RESULTS
+======================================================================
+Recipe:      recipes/Google/chrome.yaml
+Status:      VALID
+App Count:   1
+======================================================================
+
+[SUCCESS] Recipe is valid!
+```
+
+**When to use:**
+- Editing recipes locally
+- CI/CD pipeline checks
+- Before running `napt discover`
+- Troubleshooting recipe configuration
+
+---
+
+### `napt discover`
+
+Discovers the latest version of an application by querying the configured source and downloading the installer. This command performs the full discovery workflow including version extraction and state tracking.
+
+**Purpose:**
+- Find the latest version available from the source
+- Download the installer (or use cached version via ETag)
+- Extract version information from the downloaded file
+- Update state file with version and caching information
+
+**Features:**
+- ✅ Discovers version using configured strategy
+- ✅ Downloads installer (or HTTP 304 if cached)
+- ✅ Extracts version from downloaded file
+- ✅ Updates state file with ETag caching
+- ✅ SHA-256 hash verification
+- ✅ Atomic file writes
+
+**Usage:**
+```bash
+napt discover <recipe-file> [options]
+```
+
+**Options:**
+- `--output-dir DIR` - Directory to save downloaded files (default: ./downloads)
+- `--state-file FILE` - State file for version tracking (default: state/versions.json)
+- `--stateless` - Disable state tracking (no caching, always download)
+- `-v, --verbose` - Show progress and high-level status updates
+- `-d, --debug` - Show detailed debugging output (implies --verbose)
+
+**Example Output:**
+```
+Discovering version for recipe: recipes/Google/chrome.yaml
+Output directory: ./downloads
+
+[1/4] Loading configuration...
+[2/4] Discovering version...
+[3/4] Downloading installer...
+[4/4] Extracting version...
+======================================================================
+DISCOVERY RESULTS
+======================================================================
+App Name:        Google Chrome
+App ID:          napt-chrome
+Strategy:        http_static
+Version:         142.0.7444.60
+Version Source:  msi_product_version_from_file
+File Path:       ./downloads/googlechromestandaloneenterprise64.msi
+SHA-256:         9342a6a6ad6e81696b1294320beaa1630fb5c14f281061b40afbc9acd765ea88
+Status:          success
+======================================================================
+
+[SUCCESS] Version discovered successfully!
+```
+
+**When to use:**
+- Scheduled CI/CD runs to check for updates
+- Before building PSADT packages
+- Testing recipe discovery logic
+- Preparing files for Intune upload
+
+---
 
 ### Output Verbosity Modes
 
-NAPT supports three output modes to suit different debugging needs:
+Both commands support multiple output modes to suit different debugging needs:
 
 **1. Normal Mode** (default - no flags)
 - Minimal, clean output with progress steps
