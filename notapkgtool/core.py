@@ -210,7 +210,7 @@ def check_recipe(
 
     # 5. Run discovery: download and extract version
     print_step(3, 4, "Downloading installer...")
-    discovered_version, file_path, sha256 = strategy.discover_version(
+    discovered_version, file_path, sha256, headers = strategy.discover_version(
         app, output_dir, cache=cache, verbose=verbose, debug=debug
     )
 
@@ -223,13 +223,19 @@ def check_recipe(
         if "apps" not in state:
             state["apps"] = {}
 
-        # Note: We don't have headers here since strategies return tuple
-        # For now, we'll just update version and file info
-        # ETags are captured during download within the strategy
+        # Extract ETag and Last-Modified from headers for next run
+        etag = headers.get("ETag")
+        last_modified = headers.get("Last-Modified")
+
+        if etag:
+            print_verbose("STATE", f"Saving ETag for next run: {etag}")
+        if last_modified:
+            print_verbose("STATE", f"Saving Last-Modified for next run: {last_modified}")
+
         state["apps"][app_id] = {
             "version": discovered_version.version,
-            "etag": None,  # TODO: Strategies need to return headers
-            "last_modified": None,
+            "etag": etag,
+            "last_modified": last_modified,
             "file_path": str(file_path),
             "sha256": sha256,
             "last_checked": datetime.now(timezone.utc).isoformat(),

@@ -160,7 +160,7 @@ class GithubReleaseStrategy:
         cache: dict[str, Any] | None = None,
         verbose: bool = False,
         debug: bool = False,
-    ) -> tuple[DiscoveredVersion, Path, str]:
+    ) -> tuple[DiscoveredVersion, Path, str, dict]:
         """
         Fetch latest release from GitHub and download matching asset.
 
@@ -183,8 +183,8 @@ class GithubReleaseStrategy:
 
         Returns
         -------
-        tuple[DiscoveredVersion, Path, str]
-            Version info, file path to downloaded installer, and SHA-256 hash.
+        tuple[DiscoveredVersion, Path, str, dict]
+            Version info, file path, SHA-256 hash, and HTTP response headers.
 
         Raises
         ------
@@ -417,7 +417,7 @@ class GithubReleaseStrategy:
                     f"File may have been deleted. Try running with --stateless."
                 )
 
-            return discovered, cached_file, cache["sha256"]
+            return discovered, cached_file, cache["sha256"], {}
         except Exception as err:
             if isinstance(err, RuntimeError):
                 raise
@@ -427,7 +427,7 @@ class GithubReleaseStrategy:
 
         print_verbose("DISCOVERY", f"Download complete: {file_path.name}")
 
-        return discovered, file_path, sha256
+        return discovered, file_path, sha256, headers
 
 
 # Register this strategy when the module is imported

@@ -49,6 +49,7 @@ class TestStrategyRegistry:
                     DiscoveredVersion(version="1.0.0", source="custom"),
                     Path("/fake/path"),
                     "fakehash",
+                    {},  # HTTP headers
                 )
 
         register_strategy("custom_test", CustomStrategy)
@@ -87,7 +88,7 @@ class TestHttpStaticStrategy:
                     version="1.2.3", source="msi_product_version_from_file"
                 )
 
-                discovered, file_path, sha256 = strategy.discover_version(
+                discovered, file_path, sha256, headers = strategy.discover_version(
                     app_config, tmp_test_dir
                 )
 
@@ -233,7 +234,7 @@ class TestGithubReleaseStrategy:
                 headers={"Content-Length": str(len(fake_installer))},
             )
 
-            discovered, file_path, sha256 = strategy.discover_version(
+            discovered, file_path, sha256, headers = strategy.discover_version(
                 app_config, tmp_test_dir
             )
 
@@ -283,7 +284,7 @@ class TestGithubReleaseStrategy:
                 headers={"Content-Length": str(len(fake_installer))},
             )
 
-            discovered, file_path, sha256 = strategy.discover_version(
+            discovered, file_path, sha256, headers = strategy.discover_version(
                 app_config, tmp_test_dir
             )
 
@@ -325,7 +326,7 @@ class TestGithubReleaseStrategy:
                 headers={"Content-Length": str(len(fake_installer))},
             )
 
-            discovered, file_path, sha256 = strategy.discover_version(
+            discovered, file_path, sha256, headers = strategy.discover_version(
                 app_config, tmp_test_dir
             )
 
@@ -365,7 +366,7 @@ class TestGithubReleaseStrategy:
                 headers={"Content-Length": str(len(fake_installer))},
             )
 
-            discovered, file_path, sha256 = strategy.discover_version(
+            discovered, file_path, sha256, headers = strategy.discover_version(
                 app_config, tmp_test_dir
             )
 
@@ -584,7 +585,7 @@ class TestGithubReleaseStrategy:
                 headers={"Content-Length": str(len(fake_installer))},
             )
 
-            discovered, file_path, sha256 = strategy.discover_version(
+            discovered, file_path, sha256, headers = strategy.discover_version(
                 app_config, tmp_test_dir
             )
 
@@ -665,7 +666,7 @@ class TestGithubReleaseStrategy:
                 headers={"Content-Length": str(len(fake_installer))},
             )
 
-            discovered, file_path, sha256 = strategy.discover_version(
+            discovered, file_path, sha256, headers = strategy.discover_version(
                 app_config, tmp_test_dir
             )
 
@@ -704,7 +705,7 @@ class TestHttpJsonStrategy:
                 headers={"Content-Length": str(len(fake_installer))},
             )
 
-            discovered, file_path, sha256 = strategy.discover_version(
+            discovered, file_path, sha256, headers = strategy.discover_version(
                 app_config, tmp_test_dir
             )
 
@@ -747,7 +748,7 @@ class TestHttpJsonStrategy:
                 headers={"Content-Length": str(len(fake_installer))},
             )
 
-            discovered, file_path, sha256 = strategy.discover_version(
+            discovered, file_path, sha256, headers = strategy.discover_version(
                 app_config, tmp_test_dir
             )
 
@@ -782,7 +783,7 @@ class TestHttpJsonStrategy:
                 headers={"Content-Length": str(len(fake_installer))},
             )
 
-            discovered, file_path, sha256 = strategy.discover_version(
+            discovered, file_path, sha256, headers = strategy.discover_version(
                 app_config, tmp_test_dir
             )
 
@@ -819,7 +820,7 @@ class TestHttpJsonStrategy:
                 headers={"Content-Length": str(len(fake_installer))},
             )
 
-            discovered, file_path, sha256 = strategy.discover_version(
+            discovered, file_path, sha256, headers = strategy.discover_version(
                 app_config, tmp_test_dir
             )
 
@@ -863,7 +864,7 @@ class TestHttpJsonStrategy:
                 headers={"Content-Length": str(len(fake_installer))},
             )
 
-            discovered, file_path, sha256 = strategy.discover_version(
+            discovered, file_path, sha256, headers = strategy.discover_version(
                 app_config, tmp_test_dir
             )
 
@@ -1058,7 +1059,7 @@ class TestCacheAndETagSupport:
                     version="1.0.0", source="msi_product_version_from_file"
                 )
 
-                discovered, file_path, sha256 = strategy.discover_version(
+                discovered, file_path, sha256, headers = strategy.discover_version(
                     app_config, tmp_test_dir, cache=cache
                 )
 
@@ -1113,7 +1114,7 @@ class TestCacheAndETagSupport:
                 status_code=304,
             )
 
-            discovered, file_path, sha256 = strategy.discover_version(
+            discovered, file_path, sha256, headers = strategy.discover_version(
                 app_config, tmp_test_dir, cache=cache
             )
 
@@ -1160,7 +1161,7 @@ class TestCacheAndETagSupport:
                     version="2.0.0", source="msi_product_version_from_file"
                 )
 
-                discovered, file_path, sha256 = strategy.discover_version(
+                discovered, file_path, sha256, headers = strategy.discover_version(
                     app_config, tmp_test_dir, cache=cache
                 )
 
@@ -1198,7 +1199,7 @@ class TestCacheAndETagSupport:
                 )
 
                 # Call without cache parameter (None is default)
-                discovered, file_path, sha256 = strategy.discover_version(
+                discovered, file_path, sha256, headers = strategy.discover_version(
                     app_config, tmp_test_dir
                 )
 
