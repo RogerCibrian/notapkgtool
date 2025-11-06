@@ -206,7 +206,9 @@ def discover_recipe(
         if cache:
             print_verbose("STATE", f"Using cache for {app_id}")
             if cache.get("known_version"):
-                print_verbose("STATE", f"  Cached version: {cache.get('known_version')}")
+                print_verbose(
+                    "STATE", f"  Cached version: {cache.get('known_version')}"
+                )
             if cache.get("etag"):
                 print_verbose("STATE", f"  Cached ETag: {cache.get('etag')}")
 
