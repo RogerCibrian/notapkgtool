@@ -44,6 +44,13 @@ from typing import Any
 
 import requests
 
+# TODO: Add version tracking for IntuneWinAppUtil.exe
+# Currently downloads from master branch (always latest), with no version tracking.
+# Future enhancements:
+#   - Track tool version in cache metadata
+#   - Allow pinning to specific commit/release
+#   - Auto-detect when tool updates are available
+#   - Optional: Add config setting for tool version/source
 INTUNEWIN_TOOL_URL = (
     "https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool"
     "/raw/master/IntuneWinAppUtil.exe"
