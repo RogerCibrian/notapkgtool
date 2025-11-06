@@ -219,7 +219,7 @@ def discover_recipe(
 
     # Update state with discovered information
     if state and app_id and state_file:
-        from datetime import datetime, timezone
+        from datetime import UTC, datetime
 
         if "apps" not in state:
             state["apps"] = {}
@@ -233,20 +233,26 @@ def discover_recipe(
         if last_modified:
             print_verbose("STATE", f"Saving Last-Modified for next run: {last_modified}")
 
-        state["apps"][app_id] = {
-            "version": discovered_version.version,
+        # Build cache entry with new schema v2
+        cache_entry = {
+            "url": str(app.get("source", {}).get("url", "")),
             "etag": etag,
             "last_modified": last_modified,
-            "file_path": str(file_path),
             "sha256": sha256,
-            "last_checked": datetime.now(timezone.utc).isoformat(),
-            "source": discovered_version.source,
         }
+        
+        # Optional fields
+        if discovered_version.version:
+            cache_entry["known_version"] = discovered_version.version
+        if strategy_name:
+            cache_entry["strategy"] = strategy_name
+        
+        state["apps"][app_id] = cache_entry
 
         state["metadata"] = {
             "napt_version": "0.1.0",
-            "last_updated": datetime.now(timezone.utc).isoformat(),
-            "schema_version": "1",
+            "last_updated": datetime.now(UTC).isoformat(),
+            "schema_version": "2",
         }
 
         try:

@@ -39,9 +39,10 @@ Basic usage:
     
     # Update cache
     state["apps"]["napt-chrome"] = {
-        "version": "130.0.0",
+        "url": "https://dl.google.com/chrome.msi",
         "etag": "W/\"abc123\"",
-        ...
+        "sha256": "abc123...",
+        "known_version": "130.0.0"
     }
     
     # Save state
