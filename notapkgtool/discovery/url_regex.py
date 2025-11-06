@@ -264,6 +264,7 @@ class UrlRegexStrategy:
             )
         except NotModifiedError:
             # File unchanged (HTTP 304), use cached version
+            # TODO: Update for state schema v2 - use convention-based path instead of cache["file_path"]
             print_verbose(
                 "DISCOVERY", "File not modified (HTTP 304), using cached version"
             )
