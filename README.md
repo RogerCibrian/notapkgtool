@@ -343,13 +343,13 @@ apps:
 - ✅ State tracking with ETag caching
 - ✅ Cross-platform support
 
-### v0.2.0 (Current)
+### v0.2.0 (In Development - This Branch)
 - ✅ PSADT package building with `build` command
 - ✅ .intunewin generation with `package` command
 - ✅ PSADT release management from GitHub
 - ✅ Invoke-AppDeployToolkit.ps1 generation from templates
 - ✅ Custom branding support
-- ✅ Filesystem-first version tracking
+- ✅ Filesystem-first version tracking (state schema v2)
 
 ### v0.3.0 (Planned)
 - 🚧 Microsoft Intune upload

@@ -73,9 +73,9 @@ Basic usage:
 
 Access merged defaults:
 
-    >>> psadt_version = cfg["defaults"]["psadt"]["template_version"]
-    >>> print(psadt_version)
-    4.1.5
+    >>> psadt_release = cfg["defaults"]["psadt"]["release"]
+    >>> print(psadt_release)
+    latest
 
 Override vendor detection:
 
@@ -235,7 +235,7 @@ def _resolve_known_paths(
       - cfg["defaults"]["psadt"]["brand_pack"]["path"]
 
     Brand pack paths are resolved relative to defaults_root (if available),
-    otherwise relative to recipe_dir for backward compatibility.
+    otherwise relative to recipe_dir as fallback.
     Modifies cfg in place.
     """
     try:

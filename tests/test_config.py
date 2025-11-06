@@ -77,7 +77,8 @@ class TestConfigMerging:
 apiVersion: napt/v1
 defaults:
   psadt:
-    template_version: "4.1.5"
+    release: "latest"
+    cache_dir: "cache/psadt"
     app_vars:
       AppLang: "EN"
 """
@@ -100,7 +101,7 @@ apps:
         config = load_effective_config(recipe_path)
 
         # Both keys should be present (deep merge)
-        assert config["defaults"]["psadt"]["template_version"] == "4.1.5"
+        assert config["defaults"]["psadt"]["release"] == "latest"
         assert config["defaults"]["psadt"]["app_vars"]["AppLang"] == "EN"
         assert config["defaults"]["psadt"]["app_vars"]["AppName"] == "MyApp"
 

@@ -76,7 +76,8 @@ def sample_org_defaults() -> dict[str, Any]:
         "defaults": {
             "comparator": "semver",
             "psadt": {
-                "template_version": "4.1.5",
+                "release": "latest",
+                "cache_dir": "cache/psadt",
             },
         },
     }

@@ -678,26 +678,30 @@ source:
 - All other features fully supported
 - Installation: `apt-get install msitools` (Debian/Ubuntu)
 
-## Current Status (v0.2.0)
+## Current Status
 
-### ✅ Implemented
-- CLI with `validate`, `discover`, `build`, and `package` commands
+### ✅ Implemented (v0.1.0 - Released)
+- CLI with `validate` and `discover` commands
 - Three output modes: normal, verbose, and debug
 - Config loading and merging
 - HTTP static discovery strategy
 - URL regex discovery strategy
 - GitHub release discovery strategy
 - HTTP JSON API discovery strategy
-- State tracking with ETag-based caching (schema v2, filesystem-first)
+- State tracking with ETag-based caching
 - Robust file downloads with conditional requests
 - Version comparison (semver, numeric, lexicographic)
 - MSI ProductVersion extraction
 - Cross-platform support
+
+### ✅ Implemented (v0.2.0 - In Development)
+- `build` and `package` CLI commands
 - PSADT package building from recipes
-- Invoke-AppDeployToolkit.ps1 generation
+- Invoke-AppDeployToolkit.ps1 generation from templates
 - .intunewin package creation
 - PSADT release management from GitHub
-- Custom branding support
+- Custom branding support (moved to defaults/brand-packs/)
+- State schema v2 (filesystem-first approach)
 
 ### 🚧 Planned
 - Intune upload
@@ -1099,6 +1103,6 @@ GPL-3.0-only - See LICENSE file for details
 
 ---
 
-*This documentation reflects the state of NAPT v0.2.0*
+*This documentation reflects v0.1.0 (released) + v0.2.0 (in development)*
 *Last updated: 2025-11-06*
 

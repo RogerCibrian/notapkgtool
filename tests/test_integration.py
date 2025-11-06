@@ -34,7 +34,7 @@ class TestEndToEndWorkflow:
             "apiVersion": "napt/v1",
             "defaults": {
                 "comparator": "semver",
-                "psadt": {"template_version": "4.1.5"},
+                "psadt": {"release": "latest", "cache_dir": "cache/psadt"},
             },
         }
         org_path = defaults_dir / "org.yaml"
