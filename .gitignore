@@ -182,3 +182,7 @@ state/*.json
 !state/.gitignore
 
 .DS_Store
+
+# Cursor IDE files
+.cursor/
+.cursor_context
