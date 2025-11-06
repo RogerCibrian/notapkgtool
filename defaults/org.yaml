@@ -33,7 +33,14 @@ defaults:
     enforce_vendor_cn: null
 
   psadt:
+    # PSADT release to use - "latest" or specific version (e.g., "4.1.7")
+    release: "latest"
+    
+    # Cache directory for downloaded PSADT releases
+    cache_dir: "cache/psadt"
+    
     # Version of the PSAppDeployToolkit (PSADT) template to use.
+    # DEPRECATED: Use 'release' instead. Kept for backward compatibility.
     template_version: "4.1.5"
 
     # Brand pack replaces default PSADT assets (logo/banner) with custom ones.
@@ -58,6 +65,14 @@ defaults:
       AppScriptVersion: "1.0.0"           # Script version metadata
       AppScriptAuthor: "napt"             # Author name shown in script header
       RequireAdmin: true                  # Require admin privileges
+
+  build:
+    # Output directory for built PSADT packages
+    output_dir: "builds"
+    
+    # Directory naming pattern
+    # Supported placeholders: {app_id}, {version}, {vendor}
+    naming: "{app_id}/{version}"
 
   package:
     # Package type. Win32 = Intune Win32 package.
