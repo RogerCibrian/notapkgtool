@@ -681,7 +681,7 @@ source:
 ## Current Status (v0.1.0)
 
 ### ✅ Implemented
-- CLI with `check` command
+- CLI with `validate` and `discover` commands
 - Three output modes: normal, verbose, and debug
 - Config loading and merging
 - HTTP static discovery strategy
@@ -954,5 +954,5 @@ GPL-3.0-only - See LICENSE file for details
 ---
 
 *This documentation reflects the state of NAPT v0.1.0*
-*Last updated: 2025-10-28*
+*Last updated: 2025-11-06*
 
