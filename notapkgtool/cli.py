@@ -59,7 +59,7 @@ from importlib.metadata import version
 from pathlib import Path
 import sys
 
-from notapkgtool.build import build_package
+from notapkgtool.build import build_package, create_intunewin
 from notapkgtool.core import discover_recipe
 from notapkgtool.validation import validate_recipe
 
@@ -362,6 +362,89 @@ def cmd_build(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_package(args: argparse.Namespace) -> int:
+    """
+    Handler for 'napt package' command.
+
+    Creates a .intunewin package from a built PSADT directory. This command:
+      - Verifies the build directory has valid PSADT structure
+      - Downloads/caches IntuneWinAppUtil.exe if needed
+      - Runs IntuneWinAppUtil.exe to create .intunewin package
+      - Optionally cleans the source build directory after packaging
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Parsed command-line arguments containing:
+        - build_dir : Path to built PSADT package directory
+        - output_dir : Directory for .intunewin output
+        - clean_source : Whether to remove build directory after packaging
+        - verbose : Whether to show progress updates
+        - debug : Whether to show detailed debugging output
+
+    Returns
+    -------
+    int
+        Exit code: 0 for success, 1 for failure.
+
+    Side Effects
+    ------------
+    - Creates .intunewin file in output directory
+    - Downloads IntuneWinAppUtil.exe if not cached
+    - Optionally removes build directory if --clean-source
+    - Prints progress and results to stdout
+    """
+    # Set global verbose and debug flags
+    set_verbose(args.verbose)
+    set_debug(args.debug)
+
+    build_dir = Path(args.build_dir).resolve()
+    output_dir = Path(args.output_dir) if args.output_dir else None
+
+    if not build_dir.exists():
+        print(f"Error: Build directory not found: {build_dir}")
+        return 1
+
+    print(f"Creating .intunewin package from: {build_dir}")
+    if output_dir:
+        print(f"Output directory: {output_dir}")
+    print()
+
+    try:
+        result = create_intunewin(
+            build_dir,
+            output_dir=output_dir,
+            clean_source=args.clean_source,
+            verbose=args.verbose,
+            debug=args.debug,
+        )
+    except Exception as err:
+        print(f"Error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+
+    # Display results
+    print("=" * 70)
+    print("PACKAGE RESULTS")
+    print("=" * 70)
+    print(f"App ID:          {result['app_id']}")
+    print(f"Version:         {result['version']}")
+    print(f"Package Path:    {result['package_path']}")
+    if args.clean_source:
+        print(f"Build Directory: {result['build_dir']} (removed)")
+    else:
+        print(f"Build Directory: {result['build_dir']}")
+    print(f"Status:          {result['status']}")
+    print("=" * 70)
+    print()
+    print("[SUCCESS] .intunewin package created successfully!")
+
+    return 0
+
+
 def main() -> None:
     """
     Main entry point for the napt CLI.
@@ -477,6 +560,40 @@ def main() -> None:
         help="Show detailed debugging output (implies --verbose)",
     )
     parser_build.set_defaults(func=cmd_build)
+
+    # 'package' command
+    parser_package = subparsers.add_parser(
+        "package",
+        help="Create .intunewin package from PSADT build directory",
+        description="Package a built PSADT directory into a .intunewin file for Intune deployment.",
+    )
+    parser_package.add_argument(
+        "build_dir",
+        help="Path to the built PSADT package directory",
+    )
+    parser_package.add_argument(
+        "--output-dir",
+        default=None,
+        help="Directory for .intunewin output (default: packages/{app_id}/)",
+    )
+    parser_package.add_argument(
+        "--clean-source",
+        action="store_true",
+        help="Remove the build directory after packaging",
+    )
+    parser_package.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Show progress and high-level status updates",
+    )
+    parser_package.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="Show detailed debugging output (implies --verbose)",
+    )
+    parser_package.set_defaults(func=cmd_package)
 
     # Parse and dispatch
     args = parser.parse_args()
