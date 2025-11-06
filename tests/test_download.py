@@ -98,7 +98,9 @@ def test_checksum_validation_success(tmp_test_dir: Path) -> None:
 
     with requests_mock.Mocker() as m:
         m.get(url, content=data, headers={"Content-Length": str(len(data))})
-        path, digest, _ = download_file(url, tmp_test_dir, expected_sha256=expected_hash)
+        path, digest, _ = download_file(
+            url, tmp_test_dir, expected_sha256=expected_hash
+        )
 
     assert path.exists()
     assert digest == expected_hash
@@ -141,7 +143,9 @@ def test_conditional_request_with_etag_not_modified(tmp_test_dir: Path) -> None:
             download_file(url, tmp_test_dir, etag=etag)
 
 
-def test_conditional_request_with_last_modified_not_modified(tmp_test_dir: Path) -> None:
+def test_conditional_request_with_last_modified_not_modified(
+    tmp_test_dir: Path,
+) -> None:
     """Test that Last-Modified causes NotModifiedError on 304 response."""
     url = "https://example.com/file.bin"
     last_modified = "Mon, 01 Jan 2024 00:00:00 GMT"

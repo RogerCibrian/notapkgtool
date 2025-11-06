@@ -264,7 +264,9 @@ class UrlRegexStrategy:
             )
         except NotModifiedError:
             # File unchanged (HTTP 304), use cached version
-            print_verbose("DISCOVERY", "File not modified (HTTP 304), using cached version")
+            print_verbose(
+                "DISCOVERY", "File not modified (HTTP 304), using cached version"
+            )
 
             if not cache or "file_path" not in cache or "sha256" not in cache:
                 raise RuntimeError(
@@ -292,14 +294,14 @@ class UrlRegexStrategy:
     def validate_config(self, app_config: dict[str, Any]) -> list[str]:
         """
         Validate url_regex strategy configuration.
-        
+
         Checks for required fields and correct types without making network calls.
-        
+
         Parameters
         ----------
         app_config : dict
             The app configuration from the recipe.
-        
+
         Returns
         -------
         list[str]
@@ -307,7 +309,7 @@ class UrlRegexStrategy:
         """
         errors = []
         source = app_config.get("source", {})
-        
+
         # Check required fields
         if "url" not in source:
             errors.append("Missing required field: source.url")
@@ -315,7 +317,7 @@ class UrlRegexStrategy:
             errors.append("source.url must be a string")
         elif not source["url"].strip():
             errors.append("source.url cannot be empty")
-        
+
         if "pattern" not in source:
             errors.append("Missing required field: source.pattern")
         elif not isinstance(source["pattern"], str):
@@ -332,14 +334,14 @@ class UrlRegexStrategy:
             else:
                 # Try to compile the regex to check syntax
                 import re
+
                 try:
                     re.compile(pattern)
                 except re.error as err:
                     errors.append(f"Invalid regex pattern: {err}")
-        
+
         return errors
 
 
 # Register this strategy when the module is imported
 register_strategy("url_regex", UrlRegexStrategy)
-

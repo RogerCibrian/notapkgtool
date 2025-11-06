@@ -170,7 +170,9 @@ class HttpStaticStrategy:
             )
         except NotModifiedError:
             # File unchanged (HTTP 304), use cached version
-            print_verbose("DISCOVERY", "File not modified (HTTP 304), using cached version")
+            print_verbose(
+                "DISCOVERY", "File not modified (HTTP 304), using cached version"
+            )
 
             if not cache or "file_path" not in cache or "sha256" not in cache:
                 raise RuntimeError(
@@ -229,14 +231,14 @@ class HttpStaticStrategy:
     def validate_config(self, app_config: dict[str, Any]) -> list[str]:
         """
         Validate http_static strategy configuration.
-        
+
         Checks for required fields and correct types without making network calls.
-        
+
         Parameters
         ----------
         app_config : dict
             The app configuration from the recipe.
-        
+
         Returns
         -------
         list[str]
@@ -244,7 +246,7 @@ class HttpStaticStrategy:
         """
         errors = []
         source = app_config.get("source", {})
-        
+
         # Check required fields
         if "url" not in source:
             errors.append("Missing required field: source.url")
@@ -252,7 +254,7 @@ class HttpStaticStrategy:
             errors.append("source.url must be a string")
         elif not source["url"].strip():
             errors.append("source.url cannot be empty")
-        
+
         # Check version configuration
         if "version" not in source:
             errors.append("Missing required field: source.version")
@@ -260,7 +262,7 @@ class HttpStaticStrategy:
             errors.append("source.version must be a dictionary")
         else:
             version_config = source["version"]
-            
+
             # Check version.type
             if "type" not in version_config:
                 errors.append("Missing required field: source.version.type")
@@ -274,7 +276,7 @@ class HttpStaticStrategy:
                         f"Unsupported source.version.type: {version_type!r}. "
                         f"Supported: {', '.join(supported_types)}"
                     )
-        
+
         return errors
 
 

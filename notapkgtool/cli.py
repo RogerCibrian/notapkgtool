@@ -175,7 +175,9 @@ def cmd_validate(args: argparse.Namespace) -> int:
         return 0
     else:
         print()
-        print(f"[FAILED] Recipe validation failed with {len(result['errors'])} error(s).")
+        print(
+            f"[FAILED] Recipe validation failed with {len(result['errors'])} error(s)."
+        )
         return 1
 
 

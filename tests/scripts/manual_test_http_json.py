@@ -9,11 +9,11 @@ Usage:
     python tests/scripts/manual_test_http_json.py
 """
 
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import json
 from pathlib import Path
 import sys
 import tempfile
-import json
-from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
 import time
 
@@ -356,7 +356,7 @@ def test_real_api():
         print("\n✅ API Response Received!")
         print(f"  Latest Tag: {tag_name}")
         print(f"  First Asset URL: {first_asset_url[:60]}...")
-        print(f"\nNote: Full download test skipped to save bandwidth and time.")
+        print("\nNote: Full download test skipped to save bandwidth and time.")
 
     except Exception as e:
         print(f"\n❌ FAILED: {e}")
@@ -407,4 +407,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

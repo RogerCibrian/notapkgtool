@@ -231,7 +231,9 @@ def discover_recipe(
         if etag:
             print_verbose("STATE", f"Saving ETag for next run: {etag}")
         if last_modified:
-            print_verbose("STATE", f"Saving Last-Modified for next run: {last_modified}")
+            print_verbose(
+                "STATE", f"Saving Last-Modified for next run: {last_modified}"
+            )
 
         # Build cache entry with new schema v2
         cache_entry = {
@@ -240,13 +242,13 @@ def discover_recipe(
             "last_modified": last_modified,
             "sha256": sha256,
         }
-        
+
         # Optional fields
         if discovered_version.version:
             cache_entry["known_version"] = discovered_version.version
         if strategy_name:
             cache_entry["strategy"] = strategy_name
-        
+
         state["apps"][app_id] = cache_entry
 
         state["metadata"] = {

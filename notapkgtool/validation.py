@@ -44,9 +44,7 @@ class ValidationError(Exception):
     pass
 
 
-def validate_recipe(
-    recipe_path: Path, verbose: bool = False
-) -> dict[str, Any]:
+def validate_recipe(recipe_path: Path, verbose: bool = False) -> dict[str, Any]:
     """
     Validate a recipe file without downloading anything.
 
@@ -110,7 +108,7 @@ def validate_recipe(
 
     # Parse YAML
     try:
-        with open(recipe_path, "r", encoding="utf-8") as f:
+        with open(recipe_path, encoding="utf-8") as f:
             recipe = yaml.safe_load(f)
     except yaml.YAMLError as err:
         errors.append(f"Invalid YAML syntax: {err}")
@@ -239,7 +237,9 @@ def validate_recipe(
             continue
 
         if verbose:
-            print(f"  ✓ App '{app.get('name', 'unnamed')}' uses strategy: {strategy_name}")
+            print(
+                f"  ✓ App '{app.get('name', 'unnamed')}' uses strategy: {strategy_name}"
+            )
 
         # Check if strategy exists
         try:
@@ -255,16 +255,14 @@ def validate_recipe(
                 for error in config_errors:
                     errors.append(f"{app_prefix}: {error}")
             except Exception as err:
-                errors.append(
-                    f"{app_prefix}: Strategy validation failed: {err}"
-                )
+                errors.append(f"{app_prefix}: Strategy validation failed: {err}")
 
     # Determine final status
     status = "valid" if len(errors) == 0 else "invalid"
 
     if verbose:
         if status == "valid":
-            print(f"  ✓ Recipe is valid!")
+            print("  ✓ Recipe is valid!")
         else:
             print(f"  ✗ Recipe has {len(errors)} error(s)")
 
@@ -275,4 +273,3 @@ def validate_recipe(
         "app_count": app_count,
         "recipe_path": str(recipe_path),
     }
-

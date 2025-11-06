@@ -18,7 +18,7 @@ import yaml
 def tmp_test_dir(tmp_path: Path) -> Path:
     """
     Provide a temporary directory for test artifacts.
-    
+
     Automatically cleaned up after test completion.
     """
     return tmp_path
@@ -40,7 +40,7 @@ def sample_yaml_path(fixtures_dir: Path) -> Path:
 def sample_recipe_data() -> dict[str, Any]:
     """
     Provide sample recipe configuration data.
-    
+
     Returns a complete recipe structure for testing.
     """
     return {
@@ -86,17 +86,18 @@ def sample_org_defaults() -> dict[str, Any]:
 def create_yaml_file(tmp_test_dir: Path):
     """
     Factory fixture for creating temporary YAML files.
-    
+
     Usage:
         yaml_path = create_yaml_file("test.yaml", {"key": "value"})
     """
+
     def _create(filename: str, data: dict[str, Any]) -> Path:
         path = tmp_test_dir / filename
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("w", encoding="utf-8") as f:
             yaml.dump(data, f)
         return path
-    
+
     return _create
 
 
@@ -104,7 +105,7 @@ def create_yaml_file(tmp_test_dir: Path):
 def mock_download_response():
     """
     Provide mock data for download responses.
-    
+
     Returns common test data for HTTP download testing.
     """
     return {
@@ -115,4 +116,3 @@ def mock_download_response():
             "Last-Modified": "Mon, 01 Jan 2024 00:00:00 GMT",
         },
     }
-

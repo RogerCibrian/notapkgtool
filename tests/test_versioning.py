@@ -41,7 +41,7 @@ class TestVersionComparison:
         # Release > prerelease
         assert compare_any("1.0.0", "1.0.0-rc.1") == 1
         assert compare_any("1.0.0-rc.1", "1.0.0") == -1
-        
+
         # Prerelease tag ordering: alpha < beta < rc
         assert compare_any("1.0.0-beta", "1.0.0-alpha") == 1
         assert compare_any("1.0.0-rc", "1.0.0-beta") == 1
@@ -168,4 +168,3 @@ class TestEdgeCases:
         """Test real-world Chrome-style versions."""
         assert compare_any("141.0.7390.123", "140.0.7339.128") == 1
         assert compare_any("141.0.7390.123", "141.0.7390.122") == 1
-

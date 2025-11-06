@@ -60,12 +60,13 @@ Register and use a custom strategy:
     print(f"Version: {discovered.version}")
 """
 
-from .base import DiscoveryStrategy, get_strategy
-
 # Import strategy modules to trigger self-registration
-from . import github_release  # noqa: F401
-from . import http_json  # noqa: F401
-from . import http_static  # noqa: F401
-from . import url_regex  # noqa: F401
+from . import (
+    github_release,  # noqa: F401
+    http_json,  # noqa: F401
+    http_static,  # noqa: F401
+    url_regex,  # noqa: F401
+)
+from .base import DiscoveryStrategy, get_strategy
 
 __all__ = ["DiscoveryStrategy", "get_strategy"]

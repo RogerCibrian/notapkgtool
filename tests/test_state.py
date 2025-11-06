@@ -10,7 +10,6 @@ Tests state management including:
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 import pytest
 
@@ -126,7 +125,7 @@ class TestStateTracker:
                 "test-app": {
                     "url": "https://vendor.com/app.msi",
                     "sha256": "abc123",
-                    "known_version": "1.2.3"
+                    "known_version": "1.2.3",
                 }
             },
         }
@@ -255,4 +254,3 @@ class TestStateTracker:
 
         # No cache means version changed
         assert tracker.has_version_changed("test-app", "1.0.0") is True
-

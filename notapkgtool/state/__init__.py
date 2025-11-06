@@ -30,13 +30,13 @@ Basic usage:
 
     from pathlib import Path
     from notapkgtool.state import load_state, save_state
-    
+
     # Load state
     state = load_state(Path("state/versions.json"))
-    
+
     # Get cache for a recipe
     cache = state.get("apps", {}).get("napt-chrome")
-    
+
     # Update cache
     state["apps"]["napt-chrome"] = {
         "url": "https://dl.google.com/chrome.msi",
@@ -44,7 +44,7 @@ Basic usage:
         "sha256": "abc123...",
         "known_version": "130.0.0"
     }
-    
+
     # Save state
     save_state(state, Path("state/versions.json"))
 """
@@ -52,4 +52,3 @@ Basic usage:
 from .tracker import StateTracker, load_state, save_state
 
 __all__ = ["StateTracker", "load_state", "save_state"]
-

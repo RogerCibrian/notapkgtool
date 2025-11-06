@@ -127,8 +127,8 @@ Notes
 from __future__ import annotations
 
 import os
-import re
 from pathlib import Path
+import re
 from typing import Any
 
 import requests
@@ -402,7 +402,9 @@ class GithubReleaseStrategy:
             )
         except NotModifiedError:
             # File unchanged (HTTP 304), use cached version
-            print_verbose("DISCOVERY", "File not modified (HTTP 304), using cached version")
+            print_verbose(
+                "DISCOVERY", "File not modified (HTTP 304), using cached version"
+            )
 
             if not cache or "file_path" not in cache or "sha256" not in cache:
                 raise RuntimeError(
@@ -432,14 +434,14 @@ class GithubReleaseStrategy:
     def validate_config(self, app_config: dict[str, Any]) -> list[str]:
         """
         Validate github_release strategy configuration.
-        
+
         Checks for required fields and correct types without making network calls.
-        
+
         Parameters
         ----------
         app_config : dict
             The app configuration from the recipe.
-        
+
         Returns
         -------
         list[str]
@@ -447,7 +449,7 @@ class GithubReleaseStrategy:
         """
         errors = []
         source = app_config.get("source", {})
-        
+
         # Check required fields
         if "repo" not in source:
             errors.append("Missing required field: source.repo")
@@ -462,7 +464,7 @@ class GithubReleaseStrategy:
                 errors.append(
                     "source.repo must be in format 'owner/repo' (e.g., 'git/git')"
                 )
-        
+
         if "asset_pattern" not in source:
             errors.append("Missing required field: source.asset_pattern")
         elif not isinstance(source["asset_pattern"], str):
@@ -473,11 +475,12 @@ class GithubReleaseStrategy:
             # Validate regex pattern syntax
             pattern = source["asset_pattern"]
             import re
+
             try:
                 re.compile(pattern)
             except re.error as err:
                 errors.append(f"Invalid asset_pattern regex: {err}")
-        
+
         # Optional fields validation
         if "version_pattern" in source:
             if not isinstance(source["version_pattern"], str):
@@ -485,11 +488,12 @@ class GithubReleaseStrategy:
             else:
                 pattern = source["version_pattern"]
                 import re
+
                 try:
                     re.compile(pattern)
                 except re.error as err:
                     errors.append(f"Invalid version_pattern regex: {err}")
-        
+
         return errors
 
 
