@@ -39,7 +39,7 @@ defaults:
     # Brand pack replaces default PSADT assets (logo/banner) with custom ones.
     brand_pack:
       # Relative path to folder containing your replacement assets.
-      path: ../../branding/napt
+      path: brand-packs/napt
 
       # Mapping rules: local source → template target location.
       mappings:
