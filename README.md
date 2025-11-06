@@ -19,7 +19,7 @@ NAPT is a Python-based CLI tool that automates the entire workflow for packaging
 - ✅ **Intelligent updates** - Version-based, hash-based, or combined strategies
 - ✅ **Cross-platform support** - Windows, Linux, and macOS
 - ✅ **Layered configuration** - Organization → Vendor → Recipe inheritance
-- 🚧 **PSADT packaging** - Generate Intune packages (planned)
+- ✅ **PSADT packaging** - Generate Intune-ready packages with PSAppDeployToolkit
 - 🚧 **Direct Intune upload** - Automatic deployment (planned)
 - 🚧 **Deployment waves** - Phased rollouts with rings (planned)
 
@@ -63,6 +63,29 @@ napt discover recipes/Google/chrome.yaml --stateless
 
 # Show debug output with full configuration dumps
 napt discover recipes/Google/chrome.yaml --debug
+```
+
+### Build PSADT Package
+
+```bash
+# Build PSADT package from recipe and downloaded installer
+napt build recipes/Google/chrome.yaml
+
+# Specify custom downloads and output directories
+napt build recipes/Google/chrome.yaml --downloads-dir ./downloads --output-dir ./builds
+
+# Show verbose output
+napt build recipes/Google/chrome.yaml --verbose
+```
+
+### Create .intunewin Package
+
+```bash
+# Create .intunewin from build directory
+napt package builds/napt-chrome/141.0.7390.123/
+
+# Specify output directory and clean source after packaging
+napt package builds/napt-chrome/141.0.7390.123/ --output-dir ./packages --clean-source
 ```
 
 ### Output Modes
@@ -306,7 +329,7 @@ apps:
 
 ## 🗺️ Roadmap
 
-### v0.1.0 (Current)
+### v0.1.0
 - ✅ CLI with `validate` and `discover` commands
 - ✅ Recipe validation (syntax and configuration checks)
 - ✅ Verbose and debug output modes
@@ -320,9 +343,13 @@ apps:
 - ✅ State tracking with ETag caching
 - ✅ Cross-platform support
 
-### v0.2.0 (Planned)
-- 🚧 PSADT package building
-- 🚧 .intunewin generation
+### v0.2.0 (Current)
+- ✅ PSADT package building with `build` command
+- ✅ .intunewin generation with `package` command
+- ✅ PSADT release management from GitHub
+- ✅ Invoke-AppDeployToolkit.ps1 generation from templates
+- ✅ Custom branding support
+- ✅ Filesystem-first version tracking
 
 ### v0.3.0 (Planned)
 - 🚧 Microsoft Intune upload
