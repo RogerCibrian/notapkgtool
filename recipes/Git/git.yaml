@@ -18,20 +18,8 @@ apps:
         AppArch: "x64"
       install: |
         # Git for Windows silent install with default options
-        Execute-Process `
-          -Path "$dirFiles\Git-${discovered_version}-64-bit.exe" `
-          -Parameters "/VERYSILENT /NORESTART /NOCANCEL /SP- /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS /COMPONENTS=`"icons,ext\reg\shellhere,assoc,assoc_sh`"" `
-          -WindowStyle Hidden
+        Start-ADTProcess -Path "$dirFiles\Git-${discovered_version}-64-bit.exe" -Parameters "/VERYSILENT /NORESTART /NOCANCEL /SP- /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS /COMPONENTS=`"icons,ext\reg\shellhere,assoc,assoc_sh`""
       uninstall: |
-        # Git for Windows uninstall
-        $app = Get-InstalledApplication -Name "Git" -Exact
-        if ($app -and $app.UninstallString) {
-          if ($app.UninstallString -match '^\s*"(.*?)"\s*(.*)$') {
-            Execute-Process -Path $matches[1] -Parameters "/VERYSILENT /NORESTART /SP-" -WindowStyle Hidden
-          } else {
-            Execute-Process -Path $app.UninstallString -Parameters "/VERYSILENT /NORESTART" -WindowStyle Hidden
-          }
-        } else {
-          Write-Log -Message "Git for Windows not found; nothing to uninstall."
-        }
+        # Git for Windows uninstall (handles Inno Setup uninstaller automatically)
+        Uninstall-ADTApplication -Name "Git"
 
