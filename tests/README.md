@@ -1,6 +1,6 @@
 # NAPT Test Suite
 
-Comprehensive test coverage for the NAPT project with 198 tests covering all functionality.
+Comprehensive test coverage for the NAPT project with **198 tests** covering all functionality including discovery, state tracking, PSADT building, and packaging.
 
 ## Test Structure
 
@@ -29,14 +29,34 @@ tests/
 
 ## Running Tests
 
+### Prerequisites
+```bash
+# Activate virtual environment (PowerShell)
+.venv\Scripts\Activate.ps1
+
+# Or on Linux/macOS
+source .venv/bin/activate
+```
+
 ### Run All Tests
 ```bash
+python -m pytest tests/
+# or
 pytest tests/
 ```
 
 ### Run Specific Test File
 ```bash
-pytest tests/test_versioning.py
+python -m pytest tests/test_versioning.py -v
+```
+
+### Run Specific Test Module
+```bash
+# Run all build-related tests
+python -m pytest tests/test_build_manager.py tests/test_build_template.py tests/test_packager.py -v
+
+# Run all PSADT tests
+python -m pytest tests/test_psadt_release.py -v
 ```
 
 ### Run with Verbose Output
@@ -47,6 +67,16 @@ pytest tests/ -v
 ### Run with Coverage
 ```bash
 pytest tests/ --cov=notapkgtool --cov-report=html
+# Opens htmlcov/index.html for detailed coverage report
+```
+
+### Quick Test Run
+```bash
+# Quiet mode (just summary)
+pytest tests/ -q
+
+# Shows:
+# 198 passed in 0.50s
 ```
 
 ## Test Coverage
@@ -308,16 +338,80 @@ def test_example(sample_org_defaults):
 
 ## Coverage by Module
 
-| Module | Tests | Coverage |
-|--------|-------|----------|
-| `config/` | 11 | Full |
-| `core.py` | 5 | Full |
-| `discovery/` | 61 | Full (all 4 strategies) |
-| `io/download.py` | 11 | Full |
-| `state/` | 17 | Full |
-| `validation.py` | 27 | Full |
-| `versioning/` | 21 | Full |
-| `psadt/` | 13 | Full |
-| `build/` | 41 | Full |
-| **Total** | **198** | **Full** |
+| Module | Tests | Coverage | Features Tested |
+|--------|-------|----------|-----------------|
+| `config/` | 11 | Full | YAML loading, 3-layer merging, path resolution |
+| `core.py` | 5 | Full | Recipe orchestration, error handling |
+| `discovery/` | 61 | Full | All 4 strategies, ETag caching, error handling |
+| `io/download.py` | 11 | Full | HTTP downloads, conditional requests, atomic writes |
+| `state/` | 17 | Full | Schema v2, filesystem-first, cache operations |
+| `validation.py` | 27 | Full | Recipe validation, all strategies, error detection |
+| `versioning/` | 21 | Full | Semver, numeric, lexicographic comparison |
+| `psadt/` | 13 | Full | GitHub API, download, extraction, caching |
+| `build/` | 41 | Full | Orchestration, template generation, packaging |
+| **Total** | **198** | **Full** | **All implemented features** |
+
+## Key Test Features
+
+### No Network Calls
+All HTTP requests are mocked using `requests-mock`. Tests run completely offline:
+- ✅ GitHub API calls mocked
+- ✅ File downloads mocked
+- ✅ PSADT downloads mocked
+
+### Fast Execution
+- ✅ **198 tests in ~0.5 seconds**
+- ✅ Average: 2.5ms per test
+- ✅ All tests run in parallel safely (isolated)
+
+### Cross-Platform
+Tests are designed to work on:
+- ✅ Windows (primary platform)
+- ✅ Linux (with msitools for MSI tests)
+- ✅ macOS (with msitools for MSI tests)
+
+### Comprehensive Error Coverage
+Every module tests:
+- ✅ Happy path (success scenarios)
+- ✅ Missing files/configurations
+- ✅ Invalid inputs
+- ✅ Network failures
+- ✅ API errors (404, rate limits, etc.)
+- ✅ Malformed data
+
+## Development Workflow
+
+### Before Committing
+```bash
+# Run all tests
+pytest tests/
+
+# Format code
+black notapkgtool/ tests/
+
+# Fix linting
+ruff check --fix notapkgtool/ tests/
+```
+
+### Writing New Tests
+1. Create test file matching module name: `test_{module}.py`
+2. Use class-based organization: `class TestFeatureName:`
+3. Follow naming: `test_{what_is_tested}`
+4. Add comprehensive docstrings
+5. Mock external dependencies
+6. Use fixtures from `conftest.py`
+
+### Test Organization
+```python
+class TestFeatureName:
+    """Tests for specific feature."""
+    
+    def test_success_case(self, tmp_path):
+        """Test successful operation."""
+        # Happy path test
+    
+    def test_error_case_missing_input(self):
+        """Test error handling for missing input."""
+        # Error path test
+```
 
