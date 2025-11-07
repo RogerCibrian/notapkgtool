@@ -5,6 +5,14 @@ All notable changes to NAPT (Not a Pkg Tool) will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+### Changed
+
+### Fixed
+
 ## [0.2.0] - 2025-11-07
 
 ### Added
@@ -271,6 +279,7 @@ With 0.2.0, you can:
 
 Future releases will add direct Intune upload, deployment wave management, and advanced validation features.
 
-[0.2.0]: https://github.com/RogerCibrian/notapkgtool/releases/tag/0.2.0
+[Unreleased]: https://github.com/RogerCibrian/notapkgtool/compare/0.2.0...HEAD
+[0.2.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.1.0...0.2.0
 [0.1.0]: https://github.com/RogerCibrian/notapkgtool/releases/tag/0.1.0
 
