@@ -21,10 +21,10 @@ _apply_branding : Replace PSADT assets with custom branding
 Design Principles
 -----------------
 - Filesystem is source of truth for version information
-- PSADT files remain pristine (copied, not modified)
-- Invoke-AppDeployToolkit.ps1 is generated (not copied)
+- Entire PSADT Template_v4 structure copied pristine
+- Invoke-AppDeployToolkit.ps1 is generated from template (not copied)
 - Build directories are versioned: {app_id}/{version}/
-- Branding applied by replacing files in PSAppDeployToolkit/Assets/
+- Branding applied by replacing files in root Assets/ directory (v4 structure)
 
 Example
 -------

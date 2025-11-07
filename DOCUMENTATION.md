@@ -12,6 +12,11 @@ notapkgtool/
 ├── cli.py                   # Command-line interface (argparse)
 ├── core.py                  # High-level orchestration
 ├── validation.py            # Recipe validation (no downloads)
+├── build/
+│   ├── __init__.py          # Build package exports
+│   ├── manager.py           # Build orchestration and directory management
+│   ├── packager.py          # .intunewin package creation
+│   └── template.py          # Invoke-AppDeployToolkit.ps1 generation
 ├── config/
 │   ├── __init__.py          # Config package exports
 │   └── loader.py            # YAML loading and merging
@@ -22,6 +27,9 @@ notapkgtool/
 │   ├── url_regex.py         # URL regex discovery strategy
 │   ├── github_release.py    # GitHub releases API strategy
 │   └── http_json.py         # HTTP JSON API strategy
+├── psadt/
+│   ├── __init__.py          # PSADT package exports
+│   └── release.py           # PSADT release download and caching
 ├── state/
 │   ├── __init__.py          # State tracking exports
 │   └── tracker.py           # Version and ETag caching

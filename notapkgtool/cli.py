@@ -16,10 +16,17 @@ discover : command
     version information. This command verifies that a recipe is correctly
     configured, that the source is accessible, and tracks state for caching.
 
+build : command
+    Build a PSADT package from a recipe and downloaded installer. Creates
+    complete deployment package with generated scripts and branding.
+
+package : command
+    Create a .intunewin package from a built PSADT directory using
+    Microsoft's IntuneWinAppUtil.exe tool.
+
 Future commands:
-    build  : Build a PSADT package from a recipe
     upload : Upload a package to Microsoft Intune
-    sync   : Full workflow (discover -> build -> upload)
+    sync   : Full workflow (discover -> build -> upload -> deploy)
 
 Usage Examples
 --------------
@@ -29,8 +36,11 @@ Validate recipe syntax:
 Discover latest version:
     $ napt discover recipes/Google/chrome.yaml
 
-Discover with custom output directory:
-    $ napt discover recipes/Google/chrome.yaml --output-dir ./cache
+Build PSADT package:
+    $ napt build recipes/Google/chrome.yaml
+
+Create .intunewin package:
+    $ napt package builds/napt-chrome/142.0.7444.60/
 
 Enable verbose output:
     $ napt discover recipes/Google/chrome.yaml --verbose
