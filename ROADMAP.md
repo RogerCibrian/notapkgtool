@@ -126,6 +126,79 @@ This roadmap is a living document showing potential future directions for NAPT. 
 
 ---
 
+### Detection Script Generation
+**Status**: 💡 Idea  
+**Complexity**: Medium (3-4 days)  
+**Value**: High
+
+**Description**: Automatically generate detection scripts for Intune that check if an application is already installed.
+
+**Approach Options**:
+- For MSI: Generate script that checks ProductCode in registry
+- For EXE: Generate script that checks file version or registry keys
+- Template-based generation with recipe hints
+- Support for custom detection logic in recipes
+
+**Benefits**:
+- Reduces manual work for Intune app creation
+- Ensures consistent detection logic
+- Leverages information we already have (ProductCode, version, paths)
+
+**Use Cases**:
+- Automatic detection for Win32 apps in Intune
+- Prevent re-installation of already-installed apps
+- Version-based detection for upgrades
+
+**Technical Considerations**:
+- Need to handle both MSI and EXE installers
+- PowerShell detection script format for Intune
+- Support for custom registry keys or file paths
+- Version comparison in detection script
+
+---
+
+### Pre/Post Install/Uninstall Script Support
+**Status**: 💡 Idea  
+**Complexity**: Low (1-2 days)  
+**Value**: Medium
+
+**Description**: Add support for pre-install, post-install, pre-uninstall, and post-uninstall script blocks in recipes.
+
+**Proposed Recipe Format**:
+```yaml
+psadt:
+  pre_install: |
+    # Close running processes
+    # Backup user data
+  install: |
+    # Main installation
+  post_install: |
+    # Configure settings
+    # Create shortcuts
+  pre_uninstall: |
+    # Backup settings
+  uninstall: |
+    # Main uninstallation
+  post_uninstall: |
+    # Clean up user data
+```
+
+**Benefits**:
+- More granular control over deployment lifecycle
+- Separation of concerns (prep vs install vs cleanup)
+- Aligns with PSADT's deployment phase structure
+- Cleaner recipe organization
+
+**Implementation**:
+- Add new fields to recipe schema
+- Insert into appropriate sections of Invoke-AppDeployToolkit.ps1
+- Map to PSADT's Pre-Installation, Installation, Post-Installation sections
+- Validate all script blocks
+
+**Related**: PSADT already has these phases in the template structure
+
+---
+
 ## Investigating (Research Phase)
 
 ### Microsoft Intune Upload

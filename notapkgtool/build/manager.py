@@ -50,12 +50,15 @@ from notapkgtool.psadt import get_psadt_release
 from notapkgtool.versioning.msi import version_from_msi_product_version
 
 
-def _get_installer_version(installer_file: Path, config: dict[str, Any]) -> str:
+def _get_installer_version(
+    installer_file: Path, config: dict[str, Any], state_file: Path | None = None
+) -> str:
     """
-    Extract version from installer file.
+    Extract version from installer file or state.
 
     Uses the version extraction method specified in the recipe's
-    source configuration.
+    source configuration. If no version.type is specified (e.g., for
+    github_release strategy), attempts to read from state file.
 
     Parameters
     ----------
@@ -63,6 +66,8 @@ def _get_installer_version(installer_file: Path, config: dict[str, Any]) -> str:
         Path to the installer file.
     config : dict
         Recipe configuration.
+    state_file : Path, optional
+        Path to state file for fallback version lookup.
 
     Returns
     -------
@@ -72,19 +77,43 @@ def _get_installer_version(installer_file: Path, config: dict[str, Any]) -> str:
     Raises
     ------
     RuntimeError
-        If version extraction fails.
+        If version extraction fails or version not found.
     ValueError
         If version type is unsupported.
     """
     from notapkgtool.cli import print_verbose
 
     app = config["apps"][0]
+    app_id = app.get("id", "unknown")
     source = app.get("source", {})
     version_config = source.get("version", {})
     version_type = version_config.get("type", "")
 
     print_verbose("BUILD", f"Extracting version from: {installer_file.name}")
     print_verbose("BUILD", f"Version type: {version_type}")
+
+    # If no version type specified, try to use version from state
+    if not version_type:
+        if state_file and state_file.exists():
+            from notapkgtool.state import load_state
+
+            print_verbose("BUILD", "No version type specified, using state file")
+            state = load_state(state_file)
+            app_state = state.get("apps", {}).get(app_id, {})
+            known_version = app_state.get("known_version")
+
+            if known_version:
+                print_verbose("BUILD", f"Using version from state: {known_version}")
+                return known_version
+            else:
+                raise ValueError(
+                    f"No version.type specified and no known_version in state for {app_id}. "
+                    f"Run 'napt discover' first or add version.type to recipe."
+                )
+        else:
+            raise ValueError(
+                "No version.type specified in recipe. Add source.version.type or ensure state file exists."
+            )
 
     if version_type == "msi_product_version_from_file":
         try:
@@ -140,16 +169,35 @@ def _find_installer_file(downloads_dir: Path, config: dict[str, Any]) -> Path:
             print_verbose("BUILD", f"Found installer: {installer_path}")
             return installer_path
 
-    # Fallback: Search for common installer patterns
+    # Fallback: Search for installer matching app name/id or use most recent
+    app_id = app.get("id", "")
+    app_name = app.get("name", "").lower()
+
+    # Try to find installer matching app_id or app_name in filename
     for pattern in ["*.msi", "*.exe"]:
         matches = list(downloads_dir.glob(pattern))
-        if matches:
-            # Use the most recently modified file
-            installer_path = max(matches, key=lambda p: p.stat().st_mtime)
-            print_verbose(
-                "BUILD", f"Found installer by pattern {pattern}: {installer_path}"
-            )
+
+        # Filter by app name/id if possible
+        matching = [
+            p
+            for p in matches
+            if app_id.lower().replace("napt-", "") in p.name.lower()
+            or any(word in p.name.lower() for word in app_name.split() if len(word) > 3)
+        ]
+
+        if matching:
+            installer_path = max(matching, key=lambda p: p.stat().st_mtime)
+            print_verbose("BUILD", f"Found installer matching app: {installer_path}")
             return installer_path
+
+    # Ultimate fallback: Most recent installer of any type
+    all_installers = list(downloads_dir.glob("*.msi")) + list(
+        downloads_dir.glob("*.exe")
+    )
+    if all_installers:
+        installer_path = max(all_installers, key=lambda p: p.stat().st_mtime)
+        print_verbose("BUILD", f"Found most recent installer: {installer_path}")
+        return installer_path
 
     raise FileNotFoundError(
         f"No installer found in {downloads_dir}. "
@@ -444,9 +492,10 @@ def build_package(
     print_step(2, 6, "Finding installer...")
     installer_file = _find_installer_file(downloads_dir, config)
 
-    # Extract version from installer (filesystem is source of truth)
+    # Extract version from installer or state (filesystem + state are truth)
     print_step(3, 6, "Extracting version from installer...")
-    version = _get_installer_version(installer_file, config)
+    state_file = Path("state/versions.json")  # Default state file location
+    version = _get_installer_version(installer_file, config, state_file)
 
     print_verbose("BUILD", f"Building {app_name} v{version}")
 
