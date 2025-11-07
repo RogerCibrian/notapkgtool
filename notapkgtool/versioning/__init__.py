@@ -13,7 +13,7 @@ keys : module
 msi : module
     MSI ProductVersion extraction using msilib, _msi, PowerShell, or msitools.
 url_regex : module
-    Extract versions from URLs using regex patterns (planned).
+    Extract versions from URLs using regex patterns.
 
 Public API
 ----------

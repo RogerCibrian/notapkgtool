@@ -9,7 +9,8 @@ NAPT provides:
   - Automatic version discovery from multiple sources
   - Robust download with conditional requests and integrity verification
   - Intelligent update policies (version-based, hash-based, or combined)
-  - PSADT package generation (planned)
+  - PSADT package generation with Template_v4
+  - .intunewin package creation for Intune deployment
   - Direct upload to Microsoft Intune (planned)
   - Deployment wave/ring management (planned)
 

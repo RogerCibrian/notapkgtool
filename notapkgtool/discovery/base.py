@@ -9,9 +9,9 @@ This module defines the foundational components for the discovery system:
 The discovery system uses a strategy pattern to support multiple ways
 of obtaining application installers and their versions:
   - http_static: Direct download from a static URL
-  - url_regex: Parse version from URL patterns (future)
-  - github_release: Fetch from GitHub releases (future)
-  - http_json: Query JSON API endpoints (future)
+  - url_regex: Parse version from URL patterns using regex
+  - github_release: Fetch from GitHub releases API
+  - http_json: Query JSON API endpoints with JSONPath
 
 Design Philosophy
 -----------------
