@@ -6,26 +6,47 @@ commands for recipe validation, package building, and deployment management.
 
 Commands
 --------
-check : command
-    Validate a recipe by downloading the installer and extracting version info.
-    This command verifies that a recipe is correctly configured and that the
-    source URL is accessible.
+validate : command
+    Validate recipe syntax and configuration without making network calls.
+    This command checks that a recipe is correctly formatted and that all
+    required fields are present.
+
+discover : command
+    Discover the latest version by downloading the installer and extracting
+    version information. This command verifies that a recipe is correctly
+    configured, that the source is accessible, and tracks state for caching.
+
+build : command
+    Build a PSADT package from a recipe and downloaded installer. Creates
+    complete deployment package with generated scripts and branding.
+
+package : command
+    Create a .intunewin package from a built PSADT directory using
+    Microsoft's IntuneWinAppUtil.exe tool.
 
 Future commands:
-    build  : Build a PSADT package from a recipe
     upload : Upload a package to Microsoft Intune
-    sync   : Full workflow (check -> build -> upload)
+    sync   : Full workflow (discover -> build -> upload -> deploy)
 
 Usage Examples
 --------------
-Validate a recipe:
-    $ napt check recipes/Google/chrome.yaml
+Validate recipe syntax:
+    $ napt validate recipes/Google/chrome.yaml
 
-Validate with custom output directory:
-    $ napt check recipes/Google/chrome.yaml --output-dir ./cache
+Discover latest version:
+    $ napt discover recipes/Google/chrome.yaml
 
-Enable verbose error output:
-    $ napt check recipes/Google/chrome.yaml --verbose
+Build PSADT package:
+    $ napt build recipes/Google/chrome.yaml
+
+Create .intunewin package:
+    $ napt package builds/napt-chrome/142.0.7444.60/
+
+Enable verbose output:
+    $ napt discover recipes/Google/chrome.yaml --verbose
+
+Enable debug output:
+    $ napt discover recipes/Google/chrome.yaml --debug
 
 Exit Codes
 ----------
@@ -38,6 +59,7 @@ Notes
 - Commands are registered with subparsers for clean organization.
 - Each command has its own handler function (cmd_<command>).
 - Verbose mode shows full tracebacks on errors for debugging.
+- Debug mode implies verbose mode and shows detailed configuration dumps.
 """
 
 from __future__ import annotations
@@ -47,6 +69,7 @@ from importlib.metadata import version
 from pathlib import Path
 import sys
 
+from notapkgtool.build import build_package, create_intunewin
 from notapkgtool.core import discover_recipe
 from notapkgtool.validation import validate_recipe
 
@@ -145,14 +168,14 @@ def cmd_validate(args: argparse.Namespace) -> int:
     if result["warnings"]:
         print(f"Warnings ({len(result['warnings'])}):")
         for warning in result["warnings"]:
-            print(f"  ⚠ {warning}")
+            print(f"  [WARNING] {warning}")
         print()
 
     # Show errors if any
     if result["errors"]:
         print(f"Errors ({len(result['errors'])}):")
         for error in result["errors"]:
-            print(f"  ✗ {error}")
+            print(f"  [X] {error}")
         print()
 
     print("=" * 70)
@@ -163,7 +186,9 @@ def cmd_validate(args: argparse.Namespace) -> int:
         return 0
     else:
         print()
-        print(f"[FAILED] Recipe validation failed with {len(result['errors'])} error(s).")
+        print(
+            f"[FAILED] Recipe validation failed with {len(result['errors'])} error(s)."
+        )
         return 1
 
 
@@ -253,6 +278,183 @@ def cmd_discover(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_build(args: argparse.Namespace) -> int:
+    """
+    Handler for 'napt build' command.
+
+    Builds a PSADT package from a recipe and downloaded installer. This command:
+      - Loads the recipe configuration
+      - Finds the downloaded installer in downloads directory
+      - Extracts version from the installer file (filesystem is truth)
+      - Downloads/caches the specified PSADT release
+      - Creates build directory structure
+      - Copies PSADT files pristine from cache
+      - Generates Invoke-AppDeployToolkit.ps1 with recipe values
+      - Copies installer to Files/ directory
+      - Applies custom branding
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Parsed command-line arguments containing:
+        - recipe : Path to recipe YAML file
+        - downloads_dir : Directory containing downloaded installer
+        - output_dir : Base directory for build output
+        - verbose : Whether to show progress updates
+        - debug : Whether to show detailed debugging output
+
+    Returns
+    -------
+    int
+        Exit code: 0 for success, 1 for failure.
+
+    Side Effects
+    ------------
+    - Creates build directory structure
+    - Downloads PSADT release if not cached
+    - Generates Invoke-AppDeployToolkit.ps1
+    - Copies files to build directory
+    - Prints progress and results to stdout
+    """
+    # Set global verbose and debug flags
+    set_verbose(args.verbose)
+    set_debug(args.debug)
+
+    recipe_path = Path(args.recipe).resolve()
+    downloads_dir = Path(args.downloads_dir).resolve()
+    output_dir = Path(args.output_dir) if args.output_dir else None
+
+    if not recipe_path.exists():
+        print(f"Error: Recipe file not found: {recipe_path}")
+        return 1
+
+    if not downloads_dir.exists():
+        print(f"Error: Downloads directory not found: {downloads_dir}")
+        print("Run 'napt discover' first to download the installer.")
+        return 1
+
+    print(f"Building PSADT package for recipe: {recipe_path}")
+    print(f"Downloads directory: {downloads_dir}")
+    if output_dir:
+        print(f"Output directory: {output_dir}")
+    print()
+
+    try:
+        result = build_package(
+            recipe_path,
+            downloads_dir=downloads_dir,
+            output_dir=output_dir,
+            verbose=args.verbose,
+            debug=args.debug,
+        )
+    except Exception as err:
+        print(f"Error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+
+    # Display results
+    print("=" * 70)
+    print("BUILD RESULTS")
+    print("=" * 70)
+    print(f"App Name:        {result['app_name']}")
+    print(f"App ID:          {result['app_id']}")
+    print(f"Version:         {result['version']}")
+    print(f"PSADT Version:   {result['psadt_version']}")
+    print(f"Build Directory: {result['build_dir']}")
+    print(f"Status:          {result['status']}")
+    print("=" * 70)
+    print()
+    print("[SUCCESS] PSADT package built successfully!")
+
+    return 0
+
+
+def cmd_package(args: argparse.Namespace) -> int:
+    """
+    Handler for 'napt package' command.
+
+    Creates a .intunewin package from a built PSADT directory. This command:
+      - Verifies the build directory has valid PSADT structure
+      - Downloads/caches IntuneWinAppUtil.exe if needed
+      - Runs IntuneWinAppUtil.exe to create .intunewin package
+      - Optionally cleans the source build directory after packaging
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Parsed command-line arguments containing:
+        - build_dir : Path to built PSADT package directory
+        - output_dir : Directory for .intunewin output
+        - clean_source : Whether to remove build directory after packaging
+        - verbose : Whether to show progress updates
+        - debug : Whether to show detailed debugging output
+
+    Returns
+    -------
+    int
+        Exit code: 0 for success, 1 for failure.
+
+    Side Effects
+    ------------
+    - Creates .intunewin file in output directory
+    - Downloads IntuneWinAppUtil.exe if not cached
+    - Optionally removes build directory if --clean-source
+    - Prints progress and results to stdout
+    """
+    # Set global verbose and debug flags
+    set_verbose(args.verbose)
+    set_debug(args.debug)
+
+    build_dir = Path(args.build_dir).resolve()
+    output_dir = Path(args.output_dir) if args.output_dir else None
+
+    if not build_dir.exists():
+        print(f"Error: Build directory not found: {build_dir}")
+        return 1
+
+    print(f"Creating .intunewin package from: {build_dir}")
+    if output_dir:
+        print(f"Output directory: {output_dir}")
+    print()
+
+    try:
+        result = create_intunewin(
+            build_dir,
+            output_dir=output_dir,
+            clean_source=args.clean_source,
+            verbose=args.verbose,
+            debug=args.debug,
+        )
+    except Exception as err:
+        print(f"Error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+
+    # Display results
+    print("=" * 70)
+    print("PACKAGE RESULTS")
+    print("=" * 70)
+    print(f"App ID:          {result['app_id']}")
+    print(f"Version:         {result['version']}")
+    print(f"Package Path:    {result['package_path']}")
+    if args.clean_source:
+        print(f"Build Directory: {result['build_dir']} (removed)")
+    else:
+        print(f"Build Directory: {result['build_dir']}")
+    print(f"Status:          {result['status']}")
+    print("=" * 70)
+    print()
+    print("[SUCCESS] .intunewin package created successfully!")
+
+    return 0
+
+
 def main() -> None:
     """
     Main entry point for the napt CLI.
@@ -334,6 +536,74 @@ def main() -> None:
         help="Show detailed debugging output (implies --verbose)",
     )
     parser_discover.set_defaults(func=cmd_discover)
+
+    # 'build' command
+    parser_build = subparsers.add_parser(
+        "build",
+        help="Build PSADT package from recipe and installer",
+        description="Create a PSADT deployment package from a recipe and downloaded installer.",
+    )
+    parser_build.add_argument(
+        "recipe",
+        help="Path to the recipe YAML file",
+    )
+    parser_build.add_argument(
+        "--downloads-dir",
+        default="./downloads",
+        help="Directory containing the downloaded installer (default: ./downloads)",
+    )
+    parser_build.add_argument(
+        "--output-dir",
+        default=None,
+        help="Base directory for build output (default: from config or ./builds)",
+    )
+    parser_build.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Show progress and high-level status updates",
+    )
+    parser_build.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="Show detailed debugging output (implies --verbose)",
+    )
+    parser_build.set_defaults(func=cmd_build)
+
+    # 'package' command
+    parser_package = subparsers.add_parser(
+        "package",
+        help="Create .intunewin package from PSADT build directory",
+        description="Package a built PSADT directory into a .intunewin file for Intune deployment.",
+    )
+    parser_package.add_argument(
+        "build_dir",
+        help="Path to the built PSADT package directory",
+    )
+    parser_package.add_argument(
+        "--output-dir",
+        default=None,
+        help="Directory for .intunewin output (default: packages/{app_id}/)",
+    )
+    parser_package.add_argument(
+        "--clean-source",
+        action="store_true",
+        help="Remove the build directory after packaging",
+    )
+    parser_package.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Show progress and high-level status updates",
+    )
+    parser_package.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="Show detailed debugging output (implies --verbose)",
+    )
+    parser_package.set_defaults(func=cmd_package)
 
     # Parse and dispatch
     args = parser.parse_args()

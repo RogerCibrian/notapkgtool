@@ -8,7 +8,8 @@ __pycache__/
 
 # Distribution / packaging
 .Python
-build/
+/build/
+# Note: /build/ ignores top-level build/ but allows notapkgtool/build/ module
 develop-eggs/
 dist/
 downloads/
@@ -176,9 +177,21 @@ tests/__pycache__/
 artifacts/
 test_downloads/
 
+# NAPT build and cache directories
+# - builds/: PSADT package builds (napt build output)
+# - cache/: Cached PSADT releases and tools  
+# - packages/: .intunewin packages (napt package output)
+builds/
+cache/
+packages/
+
 # NAPT state files (machine-managed, regenerate from discovery)
 state/versions.json
 state/*.json
 !state/.gitignore
 
 .DS_Store
+
+# Cursor IDE files
+.cursor/
+.cursor_context

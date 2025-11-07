@@ -73,9 +73,9 @@ Basic usage:
 
 Access merged defaults:
 
-    >>> psadt_version = cfg["defaults"]["psadt"]["template_version"]
-    >>> print(psadt_version)
-    4.1.5
+    >>> psadt_release = cfg["defaults"]["psadt"]["release"]
+    >>> print(psadt_release)
+    latest
 
 Override vendor detection:
 
@@ -224,7 +224,9 @@ def _detect_vendor(recipe_path: Path, recipe_obj: dict[str, Any]) -> str | None:
 # -------------------------------
 
 
-def _resolve_known_paths(cfg: dict[str, Any], recipe_dir: Path) -> None:
+def _resolve_known_paths(
+    cfg: dict[str, Any], recipe_dir: Path, defaults_root: Path | None = None
+) -> None:
     """
     Resolve relative path fields inside the merged config.
 
@@ -232,7 +234,8 @@ def _resolve_known_paths(cfg: dict[str, Any], recipe_dir: Path) -> None:
     Currently handled:
       - cfg["defaults"]["psadt"]["brand_pack"]["path"]
 
-    If the field exists and is a relative path, resolve it against 'recipe_dir'.
+    Brand pack paths are resolved relative to defaults_root (if available),
+    otherwise relative to recipe_dir as fallback.
     Modifies cfg in place.
     """
     try:
@@ -242,7 +245,11 @@ def _resolve_known_paths(cfg: dict[str, Any], recipe_dir: Path) -> None:
             p = Path(raw_path)
             # Resolve only if the path is relative
             if not p.is_absolute():
-                brand_pack["path"] = str((recipe_dir / p).resolve())
+                # Resolve relative to defaults_root if available, else recipe_dir
+                if defaults_root:
+                    brand_pack["path"] = str((defaults_root / p).resolve())
+                else:
+                    brand_pack["path"] = str((recipe_dir / p).resolve())
     except KeyError:
         # Field missing; nothing to resolve
         pass
@@ -414,8 +421,8 @@ def load_effective_config(
         print_debug("CONFIG", "--- Final Merged Configuration ---")
         _print_yaml_content(merged, debug)
 
-    # 7) Resolve relative paths against the RECIPE directory
-    _resolve_known_paths(merged, recipe_dir)
+    # 7) Resolve relative paths (branding paths relative to defaults_root)
+    _resolve_known_paths(merged, recipe_dir, defaults_root)
 
     # 8) Inject dynamic values (e.g., AppScriptDate)
     _inject_dynamic_values(merged)

@@ -10,7 +10,6 @@ Tests state management including:
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 import pytest
 
@@ -27,7 +26,7 @@ class TestStateFileOperations:
 
         assert "metadata" in state
         assert "apps" in state
-        assert state["metadata"]["schema_version"] == "1"
+        assert state["metadata"]["schema_version"] == "2"
         assert isinstance(state["apps"], dict)
         assert len(state["apps"]) == 0
 
@@ -38,9 +37,10 @@ class TestStateFileOperations:
             "metadata": {"napt_version": "0.1.0"},
             "apps": {
                 "test-app": {
-                    "version": "1.2.3",
+                    "url": "https://vendor.com/app.msi",
                     "etag": 'W/"abc123"',
                     "sha256": "def456",
+                    "known_version": "1.2.3",
                 }
             },
         }
@@ -51,8 +51,9 @@ class TestStateFileOperations:
 
         # Load
         loaded = load_state(state_file)
-        assert loaded["apps"]["test-app"]["version"] == "1.2.3"
+        assert loaded["apps"]["test-app"]["known_version"] == "1.2.3"
         assert loaded["apps"]["test-app"]["etag"] == 'W/"abc123"'
+        assert loaded["apps"]["test-app"]["url"] == "https://vendor.com/app.msi"
 
     def test_load_missing_file_raises(self, tmp_path):
         """Test that loading nonexistent file raises FileNotFoundError."""
@@ -120,14 +121,20 @@ class TestStateTracker:
         state_file = tmp_path / "state.json"
         initial_state = {
             "metadata": {"napt_version": "0.1.0"},
-            "apps": {"test-app": {"version": "1.2.3"}},
+            "apps": {
+                "test-app": {
+                    "url": "https://vendor.com/app.msi",
+                    "sha256": "abc123",
+                    "known_version": "1.2.3",
+                }
+            },
         }
         save_state(initial_state, state_file)
 
         tracker = StateTracker(state_file)
         state = tracker.load()
 
-        assert state["apps"]["test-app"]["version"] == "1.2.3"
+        assert state["apps"]["test-app"]["known_version"] == "1.2.3"
 
     def test_load_corrupted_file_creates_backup(self, tmp_path):
         """Test that corrupted file is backed up and replaced."""
@@ -168,9 +175,10 @@ class TestStateTracker:
             "metadata": {},
             "apps": {
                 "test-app": {
-                    "version": "1.2.3",
+                    "url": "https://vendor.com/app.msi",
                     "etag": 'W/"abc123"',
                     "sha256": "def456",
+                    "known_version": "1.2.3",
                 }
             },
         }
@@ -178,8 +186,9 @@ class TestStateTracker:
         cache = tracker.get_cache("test-app")
 
         assert cache is not None
-        assert cache["version"] == "1.2.3"
+        assert cache["known_version"] == "1.2.3"
         assert cache["etag"] == 'W/"abc123"'
+        assert cache["url"] == "https://vendor.com/app.msi"
 
     def test_get_cache_missing(self, tmp_path):
         """Test getting cache for non-existent recipe returns None."""
@@ -199,22 +208,21 @@ class TestStateTracker:
 
         tracker.update_cache(
             recipe_id="test-app",
-            version="2.0.0",
-            file_path=Path("/path/to/file.msi"),
+            url="https://vendor.com/file.msi",
             sha256="abc123",
             etag='W/"xyz789"',
             last_modified="Mon, 28 Oct 2024 10:00:00 GMT",
-            source="http_static",
+            known_version="2.0.0",
+            strategy="http_static",
         )
 
         cache = tracker.get_cache("test-app")
-        assert cache["version"] == "2.0.0"
+        assert cache["known_version"] == "2.0.0"
+        assert cache["url"] == "https://vendor.com/file.msi"
         assert cache["etag"] == 'W/"xyz789"'
         assert cache["last_modified"] == "Mon, 28 Oct 2024 10:00:00 GMT"
-        assert Path(cache["file_path"]) == Path("/path/to/file.msi")
         assert cache["sha256"] == "abc123"
-        assert cache["source"] == "http_static"
-        assert "last_checked" in cache
+        assert cache["strategy"] == "http_static"
 
     def test_has_version_changed_true(self, tmp_path):
         """Test version change detection when version differs."""
@@ -222,7 +230,7 @@ class TestStateTracker:
         tracker = StateTracker(state_file)
         tracker.state = {
             "metadata": {},
-            "apps": {"test-app": {"version": "1.0.0"}},
+            "apps": {"test-app": {"known_version": "1.0.0"}},
         }
 
         assert tracker.has_version_changed("test-app", "2.0.0") is True
@@ -233,7 +241,7 @@ class TestStateTracker:
         tracker = StateTracker(state_file)
         tracker.state = {
             "metadata": {},
-            "apps": {"test-app": {"version": "1.0.0"}},
+            "apps": {"test-app": {"known_version": "1.0.0"}},
         }
 
         assert tracker.has_version_changed("test-app", "1.0.0") is False
@@ -246,4 +254,3 @@ class TestStateTracker:
 
         # No cache means version changed
         assert tracker.has_version_changed("test-app", "1.0.0") is True
-

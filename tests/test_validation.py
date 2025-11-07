@@ -7,11 +7,6 @@ and configuration without making network calls or downloading files.
 
 from __future__ import annotations
 
-import tempfile
-from pathlib import Path
-
-import pytest
-
 from notapkgtool.validation import ValidationError, validate_recipe
 
 
@@ -463,7 +458,9 @@ apps:
         result = validate_recipe(recipe)
 
         assert result["status"] == "invalid"
-        assert any("regex" in err.lower() or "pattern" in err for err in result["errors"])
+        assert any(
+            "regex" in err.lower() or "pattern" in err for err in result["errors"]
+        )
 
     def test_http_json_missing_fields(self, tmp_path):
         """Test that http_json validates missing required fields."""
@@ -605,4 +602,3 @@ class TestValidationError:
     def test_validation_error_is_exception(self):
         """Test that ValidationError is an Exception."""
         assert issubclass(ValidationError, Exception)
-

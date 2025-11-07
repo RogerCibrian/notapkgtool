@@ -12,6 +12,11 @@ notapkgtool/
 ├── cli.py                   # Command-line interface (argparse)
 ├── core.py                  # High-level orchestration
 ├── validation.py            # Recipe validation (no downloads)
+├── build/
+│   ├── __init__.py          # Build package exports
+│   ├── manager.py           # Build orchestration and directory management
+│   ├── packager.py          # .intunewin package creation
+│   └── template.py          # Invoke-AppDeployToolkit.ps1 generation
 ├── config/
 │   ├── __init__.py          # Config package exports
 │   └── loader.py            # YAML loading and merging
@@ -22,6 +27,9 @@ notapkgtool/
 │   ├── url_regex.py         # URL regex discovery strategy
 │   ├── github_release.py    # GitHub releases API strategy
 │   └── http_json.py         # HTTP JSON API strategy
+├── psadt/
+│   ├── __init__.py          # PSADT package exports
+│   └── release.py           # PSADT release download and caching
 ├── state/
 │   ├── __init__.py          # State tracking exports
 │   └── tracker.py           # Version and ETag caching
@@ -678,10 +686,10 @@ source:
 - All other features fully supported
 - Installation: `apt-get install msitools` (Debian/Ubuntu)
 
-## Current Status (v0.1.0)
+## Current Status
 
-### ✅ Implemented
-- CLI with `check` command
+### ✅ Implemented (0.1.0 - Released)
+- CLI with `validate` and `discover` commands
 - Three output modes: normal, verbose, and debug
 - Config loading and merging
 - HTTP static discovery strategy
@@ -694,8 +702,16 @@ source:
 - MSI ProductVersion extraction
 - Cross-platform support
 
+### ✅ Implemented (0.2.0 - Current Release)
+- `build` and `package` CLI commands
+- PSADT package building from recipes
+- Invoke-AppDeployToolkit.ps1 generation from templates
+- .intunewin package creation
+- PSADT release management from GitHub
+- Custom branding support (moved to defaults/brand-packs/)
+- State schema v2 (filesystem-first approach)
+
 ### 🚧 Planned
-- PSADT package building
 - Intune upload
 - Deployment wave management
 - Update policies enforcement
@@ -714,12 +730,16 @@ sudo apt-get install msitools
 
 ### Commands Overview
 
-NAPT provides two primary commands for working with recipes:
+NAPT provides four primary commands for the complete packaging workflow:
 
 | Command | Purpose | Network | Download | Use Case |
 |---------|---------|---------|----------|----------|
 | `validate` | Check recipe syntax | No | No | Development, CI/CD pre-checks |
 | `discover` | Find latest version | Yes | Yes | Production runs, version discovery |
+| `build` | Create PSADT package | Yes* | Yes* | Build deployment packages |
+| `package` | Create .intunewin | No | No | Generate Intune packages |
+
+*Downloads PSADT from GitHub if not cached
 
 ### Usage
 
@@ -863,6 +883,144 @@ Status:          success
 
 ---
 
+### `napt build`
+
+Builds a complete PSADT (PSAppDeployToolkit) package from a recipe and downloaded installer. This command creates a deployment-ready directory structure with all necessary files.
+
+**Purpose:**
+- Create PSADT deployment package from recipe
+- Generate Invoke-AppDeployToolkit.ps1 with recipe values
+- Apply custom branding to PSADT assets
+- Prepare package for .intunewin creation
+
+**Features:**
+- ✅ Downloads PSADT release from GitHub (or uses cached version)
+- ✅ Extracts version from installer file (filesystem is source of truth)
+- ✅ Generates Invoke-AppDeployToolkit.ps1 from template
+- ✅ Merges organization defaults with recipe-specific values
+- ✅ Inserts recipe install/uninstall code
+- ✅ Applies custom branding (logo, banner)
+- ✅ Creates versioned build directories
+
+**Usage:**
+```bash
+napt build <recipe-file> [options]
+```
+
+**Options:**
+- `--downloads-dir DIR` - Directory containing installer (default: ./downloads)
+- `--output-dir DIR` - Base directory for build output (default: from config or ./builds)
+- `-v, --verbose` - Show progress and high-level status updates
+- `-d, --debug` - Show detailed debugging output (implies --verbose)
+
+**Example Output:**
+```
+Building PSADT package for recipe: recipes/Google/chrome.yaml
+Downloads directory: ./downloads
+
+[1/6] Loading configuration...
+[2/6] Finding installer...
+[3/6] Extracting version from installer...
+[4/6] Getting PSADT release...
+[5/6] Creating build structure...
+[6/6] Applying branding...
+======================================================================
+BUILD RESULTS
+======================================================================
+App Name:        Google Chrome
+App ID:          napt-chrome
+Version:         141.0.7390.123
+PSADT Version:   4.1.7
+Build Directory: builds/napt-chrome/141.0.7390.123
+Status:          success
+======================================================================
+
+[SUCCESS] PSADT package built successfully!
+```
+
+**Output Structure:**
+```
+builds/
+└── napt-chrome/
+    └── 141.0.7390.123/
+        ├── PSAppDeployToolkit/        # PSADT files (pristine from GitHub)
+        ├── Files/                     # Application installer
+        │   └── googlechromestandaloneenterprise64.msi
+        ├── SupportFiles/              # Additional files (empty initially)
+        ├── Invoke-AppDeployToolkit.ps1   # Generated with recipe values
+        └── Invoke-AppDeployToolkit.exe   # PSADT launcher
+```
+
+**When to use:**
+- After running `napt discover` to download installer
+- Before creating .intunewin packages
+- To prepare packages for manual deployment
+- To test PSADT package structure
+
+---
+
+### `napt package`
+
+Creates a .intunewin package from a built PSADT directory using Microsoft's IntuneWinAppUtil.exe tool. The .intunewin format is required for uploading Win32 apps to Microsoft Intune.
+
+**Purpose:**
+- Convert PSADT build directory to .intunewin package
+- Prepare package for Intune upload
+- Optionally clean build directory to save space
+
+**Features:**
+- ✅ Validates PSADT build structure
+- ✅ Downloads IntuneWinAppUtil.exe (or uses cached version)
+- ✅ Creates .intunewin package
+- ✅ Optional build directory cleanup
+- ✅ Versioned package naming
+
+**Usage:**
+```bash
+napt package <build-dir> [options]
+```
+
+**Options:**
+- `--output-dir DIR` - Directory for .intunewin output (default: packages/{app_id}/)
+- `--clean-source` - Remove build directory after packaging (saves disk space)
+- `-v, --verbose` - Show progress and high-level status updates
+- `-d, --debug` - Show detailed debugging output (implies --verbose)
+
+**Example Output:**
+```
+Creating .intunewin package from: builds/napt-chrome/141.0.7390.123
+
+[1/4] Verifying build structure...
+[2/4] Getting IntuneWinAppUtil tool...
+[3/4] Creating .intunewin package...
+[4/4] Package complete
+======================================================================
+PACKAGE RESULTS
+======================================================================
+App ID:          napt-chrome
+Version:         141.0.7390.123
+Package Path:    packages/napt-chrome/napt-chrome-141.0.7390.123.intunewin
+Build Directory: builds/napt-chrome/141.0.7390.123
+Status:          success
+======================================================================
+
+[SUCCESS] .intunewin package created successfully!
+```
+
+**Output Structure:**
+```
+packages/
+└── napt-chrome/
+    └── napt-chrome-141.0.7390.123.intunewin
+```
+
+**When to use:**
+- After running `napt build` to create PSADT package
+- Before uploading to Microsoft Intune
+- When preparing packages for distribution
+
+---
+
 ### Output Verbosity Modes
 
 Both commands support multiple output modes to suit different debugging needs:
@@ -894,23 +1052,31 @@ Both commands support multiple output modes to suit different debugging needs:
 
 ```python
 from pathlib import Path
-from notapkgtool.core import check_recipe
+from notapkgtool.core import discover_recipe
+from notapkgtool.validation import validate_recipe
 
-# Normal mode
-result = check_recipe(
+# Validate recipe (no downloads)
+result = validate_recipe(
+    recipe_path=Path("recipes/Google/chrome.yaml"),
+    verbose=True,
+)
+print(f"Status: {result['status']}")
+
+# Discover version - Normal mode
+result = discover_recipe(
     recipe_path=Path("recipes/Google/chrome.yaml"),
     output_dir=Path("./downloads"),
 )
 
-# Verbose mode
-result = check_recipe(
+# Discover version - Verbose mode
+result = discover_recipe(
     recipe_path=Path("recipes/Google/chrome.yaml"),
     output_dir=Path("./downloads"),
     verbose=True,
 )
 
-# Debug mode
-result = check_recipe(
+# Discover version - Debug mode
+result = discover_recipe(
     recipe_path=Path("recipes/Google/chrome.yaml"),
     output_dir=Path("./downloads"),
     debug=True,
@@ -945,6 +1111,6 @@ GPL-3.0-only - See LICENSE file for details
 
 ---
 
-*This documentation reflects the state of NAPT v0.1.0*
-*Last updated: 2025-10-28*
+*This documentation reflects 0.2.0 (current release)*
+*Last updated: 2025-11-07*
 

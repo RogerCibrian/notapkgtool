@@ -22,20 +22,10 @@ apps:
         AppArch: "x64"
       install: |
         # Example install for MSI from JSON API
-        Execute-Process `
-          -Path "$dirFiles\app-${discovered_version}.msi" `
-          -Parameters "/qn /norestart" `
-          -WindowStyle Hidden
+        Start-ADTMsiProcess -Action Install -Path "$dirFiles\app-${discovered_version}.msi"
       uninstall: |
-        # Example uninstall
-        $app = Get-InstalledApplication -Name "Fictional App" -Exact
-        if ($app -and $app.ProductCode) {
-          Execute-Process -Path "msiexec.exe" `
-            -Parameters "/x $($app.ProductCode) /qn /norestart" `
-            -WindowStyle Hidden
-        } else {
-          Write-Log -Message "App not found; nothing to uninstall."
-        }
+        # Example uninstall (PSADT handles MSI uninstall automatically)
+        Uninstall-ADTApplication -Name "Fictional App"
 
 ---
 # Example 2: Nested JSON structure
@@ -61,10 +51,8 @@ apps:
         AppVersion: "${discovered_version}"
         AppArch: "x64"
       install: |
-        Execute-Process `
-          -Path "$dirFiles\installer.exe" `
-          -Parameters "/S" `
-          -WindowStyle Hidden
+        # Example EXE install with silent parameters
+        Start-ADTProcess -Path "$dirFiles\installer.exe" -Parameters "/S"
 
 ---
 # Example 3: POST request with body
@@ -95,8 +83,6 @@ apps:
         AppVersion: "${discovered_version}"
         AppArch: "x64"
       install: |
-        Execute-Process `
-          -Path "$dirFiles\setup.exe" `
-          -Parameters "--silent --install" `
-          -WindowStyle Hidden
+        # Example EXE install with custom parameters
+        Start-ADTProcess -Path "$dirFiles\setup.exe" -Parameters "--silent --install"
 

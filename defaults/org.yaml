@@ -33,13 +33,16 @@ defaults:
     enforce_vendor_cn: null
 
   psadt:
-    # Version of the PSAppDeployToolkit (PSADT) template to use.
-    template_version: "4.1.5"
+    # PSADT release to use - "latest" or specific version (e.g., "4.1.7")
+    release: "latest"
+    
+    # Cache directory for downloaded PSADT releases
+    cache_dir: "cache/psadt"
 
     # Brand pack replaces default PSADT assets (logo/banner) with custom ones.
     brand_pack:
       # Relative path to folder containing your replacement assets.
-      path: ../../branding/napt
+      path: brand-packs/napt
 
       # Mapping rules: local source → template target location.
       mappings:
@@ -59,40 +62,14 @@ defaults:
       AppScriptAuthor: "napt"             # Author name shown in script header
       RequireAdmin: true                  # Require admin privileges
 
-  package:
-    # Package type. Win32 = Intune Win32 package.
-    type: win32
+  build:
+    # Output directory for built PSADT packages
+    output_dir: "builds"
+    
+    # Directory naming pattern
+    # Supported placeholders: {app_id}, {version}, {vendor}
+    naming: "{app_id}/{version}"
 
-    # Path to the installer executable inside the PSADT package.
-    setup_file: "Invoke-AppDeployToolkit.exe"
-
-    # Default install/uninstall commands for PSADT packages.
-    install_command: "Invoke-AppDeployToolkit.exe -DeploymentType Install -DeployMode Silent"
-    uninstall_command: "Invoke-AppDeployToolkit.exe -DeploymentType Uninstall -DeployMode Silent"
-
-    # System requirements for the package.
-    requirements:
-      architecture: x64                   # x64 architecture only
-      min_os_version: "10.0.17763.0"      # Minimum Windows build number (17763 = 1809)
-
-    # Return code mapping for Intune to interpret deployment outcomes.
-    return_codes:
-      success: [0]                        # Exit code(s) considered success
-      soft_reboot: [3010]                 # Exit code(s) that mean reboot required
-      retryable: []                       # Exit code(s) to retry on
-
-  assignments:
-    # Deployment waves/rings, applied in sequence.
-    waves:
-      - name: "Ring 0 - Pilot (IT)"       # First wave, internal IT
-        groups: { included: ["grp-it-pilot"] }  # Targeted Azure AD groups
-        intent: required                  # Required install (not available/optional)
-        availability: { start: "immediate" }  # Start immediately after approval
-
-      - name: "Ring 1 - Canary"           # Early adopters ring
-        groups: { included: ["grp-canary"] }
-        delay_after_previous: "2d"        # Wait 2 days after Ring 0 before rollout
-
-      - name: "Ring 2 - Production"       # Broadest deployment ring
-        groups: { included: ["grp-all-windows"] }
-        delay_after_previous: "5d"        # Wait 5 days after Canary before rollout
+  # Future configuration sections (not yet implemented):
+  # - package: Intune package metadata and requirements
+  # - assignments: Deployment waves and ring management

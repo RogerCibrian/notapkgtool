@@ -9,7 +9,8 @@ NAPT provides:
   - Automatic version discovery from multiple sources
   - Robust download with conditional requests and integrity verification
   - Intelligent update policies (version-based, hash-based, or combined)
-  - PSADT package generation (planned)
+  - PSADT package generation with Template_v4
+  - .intunewin package creation for Intune deployment
   - Direct upload to Microsoft Intune (planned)
   - Deployment wave/ring management (planned)
 
@@ -64,7 +65,7 @@ License: GPL-3.0-only
 Repository: https://github.com/RogerCibrian/notapkgtool
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "Roger Cibrian"
 __license__ = "GPL-3.0-only"
 __description__ = "Not a Pkg Tool - Windows/Intune packaging with PSADT"

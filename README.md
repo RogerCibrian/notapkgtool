@@ -19,7 +19,7 @@ NAPT is a Python-based CLI tool that automates the entire workflow for packaging
 - ✅ **Intelligent updates** - Version-based, hash-based, or combined strategies
 - ✅ **Cross-platform support** - Windows, Linux, and macOS
 - ✅ **Layered configuration** - Organization → Vendor → Recipe inheritance
-- 🚧 **PSADT packaging** - Generate Intune packages (planned)
+- ✅ **PSADT packaging** - Generate Intune-ready packages with PSAppDeployToolkit
 - 🚧 **Direct Intune upload** - Automatic deployment (planned)
 - 🚧 **Deployment waves** - Phased rollouts with rings (planned)
 
@@ -38,21 +38,54 @@ sudo apt-get install msitools  # Debian/Ubuntu
 ### Validate a Recipe
 
 ```bash
-# Check a recipe (downloads installer and extracts version)
+# Quick validation (syntax check only, no downloads)
+napt validate recipes/Google/chrome.yaml
+
+# With verbose output
+napt validate recipes/Google/chrome.yaml --verbose
+```
+
+### Discover Latest Version
+
+```bash
+# Discover version and download installer
 # State tracking enabled by default for efficient re-runs
-napt check recipes/Google/chrome.yaml
+napt discover recipes/Google/chrome.yaml
 
 # Specify custom output directory
-napt check recipes/Google/chrome.yaml --output-dir ./cache
+napt discover recipes/Google/chrome.yaml --output-dir ./cache
 
 # Show verbose output with progress details
-napt check recipes/Google/chrome.yaml --verbose
+napt discover recipes/Google/chrome.yaml --verbose
 
 # Disable state tracking (always download, no caching)
-napt check recipes/Google/chrome.yaml --stateless
+napt discover recipes/Google/chrome.yaml --stateless
 
 # Show debug output with full configuration dumps
-napt check recipes/Google/chrome.yaml --debug
+napt discover recipes/Google/chrome.yaml --debug
+```
+
+### Build PSADT Package
+
+```bash
+# Build PSADT package from recipe and downloaded installer
+napt build recipes/Google/chrome.yaml
+
+# Specify custom downloads and output directories
+napt build recipes/Google/chrome.yaml --downloads-dir ./downloads --output-dir ./builds
+
+# Show verbose output
+napt build recipes/Google/chrome.yaml --verbose
+```
+
+### Create .intunewin Package
+
+```bash
+# Create .intunewin from build directory
+napt package builds/napt-chrome/141.0.7390.123/
+
+# Specify output directory and clean source after packaging
+napt package builds/napt-chrome/141.0.7390.123/ --output-dir ./packages --clean-source
 ```
 
 ### Output Modes
@@ -79,13 +112,13 @@ NAPT supports three output verbosity levels:
 ### Example Output
 
 ```
-Checking recipe: recipes/Google/chrome.yaml
+Discovering version for recipe: recipes/Google/chrome.yaml
 Output directory: ./downloads
 
 download progress: 100%
 download complete: googlechromestandaloneenterprise64.msi (f8f4a...) in 1.2s
 ======================================================================
-CHECK RESULTS
+DISCOVERY RESULTS
 ======================================================================
 App Name:        Google Chrome
 App ID:          napt-chrome
@@ -97,7 +130,7 @@ SHA-256:         f8f4aedf10183d73ef7fe34488924d8e324bfb34a544bb1f2c43d2b1b0b4c79
 Status:          success
 ======================================================================
 
-[SUCCESS] Recipe validated successfully!
+[SUCCESS] Version discovered successfully!
 ```
 
 ## 📖 Documentation
@@ -156,20 +189,28 @@ Pluggable strategies for obtaining application installers:
 
 ```python
 from pathlib import Path
-from notapkgtool.core import check_recipe
+from notapkgtool.core import discover_recipe
 from notapkgtool.config import load_effective_config
+from notapkgtool.validation import validate_recipe
 from notapkgtool.versioning import compare_any, is_newer_any
 
-# Validate a recipe (with verbose output)
-result = check_recipe(
+# Validate recipe syntax (no downloads)
+result = validate_recipe(
+    recipe_path=Path("recipes/Google/chrome.yaml"),
+    verbose=True
+)
+print(f"Status: {result['status']}")
+
+# Discover version and download installer
+result = discover_recipe(
     recipe_path=Path("recipes/Google/chrome.yaml"),
     output_dir=Path("./downloads"),
     verbose=True
 )
 print(f"Version: {result['version']}")
 
-# Validate with debug output
-result = check_recipe(
+# Discover with debug output
+result = discover_recipe(
     recipe_path=Path("recipes/Google/chrome.yaml"),
     output_dir=Path("./downloads"),
     debug=True
@@ -288,21 +329,27 @@ apps:
 
 ## 🗺️ Roadmap
 
-### v0.1.0 (Current)
-- ✅ CLI with `check` command
+### 0.1.0
+- ✅ CLI with `validate` and `discover` commands
+- ✅ Recipe validation (syntax and configuration checks)
 - ✅ Verbose and debug output modes
 - ✅ Configuration system with 3-layer merging
 - ✅ HTTP static discovery strategy
 - ✅ URL regex discovery strategy
 - ✅ GitHub release discovery strategy
+- ✅ HTTP JSON discovery strategy
 - ✅ MSI ProductVersion extraction
 - ✅ Version comparison utilities
 - ✅ State tracking with ETag caching
 - ✅ Cross-platform support
 
-### v0.2.0 (Planned)
-- 🚧 PSADT package building
-- 🚧 .intunewin generation
+### 0.2.0 (Current Release)
+- ✅ PSADT package building with `build` command
+- ✅ .intunewin generation with `package` command
+- ✅ PSADT release management from GitHub
+- ✅ Invoke-AppDeployToolkit.ps1 generation from templates
+- ✅ Custom branding support
+- ✅ Filesystem-first version tracking (state schema v2)
 
 ### v0.3.0 (Planned)
 - 🚧 Microsoft Intune upload

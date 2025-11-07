@@ -1026,7 +1026,6 @@ class TestCacheAndETagSupport:
 
     def test_http_static_with_cache_not_modified(self, tmp_test_dir):
         """Test http_static with cache when file not modified (HTTP 304)."""
-        from notapkgtool.io import NotModifiedError
 
         app_config = {
             "source": {
@@ -1070,7 +1069,6 @@ class TestCacheAndETagSupport:
 
     def test_github_release_with_cache_not_modified(self, tmp_test_dir):
         """Test github_release with cache when asset not modified."""
-        from notapkgtool.io import NotModifiedError
 
         app_config = {
             "source": {

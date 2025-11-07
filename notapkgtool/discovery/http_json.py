@@ -165,8 +165,8 @@ import os
 from pathlib import Path
 from typing import Any
 
-import requests
 from jsonpath_ng import parse as jsonpath_parse
+import requests
 
 from notapkgtool.io import NotModifiedError, download_file
 from notapkgtool.versioning.keys import DiscoveredVersion
@@ -410,20 +410,28 @@ class HttpJsonStrategy:
             )
         except NotModifiedError:
             # File unchanged (HTTP 304), use cached version
-            print_verbose("DISCOVERY", "File not modified (HTTP 304), using cached version")
+            # Use convention-based path: derive filename from URL
+            print_verbose(
+                "DISCOVERY", "File not modified (HTTP 304), using cached version"
+            )
 
-            if not cache or "file_path" not in cache or "sha256" not in cache:
+            if not cache or "sha256" not in cache:
                 raise RuntimeError(
-                    "Cache indicates file not modified, but missing cached file info. "
+                    "Cache indicates file not modified, but missing SHA-256. "
                     "Try running with --stateless to force re-download."
-                )
+                ) from None
 
-            cached_file = Path(cache["file_path"])
+            # Derive file path from URL (convention-based, schema v2)
+            from urllib.parse import urlparse
+
+            filename = Path(urlparse(download_url).path).name
+            cached_file = output_dir / filename
+
             if not cached_file.exists():
                 raise RuntimeError(
                     f"Cached file {cached_file} not found. "
                     f"File may have been deleted. Try running with --stateless."
-                )
+                ) from None
 
             return discovered, cached_file, cache["sha256"], {}
         except Exception as err:
@@ -440,14 +448,14 @@ class HttpJsonStrategy:
     def validate_config(self, app_config: dict[str, Any]) -> list[str]:
         """
         Validate http_json strategy configuration.
-        
+
         Checks for required fields and correct types without making network calls.
-        
+
         Parameters
         ----------
         app_config : dict
             The app configuration from the recipe.
-        
+
         Returns
         -------
         list[str]
@@ -455,7 +463,7 @@ class HttpJsonStrategy:
         """
         errors = []
         source = app_config.get("source", {})
-        
+
         # Check required fields
         if "api_url" not in source:
             errors.append("Missing required field: source.api_url")
@@ -463,7 +471,7 @@ class HttpJsonStrategy:
             errors.append("source.api_url must be a string")
         elif not source["api_url"].strip():
             errors.append("source.api_url cannot be empty")
-        
+
         if "version_path" not in source:
             errors.append("Missing required field: source.version_path")
         elif not isinstance(source["version_path"], str):
@@ -473,11 +481,12 @@ class HttpJsonStrategy:
         else:
             # Validate JSONPath syntax
             from jsonpath_ng import parse as jsonpath_parse
+
             try:
                 jsonpath_parse(source["version_path"])
             except Exception as err:
                 errors.append(f"Invalid version_path JSONPath: {err}")
-        
+
         if "download_url_path" not in source:
             errors.append("Missing required field: source.download_url_path")
         elif not isinstance(source["download_url_path"], str):
@@ -487,11 +496,12 @@ class HttpJsonStrategy:
         else:
             # Validate JSONPath syntax
             from jsonpath_ng import parse as jsonpath_parse
+
             try:
                 jsonpath_parse(source["download_url_path"])
             except Exception as err:
                 errors.append(f"Invalid download_url_path JSONPath: {err}")
-        
+
         # Optional fields validation
         if "method" in source:
             method = source["method"]
@@ -499,13 +509,13 @@ class HttpJsonStrategy:
                 errors.append("source.method must be a string")
             elif method.upper() not in ["GET", "POST"]:
                 errors.append("source.method must be 'GET' or 'POST'")
-        
+
         if "headers" in source and not isinstance(source["headers"], dict):
             errors.append("source.headers must be a dictionary")
-        
+
         if "body" in source and not isinstance(source["body"], dict):
             errors.append("source.body must be a dictionary")
-        
+
         return errors
 
 

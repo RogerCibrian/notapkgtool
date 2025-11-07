@@ -295,8 +295,8 @@ When ready to release a new version:
    ```bash
    git checkout main
    git pull origin main
-   git tag -a v0.2.0 -m "Release version 0.2.0"
-   git push origin v0.2.0
+   git tag -a 0.2.0 -m "Release 0.2.0"
+   git push origin 0.2.0
    ```
 5. Create release on GitHub with the tag
 6. Publish to PyPI (if applicable)
@@ -352,6 +352,6 @@ git push origin hotfix/fix-security-vulnerability
 
 ---
 
-**Last Updated**: 2025-10-27
+**Last Updated**: 2025-11-06
 **Strategy**: GitHub Flow with Squash and Merge
 

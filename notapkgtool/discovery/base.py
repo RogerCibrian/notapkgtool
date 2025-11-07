@@ -9,9 +9,9 @@ This module defines the foundational components for the discovery system:
 The discovery system uses a strategy pattern to support multiple ways
 of obtaining application installers and their versions:
   - http_static: Direct download from a static URL
-  - url_regex: Parse version from URL patterns (future)
-  - github_release: Fetch from GitHub releases (future)
-  - http_json: Query JSON API endpoints (future)
+  - url_regex: Parse version from URL patterns using regex
+  - github_release: Fetch from GitHub releases API
+  - http_json: Query JSON API endpoints with JSONPath
 
 Design Philosophy
 -----------------
@@ -70,7 +70,7 @@ class DiscoveryStrategy(Protocol):
 
     Each strategy must implement discover_version() which downloads
     and extracts version information based on the app config.
-    
+
     Strategies may optionally implement validate_config() to provide
     strategy-specific configuration validation without network calls.
     """
@@ -106,33 +106,33 @@ class DiscoveryStrategy(Protocol):
     def validate_config(self, app_config: dict[str, Any]) -> list[str]:
         """
         Validate strategy-specific configuration (optional).
-        
+
         This method validates the app configuration for strategy-specific
         requirements without making network calls or downloading files.
         Useful for quick feedback during recipe development.
-        
+
         Parameters
         ----------
         app_config : dict
             The app configuration from the recipe (config["apps"][0]).
-        
+
         Returns
         -------
         list[str]
             List of error messages. Empty list if configuration is valid.
             Each error should be a human-readable description of the issue.
-        
+
         Examples
         --------
         Check required fields:
-        
+
             >>> def validate_config(self, app_config):
             ...     errors = []
             ...     source = app_config.get("source", {})
             ...     if "url" not in source:
             ...         errors.append("Missing required field: source.url")
             ...     return errors
-        
+
         Notes
         -----
         - This method is optional; strategies without it will skip validation

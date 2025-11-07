@@ -9,7 +9,6 @@ Tests core orchestration including:
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -39,19 +38,21 @@ class TestDiscoverRecipe:
             ],
         }
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
-        
+
         # Mock the discovery strategy
         with patch("notapkgtool.core.get_strategy") as mock_get_strategy:
             mock_strategy = mock_get_strategy.return_value
             mock_strategy.discover_version.return_value = (
-                DiscoveredVersion(version="1.2.3", source="msi_product_version_from_file"),
+                DiscoveredVersion(
+                    version="1.2.3", source="msi_product_version_from_file"
+                ),
                 tmp_test_dir / "test.msi",
                 "abc123" * 8,  # fake SHA-256
                 {"ETag": 'W/"test123"'},  # HTTP headers
             )
-            
+
             result = discover_recipe(recipe_path, tmp_test_dir)
-        
+
         assert result["app_name"] == "Test App"
         assert result["app_id"] == "test-app"
         assert result["strategy"] == "http_static"
@@ -65,11 +66,13 @@ class TestDiscoverRecipe:
         """Test that recipe with no apps raises ValueError."""
         recipe_data = {"apiVersion": "napt/v1", "apps": []}
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
-        
+
         with pytest.raises(ValueError, match="No apps defined"):
             discover_recipe(recipe_path, tmp_test_dir)
 
-    def test_discover_recipe_missing_strategy_raises(self, tmp_test_dir, create_yaml_file):
+    def test_discover_recipe_missing_strategy_raises(
+        self, tmp_test_dir, create_yaml_file
+    ):
         """Test that missing strategy raises ValueError."""
         recipe_data = {
             "apiVersion": "napt/v1",
@@ -81,11 +84,13 @@ class TestDiscoverRecipe:
             ],
         }
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
-        
+
         with pytest.raises(ValueError, match="No 'source.strategy' defined"):
             discover_recipe(recipe_path, tmp_test_dir)
 
-    def test_discover_recipe_unknown_strategy_raises(self, tmp_test_dir, create_yaml_file):
+    def test_discover_recipe_unknown_strategy_raises(
+        self, tmp_test_dir, create_yaml_file
+    ):
         """Test that unknown strategy raises ValueError."""
         recipe_data = {
             "apiVersion": "napt/v1",
@@ -97,13 +102,13 @@ class TestDiscoverRecipe:
             ],
         }
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
-        
+
         with pytest.raises(ValueError, match="Unknown discovery strategy"):
             discover_recipe(recipe_path, tmp_test_dir)
 
     def test_discover_recipe_missing_file_raises(self, tmp_test_dir):
         """Test that missing recipe file raises error."""
         nonexistent = tmp_test_dir / "nonexistent.yaml"
-        
+
         with pytest.raises(FileNotFoundError):
             discover_recipe(nonexistent, tmp_test_dir)
