@@ -325,7 +325,6 @@ def test_real_api():
         print("Skipped.")
         return
 
-    strategy = HttpJsonStrategy()
     # Using Git for Windows as an example
     config = {
         "source": {

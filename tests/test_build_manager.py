@@ -24,7 +24,6 @@ from notapkgtool.build.manager import (
     _find_installer_file,
 )
 
-
 # All tests in this file are unit tests (fast, mocked)
 pytestmark = pytest.mark.unit
 
@@ -186,7 +185,9 @@ class TestCopyInstaller:
 class TestApplyBranding:
     """Tests for applying custom branding (unit tests with fake data)."""
 
-    def test_apply_branding_success(self, fake_psadt_template, fake_brand_pack, tmp_path):
+    def test_apply_branding_success(
+        self, fake_psadt_template, fake_brand_pack, tmp_path
+    ):
         """Test applying branding assets to v4 structure."""
         # Create build with fake template
         build_dir = tmp_path / "build"

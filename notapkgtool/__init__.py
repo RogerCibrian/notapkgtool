@@ -65,7 +65,7 @@ License: GPL-3.0-only
 Repository: https://github.com/RogerCibrian/notapkgtool
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "Roger Cibrian"
 __license__ = "GPL-3.0-only"
 __description__ = "Not a Pkg Tool - Windows/Intune packaging with PSADT"

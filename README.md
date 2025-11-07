@@ -329,7 +329,7 @@ apps:
 
 ## 🗺️ Roadmap
 
-### v0.1.0
+### 0.1.0
 - ✅ CLI with `validate` and `discover` commands
 - ✅ Recipe validation (syntax and configuration checks)
 - ✅ Verbose and debug output modes
@@ -343,7 +343,7 @@ apps:
 - ✅ State tracking with ETag caching
 - ✅ Cross-platform support
 
-### v0.2.0 (In Development - This Branch)
+### 0.2.0 (Current Release)
 - ✅ PSADT package building with `build` command
 - ✅ .intunewin generation with `package` command
 - ✅ PSADT release management from GitHub

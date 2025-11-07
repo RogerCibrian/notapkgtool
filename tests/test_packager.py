@@ -22,7 +22,6 @@ from notapkgtool.build.packager import (
     create_intunewin,
 )
 
-
 # All tests in this file are unit tests (fast, mocked)
 pytestmark = pytest.mark.unit
 

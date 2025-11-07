@@ -688,7 +688,7 @@ source:
 
 ## Current Status
 
-### ✅ Implemented (v0.1.0 - Released)
+### ✅ Implemented (0.1.0 - Released)
 - CLI with `validate` and `discover` commands
 - Three output modes: normal, verbose, and debug
 - Config loading and merging
@@ -702,7 +702,7 @@ source:
 - MSI ProductVersion extraction
 - Cross-platform support
 
-### ✅ Implemented (v0.2.0 - In Development)
+### ✅ Implemented (0.2.0 - Current Release)
 - `build` and `package` CLI commands
 - PSADT package building from recipes
 - Invoke-AppDeployToolkit.ps1 generation from templates
@@ -1111,6 +1111,6 @@ GPL-3.0-only - See LICENSE file for details
 
 ---
 
-*This documentation reflects v0.1.0 (released) + v0.2.0 (in development)*
-*Last updated: 2025-11-06*
+*This documentation reflects 0.2.0 (current release)*
+*Last updated: 2025-11-07*
 

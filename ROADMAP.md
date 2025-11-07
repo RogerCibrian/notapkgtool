@@ -274,7 +274,7 @@ psadt:
 
 ## Completed ✅
 
-### v0.2.0 Features
+### 0.2.0 Features
 - ✅ PSADT package building (`napt build`)
 - ✅ .intunewin package creation (`napt package`)
 - ✅ PSADT Template_v4 download and caching
@@ -286,7 +286,7 @@ psadt:
 - ✅ Integration testing framework
 - ✅ State schema v2 migration
 
-### v0.1.0 Features
+### 0.1.0 Features
 - ✅ Recipe validation
 - ✅ Version discovery
 - ✅ HTTP downloads with caching
@@ -328,5 +328,5 @@ If we decide not to pursue something:
 ---
 
 **Last Updated**: 2025-11-07  
-**Next Review**: After v0.2.0 release
+**Next Review**: After 0.2.0 release
 

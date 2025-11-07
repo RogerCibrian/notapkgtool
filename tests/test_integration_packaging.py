@@ -68,7 +68,9 @@ class TestBuildStructureValidation:
         # Should not raise - real template has everything needed
         _verify_build_structure(build_dir)
 
-    def test_verify_detects_missing_exe(self, real_psadt_template: Path, tmp_path: Path):
+    def test_verify_detects_missing_exe(
+        self, real_psadt_template: Path, tmp_path: Path
+    ):
         """Test validation fails when Invoke-AppDeployToolkit.exe missing."""
         from notapkgtool.build.manager import _copy_psadt_pristine
 
@@ -87,8 +89,9 @@ class TestBuildStructureValidation:
         self, real_psadt_template: Path, tmp_path: Path
     ):
         """Test validation fails when PSAppDeployToolkit directory missing."""
-        from notapkgtool.build.manager import _copy_psadt_pristine
         import shutil
+
+        from notapkgtool.build.manager import _copy_psadt_pristine
 
         build_dir = tmp_path / "build"
         build_dir.mkdir()
@@ -100,4 +103,3 @@ class TestBuildStructureValidation:
 
         with pytest.raises(ValueError, match="Missing.*PSAppDeployToolkit"):
             _verify_build_structure(build_dir)
-
