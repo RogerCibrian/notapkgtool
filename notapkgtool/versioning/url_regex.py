@@ -25,7 +25,7 @@ Patterns support full Python regex syntax. Two extraction modes:
    Extracts only the 'version' group from the match.
 
 2. Full match (fallback):
-   pattern = r"[0-9]+\.[0-9]+\.[0-9]+"
+   pattern = r"[0-9]+\\.[0-9]+\\.[0-9]+"
    Uses the entire regex match as the version.
 
 Examples
@@ -42,7 +42,7 @@ Extract version from URL with named group:
 Extract version with full match:
 
     >>> url = "https://vendor.com/app/2024.10.28/installer.exe"
-    >>> pattern = r"[0-9]{4}\.[0-9]{2}\.[0-9]{2}"
+    >>> pattern = "[0-9]{4}\\\\.[0-9]{2}\\\\.[0-9]{2}"
     >>> discovered = version_from_regex_in_url(url, pattern)
     >>> discovered.version
     '2024.10.28'
@@ -119,7 +119,7 @@ def version_from_regex_in_url(
     Extract with full match:
 
         >>> url = "https://vendor.com/downloads/1.2.3/setup.exe"
-        >>> pattern = r"[0-9]+\.[0-9]+\.[0-9]+"
+        >>> pattern = r"[0-9]+\\.[0-9]+\\.[0-9]+"
         >>> discovered = version_from_regex_in_url(url, pattern)
         >>> discovered.version
         '1.2.3'

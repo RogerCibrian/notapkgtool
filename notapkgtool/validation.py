@@ -130,7 +130,7 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> dict[str, Any]:
         }
 
     if verbose:
-        print("  ✓ YAML syntax is valid")
+        print("  [OK] YAML syntax is valid")
 
     # Validate recipe is a dict
     if not isinstance(recipe, dict):
@@ -155,7 +155,7 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> dict[str, Any]:
                 f"apiVersion '{api_version}' may not be supported (expected: napt/v1)"
             )
         if verbose and not errors:
-            print(f"  ✓ apiVersion: {api_version}")
+            print(f"  [OK] apiVersion: {api_version}")
 
     # Check apps list
     if "apps" not in recipe:
@@ -191,7 +191,7 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> dict[str, Any]:
 
     app_count = len(apps)
     if verbose:
-        print(f"  ✓ Found {app_count} app(s)")
+        print(f"  [OK] Found {app_count} app(s)")
 
     # Validate each app
     for idx, app in enumerate(apps):
@@ -238,7 +238,7 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> dict[str, Any]:
 
         if verbose:
             print(
-                f"  ✓ App '{app.get('name', 'unnamed')}' uses strategy: {strategy_name}"
+                f"  [OK] App '{app.get('name', 'unnamed')}' uses strategy: {strategy_name}"
             )
 
         # Check if strategy exists
@@ -262,9 +262,9 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> dict[str, Any]:
 
     if verbose:
         if status == "valid":
-            print("  ✓ Recipe is valid!")
+            print("  [OK] Recipe is valid!")
         else:
-            print(f"  ✗ Recipe has {len(errors)} error(s)")
+            print(f"  [ERROR] Recipe has {len(errors)} error(s)")
 
     return {
         "status": status,

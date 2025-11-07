@@ -132,7 +132,7 @@ def _get_intunewin_tool(cache_dir: Path, verbose: bool = False) -> Path:
     cache_dir.mkdir(parents=True, exist_ok=True)
     tool_path.write_bytes(response.content)
 
-    print_verbose("PACKAGE", f"✓ IntuneWinAppUtil.exe cached: {tool_path}")
+    print_verbose("PACKAGE", f"[OK] IntuneWinAppUtil.exe cached: {tool_path}")
 
     return tool_path
 
@@ -222,7 +222,7 @@ def _execute_packaging(
 
     # Return the most recently created file
     intunewin_path = max(intunewin_files, key=lambda p: p.stat().st_mtime)
-    print_verbose("PACKAGE", f"✓ Created: {intunewin_path.name}")
+    print_verbose("PACKAGE", f"[OK] Created: {intunewin_path.name}")
 
     return intunewin_path
 
@@ -339,11 +339,11 @@ def create_intunewin(
     if clean_source:
         print_step(4, 4, "Cleaning source build directory...")
         shutil.rmtree(build_dir)
-        print_verbose("PACKAGE", f"✓ Removed build directory: {build_dir}")
+        print_verbose("PACKAGE", f"[OK] Removed build directory: {build_dir}")
     else:
         print_step(4, 4, "Package complete")
 
-    print_verbose("PACKAGE", f"✓ Package created: {package_path}")
+    print_verbose("PACKAGE", f"[OK] Package created: {package_path}")
 
     return {
         "build_dir": build_dir,

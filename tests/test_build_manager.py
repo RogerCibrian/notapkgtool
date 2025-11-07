@@ -7,6 +7,9 @@ Tests build orchestration including:
 - Creating build directories
 - Copying PSADT and installers
 - Applying branding
+
+These are UNIT tests using mocked/fake data for fast execution.
+For integration tests with real PSADT, see test_integration_build.py.
 """
 
 from __future__ import annotations
@@ -20,6 +23,10 @@ from notapkgtool.build.manager import (
     _create_build_directory,
     _find_installer_file,
 )
+
+
+# All tests in this file are unit tests (fast, mocked)
+pytestmark = pytest.mark.unit
 
 
 class TestFindInstallerFile:
@@ -109,8 +116,7 @@ class TestCreateBuildDirectory:
         expected = base_dir / "test-app" / "1.0.0"
         assert result == expected
         assert result.exists()
-        assert (result / "Files").exists()
-        assert (result / "SupportFiles").exists()
+        # Note: Files/ and SupportFiles/ come from template, not created here
 
     def test_create_replaces_existing(self, tmp_path):
         """Test that existing build directory is replaced."""
@@ -127,35 +133,26 @@ class TestCreateBuildDirectory:
 
         assert result == existing
         assert not (result / "old_file.txt").exists()
-        assert (result / "Files").exists()
 
 
 class TestCopyPSADTPristine:
-    """Tests for copying PSADT files."""
+    """Tests for copying PSADT files (unit tests with fake data)."""
 
-    def test_copy_psadt_structure(self, tmp_path):
-        """Test copying PSADT directory structure."""
-        # Create fake PSADT cache
-        cache_dir = tmp_path / "cache" / "4.1.7"
-        psadt_dir = cache_dir / "PSAppDeployToolkit"
-        psadt_dir.mkdir(parents=True)
-        (psadt_dir / "PSAppDeployToolkit.psd1").write_text("manifest")
-        (psadt_dir / "Scripts").mkdir()
-        (psadt_dir / "Scripts" / "test.ps1").write_text("script")
-
-        exe = cache_dir / "Invoke-AppDeployToolkit.exe"
-        exe.write_bytes(b"fake exe")
-
-        # Create build directory
+    def test_copy_psadt_structure(self, fake_psadt_template, tmp_path):
+        """Test copying PSADT directory structure using fake template."""
+        # Use the fake_psadt_template fixture
         build_dir = tmp_path / "build"
         build_dir.mkdir()
 
-        _copy_psadt_pristine(cache_dir, build_dir)
+        _copy_psadt_pristine(fake_psadt_template, build_dir)
 
-        # Verify copied structure
+        # Verify v4 structure copied
         assert (build_dir / "PSAppDeployToolkit" / "PSAppDeployToolkit.psd1").exists()
-        assert (build_dir / "PSAppDeployToolkit" / "Scripts" / "test.ps1").exists()
         assert (build_dir / "Invoke-AppDeployToolkit.exe").exists()
+        assert (build_dir / "Invoke-AppDeployToolkit.ps1").exists()
+        assert (build_dir / "Assets").is_dir()
+        assert (build_dir / "Files").is_dir()
+        assert (build_dir / "Config").is_dir()
 
     def test_copy_psadt_missing_directory_raises(self, tmp_path):
         """Test error when PSADT directory doesn't exist."""
@@ -163,7 +160,7 @@ class TestCopyPSADTPristine:
         build_dir = tmp_path / "build"
         build_dir.mkdir()
 
-        with pytest.raises(FileNotFoundError, match="PSADT directory not found"):
+        with pytest.raises(FileNotFoundError, match="PSADT.*not found"):
             _copy_psadt_pristine(cache_dir, build_dir)
 
 
@@ -187,40 +184,23 @@ class TestCopyInstaller:
 
 
 class TestApplyBranding:
-    """Tests for applying custom branding."""
+    """Tests for applying custom branding (unit tests with fake data)."""
 
-    def test_apply_branding_success(self, tmp_path):
-        """Test applying branding assets."""
-        # Create brand pack
-        brand_dir = tmp_path / "branding"
-        brand_dir.mkdir()
-        logo = brand_dir / "AppIcon.png"
-        logo.write_bytes(b"logo data")
-
-        # Create build structure
+    def test_apply_branding_success(self, fake_psadt_template, fake_brand_pack, tmp_path):
+        """Test applying branding assets to v4 structure."""
+        # Create build with fake template
         build_dir = tmp_path / "build"
-        assets_dir = build_dir / "PSAppDeployToolkit" / "Assets"
-        assets_dir.mkdir(parents=True)
+        build_dir.mkdir()
+        _copy_psadt_pristine(fake_psadt_template, build_dir)
 
-        config = {
-            "defaults": {
-                "psadt": {
-                    "brand_pack": {
-                        "path": str(brand_dir),
-                        "mappings": [
-                            {"source": "AppIcon.*", "target": "Assets/AppIcon"}
-                        ],
-                    }
-                }
-            }
-        }
+        brand_dir, config = fake_brand_pack
 
         _apply_branding(config, build_dir)
 
-        # Verify branding applied
-        target = build_dir / "PSAppDeployToolkit" / "Assets" / "AppIcon.png"
+        # Verify branding applied to root Assets/ (v4 structure)
+        target = build_dir / "Assets" / "AppIcon.png"
         assert target.exists()
-        assert target.read_bytes() == b"logo data"
+        assert target.read_bytes() == b"custom icon data"
 
     def test_apply_branding_no_config(self, tmp_path):
         """Test when no branding configured."""

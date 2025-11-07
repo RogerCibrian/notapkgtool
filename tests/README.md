@@ -1,30 +1,73 @@
 # NAPT Test Suite
 
-Comprehensive test coverage for the NAPT project with **198 tests** covering all functionality including discovery, state tracking, PSADT building, and packaging.
+Comprehensive test coverage for the NAPT project with **200+ tests** covering all functionality including discovery, state tracking, PSADT building, and packaging.
+
+## Test Strategy: Hybrid Approach 🔺
+
+NAPT uses a **Testing Pyramid** approach with three layers:
+
+```
+        /\
+       /  \        E2E (Few) - Full workflows
+      /    \       - Slow, high confidence
+     /------\      
+    /        \     Integration (Some) - Real data, cached
+   /          \    - Medium speed, catches real-world issues  
+  /------------\   
+ /              \  Unit (Many) - Mocked data, fast
+/________________\ - Fast iteration, catches logic errors
+```
+
+### Test Types
+
+1. **Unit Tests** (Majority) - Fast, mocked data
+   - Use fake fixtures and mocks
+   - Test individual functions
+   - Run in milliseconds
+   - Default for local development
+
+2. **Integration Tests** (Some) - Real data, cached
+   - Download real PSADT Template_v4 (once per session)
+   - Download real IntuneWinAppUtil.exe (cached)
+   - Validate against actual external dependencies
+   - Marked with `@pytest.mark.integration`
+
+3. **E2E Tests** (Few) - Complete workflows
+   - Full CLI command execution
+   - End-to-end scenarios
+   - Marked with `@pytest.mark.slow`
 
 ## Test Structure
 
 ```
 tests/
-├── conftest.py                  # Shared fixtures and test configuration
-├── test_config.py              # Configuration loading and merging (11 tests)
-├── test_core.py                # Core orchestration (5 tests)
-├── test_discovery.py           # Discovery strategies (61 tests)
-├── test_download.py            # HTTP download functionality (11 tests)
-├── test_integration.py         # End-to-end integration (4 tests)
-├── test_state.py               # State tracking and caching (17 tests)
-├── test_validation.py          # Recipe validation (27 tests)
-├── test_versioning.py          # Version comparison (21 tests)
-├── test_psadt_release.py       # PSADT GitHub integration (13 tests)
-├── test_build_manager.py       # Build orchestration (13 tests)
-├── test_build_template.py      # Script generation (20 tests)
-├── test_packager.py            # .intunewin creation (8 tests)
+├── conftest.py                     # Shared fixtures (unit + integration)
+│
+├── Unit Tests (Fast, Mocked)
+├── test_config.py                 # Configuration loading (11 tests)
+├── test_core.py                   # Core orchestration (5 tests)
+├── test_discovery.py              # Discovery strategies (61 tests)
+├── test_download.py               # HTTP downloads (11 tests)
+├── test_state.py                  # State tracking (17 tests)
+├── test_validation.py             # Recipe validation (27 tests)
+├── test_versioning.py             # Version comparison (21 tests)
+├── test_psadt_release.py          # PSADT GitHub integration (13 tests)
+├── test_build_manager.py          # Build orchestration (13 tests)
+├── test_build_template.py         # Script generation (20 tests)
+├── test_packager.py               # .intunewin creation (8 tests)
+│
+├── Integration Tests (Real Data)
+├── test_integration_build.py      # Build with real PSADT Template_v4
+├── test_integration_packaging.py  # Packaging with real IntuneWinAppUtil.exe
+├── test_integration.py            # End-to-end workflows (4 tests)
+│
+├── Fixtures & Helpers
 ├── fixtures/
-│   └── test.yaml              # Test fixture data
+│   └── test.yaml                 # Test fixture data
 └── scripts/
-    ├── smoke_test_chrome.py           # Manual smoke test for Chrome
-    ├── showcase_version_check.py      # Demo script for version comparison
-    └── manual_test_http_json.py       # Manual HTTP JSON API testing
+    ├── smoke_test_chrome.py      # Manual smoke test
+    ├── showcase_version_check.py # Version comparison demo
+    └── manual_test_http_json.py  # HTTP JSON API testing
 ```
 
 ## Running Tests
@@ -38,45 +81,72 @@ tests/
 source .venv/bin/activate
 ```
 
-### Run All Tests
+### Run Unit Tests Only (Fast - Default for Development)
 ```bash
-python -m pytest tests/
-# or
+# Run only unit tests (excludes integration tests)
+pytest tests/ -m "not integration"
+
+# Even faster - quiet mode
+pytest tests/ -m "not integration" -q
+
+# Shows: 198 passed in 0.50s
+```
+
+### Run All Tests (Unit + Integration)
+```bash
+# Runs everything including integration tests
 pytest tests/
+
+# Note: Integration tests download real PSADT (~5MB) once per session
+# Subsequent runs use cached data
+```
+
+### Run Integration Tests Only
+```bash
+# Run only integration tests (requires network)
+pytest tests/ -m integration
+
+# Runs real PSADT downloads, validates actual structure
+```
+
+### Run Specific Test Types
+```bash
+# Unit tests for build module
+pytest tests/test_build_manager.py tests/test_build_template.py -v
+
+# Integration tests for build module
+pytest tests/test_integration_build.py -v
+
+# All tests for a specific module
+pytest tests/ -k "build" -v
 ```
 
 ### Run Specific Test File
 ```bash
-python -m pytest tests/test_versioning.py -v
-```
-
-### Run Specific Test Module
-```bash
-# Run all build-related tests
-python -m pytest tests/test_build_manager.py tests/test_build_template.py tests/test_packager.py -v
-
-# Run all PSADT tests
-python -m pytest tests/test_psadt_release.py -v
-```
-
-### Run with Verbose Output
-```bash
-pytest tests/ -v
+pytest tests/test_versioning.py -v
 ```
 
 ### Run with Coverage
 ```bash
+# Unit tests with coverage
+pytest tests/ -m "not integration" --cov=notapkgtool --cov-report=html
+
+# All tests with coverage
 pytest tests/ --cov=notapkgtool --cov-report=html
-# Opens htmlcov/index.html for detailed coverage report
+
+# Opens htmlcov/index.html for detailed report
 ```
 
-### Quick Test Run
+### CI/CD Recommendations
 ```bash
-# Quiet mode (just summary)
-pytest tests/ -q
+# Fast feedback (PR checks) - unit tests only
+pytest tests/ -m "not integration" -v
 
-# Shows:
-# 198 passed in 0.50s
+# Nightly builds - all tests
+pytest tests/ -v
+
+# Pre-release - all tests with coverage
+pytest tests/ --cov=notapkgtool --cov-report=term-missing
 ```
 
 ## Test Coverage

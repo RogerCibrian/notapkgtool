@@ -189,10 +189,8 @@ def _create_build_directory(base_dir: Path, app_id: str, version: str) -> Path:
         print_verbose("BUILD", "Removing existing build...")
         shutil.rmtree(build_dir)
 
-    # Create directory structure
+    # Create the build directory (template will provide subdirectories)
     build_dir.mkdir(parents=True, exist_ok=True)
-    (build_dir / "Files").mkdir(exist_ok=True)
-    (build_dir / "SupportFiles").mkdir(exist_ok=True)
 
     print_verbose("BUILD", f"Created build directory: {build_dir}")
 
@@ -201,12 +199,20 @@ def _create_build_directory(base_dir: Path, app_id: str, version: str) -> Path:
 
 def _copy_psadt_pristine(psadt_cache_dir: Path, build_dir: Path) -> None:
     """
-    Copy PSADT files from cache to build directory (pristine, unmodified).
+    Copy PSADT template files from cache to build directory (pristine, unmodified).
+
+    Copies the entire v4 template structure including:
+    - PSAppDeployToolkit/ (module)
+    - Invoke-AppDeployToolkit.exe
+    - Invoke-AppDeployToolkit.ps1 (template - will be overwritten)
+    - Assets/, Config/, Strings/ (default configs)
+    - Files/, SupportFiles/ (empty directories for user files)
+    - PSAppDeployToolkit.Extensions/
 
     Parameters
     ----------
     psadt_cache_dir : Path
-        Path to cached PSADT version directory.
+        Path to cached PSADT version directory (root of Template_v4 extraction).
     build_dir : Path
         Build directory where PSADT should be copied.
 
@@ -219,26 +225,23 @@ def _copy_psadt_pristine(psadt_cache_dir: Path, build_dir: Path) -> None:
     """
     from notapkgtool.cli import print_verbose
 
-    psadt_source = psadt_cache_dir / "PSAppDeployToolkit"
+    if not psadt_cache_dir.exists():
+        raise FileNotFoundError(f"PSADT cache directory not found: {psadt_cache_dir}")
 
-    if not psadt_source.exists():
-        raise FileNotFoundError(f"PSADT directory not found in cache: {psadt_source}")
+    print_verbose("BUILD", f"Copying PSADT template from cache: {psadt_cache_dir}")
 
-    psadt_dest = build_dir / "PSAppDeployToolkit"
+    # Copy all files and directories from the template root
+    for item in psadt_cache_dir.iterdir():
+        dest = build_dir / item.name
 
-    print_verbose("BUILD", f"Copying PSADT from cache: {psadt_source}")
+        if item.is_dir():
+            shutil.copytree(item, dest)
+            print_verbose("BUILD", f"  Copied directory: {item.name}/")
+        else:
+            shutil.copy2(item, dest)
+            print_verbose("BUILD", f"  Copied file: {item.name}")
 
-    # Copy entire PSAppDeployToolkit directory
-    shutil.copytree(psadt_source, psadt_dest)
-
-    # Also copy the Invoke-AppDeployToolkit.exe launcher
-    exe_source = psadt_cache_dir / "Invoke-AppDeployToolkit.exe"
-    if exe_source.exists():
-        exe_dest = build_dir / "Invoke-AppDeployToolkit.exe"
-        shutil.copy2(exe_source, exe_dest)
-        print_verbose("BUILD", "Copied Invoke-AppDeployToolkit.exe")
-
-    print_verbose("BUILD", "✓ PSADT files copied")
+    print_verbose("BUILD", "[OK] PSADT template copied")
 
 
 def _copy_installer(installer_file: Path, build_dir: Path) -> None:
@@ -266,7 +269,7 @@ def _copy_installer(installer_file: Path, build_dir: Path) -> None:
 
     shutil.copy2(installer_file, dest)
 
-    print_verbose("BUILD", "✓ Installer copied to Files/")
+    print_verbose("BUILD", "[OK] Installer copied to Files/")
 
 
 def _apply_branding(config: dict[str, Any], build_dir: Path) -> None:
@@ -326,18 +329,19 @@ def _apply_branding(config: dict[str, Any], build_dir: Path) -> None:
         # Use first match
         source_file = source_files[0]
 
-        # Build target path (preserve extension from source)
-        target = build_dir / "PSAppDeployToolkit" / target_path
-        target_with_ext = target.with_suffix(source_file.suffix)
+        # Build target path (append extension from source, don't replace)
+        # Apply to root Assets directory (v4 template structure)
+        target = build_dir / target_path
+        target_with_ext = Path(str(target) + source_file.suffix)
 
         # Ensure parent directory exists
         target_with_ext.parent.mkdir(parents=True, exist_ok=True)
 
         # Copy file
         shutil.copy2(source_file, target_with_ext)
-        print_verbose("BUILD", f"  {source_file.name} → {target_with_ext.name}")
+        print_verbose("BUILD", f"  {source_file.name} -> {target_with_ext.name}")
 
-    print_verbose("BUILD", "✓ Branding applied")
+    print_verbose("BUILD", "[OK] Branding applied")
 
 
 def build_package(
@@ -477,7 +481,7 @@ def build_package(
     # Write generated script
     script_dest = build_dir / "Invoke-AppDeployToolkit.ps1"
     script_dest.write_text(invoke_script, encoding="utf-8")
-    print_verbose("BUILD", "✓ Generated Invoke-AppDeployToolkit.ps1")
+    print_verbose("BUILD", "[OK] Generated Invoke-AppDeployToolkit.ps1")
 
     # Copy installer
     _copy_installer(installer_file, build_dir)
@@ -486,7 +490,7 @@ def build_package(
     print_step(6, 6, "Applying branding...")
     _apply_branding(config, build_dir)
 
-    print_verbose("BUILD", f"✓ Build complete: {build_dir}")
+    print_verbose("BUILD", f"[OK] Build complete: {build_dir}")
 
     return {
         "app_id": app_id,

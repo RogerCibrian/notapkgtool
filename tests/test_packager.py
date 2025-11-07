@@ -5,6 +5,9 @@ Tests .intunewin package creation including:
 - Build structure validation
 - IntuneWinAppUtil.exe handling
 - Package creation
+
+These are UNIT tests using mocked data for fast execution.
+For integration tests with real IntuneWinAppUtil.exe, see test_integration_packaging.py.
 """
 
 from __future__ import annotations
@@ -18,6 +21,10 @@ from notapkgtool.build.packager import (
     _verify_build_structure,
     create_intunewin,
 )
+
+
+# All tests in this file are unit tests (fast, mocked)
+pytestmark = pytest.mark.unit
 
 
 class TestVerifyBuildStructure:

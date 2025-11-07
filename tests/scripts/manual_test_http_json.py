@@ -378,7 +378,7 @@ def main():
     try:
         import requests_mock  # noqa: F401
     except ImportError:
-        print("\n⚠️  WARNING: requests-mock not installed.")
+        print("\n[WARNING] requests-mock not installed.")
         print("Install it with: pip install requests-mock")
         print("Tests will fail without it.\n")
         return

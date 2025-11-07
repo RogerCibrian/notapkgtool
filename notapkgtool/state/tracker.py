@@ -72,6 +72,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from notapkgtool import __version__
+
 
 class StateTracker:
     """
@@ -305,7 +307,7 @@ def create_default_state() -> dict[str, Any]:
     """
     return {
         "metadata": {
-            "napt_version": "0.1.0",  # TODO: Import from __init__.__version__
+            "napt_version": __version__,
             "schema_version": "2",
             "last_updated": datetime.now(UTC).isoformat(),
         },

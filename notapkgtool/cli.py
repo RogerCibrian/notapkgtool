@@ -158,14 +158,14 @@ def cmd_validate(args: argparse.Namespace) -> int:
     if result["warnings"]:
         print(f"Warnings ({len(result['warnings'])}):")
         for warning in result["warnings"]:
-            print(f"  ⚠ {warning}")
+            print(f"  [WARNING] {warning}")
         print()
 
     # Show errors if any
     if result["errors"]:
         print(f"Errors ({len(result['errors'])}):")
         for error in result["errors"]:
-            print(f"  ✗ {error}")
+            print(f"  [X] {error}")
         print()
 
     print("=" * 70)

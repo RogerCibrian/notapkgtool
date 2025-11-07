@@ -321,7 +321,7 @@ def generate_invoke_script(
     
     # Replace $adtSession block
     script = _replace_session_block(template, session_vars)
-    print_verbose("BUILD", "✓ Replaced $adtSession hashtable")
+    print_verbose("BUILD", "[OK] Replaced $adtSession hashtable")
     
     # Insert recipe code
     app = config["apps"][0]
@@ -336,7 +336,7 @@ def generate_invoke_script(
     
     script = _insert_recipe_code(script, install_code, uninstall_code)
     
-    print_verbose("BUILD", "✓ Script generation complete")
+    print_verbose("BUILD", "[OK] Script generation complete")
     
     return script
 

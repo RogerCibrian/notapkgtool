@@ -250,16 +250,24 @@ def get_psadt_release(
 
     release_data = response.json()
 
-    # Find the main .zip asset
+    # Find the Template_v4 .zip asset (the full v4 template structure)
     assets = release_data.get("assets", [])
     zip_asset = None
 
+    # Look for Template_v4 version specifically
     for asset in assets:
         name = asset.get("name", "")
-        # Look for PSAppDeployToolkit_vX.X.X.zip or similar
-        if name.endswith(".zip") and "PSAppDeployToolkit" in name:
+        if name.endswith(".zip") and "Template_v4" in name:
             zip_asset = asset
             break
+
+    # Fallback to any PSADT zip if Template_v4 not found
+    if not zip_asset:
+        for asset in assets:
+            name = asset.get("name", "")
+            if name.endswith(".zip") and "PSAppDeployToolkit" in name:
+                zip_asset = asset
+                break
 
     if not zip_asset:
         raise RuntimeError(
@@ -307,6 +315,6 @@ def get_psadt_release(
             f"PSADT extraction failed: PSAppDeployToolkit/ folder not found in {version_dir}"
         )
 
-    print_verbose("PSADT", f"✓ PSADT {version} cached successfully")
+    print_verbose("PSADT", f"PSADT {version} cached successfully")
 
     return version_dir

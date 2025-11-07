@@ -91,7 +91,7 @@ From Python:
             "url": "https://example.com/app-v1.2.3.msi",
             "version": {
                 "type": "regex_in_url",
-                "pattern": r"app-v(?P<version>[0-9.]+)\.msi",
+                "pattern": r"app-v(?P<version>[0-9.]+)\\.msi",
             },
         }
     }
@@ -188,7 +188,7 @@ class UrlRegexStrategy:
             ...         "url": "https://vendor.com/app-v1.0.0.msi",
             ...         "version": {
             ...             "type": "regex_in_url",
-            ...             "pattern": r"app-v(?P<version>[0-9.]+)\.msi"
+            ...             "pattern": "app-v(?P<version>[0-9.]+)\\\\.msi"
             ...         }
             ...     }
             ... }
@@ -264,23 +264,28 @@ class UrlRegexStrategy:
             )
         except NotModifiedError:
             # File unchanged (HTTP 304), use cached version
-            # TODO: Update for state schema v2 - use convention-based path instead of cache["file_path"]
+            # Use convention-based path: derive filename from URL
             print_verbose(
                 "DISCOVERY", "File not modified (HTTP 304), using cached version"
             )
 
-            if not cache or "file_path" not in cache or "sha256" not in cache:
+            if not cache or "sha256" not in cache:
                 raise RuntimeError(
-                    "Cache indicates file not modified, but missing cached file info. "
+                    "Cache indicates file not modified, but missing SHA-256. "
                     "Try running with --stateless to force re-download."
-                )
+                ) from None
 
-            cached_file = Path(cache["file_path"])
+            # Derive file path from URL (convention-based, schema v2)
+            from urllib.parse import urlparse
+
+            filename = Path(urlparse(url).path).name
+            cached_file = output_dir / filename
+
             if not cached_file.exists():
                 raise RuntimeError(
                     f"Cached file {cached_file} not found. "
                     f"File may have been deleted. Try running with --stateless."
-                )
+                ) from None
 
             return discovered, cached_file, cache["sha256"], {}
         except Exception as err:
