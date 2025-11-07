@@ -177,6 +177,11 @@ tests/__pycache__/
 artifacts/
 test_downloads/
 
+# NAPT build and cache directories
+builds/         # PSADT package builds (napt build output)
+cache/          # Cached PSADT releases and tools
+packages/       # .intunewin packages (napt package output)
+
 # NAPT state files (machine-managed, regenerate from discovery)
 state/versions.json
 state/*.json
