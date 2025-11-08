@@ -286,20 +286,261 @@ Use only when:
 
 ## Versioning and Releases
 
-When ready to release a new version:
+### Version Numbering
 
-1. Update version in `pyproject.toml`
-2. Update `CHANGELOG.md` with changes
-3. Create PR with version bump
-4. After merge, create GitHub release:
-   ```bash
-   git checkout main
-   git pull origin main
-   git tag -a 0.2.0 -m "Release 0.2.0"
-   git push origin 0.2.0
-   ```
-5. Create release on GitHub with the tag
-6. Publish to PyPI (if applicable)
+NAPT follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html):
+
+- **MAJOR** (e.g., 1.0.0) - Incompatible API changes
+- **MINOR** (e.g., 0.2.0) - New functionality (backward compatible)
+- **PATCH** (e.g., 0.2.1) - Bug fixes (backward compatible)
+
+**Note**: No "v" prefix - use `0.2.0` NOT `v0.2.0`
+
+### Pre-Release Checklist
+
+Before creating a release:
+
+- [ ] All feature work merged to `main`
+- [ ] Version updated in `pyproject.toml`
+- [ ] Version updated in `notapkgtool/__init__.py`
+- [ ] `CHANGELOG.md` updated with all changes following [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/)
+- [ ] `CHANGELOG.md` has `[Unreleased]` section ready for next version
+- [ ] Documentation updated (README, DOCUMENTATION, etc.)
+- [ ] All tests passing
+- [ ] Sample recipes tested end-to-end
+
+### Release Process
+
+#### 1. Prepare Release PR
+
+Create a dedicated PR for the version bump:
+
+```bash
+git checkout main
+git pull origin main
+git checkout -b chore/prepare-release-0.x.0
+
+# Update versions
+# Edit pyproject.toml: version = "0.x.0"
+# Edit notapkgtool/__init__.py: __version__ = "0.x.0"
+
+# Update CHANGELOG.md
+# - Change [Unreleased] to [0.x.0] - YYYY-MM-DD
+# - Add new [Unreleased] section at top
+# - Update version comparison links
+
+git add pyproject.toml notapkgtool/__init__.py CHANGELOG.md
+git commit -m "chore: prepare release 0.x.0"
+git push origin chore/prepare-release-0.x.0
+```
+
+**PR Title**: `chore: prepare release 0.x.0`
+
+**PR Description**: Brief summary of release highlights and link to CHANGELOG.md
+
+#### 2. Merge Release PR
+
+After review and approval, merge the PR to `main` using **squash and merge**.
+
+#### 3. Create and Push Git Tag
+
+```bash
+git checkout main
+git pull origin main
+git tag -a 0.x.0 -m "Release 0.x.0"
+git push origin 0.x.0
+```
+
+#### 4. Create GitHub Release
+
+Go to https://github.com/RogerCibrian/notapkgtool/releases/new
+
+**Tag**: Select the tag you just pushed (e.g., `0.x.0`)
+
+**Release Title**: `NAPT {version} - {Short Feature Summary}`
+
+Example: `NAPT 0.2.0 - PSADT Package Building & Intune Packaging`
+
+**Release Description**: Follow the template in `.cursor/rules/napt-releases.mdc`
+
+### Creating GitHub Releases
+
+#### Release Title Format
+
+```
+NAPT {version} - {Short Feature Summary}
+```
+
+Examples:
+- `NAPT 0.2.0 - PSADT Package Building & Intune Packaging`
+- `NAPT 0.3.0 - Direct Intune Upload & Deployment Management`
+- `NAPT 1.0.0 - Production-Ready Windows App Packaging`
+
+#### Release Description Template
+
+Use this structure for consistency:
+
+```markdown
+# 🎉 NAPT {version} - {Feature Summary}
+
+{One sentence hero statement describing the release}
+
+## ✨ What's New
+
+### 🔨 {Category Name}
+
+- **{Feature Name}** with `command` details
+  - Bullet point details
+  - More details
+
+### 🔍 {Another Category}
+
+{Continue for all major features...}
+
+## 🚀 Quick Start
+
+```bash
+# Show new commands or updated workflows
+napt command args
+```
+
+## 📦 What You Can Do Now
+
+Workflow checklist:
+1. ✅ {Step 1}
+2. ✅ {Step 2}
+3. 🚧 {Coming soon}
+
+## ⚠️ Breaking Changes
+
+> **Note**: {Context about breaking changes policy}
+
+- **{Change description}** - {Migration instructions}
+
+## 🐛 Bug Fixes
+
+- {Fix description}
+- {Another fix}
+
+## 📊 Stats
+
+- **X files changed**: X insertions(+), X deletions(-)
+- **New modules**: X
+- **Test coverage**: {Coverage info}
+
+## 🔗 Links
+
+- **Full Changelog**: {Link to CHANGELOG.md}
+- **Documentation**: {Link to DOCUMENTATION.md}
+- **Roadmap**: {Link to ROADMAP.md}
+- **Sample Recipes**: {Link to recipes/}
+
+## 🎯 What's Next ({next version})
+
+- {Planned feature 1}
+- {Planned feature 2}
+
+---
+
+**Requirements**: Python 3.11+, Windows/Linux/macOS
+
+**Tested with**: 
+- {App 1 and version}
+- {App 2 and version}
+
+**Install**: `pip install pyyaml requests`
+```
+
+#### Emoji Guide for Categories
+
+Use these emojis for consistent categorization:
+
+- 🔨 Build & Packaging
+- 🔍 Discovery & Detection
+- 🗄️ State Management
+- 🧪 Testing Infrastructure
+- 📋 Recipes & Configuration
+- 📚 Documentation
+- 🚀 Quick Start / Usage
+- 📦 Capabilities / Workflow
+- ⚠️ Breaking Changes / Warnings
+- 🐛 Bug Fixes
+- 📊 Statistics / Metrics
+- 🔗 External Links
+- 🎯 Roadmap / Future Plans
+- ✨ Highlights (header)
+- 🎉 Release Hero (title)
+
+#### Content Guidelines
+
+**Do Include**:
+- All significant changes from CHANGELOG.md
+- Code examples for new commands
+- Migration instructions for breaking changes
+- Quick start guide updates
+- Test coverage and quality metrics
+- Links to full documentation
+- "What you can do now" workflow
+- Preview of next version features
+
+**Don't Include**:
+- Internal refactorings (unless visible impact)
+- Trivial formatting changes
+- Work-in-progress features
+- Overly technical implementation details
+- Every single bug fix (only notable ones)
+
+#### Writing Style
+
+- **Active voice**: "This release adds..." not "Added in this release..."
+- **Present tense**: "This command creates..." not "This command will create..."
+- **User-focused**: Emphasize benefits, not just features
+- **Concise**: One sentence per bullet when possible
+- **Scannable**: Use headers, bullets, and code blocks
+- **Complete**: Include all info needed to understand changes
+
+### Example Release (0.2.0)
+
+See the 0.2.0 release for a complete example:
+https://github.com/RogerCibrian/notapkgtool/releases/tag/0.2.0
+
+Key elements:
+- Clear feature categories with emojis
+- Code examples showing new capabilities  
+- Breaking changes highlighted with migration notes
+- Stats showing scope of changes
+- Links to detailed documentation
+- Preview of what's coming next
+
+### Post-Release
+
+After creating the GitHub release:
+
+1. **Announce** (if applicable):
+   - Internal communication channels
+   - Project discussion boards
+   - Social media (if public release)
+
+2. **Monitor**:
+   - GitHub issues for bug reports
+   - User feedback on new features
+   - Update ROADMAP.md based on feedback
+
+3. **Prepare Next Version**:
+   - Create `[Unreleased]` section in CHANGELOG.md (if not already done)
+   - Update ROADMAP.md with next milestone
+   - Start planning next feature set
+
+### PyPI Publication (Future)
+
+When ready to publish to PyPI:
+
+```bash
+poetry build
+poetry publish
+```
+
+Ensure `pyproject.toml` metadata is complete before first publication.
 
 ## Common Scenarios
 
@@ -352,6 +593,6 @@ git push origin hotfix/fix-security-vulnerability
 
 ---
 
-**Last Updated**: 2025-11-06
+**Last Updated**: 2025-11-07
 **Strategy**: GitHub Flow with Squash and Merge
 
