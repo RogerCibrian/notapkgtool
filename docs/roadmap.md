@@ -199,6 +199,31 @@ psadt:
 
 ---
 
+### Enhanced CLI Help Menu
+**Status**: 💡 Idea  
+**Complexity**: Low (1 day)  
+**Value**: Medium
+
+**Description**: Improve the `napt -h` help output with more detailed information, examples, and better organization.
+
+**Potential Enhancements**:
+- Add examples for common workflows in help text
+- Group commands by category (Discovery, Building, Packaging)
+- Show performance characteristics of strategies
+- Add tips for troubleshooting (--verbose, --debug flags)
+- Include links to online documentation
+- Better formatting with colors/sections (via rich or similar)
+
+**Benefits**:
+- Better discoverability of features
+- Reduces need to consult docs for basic usage
+- Improves new user onboarding experience
+- Quick reference for command options
+
+**Related**: CLI help currently minimal, relies on online documentation
+
+---
+
 ## Investigating (Research Phase)
 
 ### Microsoft Intune Upload
