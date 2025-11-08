@@ -269,8 +269,15 @@ class HttpStaticStrategy:
                     f"Supported: msi_product_version_from_file"
                 ) from None
 
-            # Return cached info with empty headers (no new download occurred)
-            return discovered, cached_file, cache["sha256"], {}
+            # Return cached info with preserved headers (prevents overwriting ETag)
+            # When 304, no new headers received, so return cached values to preserve them
+            preserved_headers = {}
+            if cache.get("etag"):
+                preserved_headers["ETag"] = cache["etag"]
+            if cache.get("last_modified"):
+                preserved_headers["Last-Modified"] = cache["last_modified"]
+
+            return discovered, cached_file, cache["sha256"], preserved_headers
         except Exception as err:
             if isinstance(err, (RuntimeError, ValueError)):
                 raise
