@@ -303,8 +303,8 @@ Before creating a release:
 - [ ] All feature work merged to `main`
 - [ ] Version updated in `pyproject.toml`
 - [ ] Version updated in `notapkgtool/__init__.py`
-- [ ] `CHANGELOG.md` updated with all changes following [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/)
-- [ ] `CHANGELOG.md` has `[Unreleased]` section ready for next version
+- [ ] `docs/changelog.md` updated with all changes following [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/)
+- [ ] `docs/changelog.md` has `[Unreleased]` section ready for next version
 - [ ] Documentation updated (README, DOCUMENTATION, etc.)
 - [ ] All tests passing
 - [ ] Sample recipes tested end-to-end
@@ -324,19 +324,19 @@ git checkout -b chore/prepare-release-0.x.0
 # Edit pyproject.toml: version = "0.x.0"
 # Edit notapkgtool/__init__.py: __version__ = "0.x.0"
 
-# Update CHANGELOG.md
+# Update docs/changelog.md
 # - Change [Unreleased] to [0.x.0] - YYYY-MM-DD
 # - Add new [Unreleased] section at top
 # - Update version comparison links
 
-git add pyproject.toml notapkgtool/__init__.py CHANGELOG.md
+git add pyproject.toml notapkgtool/__init__.py docs/changelog.md
 git commit -m "chore: prepare release 0.x.0"
 git push origin chore/prepare-release-0.x.0
 ```
 
 **PR Title**: `chore: prepare release 0.x.0`
 
-**PR Description**: Brief summary of release highlights and link to CHANGELOG.md
+**PR Description**: Brief summary of release highlights and link to docs/changelog.md
 
 #### 2. Merge Release PR
 
@@ -357,9 +357,9 @@ Go to https://github.com/RogerCibrian/notapkgtool/releases/new
 
 **Tag**: Select the tag you just pushed (e.g., `0.x.0`)
 
-**Release Title**: `NAPT {version} - {Short Feature Summary}`
+**Release Title**: `NAPT {version}`
 
-Example: `NAPT 0.2.0 - PSADT Package Building & Intune Packaging`
+Example: `NAPT 0.2.0`
 
 **Release Description**: Follow the template in `.cursor/rules/napt-releases.mdc`
 
@@ -368,13 +368,13 @@ Example: `NAPT 0.2.0 - PSADT Package Building & Intune Packaging`
 #### Release Title Format
 
 ```
-NAPT {version} - {Short Feature Summary}
+NAPT {version}
 ```
 
 Examples:
-- `NAPT 0.2.0 - PSADT Package Building & Intune Packaging`
-- `NAPT 0.3.0 - Direct Intune Upload & Deployment Management`
-- `NAPT 1.0.0 - Production-Ready Windows App Packaging`
+- `NAPT 0.2.0`
+- `NAPT 0.3.0`
+- `NAPT 1.0.0`
 
 #### Release Description Template
 
@@ -430,9 +430,9 @@ Workflow checklist:
 
 ## 🔗 Links
 
-- **Full Changelog**: {Link to CHANGELOG.md}
-- **Documentation**: {Link to DOCUMENTATION.md}
-- **Roadmap**: {Link to ROADMAP.md}
+- **Full Changelog**: {Link to docs/changelog.md}
+- **Documentation**: {Link to https://rogercibrian.github.io/notapkgtool}
+- **Roadmap**: {Link to docs/roadmap.md}
 - **Sample Recipes**: {Link to recipes/}
 
 ## 🎯 What's Next ({next version})
@@ -474,7 +474,7 @@ Use these emojis for consistent categorization:
 #### Content Guidelines
 
 **Do Include**:
-- All significant changes from CHANGELOG.md
+- All significant changes from docs/changelog.md
 - Code examples for new commands
 - Migration instructions for breaking changes
 - Quick start guide updates
@@ -524,11 +524,11 @@ After creating the GitHub release:
 2. **Monitor**:
    - GitHub issues for bug reports
    - User feedback on new features
-   - Update ROADMAP.md based on feedback
+   - Update docs/roadmap.md based on feedback
 
 3. **Prepare Next Version**:
-   - Create `[Unreleased]` section in CHANGELOG.md (if not already done)
-   - Update ROADMAP.md with next milestone
+   - Create `[Unreleased]` section in docs/changelog.md (if not already done)
+   - Update docs/roadmap.md with next milestone
    - Start planning next feature set
 
 ### PyPI Publication (Future)
@@ -587,7 +587,7 @@ git push origin hotfix/fix-security-vulnerability
 
 ## Questions?
 
-- Check [DOCUMENTATION.md](DOCUMENTATION.md) for technical details
+- Check the [Documentation Site](https://rogercibrian.github.io/notapkgtool) for technical details
 - Check [README.md](README.md) for project overview
 - Open an issue for questions or discussions
 

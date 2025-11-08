@@ -140,7 +140,9 @@ napt package builds/napt-chrome/141.0.7390.123/ --output-dir ./packages --clean-
 
 ## 📖 Documentation
 
-- **[DOCUMENTATION.md](DOCUMENTATION.md)** - Comprehensive project documentation
+- **[Documentation Site](https://rogercibrian.github.io/notapkgtool)** - Complete user guide and API reference
+- **[Quick Start Guide](https://rogercibrian.github.io/notapkgtool/quick-start/)** - Installation and basic usage
+- **[API Reference](https://rogercibrian.github.io/notapkgtool/api/core/)** - Auto-generated from code
 - **[defaults/org.yaml](defaults/org.yaml)** - Example organization configuration
 - **[recipes/Google/chrome.yaml](recipes/Google/chrome.yaml)** - Example recipe
 
@@ -153,11 +155,11 @@ NAPT uses a modular architecture with key design patterns:
 - **State Tracking** - ETag-based caching for efficient conditional downloads
 - **Cross-Platform** - Native Windows support, Linux/macOS via msitools
 
-> **📚 See [DOCUMENTATION.md](DOCUMENTATION.md) for detailed architecture, API reference, and configuration guides**
+> **📚 See the [Documentation Site](https://rogercibrian.github.io/notapkgtool) for detailed architecture, API reference, and configuration guides**
 
 ## 💻 Programmatic API
 
-NAPT can be used as a Python library. See the [Programmatic API](DOCUMENTATION.md#programmatic-api) section in DOCUMENTATION.md for code examples and detailed usage.
+NAPT can be used as a Python library. See the [Programmatic API](https://rogercibrian.github.io/notapkgtool/user-guide/#programmatic-api) section for code examples and detailed usage.
 
 ## 🌍 Cross-Platform Support
 
@@ -198,7 +200,7 @@ Recipes are declarative YAML files that define how to discover, download, and pa
 - `github_release` - GitHub releases API
 - `http_json` - JSON API endpoints with JSONPath
 
-> **📚 See [Discovery Strategies](DOCUMENTATION.md#discovery-strategies) in DOCUMENTATION.md for detailed configuration reference and examples**
+> **📚 See [Discovery Strategies](https://rogercibrian.github.io/notapkgtool/user-guide/#discovery-strategies) for detailed configuration reference and examples**
 
 ## 🗺️ Roadmap
 
@@ -239,7 +241,7 @@ Contributions are welcome! Please ensure:
 4. Tests are added for new features
 5. Documentation is updated
 
-See [DOCUMENTATION.md](DOCUMENTATION.md) for detailed guidelines.
+See the [Documentation Site](https://rogercibrian.github.io/notapkgtool) for detailed guidelines.
 
 ## 📄 License
 
@@ -257,4 +259,4 @@ This project is licensed under the GNU General Public License v3.0 - see the [LI
 
 ---
 
-*For detailed documentation, see [DOCUMENTATION.md](DOCUMENTATION.md)*
+*For detailed documentation, visit the [Documentation Site](https://rogercibrian.github.io/notapkgtool)*
