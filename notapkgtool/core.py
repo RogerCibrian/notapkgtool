@@ -4,18 +4,33 @@ Core orchestration for NAPT.
 This module provides high-level orchestration functions that coordinate the
 complete workflow for recipe validation, package building, and deployment.
 
-The orchestration follows this pipeline:
+The orchestration uses a two-path architecture:
+
+VERSION-FIRST PATH (url_regex, github_release, http_json):
   1. Load and merge configuration (org defaults + vendor + recipe)
-  2. Dispatch to appropriate discovery strategy
-  3. Download installer from source
-  4. Extract version information
-  5. Generate reports or build packages
+  2. Call strategy.get_version_info() to discover version (no download)
+  3. Compare discovered version to cached known_version
+  4. If match and file exists -> skip download entirely (fast path!)
+  5. If changed or missing -> download installer
+  6. Update state and return results
+
+FILE-FIRST PATH (http_static):
+  1. Load and merge configuration (org defaults + vendor + recipe)
+  2. Call strategy.discover_version() with cached ETag
+  3. Server returns HTTP 304 (not modified) -> use cached file
+  4. Server returns HTTP 200 (modified) -> download new version
+  5. Extract version from downloaded file
+  6. Update state and return results
 
 Functions
 ---------
 discover_recipe : function
     Discover the latest version and download installer.
     This is the entry point for the 'napt discover' command.
+    Automatically uses version-first optimization when available.
+
+derive_file_path_from_url : function
+    Derive expected file path from URL for cache lookups.
 
 See Also
 --------
@@ -37,6 +52,7 @@ Design Principles
 - Error handling uses exceptions; CLI layer formats for user display
 - Discovery strategies are dynamically loaded via registry pattern
 - Configuration is immutable once loaded
+- Version-first strategies preferred for performance (skip downloads when unchanged)
 
 Example
 -------
@@ -53,6 +69,8 @@ Programmatic usage:
     print(f"App: {result['app_name']}")
     print(f"Version: {result['version']}")
     print(f"SHA-256: {result['sha256']}")
+
+    # Version-first strategies: may have skipped download if unchanged!
 """
 
 from __future__ import annotations
@@ -62,7 +80,40 @@ from typing import Any
 
 from notapkgtool.config.loader import load_effective_config
 from notapkgtool.discovery import get_strategy
+from notapkgtool.io import download_file
 from notapkgtool.state import load_state, save_state
+from notapkgtool.versioning.keys import DiscoveredVersion
+
+
+def derive_file_path_from_url(url: str, output_dir: Path) -> Path:
+    """
+    Derive file path from URL using same logic as download_file.
+
+    This function ensures version-first strategies can locate cached files
+    without downloading by following the same naming convention as the
+    download module.
+
+    Parameters
+    ----------
+    url : str
+        Download URL.
+    output_dir : Path
+        Directory where file would be downloaded.
+
+    Returns
+    -------
+    Path
+        Expected path to the file.
+
+    Examples
+    --------
+    >>> derive_file_path_from_url("https://example.com/app.msi", Path("./downloads"))
+    Path('./downloads/app.msi')
+    """
+    from urllib.parse import urlparse
+
+    filename = Path(urlparse(url).path).name
+    return output_dir / filename
 
 
 def discover_recipe(
@@ -77,15 +128,25 @@ def discover_recipe(
     Discover the latest version by loading config and downloading installer.
 
     This is the main entry point for the 'napt discover' command. It orchestrates
-    the entire discovery workflow including version detection and file download.
+    the entire discovery workflow using a two-path architecture optimized for
+    version-first strategies.
 
-    The function performs these steps:
+    The function uses duck typing to detect strategy capabilities:
+
+    VERSION-FIRST PATH (if strategy has get_version_info method):
       1. Load effective configuration (org + vendor + recipe merged)
-      2. Extract the first app from the recipe
-      3. Identify the discovery strategy from app config
-      4. Import and initialize the strategy (e.g., http_static)
-      5. Execute discovery: download installer and extract version
-      6. Return structured results for display or further processing
+      2. Call strategy.get_version_info() to discover version (no download)
+      3. Compare discovered version to cached known_version
+      4. If match and file exists -> skip download entirely (fast path!)
+      5. If changed or missing -> download installer via download_file()
+      6. Update state and return results
+
+    FILE-FIRST PATH (if strategy has only discover_version method):
+      1. Load effective configuration (org + vendor + recipe merged)
+      2. Call strategy.discover_version() with cached ETag
+      3. Strategy handles conditional request (HTTP 304 vs 200)
+      4. Extract version from downloaded file
+      5. Update state and return results
 
     Parameters
     ----------
@@ -155,8 +216,12 @@ def discover_recipe(
     -----
     - Only the first app in a recipe is currently processed
     - The discovery strategy must be registered before calling this function
+    - Version-first strategies (url_regex, github_release, http_json) can skip
+      downloads entirely when version unchanged (fast path optimization)
+    - File-first strategy (http_static) uses ETag conditional requests
     - Downloaded files are written atomically (.part then renamed)
     - Progress output goes to stdout via the download module
+    - Strategy type detected via duck typing (hasattr for get_version_info)
     """
     from notapkgtool.cli import print_step, print_verbose
 
@@ -219,13 +284,77 @@ def discover_recipe(
             if cache.get("etag"):
                 print_verbose("STATE", f"  Cached ETag: {cache.get('etag')}")
 
-    # 5. Run discovery: download and extract version
-    print_step(3, 4, "Downloading installer...")
-    discovered_version, file_path, sha256, headers = strategy.discover_version(
-        app, output_dir, cache=cache, verbose=verbose, debug=debug
-    )
+    # 5. Run discovery: version-first or file-first path
+    print_step(3, 4, "Discovering version...")
 
-    print_step(4, 4, "Extracting version...")
+    # Check if strategy supports version-first (has get_version_info method)
+    download_url = None  # Track actual download URL for state file
+    if hasattr(strategy, "get_version_info"):
+        # VERSION-FIRST PATH (url_regex, github_release, http_json)
+        # Get version without downloading
+        version_info = strategy.get_version_info(app, verbose=verbose, debug=debug)
+        download_url = version_info.download_url  # Save for state file
+
+        print_verbose("DISCOVERY", f"Version discovered: {version_info.version}")
+
+        # Check if we can use cached file (version match + file exists)
+        if cache and cache.get("known_version") == version_info.version:
+            # Derive file path from URL using same logic as download_file
+            file_path = derive_file_path_from_url(version_info.download_url, output_dir)
+
+            if file_path.exists():
+                # Fast path: version unchanged, file exists, skip download!
+                print_verbose(
+                    "CACHE",
+                    f"Version {version_info.version} unchanged, using cached file",
+                )
+                print_step(4, 4, "Using cached file...")
+                sha256 = cache.get("sha256")
+                discovered_version = DiscoveredVersion(
+                    version_info.version, version_info.source
+                )
+                headers = {}  # No download occurred, no headers
+            else:
+                # File was deleted, re-download
+                print_verbose(
+                    "WARNING",
+                    f"Cached file {file_path} not found, re-downloading",
+                )
+                print_step(4, 4, "Downloading installer...")
+                file_path, sha256, headers = download_file(
+                    version_info.download_url,
+                    output_dir,
+                    verbose=verbose,
+                    debug=debug,
+                )
+                discovered_version = DiscoveredVersion(
+                    version_info.version, version_info.source
+                )
+        else:
+            # Version changed or no cache, download new version
+            if cache:
+                print_verbose(
+                    "DISCOVERY",
+                    f"Version changed: {cache.get('known_version')} → {version_info.version}",
+                )
+            print_step(4, 4, "Downloading installer...")
+            file_path, sha256, headers = download_file(
+                version_info.download_url,
+                output_dir,
+                verbose=verbose,
+                debug=debug,
+            )
+            discovered_version = DiscoveredVersion(
+                version_info.version, version_info.source
+            )
+    else:
+        # FILE-FIRST PATH (http_static only)
+        # Must download to extract version
+        print_step(4, 4, "Downloading installer...")
+        discovered_version, file_path, sha256, headers = strategy.discover_version(
+            app, output_dir, cache=cache, verbose=verbose, debug=debug
+        )
+        download_url = str(app.get("source", {}).get("url", ""))  # Use source.url
 
     # Update state with discovered information
     if state and app_id and state_file:
@@ -247,9 +376,12 @@ def discover_recipe(
 
         # Build cache entry with new schema v2
         cache_entry = {
-            "url": str(app.get("source", {}).get("url", "")),
-            "etag": etag,
-            "last_modified": last_modified,
+            "url": download_url
+            or "",  # Actual download URL (from version_info or source.url)
+            "etag": etag if etag else None,  # Only useful for http_static
+            "last_modified": (
+                last_modified if last_modified else None
+            ),  # Only useful for http_static
             "sha256": sha256,
         }
 

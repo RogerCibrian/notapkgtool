@@ -1,17 +1,20 @@
 """
 GitHub releases discovery strategy for NAPT.
 
-This strategy fetches application installers from GitHub releases using the
-GitHub REST API. It's ideal for open-source projects and vendors who publish
-installers as GitHub release assets.
+This is a VERSION-FIRST strategy that queries the GitHub API to get version
+and download URL WITHOUT downloading the installer. This enables fast version
+checks and efficient caching.
 
 Key Advantages
 --------------
-- Direct access to latest releases via GitHub API
+- Fast version discovery (GitHub API call ~100ms)
+- Can skip downloads entirely when version unchanged
+- Direct access to latest releases via stable GitHub API
 - Version extraction from Git tags (semantic versioning friendly)
 - Asset pattern matching for multi-platform releases
 - Optional authentication for higher rate limits
-- No web scraping required (stable API)
+- No web scraping required
+- Ideal for CI/CD with scheduled checks
 
 Supported Version Extraction
 -----------------------------
@@ -26,6 +29,7 @@ Use Cases
 - Projects with GitHub releases (Firefox, Chrome alternatives)
 - Vendors who publish installers as release assets
 - Projects with semantic versioned tags
+- CI/CD pipelines with frequent version checks
 
 Recipe Configuration
 --------------------
@@ -64,13 +68,15 @@ token : str, optional
     substitution: "${GITHUB_TOKEN}".
     Note: No special permissions needed for public repositories.
 
-Workflow
---------
-1. Call GitHub API: GET /repos/{owner}/{repo}/releases/latest
+Workflow (Version-First)
+------------------------
+1. Call GitHub API: GET /repos/{owner}/{repo}/releases/latest (~100ms)
 2. Extract version from release tag using version_pattern
 3. Find matching asset using asset_pattern (or first asset)
-4. Download asset using io.download.download_file
-5. Return DiscoveredVersion, file path, and SHA-256 hash
+4. Create VersionInfo with version and download URL
+5. Core orchestration compares version to cache
+6. If match and file exists -> skip download entirely
+7. If changed or missing -> download from URL
 
 Error Handling
 --------------
@@ -98,10 +104,10 @@ In a recipe YAML:
           version:
             type: tag  # Version comes from tag, not file
 
-From Python:
+From Python (version-first approach):
 
-    from pathlib import Path
     from notapkgtool.discovery.github_release import GithubReleaseStrategy
+    from notapkgtool.io import download_file
 
     strategy = GithubReleaseStrategy()
     app_config = {
@@ -111,13 +117,30 @@ From Python:
         }
     }
 
-    discovered, file_path, sha256 = strategy.discover_version(
-        app_config, Path("./downloads")
-    )
-    print(f"Version {discovered.version} downloaded to {file_path}")
+    # Get version WITHOUT downloading
+    version_info = strategy.get_version_info(app_config)
+    print(f"Latest version: {version_info.version}")
+
+    # Download only if needed
+    if need_to_download:
+        file_path, sha256, headers = download_file(
+            version_info.download_url, Path("./downloads")
+        )
+        print(f"Downloaded to {file_path}")
+
+From Python (using core orchestration):
+
+    from pathlib import Path
+    from notapkgtool.core import discover_recipe
+
+    # Automatically uses version-first optimization
+    result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
+    print(f"Version {result['version']} at {result['file_path']}")
 
 Notes
 -----
+- Version discovery via API only (no download required)
+- Core orchestration automatically skips download if version unchanged
 - The GitHub API is stable and well-documented
 - Releases are fetched in order (latest first)
 - Asset matching is case-sensitive by default (use (?i) for case-insensitive)
@@ -127,14 +150,12 @@ Notes
 from __future__ import annotations
 
 import os
-from pathlib import Path
 import re
 from typing import Any
 
 import requests
 
-from notapkgtool.io import NotModifiedError, download_file
-from notapkgtool.versioning.keys import DiscoveredVersion
+from notapkgtool.versioning.keys import VersionInfo
 
 from .base import register_strategy
 
@@ -153,29 +174,23 @@ class GithubReleaseStrategy:
           token: "${GITHUB_TOKEN}"
     """
 
-    def discover_version(
+    def get_version_info(
         self,
         app_config: dict[str, Any],
-        output_dir: Path,
-        cache: dict[str, Any] | None = None,
         verbose: bool = False,
         debug: bool = False,
-    ) -> tuple[DiscoveredVersion, Path, str, dict]:
+    ) -> VersionInfo:
         """
-        Fetch latest release from GitHub and download matching asset.
+        Fetch latest release from GitHub API without downloading (version-first path).
 
-        This method queries the GitHub API for the latest release, extracts
-        the version from the tag name, finds a matching asset, and downloads it.
+        This method queries the GitHub API for the latest release and extracts
+        the version from the tag name and the download URL from matching assets.
+        If the version matches cached state, the download can be skipped entirely.
 
         Parameters
         ----------
         app_config : dict
             App configuration containing source.repo and optional fields.
-        output_dir : Path
-            Directory to save the downloaded file.
-        cache : dict, optional
-            Cached state with etag, last_modified, file_path, and sha256
-            for conditional requests.
         verbose : bool, optional
             If True, print verbose logging messages. Default is False.
         debug : bool, optional
@@ -183,8 +198,8 @@ class GithubReleaseStrategy:
 
         Returns
         -------
-        tuple[DiscoveredVersion, Path, str, dict]
-            Version info, file path, SHA-256 hash, and HTTP response headers.
+        VersionInfo
+            Version info with version string, download URL, and source name.
 
         Raises
         ------
@@ -192,26 +207,20 @@ class GithubReleaseStrategy:
             If required config fields are missing, invalid, or if no matching
             assets are found.
         RuntimeError
-            If API call fails, download fails, or release has no assets
-            (chained with 'from err').
+            If API call fails or release has no assets.
 
         Examples
         --------
-        Basic usage:
-
-            >>> from pathlib import Path
-            >>> strategy = GithubReleaseStrategy()
-            >>> config = {
-            ...     "source": {
-            ...         "repo": "owner/repo",
-            ...         "asset_pattern": ".*\\.msi$"
-            ...     }
-            ... }
-            >>> discovered, path, sha256 = strategy.discover_version(
-            ...     config, Path("./downloads")
-            ... )
-            >>> discovered.version
-            '1.0.0'
+        >>> strategy = GithubReleaseStrategy()
+        >>> config = {
+        ...     "source": {
+        ...         "repo": "owner/repo",
+        ...         "asset_pattern": ".*\\.msi$"
+        ...     }
+        ... }
+        >>> version_info = strategy.get_version_info(config)
+        >>> version_info.version
+        '1.0.0'
         """
         from notapkgtool.cli import print_verbose
 
@@ -235,7 +244,6 @@ class GithubReleaseStrategy:
 
         # Expand environment variables in token (e.g., ${GITHUB_TOKEN})
         if token:
-            # Simple environment variable expansion
             if token.startswith("${") and token.endswith("}"):
                 env_var = token[2:-1]
                 token = os.environ.get(env_var)
@@ -245,7 +253,7 @@ class GithubReleaseStrategy:
                         f"Warning: Environment variable {env_var} not set",
                     )
 
-        print_verbose("DISCOVERY", "Strategy: github_release")
+        print_verbose("DISCOVERY", "Strategy: github_release (version-first)")
         print_verbose("DISCOVERY", f"Repository: {repo}")
         print_verbose("DISCOVERY", f"Version pattern: {version_pattern}")
         if asset_pattern:
@@ -331,8 +339,6 @@ class GithubReleaseStrategy:
 
         print_verbose("DISCOVERY", f"Extracted version: {version_str}")
 
-        discovered = DiscoveredVersion(version=version_str, source="github_release")
-
         # Find matching asset
         assets = release_data.get("assets", [])
         if not assets:
@@ -380,62 +386,11 @@ class GithubReleaseStrategy:
 
         print_verbose("DISCOVERY", f"Download URL: {download_url}")
 
-        # Extract ETag/Last-Modified from cache if available
-        etag = cache.get("etag") if cache else None
-        last_modified = cache.get("last_modified") if cache else None
-
-        if etag:
-            print_verbose("DISCOVERY", f"Using cached ETag: {etag}")
-        if last_modified:
-            print_verbose("DISCOVERY", f"Using cached Last-Modified: {last_modified}")
-
-        # Download the asset (with conditional request if cache available)
-        print_verbose("DISCOVERY", "Downloading asset...")
-        try:
-            file_path, sha256, headers = download_file(
-                download_url,
-                output_dir,
-                etag=etag,
-                last_modified=last_modified,
-                verbose=verbose,
-                debug=debug,
-            )
-        except NotModifiedError:
-            # File unchanged (HTTP 304), use cached version
-            # Use convention-based path: derive filename from URL
-            print_verbose(
-                "DISCOVERY", "File not modified (HTTP 304), using cached version"
-            )
-
-            if not cache or "sha256" not in cache:
-                raise RuntimeError(
-                    "Cache indicates file not modified, but missing SHA-256. "
-                    "Try running with --stateless to force re-download."
-                ) from None
-
-            # Derive file path from URL (convention-based, schema v2)
-            from urllib.parse import urlparse
-
-            filename = Path(urlparse(download_url).path).name
-            cached_file = output_dir / filename
-
-            if not cached_file.exists():
-                raise RuntimeError(
-                    f"Cached file {cached_file} not found. "
-                    f"File may have been deleted. Try running with --stateless."
-                ) from None
-
-            return discovered, cached_file, cache["sha256"], {}
-        except Exception as err:
-            if isinstance(err, RuntimeError):
-                raise
-            raise RuntimeError(
-                f"Failed to download asset from {download_url}: {err}"
-            ) from err
-
-        print_verbose("DISCOVERY", f"Download complete: {file_path.name}")
-
-        return discovered, file_path, sha256, headers
+        return VersionInfo(
+            version=version_str,
+            download_url=download_url,
+            source="github_release",
+        )
 
     def validate_config(self, app_config: dict[str, Any]) -> list[str]:
         """

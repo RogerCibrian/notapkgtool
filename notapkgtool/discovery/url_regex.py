@@ -1,17 +1,17 @@
 """
 URL regex discovery strategy for NAPT.
 
-This strategy extracts version information directly from the download URL using
-regular expressions, then downloads the installer. It's ideal for vendors who
-encode version numbers in their download URLs, allowing version discovery
-without downloading the entire file first.
+This is a VERSION-FIRST strategy that extracts version information directly
+from the download URL using regular expressions, WITHOUT downloading. This
+enables instant version checks and efficient caching.
 
 Key Advantages
 --------------
-- Fast version discovery (no download required for version check)
-- Bandwidth-efficient (can decide whether to download before fetching)
+- Instant version discovery (regex only, zero network calls)
+- Can skip downloads entirely when version unchanged
 - Works with any file type (MSI, EXE, DMG, etc.)
 - No file parsing overhead
+- Ideal for CI/CD with scheduled checks
 
 Supported Version Extraction
 -----------------------------
@@ -26,6 +26,7 @@ Use Cases
 - API endpoints that return version-specific download links
   Example: https://api.vendor.com/download/2024.10.28/setup.exe
 - URLs with predictable version patterns in the path
+- CI/CD pipelines with frequent version checks
 
 Recipe Configuration
 --------------------
@@ -40,30 +41,31 @@ The pattern supports full Python regex syntax. Use a named capture group
 (?P<version>) to extract only the version portion, or let the entire match
 be used as the version.
 
-Workflow
---------
-1. Extract version from URL using regex pattern
-2. Create DiscoveredVersion with extracted version
-3. Download the installer from source.url using io.download.download_file
-4. Wait for atomic write to complete (.part -> final filename)
-5. Return DiscoveredVersion, file path, and SHA-256 hash
+Workflow (Version-First)
+------------------------
+1. Extract version from URL using regex pattern (instant)
+2. Create VersionInfo with version and download URL
+3. Core orchestration compares version to cache
+4. If match and file exists -> skip download entirely
+5. If changed or missing -> download from URL
 
 Error Handling
 --------------
 - ValueError: Missing or invalid configuration fields, pattern doesn't match
-- RuntimeError: Download failures (chained with 'from err')
 - re.error: Invalid regex patterns (propagates from regex compilation)
 
-Comparison with http_static
-----------------------------
-- url_regex: Extracts version from URL before download
-  - Pros: Fast, bandwidth-efficient, file-format agnostic
+Architecture: Version-First vs File-First
+------------------------------------------
+- url_regex (VERSION-FIRST): Extracts version from URL before download
+  - Method: get_version_info() -> VersionInfo
+  - Pros: Instant checks, can skip downloads when unchanged
   - Cons: Requires predictable URL patterns
-  - Best for: Version-encoded URLs
+  - Best for: Version-encoded URLs, frequent update checks
 
-- http_static: Downloads file first, then extracts version from file
+- http_static (FILE-FIRST): Downloads file first, then extracts version
+  - Method: discover_version() -> tuple with DiscoveredVersion
   - Pros: Works with any URL, accurate version from installer
-  - Cons: Must download file to get version
+  - Cons: Must download to know version
   - Best for: Fixed URLs with embedded version metadata
 
 Example
@@ -80,10 +82,10 @@ In a recipe YAML:
             type: regex_in_url
             pattern: "myapp-v(?P<version>[0-9.]+)-setup"
 
-From Python:
+From Python (version-first approach):
 
-    from pathlib import Path
     from notapkgtool.discovery.url_regex import UrlRegexStrategy
+    from notapkgtool.io import download_file
 
     strategy = UrlRegexStrategy()
     app_config = {
@@ -96,14 +98,30 @@ From Python:
         }
     }
 
-    discovered, file_path, sha256 = strategy.discover_version(
-        app_config, Path("./downloads")
-    )
-    print(f"Version {discovered.version} downloaded to {file_path}")
+    # Get version WITHOUT downloading
+    version_info = strategy.get_version_info(app_config)
+    print(f"Latest version: {version_info.version}")
+
+    # Download only if needed
+    if need_to_download:
+        file_path, sha256, headers = download_file(
+            version_info.download_url, Path("./downloads")
+        )
+        print(f"Downloaded to {file_path}")
+
+From Python (using core orchestration):
+
+    from pathlib import Path
+    from notapkgtool.core import discover_recipe
+
+    # Automatically uses version-first optimization
+    result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
+    print(f"Version {result['version']} at {result['file_path']}")
 
 Notes
 -----
-- Version extraction happens BEFORE download for efficiency
+- Version extraction happens WITHOUT download (instant)
+- Core orchestration automatically skips download if version unchanged
 - The URL pattern must be stable and predictable
 - Pattern matching is case-sensitive by default (use (?i) for case-insensitive)
 - Consider http_static if URLs don't contain version information
@@ -111,11 +129,9 @@ Notes
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
-from notapkgtool.io import NotModifiedError, download_file
-from notapkgtool.versioning.keys import DiscoveredVersion
+from notapkgtool.versioning.keys import VersionInfo
 from notapkgtool.versioning.url_regex import version_from_regex_in_url
 
 from .base import register_strategy
@@ -134,31 +150,24 @@ class UrlRegexStrategy:
             pattern: "app-v(?P<version>[0-9.]+)-installer"
     """
 
-    def discover_version(
+    def get_version_info(
         self,
         app_config: dict[str, Any],
-        output_dir: Path,
-        cache: dict[str, Any] | None = None,
         verbose: bool = False,
         debug: bool = False,
-    ) -> tuple[DiscoveredVersion, Path, str, dict]:
+    ) -> VersionInfo:
         """
-        Extract version from URL using regex, then download the file.
+        Extract version from URL without downloading (version-first path).
 
-        This method extracts the version from the URL BEFORE downloading,
-        making it efficient for version checking. The file is then downloaded
-        to the output directory.
+        This method enables fast version checking by extracting the version
+        directly from the URL pattern. If the version matches cached state,
+        the download can be skipped entirely.
 
         Parameters
         ----------
         app_config : dict
             App configuration containing source.url, source.version.type,
             and source.version.pattern.
-        output_dir : Path
-            Directory to save the downloaded file.
-        cache : dict, optional
-            Cached state with etag, last_modified, file_path, and sha256
-            for conditional requests.
         verbose : bool, optional
             If True, print verbose logging messages. Default is False.
         debug : bool, optional
@@ -166,37 +175,30 @@ class UrlRegexStrategy:
 
         Returns
         -------
-        tuple[DiscoveredVersion, Path, str, dict]
-            Version info, file path, SHA-256 hash, and HTTP response headers.
+        VersionInfo
+            Version info with version string, download URL, and source name.
 
         Raises
         ------
         ValueError
             If required config fields are missing, invalid, or if the regex
             pattern doesn't match the URL.
-        RuntimeError
-            If download fails (chained with 'from err').
 
         Examples
         --------
-        Basic usage:
-
-            >>> from pathlib import Path
-            >>> strategy = UrlRegexStrategy()
-            >>> config = {
-            ...     "source": {
-            ...         "url": "https://vendor.com/app-v1.0.0.msi",
-            ...         "version": {
-            ...             "type": "regex_in_url",
-            ...             "pattern": "app-v(?P<version>[0-9.]+)\\\\.msi"
-            ...         }
-            ...     }
-            ... }
-            >>> discovered, path, sha256 = strategy.discover_version(
-            ...     config, Path("./downloads")
-            ... )
-            >>> discovered.version
-            '1.0.0'
+        >>> strategy = UrlRegexStrategy()
+        >>> config = {
+        ...     "source": {
+        ...         "url": "https://vendor.com/app-v1.0.0.msi",
+        ...         "version": {
+        ...             "type": "regex_in_url",
+        ...             "pattern": "app-v(?P<version>[0-9.]+)\\\\.msi"
+        ...         }
+        ...     }
+        ... }
+        >>> version_info = strategy.get_version_info(config)
+        >>> version_info.version
+        '1.0.0'
         """
         from notapkgtool.cli import print_verbose
 
@@ -225,12 +227,11 @@ class UrlRegexStrategy:
                 "url_regex strategy requires 'source.version.pattern' in config"
             )
 
-        print_verbose("DISCOVERY", "Strategy: url_regex")
+        print_verbose("DISCOVERY", "Strategy: url_regex (version-first)")
         print_verbose("DISCOVERY", f"Source URL: {url}")
-        print_verbose("DISCOVERY", f"Version extraction: {version_type}")
         print_verbose("DISCOVERY", f"Regex pattern: {pattern}")
 
-        # Extract version from URL (BEFORE download for efficiency)
+        # Extract version from URL (no download needed!)
         try:
             discovered = version_from_regex_in_url(
                 url, pattern, verbose=verbose, debug=debug
@@ -242,60 +243,11 @@ class UrlRegexStrategy:
 
         print_verbose("DISCOVERY", f"Discovered version: {discovered.version}")
 
-        # Extract ETag/Last-Modified from cache if available
-        etag = cache.get("etag") if cache else None
-        last_modified = cache.get("last_modified") if cache else None
-
-        if etag:
-            print_verbose("DISCOVERY", f"Using cached ETag: {etag}")
-        if last_modified:
-            print_verbose("DISCOVERY", f"Using cached Last-Modified: {last_modified}")
-
-        # Now download the file (with conditional request if cache available)
-        print_verbose("DISCOVERY", "Downloading installer...")
-        try:
-            file_path, sha256, headers = download_file(
-                url,
-                output_dir,
-                etag=etag,
-                last_modified=last_modified,
-                verbose=verbose,
-                debug=debug,
-            )
-        except NotModifiedError:
-            # File unchanged (HTTP 304), use cached version
-            # Use convention-based path: derive filename from URL
-            print_verbose(
-                "DISCOVERY", "File not modified (HTTP 304), using cached version"
-            )
-
-            if not cache or "sha256" not in cache:
-                raise RuntimeError(
-                    "Cache indicates file not modified, but missing SHA-256. "
-                    "Try running with --stateless to force re-download."
-                ) from None
-
-            # Derive file path from URL (convention-based, schema v2)
-            from urllib.parse import urlparse
-
-            filename = Path(urlparse(url).path).name
-            cached_file = output_dir / filename
-
-            if not cached_file.exists():
-                raise RuntimeError(
-                    f"Cached file {cached_file} not found. "
-                    f"File may have been deleted. Try running with --stateless."
-                ) from None
-
-            return discovered, cached_file, cache["sha256"], {}
-        except Exception as err:
-            if isinstance(err, RuntimeError):
-                raise
-            raise RuntimeError(f"Failed to download {url}: {err}") from err
-
-        print_verbose("DISCOVERY", f"Download complete: {file_path.name}")
-
-        return discovered, file_path, sha256, headers
+        return VersionInfo(
+            version=discovered.version,
+            download_url=url,
+            source="url_regex",
+        )
 
     def validate_config(self, app_config: dict[str, Any]) -> list[str]:
         """

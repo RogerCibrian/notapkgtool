@@ -1,10 +1,17 @@
 """
 HTTP static URL discovery strategy for NAPT.
 
-This strategy downloads an installer from a fixed HTTP(S) URL and extracts
-version information directly from the downloaded file. It's the simplest
-discovery strategy and works well for vendors who publish installers at
-stable URLs.
+This is a FILE-FIRST strategy that downloads an installer from a fixed HTTP(S)
+URL and extracts version information from the downloaded file. Uses HTTP ETag
+conditional requests to avoid re-downloading unchanged files.
+
+Key Advantages
+--------------
+- Works with any fixed URL (version not required in URL)
+- Extracts accurate version directly from installer metadata
+- Uses ETag-based conditional requests for efficiency (~500ms vs full download)
+- Simple and reliable for vendors with stable download URLs
+- Fallback strategy when version not available via API/URL pattern
 
 Supported Version Extraction
 -----------------------------
@@ -17,28 +24,60 @@ Use Cases
 - Google Chrome: Fixed enterprise MSI URL, version embedded in MSI
 - Mozilla Firefox: Fixed enterprise MSI URL, version embedded in MSI
 - Vendors with stable download URLs and embedded version metadata
+- When version not available via API, URL pattern, or GitHub tags
 
 Recipe Configuration
 --------------------
 source:
   strategy: http_static
-  url: "https://vendor.com/installer.msi"
+  url: "https://vendor.com/installer.msi"          # Required: download URL
   version:
-    type: msi_product_version_from_file
-    file: "installer.msi"  # Optional, defaults to downloaded filename
+    type: msi_product_version_from_file            # Required: extraction method
+    file: "installer.msi"                          # Optional: defaults to URL filename
 
-Workflow
---------
-1. Download the installer from source.url using io.download.download_file
-2. Wait for atomic write to complete (.part -> final filename)
-3. Extract version based on source.version.type
-4. Return DiscoveredVersion, file path, and SHA-256 hash
+Configuration Fields
+--------------------
+url : str
+    HTTP(S) URL to download the installer from. This is a required field.
+    The URL should be stable and point to the latest version.
+
+version.type : str
+    Version extraction method. Currently supported: msi_product_version_from_file.
+    This is a required field.
+
+version.file : str, optional
+    Specific filename to extract version from. Defaults to the downloaded filename
+    derived from the URL or Content-Disposition header.
+
+Workflow (File-First with ETag Optimization)
+--------------------------------------------
+1. Make conditional HTTP request with cached ETag (If-None-Match header)
+2. Server responds with HTTP 304 Not Modified -> use cached file (~500ms)
+3. Server responds with HTTP 200 OK -> download new version
+4. Extract version from downloaded file based on source.version.type
+5. Return DiscoveredVersion, file path, and SHA-256 hash
 
 Error Handling
 --------------
 - ValueError: Missing or invalid configuration fields
 - RuntimeError: Download failures, version extraction errors
 - Errors are chained with 'from err' for better debugging
+
+Architecture: File-First vs Version-First
+------------------------------------------
+- http_static (FILE-FIRST): Downloads file first, then extracts version
+  - Method: discover_version() -> tuple with DiscoveredVersion
+  - Uses: HTTP ETag conditional requests for optimization
+  - Pros: Works with any URL, accurate version from installer
+  - Cons: Must download to know version (~500ms even with 304)
+  - Best for: Fixed URLs with embedded version metadata
+
+- url_regex, github_release, http_json (VERSION-FIRST): Version before download
+  - Method: get_version_info() -> VersionInfo
+  - Uses: Version comparison to skip downloads entirely
+  - Pros: Instant or fast checks (regex/API only), can skip downloads
+  - Cons: Requires version available via API/URL pattern
+  - Best for: Version-encoded URLs, APIs, CI/CD with frequent checks
 
 Example
 -------
@@ -66,10 +105,31 @@ From Python:
         }
     }
 
-    discovered, file_path, sha256 = strategy.discover_version(
-        app_config, Path("./downloads")
+    # With cache for ETag optimization
+    cache = {"etag": 'W/"abc123"', "sha256": "..."}
+    discovered, file_path, sha256, headers = strategy.discover_version(
+        app_config, Path("./downloads"), cache=cache
     )
-    print(f"Version {discovered.version} downloaded to {file_path}")
+    print(f"Version {discovered.version} at {file_path}")
+
+From Python (using core orchestration):
+
+    from pathlib import Path
+    from notapkgtool.core import discover_recipe
+
+    # Automatically uses ETag optimization
+    result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
+    print(f"Version {result['version']} at {result['file_path']}")
+
+Notes
+-----
+- Must download file to extract version (architectural constraint)
+- ETag optimization reduces bandwidth but still requires network round-trip
+- Core orchestration automatically provides cached ETag if available
+- Server must support ETag or Last-Modified headers for optimization
+- If server doesn't support conditional requests, full download occurs every time
+- Consider version-first strategies (url_regex, github_release, http_json) for
+  better performance when version available via API or URL pattern
 """
 
 from __future__ import annotations
