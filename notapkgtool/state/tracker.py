@@ -4,11 +4,15 @@ State tracking implementation for NAPT.
 This module implements the state persistence layer for tracking discovered
 application versions, ETags, and download metadata between runs.
 
+The state file supports two optimization approaches:
+- VERSION-FIRST (url_regex, github_release, http_json): Uses known_version for comparison
+- FILE-FIRST (http_static): Uses etag/last_modified for HTTP conditional requests
+
 Key Features
 ------------
 - JSON-based state storage (fast parsing, standard library)
 - Automatic ETag/Last-Modified tracking for conditional requests
-- Version change detection
+- Version change detection for version-first strategies
 - Robust error handling (corrupted files, missing data)
 - Auto-creation of state files and directories
 
@@ -33,10 +37,28 @@ Schema v2 (filesystem-first approach):
   }
 }
 
+Field Usage by Strategy Type
+-----------------------------
+VERSION-FIRST (url_regex, github_release, http_json):
+- url: Actual download URL (may differ from recipe source URL, e.g., GitHub asset URL)
+- etag: Saved but unused (version comparison used instead)
+- last_modified: Saved but unused (version comparison used instead)
+- sha256: Used for file integrity verification
+- known_version: PRIMARY cache key - compared to discovered version
+- strategy: For debugging/logging
+
+FILE-FIRST (http_static):
+- url: Source URL from recipe
+- etag: PRIMARY cache key - used for HTTP conditional requests (If-None-Match)
+- last_modified: SECONDARY cache key - fallback for conditional requests
+- sha256: Used for file integrity verification
+- known_version: Informational only (not used for caching decisions)
+- strategy: For debugging/logging
+
 Key Changes from v1:
-- url: Added for provenance tracking (what URL does this ETag apply to)
-- etag/last_modified/sha256: Kept (HTTP optimization, integrity checks)
-- known_version: Renamed from "version" (informational only, not source of truth)
+- url: Now stores actual download URL (critical for version-first strategies)
+- etag/last_modified/sha256: Kept (HTTP optimization for http_static, unused by version-first)
+- known_version: Renamed from "version" (PRIMARY cache key for version-first, informational for file-first)
 - strategy: Kept for debugging
 - Removed: file_path (use convention), last_checked (use file mtime), source (renamed)
 
@@ -213,15 +235,20 @@ class StateTracker:
         recipe_id : str
             Recipe identifier.
         url : str
-            Download URL (for ETag association and provenance).
+            Download URL for provenance tracking. For version-first strategies
+            (url_regex, github_release, http_json), this is the actual download URL
+            from version_info. For file-first (http_static), this is source.url.
         sha256 : str
             SHA-256 hash of file (for integrity checks).
         etag : str, optional
-            ETag header from download response (for HTTP 304).
+            ETag header from download response. Used by http_static for HTTP 304
+            conditional requests. Saved but unused by version-first strategies.
         last_modified : str, optional
-            Last-Modified header from download response.
+            Last-Modified header from download response. Used by http_static as
+            fallback for conditional requests. Saved but unused by version-first.
         known_version : str, optional
-            Version string (informational only, not source of truth).
+            Version string. PRIMARY cache key for version-first strategies
+            (compared to skip downloads). Informational only for http_static.
         strategy : str, optional
             Discovery strategy used (for debugging).
 
@@ -238,7 +265,12 @@ class StateTracker:
         Notes
         -----
         Schema v2: Removed file_path, last_checked, and renamed version→known_version.
-        Filesystem is the source of truth; state is for HTTP optimization only.
+
+        Field usage differs by strategy type:
+        - Version-first: known_version is PRIMARY cache key, etag/last_modified unused
+        - File-first: etag/last_modified are PRIMARY cache keys, known_version informational
+
+        Filesystem is the source of truth; state is for optimization only.
         """
         if "apps" not in self.state:
             self.state["apps"] = {}

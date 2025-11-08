@@ -6,7 +6,8 @@ It only parses and compares version strings consistently across sources
 (MSI, EXE, generic strings).
 
 Public API:
-- DiscoveredVersion: lightweight container for discovered versions.
+- DiscoveredVersion: container for version discovered from downloaded files (file-first).
+- VersionInfo: container for version discovered without downloading (version-first).
 - version_key_any(): build a comparable key for any version string.
 - compare_any():     tri-state compare (-1, 0, 1).
 - is_newer_any():    True if remote > current.
@@ -33,6 +34,24 @@ class DiscoveredVersion:
     """
 
     version: str
+    source: str
+
+
+@dataclass(frozen=True)
+class VersionInfo:
+    """
+    Container for version information discovered without downloading.
+
+    Used by version-first strategies (url_regex, github_release, http_json)
+    that can determine version and download URL without fetching the installer.
+
+    version: raw version string (e.g., "140.0.7339.128").
+    download_url: URL to download the installer.
+    source: strategy name for logging (e.g., "url_regex", "github_release").
+    """
+
+    version: str
+    download_url: str
     source: str
 
 

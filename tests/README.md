@@ -1,6 +1,6 @@
 # NAPT Test Suite
 
-Comprehensive test coverage for the NAPT project with **200+ tests** covering all functionality including discovery, state tracking, PSADT building, and packaging.
+Comprehensive test coverage for the NAPT project with **189 tests** covering all functionality including discovery, state tracking, PSADT building, and packaging.
 
 ## Test Strategy: Hybrid Approach 🔺
 
@@ -45,8 +45,8 @@ tests/
 │
 ├── Unit Tests (Fast, Mocked)
 ├── test_config.py                 # Configuration loading (11 tests)
-├── test_core.py                   # Core orchestration (5 tests)
-├── test_discovery.py              # Discovery strategies (61 tests)
+├── test_core.py                   # Core orchestration (8 tests)
+├── test_discovery.py              # Discovery strategies (18 tests)
 ├── test_download.py               # HTTP downloads (11 tests)
 ├── test_state.py                  # State tracking (17 tests)
 ├── test_validation.py             # Recipe validation (27 tests)
@@ -89,7 +89,7 @@ pytest tests/ -m "not integration"
 # Even faster - quiet mode
 pytest tests/ -m "not integration" -q
 
-# Shows: 198 passed in 0.50s
+# Shows: ~170 passed in 0.50s (unit tests only)
 ```
 
 ### Run All Tests (Unit + Integration)
@@ -164,31 +164,31 @@ pytest tests/ --cov=notapkgtool --cov-report=term-missing
 **11 tests covering configuration system**
 
 ### Core Orchestration Tests (`test_core.py`)
-- ✅ Successful recipe validation
+- ✅ Successful recipe discovery (file-first strategy)
 - ✅ Error handling for missing apps
 - ✅ Error handling for missing strategy
 - ✅ Error handling for unknown strategies
 - ✅ Error handling for missing files
+- ✅ Version-first fast path (cache hit skips download)
+- ✅ Version-first cache miss (downloads new version)
+- ✅ Version-first with missing cached file (re-downloads)
 
-**5 tests covering core workflow**
+**8 tests covering core workflow and version-first optimization**
 
 ### Discovery Tests (`test_discovery.py`)
 - ✅ Strategy registry and lookup
 - ✅ Custom strategy registration
-- ✅ HTTP static strategy with MSI
-- ✅ URL regex strategy with pattern matching
-- ✅ GitHub release strategy with asset selection
-- ✅ HTTP JSON API strategy with JSONPath
-- ✅ ETag caching support (HTTP 304)
-- ✅ Missing URL/configuration error handling
-- ✅ Missing version type error handling
-- ✅ Unsupported version type error handling
-- ✅ Download failure error handling
-- ✅ Version extraction failure error handling
-- ✅ GitHub API errors (404, rate limits)
-- ✅ JSON API errors (invalid responses)
+- ✅ HTTP static strategy (file-first) with MSI and ETag caching
+- ✅ Version-first strategies (url_regex, github_release, http_json):
+  - `get_version_info()` returns VersionInfo without downloading
+  - Version extraction from URLs, GitHub tags, and JSON APIs
+- ✅ ETag caching support for http_static (HTTP 304)
+- ✅ Configuration validation and error handling
+- ✅ Missing/invalid configuration detection
 
-**61 tests covering all discovery strategies**
+**18 tests covering discovery strategies**
+
+Note: Version-first strategy integration tests moved to test_core.py (TestVersionFirstFastPath)
 
 ### Download Tests (`test_download.py`)
 - ✅ Basic successful download
@@ -294,10 +294,10 @@ pytest tests/ --cov=notapkgtool --cov-report=term-missing
 
 ## Total Coverage
 
-**198 tests** covering all functionality:
+**189 tests** covering all functionality:
 - Configuration system (11 tests) ✅
-- Core orchestration (5 tests) ✅
-- Discovery strategies (61 tests) ✅
+- Core orchestration (8 tests) ✅
+- Discovery strategies (18 tests) ✅
 - HTTP downloads (11 tests) ✅
 - State tracking (17 tests) ✅
 - Recipe validation (27 tests) ✅
@@ -348,7 +348,7 @@ When adding tests:
 
 ## Test Philosophy
 
-- **Fast**: All 198 tests run in < 1 second
+- **Fast**: All 189 tests run in < 1 second
 - **Isolated**: No test depends on another
 - **Deterministic**: Same input → same output
 - **Comprehensive**: Cover happy paths and error cases
@@ -360,13 +360,13 @@ When adding tests:
 
 ```bash
 $ pytest tests/ -q
-........................................................................ [ 36%]
-........................................................................ [ 72%]
-......................................................                   [100%]
-198 passed in 0.50s
+........................................................................ [ 38%]
+........................................................................ [ 76%]
+.............................................                            [100%]
+189 passed in 0.50s
 ```
 
-**Average:** ~2.5ms per test
+**Average:** ~2.6ms per test
 
 ## Key Testing Patterns
 
@@ -411,15 +411,15 @@ def test_example(sample_org_defaults):
 | Module | Tests | Coverage | Features Tested |
 |--------|-------|----------|-----------------|
 | `config/` | 11 | Full | YAML loading, 3-layer merging, path resolution |
-| `core.py` | 5 | Full | Recipe orchestration, error handling |
-| `discovery/` | 61 | Full | All 4 strategies, ETag caching, error handling |
+| `core.py` | 8 | Full | Recipe orchestration, version-first optimization, error handling |
+| `discovery/` | 18 | Full | Version-first strategies, get_version_info(), ETag caching |
 | `io/download.py` | 11 | Full | HTTP downloads, conditional requests, atomic writes |
 | `state/` | 17 | Full | Schema v2, filesystem-first, cache operations |
 | `validation.py` | 27 | Full | Recipe validation, all strategies, error detection |
 | `versioning/` | 21 | Full | Semver, numeric, lexicographic comparison |
 | `psadt/` | 13 | Full | GitHub API, download, extraction, caching |
 | `build/` | 41 | Full | Orchestration, template generation, packaging |
-| **Total** | **198** | **Full** | **All implemented features** |
+| **Total** | **189** | **Full** | **All implemented features** |
 
 ## Key Test Features
 
@@ -430,8 +430,8 @@ All HTTP requests are mocked using `requests-mock`. Tests run completely offline
 - ✅ PSADT downloads mocked
 
 ### Fast Execution
-- ✅ **198 tests in ~0.5 seconds**
-- ✅ Average: 2.5ms per test
+- ✅ **189 tests in ~0.5 seconds**
+- ✅ Average: 2.6ms per test
 - ✅ All tests run in parallel safely (isolated)
 
 ### Cross-Platform

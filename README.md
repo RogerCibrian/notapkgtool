@@ -15,8 +15,8 @@ NAPT is a Python-based CLI tool that automates the entire workflow for packaging
 - ✅ **Declarative YAML recipes** - Define app packaging once, run everywhere
 - ✅ **Automatic version discovery** - Extract versions from MSI, EXE, URLs, or APIs
 - ✅ **Robust downloads** - Retry logic, conditional requests (ETags), atomic writes
-- ✅ **Intelligent caching** - State tracking with ETag-based conditional downloads
-- ✅ **Intelligent updates** - Version-based, hash-based, or combined strategies
+- ✅ **Intelligent caching** - Version-first strategies can skip downloads entirely when unchanged
+- ✅ **Dual-path optimization** - Version-first (instant checks) and file-first (ETag) strategies
 - ✅ **Cross-platform support** - Windows, Linux, and macOS
 - ✅ **Layered configuration** - Organization → Vendor → Recipe inheritance
 - ✅ **PSADT packaging** - Generate Intune-ready packages with PSAppDeployToolkit
@@ -151,8 +151,9 @@ napt package builds/napt-chrome/141.0.7390.123/ --output-dir ./packages --clean-
 NAPT uses a modular architecture with key design patterns:
 
 - **3-Layer Configuration** - Organization → Vendor → Recipe inheritance with deep merging
-- **Strategy Pattern** - Pluggable discovery strategies (http_static, url_regex, github_release, http_json)
-- **State Tracking** - ETag-based caching for efficient conditional downloads
+- **Strategy Pattern** - Pluggable discovery strategies with version-first and file-first approaches
+- **Version-First Optimization** - Skip downloads entirely when versions unchanged (url_regex, github_release, http_json)
+- **File-First Fallback** - ETag-based conditional requests when version must be extracted from file (http_static)
 - **Cross-Platform** - Native Windows support, Linux/macOS via msitools
 
 > **📚 See the [Documentation Site](https://rogercibrian.github.io/notapkgtool) for detailed architecture, API reference, and configuration guides**

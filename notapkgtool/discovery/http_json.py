@@ -1,17 +1,20 @@
 """
 HTTP JSON API discovery strategy for NAPT.
 
-This strategy queries JSON API endpoints to fetch version information and
-download URLs dynamically. It's ideal for vendors who provide programmatic
-APIs for their latest releases.
+This is a VERSION-FIRST strategy that queries JSON API endpoints to get version
+and download URL WITHOUT downloading the installer. This enables fast version
+checks and efficient caching.
 
 Key Advantages
 --------------
+- Fast version discovery (API call ~100ms)
+- Can skip downloads entirely when version unchanged
 - Direct API access for version and download URL
 - Support for complex JSON structures with JSONPath
 - Custom headers for authentication
 - Support for GET and POST requests
-- No file parsing required before knowing version
+- No file parsing required
+- Ideal for CI/CD with scheduled checks
 
 Supported Features
 ------------------
@@ -28,6 +31,7 @@ Use Cases
 - CDNs that provide metadata APIs
 - Applications with update check APIs
 - APIs requiring authentication or custom headers
+- CI/CD pipelines with frequent version checks
 
 Recipe Configuration
 --------------------
@@ -90,19 +94,21 @@ Nested paths:
   - "data.latest.download.url"
   - "response.assets[0].browser_download_url"
 
-Workflow
---------
+Workflow (Version-First)
+------------------------
 1. Build HTTP request (GET or POST) with headers
-2. Call API endpoint and get JSON response
+2. Call API endpoint and get JSON response (~100ms)
 3. Parse JSON and extract version using JSONPath
 4. Extract download URL using JSONPath
-5. Download installer using io.download.download_file
-6. Return DiscoveredVersion, file path, and SHA-256 hash
+5. Create VersionInfo with version and download URL
+6. Core orchestration compares version to cache
+7. If match and file exists -> skip download entirely
+8. If changed or missing -> download from URL
 
 Error Handling
 --------------
 - ValueError: Missing or invalid configuration, invalid JSONPath, path not found
-- RuntimeError: API failures, download failures, invalid JSON response
+- RuntimeError: API failures, invalid JSON response
 - Errors are chained with 'from err' for better debugging
 
 Example
@@ -131,10 +137,10 @@ In a recipe YAML (nested structure):
           headers:
             Authorization: "Bearer ${API_TOKEN}"
 
-From Python:
+From Python (version-first approach):
 
-    from pathlib import Path
     from notapkgtool.discovery.http_json import HttpJsonStrategy
+    from notapkgtool.io import download_file
 
     strategy = HttpJsonStrategy()
     app_config = {
@@ -145,13 +151,30 @@ From Python:
         }
     }
 
-    discovered, file_path, sha256 = strategy.discover_version(
-        app_config, Path("./downloads")
-    )
-    print(f"Version {discovered.version} downloaded to {file_path}")
+    # Get version WITHOUT downloading
+    version_info = strategy.get_version_info(app_config)
+    print(f"Latest version: {version_info.version}")
+
+    # Download only if needed
+    if need_to_download:
+        file_path, sha256, headers = download_file(
+            version_info.download_url, Path("./downloads")
+        )
+        print(f"Downloaded to {file_path}")
+
+From Python (using core orchestration):
+
+    from pathlib import Path
+    from notapkgtool.core import discover_recipe
+
+    # Automatically uses version-first optimization
+    result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
+    print(f"Version {result['version']} at {result['file_path']}")
 
 Notes
 -----
+- Version discovery via API only (no download required)
+- Core orchestration automatically skips download if version unchanged
 - JSONPath uses jsonpath-ng library for robust parsing
 - Environment variable expansion works in headers and other string values
 - POST body is sent as JSON (Content-Type: application/json)
@@ -162,14 +185,12 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 from typing import Any
 
 from jsonpath_ng import parse as jsonpath_parse
 import requests
 
-from notapkgtool.io import NotModifiedError, download_file
-from notapkgtool.versioning.keys import DiscoveredVersion
+from notapkgtool.versioning.keys import VersionInfo
 
 from .base import register_strategy
 
@@ -189,30 +210,24 @@ class HttpJsonStrategy:
             Authorization: "Bearer ${API_TOKEN}"
     """
 
-    def discover_version(
+    def get_version_info(
         self,
         app_config: dict[str, Any],
-        output_dir: Path,
-        cache: dict[str, Any] | None = None,
         verbose: bool = False,
         debug: bool = False,
-    ) -> tuple[DiscoveredVersion, Path, str, dict]:
+    ) -> VersionInfo:
         """
-        Query JSON API and download installer from extracted URL.
+        Query JSON API for version and download URL without downloading (version-first path).
 
         This method calls a JSON API, extracts version and download URL using
-        JSONPath expressions, then downloads the installer.
+        JSONPath expressions. If the version matches cached state, the download
+        can be skipped entirely.
 
         Parameters
         ----------
         app_config : dict
             App configuration containing source.api_url, source.version_path,
             and source.download_url_path.
-        output_dir : Path
-            Directory to save the downloaded file.
-        cache : dict, optional
-            Cached state with etag, last_modified, file_path, and sha256
-            for conditional requests.
         verbose : bool, optional
             If True, print verbose logging messages. Default is False.
         debug : bool, optional
@@ -220,8 +235,8 @@ class HttpJsonStrategy:
 
         Returns
         -------
-        tuple[DiscoveredVersion, Path, str, dict]
-            Version info, file path, SHA-256 hash, and HTTP response headers.
+        VersionInfo
+            Version info with version string, download URL, and source name.
 
         Raises
         ------
@@ -229,26 +244,21 @@ class HttpJsonStrategy:
             If required config fields are missing, invalid, or if JSONPath
             expressions don't match anything in the response.
         RuntimeError
-            If API call fails or download fails (chained with 'from err').
+            If API call fails (chained with 'from err').
 
         Examples
         --------
-        Basic usage:
-
-            >>> from pathlib import Path
-            >>> strategy = HttpJsonStrategy()
-            >>> config = {
-            ...     "source": {
-            ...         "api_url": "https://api.vendor.com/latest",
-            ...         "version_path": "version",
-            ...         "download_url_path": "download_url"
-            ...     }
-            ... }
-            >>> discovered, path, sha256 = strategy.discover_version(
-            ...     config, Path("./downloads")
-            ... )
-            >>> discovered.version
-            '1.0.0'
+        >>> strategy = HttpJsonStrategy()
+        >>> config = {
+        ...     "source": {
+        ...         "api_url": "https://api.vendor.com/latest",
+        ...         "version_path": "version",
+        ...         "download_url_path": "download_url"
+        ...     }
+        ... }
+        >>> version_info = strategy.get_version_info(config)
+        >>> version_info.version
+        '1.0.0'
         """
         from notapkgtool.cli import print_verbose
 
@@ -279,7 +289,7 @@ class HttpJsonStrategy:
         body = source.get("body", {})
         timeout = source.get("timeout", 30)
 
-        print_verbose("DISCOVERY", "Strategy: http_json")
+        print_verbose("DISCOVERY", "Strategy: http_json (version-first)")
         print_verbose("DISCOVERY", f"API URL: {api_url}")
         print_verbose("DISCOVERY", f"Method: {method}")
         print_verbose("DISCOVERY", f"Version path: {version_path}")
@@ -363,8 +373,6 @@ class HttpJsonStrategy:
 
         print_verbose("DISCOVERY", f"Extracted version: {version_str}")
 
-        discovered = DiscoveredVersion(version=version_str, source="http_json")
-
         # Extract download URL using JSONPath
         print_verbose(
             "DISCOVERY", f"Extracting download URL from path: {download_url_path}"
@@ -388,62 +396,11 @@ class HttpJsonStrategy:
 
         print_verbose("DISCOVERY", f"Download URL: {download_url}")
 
-        # Extract ETag/Last-Modified from cache if available
-        etag = cache.get("etag") if cache else None
-        last_modified = cache.get("last_modified") if cache else None
-
-        if etag:
-            print_verbose("DISCOVERY", f"Using cached ETag: {etag}")
-        if last_modified:
-            print_verbose("DISCOVERY", f"Using cached Last-Modified: {last_modified}")
-
-        # Download the installer (with conditional request if cache available)
-        print_verbose("DISCOVERY", "Downloading installer...")
-        try:
-            file_path, sha256, headers = download_file(
-                download_url,
-                output_dir,
-                etag=etag,
-                last_modified=last_modified,
-                verbose=verbose,
-                debug=debug,
-            )
-        except NotModifiedError:
-            # File unchanged (HTTP 304), use cached version
-            # Use convention-based path: derive filename from URL
-            print_verbose(
-                "DISCOVERY", "File not modified (HTTP 304), using cached version"
-            )
-
-            if not cache or "sha256" not in cache:
-                raise RuntimeError(
-                    "Cache indicates file not modified, but missing SHA-256. "
-                    "Try running with --stateless to force re-download."
-                ) from None
-
-            # Derive file path from URL (convention-based, schema v2)
-            from urllib.parse import urlparse
-
-            filename = Path(urlparse(download_url).path).name
-            cached_file = output_dir / filename
-
-            if not cached_file.exists():
-                raise RuntimeError(
-                    f"Cached file {cached_file} not found. "
-                    f"File may have been deleted. Try running with --stateless."
-                ) from None
-
-            return discovered, cached_file, cache["sha256"], {}
-        except Exception as err:
-            if isinstance(err, RuntimeError):
-                raise
-            raise RuntimeError(
-                f"Failed to download from {download_url}: {err}"
-            ) from err
-
-        print_verbose("DISCOVERY", f"Download complete: {file_path.name}")
-
-        return discovered, file_path, sha256, headers
+        return VersionInfo(
+            version=version_str,
+            download_url=download_url,
+            source="http_json",
+        )
 
     def validate_config(self, app_config: dict[str, Any]) -> list[str]:
         """
