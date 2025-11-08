@@ -57,15 +57,26 @@ apps:
 
 ## State Management & Caching
 
-NAPT automatically tracks discovered versions and uses HTTP ETags for efficient conditional downloads.
+NAPT automatically tracks discovered versions and optimizes subsequent runs by avoiding unnecessary downloads.
 
 ### How It Works
 
-1. **First Run**: Downloads file, saves ETag and version to `state/versions.json`
-2. **Second Run**: Sends `If-None-Match` header with cached ETag
-3. **Server Response**:
-   - `HTTP 304 Not Modified` → Uses cached file (instant!)
-   - `HTTP 200 OK` → Downloads new version, updates state
+**Version-First Strategies** (url_regex, github_release, http_json):
+
+1. **First Run**: Discovers version, downloads file, saves version and hash to `state/versions.json`
+2. **Subsequent Runs**: 
+   - Discovers version (API call, regex, etc.)
+   - Compares to cached `known_version`
+   - If match and file exists → **Done!** No download needed
+   - If different → Downloads new version
+
+**File-First Strategy** (http_static):
+
+1. **First Run**: Downloads file with ETag, extracts version, saves ETag to `state/versions.json`
+2. **Subsequent Runs**:
+   - Makes conditional HTTP request with cached ETag (`If-None-Match` header)
+   - Server responds with `HTTP 304 Not Modified` → Uses cached file
+   - Server responds with `HTTP 200 OK` → Downloads new version, updates state
 
 ### Default Behavior (Stateful)
 
@@ -88,10 +99,10 @@ napt discover recipes/Google/chrome.yaml --stateless
 
 ### Benefits
 
-- **Bandwidth efficiency**: Avoid downloading unchanged files
-- **Speed**: HTTP 304 responses are instant vs. downloading 60+ MB installers
+- **Zero bandwidth**: Version-first strategies skip downloads entirely when unchanged
+- **Speed**: url_regex can be instant (no network calls), APIs ~100ms vs. downloading 60+ MB
 - **Server-friendly**: Reduces load on vendor CDNs
-- **Cost savings**: Important when using metered bandwidth
+- **Cost savings**: Critical for metered bandwidth and CI/CD with frequent checks
 
 ## Discovery Strategies
 
@@ -99,12 +110,12 @@ Discovery strategies are the core mechanism for obtaining application installers
 
 ### Available Strategies
 
-| Strategy | Version Source | Use Case | Bandwidth | Speed |
-|----------|---------------|----------|-----------|-------|
-| **http_static** | File metadata | Fixed URLs with embedded versions | Medium | Medium |
-| **url_regex** | URL pattern | Version-encoded URLs | Low | Fast |
-| **github_release** | Git tags | GitHub-hosted releases | Medium | Medium |
-| **http_json** | JSON API | Programmatic APIs with metadata | Low | Fast |
+| Strategy | Version Source | Use Case | Unchanged Check |
+|----------|---------------|----------|-----------------|
+| **url_regex** | URL pattern | Version-encoded URLs | Instant (regex only) |
+| **http_json** | JSON API | REST APIs with metadata | Fast (API call ~100ms) |
+| **github_release** | Git tags | GitHub-hosted releases | Fast (GitHub API ~100ms) |
+| **http_static** | File metadata | Fixed URLs, MSI installers | Medium (HTTP conditional ~500ms) |
 
 ### http_static
 
@@ -125,7 +136,7 @@ source:
 ```
 
 **Pros:** Simple and reliable, version directly from installer (most accurate)  
-**Cons:** Must download file before knowing version
+**Cons:** Must download file to know version, slower update checks (HTTP conditional request)
 
 ### url_regex
 
@@ -146,7 +157,7 @@ source:
     pattern: "app-v(?P<version>[0-9.]+)-setup"
 ```
 
-**Pros:** Know version before download, fast, bandwidth-efficient  
+**Pros:** Know version before download, instant update checks (regex only, zero network), bandwidth-efficient  
 **Cons:** Relies on URL format stability
 
 ### github_release
@@ -167,7 +178,7 @@ source:
   version_pattern: "v?([0-9.]+)"
 ```
 
-**Pros:** Official GitHub API, reliable, supports authentication  
+**Pros:** Official GitHub API, reliable, fast update checks (API only, ~100ms), supports authentication  
 **Cons:** GitHub API rate limits (60/hour unauthenticated)
 
 ### http_json
@@ -190,7 +201,7 @@ source:
     Authorization: "Bearer ${API_TOKEN}"
 ```
 
-**Pros:** Fast, flexible, supports complex APIs, no file parsing  
+**Pros:** Fast update checks (API only, ~100ms), flexible, supports complex APIs, no file parsing  
 **Cons:** Requires vendor API availability
 
 ### Decision Guide
@@ -199,13 +210,37 @@ Use this flowchart to choose the right strategy:
 
 ```
 Do you have a JSON API for version/download info?
-├─ YES → http_json
+├─ YES → http_json (fast version checks, no download if unchanged)
 └─ NO  → Is the app on GitHub?
-    ├─ YES → github_release
+    ├─ YES → github_release (reliable API, fast checks)
     └─ NO  → Is the version in the download URL?
-        ├─ YES → url_regex
-        └─ NO  → http_static (version from file)
+        ├─ YES → url_regex (instant version checks!)
+        └─ NO  → http_static (must download to check)
 ```
+
+**Performance Note**: Version-first strategies (everything except http_static) can skip downloads entirely when versions haven't changed, making them ideal for scheduled CI/CD checks.
+
+### Performance Characteristics
+
+Understanding when each strategy excels:
+
+**First Run (no cache):**
+
+- All strategies: ~same performance (must download installer)
+- Difference: url_regex/APIs know version before downloading
+
+**Scheduled Checks (version unchanged) - Most Common:**
+
+- **url_regex**: Instant (regex only, zero network calls)
+- **github_release**: ~100ms (GitHub API call)
+- **http_json**: ~100ms (vendor API call)
+- **http_static**: ~500ms+ (conditional HTTP request to CDN)
+
+**Version Changed:**
+
+- All strategies: Must download installer (~same performance)
+
+**Recommendation**: For CI/CD with scheduled checks, prefer version-first strategies (url_regex, github_release, http_json) when available. They can skip downloads entirely when nothing changed, dramatically reducing bandwidth and runtime.
 
 ## Cross-Platform Support
 
