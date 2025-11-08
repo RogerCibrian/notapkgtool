@@ -1401,7 +1401,14 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.2.0...HEAD">Unreleased</a></h2>
 <h3 id="added">Added</h3>
 <h3 id="changed">Changed</h3>
+<ul>
+<li><strong>Discovery Performance Optimization</strong> - Version-first strategies (url_regex, github_release, http_json) now check versions before downloading, enabling instant to ~100ms update checks when unchanged instead of full downloads</li>
+<li>State file now saves actual download URLs for all strategies</li>
+</ul>
 <h3 id="fixed">Fixed</h3>
+<ul>
+<li>Fixed ETag preservation bug causing alternating download/cached behavior in http_static strategy</li>
+</ul>
 <h2 id="020-2025-11-07"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.1.0...0.2.0">0.2.0</a> - 2025-11-07</h2>
 <h3 id="added_1">Added</h3>
 <h4 id="build-packaging">Build &amp; Packaging</h4>

@@ -512,6 +512,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#performance-characteristics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance Characteristics
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1181,6 +1190,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#performance-characteristics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance Characteristics
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1458,14 +1476,24 @@ apps:
     # release will be &quot;latest&quot; (from org defaults)
 </code></pre>
 <h2 id="state-management-caching">State Management &amp; Caching</h2>
-<p>NAPT automatically tracks discovered versions and uses HTTP ETags for efficient conditional downloads.</p>
+<p>NAPT automatically tracks discovered versions and optimizes subsequent runs by avoiding unnecessary downloads.</p>
 <h3 id="how-it-works">How It Works</h3>
+<p><strong>Version-First Strategies</strong> (url_regex, github_release, http_json):</p>
 <ol>
-<li><strong>First Run</strong>: Downloads file, saves ETag and version to <code>state/versions.json</code></li>
-<li><strong>Second Run</strong>: Sends <code>If-None-Match</code> header with cached ETag</li>
-<li><strong>Server Response</strong>:</li>
-<li><code>HTTP 304 Not Modified</code> → Uses cached file (instant!)</li>
-<li><code>HTTP 200 OK</code> → Downloads new version, updates state</li>
+<li><strong>First Run</strong>: Discovers version, downloads file, saves version and hash to <code>state/versions.json</code></li>
+<li><strong>Subsequent Runs</strong>: </li>
+<li>Discovers version (API call, regex, etc.)</li>
+<li>Compares to cached <code>known_version</code></li>
+<li>If match and file exists → <strong>Done!</strong> No download needed</li>
+<li>If different → Downloads new version</li>
+</ol>
+<p><strong>File-First Strategy</strong> (http_static):</p>
+<ol>
+<li><strong>First Run</strong>: Downloads file with ETag, extracts version, saves ETag to <code>state/versions.json</code></li>
+<li><strong>Subsequent Runs</strong>:</li>
+<li>Makes conditional HTTP request with cached ETag (<code>If-None-Match</code> header)</li>
+<li>Server responds with <code>HTTP 304 Not Modified</code> → Uses cached file</li>
+<li>Server responds with <code>HTTP 200 OK</code> → Downloads new version, updates state</li>
 </ol>
 <h3 id="default-behavior-stateful">Default Behavior (Stateful)</h3>
 <pre><code class="language-bash"># State tracking enabled by default
@@ -1482,10 +1510,10 @@ napt discover recipes/Google/chrome.yaml --stateless
 </code></pre>
 <h3 id="benefits">Benefits</h3>
 <ul>
-<li><strong>Bandwidth efficiency</strong>: Avoid downloading unchanged files</li>
-<li><strong>Speed</strong>: HTTP 304 responses are instant vs. downloading 60+ MB installers</li>
+<li><strong>Zero bandwidth</strong>: Version-first strategies skip downloads entirely when unchanged</li>
+<li><strong>Speed</strong>: url_regex can be instant (no network calls), APIs ~100ms vs. downloading 60+ MB</li>
 <li><strong>Server-friendly</strong>: Reduces load on vendor CDNs</li>
-<li><strong>Cost savings</strong>: Important when using metered bandwidth</li>
+<li><strong>Cost savings</strong>: Critical for metered bandwidth and CI/CD with frequent checks</li>
 </ul>
 <h2 id="discovery-strategies">Discovery Strategies</h2>
 <p>Discovery strategies are the core mechanism for obtaining application installers and extracting version information.</p>
@@ -1496,38 +1524,33 @@ napt discover recipes/Google/chrome.yaml --stateless
 <th>Strategy</th>
 <th>Version Source</th>
 <th>Use Case</th>
-<th>Bandwidth</th>
-<th>Speed</th>
+<th>Unchanged Check</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>http_static</strong></td>
-<td>File metadata</td>
-<td>Fixed URLs with embedded versions</td>
-<td>Medium</td>
-<td>Medium</td>
-</tr>
-<tr>
 <td><strong>url_regex</strong></td>
 <td>URL pattern</td>
 <td>Version-encoded URLs</td>
-<td>Low</td>
-<td>Fast</td>
+<td>Instant (regex only)</td>
+</tr>
+<tr>
+<td><strong>http_json</strong></td>
+<td>JSON API</td>
+<td>REST APIs with metadata</td>
+<td>Fast (API call ~100ms)</td>
 </tr>
 <tr>
 <td><strong>github_release</strong></td>
 <td>Git tags</td>
 <td>GitHub-hosted releases</td>
-<td>Medium</td>
-<td>Medium</td>
+<td>Fast (GitHub API ~100ms)</td>
 </tr>
 <tr>
-<td><strong>http_json</strong></td>
-<td>JSON API</td>
-<td>Programmatic APIs with metadata</td>
-<td>Low</td>
-<td>Fast</td>
+<td><strong>http_static</strong></td>
+<td>File metadata</td>
+<td>Fixed URLs, MSI installers</td>
+<td>Medium (HTTP conditional ~500ms)</td>
 </tr>
 </tbody>
 </table>
@@ -1546,7 +1569,7 @@ napt discover recipes/Google/chrome.yaml --stateless
     type: msi_product_version_from_file
 </code></pre>
 <p><strong>Pros:</strong> Simple and reliable, version directly from installer (most accurate)<br />
-<strong>Cons:</strong> Must download file before knowing version</p>
+<strong>Cons:</strong> Must download file to know version, slower update checks (HTTP conditional request)</p>
 <h3 id="url_regex">url_regex</h3>
 <p><strong>Best for:</strong></p>
 <ul>
@@ -1562,7 +1585,7 @@ napt discover recipes/Google/chrome.yaml --stateless
     type: regex_in_url
     pattern: &quot;app-v(?P&lt;version&gt;[0-9.]+)-setup&quot;
 </code></pre>
-<p><strong>Pros:</strong> Know version before download, fast, bandwidth-efficient<br />
+<p><strong>Pros:</strong> Know version before download, instant update checks (regex only, zero network), bandwidth-efficient<br />
 <strong>Cons:</strong> Relies on URL format stability</p>
 <h3 id="github_release">github_release</h3>
 <p><strong>Best for:</strong></p>
@@ -1578,7 +1601,7 @@ napt discover recipes/Google/chrome.yaml --stateless
   asset_pattern: &quot;Git-.*-64-bit\\.exe$&quot;
   version_pattern: &quot;v?([0-9.]+)&quot;
 </code></pre>
-<p><strong>Pros:</strong> Official GitHub API, reliable, supports authentication<br />
+<p><strong>Pros:</strong> Official GitHub API, reliable, fast update checks (API only, ~100ms), supports authentication<br />
 <strong>Cons:</strong> GitHub API rate limits (60/hour unauthenticated)</p>
 <h3 id="http_json">http_json</h3>
 <p><strong>Best for:</strong></p>
@@ -1596,18 +1619,38 @@ napt discover recipes/Google/chrome.yaml --stateless
   headers:
     Authorization: &quot;Bearer ${API_TOKEN}&quot;
 </code></pre>
-<p><strong>Pros:</strong> Fast, flexible, supports complex APIs, no file parsing<br />
+<p><strong>Pros:</strong> Fast update checks (API only, ~100ms), flexible, supports complex APIs, no file parsing<br />
 <strong>Cons:</strong> Requires vendor API availability</p>
 <h3 id="decision-guide">Decision Guide</h3>
 <p>Use this flowchart to choose the right strategy:</p>
 <pre><code>Do you have a JSON API for version/download info?
-├─ YES → http_json
+├─ YES → http_json (fast version checks, no download if unchanged)
 └─ NO  → Is the app on GitHub?
-    ├─ YES → github_release
+    ├─ YES → github_release (reliable API, fast checks)
     └─ NO  → Is the version in the download URL?
-        ├─ YES → url_regex
-        └─ NO  → http_static (version from file)
+        ├─ YES → url_regex (instant version checks!)
+        └─ NO  → http_static (must download to check)
 </code></pre>
+<p><strong>Performance Note</strong>: Version-first strategies (everything except http_static) can skip downloads entirely when versions haven't changed, making them ideal for scheduled CI/CD checks.</p>
+<h3 id="performance-characteristics">Performance Characteristics</h3>
+<p>Understanding when each strategy excels:</p>
+<p><strong>First Run (no cache):</strong></p>
+<ul>
+<li>All strategies: ~same performance (must download installer)</li>
+<li>Difference: url_regex/APIs know version before downloading</li>
+</ul>
+<p><strong>Scheduled Checks (version unchanged) - Most Common:</strong></p>
+<ul>
+<li><strong>url_regex</strong>: Instant (regex only, zero network calls)</li>
+<li><strong>github_release</strong>: ~100ms (GitHub API call)</li>
+<li><strong>http_json</strong>: ~100ms (vendor API call)</li>
+<li><strong>http_static</strong>: ~500ms+ (conditional HTTP request to CDN)</li>
+</ul>
+<p><strong>Version Changed:</strong></p>
+<ul>
+<li>All strategies: Must download installer (~same performance)</li>
+</ul>
+<p><strong>Recommendation</strong>: For CI/CD with scheduled checks, prefer version-first strategies (url_regex, github_release, http_json) when available. They can skip downloads entirely when nothing changed, dramatically reducing bandwidth and runtime.</p>
 <h2 id="cross-platform-support">Cross-Platform Support</h2>
 <p>NAPT works on Windows, Linux, and macOS with full feature parity.</p>
 <h3 id="platform-compatibility-matrix">Platform Compatibility Matrix</h3>
