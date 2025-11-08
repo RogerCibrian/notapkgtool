@@ -66,7 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Pytest markers (`@pytest.mark.unit`, `@pytest.mark.integration`, `@pytest.mark.network`)
 
 #### Documentation & Project Management
-- **ROADMAP.md** for tracking future features
+- **docs/roadmap.md** for tracking future features
   - Categorized by status (Ideas, Investigating, Ready, Completed, Declined)
   - Complexity and value assessments
   - Technical considerations and blockers
@@ -206,8 +206,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Documentation
 - Complete README with quick start guide
-- Comprehensive DOCUMENTATION.md
-- API documentation for all modules
+- MkDocs documentation site with user guide and API reference
+- Auto-generated API documentation from docstrings
 - Module-level docstrings with examples
 - Test suite documentation
 - Design rationale and decision explanations
