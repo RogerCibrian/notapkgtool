@@ -32,7 +32,7 @@ napt --version
 
 **Pros:** Lock file for reproducibility, isolated environments, dev dependencies included
 
-#### Option 2: pip (Simpler for End Users)
+#### Option 2: pip (Recommended for End Users)
 
 Best for users who just want to use the tool without extra tooling.
 
