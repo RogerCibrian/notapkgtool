@@ -2,31 +2,42 @@
 Discovery strategies for NAPT.
 
 This package provides a pluggable strategy pattern for discovering application
-versions and downloading installers from various sources. Each strategy knows
-how to fetch a specific type of source (static URL, GitHub releases, JSON API,
-etc.) and extract version information.
+versions and downloading installers from various sources. Strategies are divided
+into two types: version-first (can determine version without downloading) and
+file-first (must download to extract version).
 
 Strategy Pattern
 ----------------
-Discovery strategies implement the DiscoveryStrategy protocol which defines
-a single method: discover_version(app_config, output_dir). The strategy
-registry allows dynamic lookup and instantiation based on the strategy name
+Discovery strategies implement one of two approaches:
+
+VERSION-FIRST (url_regex, github_release, http_json):
+  - Implement get_version_info() -> VersionInfo
+  - Can determine version and download URL without downloading installer
+  - Core orchestration checks version first, then decides whether to download
+  - Enables zero-bandwidth update checks when version unchanged
+
+FILE-FIRST (http_static):
+  - Implement discover_version() -> tuple[DiscoveredVersion, Path, str, dict]
+  - Must download installer to extract version from file metadata
+  - Uses HTTP ETag conditional requests for efficiency
+
+The strategy registry allows dynamic lookup based on the strategy name
 in the recipe configuration.
 
 Available Strategies
 --------------------
-http_static : HttpStaticStrategy
+http_static : HttpStaticStrategy (FILE-FIRST)
     Download from a fixed URL and extract version from the file itself.
-    Supports MSI ProductVersion extraction.
-url_regex : UrlRegexStrategy
-    Extract version from URL patterns using regex, then download.
-    Fast version discovery without downloading first.
-github_release : GithubReleaseStrategy
+    Supports MSI ProductVersion extraction. Uses ETag caching.
+url_regex : UrlRegexStrategy (VERSION-FIRST)
+    Extract version from URL patterns using regex.
+    Instant version checks with zero network calls.
+github_release : GithubReleaseStrategy (VERSION-FIRST)
     Fetch from GitHub releases API and extract version from tags.
-    Supports asset pattern matching and authentication.
-http_json : HttpJsonStrategy
+    Fast API-based version checks (~100ms).
+http_json : HttpJsonStrategy (VERSION-FIRST)
     Query JSON API endpoints for version and download URL.
-    Supports JSONPath navigation and custom headers.
+    Fast API-based version checks (~100ms).
 
 Public API
 ----------

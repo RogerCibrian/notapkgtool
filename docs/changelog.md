@@ -11,7 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Discovery Performance Optimization** - Version-first strategies (url_regex, github_release, http_json) now check versions before downloading, enabling instant to ~100ms update checks when unchanged instead of full downloads
+- State file now saves actual download URLs for all strategies
+
 ### Fixed
+
+- Fixed ETag preservation bug causing alternating download/cached behavior in http_static strategy
 
 ## [0.2.0] - 2025-11-07
 
