@@ -291,7 +291,7 @@ source:
     file: "installer.msi"  # Optional
 ```
 
-**See also:** [`notapkgtool/discovery/http_static.py`](notapkgtool/discovery/http_static.py)
+> **📚 See also:** [`notapkgtool/discovery/http_static.py`](notapkgtool/discovery/http_static.py)
 
 #### url_regex
 
@@ -321,7 +321,7 @@ source:
     pattern: "app-v(?P<version>[0-9.]+)-setup"
 ```
 
-**See also:** [`notapkgtool/discovery/url_regex.py`](notapkgtool/discovery/url_regex.py)
+> **📚 See also:** [`notapkgtool/discovery/url_regex.py`](notapkgtool/discovery/url_regex.py)
 
 #### github_release
 
@@ -353,7 +353,7 @@ source:
   token: "${GITHUB_TOKEN}"                # Optional
 ```
 
-**See also:** [`notapkgtool/discovery/github_release.py`](notapkgtool/discovery/github_release.py)
+> **📚 See also:** [`notapkgtool/discovery/github_release.py`](notapkgtool/discovery/github_release.py)
 
 #### http_json
 
@@ -389,7 +389,7 @@ source:
     platform: "windows"
 ```
 
-**See also:** [`notapkgtool/discovery/http_json.py`](notapkgtool/discovery/http_json.py)
+> **📚 See also:** [`notapkgtool/discovery/http_json.py`](notapkgtool/discovery/http_json.py)
 
 ### Decision Guide
 
@@ -720,13 +720,73 @@ source:
 
 ### Installation
 
-```bash
-# Install dependencies
-pip install pyyaml requests
+**Prerequisites:**
+- Python 3.11 or higher
+- Git
 
-# On Linux, install msitools for MSI support
-sudo apt-get install msitools
+**Choose your installation method:**
+
+#### Option 1: Poetry (Recommended for Development)
+
+Best for contributors and developers who want reproducible builds and dependency management.
+
+**Prerequisites:** Poetry must be installed. See [Poetry Installation Guide](https://python-poetry.org/docs/#installation)
+
+```bash
+# Clone and install
+git clone https://github.com/RogerCibrian/notapkgtool.git
+cd notapkgtool
+poetry install
+
+# Activate virtual environment
+poetry shell
+
+# Verify installation
+napt --version
 ```
+
+**Pros:** Lock file for reproducibility, isolated environments, dev dependencies included  
+**Cons:** Requires Poetry installation (one-time setup)
+
+**Alternative - Run commands without shell activation:**
+```bash
+# Instead of 'poetry shell', use 'poetry run' prefix
+poetry run napt --version
+poetry run pytest
+```
+
+#### Option 2: pip (Simpler for End Users)
+
+Best for users who just want to use the tool without extra tooling.
+
+```bash
+# Clone and install
+git clone https://github.com/RogerCibrian/notapkgtool.git
+cd notapkgtool
+pip install -e .
+
+# Verify installation
+napt --version
+```
+
+**Pros:** No additional tools needed, familiar to all Python users  
+**Cons:** No automatic dev dependencies, manual dependency management
+
+#### Platform-Specific Requirements
+
+On **Linux/macOS**, install msitools for MSI version extraction:
+```bash
+# Debian/Ubuntu
+sudo apt-get install msitools
+
+# RHEL/Fedora
+sudo dnf install msitools
+
+# macOS
+brew install msitools
+```
+
+On **Windows**, no additional dependencies are required (uses PowerShell COM API for MSI extraction).
 
 ### Commands Overview
 

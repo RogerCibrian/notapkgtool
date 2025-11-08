@@ -27,13 +27,61 @@ NAPT is a Python-based CLI tool that automates the entire workflow for packaging
 
 ### Installation
 
-```bash
-# Install dependencies
-pip install pyyaml requests
+**Prerequisites:**
+- Python 3.11 or higher
+- Git
 
-# On Linux, install msitools for MSI support
-sudo apt-get install msitools  # Debian/Ubuntu
+**Choose your installation method:**
+
+#### Option 1: Poetry (Recommended for Development)
+
+Best for contributors and developers who want reproducible builds and dependency management.
+
+**Prerequisites:** Poetry must be installed. See [Poetry Installation Guide](https://python-poetry.org/docs/#installation)
+
+```bash
+# Clone and install
+git clone https://github.com/RogerCibrian/notapkgtool.git
+cd notapkgtool
+poetry install
+
+# Activate virtual environment
+poetry shell
+
+# Verify installation
+napt --version
 ```
+
+#### Option 2: pip (Simpler for End Users)
+
+Best for users who just want to use the tool without extra tooling.
+
+```bash
+# Clone and install
+git clone https://github.com/RogerCibrian/notapkgtool.git
+cd notapkgtool
+pip install -e .
+
+# Verify installation
+napt --version
+```
+
+
+#### Platform-Specific Requirements
+
+On **Linux/macOS**, install msitools for MSI version extraction:
+```bash
+# Debian/Ubuntu
+sudo apt-get install msitools
+
+# RHEL/Fedora
+sudo dnf install msitools
+
+# macOS
+brew install msitools
+```
+
+On **Windows**, no additional dependencies are required (uses PowerShell COM API for MSI extraction).
 
 ### Validate a Recipe
 
@@ -88,50 +136,7 @@ napt package builds/napt-chrome/141.0.7390.123/
 napt package builds/napt-chrome/141.0.7390.123/ --output-dir ./packages --clean-source
 ```
 
-### Output Modes
-
-NAPT supports three output verbosity levels:
-
-**Normal Mode** (default):
-- Clean, minimal output with step indicators
-- Download progress bar
-- Final results summary
-
-**Verbose Mode** (`-v` or `--verbose`):
-- Configuration loading details
-- HTTP request/response information
-- File operations and SHA-256 hashes
-- Version extraction details
-
-**Debug Mode** (`-d` or `--debug`):
-- All verbose output
-- Complete YAML configuration dumps
-- Backend selection details (e.g., MSI extraction methods)
-- Full troubleshooting information
-
-### Example Output
-
-```
-Discovering version for recipe: recipes/Google/chrome.yaml
-Output directory: ./downloads
-
-download progress: 100%
-download complete: googlechromestandaloneenterprise64.msi (f8f4a...) in 1.2s
-======================================================================
-DISCOVERY RESULTS
-======================================================================
-App Name:        Google Chrome
-App ID:          napt-chrome
-Strategy:        http_static
-Version:         141.0.7390.123
-Version Source:  msi_product_version_from_file
-File Path:       ./downloads/googlechromestandaloneenterprise64.msi
-SHA-256:         f8f4aedf10183d73ef7fe34488924d8e324bfb34a544bb1f2c43d2b1b0b4c797
-Status:          success
-======================================================================
-
-[SUCCESS] Version discovered successfully!
-```
+> **💡 Tip:** Add `--verbose` or `--debug` flags to any command for detailed output
 
 ## 📖 Documentation
 
@@ -141,88 +146,18 @@ Status:          success
 
 ## 🏗️ Architecture
 
-### Project Structure
+NAPT uses a modular architecture with key design patterns:
 
-```
-notapkgtool/
-├── cli.py                 # Command-line interface (argparse)
-├── core.py                # High-level orchestration
-├── config/
-│   └── loader.py          # YAML loading and 3-layer merging
-├── discovery/
-│   ├── base.py            # Strategy protocol and registry
-│   ├── http_static.py     # Static URL downloads
-│   └── url_regex.py       # URL regex discovery strategy
-├── versioning/
-│   ├── keys.py            # Version comparison (semver, numeric)
-│   ├── msi.py             # MSI ProductVersion extraction
-│   └── url_regex.py       # URL regex extraction helper
-├── io/
-│   ├── download.py        # Robust HTTP downloads with retries
-│   └── upload.py          # Upload adapters (planned)
-└── policy/
-    └── updates.py         # Update policies and waves (planned)
-```
+- **3-Layer Configuration** - Organization → Vendor → Recipe inheritance with deep merging
+- **Strategy Pattern** - Pluggable discovery strategies (http_static, url_regex, github_release, http_json)
+- **State Tracking** - ETag-based caching for efficient conditional downloads
+- **Cross-Platform** - Native Windows support, Linux/macOS via msitools
 
-### Configuration Layers
-
-NAPT uses a sophisticated 3-layer configuration system:
-
-1. **Organization defaults** (`defaults/org.yaml`) - Base settings for all apps
-2. **Vendor defaults** (`defaults/vendors/<Vendor>.yaml`) - Vendor-specific overrides
-3. **Recipe configuration** (`recipes/<Vendor>/<app>.yaml`) - App-specific settings
-
-Configurations are deep-merged with "last wins" semantics.
-
-### Discovery Strategies
-
-Pluggable strategies for obtaining application installers:
-
-- **`http_static`** ✅ - Download from fixed URLs, extract version from file
-- **`url_regex`** ✅ - Extract version from URL patterns before download
-- **`github_release`** ✅ - Fetch from GitHub releases API with asset matching
-- **`http_json`** ✅ - Query JSON API endpoints with JSONPath navigation
-
-> **📚 For detailed comparison, configuration reference, and decision guide, see the [Discovery Strategies](DOCUMENTATION.md#discovery-strategies) section in DOCUMENTATION.md**
+> **📚 See [DOCUMENTATION.md](DOCUMENTATION.md) for detailed architecture, API reference, and configuration guides**
 
 ## 💻 Programmatic API
 
-```python
-from pathlib import Path
-from notapkgtool.core import discover_recipe
-from notapkgtool.config import load_effective_config
-from notapkgtool.validation import validate_recipe
-from notapkgtool.versioning import compare_any, is_newer_any
-
-# Validate recipe syntax (no downloads)
-result = validate_recipe(
-    recipe_path=Path("recipes/Google/chrome.yaml"),
-    verbose=True
-)
-print(f"Status: {result['status']}")
-
-# Discover version and download installer
-result = discover_recipe(
-    recipe_path=Path("recipes/Google/chrome.yaml"),
-    output_dir=Path("./downloads"),
-    verbose=True
-)
-print(f"Version: {result['version']}")
-
-# Discover with debug output
-result = discover_recipe(
-    recipe_path=Path("recipes/Google/chrome.yaml"),
-    output_dir=Path("./downloads"),
-    debug=True
-)
-
-# Load configuration
-config = load_effective_config(Path("recipes/Google/chrome.yaml"))
-
-# Compare versions
-if is_newer_any("1.2.0", "1.1.9"):
-    print("Update available!")
-```
+NAPT can be used as a Python library. See the [Programmatic API](DOCUMENTATION.md#programmatic-api) section in DOCUMENTATION.md for code examples and detailed usage.
 
 ## 🌍 Cross-Platform Support
 
@@ -232,100 +167,38 @@ if is_newer_any("1.2.0", "1.1.9"):
 | **Linux** | ✅ | ✅ | ✅ | ✅ Via msitools | Fully Supported |
 | **macOS** | ✅ | ✅ | ✅ | ✅ Via msitools | Fully Supported |
 
-### MSI Extraction Backends
-
-**Windows** (tried in order):
-1. `msilib` (Python standard library)
-2. `_msi` (CPython extension)
-3. **PowerShell COM** (always available, universal fallback)
-
-**Linux/macOS**:
-1. `msiinfo` from msitools package
-
 ## 🔧 Development
 
-### Requirements
-
-- Python 3.11+
-- `pyyaml` >= 6.0.2
-- `requests` >= 2.32
-
-### Code Quality
-
 ```bash
-# Format code
-black notapkgtool/
+# Clone and install with dev dependencies
+git clone https://github.com/RogerCibrian/notapkgtool.git
+cd notapkgtool
+poetry install
 
-# Lint code
-ruff check notapkgtool/
-
-# Run tests
-pytest tests/
+# Run code quality checks
+poetry run black notapkgtool/
+poetry run ruff check --fix notapkgtool/
+poetry run pytest tests/
 ```
+
+**Tip:** Use `poetry shell` to activate the environment, or prefix commands with `poetry run`
 
 ## 📝 Creating Recipes
 
-Create a recipe YAML file in `recipes/<Vendor>/<app>.yaml`:
+Recipes are declarative YAML files that define how to discover, download, and package applications.
 
-### HTTP Static Strategy
+**Example recipes:**
+- **[chrome.yaml](recipes/Google/chrome.yaml)** - HTTP static strategy with MSI version extraction
+- **[git.yaml](recipes/Git/git.yaml)** - GitHub release strategy with asset pattern matching
+- **[json-api-example.yaml](recipes/Examples/json-api-example.yaml)** - HTTP JSON API strategy
 
-```yaml
-apiVersion: napt/v1
+**Supported discovery strategies:**
+- `http_static` - Fixed URLs, version from file
+- `url_regex` - Extract version from URL patterns
+- `github_release` - GitHub releases API
+- `http_json` - JSON API endpoints with JSONPath
 
-apps:
-  - name: "Google Chrome"
-    id: "napt-chrome"
-    
-    source:
-      strategy: http_static
-      url: "https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi"
-      version:
-        type: msi_product_version_from_file
-    
-    psadt:
-      app_vars:
-        AppName: "Google Chrome"
-        AppVersion: "${discovered_version}"
-        AppArch: "x64"
-      install: |
-        Start-ADTMsiProcess `
-          -Path "$dirFiles\googlechromestandaloneenterprise64.msi" `
-          -Parameters "ALLUSERS=1" `
-          -MsiParameters "/qn /norestart"
-      uninstall: |
-        $app = Get-InstalledApplication -Name "Google Chrome" -Exact
-        if ($app -and $app.ProductCode) {
-          Start-ADTMsiProcess -ProductCode $app.ProductCode `
-            -MsiParameters "/qn /norestart" -Action Uninstall
-        }
-```
-
-### GitHub Release Strategy
-
-```yaml
-apiVersion: napt/v1
-
-apps:
-  - name: "Git for Windows"
-    id: "napt-git"
-    
-    source:
-      strategy: github_release
-      repo: "git-for-windows/git"
-      asset_pattern: "Git-.*-64-bit\\.exe$"
-      version_pattern: "v?([0-9.]+)\\.windows"
-    
-    psadt:
-      app_vars:
-        AppName: "Git for Windows"
-        AppVersion: "${discovered_version}"
-        AppArch: "x64"
-      install: |
-        Execute-Process `
-          -Path "$dirFiles\Git-${discovered_version}-64-bit.exe" `
-          -Parameters "/VERYSILENT /NORESTART" `
-          -WindowStyle Hidden
-```
+> **📚 See [Discovery Strategies](DOCUMENTATION.md#discovery-strategies) in DOCUMENTATION.md for detailed configuration reference and examples**
 
 ## 🗺️ Roadmap
 

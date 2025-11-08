@@ -5,13 +5,28 @@ description = "NAPT - Not a Pkg Tool for Windows/Intune packaging with PSADT"
 authors = ["Roger Cibrian"]
 license = "GPL-3.0-only"
 readme = "README.md"
+homepage = "https://github.com/RogerCibrian/notapkgtool"
+repository = "https://github.com/RogerCibrian/notapkgtool"
+documentation = "https://github.com/RogerCibrian/notapkgtool/blob/main/DOCUMENTATION.md"
+keywords = ["intune", "psadt", "packaging", "windows", "deployment", "automation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Software Distribution",
+]
 packages = [{ include = "notapkgtool" }]
 
 [tool.poetry.dependencies]
 # support 3.11+ with no upper bound - the codebase uses stable APIs
 python = ">=3.11"
 requests = "^2.32"
-pyyaml = ">=6.0.2,<7.0.0"
+pyyaml = "^6.0.2"
 jsonpath-ng = "^1.6.1"
 
 [tool.poetry.group.dev.dependencies]

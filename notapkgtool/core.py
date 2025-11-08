@@ -17,10 +17,14 @@ discover_recipe : function
     Discover the latest version and download installer.
     This is the entry point for the 'napt discover' command.
 
-Related Functions (in other modules):
-    validate_recipe : notapkgtool.validation - Validate recipe syntax
-    build_package : notapkgtool.build - Build PSADT package from recipe
-    create_intunewin : notapkgtool.build - Create .intunewin package
+See Also
+--------
+validate_recipe : notapkgtool.validation
+    Validate recipe syntax without downloads.
+build_package : notapkgtool.build
+    Build PSADT package from recipe and installer.
+create_intunewin : notapkgtool.build
+    Create .intunewin package for Intune deployment.
 
 Future orchestration functions:
     upload_package : Upload a built package to Microsoft Intune
