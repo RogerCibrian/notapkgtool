@@ -84,7 +84,7 @@ class DiscoveryStrategy(Protocol):
         Parameters
         ----------
         app_config : dict
-            The app configuration from the recipe (config["apps"][0]).
+            The app configuration from the recipe (`config["apps"][0]`).
         output_dir : Path
             Directory to download the installer to.
 
@@ -114,7 +114,7 @@ class DiscoveryStrategy(Protocol):
         Parameters
         ----------
         app_config : dict
-            The app configuration from the recipe (config["apps"][0]).
+            The app configuration from the recipe (`config["apps"][0]`).
 
         Returns
         -------
