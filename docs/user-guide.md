@@ -8,17 +8,11 @@ NAPT uses a sophisticated 3-layer configuration system that promotes DRY (Don't 
 
 ### The Three Layers
 
-1. **Organization defaults** (`defaults/org.yaml`) - Base configuration for all apps
-   - PSADT settings, update policies, deployment waves
-   - Required if a defaults directory is found
+1. **Organization defaults** (`defaults/org.yaml`) - Base configuration for all apps. Required if a defaults directory is found. Contains PSADT settings, update policies, and deployment waves.
 
-2. **Vendor defaults** (`defaults/vendors/<Vendor>.yaml`) - Vendor-specific overrides
-   - Optional; only loaded if vendor is detected
-   - Example: Google-specific settings
+2. **Vendor defaults** (`defaults/vendors/<Vendor>.yaml`) - Vendor-specific overrides. Optional; only loaded if vendor is detected (e.g., Google-specific settings).
 
-3. **Recipe configuration** (`recipes/<Vendor>/<app>.yaml`) - App-specific settings
-   - Always required; defines the specific app
-   - Final overrides
+3. **Recipe configuration** (`recipes/<Vendor>/<app>.yaml`) - App-specific settings. Always required; defines the specific app with final overrides.
 
 ### Merge Behavior
 
@@ -55,6 +49,103 @@ apps:
     # release will be "latest" (from org defaults)
 ```
 
+## Commands Reference
+
+### napt validate
+
+Validates recipe syntax and configuration without making network calls.
+
+```bash
+napt validate recipes/Google/chrome.yaml [--verbose]
+```
+
+**Purpose:**
+
+- Quick feedback during recipe development
+- CI/CD pre-checks
+- Syntax validation
+
+**What it checks:**
+
+- YAML syntax is valid
+- Required fields present (apiVersion, apps, source)
+- Discovery strategy exists and is registered
+- Strategy-specific configuration is valid
+
+**What it doesn't check:**
+
+- URLs are accessible
+- Files can be downloaded
+- Version extraction will work
+
+### napt discover
+
+Discovers the latest version by downloading the installer and extracting version information.
+
+```bash
+napt discover recipes/Google/chrome.yaml [OPTIONS]
+
+Options:
+  --output-dir DIR      Download directory (default: ./downloads)
+  --state-file FILE     State file path (default: state/versions.json)
+  --stateless           Disable state tracking
+  -v, --verbose         Show progress and status updates
+  -d, --debug           Show detailed debugging output
+```
+
+**Features:**
+
+- ✅ Discovers version using configured strategy
+- ✅ Downloads installer (or HTTP 304 if cached)
+- ✅ Extracts version from downloaded file
+- ✅ Updates state file with ETag caching
+- ✅ SHA-256 hash verification
+
+### napt build
+
+Builds a complete PSADT package from a recipe and downloaded installer.
+
+```bash
+napt build recipes/Google/chrome.yaml [OPTIONS]
+
+Options:
+  --downloads-dir DIR   Installer directory (default: ./downloads)
+  --output-dir DIR      Build output directory (default: ./builds)
+  -v, --verbose         Show progress
+  -d, --debug           Show detailed output
+```
+
+**Features:**
+
+- ✅ Downloads PSADT release from GitHub (or uses cached version)
+- ✅ Extracts version from installer file
+- ✅ Generates Invoke-AppDeployToolkit.ps1 from template
+- ✅ Merges organization defaults with recipe-specific values
+- ✅ Inserts recipe install/uninstall code
+- ✅ Applies custom branding (logo, banner)
+- ✅ Creates versioned build directories
+
+### napt package
+
+Creates a .intunewin package from a built PSADT directory.
+
+```bash
+napt package BUILD_DIR [OPTIONS]
+
+Options:
+  --output-dir DIR      Output directory (default: packages/{app_id}/)
+  --clean-source        Remove build directory after packaging
+  -v, --verbose         Show progress
+  -d, --debug           Show detailed output
+```
+
+**Features:**
+
+- ✅ Downloads IntuneWinAppUtil.exe (or uses cached version)
+- ✅ Validates build structure before packaging
+- ✅ Creates .intunewin file for Intune deployment
+- ✅ Optional source cleanup
+
 ## State Management & Caching
 
 NAPT automatically tracks discovered versions and optimizes subsequent runs by avoiding unnecessary downloads.
@@ -64,19 +155,14 @@ NAPT automatically tracks discovered versions and optimizes subsequent runs by a
 **Version-First Strategies** (url_regex, github_release, http_json):
 
 1. **First Run**: Discovers version, downloads file, saves version and hash to `state/versions.json`
-2. **Subsequent Runs**: 
-   - Discovers version (API call, regex, etc.)
-   - Compares to cached `known_version`
-   - If match and file exists → **Done!** No download needed
-   - If different → Downloads new version
+
+2. **Subsequent Runs**: Discovers version (API call, regex, etc.), compares to cached `known_version`. If match and file exists → **Done!** No download needed. If different → Downloads new version.
 
 **File-First Strategy** (http_static):
 
 1. **First Run**: Downloads file with ETag, extracts version, saves ETag to `state/versions.json`
-2. **Subsequent Runs**:
-   - Makes conditional HTTP request with cached ETag (`If-None-Match` header)
-   - Server responds with `HTTP 304 Not Modified` → Uses cached file
-   - Server responds with `HTTP 200 OK` → Downloads new version, updates state
+
+2. **Subsequent Runs**: Makes conditional HTTP request with cached ETag (`If-None-Match` header). Server responds with `HTTP 304 Not Modified` → Uses cached file, or `HTTP 200 OK` → Downloads new version and updates state.
 
 ### Default Behavior (Stateful)
 
@@ -267,103 +353,6 @@ NAPT works on Windows, Linux, and macOS with full feature parity.
 1. `msiinfo` from msitools package
 
 The PowerShell fallback makes MSI extraction truly universal on Windows systems, even when Python MSI libraries aren't available.
-
-## Commands Reference
-
-### napt validate
-
-Validates recipe syntax and configuration without making network calls.
-
-```bash
-napt validate recipes/Google/chrome.yaml [--verbose]
-```
-
-**Purpose:**
-
-- Quick feedback during recipe development
-- CI/CD pre-checks
-- Syntax validation
-
-**What it checks:**
-
-- YAML syntax is valid
-- Required fields present (apiVersion, apps, source)
-- Discovery strategy exists and is registered
-- Strategy-specific configuration is valid
-
-**What it doesn't check:**
-
-- URLs are accessible
-- Files can be downloaded
-- Version extraction will work
-
-### napt discover
-
-Discovers the latest version by downloading the installer and extracting version information.
-
-```bash
-napt discover recipes/Google/chrome.yaml [OPTIONS]
-
-Options:
-  --output-dir DIR      Download directory (default: ./downloads)
-  --state-file FILE     State file path (default: state/versions.json)
-  --stateless           Disable state tracking
-  -v, --verbose         Show progress and status updates
-  -d, --debug           Show detailed debugging output
-```
-
-**Features:**
-
-- ✅ Discovers version using configured strategy
-- ✅ Downloads installer (or HTTP 304 if cached)
-- ✅ Extracts version from downloaded file
-- ✅ Updates state file with ETag caching
-- ✅ SHA-256 hash verification
-
-### napt build
-
-Builds a complete PSADT package from a recipe and downloaded installer.
-
-```bash
-napt build recipes/Google/chrome.yaml [OPTIONS]
-
-Options:
-  --downloads-dir DIR   Installer directory (default: ./downloads)
-  --output-dir DIR      Build output directory (default: ./builds)
-  -v, --verbose         Show progress
-  -d, --debug           Show detailed output
-```
-
-**Features:**
-
-- ✅ Downloads PSADT release from GitHub (or uses cached version)
-- ✅ Extracts version from installer file
-- ✅ Generates Invoke-AppDeployToolkit.ps1 from template
-- ✅ Merges organization defaults with recipe-specific values
-- ✅ Inserts recipe install/uninstall code
-- ✅ Applies custom branding (logo, banner)
-- ✅ Creates versioned build directories
-
-### napt package
-
-Creates a .intunewin package from a built PSADT directory.
-
-```bash
-napt package BUILD_DIR [OPTIONS]
-
-Options:
-  --output-dir DIR      Output directory (default: packages/{app_id}/)
-  --clean-source        Remove build directory after packaging
-  -v, --verbose         Show progress
-  -d, --debug           Show detailed output
-```
-
-**Features:**
-
-- ✅ Downloads IntuneWinAppUtil.exe (or uses cached version)
-- ✅ Validates build structure before packaging
-- ✅ Creates .intunewin file for Intune deployment
-- ✅ Optional source cleanup
 
 ## Programmatic API
 

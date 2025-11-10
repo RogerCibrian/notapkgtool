@@ -45,15 +45,48 @@ napt package builds/napt-chrome/141.0.7390.123/
 
 Ready to get started? Check out the [Quick Start Guide](quick-start.md) for installation instructions and your first steps with NAPT.
 
-## Architecture
+## How It Works
 
-NAPT uses a modular architecture with key design patterns:
+NAPT automates the complete packaging workflow with intelligent caching to skip unnecessary work:
 
-- **3-Layer Configuration** - Organization → Vendor → Recipe inheritance with deep merging
-- **Strategy Pattern** - Pluggable discovery strategies with version-first and file-first approaches
-- **Version-First Optimization** - Skip downloads entirely when versions unchanged (url_regex, github_release, http_json)
-- **File-First Fallback** - ETag-based conditional requests when version must be extracted from file (http_static)
-- **Cross-Platform** - Native Windows support, Linux/macOS via msitools
+```mermaid
+flowchart TD
+    Start([napt discover]) --> LoadRecipe[Load Recipe YAML]
+    LoadRecipe --> CheckCache{Cached Version<br/>Exists?}
+    
+    CheckCache -->|Yes - Check for Updates| DiscoverNew[Discover Latest Version]
+    DiscoverNew --> CompareVersion{Version<br/>Changed?}
+    
+    CompareVersion -->|No - Unchanged| CheckFile{File<br/>Exists?}
+    CheckFile -->|Yes| AlreadyCurrent([✓ Already Current<br/>No action needed])
+    CheckFile -->|No| DownloadSame[Download Missing Installer]
+    DownloadSame --> UpdateState1[Update state.json]
+    UpdateState1 --> AlreadyCurrent2([✓ Already Current<br/>Installer restored])
+    
+    CompareVersion -->|Yes - New Version| DownloadNew[Download New Installer]
+    DownloadNew --> UpdateState2[Update state.json]
+    UpdateState2 --> BuildReady2([✓ Ready for napt build])
+    
+    CheckCache -->|No - First Run| DiscoverFirst[Discover Version]
+    DiscoverFirst --> DownloadFirst[Download Installer]
+    DownloadFirst --> CreateState[Create state.json]
+    CreateState --> BuildReady3([✓ Ready for napt build])
+    
+    BuildReady2 --> Build([napt build])
+    BuildReady3 --> Build
+    
+    Build --> GeneratePSADT[Generate PSADT Package]
+    GeneratePSADT --> Package([napt package])
+    Package --> CreateIntune[Create .intunewin]
+    CreateIntune --> Ready([✓ Ready for Upload])
+```
+
+**Note:** This diagram shows the typical flow for **version-first strategies** (url_regex, github_release, http_json), where version is discovered before downloading. The **file-first strategy** (http_static) uses a different approach: it downloads the file first (using HTTP ETag conditional requests), then extracts the version from the downloaded file.
+
+**Key Optimizations:**
+
+- **Version-First Strategies** (url_regex, github_release, http_json): Check version via API/regex before downloading - if unchanged and file exists, skip download entirely (instant to ~100ms)
+- **File-First Strategy** (http_static): Use HTTP ETag conditional requests - if server returns 304 Not Modified, use cached file (~500ms)
 
 See the [User Guide](user-guide.md) for detailed architecture information and the [API Reference](api/core.md) for code-level documentation.
 
