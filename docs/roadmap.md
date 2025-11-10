@@ -9,7 +9,8 @@ This roadmap is a living document showing potential future directions for NAPT. 
 - New insights from development experience
 - Community contributions
 
-**Status Legend**:
+**Status Legend:**
+
 - 💡 **Idea**: Unformed thought, needs refinement
 - 🔬 **Investigating**: Researching feasibility/approach
 - 📋 **Ready**: Well-defined, ready for implementation
@@ -38,6 +39,29 @@ This roadmap is a living document showing potential future directions for NAPT. 
 - Better developer experience
 
 **Related**: TODO in `notapkgtool/build/packager.py` - discovered during testing
+
+---
+
+### Recipe Creation Tutorial
+**Status**: 💡 Idea  
+**Complexity**: Low (1-2 days)  
+**Value**: High
+
+**Description**: Step-by-step tutorial for creating recipes from scratch.
+
+**Potential Content**:
+- Recipe structure and required fields
+- Choosing the right discovery strategy
+- Testing recipes with napt validate/discover
+- Common patterns and examples
+- Troubleshooting tips
+
+**Benefits**:
+- Lower barrier to entry for new users
+- Reduces trial-and-error in recipe development
+- Consolidates recipe knowledge in one place
+
+**Waiting On**: Recipe schema stabilization and user feedback on patterns
 
 ---
 
@@ -324,8 +348,6 @@ psadt:
 
 ### Built-in PR Creation
 **Reason**: NAPT should focus on discovery and packaging. Git operations and PR creation should remain in CI/CD workflows (GitHub Actions, etc.). This keeps NAPT platform-agnostic and focused on its core mission.
-
-**Documentation**: Documented in `.cursor/rules/napt-mission.mdc`
 
 ---
 
