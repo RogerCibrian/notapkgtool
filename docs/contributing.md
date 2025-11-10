@@ -102,12 +102,13 @@ git push origin feature/your-feature-name
 #### Creating a Pull Request
 
 1. Push your branch to GitHub
+
 2. Create a Pull Request on GitHub
-3. Fill out the description with:
-   - What the PR does
-   - Why the change is needed
-   - How it was tested
+
+3. Fill out the description with what the PR does, why the change is needed, and how it was tested
+
 4. Request review from maintainers
+
 5. Address any feedback
 
 #### After Merge
@@ -166,13 +167,11 @@ git commit -m "docs: add examples for Linux MSI extraction"
 All code must include:
 
 1. **Module-level docstrings** - Explain purpose, features, and design decisions
-2. **Function docstrings** - Use Google-style format with:
-   - Summary
-   - Parameters section with types
-   - Returns section with type
-   - Raises section for exceptions
-   - Examples where helpful
+
+2. **Function docstrings** - Use Google-style format with summary, Args, Returns, Raises, and Example sections
+
 3. **Type annotations** - Full coverage for public APIs
+
 4. **Comments** - Explain "why" not "what"
 
 ### Code Style
