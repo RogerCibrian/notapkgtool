@@ -4,56 +4,24 @@ Robust HTTP(S) file download for NAPT.
 This module provides production-grade file downloading with features designed
 for reliability, reproducibility, and efficiency in automated packaging workflows.
 
-Key Features
-------------
-1. **Retry Logic with Exponential Backoff**
-   - Automatically retries on transient failures (429, 500, 502, 503, 504)
-   - Exponential backoff prevents overwhelming failing servers
-   - Configurable via urllib3.util.Retry
+Key Features:
 
-2. **Conditional Requests (HTTP 304 Not Modified)**
-   - Supports ETag and Last-Modified headers
-   - Avoids re-downloading unchanged files
-   - Essential for incremental builds and bandwidth efficiency
+- **Retry Logic with Exponential Backoff** - Automatically retries on transient failures (429, 500, 502, 503, 504) with exponential backoff. Configurable via urllib3.util.Retry.
+- **Conditional Requests (HTTP 304 Not Modified)** - Supports ETag and Last-Modified headers to avoid re-downloading unchanged files.
+- **Atomic Writes** - Downloads to temporary .part files with atomic rename on success to prevent partial files.
+- **Integrity Verification** - SHA-256 hashing during download with optional checksum validation. Corrupted files are automatically removed.
+- **Smart Filename Detection** - Respects Content-Disposition headers, falls back to URL path, handles edge cases.
+- **Stable ETags** - Forces Accept-Encoding: identity to avoid representation-specific ETags and prevent false cache misses.
 
-3. **Atomic Writes**
-   - Downloads to temporary .part files
-   - Atomic rename on success prevents partial files
-   - Safe for concurrent or interrupted operations
+Exception Classes:
 
-4. **Integrity Verification**
-   - SHA-256 hashing during download (no extra file read)
-   - Optional checksum validation
-   - Corrupted files are automatically removed
+- NotModifiedError: Raised when conditional request returns HTTP 304 (not an error condition).
 
-5. **Smart Filename Detection**
-   - Respects Content-Disposition headers
-   - Falls back to URL path
-   - Handles edge cases (empty paths, query strings)
+Constants:
 
-6. **Stable ETags**
-   - Forces Accept-Encoding: identity to avoid representation-specific ETags
-   - Prevents false cache misses when CDN switches compression
+- DEFAULT_CHUNK (int): Stream chunk size (1 MiB). Balance memory vs. progress granularity.
 
-Functions
----------
-download_file : function
-    Main entry point for downloading files with all features.
-make_session : function
-    Create a requests.Session with sane retry/backoff defaults.
-
-Exceptions
-----------
-NotModifiedError : exception
-    Raised when conditional request returns HTTP 304 (not an error condition).
-
-Constants
----------
-DEFAULT_CHUNK : int
-    Stream chunk size (1 MiB). Balance memory vs. progress granularity.
-
-Examples
---------
+Example:
 Basic download:
 
     >>> from pathlib import Path
@@ -87,8 +55,7 @@ Checksum validation:
     ... except ValueError as e:
     ...     print(f"Checksum mismatch: {e}")
 
-Design Decisions
-----------------
+Design Decisions:
 - **Why identity encoding?** CDNs like Cloudflare compute representation-specific
   ETags. Requesting gzip vs identity yields different ETags for the same content,
   causing unnecessary re-downloads. We pin to identity for stability.
@@ -100,8 +67,7 @@ Design Decisions
 - **Why stream hashing?** Computing SHA-256 while streaming avoids a second
   file read, improving I/O efficiency especially for large installers.
 
-Notes
------
+Notes:
 - Progress output goes to stdout (can be captured/redirected)
 - User-Agent identifies NAPT to help with debugging/support
 - All HTTP errors are chained for better debugging
@@ -175,6 +141,7 @@ def make_session() -> requests.Session:
     - Sets a helpful User-Agent to avoid being blocked.
 
     Notes on Accept-Encoding:
+
     - We force 'Accept-Encoding: identity' to request the raw (uncompressed) bytes.
     - Many CDNs compute representation-specific ETags (e.g., gzip vs identity).
       That can cause conditional requests (If-None-Match) to miss and trigger
@@ -214,33 +181,33 @@ def download_file(
     verbose: bool = False,
     debug: bool = False,
 ) -> tuple[Path, str, dict]:
-    """
-    Download a URL to destination_folder with robustness and reproducibility.
+    """Download a URL to destination_folder with robustness and reproducibility.
 
-    Behavior
-    - Follows redirects and retries transient failures.
-    - If validate_content_type=True, rejects text/html (helps catch "download page" instead of a file).
-    - Writes to <filename>.part then renames to <filename> on success (atomic).
-    - Returns (final_path, sha256, response_headers_dict).
-    - If 'expected_sha256' is set, validates and raises on mismatch (removes corrupt file).
-    - If 'etag' and/or 'last_modified' are given, sends conditional headers. A 304 causes NotModifiedError.
+    Follows redirects and retries transient failures. Writes to <filename>.part
+    then renames to <filename> on success (atomic). Sends conditional headers
+    if etag/last_modified provided. Validates checksum if expected_sha256 is set.
 
-    Parameters
-    - url: Source URL.
-    - destination_folder: Folder to save into (created if missing).
-    - expected_sha256: Optional known SHA-256 (hex). If set and mismatched, raises ValueError.
-    - validate_content_type: If True, rejects responses with text/html content-type.
-    - timeout: Per-request timeout (seconds).
-    - etag: Previous ETag to use for If-None-Match (conditional GET).
-    - last_modified: Previous Last-Modified to use for If-Modified-Since (conditional GET).
+    Args:
+        url: Source URL.
+        destination_folder: Folder to save into (created if missing).
+        expected_sha256: Optional known SHA-256 (hex). If set and mismatched,
+            raises ValueError.
+        validate_content_type: If True, rejects responses with text/html content-type.
+        timeout: Per-request timeout (seconds).
+        etag: Previous ETag to use for If-None-Match (conditional GET).
+        last_modified: Previous Last-Modified to use for If-Modified-Since (conditional GET).
+        verbose: Print verbose progress.
+        debug: Print debug information.
 
-    Returns
-    - (Path, sha256_hex, headers_dict)
+    Returns:
+        A tuple (file_path, sha256_hex, headers_dict), where file_path is
+            the Path to the downloaded file, sha256_hex is the SHA-256 hash
+            of the file, and headers_dict contains HTTP response headers.
 
-    Raises
-    - NotModifiedError on HTTP 304 (conditional request satisfied).
-    - requests.HTTPError for non-2xx (after retries).
-    - ValueError for content-type mismatch or checksum mismatch.
+    Raises:
+        NotModifiedError: On HTTP 304 (conditional request satisfied).
+        requests.HTTPError: For non-2xx responses (after retries).
+        ValueError: For content-type mismatch or checksum mismatch.
     """
     from notapkgtool.cli import print_verbose
 

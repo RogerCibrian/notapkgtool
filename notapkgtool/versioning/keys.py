@@ -1,16 +1,18 @@
-"""
-Core version comparison utilities for NAPT.
+"""Core version comparison utilities for NAPT.
 
 This module is format-agnostic: it does NOT download or read files.
 It only parses and compares version strings consistently across sources
 (MSI, EXE, generic strings).
 
 Public API:
-- DiscoveredVersion: container for version discovered from downloaded files (file-first).
-- VersionInfo: container for version discovered without downloading (version-first).
+
+- DiscoveredVersion: container for version discovered from downloaded files
+    (file-first).
+- VersionInfo: container for version discovered without downloading
+    (version-first).
 - version_key_any(): build a comparable key for any version string.
-- compare_any():     tri-state compare (-1, 0, 1).
-- is_newer_any():    True if remote > current.
+- compare_any(): tri-state compare (-1, 0, 1).
+- is_newer_any(): True if remote > current.
 """
 
 from __future__ import annotations
@@ -26,11 +28,12 @@ from typing import Literal
 
 @dataclass(frozen=True)
 class DiscoveredVersion:
-    """
-    Container for a discovered version string.
+    """Container for a discovered version string.
 
-    version: raw version string (e.g., "140.0.7339.128").
-    source:  where it came from (e.g., "regex_in_url", "msi_product_version_from_file").
+    Attributes:
+        version: Raw version string (e.g., "140.0.7339.128").
+        source: Where it came from (e.g., "regex_in_url",
+            "msi_product_version_from_file").
     """
 
     version: str
@@ -39,15 +42,15 @@ class DiscoveredVersion:
 
 @dataclass(frozen=True)
 class VersionInfo:
-    """
-    Container for version information discovered without downloading.
+    """Container for version information discovered without downloading.
 
     Used by version-first strategies (url_regex, github_release, http_json)
     that can determine version and download URL without fetching the installer.
 
-    version: raw version string (e.g., "140.0.7339.128").
-    download_url: URL to download the installer.
-    source: strategy name for logging (e.g., "url_regex", "github_release").
+    Attributes:
+        version: Raw version string (e.g., "140.0.7339.128").
+        download_url: URL to download the installer.
+        source: Strategy name for logging (e.g., "url_regex", "github_release").
     """
 
     version: str

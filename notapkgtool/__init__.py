@@ -14,8 +14,7 @@ NAPT provides:
   - Direct upload to Microsoft Intune (planned)
   - Deployment wave/ring management (planned)
 
-Quick Start
------------
+Quick Start:
 Validate recipe syntax:
 
     $ napt validate recipes/Google/chrome.yaml
@@ -28,8 +27,7 @@ For full CLI documentation:
 
     $ napt --help
 
-Package Structure
------------------
+Package Structure:
 cli : module
     Command-line interface with argparse.
 core : module
@@ -45,8 +43,7 @@ io : package
 policy : package
     Update policies and deployment wave management.
 
-Public API
-----------
+Public API:
 The primary interface is the CLI, but key functions are exported for
 programmatic use:
 
@@ -58,8 +55,7 @@ programmatic use:
 
 For more details, see the individual module docstrings.
 
-Project Information
--------------------
+Project Information:
 Author: Roger Cibrian
 License: GPL-3.0-only
 Repository: https://github.com/RogerCibrian/notapkgtool

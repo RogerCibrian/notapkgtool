@@ -5,29 +5,25 @@ This is a FILE-FIRST strategy that downloads an installer from a fixed HTTP(S)
 URL and extracts version information from the downloaded file. Uses HTTP ETag
 conditional requests to avoid re-downloading unchanged files.
 
-Key Advantages
---------------
+Key Advantages:
 - Works with any fixed URL (version not required in URL)
 - Extracts accurate version directly from installer metadata
 - Uses ETag-based conditional requests for efficiency (~500ms vs full download)
 - Simple and reliable for vendors with stable download URLs
 - Fallback strategy when version not available via API/URL pattern
 
-Supported Version Extraction
------------------------------
+Supported Version Extraction:
 - msi_product_version_from_file: Extract ProductVersion property from MSI
 - (Future) exe_file_version: Extract FileVersion from PE headers
 - (Future) manual_version: Use a version specified in the recipe
 
-Use Cases
----------
+Use Cases:
 - Google Chrome: Fixed enterprise MSI URL, version embedded in MSI
 - Mozilla Firefox: Fixed enterprise MSI URL, version embedded in MSI
 - Vendors with stable download URLs and embedded version metadata
 - When version not available via API, URL pattern, or GitHub tags
 
-Recipe Configuration
---------------------
+Recipe Configuration:
 source:
   strategy: http_static
   url: "https://vendor.com/installer.msi"          # Required: download URL
@@ -35,52 +31,43 @@ source:
     type: msi_product_version_from_file            # Required: extraction method
     file: "installer.msi"                          # Optional: defaults to URL filename
 
-Configuration Fields
---------------------
-url : str
-    HTTP(S) URL to download the installer from. This is a required field.
-    The URL should be stable and point to the latest version.
+Configuration Fields:
+    - **url** (str, required): HTTP(S) URL to download the installer from.
+      The URL should be stable and point to the latest version.
+    - **version.type** (str, required): Version extraction method. Currently supported:
+      msi_product_version_from_file.
+    - **version.file** (str, optional): Specific filename to extract version from.
+      Defaults to the downloaded filename derived from the URL or Content-Disposition header.
 
-version.type : str
-    Version extraction method. Currently supported: msi_product_version_from_file.
-    This is a required field.
+Workflow (File-First with ETag Optimization):
 
-version.file : str, optional
-    Specific filename to extract version from. Defaults to the downloaded filename
-    derived from the URL or Content-Disposition header.
-
-Workflow (File-First with ETag Optimization)
---------------------------------------------
 1. Make conditional HTTP request with cached ETag (If-None-Match header)
 2. Server responds with HTTP 304 Not Modified -> use cached file (~500ms)
 3. Server responds with HTTP 200 OK -> download new version
 4. Extract version from downloaded file based on source.version.type
 5. Return DiscoveredVersion, file path, and SHA-256 hash
 
-Error Handling
---------------
-- ValueError: Missing or invalid configuration fields
-- RuntimeError: Download failures, version extraction errors
-- Errors are chained with 'from err' for better debugging
+Error Handling:
+    - ValueError: Missing or invalid configuration fields
+    - RuntimeError: Download failures, version extraction errors
+    - Errors are chained with 'from err' for better debugging
 
-Architecture: File-First vs Version-First
-------------------------------------------
-- http_static (FILE-FIRST): Downloads file first, then extracts version
-  - Method: discover_version() -> tuple with DiscoveredVersion
-  - Uses: HTTP ETag conditional requests for optimization
-  - Pros: Works with any URL, accurate version from installer
-  - Cons: Must download to know version (~500ms even with 304)
-  - Best for: Fixed URLs with embedded version metadata
+Architecture (File-First vs Version-First):
+    - **http_static (FILE-FIRST)**: Downloads file first, then extracts version
+      - Method: discover_version() -> tuple with DiscoveredVersion
+      - Uses: HTTP ETag conditional requests for optimization
+      - Pros: Works with any URL, accurate version from installer
+      - Cons: Must download to know version (~500ms even with 304)
+      - Best for: Fixed URLs with embedded version metadata
 
-- url_regex, github_release, http_json (VERSION-FIRST): Version before download
-  - Method: get_version_info() -> VersionInfo
-  - Uses: Version comparison to skip downloads entirely
-  - Pros: Instant or fast checks (regex/API only), can skip downloads
-  - Cons: Requires version available via API/URL pattern
-  - Best for: Version-encoded URLs, APIs, CI/CD with frequent checks
+    - **url_regex, github_release, http_json (VERSION-FIRST)**: Version before download
+      - Method: get_version_info() -> VersionInfo
+      - Uses: Version comparison to skip downloads entirely
+      - Pros: Instant or fast checks (regex/API only), can skip downloads
+      - Cons: Requires version available via API/URL pattern
+      - Best for: Version-encoded URLs, APIs, CI/CD with frequent checks
 
-Example
--------
+Example:
 In a recipe YAML:
 
     apps:
@@ -121,8 +108,7 @@ From Python (using core orchestration):
     result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
     print(f"Version {result['version']} at {result['file_path']}")
 
-Notes
------
+Notes:
 - Must download file to extract version (architectural constraint)
 - ETag optimization reduces bandwidth but still requires network round-trip
 - Core orchestration automatically provides cached ETag if available
@@ -145,8 +131,7 @@ from .base import register_strategy
 
 
 class HttpStaticStrategy:
-    """
-    Discovery strategy for static HTTP(S) URLs.
+    """Discovery strategy for static HTTP(S) URLs.
 
     Configuration example:
         source:
@@ -165,31 +150,29 @@ class HttpStaticStrategy:
         verbose: bool = False,
         debug: bool = False,
     ) -> tuple[DiscoveredVersion, Path, str, dict]:
-        """
-        Download from static URL and extract version from the file.
+        """Download from static URL and extract version from the file.
 
-        Parameters
-        ----------
-        app_config : dict
-            App configuration containing source.url and source.version.
-        output_dir : Path
-            Directory to save the downloaded file.
-        cache : dict, optional
-            Cached state with etag, last_modified, file_path, and sha256
-            for conditional requests. If provided and file is unchanged
-            (HTTP 304), the cached file is returned.
+        Args:
+            app_config: App configuration containing source.url and
+                source.version.
+            output_dir: Directory to save the downloaded file.
+            cache: Cached state with etag, last_modified,
+                file_path, and sha256 for conditional requests. If provided
+                and file is unchanged (HTTP 304), the cached file is returned.
+            verbose: If True, print verbose logging messages.
+                Default is False.
+            debug: If True, print debug logging messages.
+                Default is False.
 
-        Returns
-        -------
-        tuple[DiscoveredVersion, Path, str, dict]
-            Version info, file path, SHA-256 hash, and HTTP response headers.
+        Returns:
+            A tuple (version_info, file_path, sha256, headers), where
+                version_info contains the discovered version information,
+                file_path is the Path to the downloaded file, sha256 is the
+                SHA-256 hash, and headers contains HTTP response headers.
 
-        Raises
-        ------
-        ValueError
-            If required config fields are missing or invalid.
-        RuntimeError
-            If download or version extraction fails.
+        Raises:
+            ValueError: If required config fields are missing or invalid.
+            RuntimeError: If download or version extraction fails.
         """
         from notapkgtool.cli import print_verbose
 
@@ -302,19 +285,14 @@ class HttpStaticStrategy:
         return discovered, file_path, sha256, headers
 
     def validate_config(self, app_config: dict[str, Any]) -> list[str]:
-        """
-        Validate http_static strategy configuration.
+        """Validate http_static strategy configuration.
 
         Checks for required fields and correct types without making network calls.
 
-        Parameters
-        ----------
-        app_config : dict
-            The app configuration from the recipe.
+        Args:
+            app_config: The app configuration from the recipe.
 
-        Returns
-        -------
-        list[str]
+        Returns:
             List of error messages (empty if valid).
         """
         errors = []

@@ -15,8 +15,7 @@ The state file is a JSON file that stores:
 
 State tracking is enabled by default and can be disabled with --stateless flag.
 
-Public API
-----------
+Public API:
 StateTracker : class
     Main interface for state management operations.
 load_state : function
@@ -24,8 +23,7 @@ load_state : function
 save_state : function
     Save state to JSON file with pretty-printing.
 
-Example
--------
+Example:
 Basic usage:
 
     from pathlib import Path

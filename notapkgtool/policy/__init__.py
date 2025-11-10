@@ -5,20 +5,17 @@ This module provides policy enforcement for application updates including
 version comparison strategies, hash-based change detection, and deployment
 wave/ring management.
 
-Modules
--------
+Modules:
 updates : module
     Update policies for deciding when to stage new application versions.
 
-Public API
-----------
+Public API:
 UpdatePolicy : class
     Configuration for update staging decisions.
 should_stage : function
     Determine if a new version should be staged based on policy.
 
-Example
--------
+Example:
     from notapkgtool.policy import UpdatePolicy, should_stage
 
     policy = UpdatePolicy(

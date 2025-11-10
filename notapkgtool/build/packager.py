@@ -1,29 +1,20 @@
-"""
-.intunewin package generation for NAPT.
+""".intunewin package generation for NAPT.
 
 This module handles creating .intunewin packages from built PSADT directories
 using Microsoft's IntuneWinAppUtil.exe tool.
 
-Functions
----------
-create_intunewin : function
-    Create a .intunewin package from a PSADT build directory.
+Private Helpers:
+    - _get_intunewin_tool: Download and cache IntuneWinAppUtil.exe
+    - _execute_packaging: Run IntuneWinAppUtil.exe to create .intunewin
+    - _verify_build_structure: Validate PSADT build directory
 
-Private Helpers
----------------
-_get_intunewin_tool : Download and cache IntuneWinAppUtil.exe
-_execute_packaging : Run IntuneWinAppUtil.exe to create .intunewin
-_verify_build_structure : Validate PSADT build directory
+Design Principles:
+    - IntuneWinAppUtil.exe is cached globally (not per-build)
+    - Package output follows convention: {app_id}-{version}.intunewin
+    - Build directory can optionally be cleaned after packaging
+    - Tool is downloaded from Microsoft's official GitHub repository
 
-Design Principles
------------------
-- IntuneWinAppUtil.exe is cached globally (not per-build)
-- Package output follows convention: {app_id}-{version}.intunewin
-- Build directory can optionally be cleaned after packaging
-- Tool is downloaded from Microsoft's official GitHub repository
-
-Example
--------
+Example:
     from pathlib import Path
     from notapkgtool.build.packager import create_intunewin
 
@@ -58,18 +49,13 @@ INTUNEWIN_TOOL_URL = (
 
 
 def _verify_build_structure(build_dir: Path) -> None:
-    """
-    Verify that the build directory has a valid PSADT structure.
+    """Verify that the build directory has a valid PSADT structure.
 
-    Parameters
-    ----------
-    build_dir : Path
-        Build directory to verify.
+    Args:
+        build_dir: Build directory to verify.
 
-    Raises
-    ------
-    ValueError
-        If required files/directories are missing.
+    Raises:
+        ValueError: If required files/directories are missing.
     """
     required = [
         "PSAppDeployToolkit",
@@ -91,25 +77,17 @@ def _verify_build_structure(build_dir: Path) -> None:
 
 
 def _get_intunewin_tool(cache_dir: Path, verbose: bool = False) -> Path:
-    """
-    Download and cache IntuneWinAppUtil.exe.
+    """Download and cache IntuneWinAppUtil.exe.
 
-    Parameters
-    ----------
-    cache_dir : Path
-        Directory to cache the tool.
-    verbose : bool, optional
-        Show verbose output.
+    Args:
+        cache_dir: Directory to cache the tool.
+        verbose: Show verbose output. Default is False.
 
-    Returns
-    -------
-    Path
+    Returns:
         Path to the IntuneWinAppUtil.exe tool.
 
-    Raises
-    ------
-    RuntimeError
-        If download fails.
+    Raises:
+        RuntimeError: If download fails.
     """
     from notapkgtool.cli import print_verbose
 
@@ -144,31 +122,20 @@ def _execute_packaging(
     output_dir: Path,
     verbose: bool = False,
 ) -> Path:
-    """
-    Execute IntuneWinAppUtil.exe to create .intunewin package.
+    """Execute IntuneWinAppUtil.exe to create .intunewin package.
 
-    Parameters
-    ----------
-    tool_path : Path
-        Path to IntuneWinAppUtil.exe.
-    source_dir : Path
-        Source directory (build directory).
-    setup_file : str
-        Name of the setup file (e.g., "Invoke-AppDeployToolkit.exe").
-    output_dir : Path
-        Output directory for .intunewin file.
-    verbose : bool, optional
-        Show verbose output.
+    Args:
+        tool_path: Path to IntuneWinAppUtil.exe.
+        source_dir: Source directory (build directory).
+        setup_file: Name of the setup file (e.g., "Invoke-AppDeployToolkit.exe").
+        output_dir: Output directory for .intunewin file.
+        verbose: Show verbose output. Default is False.
 
-    Returns
-    -------
-    Path
+    Returns:
         Path to the created .intunewin file.
 
-    Raises
-    ------
-    RuntimeError
-        If packaging fails.
+    Raises:
+        RuntimeError: If packaging fails.
     """
     from notapkgtool.cli import print_verbose
 
@@ -234,68 +201,53 @@ def create_intunewin(
     verbose: bool = False,
     debug: bool = False,
 ) -> dict[str, Any]:
-    """
-    Create a .intunewin package from a PSADT build directory.
+    """Create a .intunewin package from a PSADT build directory.
 
     Uses Microsoft's IntuneWinAppUtil.exe tool to package a PSADT build
     directory into a .intunewin file suitable for Intune deployment.
 
-    Parameters
-    ----------
-    build_dir : Path
-        Path to the built PSADT package directory.
-    output_dir : Path, optional
-        Directory for the .intunewin output.
-        Default: packages/{app_id}/
-    clean_source : bool, optional
-        If True, remove the build directory after packaging.
-        Default: False.
-    verbose : bool, optional
-        Show verbose output.
-    debug : bool, optional
-        Show debug output.
+    Args:
+        build_dir: Path to the built PSADT package directory.
+        output_dir: Directory for the .intunewin output.
+            Default: packages/{app_id}/
+        clean_source: If True, remove the build directory
+            after packaging. Default is False.
+        verbose: Show verbose output. Default is False.
+        debug: Show debug output. Default is False.
 
-    Returns
-    -------
-    dict
-        Packaging results containing:
-        - build_dir : Path
-        - package_path : Path
-        - app_id : str (from directory structure)
-        - version : str (from directory structure)
-        - status : str
+    Returns:
+        A dict (build_dir, package_path, app_id, version, status), where
+            build_dir is the Path to the build directory, package_path is
+            the Path to the created .intunewin file, app_id is the application
+            ID, version is the application version, and status is the
+            packaging status.
 
-    Raises
-    ------
-    ValueError
-        If build directory structure is invalid.
-    RuntimeError
-        If packaging fails.
+    Raises:
+        ValueError: If build directory structure is invalid.
+        RuntimeError: If packaging fails.
 
-    Examples
-    --------
-    Basic packaging:
+    Example:
+        Basic packaging:
 
-        >>> result = create_intunewin(
-        ...     build_dir=Path("builds/napt-chrome/141.0.7390.123")
-        ... )
-        >>> print(result['package_path'])
-        packages/napt-chrome/napt-chrome-141.0.7390.123.intunewin
+            result = create_intunewin(
+                build_dir=Path("builds/napt-chrome/141.0.7390.123")
+            )
+            print(result['package_path'])
+            # packages/napt-chrome/napt-chrome-141.0.7390.123.intunewin
 
-    With cleanup:
+        With cleanup:
 
-        >>> result = create_intunewin(
-        ...     build_dir=Path("builds/napt-chrome/141.0.7390.123"),
-        ...     clean_source=True
-        ... )
-        # Build directory is removed after packaging
+            result = create_intunewin(
+                build_dir=Path("builds/napt-chrome/141.0.7390.123"),
+                clean_source=True
+            )
+            # Build directory is removed after packaging
 
-    Notes
-    -----
-    - Requires build directory from 'napt build' command
-    - IntuneWinAppUtil.exe is downloaded and cached on first use
-    - Setup file is always "Invoke-AppDeployToolkit.exe"
-    - Output follows convention: packages/{app_id}/{app_id}-{version}.intunewin
+    Note:
+        Requires build directory from 'napt build' command. IntuneWinAppUtil.exe
+        is downloaded and cached on first use. Setup file is always
+        "Invoke-AppDeployToolkit.exe". Output follows convention:
+        packages/{app_id}/{app_id}-{version}.intunewin
     """
     from notapkgtool.cli import print_step, print_verbose
 

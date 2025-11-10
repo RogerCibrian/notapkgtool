@@ -5,94 +5,77 @@ This is a VERSION-FIRST strategy that queries the GitHub API to get version
 and download URL WITHOUT downloading the installer. This enables fast version
 checks and efficient caching.
 
-Key Advantages
---------------
-- Fast version discovery (GitHub API call ~100ms)
-- Can skip downloads entirely when version unchanged
-- Direct access to latest releases via stable GitHub API
-- Version extraction from Git tags (semantic versioning friendly)
-- Asset pattern matching for multi-platform releases
-- Optional authentication for higher rate limits
-- No web scraping required
-- Ideal for CI/CD with scheduled checks
+Key Advantages:
+    - Fast version discovery (GitHub API call ~100ms)
+    - Can skip downloads entirely when version unchanged
+    - Direct access to latest releases via stable GitHub API
+    - Version extraction from Git tags (semantic versioning friendly)
+    - Asset pattern matching for multi-platform releases
+    - Optional authentication for higher rate limits
+    - No web scraping required
+    - Ideal for CI/CD with scheduled checks
 
-Supported Version Extraction
------------------------------
-- Tag-based: Extract version from release tag names
-  - Supports named capture groups: (?P<version>...)
-  - Default pattern strips "v" prefix: v1.2.3 → 1.2.3
-  - Falls back to full tag if no pattern match
+Supported Version Extraction:
+    - Tag-based: Extract version from release tag names
+      - Supports named capture groups: (?P<version>...)
+      - Default pattern strips "v" prefix: v1.2.3 → 1.2.3
+      - Falls back to full tag if no pattern match
 
-Use Cases
----------
-- Open-source projects (Git, VS Code, Node.js, etc.)
-- Projects with GitHub releases (Firefox, Chrome alternatives)
-- Vendors who publish installers as release assets
-- Projects with semantic versioned tags
-- CI/CD pipelines with frequent version checks
+Use Cases:
+    - Open-source projects (Git, VS Code, Node.js, etc.)
+    - Projects with GitHub releases (Firefox, Chrome alternatives)
+    - Vendors who publish installers as release assets
+    - Projects with semantic versioned tags
+    - CI/CD pipelines with frequent version checks
 
-Recipe Configuration
---------------------
-source:
-  strategy: github_release
-  repo: "git-for-windows/git"                    # Required: owner/repo
-  asset_pattern: "Git-.*-64-bit\\.exe$"          # Optional: regex for asset
-  version_pattern: "v?([0-9.]+)"                 # Optional: version extraction
-  prerelease: false                              # Optional: include prereleases
-  token: "${GITHUB_TOKEN}"                       # Optional: auth token
+Recipe Configuration:
 
-Configuration Fields
---------------------
-repo : str
-    GitHub repository in "owner/name" format (e.g., "git-for-windows/git").
-    This is the only required field.
+    source:
+      strategy: github_release
+      repo: "git-for-windows/git"                    # Required: owner/repo
+      asset_pattern: "Git-.*-64-bit\\.exe$"          # Optional: regex for asset
+      version_pattern: "v?([0-9.]+)"                 # Optional: version extraction
+      prerelease: false                              # Optional: include prereleases
+      token: "${GITHUB_TOKEN}"                       # Optional: auth token
 
-asset_pattern : str, optional
-    Regular expression to match asset filename. If multiple assets match,
-    the first match is used. If omitted, the first asset is selected.
-    Example: ".*-x64\\.msi$" matches assets ending with "-x64.msi"
+Configuration Fields:
+    - **repo** (str, required): GitHub repository in "owner/name" format
+      (e.g., "git-for-windows/git").
+    - **asset_pattern** (str, optional): Regular expression to match asset filename.
+      If multiple assets match, the first match is used. If omitted, the first
+      asset is selected. Example: ".*-x64\\.msi$" matches assets ending with "-x64.msi"
+    - **version_pattern** (str, optional): Regular expression to extract version from
+      the release tag name. Use a named capture group (?P<version>...) or the
+      entire match. Default: "v?([0-9.]+)" strips optional "v" prefix.
+      Example: "release-([0-9.]+)" for tags like "release-1.2.3"
+    - **prerelease** (bool, optional): If True, include pre-release versions. If False
+      (default), only stable releases are considered. Uses GitHub's prerelease flag.
+    - **token** (str, optional): GitHub personal access token for authentication.
+      Increases rate limit from 60 to 5000 requests per hour. Can use environment
+      variable substitution: "${GITHUB_TOKEN}". No special permissions needed for
+      public repositories.
 
-version_pattern : str, optional
-    Regular expression to extract version from the release tag name.
-    Use a named capture group (?P<version>...) or the entire match.
-    Default: "v?([0-9.]+)" strips optional "v" prefix.
-    Example: "release-([0-9.]+)" for tags like "release-1.2.3"
+Workflow (Version-First):
+    1. Call GitHub API: GET /repos/{owner}/{repo}/releases/latest (~100ms)
+    2. Extract version from release tag using version_pattern
+    3. Find matching asset using asset_pattern (or first asset)
+    4. Create VersionInfo with version and download URL
+    5. Core orchestration compares version to cache
+    6. If match and file exists -> skip download entirely
+    7. If changed or missing -> download from URL
 
-prerelease : bool, optional
-    If True, include pre-release versions. If False (default), only
-    stable releases are considered. Uses GitHub's prerelease flag.
+Error Handling:
+    - ValueError: Missing or invalid configuration fields
+    - RuntimeError: API failures, no releases, no matching assets
+    - Errors are chained with 'from err' for better debugging
 
-token : str, optional
-    GitHub personal access token for authentication. Increases rate limit
-    from 60 to 5000 requests per hour. Can use environment variable
-    substitution: "${GITHUB_TOKEN}".
-    Note: No special permissions needed for public repositories.
+Rate Limits:
+    - Unauthenticated: 60 requests/hour per IP
+    - Authenticated: 5000 requests/hour per token
+    - Tip: Use a token for production use or frequent checks
 
-Workflow (Version-First)
-------------------------
-1. Call GitHub API: GET /repos/{owner}/{repo}/releases/latest (~100ms)
-2. Extract version from release tag using version_pattern
-3. Find matching asset using asset_pattern (or first asset)
-4. Create VersionInfo with version and download URL
-5. Core orchestration compares version to cache
-6. If match and file exists -> skip download entirely
-7. If changed or missing -> download from URL
-
-Error Handling
---------------
-- ValueError: Missing or invalid configuration fields
-- RuntimeError: API failures, no releases, no matching assets
-- Errors are chained with 'from err' for better debugging
-
-Rate Limits
------------
-- Unauthenticated: 60 requests/hour per IP
-- Authenticated: 5000 requests/hour per token
-- Tip: Use a token for production use or frequent checks
-
-Example
--------
-In a recipe YAML:
+Example:
+    In a recipe YAML:
 
     apps:
       - name: "Git for Windows"
@@ -137,14 +120,12 @@ From Python (using core orchestration):
     result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
     print(f"Version {result['version']} at {result['file_path']}")
 
-Notes
------
-- Version discovery via API only (no download required)
-- Core orchestration automatically skips download if version unchanged
-- The GitHub API is stable and well-documented
-- Releases are fetched in order (latest first)
-- Asset matching is case-sensitive by default (use (?i) for case-insensitive)
-- Consider http_static if you need a direct download URL instead
+Note:
+    Version discovery via API only (no download required).
+    Core orchestration automatically skips download if version unchanged.
+    The GitHub API is stable and well-documented. Releases are fetched in order
+    (latest first). Asset matching is case-sensitive by default (use (?i) for
+    case-insensitive). Consider http_static if you need a direct download URL instead.
 """
 
 from __future__ import annotations
@@ -161,8 +142,7 @@ from .base import register_strategy
 
 
 class GithubReleaseStrategy:
-    """
-    Discovery strategy for GitHub releases.
+    """Discovery strategy for GitHub releases.
 
     Configuration example:
         source:
@@ -180,47 +160,40 @@ class GithubReleaseStrategy:
         verbose: bool = False,
         debug: bool = False,
     ) -> VersionInfo:
-        """
-        Fetch latest release from GitHub API without downloading (version-first path).
+        """Fetch latest release from GitHub API without downloading (version-first path).
 
         This method queries the GitHub API for the latest release and extracts
         the version from the tag name and the download URL from matching assets.
         If the version matches cached state, the download can be skipped entirely.
 
-        Parameters
-        ----------
-        app_config : dict
-            App configuration containing source.repo and optional fields.
-        verbose : bool, optional
-            If True, print verbose logging messages. Default is False.
-        debug : bool, optional
-            If True, print debug logging messages. Default is False.
+        Args:
+            app_config: App configuration containing source.repo and
+                optional fields.
+            verbose: If True, print verbose logging messages.
+                Default is False.
+            debug: If True, print debug logging messages.
+                Default is False.
 
-        Returns
-        -------
-        VersionInfo
-            Version info with version string, download URL, and source name.
+        Returns:
+            Version info with version string, download URL, and
+                source name.
 
-        Raises
-        ------
-        ValueError
-            If required config fields are missing, invalid, or if no matching
-            assets are found.
-        RuntimeError
-            If API call fails or release has no assets.
+        Raises:
+            ValueError: If required config fields are missing, invalid, or if
+                no matching assets are found.
+            RuntimeError: If API call fails or release has no assets.
 
-        Examples
-        --------
-        >>> strategy = GithubReleaseStrategy()
-        >>> config = {
-        ...     "source": {
-        ...         "repo": "owner/repo",
-        ...         "asset_pattern": ".*\\.msi$"
-        ...     }
-        ... }
-        >>> version_info = strategy.get_version_info(config)
-        >>> version_info.version
-        '1.0.0'
+        Example:
+            >>> strategy = GithubReleaseStrategy()
+            >>> config = {
+            ...     "source": {
+            ...         "repo": "owner/repo",
+            ...         "asset_pattern": ".*\\.msi$"
+            ...     }
+            ... }
+            >>> version_info = strategy.get_version_info(config)
+            >>> version_info.version
+            '1.0.0'
         """
         from notapkgtool.cli import print_verbose
 
@@ -393,19 +366,14 @@ class GithubReleaseStrategy:
         )
 
     def validate_config(self, app_config: dict[str, Any]) -> list[str]:
-        """
-        Validate github_release strategy configuration.
+        """Validate github_release strategy configuration.
 
         Checks for required fields and correct types without making network calls.
 
-        Parameters
-        ----------
-        app_config : dict
-            The app configuration from the recipe.
+        Args:
+            app_config: The app configuration from the recipe.
 
-        Returns
-        -------
-        list[str]
+        Returns:
             List of error messages (empty if valid).
         """
         errors = []

@@ -5,6 +5,7 @@ Determines whether a newly discovered remote artifact should be staged,
 based on version, hash, and org policy.
 
 Usage:
+
     from notapkgtool.policy.updates import should_stage, UpdatePolicy
 
     decision = should_stage(
@@ -42,18 +43,20 @@ def should_stage(
     current_hash: str | None,
     policy: UpdatePolicy,
 ) -> bool:
-    """
-    Decide whether to stage a newly discovered artifact.
+    """Decide whether to stage a newly discovered artifact.
 
-    Inputs:
-      remote_version: version found during discovery (string as parsed for the comparator)
-      remote_hash   : SHA-256 (hex) of the newly downloaded artifact
-      current_version: version we last staged/deployed (None if none)
-      current_hash   : hash we last staged/deployed (None if none)
-      policy        : UpdatePolicy controlling the decision algorithm
+    Compares remote version/hash against current state using the configured
+    policy strategy to determine if the new artifact should be staged.
+
+    Args:
+        remote_version: Version found during discovery.
+        remote_hash: SHA-256 hash of the newly downloaded artifact.
+        current_version: Version we last staged/deployed (None if none).
+        current_hash: Hash we last staged/deployed (None if none).
+        policy: UpdatePolicy controlling the decision algorithm.
 
     Returns:
-      True if we should stage the new artifact, False otherwise.
+        True if the new artifact should be staged, False otherwise.
     """
     # If we have no prior state, stage the first artifact.
     if current_version is None and current_hash is None:

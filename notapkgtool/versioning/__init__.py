@@ -6,8 +6,7 @@ version information from binary files (MSI, EXE). It supports multiple
 comparison strategies and handles various versioning schemes including
 semantic versioning, numeric versions, and prerelease tags.
 
-Modules
--------
+Modules:
 keys : module
     Core version comparison logic with semver-like parsing and robust fallbacks.
 msi : module
@@ -15,8 +14,7 @@ msi : module
 url_regex : module
     Extract versions from URLs using regex patterns.
 
-Public API
-----------
+Public API:
 DiscoveredVersion : dataclass
     Container for discovered version information with source tracking.
 SourceHint : Literal type
@@ -28,8 +26,7 @@ is_newer_any : function
 version_key_any : function
     Generate a sortable key for any version string.
 
-Version Comparison Strategies
-------------------------------
+Version Comparison Strategies:
 The versioning system supports multiple comparison modes:
 
 1. **Semantic Versioning (semver)**:
@@ -46,8 +43,7 @@ The versioning system supports multiple comparison modes:
    - Fallback string comparison for non-version-like strings
    - Useful for build IDs, timestamps, etc.
 
-Examples
---------
+Examples:
 Basic version comparison:
 
     >>> from notapkgtool.versioning import compare_any, is_newer_any
@@ -70,8 +66,7 @@ MSI version extraction:
     >>> print(discovered.version)
     1.2.3
 
-Notes
------
+Notes:
 - Version comparison is format-agnostic: no network or file I/O
 - MSI extraction works cross-platform with appropriate backends
 - Prerelease ordering follows common conventions but allows custom tags

@@ -6,9 +6,8 @@ versions and downloading installers from various sources. Strategies are divided
 into two types: version-first (can determine version without downloading) and
 file-first (must download to extract version).
 
-Strategy Pattern
-----------------
-Discovery strategies implement one of two approaches:
+Strategy Pattern:
+    Discovery strategies implement one of two approaches:
 
 VERSION-FIRST (url_regex, github_release, http_json):
   - Implement get_version_info() -> VersionInfo
@@ -24,31 +23,28 @@ FILE-FIRST (http_static):
 The strategy registry allows dynamic lookup based on the strategy name
 in the recipe configuration.
 
-Available Strategies
---------------------
-http_static : HttpStaticStrategy (FILE-FIRST)
-    Download from a fixed URL and extract version from the file itself.
-    Supports MSI ProductVersion extraction. Uses ETag caching.
-url_regex : UrlRegexStrategy (VERSION-FIRST)
-    Extract version from URL patterns using regex.
-    Instant version checks with zero network calls.
-github_release : GithubReleaseStrategy (VERSION-FIRST)
-    Fetch from GitHub releases API and extract version from tags.
-    Fast API-based version checks (~100ms).
-http_json : HttpJsonStrategy (VERSION-FIRST)
-    Query JSON API endpoints for version and download URL.
-    Fast API-based version checks (~100ms).
+Available Strategies:
+    http_static : HttpStaticStrategy (FILE-FIRST)
+        Download from a fixed URL and extract version from the file itself.
+        Supports MSI ProductVersion extraction. Uses ETag caching.
+    url_regex : UrlRegexStrategy (VERSION-FIRST)
+        Extract version from URL patterns using regex.
+        Instant version checks with zero network calls.
+    github_release : GithubReleaseStrategy (VERSION-FIRST)
+        Fetch from GitHub releases API and extract version from tags.
+        Fast API-based version checks (~100ms).
+    http_json : HttpJsonStrategy (VERSION-FIRST)
+        Query JSON API endpoints for version and download URL.
+        Fast API-based version checks (~100ms).
 
-Public API
-----------
-DiscoveryStrategy : Protocol
-    Protocol that all discovery strategies must implement.
-get_strategy : function
-    Get a discovery strategy instance by name from the registry.
+Public API:
+    DiscoveryStrategy : Protocol
+        Protocol that all discovery strategies must implement.
+    get_strategy : function
+        Get a discovery strategy instance by name from the registry.
 
-Example
--------
-Register and use a custom strategy:
+Example:
+    Register and use a custom strategy:
 
     from notapkgtool.discovery import get_strategy
     from pathlib import Path

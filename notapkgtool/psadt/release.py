@@ -5,15 +5,13 @@ This module handles fetching, downloading, and caching PSAppDeployToolkit
 releases from the official GitHub repository. It reuses NAPT's existing
 GitHub release discovery infrastructure for consistency.
 
-Key Features
-------------
+Key Features:
 - Fetch latest PSADT version from GitHub API
 - Download and cache specific PSADT versions
 - Extract releases to cache directory
 - Version resolution ("latest" keyword support)
 
-Public API
-----------
+Public API:
 fetch_latest_psadt_version : function
     Query GitHub for the latest PSADT release version.
 get_psadt_release : function
@@ -21,8 +19,7 @@ get_psadt_release : function
 is_psadt_cached : function
     Check if a PSADT version is already cached.
 
-Usage
------
+Usage:
 Basic usage:
 
     from pathlib import Path
@@ -38,8 +35,7 @@ Basic usage:
     if is_psadt_cached("4.1.7", Path("cache/psadt")):
         print("Already cached!")
 
-Design Notes
-------------
+Design Notes:
 - Reuses notapkgtool.discovery.github_release for API calls
 - Caches releases by version: cache/psadt/{version}/
 - Downloads .zip releases and extracts to cache
@@ -65,29 +61,24 @@ def fetch_latest_psadt_version(verbose: bool = False) -> str:
     Queries the GitHub API for the latest release and extracts the version
     number from the tag name (e.g., "4.1.7" from tag "4.1.7").
 
-    Parameters
-    ----------
+    Args:
     verbose : bool, optional
         If True, print verbose output about the API request.
 
-    Returns
-    -------
+    Returns:
     str
         Version number (e.g., "4.1.7").
 
-    Raises
-    ------
+    Raises:
     RuntimeError
         If the GitHub API request fails or version cannot be extracted.
 
-    Examples
-    --------
+    Example:
     >>> version = fetch_latest_psadt_version()
     >>> print(version)
     4.1.7
 
-    Notes
-    -----
+    Note:
     - Uses GitHub's public API (60 requests/hour limit without auth)
     - Version is extracted from release tag name
     - For higher rate limits, set GITHUB_TOKEN environment variable
@@ -131,25 +122,21 @@ def is_psadt_cached(version: str, cache_dir: Path) -> bool:
     """
     Check if a PSADT version is already cached.
 
-    Parameters
-    ----------
+    Args:
     version : str
         PSADT version to check (e.g., "4.1.7").
     cache_dir : Path
         Base cache directory (e.g., Path("cache/psadt")).
 
-    Returns
-    -------
+    Returns:
     bool
         True if the version is cached and valid, False otherwise.
 
-    Examples
-    --------
+    Example:
     >>> if is_psadt_cached("4.1.7", Path("cache/psadt")):
     ...     print("Already downloaded!")
 
-    Notes
-    -----
+    Note:
     Validates that the cache contains the expected PSADT structure:
     - PSAppDeployToolkit/ folder must exist
     - PSAppDeployToolkit.psd1 manifest must exist
@@ -170,8 +157,7 @@ def get_psadt_release(
     Resolves "latest" to the current latest version from GitHub, then
     downloads the release .zip file and extracts it to the cache.
 
-    Parameters
-    ----------
+    Args:
     release_spec : str
         Version specifier - either "latest" or specific version (e.g., "4.1.7").
     cache_dir : Path
@@ -181,20 +167,17 @@ def get_psadt_release(
     debug : bool, optional
         Show debug output.
 
-    Returns
-    -------
+    Returns:
     Path
         Path to the cached PSADT directory (cache_dir/{version}).
 
-    Raises
-    ------
+    Raises:
     RuntimeError
         If download fails or extraction fails.
     ValueError
         If release_spec is invalid.
 
-    Examples
-    --------
+    Example:
     Get latest version:
 
         >>> psadt = get_psadt_release("latest", Path("cache/psadt"))
@@ -205,8 +188,7 @@ def get_psadt_release(
 
         >>> psadt = get_psadt_release("4.1.7", Path("cache/psadt"))
 
-    Notes
-    -----
+    Note:
     - Caches by version: cache/psadt/{version}/PSAppDeployToolkit/
     - If already cached, returns path immediately (no re-download)
     - Downloads from GitHub releases as .zip files

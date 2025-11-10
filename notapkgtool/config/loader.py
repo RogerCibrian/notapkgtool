@@ -6,63 +6,51 @@ allows organization-wide defaults to be overridden by vendor-specific settings
 and finally by recipe-specific configuration. This design promotes DRY
 (Don't Repeat Yourself) principles and makes recipes easier to maintain.
 
-Configuration Layers
---------------------
-1. **Organization defaults** (defaults/org.yaml)
-   - Base configuration for all apps
-   - Defines PSADT settings, update policies, deployment waves, etc.
-   - Required if a defaults directory is found
+Configuration Layers:
+    1. **Organization defaults** (defaults/org.yaml)
+       - Base configuration for all apps
+       - Defines PSADT settings, update policies, deployment waves, etc.
+       - Required if a defaults directory is found
 
-2. **Vendor defaults** (defaults/vendors/<Vendor>.yaml)
-   - Vendor-specific overrides (e.g., Google-specific settings)
-   - Optional; only loaded if vendor is detected
-   - Overrides organization defaults
+    2. **Vendor defaults** (defaults/vendors/<Vendor>.yaml)
+       - Vendor-specific overrides (e.g., Google-specific settings)
+       - Optional; only loaded if vendor is detected
+       - Overrides organization defaults
 
-3. **Recipe configuration** (recipes/<Vendor>/<app>.yaml)
-   - App-specific configuration
-   - Always required; defines the app itself
-   - Overrides vendor and organization defaults
+    3. **Recipe configuration** (recipes/<Vendor>/<app>.yaml)
+       - App-specific configuration
+       - Always required; defines the app itself
+       - Overrides vendor and organization defaults
 
-Merge Behavior
---------------
-The loader performs deep merging with "last wins" semantics:
-  - **Dicts**: Recursively merged (keys from overlay override base)
-  - **Lists**: Completely replaced (NOT appended/extended)
-  - **Scalars**: Overwritten (strings, numbers, booleans)
+Merge Behavior:
+    The loader performs deep merging with "last wins" semantics:
+      - **Dicts**: Recursively merged (keys from overlay override base)
+      - **Lists**: Completely replaced (NOT appended/extended)
+      - **Scalars**: Overwritten (strings, numbers, booleans)
 
-Path Resolution
----------------
-Relative paths in configuration are resolved against the RECIPE FILE location,
-making recipes relocatable and portable. Currently resolved paths:
-  - defaults.psadt.brand_pack.path
+Path Resolution:
+    Relative paths in configuration are resolved against the RECIPE FILE location,
+    making recipes relocatable and portable. Currently resolved paths:
+      - defaults.psadt.brand_pack.path
 
-Dynamic Injection
------------------
-Some fields are injected at load time:
-  - defaults.psadt.app_vars.AppScriptDate: Today's date (YYYY-MM-DD)
+Dynamic Injection:
+    Some fields are injected at load time:
+      - defaults.psadt.app_vars.AppScriptDate: Today's date (YYYY-MM-DD)
 
-Functions
----------
-load_effective_config : function
-    Load and merge configuration for a recipe (main public API).
+Private Helpers:
+    - _load_yaml_file: Load YAML with error handling
+    - _deep_merge_dicts: Recursive dict merging
+    - _find_defaults_root: Locate defaults directory
+    - _detect_vendor: Determine vendor from recipe location or content
+    - _resolve_known_paths: Resolve relative paths to absolute
+    - _inject_dynamic_values: Add runtime-determined fields
 
-Private Helpers
----------------
-_load_yaml_file : Load YAML with error handling
-_deep_merge_dicts : Recursive dict merging
-_find_defaults_root : Locate defaults directory
-_detect_vendor : Determine vendor from recipe location or content
-_resolve_known_paths : Resolve relative paths to absolute
-_inject_dynamic_values : Add runtime-determined fields
+Error Handling:
+    - FileNotFoundError: Recipe file doesn't exist
+    - SystemExit: YAML parse errors or empty files
+    - All errors are chained with "from err" for better debugging
 
-Error Handling
---------------
-- FileNotFoundError: Recipe file doesn't exist
-- SystemExit: YAML parse errors or empty files
-- All errors are chained with "from err" for better debugging
-
-Examples
---------
+Example:
 Basic usage:
 
     >>> from pathlib import Path
@@ -84,8 +72,7 @@ Override vendor detection:
     ...     vendor="CustomVendor"
     ... )
 
-Notes
------
+Notes:
 - The loader walks upward from the recipe to find defaults/org.yaml
 - Vendor is detected from directory name (recipes/Google/) or recipe content
 - Paths are resolved relative to the recipe, not the working directory
