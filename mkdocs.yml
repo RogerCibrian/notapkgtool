@@ -7,6 +7,9 @@ repo_name: RogerCibrian/notapkgtool
 
 theme:
   name: material
+  features:
+    - navigation.tabs        
+    - navigation.tabs.sticky 
   palette:
     # Dark mode (default)
     - scheme: slate
@@ -24,6 +27,15 @@ theme:
         icon: material/weather-sunny
         name: Switch to dark mode
 
+markdown_extensions:
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
 plugins:
   - search
   - autorefs
@@ -32,24 +44,45 @@ plugins:
       handlers:
         python:
           options:
+            # Docstring parsing
             docstring_style: google
+            docstring_section_style: table           
+            
+            # Headings
             show_root_heading: true
-            show_source: true
-            members_order: source
             heading_level: 2
+            show_symbol_type_toc: true         
+            show_symbol_type_heading: true     
+            
+            # Signatures
+            show_signature: true
+            show_signature_annotations: true
+            separate_signature: true
+            line_length: 80                         
+            
+            # Members
+            members_order: source
+            
+            # Source links
+            show_source: true
 
 nav:
   - Home: index.md
   - Quick Start: quick-start.md
   - User Guide: user-guide.md
   - API Reference:
-    - Core: api/core.md
-    - Discovery: api/discovery.md
-    - Configuration: api/config.md
-    - Build: api/build.md
-    - Versioning: api/versioning.md
-    - I/O: api/io.md
-    - State: api/state.md
+    - cli: api/cli.md
+    - core: api/core.md
+    - validation: api/validation.md
+    - Modules:
+      - build: api/build.md
+      - config: api/config.md
+      - discovery: api/discovery.md
+      - io: api/io.md
+      - policy: api/policy.md
+      - psadt: api/psadt.md
+      - state: api/state.md
+      - versioning: api/versioning.md
   - Roadmap: roadmap.md
   - Changelog: changelog.md
   - Contributing: contributing.md
