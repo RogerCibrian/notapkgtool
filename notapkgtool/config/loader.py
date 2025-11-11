@@ -1,95 +1,81 @@
-"""
-Configuration loading and merging for NAPT.
+"""Configuration loading and merging for NAPT.
 
 This module implements a sophisticated three-layer configuration system that
 allows organization-wide defaults to be overridden by vendor-specific settings
 and finally by recipe-specific configuration. This design promotes DRY
 (Don't Repeat Yourself) principles and makes recipes easier to maintain.
 
-Configuration Layers
---------------------
-1. **Organization defaults** (defaults/org.yaml)
-   - Base configuration for all apps
-   - Defines PSADT settings, update policies, deployment waves, etc.
-   - Required if a defaults directory is found
+Configuration Layers:
+    1. **Organization defaults** (defaults/org.yaml)
+       - Base configuration for all apps
+       - Defines PSADT settings, update policies, deployment waves, etc.
+       - Required if a defaults directory is found
 
-2. **Vendor defaults** (defaults/vendors/<Vendor>.yaml)
-   - Vendor-specific overrides (e.g., Google-specific settings)
-   - Optional; only loaded if vendor is detected
-   - Overrides organization defaults
+    2. **Vendor defaults** (defaults/vendors/<Vendor>.yaml)
+       - Vendor-specific overrides (e.g., Google-specific settings)
+       - Optional; only loaded if vendor is detected
+       - Overrides organization defaults
 
-3. **Recipe configuration** (recipes/<Vendor>/<app>.yaml)
-   - App-specific configuration
-   - Always required; defines the app itself
-   - Overrides vendor and organization defaults
+    3. **Recipe configuration** (recipes/<Vendor>/<app>.yaml)
+       - App-specific configuration
+       - Always required; defines the app itself
+       - Overrides vendor and organization defaults
 
-Merge Behavior
---------------
-The loader performs deep merging with "last wins" semantics:
-  - **Dicts**: Recursively merged (keys from overlay override base)
-  - **Lists**: Completely replaced (NOT appended/extended)
-  - **Scalars**: Overwritten (strings, numbers, booleans)
+Merge Behavior:
+    The loader performs deep merging with "last wins" semantics:
+      - **Dicts**: Recursively merged (keys from overlay override base)
+      - **Lists**: Completely replaced (NOT appended/extended)
+      - **Scalars**: Overwritten (strings, numbers, booleans)
 
-Path Resolution
----------------
-Relative paths in configuration are resolved against the RECIPE FILE location,
-making recipes relocatable and portable. Currently resolved paths:
-  - defaults.psadt.brand_pack.path
+Path Resolution:
+    Relative paths in configuration are resolved against the RECIPE FILE location,
+    making recipes relocatable and portable. Currently resolved paths:
+      - defaults.psadt.brand_pack.path
 
-Dynamic Injection
------------------
-Some fields are injected at load time:
-  - defaults.psadt.app_vars.AppScriptDate: Today's date (YYYY-MM-DD)
+Dynamic Injection:
+    Some fields are injected at load time:
+      - defaults.psadt.app_vars.AppScriptDate: Today's date (YYYY-MM-DD)
 
-Functions
----------
-load_effective_config : function
-    Load and merge configuration for a recipe (main public API).
+Private Helpers:
+    - _load_yaml_file: Load YAML with error handling
+    - _deep_merge_dicts: Recursive dict merging
+    - _find_defaults_root: Locate defaults directory
+    - _detect_vendor: Determine vendor from recipe location or content
+    - _resolve_known_paths: Resolve relative paths to absolute
+    - _inject_dynamic_values: Add runtime-determined fields
 
-Private Helpers
----------------
-_load_yaml_file : Load YAML with error handling
-_deep_merge_dicts : Recursive dict merging
-_find_defaults_root : Locate defaults directory
-_detect_vendor : Determine vendor from recipe location or content
-_resolve_known_paths : Resolve relative paths to absolute
-_inject_dynamic_values : Add runtime-determined fields
+Error Handling:
+    - FileNotFoundError: Recipe file doesn't exist
+    - SystemExit: YAML parse errors or empty files
+    - All errors are chained with "from err" for better debugging
 
-Error Handling
---------------
-- FileNotFoundError: Recipe file doesn't exist
-- SystemExit: YAML parse errors or empty files
-- All errors are chained with "from err" for better debugging
+Example:
+    Basic usage:
 
-Examples
---------
-Basic usage:
+        from pathlib import Path
+        from notapkgtool.config import load_effective_config
 
-    >>> from pathlib import Path
-    >>> from notapkgtool.config import load_effective_config
-    >>> cfg = load_effective_config(Path("recipes/Google/chrome.yaml"))
-    >>> print(cfg["apps"][0]["name"])
-    Google Chrome
+        cfg = load_effective_config(Path("recipes/Google/chrome.yaml"))
+        print(cfg["apps"][0]["name"])  # Output: Google Chrome
 
-Access merged defaults:
+    Access merged defaults:
 
-    >>> psadt_release = cfg["defaults"]["psadt"]["release"]
-    >>> print(psadt_release)
-    latest
+        psadt_release = cfg["defaults"]["psadt"]["release"]
+        print(psadt_release)  # Output: latest
 
-Override vendor detection:
+    Override vendor detection:
 
-    >>> cfg = load_effective_config(
-    ...     Path("recipes/Google/chrome.yaml"),
-    ...     vendor="CustomVendor"
-    ... )
+        cfg = load_effective_config(
+            Path("recipes/Google/chrome.yaml"),
+            vendor="CustomVendor"
+        )
 
-Notes
------
-- The loader walks upward from the recipe to find defaults/org.yaml
-- Vendor is detected from directory name (recipes/Google/) or recipe content
-- Paths are resolved relative to the recipe, not the working directory
-- Dynamic fields are best-effort (warnings on failure, not errors)
+Note:
+    - The loader walks upward from the recipe to find defaults/org.yaml
+    - Vendor is detected from directory name (recipes/Google/) or recipe content
+    - Paths are resolved relative to the recipe, not the working directory
+    - Dynamic fields are best-effort (warnings on failure, not errors)
+
 """
 
 from __future__ import annotations
@@ -108,8 +94,7 @@ import yaml
 
 @dataclass(frozen=True)
 class LoadContext:
-    """
-    Metadata describing how the config was resolved.
+    """Metadata describing how the config was resolved.
     Useful for debugging and logging.
     """
 
@@ -126,12 +111,12 @@ class LoadContext:
 
 
 def _load_yaml_file(p: Path) -> Any:
-    """
-    Load a YAML file and return the parsed Python object.
+    """Load a YAML file and return the parsed Python object.
 
     Raises:
       FileNotFoundError      - when file does not exist
       SystemExit             - for invalid YAML (parse error) with chained context
+
     """
     if not p.exists():
         raise FileNotFoundError(f"file not found: {p}")
@@ -153,8 +138,7 @@ def _load_yaml_file(p: Path) -> Any:
 
 
 def _deep_merge_dicts(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
-    """
-    Deep-merge two dicts with "overlay wins".
+    """Deep-merge two dicts with "overlay wins".
 
     Rules:
       - dict + dict -> deep merge
@@ -179,8 +163,7 @@ def _deep_merge_dicts(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str
 
 
 def _find_defaults_root(start_dir: Path) -> Path | None:
-    """
-    Walk upward from 'start_dir' looking for a 'defaults/org.yaml'.
+    """Walk upward from 'start_dir' looking for a 'defaults/org.yaml'.
     Returns the directory containing 'defaults' or None if not found.
     """
     for parent in [start_dir] + list(start_dir.parents):
@@ -191,8 +174,7 @@ def _find_defaults_root(start_dir: Path) -> Path | None:
 
 
 def _detect_vendor(recipe_path: Path, recipe_obj: dict[str, Any]) -> str | None:
-    """
-    Determine the vendor name for this recipe.
+    """Determine the vendor name for this recipe.
 
     Priority:
       1) Folder name under 'recipes/' (e.g., recipes/Google/chrome.yaml -> Google)
@@ -227,8 +209,7 @@ def _detect_vendor(recipe_path: Path, recipe_obj: dict[str, Any]) -> str | None:
 def _resolve_known_paths(
     cfg: dict[str, Any], recipe_dir: Path, defaults_root: Path | None = None
 ) -> None:
-    """
-    Resolve relative path fields inside the merged config.
+    """Resolve relative path fields inside the merged config.
 
     We keep this explicit and conservative to avoid unexpected rewrites.
     Currently handled:
@@ -261,8 +242,7 @@ def _resolve_known_paths(
 
 
 def _inject_dynamic_values(cfg: dict[str, Any]) -> None:
-    """
-    Inject dynamic fields that should be set at load/build time.
+    """Inject dynamic fields that should be set at load/build time.
 
     Currently:
       - defaults.psadt.app_vars.AppScriptDate = today's date (YYYY-MM-DD)
@@ -312,26 +292,27 @@ def load_effective_config(
     verbose: bool = False,
     debug: bool = False,
 ) -> dict[str, Any]:
-    """
-    Load and merge the effective configuration for a recipe.
+    """Load and merge the effective configuration for a recipe.
 
-    Steps
-      1) Read recipe YAML.
-      2) Find defaults root by scanning upwards for 'defaults/org.yaml'.
-      3) Load org defaults (required if defaults root exists).
-      4) Determine vendor (param 'vendor' > folder name > recipe contents).
-      5) Load vendor defaults if present.
-      6) Merge: org -> vendor -> recipe (dicts deep-merge, lists replace).
-      7) Resolve known relative paths (relative to the recipe directory).
-      8) Inject dynamic fields (AppScriptDate = today if absent).
+    Steps:
+        1. Read recipe YAML
+        2. Find defaults root by scanning upwards for 'defaults/org.yaml'
+        3. Load org defaults (required if defaults root exists)
+        4. Determine vendor (param 'vendor' > folder name > recipe contents)
+        5. Load vendor defaults if present
+        6. Merge: org -> vendor -> recipe (dicts deep-merge, lists replace)
+        7. Resolve known relative paths (relative to the recipe directory)
+        8. Inject dynamic fields (AppScriptDate = today if absent)
 
-    Returns
-      A merged configuration dict ready for downstream processors.
-      If no defaults were found in the tree, the recipe is returned as-is (with path resolution + injection).
+    Returns:
+        A merged configuration dict ready for downstream processors.
+        If no defaults were found in the tree, the recipe is returned
+        as-is (with path resolution + injection).
 
-    Raises
-      SystemExit on YAML parse errors (with chained context),
-      FileNotFoundError if the recipe file itself is missing.
+    Raises:
+        SystemExit: On YAML parse errors (with chained context).
+        FileNotFoundError: If the recipe file itself is missing.
+
     """
     from notapkgtool.cli import print_debug, print_verbose
 

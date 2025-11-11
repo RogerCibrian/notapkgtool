@@ -1,76 +1,34 @@
-"""
-Core orchestration for NAPT.
+"""Core orchestration for NAPT.
 
 This module provides high-level orchestration functions that coordinate the
 complete workflow for recipe validation, package building, and deployment.
 
-The orchestration uses a two-path architecture:
+Design Principles:
 
-VERSION-FIRST PATH (url_regex, github_release, http_json):
-  1. Load and merge configuration (org defaults + vendor + recipe)
-  2. Call strategy.get_version_info() to discover version (no download)
-  3. Compare discovered version to cached known_version
-  4. If match and file exists -> skip download entirely (fast path!)
-  5. If changed or missing -> download installer
-  6. Update state and return results
-
-FILE-FIRST PATH (http_static):
-  1. Load and merge configuration (org defaults + vendor + recipe)
-  2. Call strategy.discover_version() with cached ETag
-  3. Server returns HTTP 304 (not modified) -> use cached file
-  4. Server returns HTTP 200 (modified) -> download new version
-  5. Extract version from downloaded file
-  6. Update state and return results
-
-Functions
----------
-discover_recipe : function
-    Discover the latest version and download installer.
-    This is the entry point for the 'napt discover' command.
-    Automatically uses version-first optimization when available.
-
-derive_file_path_from_url : function
-    Derive expected file path from URL for cache lookups.
-
-See Also
---------
-validate_recipe : notapkgtool.validation
-    Validate recipe syntax without downloads.
-build_package : notapkgtool.build
-    Build PSADT package from recipe and installer.
-create_intunewin : notapkgtool.build
-    Create .intunewin package for Intune deployment.
-
-Future orchestration functions:
-    upload_package : Upload a built package to Microsoft Intune
-    sync_recipe : Full workflow (discover -> build -> package -> upload)
-
-Design Principles
------------------
 - Each function has a single, clear responsibility
 - Functions return structured data (dicts) for easy testing and extension
 - Error handling uses exceptions; CLI layer formats for user display
 - Discovery strategies are dynamically loaded via registry pattern
 - Configuration is immutable once loaded
-- Version-first strategies preferred for performance (skip downloads when unchanged)
+- Two-path architecture optimizes for different strategy types
 
-Example
--------
-Programmatic usage:
+Example:
+    Programmatic usage:
 
-    from pathlib import Path
-    from notapkgtool.core import discover_recipe
+        from pathlib import Path
+        from notapkgtool.core import discover_recipe
 
-    result = discover_recipe(
-        recipe_path=Path("recipes/Google/chrome.yaml"),
-        output_dir=Path("./downloads"),
-    )
+        result = discover_recipe(
+            recipe_path=Path("recipes/Google/chrome.yaml"),
+            output_dir=Path("./downloads"),
+        )
 
-    print(f"App: {result['app_name']}")
-    print(f"Version: {result['version']}")
-    print(f"SHA-256: {result['sha256']}")
+        print(f"App: {result['app_name']}")
+        print(f"Version: {result['version']}")
+        print(f"SHA-256: {result['sha256']}")
 
-    # Version-first strategies: may have skipped download if unchanged!
+        # Version-first strategies: may have skipped download if unchanged!
+
 """
 
 from __future__ import annotations
@@ -78,6 +36,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from notapkgtool import __version__
 from notapkgtool.config.loader import load_effective_config
 from notapkgtool.discovery import get_strategy
 from notapkgtool.io import download_file
@@ -86,29 +45,30 @@ from notapkgtool.versioning.keys import DiscoveredVersion
 
 
 def derive_file_path_from_url(url: str, output_dir: Path) -> Path:
-    """
-    Derive file path from URL using same logic as download_file.
+    """Derive file path from URL using same logic as download_file.
 
     This function ensures version-first strategies can locate cached files
     without downloading by following the same naming convention as the
     download module.
 
-    Parameters
-    ----------
-    url : str
-        Download URL.
-    output_dir : Path
-        Directory where file would be downloaded.
+    Args:
+        url: Download URL.
+        output_dir: Directory where file would be downloaded.
 
-    Returns
-    -------
-    Path
+    Returns:
         Expected path to the file.
 
-    Examples
-    --------
-    >>> derive_file_path_from_url("https://example.com/app.msi", Path("./downloads"))
-    Path('./downloads/app.msi')
+    Example:
+        Get expected file path for a download URL:
+
+            from pathlib import Path
+
+            path = derive_file_path_from_url(
+                "https://example.com/app.msi",
+                Path("./downloads")
+            )
+            # Returns: Path('./downloads/app.msi')
+
     """
     from urllib.parse import urlparse
 
@@ -124,8 +84,7 @@ def discover_recipe(
     verbose: bool = False,
     debug: bool = False,
 ) -> dict[str, Any]:
-    """
-    Discover the latest version by loading config and downloading installer.
+    """Discover the latest version by loading config and downloading installer.
 
     This is the main entry point for the 'napt discover' command. It orchestrates
     the entire discovery workflow using a two-path architecture optimized for
@@ -134,94 +93,83 @@ def discover_recipe(
     The function uses duck typing to detect strategy capabilities:
 
     VERSION-FIRST PATH (if strategy has get_version_info method):
-      1. Load effective configuration (org + vendor + recipe merged)
-      2. Call strategy.get_version_info() to discover version (no download)
-      3. Compare discovered version to cached known_version
-      4. If match and file exists -> skip download entirely (fast path!)
-      5. If changed or missing -> download installer via download_file()
-      6. Update state and return results
+
+    1. Load effective configuration (org + vendor + recipe merged)
+    2. Call strategy.get_version_info() to discover version (no download)
+    3. Compare discovered version to cached known_version
+    4. If match and file exists -> skip download entirely (fast path!)
+    5. If changed or missing -> download installer via download_file()
+    6. Update state and return results
 
     FILE-FIRST PATH (if strategy has only discover_version method):
-      1. Load effective configuration (org + vendor + recipe merged)
-      2. Call strategy.discover_version() with cached ETag
-      3. Strategy handles conditional request (HTTP 304 vs 200)
-      4. Extract version from downloaded file
-      5. Update state and return results
 
-    Parameters
-    ----------
-    recipe_path : Path
-        Path to the recipe YAML file. Must exist and be readable.
-        The path is resolved to absolute form.
-    output_dir : Path
-        Directory to download the installer to. Created if it doesn't exist.
-        The downloaded file will be named based on Content-Disposition header
-        or URL path.
-    state_file : Path, optional
-        Path to state file for version tracking and ETag caching.
-        Default is "state/versions.json". Set to None to disable.
-    stateless : bool, optional
-        If True, disable state tracking (no caching, always download).
-        Default is False.
+    1. Load effective configuration (org + vendor + recipe merged)
+    2. Call strategy.discover_version() with cached ETag
+    3. Strategy handles conditional request (HTTP 304 vs 200)
+    4. Extract version from downloaded file
+    5. Update state and return results
 
-    Returns
-    -------
-    dict[str, Any]
-        Results dictionary containing:
-        - app_name : str - Application display name
-        - app_id : str - Unique identifier for the app
-        - strategy : str - Discovery strategy used (e.g., "http_static")
-        - version : str - Extracted version string
-        - version_source : str - How version was determined (e.g., "msi_product_version_from_file")
-        - file_path : Path - Absolute path to downloaded installer
-        - sha256 : str - SHA-256 hash of the downloaded file (hex)
-        - status : str - Always "success" if no exception raised
+    Args:
+        recipe_path: Path to the recipe YAML file. Must exist and be
+            readable. The path is resolved to absolute form.
+        output_dir: Directory to download the installer to. Created if
+            it doesn't exist. The downloaded file will be named based on
+            Content-Disposition header or URL path.
+        state_file: Path to state file for version tracking
+            and ETag caching. Default is "state/versions.json". Set to None
+            to disable.
+        stateless: If True, disable state tracking (no caching,
+            always download). Default is False.
+        verbose: If True, print verbose progress output.
+            Default is False.
+        debug: If True, print debug output. Default is False.
 
-    Raises
-    ------
-    SystemExit
-        On YAML parse errors or missing recipe file (handled by config loader).
-    ValueError
-        On missing or invalid configuration fields:
-        - No apps defined in recipe
-        - Missing 'source.strategy' field
-        - Unknown discovery strategy name
-    RuntimeError
-        On download failures or version extraction errors.
-    FileNotFoundError
-        If recipe file doesn't exist (before config loading).
+    Returns:
+        A dict (app_name, app_id, strategy, version, version_source,
+            file_path, sha256, status), where app_name is the application
+            display name, app_id is the unique identifier, strategy is the
+            discovery strategy used, version is the extracted version string,
+            version_source describes how version was determined, file_path
+            is the Path to the downloaded installer, sha256 is the file hash,
+            and status is always "success".
 
-    Examples
-    --------
-    Basic version discovery:
+    Raises:
+        SystemExit: On YAML parse errors or missing recipe file (handled by
+            config loader).
+        ValueError: On missing or invalid configuration fields (no apps defined,
+            missing 'source.strategy' field, unknown discovery strategy name).
+        RuntimeError: On download failures or version extraction errors.
+        FileNotFoundError: If recipe file doesn't exist (before config loading).
 
-        >>> from pathlib import Path
-        >>> result = discover_recipe(
-        ...     Path("recipes/Google/chrome.yaml"),
-        ...     Path("./downloads")
-        ... )
-        >>> print(result['version'])
-        141.0.7390.123
+    Example:
+        Basic version discovery:
 
-    Handling errors:
+            from pathlib import Path
+            result = discover_recipe(
+                Path("recipes/Google/chrome.yaml"),
+                Path("./downloads")
+            )
+            print(result['version'])  # 141.0.7390.123
 
-        >>> try:
-        ...     result = discover_recipe(Path("invalid.yaml"), Path("."))
-        ... except ValueError as e:
-        ...     print(f"Config error: {e}")
-        ... except RuntimeError as e:
-        ...     print(f"Download error: {e}")
+        Handling errors:
 
-    Notes
-    -----
-    - Only the first app in a recipe is currently processed
-    - The discovery strategy must be registered before calling this function
-    - Version-first strategies (url_regex, github_release, http_json) can skip
-      downloads entirely when version unchanged (fast path optimization)
-    - File-first strategy (http_static) uses ETag conditional requests
-    - Downloaded files are written atomically (.part then renamed)
-    - Progress output goes to stdout via the download module
-    - Strategy type detected via duck typing (hasattr for get_version_info)
+            try:
+                result = discover_recipe(Path("invalid.yaml"), Path("."))
+            except ValueError as e:
+                print(f"Config error: {e}")
+            except RuntimeError as e:
+                print(f"Download error: {e}")
+
+    Note:
+        Only the first app in a recipe is currently processed. The discovery
+        strategy must be registered before calling this function. Version-first
+        strategies (url_regex, github_release, http_json) can skip downloads
+        entirely when version unchanged (fast path optimization). File-first
+        strategy (http_static) uses ETag conditional requests. Downloaded files
+        are written atomically (.part then renamed). Progress output goes to
+        stdout via the download module. Strategy type detected via duck typing
+        (hasattr for get_version_info).
+
     """
     from notapkgtool.cli import print_step, print_verbose
 
@@ -234,7 +182,7 @@ def discover_recipe(
         except FileNotFoundError:
             print_verbose("STATE", f"State file not found, will create: {state_file}")
             state = {
-                "metadata": {"napt_version": "0.1.0", "schema_version": "1"},
+                "metadata": {"napt_version": __version__, "schema_version": "2"},
                 "apps": {},
             }
         except Exception as err:
@@ -394,7 +342,7 @@ def discover_recipe(
         state["apps"][app_id] = cache_entry
 
         state["metadata"] = {
-            "napt_version": "0.1.0",
+            "napt_version": __version__,
             "last_updated": datetime.now(UTC).isoformat(),
             "schema_version": "2",
         }

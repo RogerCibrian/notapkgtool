@@ -4,6 +4,10 @@ Thank you for your interest in contributing to NAPT! This guide will help you ge
 
 ## Getting Started
 
+### Feature Ideas
+
+Have an idea for NAPT? Check [docs/roadmap.md](roadmap.md) to see what's planned and add your suggestions to the appropriate category!
+
 ### Development Setup
 
 ```bash
@@ -39,148 +43,87 @@ poetry run black notapkgtool/ tests/
 # Fix linting issues
 poetry run ruff check --fix notapkgtool/ tests/
 
+# Check docstring formatting
+poetry run ruff check --select D notapkgtool/
+
 # Check types (if using mypy)
 poetry run mypy notapkgtool/
 ```
 
 ## Branching Strategy
 
-NAPT uses **GitHub Flow** - a simple, branch-based workflow that keeps `main` always deployable.
+NAPT uses **GitHub Flow** - a simple, branch-based workflow. See [branching.md](branching.md) for complete workflow details.
 
-### Core Principles
+**Quick Summary:**
+- Create feature branches from `main` (use prefixes: `feature/`, `bugfix/`, `docs/`)
+- Make frequent, small commits with conventional commit messages
+- Open Pull Requests for code review
+- Merge to `main` when approved
+- Keep `main` always stable and deployable
 
-1. **`main` branch is always stable** - Production-ready code only
-2. **Feature branches for all work** - Every change starts from a branch
-3. **Pull Requests for review** - All changes reviewed before merging
-4. **Merge frequently** - Keep branches short-lived (< 1 week ideal)
+**Branch naming:** `feature/add-rpm-support`, `bugfix/fix-version-parsing`, `docs/update-guide`
 
-### Branch Naming Convention
-
-Use descriptive names with type prefixes:
-
-| Prefix | Purpose | Example |
-|--------|---------|---------|
-| `feature/` | New features or enhancements | `feature/add-rpm-support` |
-| `bugfix/` | Bug fixes | `bugfix/fix-version-parsing` |
-| `docs/` | Documentation updates | `docs/update-installation-guide` |
-| `refactor/` | Code improvements (no behavior change) | `refactor/simplify-config-loader` |
-| `test/` | Test additions/improvements | `test/add-integration-tests` |
-| `chore/` | Maintenance tasks | `chore/update-dependencies` |
-| `hotfix/` | Urgent production fixes | `hotfix/security-patch` |
-
-**Naming Rules:**
-
-- Use lowercase with hyphens
-- Be descriptive but concise (3-6 words)
-- Avoid generic names like `fix-bug` or `updates`
-- No issue numbers in branch names
-
-### Workflow
-
-#### Starting New Work
-
-```bash
-# Always start from updated main
-git checkout main
-git pull origin main
-
-# Create your feature branch
-git checkout -b feature/your-feature-name
-```
-
-#### During Development
-
-```bash
-# Make changes, commit frequently
-git add .
-git commit -m "feat: add your feature"
-
-# Push your branch
-git push origin feature/your-feature-name
-```
-
-#### Creating a Pull Request
-
-1. Push your branch to GitHub
-2. Create a Pull Request on GitHub
-3. Fill out the description with:
-   - What the PR does
-   - Why the change is needed
-   - How it was tested
-4. Request review from maintainers
-5. Address any feedback
-
-#### After Merge
-
-```bash
-# Update your local main
-git checkout main
-git pull origin main
-
-# Delete your local feature branch
-git branch -d feature/your-feature-name
-```
-
-## Commit Message Format
-
-Use conventional commit format for clarity:
-
-```
-<type>: <description>
-
-[optional body]
-```
-
-### Commit Types
-
-| Type | Purpose | Example |
-|------|---------|---------|
-| `feat` | New feature | `feat: add EXE version extraction` |
-| `fix` | Bug fix | `fix: correct version comparison logic` |
-| `docs` | Documentation | `docs: update installation instructions` |
-| `refactor` | Code improvement | `refactor: simplify config loading` |
-| `test` | Tests | `test: add tests for MSI extraction` |
-| `chore` | Maintenance | `chore: update Poetry dependencies` |
-| `perf` | Performance | `perf: optimize version comparison` |
-
-### Commit Guidelines
-
-- Use imperative mood: "add" not "added" or "adds"
-- Keep subject line under 50 characters
-- Capitalize subject line
-- No period at end of subject
-- Separate subject from body with blank line
-
-**Good Examples:**
-
-```bash
-git commit -m "feat: add RPM version extraction support"
-git commit -m "fix: handle missing ETag headers gracefully"
-git commit -m "docs: add examples for Linux MSI extraction"
-```
+**Commit format:** `<type>: <description>` where type is feat, fix, docs, refactor, test, chore, or perf
 
 ## Code Guidelines
 
-### Documentation Standards
+### Python Docstring Standards
 
-All code must include:
+All Python code must follow **Google-style docstrings**:
 
-1. **Module-level docstrings** - Explain purpose, features, and design decisions
-2. **Function docstrings** - Use Google-style format with:
-   - Summary
-   - Parameters section with types
-   - Returns section with type
-   - Raises section for exceptions
-   - Examples where helpful
-3. **Type annotations** - Full coverage for public APIs
-4. **Comments** - Explain "why" not "what"
+**Module docstrings:**
+
+- Brief summary + optional detailed description
+- Use "Key Features" or "Key Advantages" bullet lists (with blank line before)
+- Include Example section if helpful
+- Avoid: schema dumps, workflow steps, package structure listings, migration notes
+
+**Function docstrings:**
+
+- One-line summary + optional details
+- Standard sections: `Args:`, `Returns:`, `Raises:`, `Example:`, `Note:`
+- Use `Example:` (singular, NEVER `Examples:` or `Usage Example:`)
+- Use `Note:` (singular, NEVER `Notes:`)
+- NO `>>>` doctest prompts - causes rendering issues
+- ALL content after section headers MUST be indented 4 spaces
+- Add blank line after section headers before content
+
+**Type annotations:**
+
+- Full coverage for public APIs
+- Modern Python 3.11+ syntax (`X | None`, not `Optional[X]`)
+
+### Markdown Documentation
+
+When updating documentation in `docs/*.md`, follow the 3-tier structure:
+
+**1. docs/index.md (Landing Page)**
+
+- High-level overview only
+- Simple diagrams (5-10 nodes, centered with `<div align="center">`)
+- Link to deeper content, don't duplicate
+
+**2. docs/quick-start.md (Quick Start)**
+
+- Installation steps (pip first, then Poetry)
+- Basic command examples with expected outputs
+- Platform-specific requirements
+
+**3. docs/user-guide.md (Comprehensive Guide)**
+
+- Section order: Commands → Strategies → State → Configuration → Best Practices
+- Technical depth appropriate here
+- Detailed diagrams (can split complex ones)
+- Performance comparisons and troubleshooting
+
+**Key principle:** No redundancy - each piece of information lives in ONE appropriate place.
 
 ### Code Style
 
 - **Formatting**: Use Black (line length 88)
-- **Linting**: Pass Ruff checks
+- **Linting**: Pass Ruff checks (including docstring checks with `-select D`)
 - **Type hints**: Modern Python 3.11+ syntax (`X | None`, not `Optional[X]`)
-- **Import order**:
+- **Import order**: Ruff automatically organizes imports:
   1. `from __future__ import annotations` (if needed)
   2. Standard library
   3. Third-party packages
@@ -211,6 +154,8 @@ When contributing code:
 ## Pull Request Guidelines
 
 ### Before Submitting
+
+Before creating a pull request, ensure:
 
 - [ ] Code follows existing patterns and conventions
 - [ ] All functions have comprehensive docstrings

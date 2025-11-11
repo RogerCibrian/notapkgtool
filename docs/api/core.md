@@ -1,6 +1,6 @@
-# Core Module
+# core
 
-The core module provides high-level orchestration functions that coordinate the complete workflow for recipe validation, package building, and deployment.
+Core orchestration module for NAPT.
 
 The orchestration uses a two-path architecture that automatically optimizes based on discovery strategy capabilities:
 
@@ -9,8 +9,4 @@ The orchestration uses a two-path architecture that automatically optimizes base
 - **File-First Path**: For strategies with only `discover_version()` method (http_static), uses HTTP ETag conditional requests to minimize bandwidth.
 
 ::: notapkgtool.core
-    options:
-      show_root_heading: true
-      show_source: true
-      members_order: source
 

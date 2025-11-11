@@ -1,5 +1,4 @@
-"""
-NAPT - Not a Pkg Tool
+"""NAPT - Not a Pkg Tool
 
 A Python-based CLI tool for automating Windows application packaging and
 deployment to Microsoft Intune using PSAppDeployToolkit (PSADT).
@@ -14,8 +13,7 @@ NAPT provides:
   - Direct upload to Microsoft Intune (planned)
   - Deployment wave/ring management (planned)
 
-Quick Start
------------
+Quick Start:
 Validate recipe syntax:
 
     $ napt validate recipes/Google/chrome.yaml
@@ -28,25 +26,7 @@ For full CLI documentation:
 
     $ napt --help
 
-Package Structure
------------------
-cli : module
-    Command-line interface with argparse.
-core : module
-    High-level orchestration functions.
-config : package
-    YAML configuration loading and merging.
-discovery : package
-    Strategy pattern for discovering application versions.
-versioning : package
-    Version comparison and extraction from MSI/EXE files.
-io : package
-    Download and upload operations.
-policy : package
-    Update policies and deployment wave management.
-
-Public API
-----------
+Public API:
 The primary interface is the CLI, but key functions are exported for
 programmatic use:
 
@@ -57,12 +37,6 @@ programmatic use:
     from notapkgtool.io import download_file
 
 For more details, see the individual module docstrings.
-
-Project Information
--------------------
-Author: Roger Cibrian
-License: GPL-3.0-only
-Repository: https://github.com/RogerCibrian/notapkgtool
 """
 
 __version__ = "0.2.0"

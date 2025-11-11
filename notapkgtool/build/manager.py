@@ -1,33 +1,24 @@
-"""
-Build manager for PSADT package creation.
+"""Build manager for PSADT package creation.
 
 This module orchestrates the complete build process for creating PSADT
 packages from recipes and downloaded installers.
 
-Functions
----------
-build_package : function
-    Main entry point for building PSADT packages.
+Private Helpers:
+    - _get_installer_version: Extract version from downloaded installer
+    - _find_installer_file: Locate installer in downloads directory
+    - _create_build_directory: Create build directory structure
+    - _copy_psadt_pristine: Copy PSADT files from cache
+    - _copy_installer: Copy installer to Files/ directory
+    - _apply_branding: Replace PSADT assets with custom branding
 
-Private Helpers
----------------
-_get_installer_version : Extract version from downloaded installer
-_find_installer_file : Locate installer in downloads directory
-_create_build_directory : Create build directory structure
-_copy_psadt_pristine : Copy PSADT files from cache
-_copy_installer : Copy installer to Files/ directory
-_apply_branding : Replace PSADT assets with custom branding
+Design Principles:
+    - Filesystem is source of truth for version information
+    - Entire PSADT Template_v4 structure copied pristine
+    - Invoke-AppDeployToolkit.ps1 is generated from template (not copied)
+    - Build directories are versioned: {app_id}/{version}/
+    - Branding applied by replacing files in root Assets/ directory (v4 structure)
 
-Design Principles
------------------
-- Filesystem is source of truth for version information
-- Entire PSADT Template_v4 structure copied pristine
-- Invoke-AppDeployToolkit.ps1 is generated from template (not copied)
-- Build directories are versioned: {app_id}/{version}/
-- Branding applied by replacing files in root Assets/ directory (v4 structure)
-
-Example
--------
+Example:
     from pathlib import Path
     from notapkgtool.build import build_package
 
@@ -53,33 +44,24 @@ from notapkgtool.versioning.msi import version_from_msi_product_version
 def _get_installer_version(
     installer_file: Path, config: dict[str, Any], state_file: Path | None = None
 ) -> str:
-    """
-    Extract version from installer file or state.
+    """Extract version from installer file or state.
 
     Uses the version extraction method specified in the recipe's
     source configuration. If no version.type is specified (e.g., for
     github_release strategy), attempts to read from state file.
 
-    Parameters
-    ----------
-    installer_file : Path
-        Path to the installer file.
-    config : dict
-        Recipe configuration.
-    state_file : Path, optional
-        Path to state file for fallback version lookup.
+    Args:
+        installer_file: Path to the installer file.
+        config: Recipe configuration.
+        state_file: Path to state file for fallback version
+            lookup.
 
-    Returns
-    -------
-    str
+    Returns:
         Extracted version string.
 
-    Raises
-    ------
-    RuntimeError
-        If version extraction fails or version not found.
-    ValueError
-        If version type is unsupported.
+    Raises:
+        RuntimeError: If version extraction fails or version not found.
+        ValueError: If version type is unsupported.
     """
     from notapkgtool.cli import print_verbose
 
@@ -132,27 +114,19 @@ def _get_installer_version(
 
 
 def _find_installer_file(downloads_dir: Path, config: dict[str, Any]) -> Path:
-    """
-    Find the installer file in the downloads directory.
+    """Find the installer file in the downloads directory.
 
     Uses the URL from the recipe to determine the expected filename.
 
-    Parameters
-    ----------
-    downloads_dir : Path
-        Downloads directory to search.
-    config : dict
-        Recipe configuration.
+    Args:
+        downloads_dir: Downloads directory to search.
+        config: Recipe configuration.
 
-    Returns
-    -------
-    Path
+    Returns:
         Path to the installer file.
 
-    Raises
-    ------
-    FileNotFoundError
-        If installer file cannot be found.
+    Raises:
+        FileNotFoundError: If installer file cannot be found.
     """
     from notapkgtool.cli import print_verbose
 
@@ -206,27 +180,18 @@ def _find_installer_file(downloads_dir: Path, config: dict[str, Any]) -> Path:
 
 
 def _create_build_directory(base_dir: Path, app_id: str, version: str) -> Path:
-    """
-    Create the build directory structure.
+    """Create the build directory structure.
 
-    Parameters
-    ----------
-    base_dir : Path
-        Base builds directory.
-    app_id : str
-        Application ID.
-    version : str
-        Application version.
+    Args:
+        base_dir: Base builds directory.
+        app_id: Application ID.
+        version: Application version.
 
-    Returns
-    -------
-    Path
+    Returns:
         Path to the created build directory.
 
-    Raises
-    ------
-    OSError
-        If directory creation fails.
+    Raises:
+        OSError: If directory creation fails.
     """
     from notapkgtool.cli import print_verbose
 
@@ -246,8 +211,7 @@ def _create_build_directory(base_dir: Path, app_id: str, version: str) -> Path:
 
 
 def _copy_psadt_pristine(psadt_cache_dir: Path, build_dir: Path) -> None:
-    """
-    Copy PSADT template files from cache to build directory (pristine, unmodified).
+    """Copy PSADT template files from cache to build directory (pristine, unmodified).
 
     Copies the entire v4 template structure including:
     - PSAppDeployToolkit/ (module)
@@ -257,19 +221,14 @@ def _copy_psadt_pristine(psadt_cache_dir: Path, build_dir: Path) -> None:
     - Files/, SupportFiles/ (empty directories for user files)
     - PSAppDeployToolkit.Extensions/
 
-    Parameters
-    ----------
-    psadt_cache_dir : Path
-        Path to cached PSADT version directory (root of Template_v4 extraction).
-    build_dir : Path
-        Build directory where PSADT should be copied.
+    Args:
+        psadt_cache_dir: Path to cached PSADT version directory (root
+            of Template_v4 extraction).
+        build_dir: Build directory where PSADT should be copied.
 
-    Raises
-    ------
-    FileNotFoundError
-        If PSADT cache directory or required files don't exist.
-    OSError
-        If copy operation fails.
+    Raises:
+        FileNotFoundError: If PSADT cache directory or required files don't exist.
+        OSError: If copy operation fails.
     """
     from notapkgtool.cli import print_verbose
 
@@ -293,20 +252,14 @@ def _copy_psadt_pristine(psadt_cache_dir: Path, build_dir: Path) -> None:
 
 
 def _copy_installer(installer_file: Path, build_dir: Path) -> None:
-    """
-    Copy installer to the build's Files/ directory.
+    """Copy installer to the build's Files/ directory.
 
-    Parameters
-    ----------
-    installer_file : Path
-        Path to the installer file.
-    build_dir : Path
-        Build directory.
+    Args:
+        installer_file: Path to the installer file.
+        build_dir: Build directory.
 
-    Raises
-    ------
-    OSError
-        If copy operation fails.
+    Raises:
+        OSError: If copy operation fails.
     """
     from notapkgtool.cli import print_verbose
 
@@ -321,25 +274,18 @@ def _copy_installer(installer_file: Path, build_dir: Path) -> None:
 
 
 def _apply_branding(config: dict[str, Any], build_dir: Path) -> None:
-    """
-    Apply custom branding by replacing PSADT assets.
+    """Apply custom branding by replacing PSADT assets.
 
     Reads the brand_pack configuration and replaces PSADT's default
     assets (logo, banner) with custom ones.
 
-    Parameters
-    ----------
-    config : dict
-        Merged configuration with brand_pack settings.
-    build_dir : Path
-        Build directory containing PSAppDeployToolkit/.
+    Args:
+        config: Merged configuration with brand_pack settings.
+        build_dir: Build directory containing PSAppDeployToolkit/.
 
-    Raises
-    ------
-    FileNotFoundError
-        If branding files don't exist.
-    OSError
-        If file copy operation fails.
+    Raises:
+        FileNotFoundError: If branding files don't exist.
+        OSError: If file copy operation fails.
     """
     from notapkgtool.cli import print_verbose
 
@@ -399,75 +345,58 @@ def build_package(
     verbose: bool = False,
     debug: bool = False,
 ) -> dict[str, Any]:
-    """
-    Build a PSADT package from a recipe and downloaded installer.
+    """Build a PSADT package from a recipe and downloaded installer.
 
     This is the main entry point for the build process. It:
-      1. Loads the recipe configuration
-      2. Finds the downloaded installer
-      3. Extracts version from installer (filesystem is truth)
-      4. Gets/downloads PSADT release
-      5. Creates build directory structure
-      6. Copies PSADT files (pristine)
-      7. Generates Invoke-AppDeployToolkit.ps1 from template
-      8. Copies installer to Files/
-      9. Applies custom branding
 
-    Parameters
-    ----------
-    recipe_path : Path
-        Path to the recipe YAML file.
-    downloads_dir : Path, optional
-        Directory containing the downloaded installer.
-        Default: Path("downloads")
-    output_dir : Path, optional
-        Base directory for build output.
-        Default: From config or Path("builds")
-    verbose : bool, optional
-        Show verbose progress output.
-    debug : bool, optional
-        Show debug output.
+    1. Loads the recipe configuration
+    2. Finds the downloaded installer
+    3. Extracts version from installer (filesystem is truth)
+    4. Gets/downloads PSADT release
+    5. Creates build directory structure
+    6. Copies PSADT files (pristine)
+    7. Generates Invoke-AppDeployToolkit.ps1 from template
+    8. Copies installer to Files/
+    9. Applies custom branding
 
-    Returns
-    -------
-    dict
-        Build results containing:
-        - app_id : str
-        - app_name : str
-        - version : str
-        - build_dir : Path
-        - psadt_version : str
-        - status : str
+    Args:
+        recipe_path: Path to the recipe YAML file.
+        downloads_dir: Directory containing the downloaded
+            installer. Default: Path("downloads")
+        output_dir: Base directory for build output.
+            Default: From config or Path("builds")
+        verbose: Show verbose progress output. Default is False.
+        debug: Show debug output. Default is False.
 
-    Raises
-    ------
-    FileNotFoundError
-        If recipe or installer doesn't exist.
-    RuntimeError
-        If build process fails.
+    Returns:
+        A dict (app_id, app_name, version, build_dir, psadt_version, status),
+            where app_id is the application ID, app_name is the application
+            name, version is the application version, build_dir is the Path
+            to the build directory, psadt_version is the PSADT version used,
+            and status is the build status.
 
-    Examples
-    --------
-    Basic build:
+    Raises:
+        FileNotFoundError: If recipe or installer doesn't exist.
+        RuntimeError: If build process fails.
 
-        >>> result = build_package(Path("recipes/Google/chrome.yaml"))
-        >>> print(result['build_dir'])
-        builds/napt-chrome/141.0.7390.123
+    Example:
+        Basic build:
 
-    Custom output directory:
+            result = build_package(Path("recipes/Google/chrome.yaml"))
+            print(result['build_dir'])  # builds/napt-chrome/141.0.7390.123
 
-        >>> result = build_package(
-        ...     Path("recipes/Google/chrome.yaml"),
-        ...     output_dir=Path("custom/builds")
-        ... )
+        Custom output directory:
 
-    Notes
-    -----
-    - Requires installer to be downloaded first (run 'napt discover')
-    - Version extracted from installer file, not state cache
-    - Overwrites existing build directory if it exists
-    - PSADT files are copied pristine from cache
-    - Invoke-AppDeployToolkit.ps1 is generated (not copied)
+            result = build_package(
+                Path("recipes/Google/chrome.yaml"),
+                output_dir=Path("custom/builds")
+            )
+
+    Note:
+        Requires installer to be downloaded first (run 'napt discover').
+        Version extracted from installer file, not state cache. Overwrites
+        existing build directory if it exists. PSADT files are copied pristine
+        from cache. Invoke-AppDeployToolkit.ps1 is generated (not copied).
     """
     from notapkgtool.cli import print_step, print_verbose
 

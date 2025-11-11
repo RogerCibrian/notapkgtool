@@ -1,90 +1,46 @@
-"""
-State tracking implementation for NAPT.
+"""State tracking implementation for NAPT.
 
 This module implements the state persistence layer for tracking discovered
 application versions, ETags, and download metadata between runs.
 
 The state file supports two optimization approaches:
+
 - VERSION-FIRST (url_regex, github_release, http_json): Uses known_version for comparison
 - FILE-FIRST (http_static): Uses etag/last_modified for HTTP conditional requests
 
-Key Features
-------------
+Key Features:
+
 - JSON-based state storage (fast parsing, standard library)
 - Automatic ETag/Last-Modified tracking for conditional requests
 - Version change detection for version-first strategies
 - Robust error handling (corrupted files, missing data)
 - Auto-creation of state files and directories
 
-State File Schema
------------------
-Schema v2 (filesystem-first approach):
-{
-  "metadata": {
-    "napt_version": "0.1.0",
-    "schema_version": "2",
-    "last_updated": "2024-10-28T10:30:00Z"
-  },
-  "apps": {
-    "recipe-id": {
-      "url": "https://vendor.com/installer.msi",
-      "etag": "W/\"abc123\"",
-      "last_modified": "Mon, 28 Oct 2024 10:30:00 GMT",
-      "sha256": "def456...",
-      "known_version": "1.2.3",
-      "strategy": "http_static"
-    }
-  }
-}
+Example:
+    High-level API with StateTracker:
 
-Field Usage by Strategy Type
------------------------------
-VERSION-FIRST (url_regex, github_release, http_json):
-- url: Actual download URL (may differ from recipe source URL, e.g., GitHub asset URL)
-- etag: Saved but unused (version comparison used instead)
-- last_modified: Saved but unused (version comparison used instead)
-- sha256: Used for file integrity verification
-- known_version: PRIMARY cache key - compared to discovered version
-- strategy: For debugging/logging
+        from pathlib import Path
+        from notapkgtool.state import StateTracker
 
-FILE-FIRST (http_static):
-- url: Source URL from recipe
-- etag: PRIMARY cache key - used for HTTP conditional requests (If-None-Match)
-- last_modified: SECONDARY cache key - fallback for conditional requests
-- sha256: Used for file integrity verification
-- known_version: Informational only (not used for caching decisions)
-- strategy: For debugging/logging
+        tracker = StateTracker(Path("state/versions.json"))
+        tracker.load()
 
-Key Changes from v1:
-- url: Now stores actual download URL (critical for version-first strategies)
-- etag/last_modified/sha256: Kept (HTTP optimization for http_static, unused by version-first)
-- known_version: Renamed from "version" (PRIMARY cache key for version-first, informational for file-first)
-- strategy: Kept for debugging
-- Removed: file_path (use convention), last_checked (use file mtime), source (renamed)
+        # Get cache for conditional requests
+        cache = tracker.get_cache("napt-chrome")
 
-Usage
------
-High-level API with StateTracker:
+        # Update after discovery
+        tracker.update_cache("napt-chrome", version="130.0.0", ...)
+        tracker.save()
 
-    from notapkgtool.state import StateTracker
+    Low-level API with functions:
 
-    tracker = StateTracker(Path("state/versions.json"))
-    tracker.load()
+        from pathlib import Path
+        from notapkgtool.state import load_state, save_state
 
-    # Get cache for conditional requests
-    cache = tracker.get_cache("napt-chrome")
+        state = load_state(Path("state/versions.json"))
+        # ... modify state dict ...
+        save_state(state, Path("state/versions.json"))
 
-    # Update after discovery
-    tracker.update_cache("napt-chrome", version="130.0.0", ...)
-    tracker.save()
-
-Low-level API with functions:
-
-    from notapkgtool.state import load_state, save_state
-
-    state = load_state(Path("state/versions.json"))
-    # ... modify state dict ...
-    save_state(state, Path("state/versions.json"))
 """
 
 from __future__ import annotations
@@ -98,60 +54,56 @@ from notapkgtool import __version__
 
 
 class StateTracker:
-    """
-    Manages application state tracking with automatic persistence.
+    """Manages application state tracking with automatic persistence.
 
     This class provides a high-level interface for loading, querying, and
     updating the state file. It handles file I/O, error recovery, and
     provides convenience methods for common operations.
 
-    Attributes
-    ----------
-    state_file : Path
-        Path to the JSON state file.
-    state : dict
-        In-memory state dictionary.
+    Attributes:
+        state_file: Path to the JSON state file.
+        state: In-memory state dictionary.
 
-    Examples
-    --------
-    Basic usage:
+    Example:
+        Basic usage:
 
-        >>> tracker = StateTracker(Path("state/versions.json"))
-        >>> tracker.load()
-    >>> cache = tracker.get_cache("napt-chrome")
-    >>> tracker.update_cache("napt-chrome",
-    ...     url="https://...", sha256="...", known_version="130.0.0")
-    >>> tracker.save()
+            from pathlib import Path
+
+            tracker = StateTracker(Path("state/versions.json"))
+            tracker.load()
+            cache = tracker.get_cache("napt-chrome")
+            tracker.update_cache(
+                "napt-chrome",
+                url="https://...",
+                sha256="...",
+                known_version="130.0.0"
+            )
+            tracker.save()
+
     """
 
     def __init__(self, state_file: Path):
-        """
-        Initialize state tracker.
+        """Initialize state tracker.
 
-        Parameters
-        ----------
-        state_file : Path
-            Path to JSON state file. Created if doesn't exist.
+        Args:
+            state_file: Path to JSON state file. Created if doesn't exist.
+
         """
         self.state_file = state_file
         self.state: dict[str, Any] = {}
 
     def load(self) -> dict[str, Any]:
-        """
-        Load state from file.
+        """Load state from file.
 
         Creates default state structure if file doesn't exist.
         Handles corrupted files by creating backup and starting fresh.
 
-        Returns
-        -------
-        dict
+        Returns:
             Loaded state dictionary.
 
-        Raises
-        ------
-        OSError
-            If file permissions prevent reading.
+        Raises:
+            OSError: If file permissions prevent reading.
+
         """
         try:
             self.state = load_state(self.state_file)
@@ -174,16 +126,15 @@ class StateTracker:
         return self.state
 
     def save(self) -> None:
-        """
-        Save current state to file.
+        """Save current state to file.
 
         Updates metadata.last_updated timestamp automatically.
         Creates parent directories if needed.
 
-        Raises
-        ------
+        Raises:
         OSError
             If file permissions prevent writing.
+
         """
         # Update metadata
         self.state.setdefault("metadata", {})
@@ -195,25 +146,23 @@ class StateTracker:
         save_state(self.state, self.state_file)
 
     def get_cache(self, recipe_id: str) -> dict[str, Any] | None:
-        """
-        Get cached information for a recipe.
+        """Get cached information for a recipe.
 
-        Parameters
-        ----------
-        recipe_id : str
-            Recipe identifier (from recipe's 'id' field).
+        Args:
+        recipe_id: Recipe identifier (from recipe's 'id' field).
 
-        Returns
-        -------
+        Returns:
         dict or None
             Cached data if available, None otherwise.
 
-        Examples
-        --------
-        >>> cache = tracker.get_cache("napt-chrome")
-        >>> if cache:
-        ...     etag = cache.get('etag')
-        ...     known_version = cache.get('known_version')
+        Example:
+            Retrieve cached information:
+
+                cache = tracker.get_cache("napt-chrome")
+                if cache:
+                    etag = cache.get('etag')
+                    known_version = cache.get('known_version')
+
         """
         return self.state.get("apps", {}).get(recipe_id)
 
@@ -227,50 +176,43 @@ class StateTracker:
         known_version: str | None = None,
         strategy: str | None = None,
     ) -> None:
-        """
-        Update cached information for a recipe.
+        """Update cached information for a recipe.
 
-        Parameters
-        ----------
-        recipe_id : str
-            Recipe identifier.
-        url : str
-            Download URL for provenance tracking. For version-first strategies
-            (url_regex, github_release, http_json), this is the actual download URL
-            from version_info. For file-first (http_static), this is source.url.
-        sha256 : str
-            SHA-256 hash of file (for integrity checks).
-        etag : str, optional
-            ETag header from download response. Used by http_static for HTTP 304
-            conditional requests. Saved but unused by version-first strategies.
-        last_modified : str, optional
-            Last-Modified header from download response. Used by http_static as
-            fallback for conditional requests. Saved but unused by version-first.
-        known_version : str, optional
-            Version string. PRIMARY cache key for version-first strategies
-            (compared to skip downloads). Informational only for http_static.
-        strategy : str, optional
-            Discovery strategy used (for debugging).
+        Args:
+            recipe_id: Recipe identifier.
+            url: Download URL for provenance tracking. For version-first strategies
+                (url_regex, github_release, http_json), this is the actual download URL
+                from version_info. For file-first (http_static), this is source.url.
+            sha256: SHA-256 hash of file (for integrity checks).
+            etag: ETag header from download response. Used by http_static for HTTP 304
+                conditional requests. Saved but unused by version-first strategies.
+            last_modified: Last-Modified header from download response. Used by http_static
+                as fallback for conditional requests. Saved but unused by version-first.
+            known_version: Version string. PRIMARY cache key for version-first strategies
+                (compared to skip downloads). Informational only for http_static.
+            strategy: Discovery strategy used (for debugging).
 
-        Examples
-        --------
-        >>> tracker.update_cache(
-        ...     "napt-chrome",
-        ...     url="https://dl.google.com/chrome.msi",
+        Example:
+            Update cache entry:
+
+                tracker.update_cache(
+                    "napt-chrome",
+                    url="https://dl.google.com/chrome.msi",
         ...     sha256="abc123...",
         ...     etag='W/"def456"',
         ...     known_version="130.0.0"
         ... )
 
-        Notes
-        -----
-        Schema v2: Removed file_path, last_checked, and renamed version→known_version.
+        Note:
+            Schema v2: Removed file_path, last_checked, and renamed version→known_version.
 
-        Field usage differs by strategy type:
-        - Version-first: known_version is PRIMARY cache key, etag/last_modified unused
-        - File-first: etag/last_modified are PRIMARY cache keys, known_version informational
+            Field usage differs by strategy type:
 
-        Filesystem is the source of truth; state is for optimization only.
+            - Version-first: known_version is PRIMARY cache key, etag/last_modified unused
+            - File-first: etag/last_modified are PRIMARY cache keys, known_version informational
+
+            Filesystem is the source of truth; state is for optimization only.
+
         """
         if "apps" not in self.state:
             self.state["apps"] = {}
@@ -291,30 +233,26 @@ class StateTracker:
         self.state["apps"][recipe_id] = cache_entry
 
     def has_version_changed(self, recipe_id: str, new_version: str) -> bool:
-        """
-        Check if discovered version differs from cached known_version.
+        """Check if discovered version differs from cached known_version.
 
-        Parameters
-        ----------
-        recipe_id : str
-            Recipe identifier.
-        new_version : str
-            Newly discovered version.
+        Args:
+        recipe_id: Recipe identifier.
+        new_version: Newly discovered version.
 
-        Returns
-        -------
+        Returns:
         bool
             True if version changed or no cached version exists.
 
-        Examples
-        --------
-        >>> if tracker.has_version_changed("napt-chrome", "130.0.0"):
-        ...     print("New version available!")
+        Example:
+            Check if version has changed:
 
-        Notes
-        -----
-        Uses 'known_version' field which is informational only.
-        Real version should be extracted from filesystem during build.
+                if tracker.has_version_changed("napt-chrome", "130.0.0"):
+                    print("New version available!")
+
+        Note:
+            Uses 'known_version' field which is informational only.
+            Real version should be extracted from filesystem during build.
+
         """
         cache = self.get_cache(recipe_id)
         if not cache:
@@ -324,18 +262,18 @@ class StateTracker:
 
 
 def create_default_state() -> dict[str, Any]:
-    """
-    Create a default empty state structure.
+    """Create a default empty state structure.
 
-    Returns
-    -------
+    Returns:
     dict
         Empty state with metadata section.
 
-    Examples
-    --------
-    >>> state = create_default_state()
-    >>> state["apps"] = {}
+    Example:
+        Create default state structure:
+
+            state = create_default_state()
+            state["apps"] = {}
+
     """
     return {
         "metadata": {
@@ -348,21 +286,17 @@ def create_default_state() -> dict[str, Any]:
 
 
 def load_state(state_file: Path) -> dict[str, Any]:
-    """
-    Load state from JSON file.
+    """Load state from JSON file.
 
-    Parameters
-    ----------
-    state_file : Path
+    Args:
+    state_file:
         Path to JSON state file.
 
-    Returns
-    -------
+    Returns:
     dict
         Loaded state dictionary.
 
-    Raises
-    ------
+    Raises:
     FileNotFoundError
         If state file doesn't exist.
     json.JSONDecodeError
@@ -370,46 +304,48 @@ def load_state(state_file: Path) -> dict[str, Any]:
     OSError
         If file cannot be read due to permissions.
 
-    Examples
-    --------
-    >>> from pathlib import Path
-    >>> state = load_state(Path("state/versions.json"))
-    >>> apps = state.get("apps", {})
+    Example:
+        Load state from file:
+
+            from pathlib import Path
+
+            state = load_state(Path("state/versions.json"))
+            apps = state.get("apps", {})
+
     """
     with open(state_file, encoding="utf-8") as f:
         return json.load(f)
 
 
 def save_state(state: dict[str, Any], state_file: Path) -> None:
-    """
-    Save state to JSON file with pretty-printing.
+    """Save state to JSON file with pretty-printing.
 
     Creates parent directories if needed. Uses 2-space indentation
     and sorted keys for consistent diffs in version control.
 
-    Parameters
-    ----------
-    state : dict
+    Args:
+    state:
         State dictionary to save.
-    state_file : Path
+    state_file:
         Path to JSON state file.
 
-    Raises
-    ------
+    Raises:
     OSError
         If file cannot be written due to permissions.
 
-    Examples
-    --------
-    >>> from pathlib import Path
-    >>> state = {"metadata": {}, "apps": {}}
-    >>> save_state(state, Path("state/versions.json"))
+    Example:
+        Save state to file:
 
-    Notes
-    -----
-    - Uses 2-space indentation for readability
-    - Sorts keys alphabetically for consistent diffs
-    - Adds trailing newline for git compatibility
+            from pathlib import Path
+
+            state = {"metadata": {}, "apps": {}}
+            save_state(state, Path("state/versions.json"))
+
+    Note:
+        - Uses 2-space indentation for readability
+        - Sorts keys alphabetically for consistent diffs
+        - Adds trailing newline for git compatibility
+
     """
     state_file.parent.mkdir(parents=True, exist_ok=True)
 

@@ -5,15 +5,13 @@ This module handles building PSAppDeployToolkit packages from recipes and
 downloaded installers. It orchestrates PSADT release management, script
 generation, file copying, and branding application.
 
-Public API
-----------
+Public API:
 build_package : function
     Build a complete PSADT package from a recipe and installer.
 create_intunewin : function
     Create a .intunewin package from a built PSADT directory.
 
-Example
--------
+Example:
     from pathlib import Path
     from notapkgtool.build import build_package, create_intunewin
     

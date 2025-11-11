@@ -1,65 +1,62 @@
-"""
-MSI ProductVersion extraction for NAPT.
+"""MSI ProductVersion extraction for NAPT.
 
 This module extracts the ProductVersion property from Windows Installer (MSI)
 database files. It tries multiple backends in order of preference to maximize
 cross-platform compatibility.
 
-Backend Priority
-----------------
+Backend Priority:
+
 On Windows:
-  1. msilib (Python standard library, Python 3.11+)
-  2. _msi (CPython extension module, Windows-specific)
-  3. PowerShell COM (Windows Installer COM API, always available)
+
+1. msilib (Python standard library, Python 3.11+)
+2. _msi (CPython extension module, Windows-specific)
+3. PowerShell COM (Windows Installer COM API, always available)
 
 On Linux/macOS:
-  1. msiinfo (from msitools package, must be installed separately)
 
-The PowerShell fallback makes this truly universal on Windows systems,
-even when Python MSI libraries aren't available.
+1. msiinfo (from msitools package, must be installed separately)
 
-Functions
----------
-version_from_msi_product_version : function
-    Extract ProductVersion from an MSI file using available backends.
+    The PowerShell fallback makes this truly universal on Windows systems,
+    even when Python MSI libraries aren't available.
 
-Installation Requirements
---------------------------
+Installation Requirements:
+
 Windows:
-  - No additional packages required (PowerShell fallback always works)
-  - Optional: Ensure msilib is available for better performance
+
+- No additional packages required (PowerShell fallback always works)
+- Optional: Ensure msilib is available for better performance
 
 Linux/macOS:
-  - Install msitools package:
-    - Debian/Ubuntu: sudo apt-get install msitools
-    - RHEL/Fedora: sudo dnf install msitools
-    - macOS: brew install msitools
 
-Examples
---------
-Extract version from MSI:
+- Install msitools package:
+    - Debian/Ubuntu: `sudo apt-get install msitools`
+    - RHEL/Fedora: `sudo dnf install msitools`
+    - macOS: `brew install msitools`
 
-    >>> from pathlib import Path
-    >>> from notapkgtool.versioning.msi import version_from_msi_product_version
-    >>> discovered = version_from_msi_product_version("chrome.msi")
-    >>> print(f"{discovered.version} from {discovered.source}")
-    141.0.7390.123 from msi_product_version_from_file
+Example:
+    Extract version from MSI:
 
-Error handling:
+        from pathlib import Path
+        from notapkgtool.versioning.msi import version_from_msi_product_version
+        discovered = version_from_msi_product_version("chrome.msi")
+        print(f"{discovered.version} from {discovered.source}")
+        # 141.0.7390.123 from msi_product_version_from_file
 
-    >>> try:
-    ...     discovered = version_from_msi_product_version("missing.msi")
-    ... except FileNotFoundError:
-    ...     print("MSI file not found")
-    ... except RuntimeError as e:
-    ...     print(f"Extraction failed: {e}")
+    Error handling:
 
-Notes
------
-- This is pure file introspection; no network calls are made
-- All backends query the MSI Property table for ProductVersion
-- The PowerShell approach uses COM (WindowsInstaller.Installer)
-- Errors are chained for debugging (check 'from err' clause)
+        try:
+            discovered = version_from_msi_product_version("missing.msi")
+        except FileNotFoundError:
+            print("MSI file not found")
+        except RuntimeError as e:
+            print(f"Extraction failed: {e}")
+
+Note:
+    This is pure file introspection; no network calls are made. All backends
+    query the MSI Property table for ProductVersion. The PowerShell approach
+    uses COM (WindowsInstaller.Installer). Errors are chained for debugging
+    (check 'from err' clause).
+
 """
 
 from __future__ import annotations
@@ -80,18 +77,27 @@ from .keys import DiscoveredVersion  # reuse the shared DTO
 def version_from_msi_product_version(
     file_path: str | Path, verbose: bool = False, debug: bool = False
 ) -> DiscoveredVersion:
-    """
-    Extract ProductVersion from an MSI file.
+    """Extract ProductVersion from an MSI file.
 
-    Backends (tried in order):
-    - Windows: 'msilib' from Python standard library (Python 3.11+).
-    - Windows: CPython '_msi' extension (alternative).
-    - Elsewhere: 'msiinfo' from 'msitools' if available in PATH.
-    - If none available, raises NotImplementedError.
+    Uses cross-platform backends to read the MSI Property table. On Windows,
+    tries msilib (Python 3.11+), _msi extension, then PowerShell COM API as
+    universal fallback. On Linux/macOS, requires msitools package.
 
-    Raises
-    ------
-    FileNotFoundError | RuntimeError | NotImplementedError
+    Args:
+        file_path: Path to the MSI file.
+        verbose: If True, print verbose logging messages.
+            Default is False.
+        debug: If True, print debug logging messages.
+            Default is False.
+
+    Returns:
+        Discovered version with source information.
+
+    Raises:
+        FileNotFoundError: If the MSI file doesn't exist.
+        RuntimeError: If version extraction fails.
+        NotImplementedError: If no extraction backend is available on this system.
+
     """
     from notapkgtool.cli import print_debug, print_verbose
 

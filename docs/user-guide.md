@@ -2,107 +2,114 @@
 
 This guide covers NAPT's key features, configuration system, and advanced usage patterns.
 
-## Configuration Layers
+## Commands Reference
 
-NAPT uses a sophisticated 3-layer configuration system that promotes DRY (Don't Repeat Yourself) principles:
+### napt validate
 
-### The Three Layers
-
-1. **Organization defaults** (`defaults/org.yaml`) - Base configuration for all apps
-   - PSADT settings, update policies, deployment waves
-   - Required if a defaults directory is found
-
-2. **Vendor defaults** (`defaults/vendors/<Vendor>.yaml`) - Vendor-specific overrides
-   - Optional; only loaded if vendor is detected
-   - Example: Google-specific settings
-
-3. **Recipe configuration** (`recipes/<Vendor>/<app>.yaml`) - App-specific settings
-   - Always required; defines the specific app
-   - Final overrides
-
-### Merge Behavior
-
-The loader performs deep merging with "last wins" semantics:
-
-- **Dicts**: Recursively merged (keys from overlay override base)
-- **Lists**: Completely replaced (NOT appended/extended)
-- **Scalars**: Overwritten (strings, numbers, booleans)
-
-### Example
-
-```yaml
-# defaults/org.yaml
-defaults:
-  psadt:
-    release: "latest"
-    app_vars:
-      AppVendor: "Unknown"
-```
-
-```yaml
-# defaults/vendors/Google.yaml
-defaults:
-  psadt:
-    app_vars:
-      AppVendor: "Google LLC"
-```
-
-```yaml
-# recipes/Google/chrome.yaml
-apps:
-  - name: "Google Chrome"
-    # AppVendor will be "Google LLC" (from vendor defaults)
-    # release will be "latest" (from org defaults)
-```
-
-## State Management & Caching
-
-NAPT automatically tracks discovered versions and optimizes subsequent runs by avoiding unnecessary downloads.
-
-### How It Works
-
-**Version-First Strategies** (url_regex, github_release, http_json):
-
-1. **First Run**: Discovers version, downloads file, saves version and hash to `state/versions.json`
-2. **Subsequent Runs**: 
-   - Discovers version (API call, regex, etc.)
-   - Compares to cached `known_version`
-   - If match and file exists → **Done!** No download needed
-   - If different → Downloads new version
-
-**File-First Strategy** (http_static):
-
-1. **First Run**: Downloads file with ETag, extracts version, saves ETag to `state/versions.json`
-2. **Subsequent Runs**:
-   - Makes conditional HTTP request with cached ETag (`If-None-Match` header)
-   - Server responds with `HTTP 304 Not Modified` → Uses cached file
-   - Server responds with `HTTP 200 OK` → Downloads new version, updates state
-
-### Default Behavior (Stateful)
+Validates recipe syntax and configuration without making network calls.
 
 ```bash
-# State tracking enabled by default
-napt discover recipes/Google/chrome.yaml
-
-# Creates/updates: state/versions.json
+napt validate recipes/Google/chrome.yaml [--verbose]
 ```
 
-### Stateless Mode
+**Purpose:**
+
+- Quick feedback during recipe development
+- CI/CD pre-checks
+- Syntax validation
+
+**What it checks:**
+
+- YAML syntax is valid
+- Required fields present (apiVersion, apps, source)
+- Discovery strategy exists and is registered
+- Strategy-specific configuration is valid
+
+**What it doesn't check:**
+
+- URLs are accessible
+- Files can be downloaded
+- Version extraction will work
+
+### napt discover
+
+Discovers the latest version by downloading the installer and extracting version information.
 
 ```bash
-# Disable state tracking for one-off checks
-napt discover recipes/Google/chrome.yaml --stateless
+napt discover recipes/Google/chrome.yaml [OPTIONS]
 
-# Always downloads, no caching
-# Useful for CI/CD clean builds
+Options:
+  --output-dir DIR      Download directory (default: ./downloads)
+  --state-file FILE     State file path (default: state/versions.json)
+  --stateless           Disable state tracking
+  -v, --verbose         Show progress and status updates
+  -d, --debug           Show detailed debugging output
 ```
 
-### Benefits
+**Features:**
 
-- **Zero bandwidth**: Version-first strategies skip downloads entirely when unchanged
-- **Speed**: url_regex can be instant (no network calls), APIs ~100ms vs. downloading 60+ MB
-- **Server-friendly**: Reduces load on vendor CDNs
-- **Cost savings**: Critical for metered bandwidth and CI/CD with frequent checks
+- ✅ Discovers version using configured strategy
+- ✅ Downloads installer (or HTTP 304 if cached)
+- ✅ Extracts version from downloaded file
+- ✅ Updates state file with ETag caching
+- ✅ SHA-256 hash verification
+
+### napt build
+
+Builds a complete PSADT package from a recipe and downloaded installer.
+
+```bash
+napt build recipes/Google/chrome.yaml [OPTIONS]
+
+Options:
+  --downloads-dir DIR   Installer directory (default: ./downloads)
+  --output-dir DIR      Build output directory (default: ./builds)
+  -v, --verbose         Show progress
+  -d, --debug           Show detailed output
+```
+
+**Features:**
+
+- ✅ Downloads PSADT release from GitHub (or uses cached version)
+- ✅ Extracts version from installer file
+- ✅ Generates Invoke-AppDeployToolkit.ps1 from template
+- ✅ Merges organization defaults with recipe-specific values
+- ✅ Inserts recipe install/uninstall code
+- ✅ Applies custom branding (logo, banner)
+- ✅ Creates versioned build directories
+
+### napt package
+
+Creates a .intunewin package from a built PSADT directory.
+
+```bash
+napt package BUILD_DIR [OPTIONS]
+
+Options:
+  --output-dir DIR      Output directory (default: packages/{app_id}/)
+  --clean-source        Remove build directory after packaging
+  -v, --verbose         Show progress
+  -d, --debug           Show detailed output
+```
+
+**Features:**
+
+- ✅ Downloads IntuneWinAppUtil.exe (or uses cached version)
+- ✅ Validates build structure before packaging
+- ✅ Creates .intunewin file for Intune deployment
+- ✅ Optional source cleanup
+
+### Output Modes
+
+All commands support verbosity flags to control output detail:
+
+| Flag | What it shows |
+|------|---------------|
+| (none) | Clean output with step indicators `[1/4]` and progress |
+| `--verbose` or `-v` | + HTTP requests/responses, file operations, SHA-256 hashes, configuration loading |
+| `--debug` or `-d` | + Full YAML config dumps (org/vendor/recipe/merged), backend selection details, regex match groups |
+
+Debug mode includes all verbose output plus deep diagnostic information. Use `--verbose` for normal troubleshooting and `--debug` when you need to understand exactly what NAPT is doing internally.
 
 ## Discovery Strategies
 
@@ -208,39 +215,167 @@ source:
 
 Use this flowchart to choose the right strategy:
 
-```
-Do you have a JSON API for version/download info?
-├─ YES → http_json (fast version checks, no download if unchanged)
-└─ NO  → Is the app on GitHub?
-    ├─ YES → github_release (reliable API, fast checks)
-    └─ NO  → Is the version in the download URL?
-        ├─ YES → url_regex (instant version checks!)
-        └─ NO  → http_static (must download to check)
+```mermaid
+flowchart TD
+    Start{JSON API for<br/>version/download?}
+    Start -->|Yes| JSON[http_json<br/>Fast version checks]
+    Start -->|No| GitHub{App on<br/>GitHub?}
+    GitHub -->|Yes| GHRelease[github_release<br/>Reliable API, fast checks]
+    GitHub -->|No| URLVersion{Version in<br/>download URL?}
+    URLVersion -->|Yes| Regex[url_regex<br/>Instant version checks]
+    URLVersion -->|No| Static[http_static<br/>Must download to check]
 ```
 
 **Performance Note**: Version-first strategies (everything except http_static) can skip downloads entirely when versions haven't changed, making them ideal for scheduled CI/CD checks.
 
-### Performance Characteristics
+## State Management & Caching
 
-Understanding when each strategy excels:
+NAPT automatically tracks discovered versions and optimizes subsequent runs by avoiding unnecessary downloads.
 
-**First Run (no cache):**
+### How It Works
 
-- All strategies: ~same performance (must download installer)
-- Difference: url_regex/APIs know version before downloading
+NAPT uses different caching approaches based on the discovery strategy, enabling significant performance and bandwidth savings:
 
-**Scheduled Checks (version unchanged) - Most Common:**
+- **Version-First** (url_regex, github_release, http_json): Checks version via API/regex (~100ms or instant) before downloading. If unchanged and file exists, skips download entirely - saving 60+ MB bandwidth and minutes of time on every check.
+- **File-First** (http_static): Uses HTTP conditional requests (ETags) to check if file changed. If server returns 304 Not Modified (~500ms), uses cached file without re-downloading.
 
-- **url_regex**: Instant (regex only, zero network calls)
-- **github_release**: ~100ms (GitHub API call)
-- **http_json**: ~100ms (vendor API call)
-- **http_static**: ~500ms+ (conditional HTTP request to CDN)
+This intelligent caching is critical for CI/CD with frequent scheduled checks, dramatically reducing bandwidth costs and load on vendor CDNs while providing near-instant feedback when applications haven't changed.
 
-**Version Changed:**
+### Detailed Workflow
 
-- All strategies: Must download installer (~same performance)
+#### Version-First Strategies (url_regex, github_release, http_json)
 
-**Recommendation**: For CI/CD with scheduled checks, prefer version-first strategies (url_regex, github_release, http_json) when available. They can skip downloads entirely when nothing changed, dramatically reducing bandwidth and runtime.
+These strategies discover the version **before** downloading, enabling instant cache checks:
+
+```mermaid
+flowchart TD
+    Start([napt discover]) --> LoadRecipe[Load Recipe YAML]
+    LoadRecipe --> CheckCache{Cached<br/>Version?}
+    
+    CheckCache -->|Yes| DiscoverAPI[Discover Version via API/Regex]
+    CheckCache -->|No - First Run| DiscoverFirst[Discover Version via API/Regex]
+    
+    DiscoverAPI --> Compare{Version<br/>Changed?}
+    Compare -->|No - Same Version| CheckFile{File<br/>Exists?}
+    CheckFile -->|Yes| Done([✓ Already Current<br/>No download needed])
+    CheckFile -->|No| DownloadMissing[Download Missing File]
+    DownloadMissing --> UpdateState1[Update state.json]
+    UpdateState1 --> Done
+    
+    Compare -->|Yes - New Version| DownloadNew[Download New Installer]
+    DownloadNew --> UpdateState2[Update state.json]
+    UpdateState2 --> Ready([✓ Ready for napt build])
+    
+    DiscoverFirst --> DownloadFirstRun[Download Installer]
+    DownloadFirstRun --> CreateState[Create state.json]
+    CreateState --> Ready
+```
+
+**Key optimization:** Version discovered via API/regex (~100ms or instant) **before** downloading. If unchanged and file exists, skip download entirely.
+
+#### File-First Strategy (http_static)
+
+This strategy must download (or check) the file first to extract the version:
+
+```mermaid
+flowchart TD
+    Start([napt discover]) --> LoadRecipe[Load Recipe YAML]
+    LoadRecipe --> CheckCache{Cached<br/>ETag?}
+    
+    CheckCache -->|Yes| ConditionalRequest[HTTP Request with ETag]
+    CheckCache -->|No - First Run| DownloadFirst[Download File]
+    
+    ConditionalRequest --> ServerResponse{Server<br/>Response?}
+    ServerResponse -->|304 Not Modified| UpdateTimestamp[Update state.json timestamp]
+    UpdateTimestamp --> Done([✓ Already Current<br/>Using cached file])
+    
+    ServerResponse -->|200 OK - Changed| DownloadNew[Download New File]
+    DownloadNew --> ExtractVersion[Extract Version from File]
+    ExtractVersion --> UpdateState[Update state.json]
+    UpdateState --> Ready([✓ Ready for napt build])
+    
+    DownloadFirst --> ExtractFirst[Extract Version from File]
+    ExtractFirst --> CreateState[Create state.json with ETag]
+    CreateState --> Ready
+```
+
+**Key optimization:** HTTP conditional request with ETag (~500ms). Server returns 304 Not Modified if unchanged, avoiding re-download. Version extracted **after** download/check.
+
+#### Performance Comparison
+
+| Scenario | Version-First | File-First |
+|----------|--------------|------------|
+| **First run** | API call + Download | Download only |
+| **Unchanged (most common)** | ~100ms API call (or instant regex) | ~500ms HTTP conditional request |
+| **Changed** | API call + Download | Full download |
+
+**Recommendation:** Use version-first strategies (url_regex, github_release, http_json) when available for fastest cache checks.
+
+### Default Behavior (Stateful)
+
+```bash
+# State tracking enabled by default
+napt discover recipes/Google/chrome.yaml
+
+# Creates/updates: state/versions.json
+```
+
+### Stateless Mode
+
+```bash
+# Disable state tracking for one-off checks
+napt discover recipes/Google/chrome.yaml --stateless
+
+# Always downloads, no caching
+# Useful for CI/CD clean builds
+```
+
+## Configuration Layers
+
+NAPT uses a sophisticated 3-layer configuration system that promotes DRY (Don't Repeat Yourself) principles:
+
+### The Three Layers
+
+1. **Organization defaults** (`defaults/org.yaml`) - Base configuration for all apps. Required if a defaults directory is found. Contains PSADT settings, update policies, and deployment waves.
+
+2. **Vendor defaults** (`defaults/vendors/<Vendor>.yaml`) - Vendor-specific overrides. Optional; only loaded if vendor is detected (e.g., Google-specific settings).
+
+3. **Recipe configuration** (`recipes/<Vendor>/<app>.yaml`) - App-specific settings. Always required; defines the specific app with final overrides.
+
+### Merge Behavior
+
+The loader performs deep merging with "last wins" semantics:
+
+- **Dicts**: Recursively merged (keys from overlay override base)
+- **Lists**: Completely replaced (NOT appended/extended)
+- **Scalars**: Overwritten (strings, numbers, booleans)
+
+### Example
+
+```yaml
+# defaults/org.yaml
+defaults:
+  psadt:
+    release: "latest"
+    app_vars:
+      AppVendor: "Unknown"
+```
+
+```yaml
+# defaults/vendors/Google.yaml
+defaults:
+  psadt:
+    app_vars:
+      AppVendor: "Google LLC"
+```
+
+```yaml
+# recipes/Google/chrome.yaml
+apps:
+  - name: "Google Chrome"
+    # AppVendor will be "Google LLC" (from vendor defaults)
+    # release will be "latest" (from org defaults)
+```
 
 ## Cross-Platform Support
 
@@ -267,103 +402,6 @@ NAPT works on Windows, Linux, and macOS with full feature parity.
 1. `msiinfo` from msitools package
 
 The PowerShell fallback makes MSI extraction truly universal on Windows systems, even when Python MSI libraries aren't available.
-
-## Commands Reference
-
-### napt validate
-
-Validates recipe syntax and configuration without making network calls.
-
-```bash
-napt validate recipes/Google/chrome.yaml [--verbose]
-```
-
-**Purpose:**
-
-- Quick feedback during recipe development
-- CI/CD pre-checks
-- Syntax validation
-
-**What it checks:**
-
-- YAML syntax is valid
-- Required fields present (apiVersion, apps, source)
-- Discovery strategy exists and is registered
-- Strategy-specific configuration is valid
-
-**What it doesn't check:**
-
-- URLs are accessible
-- Files can be downloaded
-- Version extraction will work
-
-### napt discover
-
-Discovers the latest version by downloading the installer and extracting version information.
-
-```bash
-napt discover recipes/Google/chrome.yaml [OPTIONS]
-
-Options:
-  --output-dir DIR      Download directory (default: ./downloads)
-  --state-file FILE     State file path (default: state/versions.json)
-  --stateless           Disable state tracking
-  -v, --verbose         Show progress and status updates
-  -d, --debug           Show detailed debugging output
-```
-
-**Features:**
-
-- ✅ Discovers version using configured strategy
-- ✅ Downloads installer (or HTTP 304 if cached)
-- ✅ Extracts version from downloaded file
-- ✅ Updates state file with ETag caching
-- ✅ SHA-256 hash verification
-
-### napt build
-
-Builds a complete PSADT package from a recipe and downloaded installer.
-
-```bash
-napt build recipes/Google/chrome.yaml [OPTIONS]
-
-Options:
-  --downloads-dir DIR   Installer directory (default: ./downloads)
-  --output-dir DIR      Build output directory (default: ./builds)
-  -v, --verbose         Show progress
-  -d, --debug           Show detailed output
-```
-
-**Features:**
-
-- ✅ Downloads PSADT release from GitHub (or uses cached version)
-- ✅ Extracts version from installer file
-- ✅ Generates Invoke-AppDeployToolkit.ps1 from template
-- ✅ Merges organization defaults with recipe-specific values
-- ✅ Inserts recipe install/uninstall code
-- ✅ Applies custom branding (logo, banner)
-- ✅ Creates versioned build directories
-
-### napt package
-
-Creates a .intunewin package from a built PSADT directory.
-
-```bash
-napt package BUILD_DIR [OPTIONS]
-
-Options:
-  --output-dir DIR      Output directory (default: packages/{app_id}/)
-  --clean-source        Remove build directory after packaging
-  -v, --verbose         Show progress
-  -d, --debug           Show detailed output
-```
-
-**Features:**
-
-- ✅ Downloads IntuneWinAppUtil.exe (or uses cached version)
-- ✅ Validates build structure before packaging
-- ✅ Creates .intunewin file for Intune deployment
-- ✅ Optional source cleanup
 
 ## Programmatic API
 

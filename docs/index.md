@@ -15,8 +15,7 @@ NAPT is a Python-based CLI tool that automates the entire workflow for packaging
 - ✅ **Declarative YAML recipes** - Define app packaging once, run everywhere
 - ✅ **Automatic version discovery** - Extract versions from MSI, EXE, URLs, or APIs
 - ✅ **Robust downloads** - Retry logic, conditional requests (ETags), atomic writes
-- ✅ **Intelligent caching** - Version-first strategies can skip downloads entirely when unchanged
-- ✅ **Dual-path optimization** - Version-first (instant checks) and file-first (ETag) strategies
+- ✅ **Smart caching** - Skip unnecessary downloads with intelligent version checks
 - ✅ **Cross-platform support** - Windows, Linux, and macOS
 - ✅ **Layered configuration** - Organization → Vendor → Recipe inheritance
 - ✅ **PSADT packaging** - Generate Intune-ready packages with PSAppDeployToolkit
@@ -39,31 +38,52 @@ napt build recipes/Google/chrome.yaml
 napt package builds/napt-chrome/141.0.7390.123/
 ```
 
-> **💡 Tip:** Add `--verbose` or `--debug` flags to any command for detailed output
+> **💡 Tip:** Add `--verbose` for progress updates or `--debug` for detailed diagnostics. See [Commands Reference](user-guide.md#commands-reference) for details.
 
 ## Getting Started
 
 Ready to get started? Check out the [Quick Start Guide](quick-start.md) for installation instructions and your first steps with NAPT.
 
-## Architecture
+## How It Works
 
-NAPT uses a modular architecture with key design patterns:
+NAPT automates the complete packaging workflow with intelligent caching to skip unnecessary work:
 
-- **3-Layer Configuration** - Organization → Vendor → Recipe inheritance with deep merging
-- **Strategy Pattern** - Pluggable discovery strategies with version-first and file-first approaches
-- **Version-First Optimization** - Skip downloads entirely when versions unchanged (url_regex, github_release, http_json)
-- **File-First Fallback** - ETag-based conditional requests when version must be extracted from file (http_static)
-- **Cross-Platform** - Native Windows support, Linux/macOS via msitools
+<div align="center">
+
+```mermaid
+flowchart TD
+    Start([napt discover]) --> LoadRecipe[Load Recipe YAML]
+    LoadRecipe --> CheckCache{Cached?}
+    
+    CheckCache -->|Yes| CheckUpdates[Check for Updates]
+    CheckUpdates --> IsUpdated{Updated?}
+    IsUpdated -->|No| Skip([✓ Already Current])
+    IsUpdated -->|Yes| Download[Download Installer]
+    
+    CheckCache -->|No| Download
+    Download --> UpdateState[Update state.json]
+    UpdateState --> Ready([✓ Ready for napt build])
+    
+    Ready --> Build([napt build])
+    Build --> Package([napt package])
+    Package --> Deploy([✓ Ready for Upload])
+```
+
+</div>
 
 See the [User Guide](user-guide.md) for detailed architecture information and the [API Reference](api/core.md) for code-level documentation.
 
 ## Cross-Platform Support
 
-| Platform | Download | Config | CLI | MSI Extraction | Status |
-|----------|----------|--------|-----|----------------|--------|
-| **Windows** | ✅ | ✅ | ✅ | ✅ Native (PowerShell COM) | Fully Supported |
-| **Linux** | ✅ | ✅ | ✅ | ✅ Via msitools | Fully Supported |
-| **macOS** | ✅ | ✅ | ✅ | ✅ Via msitools | Fully Supported |
+NAPT works on Windows, Linux, and macOS with full feature parity.
+
+| Platform | Status |
+|----------|--------|
+| **Windows** | ✅ Fully Supported |
+| **Linux** | ✅ Fully Supported |
+| **macOS** | ✅ Fully Supported |
+
+See the [Cross-Platform Support](user-guide.md#cross-platform-support) section for technical details on MSI extraction backends.
 
 ## Creating Recipes
 
@@ -75,14 +95,7 @@ Recipes are declarative YAML files that define how to discover, download, and pa
 - **[git.yaml](https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Git/git.yaml)** - GitHub release strategy with asset pattern matching
 - **[json-api-example.yaml](https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Examples/json-api-example.yaml)** - HTTP JSON API strategy
 
-**Supported discovery strategies:**
-
-- `http_static` - Fixed URLs, version from file
-- `url_regex` - Extract version from URL patterns
-- `github_release` - GitHub releases API
-- `http_json` - JSON API endpoints with JSONPath
-
-See the [User Guide](user-guide.md#discovery-strategies) for detailed configuration reference and examples.
+NAPT supports multiple discovery strategies (http_static, url_regex, github_release, http_json) - see the [Discovery Strategies](user-guide.md#discovery-strategies) guide for detailed configuration and examples.
 
 ## Contributing
 

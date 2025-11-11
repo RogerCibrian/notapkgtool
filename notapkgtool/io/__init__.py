@@ -1,26 +1,22 @@
-"""
-Input/Output operations for NAPT.
+"""Input/Output operations for NAPT.
 
 This module provides robust file download and upload capabilities with
 features like conditional requests, retry logic, atomic writes, and
 integrity verification.
 
-Modules
--------
+Modules:
 download : module
     HTTP(S) file download with retries, conditional requests, and checksums.
 upload : module
     File upload adapters for Intune and storage providers (planned).
 
-Public API
-----------
+Public API:
 download_file : function
     Download a file from a URL with robustness and reproducibility.
 NotModifiedError : exception
     Raised when a conditional request returns HTTP 304.
 
-Example
--------
+Example:
     from pathlib import Path
     from notapkgtool.io import download_file
 
@@ -29,6 +25,7 @@ Example
         destination_folder=Path("./downloads"),
     )
     print(f"Downloaded to {file_path} with hash {sha256}")
+
 """
 
 from .download import NotModifiedError, download_file, make_session

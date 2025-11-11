@@ -1,12 +1,11 @@
-"""
-Recipe validation module.
+"""Recipe validation module.
 
 This module provides validation functions for checking recipe syntax and
 configuration without making network calls or downloading files. This is
 useful for quick feedback during recipe development and in CI/CD pipelines.
 
-Validation Checks
------------------
+Validation Checks:
+
 - YAML syntax is valid
 - Required top-level fields present (apiVersion, apps)
 - apiVersion is supported
@@ -14,16 +13,19 @@ Validation Checks
 - Discovery strategy exists and is registered
 - Strategy-specific configuration is valid
 
-Usage Example
--------------
->>> from notapkgtool.validation import validate_recipe
->>> from pathlib import Path
->>> result = validate_recipe(Path("recipes/Google/chrome.yaml"))
->>> if result["status"] == "valid":
-...     print(f"Recipe is valid with {result['app_count']} app(s)")
-... else:
-...     for error in result["errors"]:
-...         print(f"Error: {error}")
+Example:
+    Validate a recipe and handle results:
+
+        from pathlib import Path
+        from notapkgtool.validation import validate_recipe
+
+        result = validate_recipe(Path("recipes/Google/chrome.yaml"))
+        if result["status"] == "valid":
+            print(f"Recipe is valid with {result['app_count']} app(s)")
+        else:
+            for error in result["errors"]:
+                print(f"Error: {error}")
+
 """
 
 from __future__ import annotations
@@ -45,8 +47,7 @@ class ValidationError(Exception):
 
 
 def validate_recipe(recipe_path: Path, verbose: bool = False) -> dict[str, Any]:
-    """
-    Validate a recipe file without downloading anything.
+    """Validate a recipe file without downloading anything.
 
     This function checks:
     1. YAML file can be parsed
@@ -62,31 +63,30 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> dict[str, Any]:
     - Verify URLs are accessible
     - Check if versions can be extracted
 
-    Parameters
-    ----------
-    recipe_path : Path
-        Path to the recipe YAML file to validate.
-    verbose : bool, optional
-        If True, print validation progress. Default is False.
+    Args:
+        recipe_path: Path to the recipe YAML file to validate.
+        verbose: If True, print validation progress.
+            Default is False.
 
-    Returns
-    -------
-    dict[str, Any]
-        Validation result with keys:
-        - status: "valid" or "invalid"
-        - errors: List of error messages (empty if valid)
-        - warnings: List of warning messages (non-critical issues)
-        - app_count: Number of apps in the recipe
-        - recipe_path: Path to the validated recipe
+    Returns:
+        A dict (status, errors, warnings, app_count, recipe_path), where
+            status is "valid" or "invalid", errors is a list of error messages
+            (empty if valid), warnings is a list of warning messages, app_count
+            is the number of apps in the recipe, and recipe_path is the string
+            path to the validated recipe.
 
-    Examples
-    --------
-    >>> result = validate_recipe(Path("recipes/app.yaml"))
-    >>> if result["status"] == "valid":
-    ...     print("Recipe is valid!")
-    >>> else:
-    ...     for error in result["errors"]:
-    ...         print(f"Error: {error}")
+    Example:
+        Validate a recipe and check results:
+
+            from pathlib import Path
+
+            result = validate_recipe(Path("recipes/app.yaml"))
+            if result["status"] == "valid":
+                print("Recipe is valid!")
+            else:
+                for error in result["errors"]:
+                    print(f"Error: {error}")
+
     """
     errors = []
     warnings = []
