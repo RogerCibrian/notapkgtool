@@ -588,7 +588,7 @@ git push origin hotfix/fix-security-vulnerability
 ## Questions?
 
 - Check the [Documentation Site](https://rogercibrian.github.io/notapkgtool) for technical details
-- Check [README.md](README.md) for project overview
+- Check the [README](https://github.com/RogerCibrian/notapkgtool#readme) for project overview
 - Open an issue for questions or discussions
 
 ---
