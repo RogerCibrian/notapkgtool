@@ -83,7 +83,7 @@ nav:
       - psadt: api/psadt.md
       - state: api/state.md
       - versioning: api/versioning.md
-  - Roadmap: roadmap.md
   - Changelog: changelog.md
+  - Roadmap: roadmap.md
   - Contributing: contributing.md
 
