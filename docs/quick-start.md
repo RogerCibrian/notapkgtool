@@ -11,7 +11,27 @@ Get up and running with NAPT in minutes!
 
 ### Choose Your Installation Method
 
-#### Option 1: Poetry (Recommended for Development)
+#### Option 1: pip (Recommended for End Users)
+
+Best for users who just want to use the tool without extra tooling.
+
+```bash
+# Clone repository
+git clone https://github.com/RogerCibrian/notapkgtool.git
+cd notapkgtool
+
+# Create and activate virtual environment (recommended)
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install
+pip install -e .
+
+# Verify installation
+napt --version
+```
+
+#### Option 2: Poetry (Recommended for Development)
 
 Best for contributors and developers who want reproducible builds and dependency management.
 
@@ -30,27 +50,9 @@ poetry shell
 napt --version
 ```
 
-**Pros:** Lock file for reproducibility, isolated environments, dev dependencies included
+### Platform-Specific Requirements
 
-#### Option 2: pip (Recommended for End Users)
-
-Best for users who just want to use the tool without extra tooling.
-
-```bash
-# Clone and install
-git clone https://github.com/RogerCibrian/notapkgtool.git
-cd notapkgtool
-pip install -e .
-
-# Verify installation
-napt --version
-```
-
-**Pros:** No additional tools needed, familiar to all Python users
-
-#### Platform-Specific Requirements
-
-On **Linux/macOS**, install msitools for MSI version extraction:
+**Linux/macOS** - Install msitools for MSI version extraction:
 
 ```bash
 # Debian/Ubuntu
@@ -63,7 +65,7 @@ sudo dnf install msitools
 brew install msitools
 ```
 
-On **Windows**, no additional dependencies are required (uses PowerShell COM API for MSI extraction).
+> **Note:** Windows users don't need msitools - NAPT uses native PowerShell COM API for MSI extraction.
 
 ## Basic Usage
 
@@ -128,17 +130,7 @@ napt package builds/napt-chrome/141.0.7390.123/
 napt package builds/napt-chrome/141.0.7390.123/ --output-dir ./packages --clean-source
 ```
 
-## Output Modes
-
-NAPT supports three verbosity levels:
-
-| Flag | Mode | Output |
-|------|------|--------|
-| (none) | Normal | Clean, minimal output with step indicators and progress bars |
-| `--verbose` | Verbose | Configuration details, HTTP info, file operations, SHA-256 hashes |
-| `--debug` | Debug | All verbose output plus full YAML config dumps and backend details |
-
-> **💡 Tip:** Add `--verbose` or `--debug` to any command for detailed output
+> **💡 Tip:** Use `--verbose` to see progress details or `--debug` for full diagnostics including configuration dumps and backend selection
 
 ## Example Workflow
 
@@ -147,15 +139,20 @@ Here's a complete workflow from recipe validation to Intune package:
 ```bash
 # 1. Validate recipe
 napt validate recipes/Google/chrome.yaml
+# ✓ Recipe is valid
 
 # 2. Discover and download latest version
 napt discover recipes/Google/chrome.yaml
+# → downloads/googlechromestandaloneenterprise64.msi
+# → state/versions.json (updated)
 
 # 3. Build PSADT package
 napt build recipes/Google/chrome.yaml
+# → builds/napt-chrome/141.0.7390.123/
 
 # 4. Create .intunewin package
 napt package builds/napt-chrome/141.0.7390.123/
+# → packages/napt-chrome/napt-chrome-141.0.7390.123.intunewin
 
 # Result: Ready-to-upload .intunewin file in packages/napt-chrome/
 ```
