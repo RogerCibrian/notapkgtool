@@ -3,33 +3,14 @@
 This module provides high-level orchestration functions that coordinate the
 complete workflow for recipe validation, package building, and deployment.
 
-The orchestration uses a two-path architecture:
-
-VERSION-FIRST PATH (url_regex, github_release, http_json):
-
-1. Load and merge configuration (org defaults + vendor + recipe)
-2. Call strategy.get_version_info() to discover version (no download)
-3. Compare discovered version to cached known_version
-4. If match and file exists -> skip download entirely (fast path!)
-5. If changed or missing -> download installer
-6. Update state and return results
-
-FILE-FIRST PATH (http_static):
-
-1. Load and merge configuration (org defaults + vendor + recipe)
-2. Call strategy.discover_version() with cached ETag
-3. Server returns HTTP 304 (not modified) -> use cached file
-4. Server returns HTTP 200 (modified) -> download new version
-5. Extract version from downloaded file
-6. Update state and return results
-
 Design Principles:
-    - Each function has a single, clear responsibility
-    - Functions return structured data (dicts) for easy testing and extension
-    - Error handling uses exceptions; CLI layer formats for user display
-    - Discovery strategies are dynamically loaded via registry pattern
-    - Configuration is immutable once loaded
-    - Version-first strategies preferred for performance (skip downloads when unchanged)
+
+- Each function has a single, clear responsibility
+- Functions return structured data (dicts) for easy testing and extension
+- Error handling uses exceptions; CLI layer formats for user display
+- Discovery strategies are dynamically loaded via registry pattern
+- Configuration is immutable once loaded
+- Two-path architecture optimizes for different strategy types
 
 Example:
     Programmatic usage:
@@ -55,6 +36,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from notapkgtool import __version__
 from notapkgtool.config.loader import load_effective_config
 from notapkgtool.discovery import get_strategy
 from notapkgtool.io import download_file
@@ -200,7 +182,7 @@ def discover_recipe(
         except FileNotFoundError:
             print_verbose("STATE", f"State file not found, will create: {state_file}")
             state = {
-                "metadata": {"napt_version": "0.1.0", "schema_version": "1"},
+                "metadata": {"napt_version": __version__, "schema_version": "2"},
                 "apps": {},
             }
         except Exception as err:
@@ -360,7 +342,7 @@ def discover_recipe(
         state["apps"][app_id] = cache_entry
 
         state["metadata"] = {
-            "napt_version": "0.1.0",
+            "napt_version": __version__,
             "last_updated": datetime.now(UTC).isoformat(),
             "schema_version": "2",
         }
