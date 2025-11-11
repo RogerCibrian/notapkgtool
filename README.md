@@ -10,6 +10,8 @@
 
 NAPT is a Python-based CLI tool that automates the entire workflow for packaging Windows applications and deploying them to Microsoft Intune. It eliminates repetitive manual work through declarative YAML-based recipes and intelligent version discovery.
 
+📚 **[Full Documentation](https://rogercibrian.github.io/notapkgtool/)** | [Quick Start](https://rogercibrian.github.io/notapkgtool/quick-start/) | [User Guide](https://rogercibrian.github.io/notapkgtool/user-guide/) | [API Reference](https://rogercibrian.github.io/notapkgtool/api/core/)
+
 ### Key Features
 
 - ✅ **Declarative YAML recipes** - Define app packaging once, run everywhere
@@ -38,11 +40,11 @@ napt build recipes/Google/chrome.yaml
 napt package builds/napt-chrome/141.0.7390.123/
 ```
 
-> **💡 Tip:** Add `--verbose` for progress updates or `--debug` for detailed diagnostics. See [Commands Reference](docs/user-guide.md#commands-reference) for details.
+> **💡 Tip:** Add `--verbose` for progress updates or `--debug` for detailed diagnostics. See [Commands Reference](https://rogercibrian.github.io/notapkgtool/user-guide/#commands-reference) for details.
 
 ## Getting Started
 
-Ready to get started? Check out the [Quick Start Guide](docs/quick-start.md) for installation instructions and your first steps with NAPT.
+Ready to get started? Check out the [Quick Start Guide](https://rogercibrian.github.io/notapkgtool/quick-start/) for installation instructions and your first steps with NAPT.
 
 ## How It Works
 
@@ -71,7 +73,7 @@ flowchart TD
 
 </div>
 
-See the [User Guide](docs/user-guide.md) for detailed architecture information and the [API Reference](docs/api/core.md) for code-level documentation.
+See the [User Guide](https://rogercibrian.github.io/notapkgtool/user-guide/) for detailed architecture information and the [API Reference](https://rogercibrian.github.io/notapkgtool/api/core/) for code-level documentation.
 
 ## Cross-Platform Support
 
@@ -83,7 +85,7 @@ NAPT works on Windows, Linux, and macOS with full feature parity.
 | **Linux** | ✅ Fully Supported |
 | **macOS** | ✅ Fully Supported |
 
-See the [Cross-Platform Support](docs/user-guide.md#cross-platform-support) section for technical details on MSI extraction backends.
+See the [Cross-Platform Support](https://rogercibrian.github.io/notapkgtool/user-guide/#cross-platform-support) section for technical details on MSI extraction backends.
 
 ## Creating Recipes
 
@@ -95,7 +97,7 @@ Recipes are declarative YAML files that define how to discover, download, and pa
 - **[git.yaml](https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Git/git.yaml)** - GitHub release strategy with asset pattern matching
 - **[json-api-example.yaml](https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Examples/json-api-example.yaml)** - HTTP JSON API strategy
 
-NAPT supports multiple discovery strategies (http_static, url_regex, github_release, http_json) - see the [Discovery Strategies](docs/user-guide.md#discovery-strategies) guide for detailed configuration and examples.
+NAPT supports multiple discovery strategies (http_static, url_regex, github_release, http_json) - see the [Discovery Strategies](https://rogercibrian.github.io/notapkgtool/user-guide/#discovery-strategies) guide for detailed configuration and examples.
 
 ## Contributing
 
@@ -107,7 +109,7 @@ Contributions are welcome! Please ensure:
 4. Tests are added for new features
 5. Documentation is updated
 
-See [Contributing](docs/contributing.md) for detailed guidelines.
+See [Contributing](https://rogercibrian.github.io/notapkgtool/contributing/) for detailed guidelines.
 
 ## License
 
