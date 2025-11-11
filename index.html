@@ -92,7 +92,7 @@
 
   
 
-<header class="md-header md-header--shadow" data-md-component="header">
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
     <a href="." title="NAPT Documentation" class="md-header__button md-logo" aria-label="NAPT Documentation" data-md-component="logo">
       
@@ -207,13 +207,158 @@
     
   </nav>
   
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="quick-start/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Quick Start
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="user-guide/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  User Guide
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="api/cli/" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="changelog/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="roadmap/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Roadmap
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="contributing/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Contributing
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
 </header>
     
     <div class="md-container" data-md-component="container">
       
       
-        
-          
         
       
       <main class="md-main" data-md-component="main">
@@ -227,8 +372,10 @@
                     
 
 
+  
 
-<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
     <a href="." title="NAPT Documentation" class="md-nav__button md-logo" aria-label="NAPT Documentation" data-md-component="logo">
       
@@ -352,9 +499,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#architecture" class="md-nav__link">
+  <a href="#how-it-works" class="md-nav__link">
     <span class="md-ellipsis">
-      Architecture
+      How It Works
     </span>
   </a>
   
@@ -476,6 +623,9 @@
     
     
     
+      
+      
+    
     
     <li class="md-nav__item md-nav__item--nested">
       
@@ -511,12 +661,12 @@
   
   
     <li class="md-nav__item">
-      <a href="api/core/" class="md-nav__link">
+      <a href="api/cli/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Core
+    cli
     
   </span>
   
@@ -534,12 +684,99 @@
   
   
     <li class="md-nav__item">
-      <a href="api/discovery/" class="md-nav__link">
+      <a href="api/core/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Discovery
+    core
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="api/validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    validation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Modules
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            Modules
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="api/build/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    build
     
   </span>
   
@@ -562,7 +799,7 @@
   
   
   <span class="md-ellipsis">
-    Configuration
+    config
     
   </span>
   
@@ -580,35 +817,12 @@
   
   
     <li class="md-nav__item">
-      <a href="api/build/" class="md-nav__link">
+      <a href="api/discovery/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Build
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="api/versioning/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Versioning
+    discovery
     
   </span>
   
@@ -631,7 +845,53 @@
   
   
   <span class="md-ellipsis">
-    I/O
+    io
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="api/policy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    policy
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="api/psadt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    psadt
     
   </span>
   
@@ -654,12 +914,43 @@
   
   
   <span class="md-ellipsis">
-    State
+    state
     
   </span>
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="api/versioning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    versioning
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -679,12 +970,12 @@
   
   
     <li class="md-nav__item">
-      <a href="roadmap/" class="md-nav__link">
+      <a href="changelog/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Roadmap
+    Changelog
     
   </span>
   
@@ -701,12 +992,12 @@
   
   
     <li class="md-nav__item">
-      <a href="changelog/" class="md-nav__link">
+      <a href="roadmap/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Changelog
+    Roadmap
     
   </span>
   
@@ -807,9 +1098,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#architecture" class="md-nav__link">
+  <a href="#how-it-works" class="md-nav__link">
     <span class="md-ellipsis">
-      Architecture
+      How It Works
     </span>
   </a>
   
@@ -902,8 +1193,7 @@
 <li>✅ <strong>Declarative YAML recipes</strong> - Define app packaging once, run everywhere</li>
 <li>✅ <strong>Automatic version discovery</strong> - Extract versions from MSI, EXE, URLs, or APIs</li>
 <li>✅ <strong>Robust downloads</strong> - Retry logic, conditional requests (ETags), atomic writes</li>
-<li>✅ <strong>Intelligent caching</strong> - Version-first strategies can skip downloads entirely when unchanged</li>
-<li>✅ <strong>Dual-path optimization</strong> - Version-first (instant checks) and file-first (ETag) strategies</li>
+<li>✅ <strong>Smart caching</strong> - Skip unnecessary downloads with intelligent version checks</li>
 <li>✅ <strong>Cross-platform support</strong> - Windows, Linux, and macOS</li>
 <li>✅ <strong>Layered configuration</strong> - Organization → Vendor → Recipe inheritance</li>
 <li>✅ <strong>PSADT packaging</strong> - Generate Intune-ready packages with PSAppDeployToolkit</li>
@@ -911,72 +1201,72 @@
 <li>🚧 <strong>Deployment waves</strong> - Phased rollouts with rings (planned)</li>
 </ul>
 <h2 id="quick-example">Quick Example</h2>
-<pre><code class="language-bash"># Validate a recipe
-napt validate recipes/Google/chrome.yaml
+<div class="highlight"><pre><span></span><code><span class="c1"># Validate a recipe</span>
+napt<span class="w"> </span>validate<span class="w"> </span>recipes/Google/chrome.yaml
 
-# Discover version and download installer
-napt discover recipes/Google/chrome.yaml
+<span class="c1"># Discover version and download installer</span>
+napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
 
-# Build PSADT package
-napt build recipes/Google/chrome.yaml
+<span class="c1"># Build PSADT package</span>
+napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
 
-# Create .intunewin package
-napt package builds/napt-chrome/141.0.7390.123/
-</code></pre>
+<span class="c1"># Create .intunewin package</span>
+napt<span class="w"> </span>package<span class="w"> </span>builds/napt-chrome/141.0.7390.123/
+</code></pre></div>
 <blockquote>
-<p><strong>💡 Tip:</strong> Add <code>--verbose</code> or <code>--debug</code> flags to any command for detailed output</p>
+<p><strong>💡 Tip:</strong> Add <code>--verbose</code> for progress updates or <code>--debug</code> for detailed diagnostics. See <a href="user-guide/#commands-reference">Commands Reference</a> for details.</p>
 </blockquote>
 <h2 id="getting-started">Getting Started</h2>
 <p>Ready to get started? Check out the <a href="quick-start/">Quick Start Guide</a> for installation instructions and your first steps with NAPT.</p>
-<h2 id="architecture">Architecture</h2>
-<p>NAPT uses a modular architecture with key design patterns:</p>
-<ul>
-<li><strong>3-Layer Configuration</strong> - Organization → Vendor → Recipe inheritance with deep merging</li>
-<li><strong>Strategy Pattern</strong> - Pluggable discovery strategies with version-first and file-first approaches</li>
-<li><strong>Version-First Optimization</strong> - Skip downloads entirely when versions unchanged (url_regex, github_release, http_json)</li>
-<li><strong>File-First Fallback</strong> - ETag-based conditional requests when version must be extracted from file (http_static)</li>
-<li><strong>Cross-Platform</strong> - Native Windows support, Linux/macOS via msitools</li>
-</ul>
+<h2 id="how-it-works">How It Works</h2>
+<p>NAPT automates the complete packaging workflow with intelligent caching to skip unnecessary work:</p>
+<div align="center">
+
+<pre class="mermaid"><code>flowchart TD
+    Start([napt discover]) --&gt; LoadRecipe[Load Recipe YAML]
+    LoadRecipe --&gt; CheckCache{Cached?}
+
+    CheckCache --&gt;|Yes| CheckUpdates[Check for Updates]
+    CheckUpdates --&gt; IsUpdated{Updated?}
+    IsUpdated --&gt;|No| Skip([✓ Already Current])
+    IsUpdated --&gt;|Yes| Download[Download Installer]
+
+    CheckCache --&gt;|No| Download
+    Download --&gt; UpdateState[Update state.json]
+    UpdateState --&gt; Ready([✓ Ready for napt build])
+
+    Ready --&gt; Build([napt build])
+    Build --&gt; Package([napt package])
+    Package --&gt; Deploy([✓ Ready for Upload])</code></pre>
+
+</div>
+
 <p>See the <a href="user-guide/">User Guide</a> for detailed architecture information and the <a href="api/core/">API Reference</a> for code-level documentation.</p>
 <h2 id="cross-platform-support">Cross-Platform Support</h2>
+<p>NAPT works on Windows, Linux, and macOS with full feature parity.</p>
 <table>
 <thead>
 <tr>
 <th>Platform</th>
-<th>Download</th>
-<th>Config</th>
-<th>CLI</th>
-<th>MSI Extraction</th>
 <th>Status</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><strong>Windows</strong></td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅ Native (PowerShell COM)</td>
-<td>Fully Supported</td>
+<td>✅ Fully Supported</td>
 </tr>
 <tr>
 <td><strong>Linux</strong></td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅ Via msitools</td>
-<td>Fully Supported</td>
+<td>✅ Fully Supported</td>
 </tr>
 <tr>
 <td><strong>macOS</strong></td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅ Via msitools</td>
-<td>Fully Supported</td>
+<td>✅ Fully Supported</td>
 </tr>
 </tbody>
 </table>
+<p>See the <a href="user-guide/#cross-platform-support">Cross-Platform Support</a> section for technical details on MSI extraction backends.</p>
 <h2 id="creating-recipes">Creating Recipes</h2>
 <p>Recipes are declarative YAML files that define how to discover, download, and package applications.</p>
 <p><strong>Example recipes:</strong></p>
@@ -985,14 +1275,7 @@ napt package builds/napt-chrome/141.0.7390.123/
 <li><strong><a href="https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Git/git.yaml">git.yaml</a></strong> - GitHub release strategy with asset pattern matching</li>
 <li><strong><a href="https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Examples/json-api-example.yaml">json-api-example.yaml</a></strong> - HTTP JSON API strategy</li>
 </ul>
-<p><strong>Supported discovery strategies:</strong></p>
-<ul>
-<li><code>http_static</code> - Fixed URLs, version from file</li>
-<li><code>url_regex</code> - Extract version from URL patterns</li>
-<li><code>github_release</code> - GitHub releases API</li>
-<li><code>http_json</code> - JSON API endpoints with JSONPath</li>
-</ul>
-<p>See the <a href="user-guide/#discovery-strategies">User Guide</a> for detailed configuration reference and examples.</p>
+<p>NAPT supports multiple discovery strategies (http_static, url_regex, github_release, http_json) - see the <a href="user-guide/#discovery-strategies">Discovery Strategies</a> guide for detailed configuration and examples.</p>
 <h2 id="contributing">Contributing</h2>
 <p>Contributions are welcome! Please ensure:</p>
 <ol>
@@ -1061,7 +1344,7 @@ napt package builds/napt-chrome/141.0.7390.123/
     
     
       
-      <script id="__config" type="application/json">{"base": ".", "features": [], "search": "assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"base": ".", "features": ["navigation.tabs", "navigation.tabs.sticky"], "search": "assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
       <script src="assets/javascripts/bundle.f55a23d4.min.js"></script>

@@ -15,10 +15,10 @@
         <link rel="canonical" href="https://rogercibrian.github.io/notapkgtool/api/build/">
       
       
-        <link rel="prev" href="../config/">
+        <link rel="prev" href="../validation/">
       
       
-        <link rel="next" href="../versioning/">
+        <link rel="next" href="../config/">
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
@@ -26,7 +26,7 @@
     
     
       
-        <title>Build - NAPT Documentation</title>
+        <title>build - NAPT Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#build-module" class="md-skip">
+        <a href="#build" class="md-skip">
           Skip to content
         </a>
       
@@ -94,7 +94,7 @@
 
   
 
-<header class="md-header md-header--shadow" data-md-component="header">
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
     <a href="../.." title="NAPT Documentation" class="md-header__button md-logo" aria-label="NAPT Documentation" data-md-component="logo">
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Build
+              build
             
           </span>
         </div>
@@ -209,13 +209,158 @@
     
   </nav>
   
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../quick-start/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Quick Start
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../user-guide/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  User Guide
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../cli/" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../changelog/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../roadmap/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Roadmap
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../contributing/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Contributing
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
 </header>
     
     <div class="md-container" data-md-component="container">
       
       
-        
-          
         
       
       <main class="md-main" data-md-component="main">
@@ -229,8 +374,10 @@
                     
 
 
+  
 
-<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
     <a href="../.." title="NAPT Documentation" class="md-nav__button md-logo" aria-label="NAPT Documentation" data-md-component="logo">
       
@@ -333,15 +480,21 @@
     
     
     
+      
+        
+        
+      
+      
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
             
   
   
@@ -368,12 +521,35 @@
   
   
     <li class="md-nav__item">
+      <a href="../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    cli
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../core/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Core
+    core
     
   </span>
   
@@ -391,12 +567,12 @@
   
   
     <li class="md-nav__item">
-      <a href="../discovery/" class="md-nav__link">
+      <a href="../validation/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Discovery
+    validation
     
   </span>
   
@@ -411,24 +587,44 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../config/" class="md-nav__link">
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
         
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
-    Configuration
+    Modules
     
   </span>
   
 
-      </a>
-    </li>
-  
-
-              
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            Modules
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
             
               
                 
@@ -451,7 +647,7 @@
   
   
   <span class="md-ellipsis">
-    Build
+    build
     
   </span>
   
@@ -464,7 +660,7 @@
   
   
   <span class="md-ellipsis">
-    Build
+    build
     
   </span>
   
@@ -487,110 +683,19 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#build-manager" class="md-nav__link">
-    <span class="md-ellipsis">
-      Build Manager
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#notapkgtool.build.manager" class="md-nav__link">
     <span class="md-ellipsis">
-      manager
+      <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;manager
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="manager">
+    <nav class="md-nav" aria-label=" manager">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.manager--functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      Functions
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.manager--private-helpers" class="md-nav__link">
-    <span class="md-ellipsis">
-      Private Helpers
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.manager--design-principles" class="md-nav__link">
-    <span class="md-ellipsis">
-      Design Principles
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.manager--example" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#notapkgtool.build.manager.build_package" class="md-nav__link">
     <span class="md-ellipsis">
-      build_package
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="build_package">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.manager.build_package--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.manager.build_package--returns" class="md-nav__link">
-    <span class="md-ellipsis">
-      Returns
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.manager.build_package--raises" class="md-nav__link">
-    <span class="md-ellipsis">
-      Raises
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.manager.build_package--examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Examples
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.manager.build_package--notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
+      <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;build_package
     </span>
   </a>
   
@@ -598,110 +703,23 @@
         
       </ul>
     </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#template-generation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Template Generation
-    </span>
-  </a>
   
 </li>
       
         <li class="md-nav__item">
   <a href="#notapkgtool.build.template" class="md-nav__link">
     <span class="md-ellipsis">
-      template
+      <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;template
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="template">
+    <nav class="md-nav" aria-label=" template">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.template--functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      Functions
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.template--private-helpers" class="md-nav__link">
-    <span class="md-ellipsis">
-      Private Helpers
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.template--design-principles" class="md-nav__link">
-    <span class="md-ellipsis">
-      Design Principles
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.template--example" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#notapkgtool.build.template.generate_invoke_script" class="md-nav__link">
     <span class="md-ellipsis">
-      generate_invoke_script
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="generate_invoke_script">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.template.generate_invoke_script--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.template.generate_invoke_script--returns" class="md-nav__link">
-    <span class="md-ellipsis">
-      Returns
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.template.generate_invoke_script--raises" class="md-nav__link">
-    <span class="md-ellipsis">
-      Raises
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.template.generate_invoke_script--examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Examples
+      <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;generate_invoke_script
     </span>
   </a>
   
@@ -709,126 +727,25 @@
         
       </ul>
     </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#packager" class="md-nav__link">
-    <span class="md-ellipsis">
-      Packager
-    </span>
-  </a>
   
 </li>
       
         <li class="md-nav__item">
   <a href="#notapkgtool.build.packager" class="md-nav__link">
     <span class="md-ellipsis">
-      packager
+      <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;packager
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="packager">
+    <nav class="md-nav" aria-label=" packager">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.packager--functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      Functions
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.packager--private-helpers" class="md-nav__link">
-    <span class="md-ellipsis">
-      Private Helpers
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.packager--design-principles" class="md-nav__link">
-    <span class="md-ellipsis">
-      Design Principles
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.packager--example" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#notapkgtool.build.packager.create_intunewin" class="md-nav__link">
     <span class="md-ellipsis">
-      create_intunewin
+      <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;create_intunewin
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="create_intunewin">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.packager.create_intunewin--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.packager.create_intunewin--returns" class="md-nav__link">
-    <span class="md-ellipsis">
-      Returns
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.packager.create_intunewin--raises" class="md-nav__link">
-    <span class="md-ellipsis">
-      Raises
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.packager.create_intunewin--examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Examples
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.packager.create_intunewin--notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -853,12 +770,35 @@
   
   
     <li class="md-nav__item">
-      <a href="../versioning/" class="md-nav__link">
+      <a href="../config/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Versioning
+    config
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    discovery
     
   </span>
   
@@ -881,7 +821,53 @@
   
   
   <span class="md-ellipsis">
-    I/O
+    io
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../policy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    policy
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../psadt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    psadt
     
   </span>
   
@@ -904,12 +890,43 @@
   
   
   <span class="md-ellipsis">
-    State
+    state
     
   </span>
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../versioning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    versioning
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -929,12 +946,12 @@
   
   
     <li class="md-nav__item">
-      <a href="../../roadmap/" class="md-nav__link">
+      <a href="../../changelog/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Roadmap
+    Changelog
     
   </span>
   
@@ -951,12 +968,12 @@
   
   
     <li class="md-nav__item">
-      <a href="../../changelog/" class="md-nav__link">
+      <a href="../../roadmap/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Changelog
+    Roadmap
     
   </span>
   
@@ -1015,110 +1032,19 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#build-manager" class="md-nav__link">
-    <span class="md-ellipsis">
-      Build Manager
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#notapkgtool.build.manager" class="md-nav__link">
     <span class="md-ellipsis">
-      manager
+      <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;manager
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="manager">
+    <nav class="md-nav" aria-label=" manager">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.manager--functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      Functions
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.manager--private-helpers" class="md-nav__link">
-    <span class="md-ellipsis">
-      Private Helpers
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.manager--design-principles" class="md-nav__link">
-    <span class="md-ellipsis">
-      Design Principles
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.manager--example" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#notapkgtool.build.manager.build_package" class="md-nav__link">
     <span class="md-ellipsis">
-      build_package
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="build_package">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.manager.build_package--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.manager.build_package--returns" class="md-nav__link">
-    <span class="md-ellipsis">
-      Returns
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.manager.build_package--raises" class="md-nav__link">
-    <span class="md-ellipsis">
-      Raises
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.manager.build_package--examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Examples
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.manager.build_package--notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
+      <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;build_package
     </span>
   </a>
   
@@ -1126,110 +1052,23 @@
         
       </ul>
     </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#template-generation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Template Generation
-    </span>
-  </a>
   
 </li>
       
         <li class="md-nav__item">
   <a href="#notapkgtool.build.template" class="md-nav__link">
     <span class="md-ellipsis">
-      template
+      <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;template
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="template">
+    <nav class="md-nav" aria-label=" template">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.template--functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      Functions
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.template--private-helpers" class="md-nav__link">
-    <span class="md-ellipsis">
-      Private Helpers
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.template--design-principles" class="md-nav__link">
-    <span class="md-ellipsis">
-      Design Principles
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.template--example" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#notapkgtool.build.template.generate_invoke_script" class="md-nav__link">
     <span class="md-ellipsis">
-      generate_invoke_script
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="generate_invoke_script">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.template.generate_invoke_script--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.template.generate_invoke_script--returns" class="md-nav__link">
-    <span class="md-ellipsis">
-      Returns
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.template.generate_invoke_script--raises" class="md-nav__link">
-    <span class="md-ellipsis">
-      Raises
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.template.generate_invoke_script--examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Examples
+      <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;generate_invoke_script
     </span>
   </a>
   
@@ -1237,126 +1076,25 @@
         
       </ul>
     </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#packager" class="md-nav__link">
-    <span class="md-ellipsis">
-      Packager
-    </span>
-  </a>
   
 </li>
       
         <li class="md-nav__item">
   <a href="#notapkgtool.build.packager" class="md-nav__link">
     <span class="md-ellipsis">
-      packager
+      <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;packager
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="packager">
+    <nav class="md-nav" aria-label=" packager">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.packager--functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      Functions
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.packager--private-helpers" class="md-nav__link">
-    <span class="md-ellipsis">
-      Private Helpers
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.packager--design-principles" class="md-nav__link">
-    <span class="md-ellipsis">
-      Design Principles
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.packager--example" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#notapkgtool.build.packager.create_intunewin" class="md-nav__link">
     <span class="md-ellipsis">
-      create_intunewin
+      <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;create_intunewin
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="create_intunewin">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.packager.create_intunewin--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.packager.create_intunewin--returns" class="md-nav__link">
-    <span class="md-ellipsis">
-      Returns
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.packager.create_intunewin--raises" class="md-nav__link">
-    <span class="md-ellipsis">
-      Raises
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.packager.create_intunewin--examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Examples
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.build.packager.create_intunewin--notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -1384,9 +1122,8 @@
   
 
 
-<h1 id="build-module">Build Module</h1>
+<h1 id="build">build</h1>
 <p>The build module handles PSADT package creation and .intunewin packaging for Intune deployment.</p>
-<h2 id="build-manager">Build Manager</h2>
 
 
 <div class="doc doc-object doc-module">
@@ -1394,7 +1131,7 @@
 
 
 <h2 id="notapkgtool.build.manager" class="doc doc-heading">
-            <code>notapkgtool.build.manager</code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-module"></code>            <span class="doc doc-object-name doc-module-name">notapkgtool.build.manager</span>
 
 
 </h2>
@@ -1404,36 +1141,41 @@
         <p>Build manager for PSADT package creation.</p>
 <p>This module orchestrates the complete build process for creating PSADT
 packages from recipes and downloaded installers.</p>
-<h4 id="notapkgtool.build.manager--functions">Functions</h4>
-<p>build_package : function
-    Main entry point for building PSADT packages.</p>
-<h4 id="notapkgtool.build.manager--private-helpers">Private Helpers</h4>
-<p>_get_installer_version : Extract version from downloaded installer
-_find_installer_file : Locate installer in downloads directory
-_create_build_directory : Create build directory structure
-_copy_psadt_pristine : Copy PSADT files from cache
-_copy_installer : Copy installer to Files/ directory
-_apply_branding : Replace PSADT assets with custom branding</p>
-<h4 id="notapkgtool.build.manager--design-principles">Design Principles</h4>
-<ul>
+
+
+<details class="private-helpers" open>
+  <summary>Private Helpers</summary>
+  <ul>
+<li>_get_installer_version: Extract version from downloaded installer</li>
+<li>_find_installer_file: Locate installer in downloads directory</li>
+<li>_create_build_directory: Create build directory structure</li>
+<li>_copy_psadt_pristine: Copy PSADT files from cache</li>
+<li>_copy_installer: Copy installer to Files/ directory</li>
+<li>_apply_branding: Replace PSADT assets with custom branding</li>
+</ul>
+</details>
+
+<details class="design-principles" open>
+  <summary>Design Principles</summary>
+  <ul>
 <li>Filesystem is source of truth for version information</li>
 <li>Entire PSADT Template_v4 structure copied pristine</li>
 <li>Invoke-AppDeployToolkit.ps1 is generated from template (not copied)</li>
 <li>Build directories are versioned: {app_id}/{version}/</li>
 <li>Branding applied by replacing files in root Assets/ directory (v4 structure)</li>
 </ul>
-<h4 id="notapkgtool.build.manager--example">Example</h4>
-<pre><code>from pathlib import Path
-from notapkgtool.build import build_package
+</details>
 
-result = build_package(
+<details class="example" open>
+  <summary>Example</summary>
+  <p>from pathlib import Path
+from notapkgtool.build import build_package</p>
+<p>result = build_package(
     recipe_path=Path("recipes/Google/chrome.yaml"),
     downloads_dir=Path("downloads"),
-)
-
-print(f"Built: {result['build_dir']}")
-</code></pre>
-
+)</p>
+<p>print(f"Built: {result['build_dir']}")</p>
+</details>
 
 
 
@@ -1458,76 +1200,266 @@ print(f"Built: {result['build_dir']}")
 
 
 <h3 id="notapkgtool.build.manager.build_package" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">build_package</span><span class="p">(</span><span class="n">recipe_path</span><span class="p">,</span> <span class="n">downloads_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">output_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">build_package</span>
+
 
 </h3>
-
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">build_package</span><span class="p">(</span><span class="n">recipe_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">downloads_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">debug</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
 
         <p>Build a PSADT package from a recipe and downloaded installer.</p>
-<p>This is the main entry point for the build process. It:
-  1. Loads the recipe configuration
-  2. Finds the downloaded installer
-  3. Extracts version from installer (filesystem is truth)
-  4. Gets/downloads PSADT release
-  5. Creates build directory structure
-  6. Copies PSADT files (pristine)
-  7. Generates Invoke-AppDeployToolkit.ps1 from template
-  8. Copies installer to Files/
-  9. Applies custom branding</p>
-<h5 id="notapkgtool.build.manager.build_package--parameters">Parameters</h5>
-<p>recipe_path : Path
-    Path to the recipe YAML file.
-downloads_dir : Path, optional
-    Directory containing the downloaded installer.
-    Default: Path("downloads")
-output_dir : Path, optional
-    Base directory for build output.
-    Default: From config or Path("builds")
-verbose : bool, optional
-    Show verbose progress output.
-debug : bool, optional
-    Show debug output.</p>
-<h5 id="notapkgtool.build.manager.build_package--returns">Returns</h5>
-<p>dict
-    Build results containing:
-    - app_id : str
-    - app_name : str
-    - version : str
-    - build_dir : Path
-    - psadt_version : str
-    - status : str</p>
-<h5 id="notapkgtool.build.manager.build_package--raises">Raises</h5>
-<p>FileNotFoundError
-    If recipe or installer doesn't exist.
-RuntimeError
-    If build process fails.</p>
-<h5 id="notapkgtool.build.manager.build_package--examples">Examples</h5>
-<p>Basic build:</p>
-<pre><code>&gt;&gt;&gt; result = build_package(Path("recipes/Google/chrome.yaml"))
-&gt;&gt;&gt; print(result['build_dir'])
-builds/napt-chrome/141.0.7390.123
+<p>This is the main entry point for the build process. It:</p>
+<ol>
+<li>Loads the recipe configuration</li>
+<li>Finds the downloaded installer</li>
+<li>Extracts version from installer (filesystem is truth)</li>
+<li>Gets/downloads PSADT release</li>
+<li>Creates build directory structure</li>
+<li>Copies PSADT files (pristine)</li>
+<li>Generates Invoke-AppDeployToolkit.ps1 from template</li>
+<li>Copies installer to Files/</li>
+<li>Applies custom branding</li>
+</ol>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>recipe_path</code>
+            </td>
+            <td>
+                  <code><span title="pathlib.Path">Path</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Path to the recipe YAML file.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>downloads_dir</code>
+            </td>
+            <td>
+                  <code><span title="pathlib.Path">Path</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Directory containing the downloaded
+installer. Default: Path("downloads")</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>output_dir</code>
+            </td>
+            <td>
+                  <code><span title="pathlib.Path">Path</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Base directory for build output.
+Default: From config or Path("builds")</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>verbose</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Show verbose progress output. Default is False.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>debug</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Show debug output. Default is False.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A dict (app_id, app_name, version, build_dir, psadt_version, status),
+where app_id is the application ID, app_name is the application
+name, version is the application version, build_dir is the Path
+to the build directory, psadt_version is the PSADT version used,
+and status is the build status.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="FileNotFoundError">FileNotFoundError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If recipe or installer doesn't exist.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If build process fails.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <p>Basic build:</p>
+<pre><code>result = build_package(Path("recipes/Google/chrome.yaml"))
+print(result['build_dir'])  # builds/napt-chrome/141.0.7390.123
 </code></pre>
 <p>Custom output directory:</p>
-<pre><code>&gt;&gt;&gt; result = build_package(
-...     Path("recipes/Google/chrome.yaml"),
-...     output_dir=Path("custom/builds")
-... )
+<pre><code>result = build_package(
+    Path("recipes/Google/chrome.yaml"),
+    output_dir=Path("custom/builds")
+)
 </code></pre>
-<h5 id="notapkgtool.build.manager.build_package--notes">Notes</h5>
-<ul>
-<li>Requires installer to be downloaded first (run 'napt discover')</li>
-<li>Version extracted from installer file, not state cache</li>
-<li>Overwrites existing build directory if it exists</li>
-<li>PSADT files are copied pristine from cache</li>
-<li>Invoke-AppDeployToolkit.ps1 is generated (not copied)</li>
-</ul>
+</details>
 
+<details class="note" open>
+  <summary>Note</summary>
+  <p>Requires installer to be downloaded first (run 'napt discover').
+Version extracted from installer file, not state cache. Overwrites
+existing build directory if it exists. PSADT files are copied pristine
+from cache. Invoke-AppDeployToolkit.ps1 is generated (not copied).</p>
+</details>
 
-            <details class="quote">
+            <details class="mkdocstrings-source">
               <summary>Source code in <code>notapkgtool/build/manager.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">395</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">341</span>
+<span class="normal">342</span>
+<span class="normal">343</span>
+<span class="normal">344</span>
+<span class="normal">345</span>
+<span class="normal">346</span>
+<span class="normal">347</span>
+<span class="normal">348</span>
+<span class="normal">349</span>
+<span class="normal">350</span>
+<span class="normal">351</span>
+<span class="normal">352</span>
+<span class="normal">353</span>
+<span class="normal">354</span>
+<span class="normal">355</span>
+<span class="normal">356</span>
+<span class="normal">357</span>
+<span class="normal">358</span>
+<span class="normal">359</span>
+<span class="normal">360</span>
+<span class="normal">361</span>
+<span class="normal">362</span>
+<span class="normal">363</span>
+<span class="normal">364</span>
+<span class="normal">365</span>
+<span class="normal">366</span>
+<span class="normal">367</span>
+<span class="normal">368</span>
+<span class="normal">369</span>
+<span class="normal">370</span>
+<span class="normal">371</span>
+<span class="normal">372</span>
+<span class="normal">373</span>
+<span class="normal">374</span>
+<span class="normal">375</span>
+<span class="normal">376</span>
+<span class="normal">377</span>
+<span class="normal">378</span>
+<span class="normal">379</span>
+<span class="normal">380</span>
+<span class="normal">381</span>
+<span class="normal">382</span>
+<span class="normal">383</span>
+<span class="normal">384</span>
+<span class="normal">385</span>
+<span class="normal">386</span>
+<span class="normal">387</span>
+<span class="normal">388</span>
+<span class="normal">389</span>
+<span class="normal">390</span>
+<span class="normal">391</span>
+<span class="normal">392</span>
+<span class="normal">393</span>
+<span class="normal">394</span>
+<span class="normal">395</span>
 <span class="normal">396</span>
 <span class="normal">397</span>
 <span class="normal">398</span>
@@ -1612,153 +1544,65 @@ builds/napt-chrome/141.0.7390.123
 <span class="normal">477</span>
 <span class="normal">478</span>
 <span class="normal">479</span>
-<span class="normal">480</span>
-<span class="normal">481</span>
-<span class="normal">482</span>
-<span class="normal">483</span>
-<span class="normal">484</span>
-<span class="normal">485</span>
-<span class="normal">486</span>
-<span class="normal">487</span>
-<span class="normal">488</span>
-<span class="normal">489</span>
-<span class="normal">490</span>
-<span class="normal">491</span>
-<span class="normal">492</span>
-<span class="normal">493</span>
-<span class="normal">494</span>
-<span class="normal">495</span>
-<span class="normal">496</span>
-<span class="normal">497</span>
-<span class="normal">498</span>
-<span class="normal">499</span>
-<span class="normal">500</span>
-<span class="normal">501</span>
-<span class="normal">502</span>
-<span class="normal">503</span>
-<span class="normal">504</span>
-<span class="normal">505</span>
-<span class="normal">506</span>
-<span class="normal">507</span>
-<span class="normal">508</span>
-<span class="normal">509</span>
-<span class="normal">510</span>
-<span class="normal">511</span>
-<span class="normal">512</span>
-<span class="normal">513</span>
-<span class="normal">514</span>
-<span class="normal">515</span>
-<span class="normal">516</span>
-<span class="normal">517</span>
-<span class="normal">518</span>
-<span class="normal">519</span>
-<span class="normal">520</span>
-<span class="normal">521</span>
-<span class="normal">522</span>
-<span class="normal">523</span>
-<span class="normal">524</span>
-<span class="normal">525</span>
-<span class="normal">526</span>
-<span class="normal">527</span>
-<span class="normal">528</span>
-<span class="normal">529</span>
-<span class="normal">530</span>
-<span class="normal">531</span>
-<span class="normal">532</span>
-<span class="normal">533</span>
-<span class="normal">534</span>
-<span class="normal">535</span>
-<span class="normal">536</span>
-<span class="normal">537</span>
-<span class="normal">538</span>
-<span class="normal">539</span>
-<span class="normal">540</span>
-<span class="normal">541</span>
-<span class="normal">542</span>
-<span class="normal">543</span>
-<span class="normal">544</span>
-<span class="normal">545</span>
-<span class="normal">546</span>
-<span class="normal">547</span>
-<span class="normal">548</span>
-<span class="normal">549</span>
-<span class="normal">550</span>
-<span class="normal">551</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">build_package</span><span class="p">(</span>
+<span class="normal">480</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">build_package</span><span class="p">(</span>
     <span class="n">recipe_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
     <span class="n">downloads_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">output_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">debug</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Build a PSADT package from a recipe and downloaded installer.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build a PSADT package from a recipe and downloaded installer.</span>
 
 <span class="sd">    This is the main entry point for the build process. It:</span>
-<span class="sd">      1. Loads the recipe configuration</span>
-<span class="sd">      2. Finds the downloaded installer</span>
-<span class="sd">      3. Extracts version from installer (filesystem is truth)</span>
-<span class="sd">      4. Gets/downloads PSADT release</span>
-<span class="sd">      5. Creates build directory structure</span>
-<span class="sd">      6. Copies PSADT files (pristine)</span>
-<span class="sd">      7. Generates Invoke-AppDeployToolkit.ps1 from template</span>
-<span class="sd">      8. Copies installer to Files/</span>
-<span class="sd">      9. Applies custom branding</span>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    recipe_path : Path</span>
-<span class="sd">        Path to the recipe YAML file.</span>
-<span class="sd">    downloads_dir : Path, optional</span>
-<span class="sd">        Directory containing the downloaded installer.</span>
-<span class="sd">        Default: Path(&quot;downloads&quot;)</span>
-<span class="sd">    output_dir : Path, optional</span>
-<span class="sd">        Base directory for build output.</span>
-<span class="sd">        Default: From config or Path(&quot;builds&quot;)</span>
-<span class="sd">    verbose : bool, optional</span>
-<span class="sd">        Show verbose progress output.</span>
-<span class="sd">    debug : bool, optional</span>
-<span class="sd">        Show debug output.</span>
+<span class="sd">    1. Loads the recipe configuration</span>
+<span class="sd">    2. Finds the downloaded installer</span>
+<span class="sd">    3. Extracts version from installer (filesystem is truth)</span>
+<span class="sd">    4. Gets/downloads PSADT release</span>
+<span class="sd">    5. Creates build directory structure</span>
+<span class="sd">    6. Copies PSADT files (pristine)</span>
+<span class="sd">    7. Generates Invoke-AppDeployToolkit.ps1 from template</span>
+<span class="sd">    8. Copies installer to Files/</span>
+<span class="sd">    9. Applies custom branding</span>
 
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    dict</span>
-<span class="sd">        Build results containing:</span>
-<span class="sd">        - app_id : str</span>
-<span class="sd">        - app_name : str</span>
-<span class="sd">        - version : str</span>
-<span class="sd">        - build_dir : Path</span>
-<span class="sd">        - psadt_version : str</span>
-<span class="sd">        - status : str</span>
+<span class="sd">    Args:</span>
+<span class="sd">        recipe_path: Path to the recipe YAML file.</span>
+<span class="sd">        downloads_dir: Directory containing the downloaded</span>
+<span class="sd">            installer. Default: Path(&quot;downloads&quot;)</span>
+<span class="sd">        output_dir: Base directory for build output.</span>
+<span class="sd">            Default: From config or Path(&quot;builds&quot;)</span>
+<span class="sd">        verbose: Show verbose progress output. Default is False.</span>
+<span class="sd">        debug: Show debug output. Default is False.</span>
 
-<span class="sd">    Raises</span>
-<span class="sd">    ------</span>
-<span class="sd">    FileNotFoundError</span>
-<span class="sd">        If recipe or installer doesn&#39;t exist.</span>
-<span class="sd">    RuntimeError</span>
-<span class="sd">        If build process fails.</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        A dict (app_id, app_name, version, build_dir, psadt_version, status),</span>
+<span class="sd">            where app_id is the application ID, app_name is the application</span>
+<span class="sd">            name, version is the application version, build_dir is the Path</span>
+<span class="sd">            to the build directory, psadt_version is the PSADT version used,</span>
+<span class="sd">            and status is the build status.</span>
 
-<span class="sd">    Examples</span>
-<span class="sd">    --------</span>
-<span class="sd">    Basic build:</span>
+<span class="sd">    Raises:</span>
+<span class="sd">        FileNotFoundError: If recipe or installer doesn&#39;t exist.</span>
+<span class="sd">        RuntimeError: If build process fails.</span>
 
-<span class="sd">        &gt;&gt;&gt; result = build_package(Path(&quot;recipes/Google/chrome.yaml&quot;))</span>
-<span class="sd">        &gt;&gt;&gt; print(result[&#39;build_dir&#39;])</span>
-<span class="sd">        builds/napt-chrome/141.0.7390.123</span>
+<span class="sd">    Example:</span>
+<span class="sd">        Basic build:</span>
 
-<span class="sd">    Custom output directory:</span>
+<span class="sd">            result = build_package(Path(&quot;recipes/Google/chrome.yaml&quot;))</span>
+<span class="sd">            print(result[&#39;build_dir&#39;])  # builds/napt-chrome/141.0.7390.123</span>
 
-<span class="sd">        &gt;&gt;&gt; result = build_package(</span>
-<span class="sd">        ...     Path(&quot;recipes/Google/chrome.yaml&quot;),</span>
-<span class="sd">        ...     output_dir=Path(&quot;custom/builds&quot;)</span>
-<span class="sd">        ... )</span>
+<span class="sd">        Custom output directory:</span>
 
-<span class="sd">    Notes</span>
-<span class="sd">    -----</span>
-<span class="sd">    - Requires installer to be downloaded first (run &#39;napt discover&#39;)</span>
-<span class="sd">    - Version extracted from installer file, not state cache</span>
-<span class="sd">    - Overwrites existing build directory if it exists</span>
-<span class="sd">    - PSADT files are copied pristine from cache</span>
-<span class="sd">    - Invoke-AppDeployToolkit.ps1 is generated (not copied)</span>
+<span class="sd">            result = build_package(</span>
+<span class="sd">                Path(&quot;recipes/Google/chrome.yaml&quot;),</span>
+<span class="sd">                output_dir=Path(&quot;custom/builds&quot;)</span>
+<span class="sd">            )</span>
+
+<span class="sd">    Note:</span>
+<span class="sd">        Requires installer to be downloaded first (run &#39;napt discover&#39;).</span>
+<span class="sd">        Version extracted from installer file, not state cache. Overwrites</span>
+<span class="sd">        existing build directory if it exists. PSADT files are copied pristine</span>
+<span class="sd">        from cache. Invoke-AppDeployToolkit.ps1 is generated (not copied).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_step</span><span class="p">,</span> <span class="n">print_verbose</span>
 
@@ -1852,15 +1696,14 @@ builds/napt-chrome/141.0.7390.123
 
     </div>
 
-</div><h2 id="template-generation">Template Generation</h2>
-
+</div>
 
 <div class="doc doc-object doc-module">
 
 
 
 <h2 id="notapkgtool.build.template" class="doc doc-heading">
-            <code>notapkgtool.build.template</code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-module"></code>            <span class="doc doc-object-name doc-module-name">notapkgtool.build.template</span>
 
 
 </h2>
@@ -1871,36 +1714,41 @@ builds/napt-chrome/141.0.7390.123
 <p>This module handles generating the Invoke-AppDeployToolkit.ps1 script by
 reading PSADT's template, substituting configuration values, and inserting
 recipe-specific install/uninstall code.</p>
-<h4 id="notapkgtool.build.template--functions">Functions</h4>
-<p>generate_invoke_script : function
-    Main entry point for script generation.</p>
-<h4 id="notapkgtool.build.template--private-helpers">Private Helpers</h4>
-<p>_build_adtsession_vars : Build $adtSession hashtable from config
-_replace_session_block : Replace $adtSession = @{...} in template
-_insert_recipe_code : Insert install/uninstall code at markers
-_format_powershell_value : Format Python values as PowerShell literals</p>
-<h4 id="notapkgtool.build.template--design-principles">Design Principles</h4>
-<ul>
+
+
+<details class="private-helpers" open>
+  <summary>Private Helpers</summary>
+  <ul>
+<li>_build_adtsession_vars: Build $adtSession hashtable from config</li>
+<li>_replace_session_block: Replace $adtSession = @{...} in template</li>
+<li>_insert_recipe_code: Insert install/uninstall code at markers</li>
+<li>_format_powershell_value: Format Python values as PowerShell literals</li>
+</ul>
+</details>
+
+<details class="design-principles" open>
+  <summary>Design Principles</summary>
+  <ul>
 <li>PSADT template remains pristine in cache</li>
 <li>Generate script by substitution, not modification</li>
 <li>Preserve PSADT's structure and comments</li>
 <li>Support dynamic values (AppScriptDate, discovered version)</li>
 <li>Merge org defaults with recipe overrides</li>
 </ul>
-<h4 id="notapkgtool.build.template--example">Example</h4>
-<pre><code>from pathlib import Path
-from notapkgtool.build.template import generate_invoke_script
+</details>
 
-script = generate_invoke_script(
+<details class="example" open>
+  <summary>Example</summary>
+  <p>from pathlib import Path
+from notapkgtool.build.template import generate_invoke_script</p>
+<p>script = generate_invoke_script(
     template_path=Path("cache/psadt/4.1.7/Invoke-AppDeployToolkit.ps1"),
     config=recipe_config,
     version="141.0.7390.123",
     psadt_version="4.1.7"
-)
-
-Path("builds/app/version/Invoke-AppDeployToolkit.ps1").write_text(script)
-</code></pre>
-
+)</p>
+<p>Path("builds/app/version/Invoke-AppDeployToolkit.ps1").write_text(script)</p>
+</details>
 
 
 
@@ -1925,10 +1773,12 @@ Path("builds/app/version/Invoke-AppDeployToolkit.ps1").write_text(script)
 
 
 <h3 id="notapkgtool.build.template.generate_invoke_script" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">generate_invoke_script</span><span class="p">(</span><span class="n">template_path</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">version</span><span class="p">,</span> <span class="n">psadt_version</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">generate_invoke_script</span>
+
 
 </h3>
-
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">generate_invoke_script</span><span class="p">(</span><span class="n">template_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">version</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">psadt_version</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">debug</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
 
@@ -1936,45 +1786,232 @@ Path("builds/app/version/Invoke-AppDeployToolkit.ps1").write_text(script)
 <p>Reads the PSADT template, replaces the $adtSession hashtable with
 values from the configuration, and inserts recipe-specific install/
 uninstall code.</p>
-<h5 id="notapkgtool.build.template.generate_invoke_script--parameters">Parameters</h5>
-<p>template_path : Path
-    Path to PSADT's Invoke-AppDeployToolkit.ps1 template.
-config : dict
-    Merged configuration (org + vendor + recipe).
-version : str
-    Application version (from filesystem).
-psadt_version : str
-    PSADT version being used.
-verbose : bool, optional
-    Show verbose output.
-debug : bool, optional
-    Show debug output.</p>
-<h5 id="notapkgtool.build.template.generate_invoke_script--returns">Returns</h5>
-<p>str
-    Generated PowerShell script text.</p>
-<h5 id="notapkgtool.build.template.generate_invoke_script--raises">Raises</h5>
-<p>FileNotFoundError
-    If template doesn't exist.
-RuntimeError
-    If template parsing fails.</p>
-<h5 id="notapkgtool.build.template.generate_invoke_script--examples">Examples</h5>
-<blockquote>
-<blockquote>
-<blockquote>
-<p>script = generate_invoke_script(
-...     Path("cache/psadt/4.1.7/Invoke-AppDeployToolkit.ps1"),
-...     config,
-...     "141.0.7390.123",
-...     "4.1.7"
-... )</p>
-</blockquote>
-</blockquote>
-</blockquote>
 
 
-            <details class="quote">
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>template_path</code>
+            </td>
+            <td>
+                  <code><span title="pathlib.Path">Path</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Path to PSADT's Invoke-AppDeployToolkit.ps1 template.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>config</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Merged configuration (org + vendor + recipe).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>version</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Application version (from filesystem).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>psadt_version</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>PSADT version being used.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>verbose</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Show verbose output. Default is False.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>debug</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Show debug output. Default is False.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Generated PowerShell script text.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="FileNotFoundError">FileNotFoundError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If template doesn't exist.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If template parsing fails.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <p>Generate deployment script from template:</p>
+<pre><code>from pathlib import Path
+
+script = generate_invoke_script(
+    Path("cache/psadt/4.1.7/Invoke-AppDeployToolkit.ps1"),
+    config,
+    "141.0.7390.123",
+    "4.1.7"
+)
+</code></pre>
+</details>
+
+            <details class="mkdocstrings-source">
               <summary>Source code in <code>notapkgtool/build/template.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">252</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">212</span>
+<span class="normal">213</span>
+<span class="normal">214</span>
+<span class="normal">215</span>
+<span class="normal">216</span>
+<span class="normal">217</span>
+<span class="normal">218</span>
+<span class="normal">219</span>
+<span class="normal">220</span>
+<span class="normal">221</span>
+<span class="normal">222</span>
+<span class="normal">223</span>
+<span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span>
+<span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span>
+<span class="normal">237</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span>
+<span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
+<span class="normal">251</span>
+<span class="normal">252</span>
 <span class="normal">253</span>
 <span class="normal">254</span>
 <span class="normal">255</span>
@@ -2013,57 +2050,7 @@ RuntimeError
 <span class="normal">288</span>
 <span class="normal">289</span>
 <span class="normal">290</span>
-<span class="normal">291</span>
-<span class="normal">292</span>
-<span class="normal">293</span>
-<span class="normal">294</span>
-<span class="normal">295</span>
-<span class="normal">296</span>
-<span class="normal">297</span>
-<span class="normal">298</span>
-<span class="normal">299</span>
-<span class="normal">300</span>
-<span class="normal">301</span>
-<span class="normal">302</span>
-<span class="normal">303</span>
-<span class="normal">304</span>
-<span class="normal">305</span>
-<span class="normal">306</span>
-<span class="normal">307</span>
-<span class="normal">308</span>
-<span class="normal">309</span>
-<span class="normal">310</span>
-<span class="normal">311</span>
-<span class="normal">312</span>
-<span class="normal">313</span>
-<span class="normal">314</span>
-<span class="normal">315</span>
-<span class="normal">316</span>
-<span class="normal">317</span>
-<span class="normal">318</span>
-<span class="normal">319</span>
-<span class="normal">320</span>
-<span class="normal">321</span>
-<span class="normal">322</span>
-<span class="normal">323</span>
-<span class="normal">324</span>
-<span class="normal">325</span>
-<span class="normal">326</span>
-<span class="normal">327</span>
-<span class="normal">328</span>
-<span class="normal">329</span>
-<span class="normal">330</span>
-<span class="normal">331</span>
-<span class="normal">332</span>
-<span class="normal">333</span>
-<span class="normal">334</span>
-<span class="normal">335</span>
-<span class="normal">336</span>
-<span class="normal">337</span>
-<span class="normal">338</span>
-<span class="normal">339</span>
-<span class="normal">340</span>
-<span class="normal">341</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">generate_invoke_script</span><span class="p">(</span>
+<span class="normal">291</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">generate_invoke_script</span><span class="p">(</span>
     <span class="n">template_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
     <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
     <span class="n">version</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -2071,48 +2058,38 @@ RuntimeError
     <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">debug</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Generate Invoke-AppDeployToolkit.ps1 from PSADT template and config.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate Invoke-AppDeployToolkit.ps1 from PSADT template and config.</span>
 
 <span class="sd">    Reads the PSADT template, replaces the $adtSession hashtable with</span>
 <span class="sd">    values from the configuration, and inserts recipe-specific install/</span>
 <span class="sd">    uninstall code.</span>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    template_path : Path</span>
-<span class="sd">        Path to PSADT&#39;s Invoke-AppDeployToolkit.ps1 template.</span>
-<span class="sd">    config : dict</span>
-<span class="sd">        Merged configuration (org + vendor + recipe).</span>
-<span class="sd">    version : str</span>
-<span class="sd">        Application version (from filesystem).</span>
-<span class="sd">    psadt_version : str</span>
-<span class="sd">        PSADT version being used.</span>
-<span class="sd">    verbose : bool, optional</span>
-<span class="sd">        Show verbose output.</span>
-<span class="sd">    debug : bool, optional</span>
-<span class="sd">        Show debug output.</span>
+<span class="sd">    Args:</span>
+<span class="sd">        template_path: Path to PSADT&#39;s Invoke-AppDeployToolkit.ps1 template.</span>
+<span class="sd">        config: Merged configuration (org + vendor + recipe).</span>
+<span class="sd">        version: Application version (from filesystem).</span>
+<span class="sd">        psadt_version: PSADT version being used.</span>
+<span class="sd">        verbose: Show verbose output. Default is False.</span>
+<span class="sd">        debug: Show debug output. Default is False.</span>
 
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    str</span>
+<span class="sd">    Returns:</span>
 <span class="sd">        Generated PowerShell script text.</span>
 
-<span class="sd">    Raises</span>
-<span class="sd">    ------</span>
-<span class="sd">    FileNotFoundError</span>
-<span class="sd">        If template doesn&#39;t exist.</span>
-<span class="sd">    RuntimeError</span>
-<span class="sd">        If template parsing fails.</span>
+<span class="sd">    Raises:</span>
+<span class="sd">        FileNotFoundError: If template doesn&#39;t exist.</span>
+<span class="sd">        RuntimeError: If template parsing fails.</span>
 
-<span class="sd">    Examples</span>
-<span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; script = generate_invoke_script(</span>
-<span class="sd">    ...     Path(&quot;cache/psadt/4.1.7/Invoke-AppDeployToolkit.ps1&quot;),</span>
-<span class="sd">    ...     config,</span>
-<span class="sd">    ...     &quot;141.0.7390.123&quot;,</span>
-<span class="sd">    ...     &quot;4.1.7&quot;</span>
-<span class="sd">    ... )</span>
+<span class="sd">    Example:</span>
+<span class="sd">        Generate deployment script from template:</span>
+
+<span class="sd">            from pathlib import Path</span>
+
+<span class="sd">            script = generate_invoke_script(</span>
+<span class="sd">                Path(&quot;cache/psadt/4.1.7/Invoke-AppDeployToolkit.ps1&quot;),</span>
+<span class="sd">                config,</span>
+<span class="sd">                &quot;141.0.7390.123&quot;,</span>
+<span class="sd">                &quot;4.1.7&quot;</span>
+<span class="sd">            )</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_debug</span><span class="p">,</span> <span class="n">print_verbose</span>
 
@@ -2165,15 +2142,14 @@ RuntimeError
 
     </div>
 
-</div><h2 id="packager">Packager</h2>
-
+</div>
 
 <div class="doc doc-object doc-module">
 
 
 
 <h2 id="notapkgtool.build.packager" class="doc doc-heading">
-            <code>notapkgtool.build.packager</code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-module"></code>            <span class="doc doc-object-name doc-module-name">notapkgtool.build.packager</span>
 
 
 </h2>
@@ -2183,32 +2159,37 @@ RuntimeError
         <p>.intunewin package generation for NAPT.</p>
 <p>This module handles creating .intunewin packages from built PSADT directories
 using Microsoft's IntuneWinAppUtil.exe tool.</p>
-<h4 id="notapkgtool.build.packager--functions">Functions</h4>
-<p>create_intunewin : function
-    Create a .intunewin package from a PSADT build directory.</p>
-<h4 id="notapkgtool.build.packager--private-helpers">Private Helpers</h4>
-<p>_get_intunewin_tool : Download and cache IntuneWinAppUtil.exe
-_execute_packaging : Run IntuneWinAppUtil.exe to create .intunewin
-_verify_build_structure : Validate PSADT build directory</p>
-<h4 id="notapkgtool.build.packager--design-principles">Design Principles</h4>
-<ul>
+
+
+<details class="private-helpers" open>
+  <summary>Private Helpers</summary>
+  <ul>
+<li>_get_intunewin_tool: Download and cache IntuneWinAppUtil.exe</li>
+<li>_execute_packaging: Run IntuneWinAppUtil.exe to create .intunewin</li>
+<li>_verify_build_structure: Validate PSADT build directory</li>
+</ul>
+</details>
+
+<details class="design-principles" open>
+  <summary>Design Principles</summary>
+  <ul>
 <li>IntuneWinAppUtil.exe is cached globally (not per-build)</li>
 <li>Package output follows convention: {app_id}-{version}.intunewin</li>
 <li>Build directory can optionally be cleaned after packaging</li>
 <li>Tool is downloaded from Microsoft's official GitHub repository</li>
 </ul>
-<h4 id="notapkgtool.build.packager--example">Example</h4>
-<pre><code>from pathlib import Path
-from notapkgtool.build.packager import create_intunewin
+</details>
 
-result = create_intunewin(
+<details class="example" open>
+  <summary>Example</summary>
+  <p>from pathlib import Path
+from notapkgtool.build.packager import create_intunewin</p>
+<p>result = create_intunewin(
     build_dir=Path("builds/napt-chrome/141.0.7390.123"),
     output_dir=Path("packages")
-)
-
-print(f"Package: {result['package_path']}")
-</code></pre>
-
+)</p>
+<p>print(f"Package: {result['package_path']}")</p>
+</details>
 
 
 
@@ -2233,69 +2214,239 @@ print(f"Package: {result['package_path']}")
 
 
 <h3 id="notapkgtool.build.packager.create_intunewin" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">create_intunewin</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="n">output_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">clean_source</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">create_intunewin</span>
+
 
 </h3>
-
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">create_intunewin</span><span class="p">(</span><span class="n">build_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">clean_source</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">debug</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
 
         <p>Create a .intunewin package from a PSADT build directory.</p>
 <p>Uses Microsoft's IntuneWinAppUtil.exe tool to package a PSADT build
 directory into a .intunewin file suitable for Intune deployment.</p>
-<h5 id="notapkgtool.build.packager.create_intunewin--parameters">Parameters</h5>
-<p>build_dir : Path
-    Path to the built PSADT package directory.
-output_dir : Path, optional
-    Directory for the .intunewin output.
-    Default: packages/{app_id}/
-clean_source : bool, optional
-    If True, remove the build directory after packaging.
-    Default: False.
-verbose : bool, optional
-    Show verbose output.
-debug : bool, optional
-    Show debug output.</p>
-<h5 id="notapkgtool.build.packager.create_intunewin--returns">Returns</h5>
-<p>dict
-    Packaging results containing:
-    - build_dir : Path
-    - package_path : Path
-    - app_id : str (from directory structure)
-    - version : str (from directory structure)
-    - status : str</p>
-<h5 id="notapkgtool.build.packager.create_intunewin--raises">Raises</h5>
-<p>ValueError
-    If build directory structure is invalid.
-RuntimeError
-    If packaging fails.</p>
-<h5 id="notapkgtool.build.packager.create_intunewin--examples">Examples</h5>
-<p>Basic packaging:</p>
-<pre><code>&gt;&gt;&gt; result = create_intunewin(
-...     build_dir=Path("builds/napt-chrome/141.0.7390.123")
-... )
-&gt;&gt;&gt; print(result['package_path'])
-packages/napt-chrome/napt-chrome-141.0.7390.123.intunewin
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>build_dir</code>
+            </td>
+            <td>
+                  <code><span title="pathlib.Path">Path</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Path to the built PSADT package directory.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>output_dir</code>
+            </td>
+            <td>
+                  <code><span title="pathlib.Path">Path</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Directory for the .intunewin output.
+Default: packages/{app_id}/</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>clean_source</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If True, remove the build directory
+after packaging. Default is False.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>verbose</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Show verbose output. Default is False.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>debug</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Show debug output. Default is False.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A dict (build_dir, package_path, app_id, version, status), where
+build_dir is the Path to the build directory, package_path is
+the Path to the created .intunewin file, app_id is the application
+ID, version is the application version, and status is the
+packaging status.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If build directory structure is invalid.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If packaging fails.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <p>Basic packaging:</p>
+<pre><code>result = create_intunewin(
+    build_dir=Path("builds/napt-chrome/141.0.7390.123")
+)
+print(result['package_path'])
+# packages/napt-chrome/napt-chrome-141.0.7390.123.intunewin
 </code></pre>
 <p>With cleanup:</p>
-<pre><code>&gt;&gt;&gt; result = create_intunewin(
-...     build_dir=Path("builds/napt-chrome/141.0.7390.123"),
-...     clean_source=True
-... )
+<pre><code>result = create_intunewin(
+    build_dir=Path("builds/napt-chrome/141.0.7390.123"),
+    clean_source=True
+)
 # Build directory is removed after packaging
 </code></pre>
-<h5 id="notapkgtool.build.packager.create_intunewin--notes">Notes</h5>
-<ul>
-<li>Requires build directory from 'napt build' command</li>
-<li>IntuneWinAppUtil.exe is downloaded and cached on first use</li>
-<li>Setup file is always "Invoke-AppDeployToolkit.exe"</li>
-<li>Output follows convention: packages/{app_id}/{app_id}-{version}.intunewin</li>
-</ul>
+</details>
 
+<details class="note" open>
+  <summary>Note</summary>
+  <p>Requires build directory from 'napt build' command. IntuneWinAppUtil.exe
+is downloaded and cached on first use. Setup file is always
+"Invoke-AppDeployToolkit.exe". Output follows convention:
+packages/{app_id}/{app_id}-{version}.intunewin</p>
+</details>
 
-            <details class="quote">
+            <details class="mkdocstrings-source">
               <summary>Source code in <code>notapkgtool/build/packager.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">230</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">197</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span>
+<span class="normal">201</span>
+<span class="normal">202</span>
+<span class="normal">203</span>
+<span class="normal">204</span>
+<span class="normal">205</span>
+<span class="normal">206</span>
+<span class="normal">207</span>
+<span class="normal">208</span>
+<span class="normal">209</span>
+<span class="normal">210</span>
+<span class="normal">211</span>
+<span class="normal">212</span>
+<span class="normal">213</span>
+<span class="normal">214</span>
+<span class="normal">215</span>
+<span class="normal">216</span>
+<span class="normal">217</span>
+<span class="normal">218</span>
+<span class="normal">219</span>
+<span class="normal">220</span>
+<span class="normal">221</span>
+<span class="normal">222</span>
+<span class="normal">223</span>
+<span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span>
+<span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
 <span class="normal">231</span>
 <span class="normal">232</span>
 <span class="normal">233</span>
@@ -2371,123 +2522,60 @@ packages/napt-chrome/napt-chrome-141.0.7390.123.intunewin
 <span class="normal">303</span>
 <span class="normal">304</span>
 <span class="normal">305</span>
-<span class="normal">306</span>
-<span class="normal">307</span>
-<span class="normal">308</span>
-<span class="normal">309</span>
-<span class="normal">310</span>
-<span class="normal">311</span>
-<span class="normal">312</span>
-<span class="normal">313</span>
-<span class="normal">314</span>
-<span class="normal">315</span>
-<span class="normal">316</span>
-<span class="normal">317</span>
-<span class="normal">318</span>
-<span class="normal">319</span>
-<span class="normal">320</span>
-<span class="normal">321</span>
-<span class="normal">322</span>
-<span class="normal">323</span>
-<span class="normal">324</span>
-<span class="normal">325</span>
-<span class="normal">326</span>
-<span class="normal">327</span>
-<span class="normal">328</span>
-<span class="normal">329</span>
-<span class="normal">330</span>
-<span class="normal">331</span>
-<span class="normal">332</span>
-<span class="normal">333</span>
-<span class="normal">334</span>
-<span class="normal">335</span>
-<span class="normal">336</span>
-<span class="normal">337</span>
-<span class="normal">338</span>
-<span class="normal">339</span>
-<span class="normal">340</span>
-<span class="normal">341</span>
-<span class="normal">342</span>
-<span class="normal">343</span>
-<span class="normal">344</span>
-<span class="normal">345</span>
-<span class="normal">346</span>
-<span class="normal">347</span>
-<span class="normal">348</span>
-<span class="normal">349</span>
-<span class="normal">350</span>
-<span class="normal">351</span>
-<span class="normal">352</span>
-<span class="normal">353</span>
-<span class="normal">354</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">create_intunewin</span><span class="p">(</span>
+<span class="normal">306</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">create_intunewin</span><span class="p">(</span>
     <span class="n">build_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
     <span class="n">output_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">clean_source</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">debug</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Create a .intunewin package from a PSADT build directory.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a .intunewin package from a PSADT build directory.</span>
 
 <span class="sd">    Uses Microsoft&#39;s IntuneWinAppUtil.exe tool to package a PSADT build</span>
 <span class="sd">    directory into a .intunewin file suitable for Intune deployment.</span>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    build_dir : Path</span>
-<span class="sd">        Path to the built PSADT package directory.</span>
-<span class="sd">    output_dir : Path, optional</span>
-<span class="sd">        Directory for the .intunewin output.</span>
-<span class="sd">        Default: packages/{app_id}/</span>
-<span class="sd">    clean_source : bool, optional</span>
-<span class="sd">        If True, remove the build directory after packaging.</span>
-<span class="sd">        Default: False.</span>
-<span class="sd">    verbose : bool, optional</span>
-<span class="sd">        Show verbose output.</span>
-<span class="sd">    debug : bool, optional</span>
-<span class="sd">        Show debug output.</span>
+<span class="sd">    Args:</span>
+<span class="sd">        build_dir: Path to the built PSADT package directory.</span>
+<span class="sd">        output_dir: Directory for the .intunewin output.</span>
+<span class="sd">            Default: packages/{app_id}/</span>
+<span class="sd">        clean_source: If True, remove the build directory</span>
+<span class="sd">            after packaging. Default is False.</span>
+<span class="sd">        verbose: Show verbose output. Default is False.</span>
+<span class="sd">        debug: Show debug output. Default is False.</span>
 
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    dict</span>
-<span class="sd">        Packaging results containing:</span>
-<span class="sd">        - build_dir : Path</span>
-<span class="sd">        - package_path : Path</span>
-<span class="sd">        - app_id : str (from directory structure)</span>
-<span class="sd">        - version : str (from directory structure)</span>
-<span class="sd">        - status : str</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        A dict (build_dir, package_path, app_id, version, status), where</span>
+<span class="sd">            build_dir is the Path to the build directory, package_path is</span>
+<span class="sd">            the Path to the created .intunewin file, app_id is the application</span>
+<span class="sd">            ID, version is the application version, and status is the</span>
+<span class="sd">            packaging status.</span>
 
-<span class="sd">    Raises</span>
-<span class="sd">    ------</span>
-<span class="sd">    ValueError</span>
-<span class="sd">        If build directory structure is invalid.</span>
-<span class="sd">    RuntimeError</span>
-<span class="sd">        If packaging fails.</span>
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If build directory structure is invalid.</span>
+<span class="sd">        RuntimeError: If packaging fails.</span>
 
-<span class="sd">    Examples</span>
-<span class="sd">    --------</span>
-<span class="sd">    Basic packaging:</span>
+<span class="sd">    Example:</span>
+<span class="sd">        Basic packaging:</span>
 
-<span class="sd">        &gt;&gt;&gt; result = create_intunewin(</span>
-<span class="sd">        ...     build_dir=Path(&quot;builds/napt-chrome/141.0.7390.123&quot;)</span>
-<span class="sd">        ... )</span>
-<span class="sd">        &gt;&gt;&gt; print(result[&#39;package_path&#39;])</span>
-<span class="sd">        packages/napt-chrome/napt-chrome-141.0.7390.123.intunewin</span>
+<span class="sd">            result = create_intunewin(</span>
+<span class="sd">                build_dir=Path(&quot;builds/napt-chrome/141.0.7390.123&quot;)</span>
+<span class="sd">            )</span>
+<span class="sd">            print(result[&#39;package_path&#39;])</span>
+<span class="sd">            # packages/napt-chrome/napt-chrome-141.0.7390.123.intunewin</span>
 
-<span class="sd">    With cleanup:</span>
+<span class="sd">        With cleanup:</span>
 
-<span class="sd">        &gt;&gt;&gt; result = create_intunewin(</span>
-<span class="sd">        ...     build_dir=Path(&quot;builds/napt-chrome/141.0.7390.123&quot;),</span>
-<span class="sd">        ...     clean_source=True</span>
-<span class="sd">        ... )</span>
-<span class="sd">        # Build directory is removed after packaging</span>
+<span class="sd">            result = create_intunewin(</span>
+<span class="sd">                build_dir=Path(&quot;builds/napt-chrome/141.0.7390.123&quot;),</span>
+<span class="sd">                clean_source=True</span>
+<span class="sd">            )</span>
+<span class="sd">            # Build directory is removed after packaging</span>
 
-<span class="sd">    Notes</span>
-<span class="sd">    -----</span>
-<span class="sd">    - Requires build directory from &#39;napt build&#39; command</span>
-<span class="sd">    - IntuneWinAppUtil.exe is downloaded and cached on first use</span>
-<span class="sd">    - Setup file is always &quot;Invoke-AppDeployToolkit.exe&quot;</span>
-<span class="sd">    - Output follows convention: packages/{app_id}/{app_id}-{version}.intunewin</span>
+<span class="sd">    Note:</span>
+<span class="sd">        Requires build directory from &#39;napt build&#39; command. IntuneWinAppUtil.exe</span>
+<span class="sd">        is downloaded and cached on first use. Setup file is always</span>
+<span class="sd">        &quot;Invoke-AppDeployToolkit.exe&quot;. Output follows convention:</span>
+<span class="sd">        packages/{app_id}/{app_id}-{version}.intunewin</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_step</span><span class="p">,</span> <span class="n">print_verbose</span>
 
@@ -2605,7 +2693,7 @@ packages/napt-chrome/napt-chrome-141.0.7390.123.intunewin
     
     
       
-      <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky"], "search": "../../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
       <script src="../../assets/javascripts/bundle.f55a23d4.min.js"></script>

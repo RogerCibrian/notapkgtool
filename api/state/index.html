@@ -15,10 +15,10 @@
         <link rel="canonical" href="https://rogercibrian.github.io/notapkgtool/api/state/">
       
       
-        <link rel="prev" href="../io/">
+        <link rel="prev" href="../psadt/">
       
       
-        <link rel="next" href="../../roadmap/">
+        <link rel="next" href="../versioning/">
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
@@ -26,7 +26,7 @@
     
     
       
-        <title>State - NAPT Documentation</title>
+        <title>state - NAPT Documentation</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#state-module" class="md-skip">
+        <a href="#state" class="md-skip">
           Skip to content
         </a>
       
@@ -94,7 +94,7 @@
 
   
 
-<header class="md-header md-header--shadow" data-md-component="header">
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
     <a href="../.." title="NAPT Documentation" class="md-header__button md-logo" aria-label="NAPT Documentation" data-md-component="logo">
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              State
+              state
             
           </span>
         </div>
@@ -209,13 +209,158 @@
     
   </nav>
   
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../quick-start/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Quick Start
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../user-guide/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  User Guide
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../cli/" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../changelog/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../roadmap/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Roadmap
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../contributing/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Contributing
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
 </header>
     
     <div class="md-container" data-md-component="container">
       
       
-        
-          
         
       
       <main class="md-main" data-md-component="main">
@@ -229,8 +374,10 @@
                     
 
 
+  
 
-<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
     <a href="../.." title="NAPT Documentation" class="md-nav__button md-logo" aria-label="NAPT Documentation" data-md-component="logo">
       
@@ -333,15 +480,21 @@
     
     
     
+      
+        
+        
+      
+      
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
             
   
   
@@ -368,12 +521,12 @@
   
   
     <li class="md-nav__item">
-      <a href="../core/" class="md-nav__link">
+      <a href="../cli/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Core
+    cli
     
   </span>
   
@@ -391,12 +544,101 @@
   
   
     <li class="md-nav__item">
-      <a href="../discovery/" class="md-nav__link">
+      <a href="../core/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Discovery
+    core
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    validation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Modules
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            Modules
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../build/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    build
     
   </span>
   
@@ -419,7 +661,7 @@
   
   
   <span class="md-ellipsis">
-    Configuration
+    config
     
   </span>
   
@@ -437,35 +679,12 @@
   
   
     <li class="md-nav__item">
-      <a href="../build/" class="md-nav__link">
+      <a href="../discovery/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Build
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../versioning/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Versioning
+    discovery
     
   </span>
   
@@ -488,7 +707,53 @@
   
   
   <span class="md-ellipsis">
-    I/O
+    io
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../policy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    policy
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../psadt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    psadt
     
   </span>
   
@@ -520,7 +785,7 @@
   
   
   <span class="md-ellipsis">
-    State
+    state
     
   </span>
   
@@ -533,7 +798,7 @@
   
   
   <span class="md-ellipsis">
-    State
+    state
     
   </span>
   
@@ -558,272 +823,74 @@
         <li class="md-nav__item">
   <a href="#notapkgtool.state" class="md-nav__link">
     <span class="md-ellipsis">
-      state
+      <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;state
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="state">
+    <nav class="md-nav" aria-label=" state">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state--public-api" class="md-nav__link">
-    <span class="md-ellipsis">
-      Public API
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state--example" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#notapkgtool.state.StateTracker" class="md-nav__link">
     <span class="md-ellipsis">
-      StateTracker
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;StateTracker
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="StateTracker">
+    <nav class="md-nav" aria-label=" StateTracker">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker--attributes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Attributes
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker--examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Examples
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#notapkgtool.state.StateTracker.__init__" class="md-nav__link">
     <span class="md-ellipsis">
-      __init__
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;__init__
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="__init__">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.__init__--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#notapkgtool.state.StateTracker.load" class="md-nav__link">
     <span class="md-ellipsis">
-      load
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;load
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="load">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.load--returns" class="md-nav__link">
-    <span class="md-ellipsis">
-      Returns
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.load--raises" class="md-nav__link">
-    <span class="md-ellipsis">
-      Raises
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#notapkgtool.state.StateTracker.save" class="md-nav__link">
     <span class="md-ellipsis">
-      save
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;save
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="save">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.save--raises" class="md-nav__link">
-    <span class="md-ellipsis">
-      Raises
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#notapkgtool.state.StateTracker.get_cache" class="md-nav__link">
     <span class="md-ellipsis">
-      get_cache
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_cache
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="get_cache">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.get_cache--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.get_cache--returns" class="md-nav__link">
-    <span class="md-ellipsis">
-      Returns
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.get_cache--examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Examples
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#notapkgtool.state.StateTracker.update_cache" class="md-nav__link">
     <span class="md-ellipsis">
-      update_cache
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;update_cache
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="update_cache">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.update_cache--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.update_cache--examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Examples
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.update_cache--notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#notapkgtool.state.StateTracker.has_version_changed" class="md-nav__link">
     <span class="md-ellipsis">
-      has_version_changed
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;has_version_changed
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="has_version_changed">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.has_version_changed--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.has_version_changed--returns" class="md-nav__link">
-    <span class="md-ellipsis">
-      Returns
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.has_version_changed--examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Examples
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.has_version_changed--notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -835,102 +902,18 @@
           <li class="md-nav__item">
   <a href="#notapkgtool.state.load_state" class="md-nav__link">
     <span class="md-ellipsis">
-      load_state
+      <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;load_state
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="load_state">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.load_state--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.load_state--returns" class="md-nav__link">
-    <span class="md-ellipsis">
-      Returns
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.load_state--raises" class="md-nav__link">
-    <span class="md-ellipsis">
-      Raises
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.load_state--examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Examples
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#notapkgtool.state.save_state" class="md-nav__link">
     <span class="md-ellipsis">
-      save_state
+      <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;save_state
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="save_state">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.save_state--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.save_state--raises" class="md-nav__link">
-    <span class="md-ellipsis">
-      Raises
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.save_state--examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Examples
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.save_state--notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -942,6 +925,37 @@
     </ul>
   
 </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../versioning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    versioning
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
       
     </li>
   
@@ -962,12 +976,12 @@
   
   
     <li class="md-nav__item">
-      <a href="../../roadmap/" class="md-nav__link">
+      <a href="../../changelog/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Roadmap
+    Changelog
     
   </span>
   
@@ -984,12 +998,12 @@
   
   
     <li class="md-nav__item">
-      <a href="../../changelog/" class="md-nav__link">
+      <a href="../../roadmap/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Changelog
+    Roadmap
     
   </span>
   
@@ -1050,272 +1064,74 @@
         <li class="md-nav__item">
   <a href="#notapkgtool.state" class="md-nav__link">
     <span class="md-ellipsis">
-      state
+      <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;state
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="state">
+    <nav class="md-nav" aria-label=" state">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state--public-api" class="md-nav__link">
-    <span class="md-ellipsis">
-      Public API
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state--example" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#notapkgtool.state.StateTracker" class="md-nav__link">
     <span class="md-ellipsis">
-      StateTracker
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;StateTracker
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="StateTracker">
+    <nav class="md-nav" aria-label=" StateTracker">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker--attributes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Attributes
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker--examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Examples
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#notapkgtool.state.StateTracker.__init__" class="md-nav__link">
     <span class="md-ellipsis">
-      __init__
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;__init__
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="__init__">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.__init__--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#notapkgtool.state.StateTracker.load" class="md-nav__link">
     <span class="md-ellipsis">
-      load
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;load
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="load">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.load--returns" class="md-nav__link">
-    <span class="md-ellipsis">
-      Returns
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.load--raises" class="md-nav__link">
-    <span class="md-ellipsis">
-      Raises
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#notapkgtool.state.StateTracker.save" class="md-nav__link">
     <span class="md-ellipsis">
-      save
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;save
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="save">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.save--raises" class="md-nav__link">
-    <span class="md-ellipsis">
-      Raises
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#notapkgtool.state.StateTracker.get_cache" class="md-nav__link">
     <span class="md-ellipsis">
-      get_cache
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_cache
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="get_cache">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.get_cache--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.get_cache--returns" class="md-nav__link">
-    <span class="md-ellipsis">
-      Returns
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.get_cache--examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Examples
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#notapkgtool.state.StateTracker.update_cache" class="md-nav__link">
     <span class="md-ellipsis">
-      update_cache
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;update_cache
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="update_cache">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.update_cache--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.update_cache--examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Examples
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.update_cache--notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#notapkgtool.state.StateTracker.has_version_changed" class="md-nav__link">
     <span class="md-ellipsis">
-      has_version_changed
+      <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;has_version_changed
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="has_version_changed">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.has_version_changed--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.has_version_changed--returns" class="md-nav__link">
-    <span class="md-ellipsis">
-      Returns
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.has_version_changed--examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Examples
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.StateTracker.has_version_changed--notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -1327,102 +1143,18 @@
           <li class="md-nav__item">
   <a href="#notapkgtool.state.load_state" class="md-nav__link">
     <span class="md-ellipsis">
-      load_state
+      <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;load_state
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="load_state">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.load_state--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.load_state--returns" class="md-nav__link">
-    <span class="md-ellipsis">
-      Returns
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.load_state--raises" class="md-nav__link">
-    <span class="md-ellipsis">
-      Raises
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.load_state--examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Examples
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#notapkgtool.state.save_state" class="md-nav__link">
     <span class="md-ellipsis">
-      save_state
+      <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;save_state
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="save_state">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.save_state--parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.save_state--raises" class="md-nav__link">
-    <span class="md-ellipsis">
-      Raises
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.save_state--examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Examples
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notapkgtool.state.save_state--notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -1450,7 +1182,7 @@
   
 
 
-<h1 id="state-module">State Module</h1>
+<h1 id="state">state</h1>
 <p>The state module provides version tracking and ETag caching for efficient conditional downloads.</p>
 
 
@@ -1459,7 +1191,7 @@
 
 
 <h2 id="notapkgtool.state" class="doc doc-heading">
-            <code>notapkgtool.state</code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-module"></code>            <span class="doc doc-object-name doc-module-name">notapkgtool.state</span>
 
 
 </h2>
@@ -1478,36 +1210,35 @@ versions, ETags, and file metadata between runs. This enables:
 - File paths and SHA-256 hashes for cached installers
 - Last checked timestamps for monitoring</p>
 <p>State tracking is enabled by default and can be disabled with --stateless flag.</p>
-<h4 id="notapkgtool.state--public-api">Public API</h4>
-<p>StateTracker : class
-    Main interface for state management operations.
-load_state : function
-    Load state from JSON file.
-save_state : function
-    Save state to JSON file with pretty-printing.</p>
-<h4 id="notapkgtool.state--example">Example</h4>
-<p>Basic usage:</p>
+<p>Public API:</p>
+<ul>
+<li>StateTracker: Main interface for state management operations</li>
+<li>load_state: Load state from JSON file</li>
+<li>save_state: Save state to JSON file with pretty-printing</li>
+</ul>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <p>Basic usage:</p>
 <pre><code>from pathlib import Path
 from notapkgtool.state import load_state, save_state
 
-# Load state
 state = load_state(Path("state/versions.json"))
 
-# Get cache for a recipe
-cache = state.get("apps", {}).get("napt-chrome")
+app_id = "napt-chrome"
+cache = state.get("apps", {}).get(app_id)
 
-# Update cache
-state["apps"]["napt-chrome"] = {
+state["apps"][app_id] = {
     "url": "https://dl.google.com/chrome.msi",
-    "etag": "W/"abc123"",
+    "etag": 'W/"abc123"',
     "sha256": "abc123...",
     "known_version": "130.0.0"
 }
 
-# Save state
 save_state(state, Path("state/versions.json"))
 </code></pre>
-
+</details>
 
 
 
@@ -1532,7 +1263,7 @@ save_state(state, Path("state/versions.json"))
 
 
 <h3 id="notapkgtool.state.StateTracker" class="doc doc-heading">
-            <code>StateTracker</code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">StateTracker</span>
 
 
 </h3>
@@ -1541,30 +1272,65 @@ save_state(state, Path("state/versions.json"))
     <div class="doc doc-contents ">
 
 
+
         <p>Manages application state tracking with automatic persistence.</p>
 <p>This class provides a high-level interface for loading, querying, and
 updating the state file. It handles file I/O, error recovery, and
 provides convenience methods for common operations.</p>
-<h5 id="notapkgtool.state.StateTracker--attributes">Attributes</h5>
-<p>state_file : Path
-    Path to the JSON state file.
-state : dict
-    In-memory state dictionary.</p>
-<h5 id="notapkgtool.state.StateTracker--examples">Examples</h5>
-<p>Basic usage:</p>
-<pre><code>&gt;&gt;&gt; tracker = StateTracker(Path("state/versions.json"))
-&gt;&gt;&gt; tracker.load()
+
+
+<p><span class="doc-section-title">Attributes:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="notapkgtool.state.StateTracker.state_file">state_file</span></code></td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Path to the JSON state file.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="notapkgtool.state.StateTracker.state">state</span></code></td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>In-memory state dictionary.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <p>Basic usage:</p>
+<pre><code>from pathlib import Path
+
+tracker = StateTracker(Path("state/versions.json"))
+tracker.load()
+cache = tracker.get_cache("napt-chrome")
+tracker.update_cache(
+    "napt-chrome",
+    url="https://...",
+    sha256="...",
+    known_version="130.0.0"
+)
+tracker.save()
 </code></pre>
-<blockquote>
-<blockquote>
-<blockquote>
-<p>cache = tracker.get_cache("napt-chrome")
-tracker.update_cache("napt-chrome",
-...     url="https://...", sha256="...", known_version="130.0.0")
-tracker.save()</p>
-</blockquote>
-</blockquote>
-</blockquote>
+</details>
 
 
 
@@ -1572,10 +1338,53 @@ tracker.save()</p>
 
 
 
-
-              <details class="quote">
+              <details class="mkdocstrings-source">
                 <summary>Source code in <code>notapkgtool/state/tracker.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">100</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 56</span>
+<span class="normal"> 57</span>
+<span class="normal"> 58</span>
+<span class="normal"> 59</span>
+<span class="normal"> 60</span>
+<span class="normal"> 61</span>
+<span class="normal"> 62</span>
+<span class="normal"> 63</span>
+<span class="normal"> 64</span>
+<span class="normal"> 65</span>
+<span class="normal"> 66</span>
+<span class="normal"> 67</span>
+<span class="normal"> 68</span>
+<span class="normal"> 69</span>
+<span class="normal"> 70</span>
+<span class="normal"> 71</span>
+<span class="normal"> 72</span>
+<span class="normal"> 73</span>
+<span class="normal"> 74</span>
+<span class="normal"> 75</span>
+<span class="normal"> 76</span>
+<span class="normal"> 77</span>
+<span class="normal"> 78</span>
+<span class="normal"> 79</span>
+<span class="normal"> 80</span>
+<span class="normal"> 81</span>
+<span class="normal"> 82</span>
+<span class="normal"> 83</span>
+<span class="normal"> 84</span>
+<span class="normal"> 85</span>
+<span class="normal"> 86</span>
+<span class="normal"> 87</span>
+<span class="normal"> 88</span>
+<span class="normal"> 89</span>
+<span class="normal"> 90</span>
+<span class="normal"> 91</span>
+<span class="normal"> 92</span>
+<span class="normal"> 93</span>
+<span class="normal"> 94</span>
+<span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
 <span class="normal">101</span>
 <span class="normal">102</span>
 <span class="normal">103</span>
@@ -1736,123 +1545,57 @@ tracker.save()</p>
 <span class="normal">258</span>
 <span class="normal">259</span>
 <span class="normal">260</span>
-<span class="normal">261</span>
-<span class="normal">262</span>
-<span class="normal">263</span>
-<span class="normal">264</span>
-<span class="normal">265</span>
-<span class="normal">266</span>
-<span class="normal">267</span>
-<span class="normal">268</span>
-<span class="normal">269</span>
-<span class="normal">270</span>
-<span class="normal">271</span>
-<span class="normal">272</span>
-<span class="normal">273</span>
-<span class="normal">274</span>
-<span class="normal">275</span>
-<span class="normal">276</span>
-<span class="normal">277</span>
-<span class="normal">278</span>
-<span class="normal">279</span>
-<span class="normal">280</span>
-<span class="normal">281</span>
-<span class="normal">282</span>
-<span class="normal">283</span>
-<span class="normal">284</span>
-<span class="normal">285</span>
-<span class="normal">286</span>
-<span class="normal">287</span>
-<span class="normal">288</span>
-<span class="normal">289</span>
-<span class="normal">290</span>
-<span class="normal">291</span>
-<span class="normal">292</span>
-<span class="normal">293</span>
-<span class="normal">294</span>
-<span class="normal">295</span>
-<span class="normal">296</span>
-<span class="normal">297</span>
-<span class="normal">298</span>
-<span class="normal">299</span>
-<span class="normal">300</span>
-<span class="normal">301</span>
-<span class="normal">302</span>
-<span class="normal">303</span>
-<span class="normal">304</span>
-<span class="normal">305</span>
-<span class="normal">306</span>
-<span class="normal">307</span>
-<span class="normal">308</span>
-<span class="normal">309</span>
-<span class="normal">310</span>
-<span class="normal">311</span>
-<span class="normal">312</span>
-<span class="normal">313</span>
-<span class="normal">314</span>
-<span class="normal">315</span>
-<span class="normal">316</span>
-<span class="normal">317</span>
-<span class="normal">318</span>
-<span class="normal">319</span>
-<span class="normal">320</span>
-<span class="normal">321</span>
-<span class="normal">322</span>
-<span class="normal">323</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">StateTracker</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Manages application state tracking with automatic persistence.</span>
+<span class="normal">261</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">StateTracker</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Manages application state tracking with automatic persistence.</span>
 
 <span class="sd">    This class provides a high-level interface for loading, querying, and</span>
 <span class="sd">    updating the state file. It handles file I/O, error recovery, and</span>
 <span class="sd">    provides convenience methods for common operations.</span>
 
-<span class="sd">    Attributes</span>
-<span class="sd">    ----------</span>
-<span class="sd">    state_file : Path</span>
-<span class="sd">        Path to the JSON state file.</span>
-<span class="sd">    state : dict</span>
-<span class="sd">        In-memory state dictionary.</span>
+<span class="sd">    Attributes:</span>
+<span class="sd">        state_file: Path to the JSON state file.</span>
+<span class="sd">        state: In-memory state dictionary.</span>
 
-<span class="sd">    Examples</span>
-<span class="sd">    --------</span>
-<span class="sd">    Basic usage:</span>
+<span class="sd">    Example:</span>
+<span class="sd">        Basic usage:</span>
 
-<span class="sd">        &gt;&gt;&gt; tracker = StateTracker(Path(&quot;state/versions.json&quot;))</span>
-<span class="sd">        &gt;&gt;&gt; tracker.load()</span>
-<span class="sd">    &gt;&gt;&gt; cache = tracker.get_cache(&quot;napt-chrome&quot;)</span>
-<span class="sd">    &gt;&gt;&gt; tracker.update_cache(&quot;napt-chrome&quot;,</span>
-<span class="sd">    ...     url=&quot;https://...&quot;, sha256=&quot;...&quot;, known_version=&quot;130.0.0&quot;)</span>
-<span class="sd">    &gt;&gt;&gt; tracker.save()</span>
+<span class="sd">            from pathlib import Path</span>
+
+<span class="sd">            tracker = StateTracker(Path(&quot;state/versions.json&quot;))</span>
+<span class="sd">            tracker.load()</span>
+<span class="sd">            cache = tracker.get_cache(&quot;napt-chrome&quot;)</span>
+<span class="sd">            tracker.update_cache(</span>
+<span class="sd">                &quot;napt-chrome&quot;,</span>
+<span class="sd">                url=&quot;https://...&quot;,</span>
+<span class="sd">                sha256=&quot;...&quot;,</span>
+<span class="sd">                known_version=&quot;130.0.0&quot;</span>
+<span class="sd">            )</span>
+<span class="sd">            tracker.save()</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state_file</span><span class="p">:</span> <span class="n">Path</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize state tracker.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize state tracker.</span>
 
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        state_file : Path</span>
-<span class="sd">            Path to JSON state file. Created if doesn&#39;t exist.</span>
+<span class="sd">        Args:</span>
+<span class="sd">            state_file: Path to JSON state file. Created if doesn&#39;t exist.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">state_file</span> <span class="o">=</span> <span class="n">state_file</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Load state from file.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load state from file.</span>
 
 <span class="sd">        Creates default state structure if file doesn&#39;t exist.</span>
 <span class="sd">        Handles corrupted files by creating backup and starting fresh.</span>
 
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        dict</span>
+<span class="sd">        Returns:</span>
 <span class="sd">            Loaded state dictionary.</span>
 
-<span class="sd">        Raises</span>
-<span class="sd">        ------</span>
-<span class="sd">        OSError</span>
-<span class="sd">            If file permissions prevent reading.</span>
+<span class="sd">        Raises:</span>
+<span class="sd">            OSError: If file permissions prevent reading.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="n">load_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state_file</span><span class="p">)</span>
@@ -1875,16 +1618,15 @@ tracker.save()</p>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Save current state to file.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Save current state to file.</span>
 
 <span class="sd">        Updates metadata.last_updated timestamp automatically.</span>
 <span class="sd">        Creates parent directories if needed.</span>
 
-<span class="sd">        Raises</span>
-<span class="sd">        ------</span>
+<span class="sd">        Raises:</span>
 <span class="sd">        OSError</span>
 <span class="sd">            If file permissions prevent writing.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Update metadata</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span>
@@ -1896,25 +1638,23 @@ tracker.save()</p>
         <span class="n">save_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_file</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">get_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">recipe_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Get cached information for a recipe.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get cached information for a recipe.</span>
 
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        recipe_id : str</span>
-<span class="sd">            Recipe identifier (from recipe&#39;s &#39;id&#39; field).</span>
+<span class="sd">        Args:</span>
+<span class="sd">        recipe_id: Recipe identifier (from recipe&#39;s &#39;id&#39; field).</span>
 
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
+<span class="sd">        Returns:</span>
 <span class="sd">        dict or None</span>
 <span class="sd">            Cached data if available, None otherwise.</span>
 
-<span class="sd">        Examples</span>
-<span class="sd">        --------</span>
-<span class="sd">        &gt;&gt;&gt; cache = tracker.get_cache(&quot;napt-chrome&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; if cache:</span>
-<span class="sd">        ...     etag = cache.get(&#39;etag&#39;)</span>
-<span class="sd">        ...     known_version = cache.get(&#39;known_version&#39;)</span>
+<span class="sd">        Example:</span>
+<span class="sd">            Retrieve cached information:</span>
+
+<span class="sd">                cache = tracker.get_cache(&quot;napt-chrome&quot;)</span>
+<span class="sd">                if cache:</span>
+<span class="sd">                    etag = cache.get(&#39;etag&#39;)</span>
+<span class="sd">                    known_version = cache.get(&#39;known_version&#39;)</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;apps&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">recipe_id</span><span class="p">)</span>
 
@@ -1928,50 +1668,43 @@ tracker.save()</p>
         <span class="n">known_version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">strategy</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Update cached information for a recipe.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update cached information for a recipe.</span>
 
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        recipe_id : str</span>
-<span class="sd">            Recipe identifier.</span>
-<span class="sd">        url : str</span>
-<span class="sd">            Download URL for provenance tracking. For version-first strategies</span>
-<span class="sd">            (url_regex, github_release, http_json), this is the actual download URL</span>
-<span class="sd">            from version_info. For file-first (http_static), this is source.url.</span>
-<span class="sd">        sha256 : str</span>
-<span class="sd">            SHA-256 hash of file (for integrity checks).</span>
-<span class="sd">        etag : str, optional</span>
-<span class="sd">            ETag header from download response. Used by http_static for HTTP 304</span>
-<span class="sd">            conditional requests. Saved but unused by version-first strategies.</span>
-<span class="sd">        last_modified : str, optional</span>
-<span class="sd">            Last-Modified header from download response. Used by http_static as</span>
-<span class="sd">            fallback for conditional requests. Saved but unused by version-first.</span>
-<span class="sd">        known_version : str, optional</span>
-<span class="sd">            Version string. PRIMARY cache key for version-first strategies</span>
-<span class="sd">            (compared to skip downloads). Informational only for http_static.</span>
-<span class="sd">        strategy : str, optional</span>
-<span class="sd">            Discovery strategy used (for debugging).</span>
+<span class="sd">        Args:</span>
+<span class="sd">            recipe_id: Recipe identifier.</span>
+<span class="sd">            url: Download URL for provenance tracking. For version-first strategies</span>
+<span class="sd">                (url_regex, github_release, http_json), this is the actual download URL</span>
+<span class="sd">                from version_info. For file-first (http_static), this is source.url.</span>
+<span class="sd">            sha256: SHA-256 hash of file (for integrity checks).</span>
+<span class="sd">            etag: ETag header from download response. Used by http_static for HTTP 304</span>
+<span class="sd">                conditional requests. Saved but unused by version-first strategies.</span>
+<span class="sd">            last_modified: Last-Modified header from download response. Used by http_static</span>
+<span class="sd">                as fallback for conditional requests. Saved but unused by version-first.</span>
+<span class="sd">            known_version: Version string. PRIMARY cache key for version-first strategies</span>
+<span class="sd">                (compared to skip downloads). Informational only for http_static.</span>
+<span class="sd">            strategy: Discovery strategy used (for debugging).</span>
 
-<span class="sd">        Examples</span>
-<span class="sd">        --------</span>
-<span class="sd">        &gt;&gt;&gt; tracker.update_cache(</span>
-<span class="sd">        ...     &quot;napt-chrome&quot;,</span>
-<span class="sd">        ...     url=&quot;https://dl.google.com/chrome.msi&quot;,</span>
+<span class="sd">        Example:</span>
+<span class="sd">            Update cache entry:</span>
+
+<span class="sd">                tracker.update_cache(</span>
+<span class="sd">                    &quot;napt-chrome&quot;,</span>
+<span class="sd">                    url=&quot;https://dl.google.com/chrome.msi&quot;,</span>
 <span class="sd">        ...     sha256=&quot;abc123...&quot;,</span>
 <span class="sd">        ...     etag=&#39;W/&quot;def456&quot;&#39;,</span>
 <span class="sd">        ...     known_version=&quot;130.0.0&quot;</span>
 <span class="sd">        ... )</span>
 
-<span class="sd">        Notes</span>
-<span class="sd">        -----</span>
-<span class="sd">        Schema v2: Removed file_path, last_checked, and renamed version→known_version.</span>
+<span class="sd">        Note:</span>
+<span class="sd">            Schema v2: Removed file_path, last_checked, and renamed version→known_version.</span>
 
-<span class="sd">        Field usage differs by strategy type:</span>
-<span class="sd">        - Version-first: known_version is PRIMARY cache key, etag/last_modified unused</span>
-<span class="sd">        - File-first: etag/last_modified are PRIMARY cache keys, known_version informational</span>
+<span class="sd">            Field usage differs by strategy type:</span>
 
-<span class="sd">        Filesystem is the source of truth; state is for optimization only.</span>
+<span class="sd">            - Version-first: known_version is PRIMARY cache key, etag/last_modified unused</span>
+<span class="sd">            - File-first: etag/last_modified are PRIMARY cache keys, known_version informational</span>
+
+<span class="sd">            Filesystem is the source of truth; state is for optimization only.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="s2">&quot;apps&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s2">&quot;apps&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
@@ -1992,30 +1725,26 @@ tracker.save()</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s2">&quot;apps&quot;</span><span class="p">][</span><span class="n">recipe_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">cache_entry</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">has_version_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">recipe_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">new_version</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Check if discovered version differs from cached known_version.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if discovered version differs from cached known_version.</span>
 
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        recipe_id : str</span>
-<span class="sd">            Recipe identifier.</span>
-<span class="sd">        new_version : str</span>
-<span class="sd">            Newly discovered version.</span>
+<span class="sd">        Args:</span>
+<span class="sd">        recipe_id: Recipe identifier.</span>
+<span class="sd">        new_version: Newly discovered version.</span>
 
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
+<span class="sd">        Returns:</span>
 <span class="sd">        bool</span>
 <span class="sd">            True if version changed or no cached version exists.</span>
 
-<span class="sd">        Examples</span>
-<span class="sd">        --------</span>
-<span class="sd">        &gt;&gt;&gt; if tracker.has_version_changed(&quot;napt-chrome&quot;, &quot;130.0.0&quot;):</span>
-<span class="sd">        ...     print(&quot;New version available!&quot;)</span>
+<span class="sd">        Example:</span>
+<span class="sd">            Check if version has changed:</span>
 
-<span class="sd">        Notes</span>
-<span class="sd">        -----</span>
-<span class="sd">        Uses &#39;known_version&#39; field which is informational only.</span>
-<span class="sd">        Real version should be extracted from filesystem during build.</span>
+<span class="sd">                if tracker.has_version_changed(&quot;napt-chrome&quot;, &quot;130.0.0&quot;):</span>
+<span class="sd">                    print(&quot;New version available!&quot;)</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            Uses &#39;known_version&#39; field which is informational only.</span>
+<span class="sd">            Real version should be extracted from filesystem during build.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">cache</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_cache</span><span class="p">(</span><span class="n">recipe_id</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">cache</span><span class="p">:</span>
@@ -2042,39 +1771,65 @@ tracker.save()</p>
 
 
 <h4 id="notapkgtool.state.StateTracker.__init__" class="doc doc-heading">
-            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">state_file</span><span class="p">)</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">__init__</span>
+
 
 </h4>
-
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">__init__</span><span class="p">(</span><span class="n">state_file</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
 
         <p>Initialize state tracker.</p>
-<h6 id="notapkgtool.state.StateTracker.__init__--parameters">Parameters</h6>
-<p>state_file : Path
-    Path to JSON state file. Created if doesn't exist.</p>
 
 
-            <details class="quote">
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>state_file</code>
+            </td>
+            <td>
+                  <code><span title="pathlib.Path">Path</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Path to JSON state file. Created if doesn't exist.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="mkdocstrings-source">
               <summary>Source code in <code>notapkgtool/state/tracker.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">127</span>
-<span class="normal">128</span>
-<span class="normal">129</span>
-<span class="normal">130</span>
-<span class="normal">131</span>
-<span class="normal">132</span>
-<span class="normal">133</span>
-<span class="normal">134</span>
-<span class="normal">135</span>
-<span class="normal">136</span>
-<span class="normal">137</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state_file</span><span class="p">:</span> <span class="n">Path</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Initialize state tracker.</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">85</span>
+<span class="normal">86</span>
+<span class="normal">87</span>
+<span class="normal">88</span>
+<span class="normal">89</span>
+<span class="normal">90</span>
+<span class="normal">91</span>
+<span class="normal">92</span>
+<span class="normal">93</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state_file</span><span class="p">:</span> <span class="n">Path</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Initialize state tracker.</span>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    state_file : Path</span>
-<span class="sd">        Path to JSON state file. Created if doesn&#39;t exist.</span>
+<span class="sd">    Args:</span>
+<span class="sd">        state_file: Path to JSON state file. Created if doesn&#39;t exist.</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">state_file</span> <span class="o">=</span> <span class="n">state_file</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
@@ -2088,77 +1843,111 @@ tracker.save()</p>
 
 
 <h4 id="notapkgtool.state.StateTracker.load" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">load</span><span class="p">()</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">load</span>
+
 
 </h4>
-
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">load</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
 
         <p>Load state from file.</p>
 <p>Creates default state structure if file doesn't exist.
 Handles corrupted files by creating backup and starting fresh.</p>
-<h6 id="notapkgtool.state.StateTracker.load--returns">Returns</h6>
-<p>dict
-    Loaded state dictionary.</p>
-<h6 id="notapkgtool.state.StateTracker.load--raises">Raises</h6>
-<p>OSError
-    If file permissions prevent reading.</p>
 
 
-            <details class="quote">
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Loaded state dictionary.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="OSError">OSError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If file permissions prevent reading.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="mkdocstrings-source">
               <summary>Source code in <code>notapkgtool/state/tracker.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">139</span>
-<span class="normal">140</span>
-<span class="normal">141</span>
-<span class="normal">142</span>
-<span class="normal">143</span>
-<span class="normal">144</span>
-<span class="normal">145</span>
-<span class="normal">146</span>
-<span class="normal">147</span>
-<span class="normal">148</span>
-<span class="normal">149</span>
-<span class="normal">150</span>
-<span class="normal">151</span>
-<span class="normal">152</span>
-<span class="normal">153</span>
-<span class="normal">154</span>
-<span class="normal">155</span>
-<span class="normal">156</span>
-<span class="normal">157</span>
-<span class="normal">158</span>
-<span class="normal">159</span>
-<span class="normal">160</span>
-<span class="normal">161</span>
-<span class="normal">162</span>
-<span class="normal">163</span>
-<span class="normal">164</span>
-<span class="normal">165</span>
-<span class="normal">166</span>
-<span class="normal">167</span>
-<span class="normal">168</span>
-<span class="normal">169</span>
-<span class="normal">170</span>
-<span class="normal">171</span>
-<span class="normal">172</span>
-<span class="normal">173</span>
-<span class="normal">174</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Load state from file.</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load state from file.</span>
 
 <span class="sd">    Creates default state structure if file doesn&#39;t exist.</span>
 <span class="sd">    Handles corrupted files by creating backup and starting fresh.</span>
 
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    dict</span>
+<span class="sd">    Returns:</span>
 <span class="sd">        Loaded state dictionary.</span>
 
-<span class="sd">    Raises</span>
-<span class="sd">    ------</span>
-<span class="sd">    OSError</span>
-<span class="sd">        If file permissions prevent reading.</span>
+<span class="sd">    Raises:</span>
+<span class="sd">        OSError: If file permissions prevent reading.</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="n">load_state</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state_file</span><span class="p">)</span>
@@ -2189,53 +1978,52 @@ Handles corrupted files by creating backup and starting fresh.</p>
 
 
 <h4 id="notapkgtool.state.StateTracker.save" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">save</span><span class="p">()</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">save</span>
+
 
 </h4>
-
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">save</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
 
         <p>Save current state to file.</p>
 <p>Updates metadata.last_updated timestamp automatically.
 Creates parent directories if needed.</p>
-<h6 id="notapkgtool.state.StateTracker.save--raises">Raises</h6>
-<p>OSError
+        <p>OSError
     If file permissions prevent writing.</p>
 
 
-            <details class="quote">
+            <details class="mkdocstrings-source">
               <summary>Source code in <code>notapkgtool/state/tracker.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">176</span>
-<span class="normal">177</span>
-<span class="normal">178</span>
-<span class="normal">179</span>
-<span class="normal">180</span>
-<span class="normal">181</span>
-<span class="normal">182</span>
-<span class="normal">183</span>
-<span class="normal">184</span>
-<span class="normal">185</span>
-<span class="normal">186</span>
-<span class="normal">187</span>
-<span class="normal">188</span>
-<span class="normal">189</span>
-<span class="normal">190</span>
-<span class="normal">191</span>
-<span class="normal">192</span>
-<span class="normal">193</span>
-<span class="normal">194</span>
-<span class="normal">195</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Save current state to file.</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span>
+<span class="normal">139</span>
+<span class="normal">140</span>
+<span class="normal">141</span>
+<span class="normal">142</span>
+<span class="normal">143</span>
+<span class="normal">144</span>
+<span class="normal">145</span>
+<span class="normal">146</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Save current state to file.</span>
 
 <span class="sd">    Updates metadata.last_updated timestamp automatically.</span>
 <span class="sd">    Creates parent directories if needed.</span>
 
-<span class="sd">    Raises</span>
-<span class="sd">    ------</span>
+<span class="sd">    Raises:</span>
 <span class="sd">    OSError</span>
 <span class="sd">        If file permissions prevent writing.</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Update metadata</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span>
@@ -2255,36 +2043,282 @@ Creates parent directories if needed.</p>
 
 
 <h4 id="notapkgtool.state.StateTracker.get_cache" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">get_cache</span><span class="p">(</span><span class="n">recipe_id</span><span class="p">)</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">get_cache</span>
+
 
 </h4>
-
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">get_cache</span><span class="p">(</span><span class="n">recipe_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
 
         <p>Get cached information for a recipe.</p>
-<h6 id="notapkgtool.state.StateTracker.get_cache--parameters">Parameters</h6>
-<p>recipe_id : str
-    Recipe identifier (from recipe's 'id' field).</p>
-<h6 id="notapkgtool.state.StateTracker.get_cache--returns">Returns</h6>
-<p>dict or None
+<p>Args:
+recipe_id: Recipe identifier (from recipe's 'id' field).</p>
+        <p>dict or None
     Cached data if available, None otherwise.</p>
-<h6 id="notapkgtool.state.StateTracker.get_cache--examples">Examples</h6>
-<blockquote>
-<blockquote>
-<blockquote>
-<p>cache = tracker.get_cache("napt-chrome")
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <p>Retrieve cached information:</p>
+<pre><code>cache = tracker.get_cache("napt-chrome")
 if cache:
-...     etag = cache.get('etag')
-...     known_version = cache.get('known_version')</p>
-</blockquote>
-</blockquote>
-</blockquote>
+    etag = cache.get('etag')
+    known_version = cache.get('known_version')
+</code></pre>
+</details>
 
-
-            <details class="quote">
+            <details class="mkdocstrings-source">
               <summary>Source code in <code>notapkgtool/state/tracker.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">197</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">148</span>
+<span class="normal">149</span>
+<span class="normal">150</span>
+<span class="normal">151</span>
+<span class="normal">152</span>
+<span class="normal">153</span>
+<span class="normal">154</span>
+<span class="normal">155</span>
+<span class="normal">156</span>
+<span class="normal">157</span>
+<span class="normal">158</span>
+<span class="normal">159</span>
+<span class="normal">160</span>
+<span class="normal">161</span>
+<span class="normal">162</span>
+<span class="normal">163</span>
+<span class="normal">164</span>
+<span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">recipe_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get cached information for a recipe.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">    recipe_id: Recipe identifier (from recipe&#39;s &#39;id&#39; field).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">    dict or None</span>
+<span class="sd">        Cached data if available, None otherwise.</span>
+
+<span class="sd">    Example:</span>
+<span class="sd">        Retrieve cached information:</span>
+
+<span class="sd">            cache = tracker.get_cache(&quot;napt-chrome&quot;)</span>
+<span class="sd">            if cache:</span>
+<span class="sd">                etag = cache.get(&#39;etag&#39;)</span>
+<span class="sd">                known_version = cache.get(&#39;known_version&#39;)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;apps&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">recipe_id</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="notapkgtool.state.StateTracker.update_cache" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">update_cache</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">update_cache</span><span class="p">(</span><span class="n">recipe_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">sha256</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">etag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">last_modified</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">known_version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">strategy</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Update cached information for a recipe.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>recipe_id</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Recipe identifier.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>url</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Download URL for provenance tracking. For version-first strategies
+(url_regex, github_release, http_json), this is the actual download URL
+from version_info. For file-first (http_static), this is source.url.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>sha256</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>SHA-256 hash of file (for integrity checks).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>etag</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>ETag header from download response. Used by http_static for HTTP 304
+conditional requests. Saved but unused by version-first strategies.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>last_modified</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Last-Modified header from download response. Used by http_static
+as fallback for conditional requests. Saved but unused by version-first.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>known_version</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Version string. PRIMARY cache key for version-first strategies
+(compared to skip downloads). Informational only for http_static.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>strategy</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Discovery strategy used (for debugging).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <p>Update cache entry:</p>
+<pre><code>tracker.update_cache(
+    "napt-chrome",
+    url="https://dl.google.com/chrome.msi",
+</code></pre>
+</details>        <p>...     sha256="abc123...",
+...     etag='W/"def456"',
+...     known_version="130.0.0"
+... )</p>
+
+
+<details class="note" open>
+  <summary>Note</summary>
+  <p>Schema v2: Removed file_path, last_checked, and renamed version→known_version.</p>
+<p>Field usage differs by strategy type:</p>
+<ul>
+<li>Version-first: known_version is PRIMARY cache key, etag/last_modified unused</li>
+<li>File-first: etag/last_modified are PRIMARY cache keys, known_version informational</li>
+</ul>
+<p>Filesystem is the source of truth; state is for optimization only.</p>
+</details>
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>notapkgtool/state/tracker.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span>
+<span class="normal">177</span>
+<span class="normal">178</span>
+<span class="normal">179</span>
+<span class="normal">180</span>
+<span class="normal">181</span>
+<span class="normal">182</span>
+<span class="normal">183</span>
+<span class="normal">184</span>
+<span class="normal">185</span>
+<span class="normal">186</span>
+<span class="normal">187</span>
+<span class="normal">188</span>
+<span class="normal">189</span>
+<span class="normal">190</span>
+<span class="normal">191</span>
+<span class="normal">192</span>
+<span class="normal">193</span>
+<span class="normal">194</span>
+<span class="normal">195</span>
+<span class="normal">196</span>
+<span class="normal">197</span>
 <span class="normal">198</span>
 <span class="normal">199</span>
 <span class="normal">200</span>
@@ -2305,91 +2339,9 @@ if cache:
 <span class="normal">215</span>
 <span class="normal">216</span>
 <span class="normal">217</span>
-<span class="normal">218</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">recipe_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Get cached information for a recipe.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    recipe_id : str</span>
-<span class="sd">        Recipe identifier (from recipe&#39;s &#39;id&#39; field).</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    dict or None</span>
-<span class="sd">        Cached data if available, None otherwise.</span>
-
-<span class="sd">    Examples</span>
-<span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; cache = tracker.get_cache(&quot;napt-chrome&quot;)</span>
-<span class="sd">    &gt;&gt;&gt; if cache:</span>
-<span class="sd">    ...     etag = cache.get(&#39;etag&#39;)</span>
-<span class="sd">    ...     known_version = cache.get(&#39;known_version&#39;)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;apps&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">recipe_id</span><span class="p">)</span>
-</code></pre></div></td></tr></table></div>
-            </details>
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h4 id="notapkgtool.state.StateTracker.update_cache" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">update_cache</span><span class="p">(</span><span class="n">recipe_id</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">sha256</span><span class="p">,</span> <span class="n">etag</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">last_modified</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">known_version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">strategy</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
-
-</h4>
-
-
-    <div class="doc doc-contents ">
-
-        <p>Update cached information for a recipe.</p>
-<h6 id="notapkgtool.state.StateTracker.update_cache--parameters">Parameters</h6>
-<p>recipe_id : str
-    Recipe identifier.
-url : str
-    Download URL for provenance tracking. For version-first strategies
-    (url_regex, github_release, http_json), this is the actual download URL
-    from version_info. For file-first (http_static), this is source.url.
-sha256 : str
-    SHA-256 hash of file (for integrity checks).
-etag : str, optional
-    ETag header from download response. Used by http_static for HTTP 304
-    conditional requests. Saved but unused by version-first strategies.
-last_modified : str, optional
-    Last-Modified header from download response. Used by http_static as
-    fallback for conditional requests. Saved but unused by version-first.
-known_version : str, optional
-    Version string. PRIMARY cache key for version-first strategies
-    (compared to skip downloads). Informational only for http_static.
-strategy : str, optional
-    Discovery strategy used (for debugging).</p>
-<h6 id="notapkgtool.state.StateTracker.update_cache--examples">Examples</h6>
-<blockquote>
-<blockquote>
-<blockquote>
-<p>tracker.update_cache(
-...     "napt-chrome",
-...     url="https://dl.google.com/chrome.msi",
-...     sha256="abc123...",
-...     etag='W/"def456"',
-...     known_version="130.0.0"
-... )</p>
-</blockquote>
-</blockquote>
-</blockquote>
-<h6 id="notapkgtool.state.StateTracker.update_cache--notes">Notes</h6>
-<p>Schema v2: Removed file_path, last_checked, and renamed version→known_version.</p>
-<p>Field usage differs by strategy type:
-- Version-first: known_version is PRIMARY cache key, etag/last_modified unused
-- File-first: etag/last_modified are PRIMARY cache keys, known_version informational</p>
-<p>Filesystem is the source of truth; state is for optimization only.</p>
-
-
-            <details class="quote">
-              <summary>Source code in <code>notapkgtool/state/tracker.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">220</span>
+<span class="normal">218</span>
+<span class="normal">219</span>
+<span class="normal">220</span>
 <span class="normal">221</span>
 <span class="normal">222</span>
 <span class="normal">223</span>
@@ -2402,65 +2354,7 @@ strategy : str, optional
 <span class="normal">230</span>
 <span class="normal">231</span>
 <span class="normal">232</span>
-<span class="normal">233</span>
-<span class="normal">234</span>
-<span class="normal">235</span>
-<span class="normal">236</span>
-<span class="normal">237</span>
-<span class="normal">238</span>
-<span class="normal">239</span>
-<span class="normal">240</span>
-<span class="normal">241</span>
-<span class="normal">242</span>
-<span class="normal">243</span>
-<span class="normal">244</span>
-<span class="normal">245</span>
-<span class="normal">246</span>
-<span class="normal">247</span>
-<span class="normal">248</span>
-<span class="normal">249</span>
-<span class="normal">250</span>
-<span class="normal">251</span>
-<span class="normal">252</span>
-<span class="normal">253</span>
-<span class="normal">254</span>
-<span class="normal">255</span>
-<span class="normal">256</span>
-<span class="normal">257</span>
-<span class="normal">258</span>
-<span class="normal">259</span>
-<span class="normal">260</span>
-<span class="normal">261</span>
-<span class="normal">262</span>
-<span class="normal">263</span>
-<span class="normal">264</span>
-<span class="normal">265</span>
-<span class="normal">266</span>
-<span class="normal">267</span>
-<span class="normal">268</span>
-<span class="normal">269</span>
-<span class="normal">270</span>
-<span class="normal">271</span>
-<span class="normal">272</span>
-<span class="normal">273</span>
-<span class="normal">274</span>
-<span class="normal">275</span>
-<span class="normal">276</span>
-<span class="normal">277</span>
-<span class="normal">278</span>
-<span class="normal">279</span>
-<span class="normal">280</span>
-<span class="normal">281</span>
-<span class="normal">282</span>
-<span class="normal">283</span>
-<span class="normal">284</span>
-<span class="normal">285</span>
-<span class="normal">286</span>
-<span class="normal">287</span>
-<span class="normal">288</span>
-<span class="normal">289</span>
-<span class="normal">290</span>
-<span class="normal">291</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_cache</span><span class="p">(</span>
+<span class="normal">233</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_cache</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">recipe_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -2470,50 +2364,43 @@ strategy : str, optional
     <span class="n">known_version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">strategy</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Update cached information for a recipe.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Update cached information for a recipe.</span>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    recipe_id : str</span>
-<span class="sd">        Recipe identifier.</span>
-<span class="sd">    url : str</span>
-<span class="sd">        Download URL for provenance tracking. For version-first strategies</span>
-<span class="sd">        (url_regex, github_release, http_json), this is the actual download URL</span>
-<span class="sd">        from version_info. For file-first (http_static), this is source.url.</span>
-<span class="sd">    sha256 : str</span>
-<span class="sd">        SHA-256 hash of file (for integrity checks).</span>
-<span class="sd">    etag : str, optional</span>
-<span class="sd">        ETag header from download response. Used by http_static for HTTP 304</span>
-<span class="sd">        conditional requests. Saved but unused by version-first strategies.</span>
-<span class="sd">    last_modified : str, optional</span>
-<span class="sd">        Last-Modified header from download response. Used by http_static as</span>
-<span class="sd">        fallback for conditional requests. Saved but unused by version-first.</span>
-<span class="sd">    known_version : str, optional</span>
-<span class="sd">        Version string. PRIMARY cache key for version-first strategies</span>
-<span class="sd">        (compared to skip downloads). Informational only for http_static.</span>
-<span class="sd">    strategy : str, optional</span>
-<span class="sd">        Discovery strategy used (for debugging).</span>
+<span class="sd">    Args:</span>
+<span class="sd">        recipe_id: Recipe identifier.</span>
+<span class="sd">        url: Download URL for provenance tracking. For version-first strategies</span>
+<span class="sd">            (url_regex, github_release, http_json), this is the actual download URL</span>
+<span class="sd">            from version_info. For file-first (http_static), this is source.url.</span>
+<span class="sd">        sha256: SHA-256 hash of file (for integrity checks).</span>
+<span class="sd">        etag: ETag header from download response. Used by http_static for HTTP 304</span>
+<span class="sd">            conditional requests. Saved but unused by version-first strategies.</span>
+<span class="sd">        last_modified: Last-Modified header from download response. Used by http_static</span>
+<span class="sd">            as fallback for conditional requests. Saved but unused by version-first.</span>
+<span class="sd">        known_version: Version string. PRIMARY cache key for version-first strategies</span>
+<span class="sd">            (compared to skip downloads). Informational only for http_static.</span>
+<span class="sd">        strategy: Discovery strategy used (for debugging).</span>
 
-<span class="sd">    Examples</span>
-<span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; tracker.update_cache(</span>
-<span class="sd">    ...     &quot;napt-chrome&quot;,</span>
-<span class="sd">    ...     url=&quot;https://dl.google.com/chrome.msi&quot;,</span>
+<span class="sd">    Example:</span>
+<span class="sd">        Update cache entry:</span>
+
+<span class="sd">            tracker.update_cache(</span>
+<span class="sd">                &quot;napt-chrome&quot;,</span>
+<span class="sd">                url=&quot;https://dl.google.com/chrome.msi&quot;,</span>
 <span class="sd">    ...     sha256=&quot;abc123...&quot;,</span>
 <span class="sd">    ...     etag=&#39;W/&quot;def456&quot;&#39;,</span>
 <span class="sd">    ...     known_version=&quot;130.0.0&quot;</span>
 <span class="sd">    ... )</span>
 
-<span class="sd">    Notes</span>
-<span class="sd">    -----</span>
-<span class="sd">    Schema v2: Removed file_path, last_checked, and renamed version→known_version.</span>
+<span class="sd">    Note:</span>
+<span class="sd">        Schema v2: Removed file_path, last_checked, and renamed version→known_version.</span>
 
-<span class="sd">    Field usage differs by strategy type:</span>
-<span class="sd">    - Version-first: known_version is PRIMARY cache key, etag/last_modified unused</span>
-<span class="sd">    - File-first: etag/last_modified are PRIMARY cache keys, known_version informational</span>
+<span class="sd">        Field usage differs by strategy type:</span>
 
-<span class="sd">    Filesystem is the source of truth; state is for optimization only.</span>
+<span class="sd">        - Version-first: known_version is PRIMARY cache key, etag/last_modified unused</span>
+<span class="sd">        - File-first: etag/last_modified are PRIMARY cache keys, known_version informational</span>
+
+<span class="sd">        Filesystem is the source of truth; state is for optimization only.</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="s2">&quot;apps&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">[</span><span class="s2">&quot;apps&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
@@ -2542,93 +2429,86 @@ strategy : str, optional
 
 
 <h4 id="notapkgtool.state.StateTracker.has_version_changed" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">has_version_changed</span><span class="p">(</span><span class="n">recipe_id</span><span class="p">,</span> <span class="n">new_version</span><span class="p">)</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">has_version_changed</span>
+
 
 </h4>
-
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">has_version_changed</span><span class="p">(</span><span class="n">recipe_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">new_version</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
 
         <p>Check if discovered version differs from cached known_version.</p>
-<h6 id="notapkgtool.state.StateTracker.has_version_changed--parameters">Parameters</h6>
-<p>recipe_id : str
-    Recipe identifier.
-new_version : str
-    Newly discovered version.</p>
-<h6 id="notapkgtool.state.StateTracker.has_version_changed--returns">Returns</h6>
-<p>bool
+<p>Args:
+recipe_id: Recipe identifier.
+new_version: Newly discovered version.</p>
+        <p>bool
     True if version changed or no cached version exists.</p>
-<h6 id="notapkgtool.state.StateTracker.has_version_changed--examples">Examples</h6>
-<blockquote>
-<blockquote>
-<blockquote>
-<p>if tracker.has_version_changed("napt-chrome", "130.0.0"):
-...     print("New version available!")</p>
-</blockquote>
-</blockquote>
-</blockquote>
-<h6 id="notapkgtool.state.StateTracker.has_version_changed--notes">Notes</h6>
-<p>Uses 'known_version' field which is informational only.
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <p>Check if version has changed:</p>
+<pre><code>if tracker.has_version_changed("napt-chrome", "130.0.0"):
+    print("New version available!")
+</code></pre>
+</details>
+
+<details class="note" open>
+  <summary>Note</summary>
+  <p>Uses 'known_version' field which is informational only.
 Real version should be extracted from filesystem during build.</p>
+</details>
 
-
-            <details class="quote">
+            <details class="mkdocstrings-source">
               <summary>Source code in <code>notapkgtool/state/tracker.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">293</span>
-<span class="normal">294</span>
-<span class="normal">295</span>
-<span class="normal">296</span>
-<span class="normal">297</span>
-<span class="normal">298</span>
-<span class="normal">299</span>
-<span class="normal">300</span>
-<span class="normal">301</span>
-<span class="normal">302</span>
-<span class="normal">303</span>
-<span class="normal">304</span>
-<span class="normal">305</span>
-<span class="normal">306</span>
-<span class="normal">307</span>
-<span class="normal">308</span>
-<span class="normal">309</span>
-<span class="normal">310</span>
-<span class="normal">311</span>
-<span class="normal">312</span>
-<span class="normal">313</span>
-<span class="normal">314</span>
-<span class="normal">315</span>
-<span class="normal">316</span>
-<span class="normal">317</span>
-<span class="normal">318</span>
-<span class="normal">319</span>
-<span class="normal">320</span>
-<span class="normal">321</span>
-<span class="normal">322</span>
-<span class="normal">323</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">has_version_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">recipe_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">new_version</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Check if discovered version differs from cached known_version.</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">235</span>
+<span class="normal">236</span>
+<span class="normal">237</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span>
+<span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
+<span class="normal">251</span>
+<span class="normal">252</span>
+<span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span>
+<span class="normal">257</span>
+<span class="normal">258</span>
+<span class="normal">259</span>
+<span class="normal">260</span>
+<span class="normal">261</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">has_version_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">recipe_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">new_version</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if discovered version differs from cached known_version.</span>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    recipe_id : str</span>
-<span class="sd">        Recipe identifier.</span>
-<span class="sd">    new_version : str</span>
-<span class="sd">        Newly discovered version.</span>
+<span class="sd">    Args:</span>
+<span class="sd">    recipe_id: Recipe identifier.</span>
+<span class="sd">    new_version: Newly discovered version.</span>
 
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
+<span class="sd">    Returns:</span>
 <span class="sd">    bool</span>
 <span class="sd">        True if version changed or no cached version exists.</span>
 
-<span class="sd">    Examples</span>
-<span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; if tracker.has_version_changed(&quot;napt-chrome&quot;, &quot;130.0.0&quot;):</span>
-<span class="sd">    ...     print(&quot;New version available!&quot;)</span>
+<span class="sd">    Example:</span>
+<span class="sd">        Check if version has changed:</span>
 
-<span class="sd">    Notes</span>
-<span class="sd">    -----</span>
-<span class="sd">    Uses &#39;known_version&#39; field which is informational only.</span>
-<span class="sd">    Real version should be extracted from filesystem during build.</span>
+<span class="sd">            if tracker.has_version_changed(&quot;napt-chrome&quot;, &quot;130.0.0&quot;):</span>
+<span class="sd">                print(&quot;New version available!&quot;)</span>
+
+<span class="sd">    Note:</span>
+<span class="sd">        Uses &#39;known_version&#39; field which is informational only.</span>
+<span class="sd">        Real version should be extracted from filesystem during build.</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">cache</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_cache</span><span class="p">(</span><span class="n">recipe_id</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">cache</span><span class="p">:</span>
@@ -2654,87 +2534,81 @@ Real version should be extracted from filesystem during build.</p>
 
 
 <h3 id="notapkgtool.state.load_state" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">load_state</span><span class="p">(</span><span class="n">state_file</span><span class="p">)</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">load_state</span>
+
 
 </h3>
-
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">load_state</span><span class="p">(</span><span class="n">state_file</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
 
         <p>Load state from JSON file.</p>
-<h5 id="notapkgtool.state.load_state--parameters">Parameters</h5>
-<p>state_file : Path
+        <p>state_file:
     Path to JSON state file.</p>
-<h5 id="notapkgtool.state.load_state--returns">Returns</h5>
-<p>dict
+        <p>dict
     Loaded state dictionary.</p>
-<h5 id="notapkgtool.state.load_state--raises">Raises</h5>
-<p>FileNotFoundError
+        <p>FileNotFoundError
     If state file doesn't exist.
 json.JSONDecodeError
     If file contains invalid JSON.
 OSError
     If file cannot be read due to permissions.</p>
-<h5 id="notapkgtool.state.load_state--examples">Examples</h5>
-<blockquote>
-<blockquote>
-<blockquote>
-<p>from pathlib import Path
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <p>Load state from file:</p>
+<pre><code>from pathlib import Path
+
 state = load_state(Path("state/versions.json"))
-apps = state.get("apps", {})</p>
-</blockquote>
-</blockquote>
-</blockquote>
+apps = state.get("apps", {})
+</code></pre>
+</details>
 
-
-            <details class="quote">
+            <details class="mkdocstrings-source">
               <summary>Source code in <code>notapkgtool/state/tracker.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">350</span>
-<span class="normal">351</span>
-<span class="normal">352</span>
-<span class="normal">353</span>
-<span class="normal">354</span>
-<span class="normal">355</span>
-<span class="normal">356</span>
-<span class="normal">357</span>
-<span class="normal">358</span>
-<span class="normal">359</span>
-<span class="normal">360</span>
-<span class="normal">361</span>
-<span class="normal">362</span>
-<span class="normal">363</span>
-<span class="normal">364</span>
-<span class="normal">365</span>
-<span class="normal">366</span>
-<span class="normal">367</span>
-<span class="normal">368</span>
-<span class="normal">369</span>
-<span class="normal">370</span>
-<span class="normal">371</span>
-<span class="normal">372</span>
-<span class="normal">373</span>
-<span class="normal">374</span>
-<span class="normal">375</span>
-<span class="normal">376</span>
-<span class="normal">377</span>
-<span class="normal">378</span>
-<span class="normal">379</span>
-<span class="normal">380</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">load_state</span><span class="p">(</span><span class="n">state_file</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Load state from JSON file.</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">288</span>
+<span class="normal">289</span>
+<span class="normal">290</span>
+<span class="normal">291</span>
+<span class="normal">292</span>
+<span class="normal">293</span>
+<span class="normal">294</span>
+<span class="normal">295</span>
+<span class="normal">296</span>
+<span class="normal">297</span>
+<span class="normal">298</span>
+<span class="normal">299</span>
+<span class="normal">300</span>
+<span class="normal">301</span>
+<span class="normal">302</span>
+<span class="normal">303</span>
+<span class="normal">304</span>
+<span class="normal">305</span>
+<span class="normal">306</span>
+<span class="normal">307</span>
+<span class="normal">308</span>
+<span class="normal">309</span>
+<span class="normal">310</span>
+<span class="normal">311</span>
+<span class="normal">312</span>
+<span class="normal">313</span>
+<span class="normal">314</span>
+<span class="normal">315</span>
+<span class="normal">316</span>
+<span class="normal">317</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">load_state</span><span class="p">(</span><span class="n">state_file</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load state from JSON file.</span>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    state_file : Path</span>
+<span class="sd">    Args:</span>
+<span class="sd">    state_file:</span>
 <span class="sd">        Path to JSON state file.</span>
 
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
+<span class="sd">    Returns:</span>
 <span class="sd">    dict</span>
 <span class="sd">        Loaded state dictionary.</span>
 
-<span class="sd">    Raises</span>
-<span class="sd">    ------</span>
+<span class="sd">    Raises:</span>
 <span class="sd">    FileNotFoundError</span>
 <span class="sd">        If state file doesn&#39;t exist.</span>
 <span class="sd">    json.JSONDecodeError</span>
@@ -2742,11 +2616,14 @@ apps = state.get("apps", {})</p>
 <span class="sd">    OSError</span>
 <span class="sd">        If file cannot be read due to permissions.</span>
 
-<span class="sd">    Examples</span>
-<span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; from pathlib import Path</span>
-<span class="sd">    &gt;&gt;&gt; state = load_state(Path(&quot;state/versions.json&quot;))</span>
-<span class="sd">    &gt;&gt;&gt; apps = state.get(&quot;apps&quot;, {})</span>
+<span class="sd">    Example:</span>
+<span class="sd">        Load state from file:</span>
+
+<span class="sd">            from pathlib import Path</span>
+
+<span class="sd">            state = load_state(Path(&quot;state/versions.json&quot;))</span>
+<span class="sd">            apps = state.get(&quot;apps&quot;, {})</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">state_file</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
@@ -2760,109 +2637,110 @@ apps = state.get("apps", {})</p>
 
 
 <h3 id="notapkgtool.state.save_state" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">save_state</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">state_file</span><span class="p">)</span></code>
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">save_state</span>
+
 
 </h3>
-
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">save_state</span><span class="p">(</span><span class="n">state</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">state_file</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
 
     <div class="doc doc-contents ">
 
         <p>Save state to JSON file with pretty-printing.</p>
 <p>Creates parent directories if needed. Uses 2-space indentation
 and sorted keys for consistent diffs in version control.</p>
-<h5 id="notapkgtool.state.save_state--parameters">Parameters</h5>
-<p>state : dict
+        <p>state:
     State dictionary to save.
-state_file : Path
+state_file:
     Path to JSON state file.</p>
-<h5 id="notapkgtool.state.save_state--raises">Raises</h5>
-<p>OSError
+        <p>OSError
     If file cannot be written due to permissions.</p>
-<h5 id="notapkgtool.state.save_state--examples">Examples</h5>
-<blockquote>
-<blockquote>
-<blockquote>
-<p>from pathlib import Path
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <p>Save state to file:</p>
+<pre><code>from pathlib import Path
+
 state = {"metadata": {}, "apps": {}}
-save_state(state, Path("state/versions.json"))</p>
-</blockquote>
-</blockquote>
-</blockquote>
-<h5 id="notapkgtool.state.save_state--notes">Notes</h5>
-<ul>
+save_state(state, Path("state/versions.json"))
+</code></pre>
+</details>
+
+<details class="note" open>
+  <summary>Note</summary>
+  <ul>
 <li>Uses 2-space indentation for readability</li>
 <li>Sorts keys alphabetically for consistent diffs</li>
 <li>Adds trailing newline for git compatibility</li>
 </ul>
+</details>
 
-
-            <details class="quote">
+            <details class="mkdocstrings-source">
               <summary>Source code in <code>notapkgtool/state/tracker.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">383</span>
-<span class="normal">384</span>
-<span class="normal">385</span>
-<span class="normal">386</span>
-<span class="normal">387</span>
-<span class="normal">388</span>
-<span class="normal">389</span>
-<span class="normal">390</span>
-<span class="normal">391</span>
-<span class="normal">392</span>
-<span class="normal">393</span>
-<span class="normal">394</span>
-<span class="normal">395</span>
-<span class="normal">396</span>
-<span class="normal">397</span>
-<span class="normal">398</span>
-<span class="normal">399</span>
-<span class="normal">400</span>
-<span class="normal">401</span>
-<span class="normal">402</span>
-<span class="normal">403</span>
-<span class="normal">404</span>
-<span class="normal">405</span>
-<span class="normal">406</span>
-<span class="normal">407</span>
-<span class="normal">408</span>
-<span class="normal">409</span>
-<span class="normal">410</span>
-<span class="normal">411</span>
-<span class="normal">412</span>
-<span class="normal">413</span>
-<span class="normal">414</span>
-<span class="normal">415</span>
-<span class="normal">416</span>
-<span class="normal">417</span>
-<span class="normal">418</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">save_state</span><span class="p">(</span><span class="n">state</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">state_file</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Save state to JSON file with pretty-printing.</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">320</span>
+<span class="normal">321</span>
+<span class="normal">322</span>
+<span class="normal">323</span>
+<span class="normal">324</span>
+<span class="normal">325</span>
+<span class="normal">326</span>
+<span class="normal">327</span>
+<span class="normal">328</span>
+<span class="normal">329</span>
+<span class="normal">330</span>
+<span class="normal">331</span>
+<span class="normal">332</span>
+<span class="normal">333</span>
+<span class="normal">334</span>
+<span class="normal">335</span>
+<span class="normal">336</span>
+<span class="normal">337</span>
+<span class="normal">338</span>
+<span class="normal">339</span>
+<span class="normal">340</span>
+<span class="normal">341</span>
+<span class="normal">342</span>
+<span class="normal">343</span>
+<span class="normal">344</span>
+<span class="normal">345</span>
+<span class="normal">346</span>
+<span class="normal">347</span>
+<span class="normal">348</span>
+<span class="normal">349</span>
+<span class="normal">350</span>
+<span class="normal">351</span>
+<span class="normal">352</span>
+<span class="normal">353</span>
+<span class="normal">354</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">save_state</span><span class="p">(</span><span class="n">state</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">state_file</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Save state to JSON file with pretty-printing.</span>
 
 <span class="sd">    Creates parent directories if needed. Uses 2-space indentation</span>
 <span class="sd">    and sorted keys for consistent diffs in version control.</span>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    state : dict</span>
+<span class="sd">    Args:</span>
+<span class="sd">    state:</span>
 <span class="sd">        State dictionary to save.</span>
-<span class="sd">    state_file : Path</span>
+<span class="sd">    state_file:</span>
 <span class="sd">        Path to JSON state file.</span>
 
-<span class="sd">    Raises</span>
-<span class="sd">    ------</span>
+<span class="sd">    Raises:</span>
 <span class="sd">    OSError</span>
 <span class="sd">        If file cannot be written due to permissions.</span>
 
-<span class="sd">    Examples</span>
-<span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; from pathlib import Path</span>
-<span class="sd">    &gt;&gt;&gt; state = {&quot;metadata&quot;: {}, &quot;apps&quot;: {}}</span>
-<span class="sd">    &gt;&gt;&gt; save_state(state, Path(&quot;state/versions.json&quot;))</span>
+<span class="sd">    Example:</span>
+<span class="sd">        Save state to file:</span>
 
-<span class="sd">    Notes</span>
-<span class="sd">    -----</span>
-<span class="sd">    - Uses 2-space indentation for readability</span>
-<span class="sd">    - Sorts keys alphabetically for consistent diffs</span>
-<span class="sd">    - Adds trailing newline for git compatibility</span>
+<span class="sd">            from pathlib import Path</span>
+
+<span class="sd">            state = {&quot;metadata&quot;: {}, &quot;apps&quot;: {}}</span>
+<span class="sd">            save_state(state, Path(&quot;state/versions.json&quot;))</span>
+
+<span class="sd">    Note:</span>
+<span class="sd">        - Uses 2-space indentation for readability</span>
+<span class="sd">        - Sorts keys alphabetically for consistent diffs</span>
+<span class="sd">        - Adds trailing newline for git compatibility</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">state_file</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
@@ -2930,7 +2808,7 @@ save_state(state, Path("state/versions.json"))</p>
     
     
       
-      <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky"], "search": "../../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
       <script src="../../assets/javascripts/bundle.f55a23d4.min.js"></script>
