@@ -1,5 +1,4 @@
-"""
-PSAppDeployToolkit integration for NAPT.
+"""PSAppDeployToolkit integration for NAPT.
 
 This module handles PSAppDeployToolkit (PSADT) release management, caching,
 and integration with NAPT's build system.
@@ -23,6 +22,7 @@ Example:
     # Download and cache
     psadt_path = get_psadt_release("latest", Path("cache/psadt"))
     print(f"PSADT cached at: {psadt_path}")
+
 """
 
 from .release import (

@@ -1,11 +1,11 @@
-"""
-HTTP static URL discovery strategy for NAPT.
+"""HTTP static URL discovery strategy for NAPT.
 
 This is a FILE-FIRST strategy that downloads an installer from a fixed HTTP(S)
 URL and extracts version information from the downloaded file. Uses HTTP ETag
 conditional requests to avoid re-downloading unchanged files.
 
 Key Advantages:
+
 - Works with any fixed URL (version not required in URL)
 - Extracts accurate version directly from installer metadata
 - Uses ETag-based conditional requests for efficiency (~500ms vs full download)
@@ -13,59 +13,38 @@ Key Advantages:
 - Fallback strategy when version not available via API/URL pattern
 
 Supported Version Extraction:
+
 - msi_product_version_from_file: Extract ProductVersion property from MSI
 - (Future) exe_file_version: Extract FileVersion from PE headers
 - (Future) manual_version: Use a version specified in the recipe
 
 Use Cases:
+
 - Google Chrome: Fixed enterprise MSI URL, version embedded in MSI
 - Mozilla Firefox: Fixed enterprise MSI URL, version embedded in MSI
 - Vendors with stable download URLs and embedded version metadata
 - When version not available via API, URL pattern, or GitHub tags
 
 Recipe Configuration:
-source:
-  strategy: http_static
-  url: "https://vendor.com/installer.msi"          # Required: download URL
-  version:
-    type: msi_product_version_from_file            # Required: extraction method
-    file: "installer.msi"                          # Optional: defaults to URL filename
+
+    source:
+      strategy: http_static
+      url: "https://vendor.com/installer.msi"          # Required: download URL
+      version:
+        type: msi_product_version_from_file            # Required: extraction method
+        file: "installer.msi"                          # Optional: defaults to URL filename
 
 Configuration Fields:
-    - **url** (str, required): HTTP(S) URL to download the installer from.
-      The URL should be stable and point to the latest version.
-    - **version.type** (str, required): Version extraction method. Currently supported:
-      msi_product_version_from_file.
-    - **version.file** (str, optional): Specific filename to extract version from.
-      Defaults to the downloaded filename derived from the URL or Content-Disposition header.
 
-Workflow (File-First with ETag Optimization):
-
-1. Make conditional HTTP request with cached ETag (If-None-Match header)
-2. Server responds with HTTP 304 Not Modified -> use cached file (~500ms)
-3. Server responds with HTTP 200 OK -> download new version
-4. Extract version from downloaded file based on source.version.type
-5. Return DiscoveredVersion, file path, and SHA-256 hash
+- **url** (str, required): HTTP(S) URL to download the installer from. The URL should be stable and point to the latest version.
+- **version.type** (str, required): Version extraction method. Currently supported: msi_product_version_from_file.
+- **version.file** (str, optional): Specific filename to extract version from. Defaults to the downloaded filename derived from the URL or Content-Disposition header.
 
 Error Handling:
-    - ValueError: Missing or invalid configuration fields
-    - RuntimeError: Download failures, version extraction errors
-    - Errors are chained with 'from err' for better debugging
 
-Architecture (File-First vs Version-First):
-    - **http_static (FILE-FIRST)**: Downloads file first, then extracts version
-      - Method: discover_version() -> tuple with DiscoveredVersion
-      - Uses: HTTP ETag conditional requests for optimization
-      - Pros: Works with any URL, accurate version from installer
-      - Cons: Must download to know version (~500ms even with 304)
-      - Best for: Fixed URLs with embedded version metadata
-
-    - **url_regex, github_release, http_json (VERSION-FIRST)**: Version before download
-      - Method: get_version_info() -> VersionInfo
-      - Uses: Version comparison to skip downloads entirely
-      - Pros: Instant or fast checks (regex/API only), can skip downloads
-      - Cons: Requires version available via API/URL pattern
-      - Best for: Version-encoded URLs, APIs, CI/CD with frequent checks
+- ValueError: Missing or invalid configuration fields
+- RuntimeError: Download failures, version extraction errors
+- Errors are chained with 'from err' for better debugging
 
 Example:
 In a recipe YAML:
@@ -108,14 +87,15 @@ From Python (using core orchestration):
     result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
     print(f"Version {result['version']} at {result['file_path']}")
 
-Notes:
-- Must download file to extract version (architectural constraint)
-- ETag optimization reduces bandwidth but still requires network round-trip
-- Core orchestration automatically provides cached ETag if available
-- Server must support ETag or Last-Modified headers for optimization
-- If server doesn't support conditional requests, full download occurs every time
-- Consider version-first strategies (url_regex, github_release, http_json) for
+Note:
+    - Must download file to extract version (architectural constraint)
+    - ETag optimization reduces bandwidth but still requires network round-trip
+    - Core orchestration automatically provides cached ETag if available
+    - Server must support ETag or Last-Modified headers for optimization
+    - If server doesn't support conditional requests, full download occurs every time
+    - Consider version-first strategies (url_regex, github_release, http_json) for
   better performance when version available via API or URL pattern
+
 """
 
 from __future__ import annotations
@@ -173,6 +153,7 @@ class HttpStaticStrategy:
         Raises:
             ValueError: If required config fields are missing or invalid.
             RuntimeError: If download or version extraction fails.
+
         """
         from notapkgtool.cli import print_verbose
 
@@ -294,6 +275,7 @@ class HttpStaticStrategy:
 
         Returns:
             List of error messages (empty if valid).
+
         """
         errors = []
         source = app_config.get("source", {})

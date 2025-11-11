@@ -1,20 +1,25 @@
-"""
-Update decision policy for NAPT.
+"""Update decision policy for NAPT.
 
 Determines whether a newly discovered remote artifact should be staged,
 based on version, hash, and org policy.
 
-Usage:
+Example:
+    Check if a new version should be staged:
 
-    from notapkgtool.policy.updates import should_stage, UpdatePolicy
+        from notapkgtool.policy.updates import should_stage, UpdatePolicy
 
-    decision = should_stage(
-        remote_version="124.0.6367.91",
-        remote_hash="abc...",
-        current_version="124.0.6367.70",
-        current_hash="def...",
-        policy=UpdatePolicy(strategy="version_then_hash", allow_same_version_hash_change=True, comparator="semver"),
-    )
+        decision = should_stage(
+            remote_version="124.0.6367.91",
+            remote_hash="abc...",
+            current_version="124.0.6367.70",
+            current_hash="def...",
+            policy=UpdatePolicy(
+                strategy="version_then_hash",
+                allow_same_version_hash_change=True,
+                comparator="semver"
+            ),
+        )
+
 """
 
 from __future__ import annotations
@@ -57,6 +62,7 @@ def should_stage(
 
     Returns:
         True if the new artifact should be staged, False otherwise.
+
     """
     # If we have no prior state, stage the first artifact.
     if current_version is None and current_hash is None:

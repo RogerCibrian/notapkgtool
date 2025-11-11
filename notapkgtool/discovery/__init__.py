@@ -1,5 +1,4 @@
-"""
-Discovery strategies for NAPT.
+"""Discovery strategies for NAPT.
 
 This package provides a pluggable strategy pattern for discovering application
 versions and downloading installers from various sources. Strategies are divided
@@ -38,33 +37,33 @@ Available Strategies:
         Fast API-based version checks (~100ms).
 
 Public API:
-    DiscoveryStrategy : Protocol
-        Protocol that all discovery strategies must implement.
-    get_strategy : function
-        Get a discovery strategy instance by name from the registry.
+
+- DiscoveryStrategy: Protocol that all discovery strategies must implement
+- get_strategy: Get a discovery strategy instance by name from the registry
 
 Example:
     Register and use a custom strategy:
 
-    from notapkgtool.discovery import get_strategy
-    from pathlib import Path
+        from notapkgtool.discovery import get_strategy
+        from pathlib import Path
 
-    # Get a strategy by name (auto-registered on import)
-    strategy = get_strategy("http_static")
+        # Get a strategy by name (auto-registered on import)
+        strategy = get_strategy("http_static")
 
-    # Use it to discover a version
-    app_config = {
-        "source": {
-            "strategy": "http_static",
-            "url": "https://example.com/app.msi",
-            "version": {"type": "msi_product_version_from_file"},
+        # Use it to discover a version
+        app_config = {
+            "source": {
+                "strategy": "http_static",
+                "url": "https://example.com/app.msi",
+                "version": {"type": "msi_product_version_from_file"},
+            }
         }
-    }
 
-    discovered, file_path, sha256 = strategy.discover_version(
-        app_config, Path("./downloads")
-    )
-    print(f"Version: {discovered.version}")
+        discovered, file_path, sha256 = strategy.discover_version(
+            app_config, Path("./downloads")
+        )
+        print(f"Version: {discovered.version}")
+
 """
 
 # Import strategy modules to trigger self-registration

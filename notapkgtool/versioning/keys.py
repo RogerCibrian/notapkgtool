@@ -6,13 +6,11 @@ It only parses and compares version strings consistently across sources
 
 Public API:
 
-- DiscoveredVersion: container for version discovered from downloaded files
-    (file-first).
-- VersionInfo: container for version discovered without downloading
-    (version-first).
-- version_key_any(): build a comparable key for any version string.
-- compare_any(): tri-state compare (-1, 0, 1).
-- is_newer_any(): True if remote > current.
+- DiscoveredVersion: Container for version discovered from downloaded files (file-first)
+- VersionInfo: Container for version discovered without downloading (version-first)
+- version_key_any(): Build a comparable key for any version string
+- compare_any(): Tri-state compare (-1, 0, 1)
+- is_newer_any(): True if remote > current
 """
 
 from __future__ import annotations
@@ -34,6 +32,7 @@ class DiscoveredVersion:
         version: Raw version string (e.g., "140.0.7339.128").
         source: Where it came from (e.g., "regex_in_url",
             "msi_product_version_from_file").
+
     """
 
     version: str
@@ -51,6 +50,7 @@ class VersionInfo:
         version: Raw version string (e.g., "140.0.7339.128").
         download_url: URL to download the installer.
         source: Strategy name for logging (e.g., "url_regex", "github_release").
+
     """
 
     version: str
@@ -84,8 +84,7 @@ _NUM_SEP = re.compile(r"[._-]")
 
 
 def _ints_from_text(text: str) -> tuple[int, ...]:
-    """
-    Parse numeric components only (for MSI/EXE).
+    """Parse numeric components only (for MSI/EXE).
     Raises ValueError if any non-numeric token is encountered to avoid
     silently mapping "1.2a" -> (1,2,0).
     """
@@ -116,8 +115,7 @@ def _pad_equal(
 
 
 def _split_pre_tokens(pre: str) -> tuple[tuple[int, object], ...]:
-    """
-    Split prerelease suffix into tokens with numeric awareness.
+    """Split prerelease suffix into tokens with numeric awareness.
     Example: "rc.10-x" -> [("rc"), 10, "x"] encoded as:
       (0, int) for numeric tokens (sort before text)
       (1, str) for text tokens (lowercased)
@@ -135,8 +133,7 @@ def _split_pre_tokens(pre: str) -> tuple[tuple[int, object], ...]:
 
 
 def _find_pre_segment(s: str) -> tuple[float | None, tuple[tuple[int, object], ...]]:
-    """
-    Detect a prerelease tag in the given suffix string.
+    """Detect a prerelease tag in the given suffix string.
     Returns (rank, tokens) or (None, ()) if not a prerelease.
     """
     m = re.search(r"(?i)\b([A-Za-z]+)[._-]?([0-9A-Za-z.\-]*)", s)
@@ -167,8 +164,7 @@ def _strip_build_meta(s: str) -> str:
 
 
 def _leading_release_tuple(s: str) -> tuple[int, ...]:
-    """
-    Extract the leading numeric "release" tuple from a version-like string.
+    """Extract the leading numeric "release" tuple from a version-like string.
 
     Behavior:
     - Trim whitespace, lowercase, and drop a leading "v" (e.g., "v1.2.3" -> "1.2.3").
@@ -198,8 +194,7 @@ def _leading_release_tuple(s: str) -> tuple[int, ...]:
 def _semver_like_key_robust(
     s: str,
 ) -> tuple[tuple[int, ...], float, tuple[tuple[int, object], ...], int]:
-    """
-    Build a semver-like key:
+    """Build a semver-like key:
       (release_tuple, pre_rank_or_4.0, pre_tokens, post_num)
 
     Final releases use pre_rank=4.0 so they compare newer than any prerelease
@@ -225,8 +220,7 @@ def _semver_like_key_robust(
 
 
 def version_key_any(s: str, *, source: SourceHint = "string") -> tuple:
-    """
-    Compute a comparable key for any version string.
+    """Compute a comparable key for any version string.
 
     - MSI/EXE: purely numeric (truncated to 3/4 parts).
     - Generic string: semver-like robust key; if no numeric prefix, fallback to ("text", raw).
@@ -252,8 +246,7 @@ def compare_any(
     source: SourceHint = "string",
     verbose: bool = False,
 ) -> int:
-    """
-    Compare two versions with a source hint.
+    """Compare two versions with a source hint.
     Returns -1 if a < b, 0 if equal, 1 if a > b.
     """
     if source in ("msi", "exe"):
@@ -289,8 +282,7 @@ def is_newer_any(
     source: SourceHint = "string",
     verbose: bool = False,
 ) -> bool:
-    """
-    Decide if 'remote' should be considered newer than 'current'.
+    """Decide if 'remote' should be considered newer than 'current'.
     Returns True iff remote > current under the given source semantics.
     """
     if current is None:

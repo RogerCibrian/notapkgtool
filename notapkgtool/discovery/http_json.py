@@ -1,11 +1,11 @@
-"""
-HTTP JSON API discovery strategy for NAPT.
+"""HTTP JSON API discovery strategy for NAPT.
 
 This is a VERSION-FIRST strategy that queries JSON API endpoints to get version
 and download URL WITHOUT downloading the installer. This enables fast version
 checks and efficient caching.
 
 Key Advantages:
+
 - Fast version discovery (API call ~100ms)
 - Can skip downloads entirely when version unchanged
 - Direct API access for version and download URL
@@ -16,6 +16,7 @@ Key Advantages:
 - Ideal for CI/CD with scheduled checks
 
 Supported Features:
+
 - JSONPath navigation for nested structures
 - Array indexing and filtering
 - Custom HTTP headers (Authorization, etc.)
@@ -23,6 +24,7 @@ Supported Features:
 - Environment variable expansion in values
 
 Use Cases:
+
 - Vendors with JSON APIs (Microsoft, Mozilla, etc.)
 - Cloud services with version endpoints
 - CDNs that provide metadata APIs
@@ -31,62 +33,42 @@ Use Cases:
 - CI/CD pipelines with frequent version checks
 
 Recipe Configuration:
-source:
-  strategy: http_json
-  api_url: "https://vendor.com/api/latest"
-  version_path: "version"                      # JSONPath to version
-  download_url_path: "download_url"            # JSONPath to URL
-  method: "GET"                                # Optional: GET or POST
-  headers:                                     # Optional: custom headers
-    Authorization: "Bearer ${API_TOKEN}"
-    Accept: "application/json"
-  body:                                        # Optional: POST body
-    platform: "windows"
-    arch: "x64"
-  timeout: 30                                  # Optional: timeout in seconds
+
+    source:
+      strategy: http_json
+      api_url: "https://vendor.com/api/latest"
+      version_path: "version"                      # JSONPath to version
+      download_url_path: "download_url"            # JSONPath to URL
+      method: "GET"                                # Optional: GET or POST
+      headers:                                     # Optional: custom headers
+        Authorization: "Bearer ${API_TOKEN}"
+        Accept: "application/json"
+      body:                                        # Optional: POST body
+        platform: "windows"
+        arch: "x64"
+      timeout: 30                                  # Optional: timeout in seconds
 
 Configuration Fields:
-    - **api_url** (str, required): API endpoint URL that returns JSON with version
-      and download information.
-    - **version_path** (str, required): JSONPath expression to extract version from
-      the API response. Examples: "version", "release.version", "data.version"
-    - **download_url_path** (str, required): JSONPath expression to extract download URL
-      from the API response. Examples: "download_url", "assets.url", "platforms.windows.x64"
-    - **method** (str, optional): HTTP method to use. Either "GET" or "POST". Default is "GET".
-    - **headers** (dict, optional): Custom HTTP headers to send with the request. Useful
-      for authentication or setting Accept headers. Values support environment variable
-      expansion. Example: {"Authorization": "Bearer ${API_TOKEN}"}
-    - **body** (dict, optional): Request body for POST requests. Sent as JSON. Only used
-      when method="POST". Example: {"platform": "windows", "arch": "x64"}
+
+- **api_url** (str, required): API endpoint URL that returns JSON with version and download information
+- **version_path** (str, required): JSONPath expression to extract version from the API response. Examples: "version", "release.version", "data.version"
+- **download_url_path** (str, required): JSONPath expression to extract download URL from the API response. Examples: "download_url", "assets.url", "platforms.windows.x64"
+- **method** (str, optional): HTTP method to use. Either "GET" or "POST". Default is "GET"
+- **headers** (dict, optional): Custom HTTP headers to send with the request. Useful for authentication or setting Accept headers. Values support environment variable expansion. Example: {"Authorization": "Bearer ${API_TOKEN}"}
+- **body** (dict, optional): Request body for POST requests. Sent as JSON. Only used when method="POST". Example: {"platform": "windows", "arch": "x64"}
     - **timeout** (int, optional): Request timeout in seconds. Default is 30.
 
 JSONPath Syntax:
-    Simple paths:
-      - "version" → {"version": "1.2.3"}
-      - "release.version" → {"release": {"version": "1.2.3"}}
 
-    Array indexing:
-      - "data.version" → Get from array index
-      - "releases.version" → Last item in array
-
-    Nested paths:
-      - "data.latest.download.url"
-      - "response.assets.browser_download_url"
-
-Workflow (Version-First):
-    1. Build HTTP request (GET or POST) with headers
-    2. Call API endpoint and get JSON response (~100ms)
-    3. Parse JSON and extract version using JSONPath
-    4. Extract download URL using JSONPath
-    5. Create VersionInfo with version and download URL
-    6. Core orchestration compares version to cache
-    7. If match and file exists -> skip download entirely
-    8. If changed or missing -> download from URL
+- Simple paths: "version", "release.version"
+- Array indexing: "data.version", "releases.version"
+- Nested paths: "data.latest.download.url", "response.assets.browser_download_url"
 
 Error Handling:
-    - ValueError: Missing or invalid configuration, invalid JSONPath, path not found
-    - RuntimeError: API failures, invalid JSON response
-    - Errors are chained with 'from err' for better debugging
+
+- ValueError: Missing or invalid configuration, invalid JSONPath, path not found
+- RuntimeError: API failures, invalid JSON response
+- Errors are chained with 'from err' for better debugging
 
 Example:
 In a recipe YAML (simple API):
@@ -147,13 +129,14 @@ From Python (using core orchestration):
     result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
     print(f"Version {result['version']} at {result['file_path']}")
 
-Notes:
-- Version discovery via API only (no download required)
-- Core orchestration automatically skips download if version unchanged
-- JSONPath uses jsonpath-ng library for robust parsing
-- Environment variable expansion works in headers and other string values
-- POST body is sent as JSON (Content-Type: application/json)
-- Timeout defaults to 30 seconds to prevent hanging on slow APIs
+Note:
+    - Version discovery via API only (no download required)
+    - Core orchestration automatically skips download if version unchanged
+    - JSONPath uses jsonpath-ng library for robust parsing
+    - Environment variable expansion works in headers and other string values
+    - POST body is sent as JSON (Content-Type: application/json)
+    - Timeout defaults to 30 seconds to prevent hanging on slow APIs
+
 """
 
 from __future__ import annotations
@@ -214,17 +197,19 @@ class HttpJsonStrategy:
             RuntimeError: If API call fails (chained with 'from err').
 
         Example:
-            >>> strategy = HttpJsonStrategy()
-            >>> config = {
-            ...     "source": {
-            ...         "api_url": "https://api.vendor.com/latest",
-            ...         "version_path": "version",
-            ...         "download_url_path": "download_url"
-            ...     }
-            ... }
-            >>> version_info = strategy.get_version_info(config)
-            >>> version_info.version
-            '1.0.0'
+            Get version info from JSON API:
+
+                strategy = HttpJsonStrategy()
+                config = {
+                    "source": {
+                        "api_url": "https://api.vendor.com/latest",
+                        "version_path": "version",
+                        "download_url_path": "download_url"
+                    }
+                }
+                version_info = strategy.get_version_info(config)
+                # version_info.version returns: '1.0.0'
+
         """
         from notapkgtool.cli import print_verbose
 
@@ -378,6 +363,7 @@ class HttpJsonStrategy:
 
         Returns:
             List of error messages (empty if valid).
+
         """
         errors = []
         source = app_config.get("source", {})

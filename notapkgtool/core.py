@@ -47,6 +47,7 @@ Example:
         print(f"SHA-256: {result['sha256']}")
 
         # Version-first strategies: may have skipped download if unchanged!
+
 """
 
 from __future__ import annotations
@@ -76,8 +77,16 @@ def derive_file_path_from_url(url: str, output_dir: Path) -> Path:
         Expected path to the file.
 
     Example:
-        >>> derive_file_path_from_url("https://example.com/app.msi", Path("./downloads"))
-        Path('./downloads/app.msi')
+        Get expected file path for a download URL:
+
+            from pathlib import Path
+
+            path = derive_file_path_from_url(
+                "https://example.com/app.msi",
+                Path("./downloads")
+            )
+            # Returns: Path('./downloads/app.msi')
+
     """
     from urllib.parse import urlparse
 
@@ -178,6 +187,7 @@ def discover_recipe(
         are written atomically (.part then renamed). Progress output goes to
         stdout via the download module. Strategy type detected via duck typing
         (hasattr for get_version_info).
+
     """
     from notapkgtool.cli import print_step, print_verbose
 

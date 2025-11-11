@@ -49,12 +49,11 @@ def _format_powershell_value(value: Any) -> str:
         PowerShell literal representation.
 
     Example:
-        >>> _format_powershell_value("hello")
-        "'hello'"
-        >>> _format_powershell_value(True)
-        '$true'
-        >>> _format_powershell_value([0, 1, 2])
-        '@(0, 1, 2)'
+        Format values for PowerShell:
+
+            _format_powershell_value("hello")      # Returns: "'hello'"
+            _format_powershell_value(True)         # Returns: '$true'
+            _format_powershell_value([0, 1, 2])    # Returns: '@(0, 1, 2)'
     """
     if isinstance(value, bool):
         return "$true" if value else "$false"
@@ -240,12 +239,16 @@ def generate_invoke_script(
         RuntimeError: If template parsing fails.
 
     Example:
-        >>> script = generate_invoke_script(
-        ...     Path("cache/psadt/4.1.7/Invoke-AppDeployToolkit.ps1"),
-        ...     config,
-        ...     "141.0.7390.123",
-        ...     "4.1.7"
-        ... )
+        Generate deployment script from template:
+
+            from pathlib import Path
+
+            script = generate_invoke_script(
+                Path("cache/psadt/4.1.7/Invoke-AppDeployToolkit.ps1"),
+                config,
+                "141.0.7390.123",
+                "4.1.7"
+            )
     """
     from notapkgtool.cli import print_debug, print_verbose
 

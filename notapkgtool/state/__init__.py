@@ -1,5 +1,4 @@
-"""
-State tracking and version management for NAPT.
+"""State tracking and version management for NAPT.
 
 This module provides state persistence for tracking discovered application
 versions, ETags, and file metadata between runs. This enables:
@@ -16,35 +15,31 @@ The state file is a JSON file that stores:
 State tracking is enabled by default and can be disabled with --stateless flag.
 
 Public API:
-StateTracker : class
-    Main interface for state management operations.
-load_state : function
-    Load state from JSON file.
-save_state : function
-    Save state to JSON file with pretty-printing.
+
+- StateTracker: Main interface for state management operations
+- load_state: Load state from JSON file
+- save_state: Save state to JSON file with pretty-printing
 
 Example:
-Basic usage:
+    Basic usage:
 
-    from pathlib import Path
-    from notapkgtool.state import load_state, save_state
+        from pathlib import Path
+        from notapkgtool.state import load_state, save_state
 
-    # Load state
-    state = load_state(Path("state/versions.json"))
+        state = load_state(Path("state/versions.json"))
 
-    # Get cache for a recipe
-    cache = state.get("apps", {}).get("napt-chrome")
+        app_id = "napt-chrome"
+        cache = state.get("apps", {}).get(app_id)
 
-    # Update cache
-    state["apps"]["napt-chrome"] = {
-        "url": "https://dl.google.com/chrome.msi",
-        "etag": "W/\"abc123\"",
-        "sha256": "abc123...",
-        "known_version": "130.0.0"
-    }
+        state["apps"][app_id] = {
+            "url": "https://dl.google.com/chrome.msi",
+            "etag": 'W/"abc123"',
+            "sha256": "abc123...",
+            "known_version": "130.0.0"
+        }
 
-    # Save state
-    save_state(state, Path("state/versions.json"))
+        save_state(state, Path("state/versions.json"))
+
 """
 
 from .tracker import StateTracker, load_state, save_state

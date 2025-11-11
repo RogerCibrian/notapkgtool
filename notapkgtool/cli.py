@@ -1,31 +1,16 @@
-"""
-Command-line interface for NAPT.
+"""Command-line interface for NAPT.
 
 This module provides the main CLI entry point for the napt tool, offering
 commands for recipe validation, package building, and deployment management.
 
 Commands:
 
-    validate: Validate recipe syntax and configuration without making network calls.
-        This command checks that a recipe is correctly formatted and that all
-        required fields are present.
+    validate: Validate recipe syntax and configuration
+    discover: Discover latest version and download installer
+    build: Build PSADT package from recipe
+    package: Create .intunewin package for Intune
 
-    discover: Discover the latest version by downloading the installer and extracting
-        version information. This command verifies that a recipe is correctly
-        configured, that the source is accessible, and tracks state for caching.
-
-    build: Build a PSADT package from a recipe and downloaded installer. Creates
-        complete deployment package with generated scripts and branding.
-
-    package: Create a .intunewin package from a built PSADT directory using
-        Microsoft's IntuneWinAppUtil.exe tool.
-
-    Future commands:
-        upload: Upload a package to Microsoft Intune
-        sync: Full workflow (discover -> build -> upload -> deploy)
-
-Usage Examples:
-
+Example:
     Validate recipe syntax:
 
         $ napt validate recipes/Google/chrome.yaml
@@ -61,6 +46,7 @@ Note:
     Each command has its own handler function (cmd_<command>).
     Verbose mode shows full tracebacks on errors for debugging.
     Debug mode implies verbose mode and shows detailed configuration dumps.
+
 """
 
 from __future__ import annotations
@@ -121,8 +107,7 @@ def print_debug(prefix: str, message: str) -> None:
 
 
 def cmd_validate(args: argparse.Namespace) -> int:
-    """
-    Handler for 'napt validate' command.
+    """Handler for 'napt validate' command.
 
     Validates recipe syntax and configuration without downloading files or
     making network calls. This is useful for quick feedback during recipe
@@ -137,6 +122,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
     Note:
         Prints validation results, errors, and warnings to stdout.
+
     """
     # Set global verbose flag
     set_verbose(args.verbose)
@@ -187,16 +173,13 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
 
 def cmd_discover(args: argparse.Namespace) -> int:
-    """
-    Handler for 'napt discover' command.
+    """Handler for 'napt discover' command.
 
     Discovers the latest version of an application by querying the source
-    and downloading the installer. This command:
-      - Validates the recipe YAML is correctly formatted
-      - Uses the configured discovery strategy to find the latest version
-      - Downloads the installer (or uses cached version via ETag)
-      - Extracts version information from the downloaded file
-      - Updates the state file with version and caching info
+    and downloading the installer. This command validates the recipe YAML,
+    uses the configured discovery strategy to find the latest version,
+    downloads the installer (or uses cached version via ETag), extracts
+    version information, and updates the state file with caching info.
 
     Args:
         args: Parsed command-line arguments containing
@@ -209,6 +192,7 @@ def cmd_discover(args: argparse.Namespace) -> int:
         Downloads installer file to output_dir (or uses cached version).
         Updates state file with version and ETag information. Prints progress
         and results to stdout. Prints errors with optional traceback if verbose/debug.
+
     """
     # Set global verbose and debug flags
     set_verbose(args.verbose)
@@ -262,19 +246,15 @@ def cmd_discover(args: argparse.Namespace) -> int:
 
 
 def cmd_build(args: argparse.Namespace) -> int:
-    """
-    Handler for 'napt build' command.
+    """Handler for 'napt build' command.
 
-    Builds a PSADT package from a recipe and downloaded installer. This command:
-      - Loads the recipe configuration
-      - Finds the downloaded installer in downloads directory
-      - Extracts version from the installer file (filesystem is truth)
-      - Downloads/caches the specified PSADT release
-      - Creates build directory structure
-      - Copies PSADT files pristine from cache
-      - Generates Invoke-AppDeployToolkit.ps1 with recipe values
-      - Copies installer to Files/ directory
-      - Applies custom branding
+    Builds a PSADT package from a recipe and downloaded installer. This command
+    loads the recipe configuration, finds the downloaded installer, extracts
+    version from the installer file (filesystem is truth), downloads/caches
+    the specified PSADT release, creates build directory structure, copies
+    PSADT files pristine from cache, generates Invoke-AppDeployToolkit.ps1
+    with recipe values, copies installer to Files/ directory, and applies
+    custom branding.
 
     Args:
         args: Parsed command-line arguments containing
@@ -287,6 +267,7 @@ def cmd_build(args: argparse.Namespace) -> int:
         Creates build directory structure. Downloads PSADT release if not cached.
         Generates Invoke-AppDeployToolkit.ps1. Copies files to build directory.
         Prints progress and results to stdout.
+
     """
     # Set global verbose and debug flags
     set_verbose(args.verbose)
@@ -345,14 +326,13 @@ def cmd_build(args: argparse.Namespace) -> int:
 
 
 def cmd_package(args: argparse.Namespace) -> int:
-    """
-    Handler for 'napt package' command.
+    """Handler for 'napt package' command.
 
-    Creates a .intunewin package from a built PSADT directory. This command:
-      - Verifies the build directory has valid PSADT structure
-      - Downloads/caches IntuneWinAppUtil.exe if needed
-      - Runs IntuneWinAppUtil.exe to create .intunewin package
-      - Optionally cleans the source build directory after packaging
+    Creates a .intunewin package from a built PSADT directory. This command
+    verifies the build directory has valid PSADT structure, downloads/caches
+    IntuneWinAppUtil.exe if needed, runs IntuneWinAppUtil.exe to create
+    .intunewin package, and optionally cleans the source build directory
+    after packaging.
 
     Args:
         args: Parsed command-line arguments containing
@@ -365,6 +345,7 @@ def cmd_package(args: argparse.Namespace) -> int:
         Creates .intunewin file in output directory. Downloads IntuneWinAppUtil.exe
         if not cached. Optionally removes build directory if --clean-source.
         Prints progress and results to stdout.
+
     """
     # Set global verbose and debug flags
     set_verbose(args.verbose)
@@ -418,8 +399,7 @@ def cmd_package(args: argparse.Namespace) -> int:
 
 
 def main() -> None:
-    """
-    Main entry point for the napt CLI.
+    """Main entry point for the napt CLI.
 
     This function is registered as the 'napt' console script in pyproject.toml.
     """

@@ -47,6 +47,7 @@ Note:
     This is pure string extraction; no network calls are made. The extracted
     version is not validated for format. Empty version strings will raise
     ValueError. Regex compilation errors propagate as-is.
+
 """
 
 from __future__ import annotations
@@ -98,6 +99,7 @@ def version_from_regex_in_url(
             pattern = r"[0-9]+\\.[0-9]+\\.[0-9]+"
             discovered = version_from_regex_in_url(url, pattern)
             # discovered.version == '1.2.3'
+
     """
     from notapkgtool.cli import print_debug, print_verbose
 

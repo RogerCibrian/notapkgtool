@@ -1,5 +1,4 @@
-"""
-Robust HTTP(S) file download for NAPT.
+"""Robust HTTP(S) file download for NAPT.
 
 This module provides production-grade file downloading with features designed
 for reliability, reproducibility, and efficiency in automated packaging workflows.
@@ -22,56 +21,54 @@ Constants:
 - DEFAULT_CHUNK (int): Stream chunk size (1 MiB). Balance memory vs. progress granularity.
 
 Example:
-Basic download:
+    Basic download:
 
-    >>> from pathlib import Path
-    >>> from notapkgtool.io import download_file
-    >>> path, sha256, headers = download_file(
-    ...     url="https://example.com/installer.msi",
-    ...     destination_folder=Path("./downloads"),
-    ... )
-    >>> print(f"Downloaded to {path}")
-    >>> print(f"SHA-256: {sha256}")
+        from pathlib import Path
+        from notapkgtool.io import download_file
 
-Conditional download (avoid re-downloading):
+        path, sha256, headers = download_file(
+            url="https://example.com/installer.msi",
+            destination_folder=Path("./downloads"),
+        )
+        print(f"Downloaded to {path}")
+        print(f"SHA-256: {sha256}")
 
-    >>> try:
-    ...     path, sha256, headers = download_file(
-    ...         url="https://example.com/installer.msi",
-    ...         destination_folder=Path("./downloads"),
-    ...         etag=previous_etag,
-    ...     )
-    ... except NotModifiedError:
-    ...     print("File unchanged, using cached version")
+    Conditional download (avoid re-downloading):
 
-Checksum validation:
+        from notapkgtool.io import NotModifiedError
 
-    >>> try:
-    ...     path, sha256, headers = download_file(
-    ...         url="https://example.com/installer.msi",
-    ...         destination_folder=Path("./downloads"),
-    ...         expected_sha256="abc123...",
-    ...     )
-    ... except ValueError as e:
-    ...     print(f"Checksum mismatch: {e}")
+        try:
+            path, sha256, headers = download_file(
+                url="https://example.com/installer.msi",
+                destination_folder=Path("./downloads"),
+                etag=previous_etag,
+            )
+        except NotModifiedError:
+            print("File unchanged, using cached version")
+
+    Checksum validation:
+
+        try:
+            path, sha256, headers = download_file(
+                url="https://example.com/installer.msi",
+                destination_folder=Path("./downloads"),
+                expected_sha256="abc123...",
+            )
+        except ValueError as e:
+            print(f"Checksum mismatch: {e}")
 
 Design Decisions:
-- **Why identity encoding?** CDNs like Cloudflare compute representation-specific
-  ETags. Requesting gzip vs identity yields different ETags for the same content,
-  causing unnecessary re-downloads. We pin to identity for stability.
 
-- **Why atomic writes?** Prevents partial files from appearing in the destination.
-  Critical for automation where another process might start using a file before
-  download completes.
+- **Why identity encoding?** CDNs like Cloudflare compute representation-specific ETags. Requesting gzip vs identity yields different ETags for the same content, causing unnecessary re-downloads. We pin to identity for stability.
+- **Why atomic writes?** Prevents partial files from appearing in the destination. Critical for automation where another process might start using a file before download completes.
+- **Why stream hashing?** Computing SHA-256 while streaming avoids a second file read, improving I/O efficiency especially for large installers.
 
-- **Why stream hashing?** Computing SHA-256 while streaming avoids a second
-  file read, improving I/O efficiency especially for large installers.
-
-Notes:
+Note:
 - Progress output goes to stdout (can be captured/redirected)
 - User-Agent identifies NAPT to help with debugging/support
 - All HTTP errors are chained for better debugging
 - Timeouts are per-request, not total download time
+
 """
 
 from __future__ import annotations
@@ -91,15 +88,13 @@ DEFAULT_CHUNK = 1024 * 1024
 
 
 class NotModifiedError(Exception):
-    """
-    Raised when a conditional request (If-None-Match / If-Modified-Since)
+    """Raised when a conditional request (If-None-Match / If-Modified-Since)
     returns HTTP 304 Not Modified. Caller can treat this as "no work to do".
     """
 
 
 def _filename_from_cd(content_disposition: str) -> str | None:
-    """
-    Extract a filename from a Content-Disposition header if present.
+    """Extract a filename from a Content-Disposition header if present.
 
     Example header:
       'attachment; filename="setup.msi"'
@@ -115,17 +110,13 @@ def _filename_from_cd(content_disposition: str) -> str | None:
 
 
 def _filename_from_url(url: str) -> str:
-    """
-    Derive a filename from the URL path. Fallback to a generic name if empty.
-    """
+    """Derive a filename from the URL path. Fallback to a generic name if empty."""
     name = Path(urlparse(url).path).name
     return name or "download.bin"
 
 
 def _sha256_iter(chunks: Iterable[bytes]) -> str:
-    """
-    Compute SHA-256 from an iterator of byte chunks (stream-friendly).
-    """
+    """Compute SHA-256 from an iterator of byte chunks (stream-friendly)."""
     h = hashlib.sha256()
     for c in chunks:
         h.update(c)
@@ -133,8 +124,7 @@ def _sha256_iter(chunks: Iterable[bytes]) -> str:
 
 
 def make_session() -> requests.Session:
-    """
-    Create a requests.Session with sane retry/backoff defaults.
+    """Create a requests.Session with sane retry/backoff defaults.
 
     - Retries on common transient status codes.
     - Applies exponential backoff.
@@ -208,6 +198,7 @@ def download_file(
         NotModifiedError: On HTTP 304 (conditional request satisfied).
         requests.HTTPError: For non-2xx responses (after retries).
         ValueError: For content-type mismatch or checksum mismatch.
+
     """
     from notapkgtool.cli import print_verbose
 

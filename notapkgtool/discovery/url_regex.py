@@ -1,11 +1,11 @@
-"""
-URL regex discovery strategy for NAPT.
+"""URL regex discovery strategy for NAPT.
 
 This is a VERSION-FIRST strategy that extracts version information directly
 from the download URL using regular expressions, WITHOUT downloading. This
 enables instant version checks and efficient caching.
 
 Key Advantages:
+
 - Instant version discovery (regex only, zero network calls)
 - Can skip downloads entirely when version unchanged
 - Works with any file type (MSI, EXE, DMG, etc.)
@@ -13,53 +13,35 @@ Key Advantages:
 - Ideal for CI/CD with scheduled checks
 
 Supported Version Extraction:
+
 - regex_in_url: Extract version from URL using a regex pattern
   - Supports named capture groups: (?P<version>...)
   - Falls back to full match if no named group
 
 Use Cases:
-- Vendors with version-encoded download URLs
-  Example: https://vendor.com/app-v1.2.3-installer.msi
-- API endpoints that return version-specific download links
-  Example: https://api.vendor.com/download/2024.10.28/setup.exe
+
+- Vendors with version-encoded download URLs (e.g., https://vendor.com/app-v1.2.3-installer.msi)
+- API endpoints that return version-specific download links (e.g., https://api.vendor.com/download/2024.10.28/setup.exe)
 - URLs with predictable version patterns in the path
 - CI/CD pipelines with frequent version checks
 
 Recipe Configuration:
-source:
-  strategy: url_regex
-  url: "https://vendor.com/downloads/app-v1.2.3-setup.msi"
-  version:
-    type: regex_in_url
-    pattern: "app-v(?P<version>[0-9.]+)-setup"
+
+    source:
+      strategy: url_regex
+      url: "https://vendor.com/downloads/app-v1.2.3-setup.msi"
+      version:
+        type: regex_in_url
+        pattern: "app-v(?P<version>[0-9.]+)-setup"
 
 The pattern supports full Python regex syntax. Use a named capture group
 (?P<version>) to extract only the version portion, or let the entire match
 be used as the version.
 
-Workflow (Version-First):
-    1. Extract version from URL using regex pattern (instant)
-    2. Create VersionInfo with version and download URL
-    3. Core orchestration compares version to cache
-    4. If match and file exists -> skip download entirely
-    5. If changed or missing -> download from URL
-
 Error Handling:
-    - ValueError: Missing or invalid configuration fields, pattern doesn't match
-    - re.error: Invalid regex patterns (propagates from regex compilation)
 
-Architecture (Version-First vs File-First):
-    - **url_regex (VERSION-FIRST)**: Extracts version from URL before download
-      - Method: get_version_info() -> VersionInfo
-      - Pros: Instant checks, can skip downloads when unchanged
-      - Cons: Requires predictable URL patterns
-      - Best for: Version-encoded URLs, frequent update checks
-
-    - **http_static (FILE-FIRST)**: Downloads file first, then extracts version
-      - Method: discover_version() -> tuple with DiscoveredVersion
-      - Pros: Works with any URL, accurate version from installer
-      - Cons: Must download to know version
-      - Best for: Fixed URLs with embedded version metadata
+- ValueError: Missing or invalid configuration fields, pattern doesn't match
+- re.error: Invalid regex patterns (propagates from regex compilation)
 
 Example:
 In a recipe YAML:
@@ -110,12 +92,12 @@ From Python (using core orchestration):
     result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
     print(f"Version {result['version']} at {result['file_path']}")
 
-Notes:
-- Version extraction happens WITHOUT download (instant)
-- Core orchestration automatically skips download if version unchanged
-- The URL pattern must be stable and predictable
-- Pattern matching is case-sensitive by default (use (?i) for case-insensitive)
-- Consider http_static if URLs don't contain version information
+Note:
+    - Version extraction happens WITHOUT download (instant)
+    - Core orchestration automatically skips download if version unchanged
+    - The URL pattern must be stable and predictable
+    - Pattern matching is case-sensitive by default (use (?i) for case-insensitive)
+    - Consider http_static if URLs don't contain version information
 """
 
 from __future__ import annotations
@@ -169,19 +151,21 @@ class UrlRegexStrategy:
                 the regex pattern doesn't match the URL.
 
         Example:
-            >>> strategy = UrlRegexStrategy()
-            >>> config = {
-            ...     "source": {
-            ...         "url": "https://vendor.com/app-v1.0.0.msi",
-            ...         "version": {
-            ...             "type": "regex_in_url",
-            ...             "pattern": "app-v(?P<version>[0-9.]+)\\\\.msi"
-            ...         }
-            ...     }
-            ... }
-            >>> version_info = strategy.get_version_info(config)
-            >>> version_info.version
-            '1.0.0'
+            Extract version from URL using regex:
+
+                strategy = UrlRegexStrategy()
+                config = {
+                    "source": {
+                        "url": "https://vendor.com/app-v1.0.0.msi",
+                        "version": {
+                            "type": "regex_in_url",
+                            "pattern": "app-v(?P<version>[0-9.]+)\\\\.msi"
+                        }
+                    }
+                }
+                version_info = strategy.get_version_info(config)
+                # version_info.version returns: '1.0.0'
+
         """
         from notapkgtool.cli import print_verbose
 
@@ -242,6 +226,7 @@ class UrlRegexStrategy:
 
         Returns:
             List of error messages (empty if valid).
+
         """
         errors = []
         source = app_config.get("source", {})

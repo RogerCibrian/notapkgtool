@@ -1,5 +1,4 @@
-"""
-Deployment policy and update management for NAPT.
+"""Deployment policy and update management for NAPT.
 
 This module provides policy enforcement for application updates including
 version comparison strategies, hash-based change detection, and deployment
@@ -31,6 +30,7 @@ Example:
         policy=policy,
     )
     print(f"Should stage: {stage_it}")  # True
+
 """
 
 # Future: Import when updates.py is fully implemented

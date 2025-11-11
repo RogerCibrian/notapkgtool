@@ -1,5 +1,4 @@
-"""
-Version comparison and extraction utilities for NAPT.
+"""Version comparison and extraction utilities for NAPT.
 
 This package provides tools for comparing version strings and extracting
 version information from binary files (MSI, EXE). It supports multiple
@@ -15,16 +14,12 @@ url_regex : module
     Extract versions from URLs using regex patterns.
 
 Public API:
-DiscoveredVersion : dataclass
-    Container for discovered version information with source tracking.
-SourceHint : Literal type
-    Type hint for version source ("msi", "exe", or "string").
-compare_any : function
-    Compare two version strings, returning -1, 0, or 1.
-is_newer_any : function
-    Check if a remote version is newer than the current version.
-version_key_any : function
-    Generate a sortable key for any version string.
+
+- DiscoveredVersion: Container for discovered version information with source tracking
+- SourceHint: Type hint for version source ("msi", "exe", or "string")
+- compare_any: Compare two version strings, returning -1, 0, or 1
+- is_newer_any: Check if a remote version is newer than the current version
+- version_key_any: Generate a sortable key for any version string
 
 Version Comparison Strategies:
 The versioning system supports multiple comparison modes:
@@ -43,33 +38,38 @@ The versioning system supports multiple comparison modes:
    - Fallback string comparison for non-version-like strings
    - Useful for build IDs, timestamps, etc.
 
-Examples:
-Basic version comparison:
+Example:
+    Basic version comparison:
 
-    >>> from notapkgtool.versioning import compare_any, is_newer_any
-    >>> compare_any("1.2.0", "1.1.9")  # semver mode
-    1
-    >>> is_newer_any("1.2.0", "1.1.9")
-    True
+        from notapkgtool.versioning import compare_any, is_newer_any
 
-Prerelease handling:
+        # Compare versions (returns 1 for newer, 0 for equal, -1 for older)
+        result = compare_any("1.2.0", "1.1.9")  # Returns: 1
 
-    >>> compare_any("1.0.0-rc.1", "1.0.0-beta.5")
-    1  # rc > beta
-    >>> compare_any("1.0.0", "1.0.0-rc.1")
-    1  # release > prerelease
+        # Check if version is newer
+        is_newer = is_newer_any("1.2.0", "1.1.9")  # Returns: True
 
-MSI version extraction:
+    Prerelease handling:
 
-    >>> from notapkgtool.versioning.msi import version_from_msi_product_version
-    >>> discovered = version_from_msi_product_version("installer.msi")
-    >>> print(discovered.version)
-    1.2.3
+        # rc is newer than beta
+        compare_any("1.0.0-rc.1", "1.0.0-beta.5")  # Returns: 1
 
-Notes:
-- Version comparison is format-agnostic: no network or file I/O
-- MSI extraction works cross-platform with appropriate backends
-- Prerelease ordering follows common conventions but allows custom tags
+        # Release is newer than prerelease
+        compare_any("1.0.0", "1.0.0-rc.1")  # Returns: 1
+
+    MSI version extraction:
+
+        from pathlib import Path
+        from notapkgtool.versioning.msi import version_from_msi_product_version
+
+        discovered = version_from_msi_product_version(Path("installer.msi"))
+        print(discovered.version)  # e.g., "1.2.3"
+
+Note:
+    - Version comparison is format-agnostic: no network or file I/O
+    - MSI extraction works cross-platform with appropriate backends
+    - Prerelease ordering follows common conventions but allows custom tags
+
 """
 
 from .keys import (

@@ -1,5 +1,4 @@
-"""
-Recipe validation module.
+"""Recipe validation module.
 
 This module provides validation functions for checking recipe syntax and
 configuration without making network calls or downloading files. This is
@@ -14,15 +13,19 @@ Validation Checks:
 - Discovery strategy exists and is registered
 - Strategy-specific configuration is valid
 
-Usage Example:
->>> from notapkgtool.validation import validate_recipe
->>> from pathlib import Path
->>> result = validate_recipe(Path("recipes/Google/chrome.yaml"))
->>> if result["status"] == "valid":
-...     print(f"Recipe is valid with {result['app_count']} app(s)")
-... else:
-...     for error in result["errors"]:
-...         print(f"Error: {error}")
+Example:
+    Validate a recipe and handle results:
+
+        from pathlib import Path
+        from notapkgtool.validation import validate_recipe
+
+        result = validate_recipe(Path("recipes/Google/chrome.yaml"))
+        if result["status"] == "valid":
+            print(f"Recipe is valid with {result['app_count']} app(s)")
+        else:
+            for error in result["errors"]:
+                print(f"Error: {error}")
+
 """
 
 from __future__ import annotations
@@ -73,12 +76,17 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> dict[str, Any]:
             path to the validated recipe.
 
     Example:
-        >>> result = validate_recipe(Path("recipes/app.yaml"))
-        >>> if result["status"] == "valid":
-        ...     print("Recipe is valid!")
-        >>> else:
-        ...     for error in result["errors"]:
-        ...         print(f"Error: {error}")
+        Validate a recipe and check results:
+
+            from pathlib import Path
+
+            result = validate_recipe(Path("recipes/app.yaml"))
+            if result["status"] == "valid":
+                print("Recipe is valid!")
+            else:
+                for error in result["errors"]:
+                    print(f"Error: {error}")
+
     """
     errors = []
     warnings = []

@@ -1,32 +1,34 @@
-"""
-GitHub releases discovery strategy for NAPT.
+"""GitHub releases discovery strategy for NAPT.
 
 This is a VERSION-FIRST strategy that queries the GitHub API to get version
 and download URL WITHOUT downloading the installer. This enables fast version
 checks and efficient caching.
 
 Key Advantages:
-    - Fast version discovery (GitHub API call ~100ms)
-    - Can skip downloads entirely when version unchanged
-    - Direct access to latest releases via stable GitHub API
-    - Version extraction from Git tags (semantic versioning friendly)
-    - Asset pattern matching for multi-platform releases
-    - Optional authentication for higher rate limits
-    - No web scraping required
-    - Ideal for CI/CD with scheduled checks
+
+- Fast version discovery (GitHub API call ~100ms)
+- Can skip downloads entirely when version unchanged
+- Direct access to latest releases via stable GitHub API
+- Version extraction from Git tags (semantic versioning friendly)
+- Asset pattern matching for multi-platform releases
+- Optional authentication for higher rate limits
+- No web scraping required
+- Ideal for CI/CD with scheduled checks
 
 Supported Version Extraction:
-    - Tag-based: Extract version from release tag names
-      - Supports named capture groups: (?P<version>...)
-      - Default pattern strips "v" prefix: v1.2.3 → 1.2.3
-      - Falls back to full tag if no pattern match
+
+- Tag-based: Extract version from release tag names
+  - Supports named capture groups: (?P<version>...)
+  - Default pattern strips "v" prefix: v1.2.3 → 1.2.3
+  - Falls back to full tag if no pattern match
 
 Use Cases:
-    - Open-source projects (Git, VS Code, Node.js, etc.)
-    - Projects with GitHub releases (Firefox, Chrome alternatives)
-    - Vendors who publish installers as release assets
-    - Projects with semantic versioned tags
-    - CI/CD pipelines with frequent version checks
+
+- Open-source projects (Git, VS Code, Node.js, etc.)
+- Projects with GitHub releases (Firefox, Chrome alternatives)
+- Vendors who publish installers as release assets
+- Projects with semantic versioned tags
+- CI/CD pipelines with frequent version checks
 
 Recipe Configuration:
 
@@ -39,15 +41,10 @@ Recipe Configuration:
       token: "${GITHUB_TOKEN}"                       # Optional: auth token
 
 Configuration Fields:
-    - **repo** (str, required): GitHub repository in "owner/name" format
-      (e.g., "git-for-windows/git").
-    - **asset_pattern** (str, optional): Regular expression to match asset filename.
-      If multiple assets match, the first match is used. If omitted, the first
-      asset is selected. Example: ".*-x64\\.msi$" matches assets ending with "-x64.msi"
-    - **version_pattern** (str, optional): Regular expression to extract version from
-      the release tag name. Use a named capture group (?P<version>...) or the
-      entire match. Default: "v?([0-9.]+)" strips optional "v" prefix.
-      Example: "release-([0-9.]+)" for tags like "release-1.2.3"
+
+- **repo** (str, required): GitHub repository in "owner/name" format (e.g., "git-for-windows/git")
+- **asset_pattern** (str, optional): Regular expression to match asset filename. If multiple assets match, the first match is used. If omitted, the first asset is selected. Example: ".*-x64\\.msi$" matches assets ending with "-x64.msi"
+- **version_pattern** (str, optional): Regular expression to extract version from the release tag name. Use a named capture group (?P<version>...) or the entire match. Default: "v?([0-9.]+)" strips optional "v" prefix. Example: "release-([0-9.]+)" for tags like "release-1.2.3"
     - **prerelease** (bool, optional): If True, include pre-release versions. If False
       (default), only stable releases are considered. Uses GitHub's prerelease flag.
     - **token** (str, optional): GitHub personal access token for authentication.
@@ -55,24 +52,17 @@ Configuration Fields:
       variable substitution: "${GITHUB_TOKEN}". No special permissions needed for
       public repositories.
 
-Workflow (Version-First):
-    1. Call GitHub API: GET /repos/{owner}/{repo}/releases/latest (~100ms)
-    2. Extract version from release tag using version_pattern
-    3. Find matching asset using asset_pattern (or first asset)
-    4. Create VersionInfo with version and download URL
-    5. Core orchestration compares version to cache
-    6. If match and file exists -> skip download entirely
-    7. If changed or missing -> download from URL
-
 Error Handling:
-    - ValueError: Missing or invalid configuration fields
-    - RuntimeError: API failures, no releases, no matching assets
-    - Errors are chained with 'from err' for better debugging
+
+- ValueError: Missing or invalid configuration fields
+- RuntimeError: API failures, no releases, no matching assets
+- Errors are chained with 'from err' for better debugging
 
 Rate Limits:
-    - Unauthenticated: 60 requests/hour per IP
-    - Authenticated: 5000 requests/hour per token
-    - Tip: Use a token for production use or frequent checks
+
+- Unauthenticated: 60 requests/hour per IP
+- Authenticated: 5000 requests/hour per token
+- Tip: Use a token for production use or frequent checks
 
 Example:
     In a recipe YAML:
@@ -126,6 +116,7 @@ Note:
     The GitHub API is stable and well-documented. Releases are fetched in order
     (latest first). Asset matching is case-sensitive by default (use (?i) for
     case-insensitive). Consider http_static if you need a direct download URL instead.
+
 """
 
 from __future__ import annotations
@@ -184,16 +175,18 @@ class GithubReleaseStrategy:
             RuntimeError: If API call fails or release has no assets.
 
         Example:
-            >>> strategy = GithubReleaseStrategy()
-            >>> config = {
-            ...     "source": {
-            ...         "repo": "owner/repo",
-            ...         "asset_pattern": ".*\\.msi$"
-            ...     }
-            ... }
-            >>> version_info = strategy.get_version_info(config)
-            >>> version_info.version
-            '1.0.0'
+            Get version from GitHub releases:
+
+                strategy = GithubReleaseStrategy()
+                config = {
+                    "source": {
+                        "repo": "owner/repo",
+                        "asset_pattern": ".*\\.msi$"
+                    }
+                }
+                version_info = strategy.get_version_info(config)
+                # version_info.version returns: '1.0.0'
+
         """
         from notapkgtool.cli import print_verbose
 
@@ -375,6 +368,7 @@ class GithubReleaseStrategy:
 
         Returns:
             List of error messages (empty if valid).
+
         """
         errors = []
         source = app_config.get("source", {})

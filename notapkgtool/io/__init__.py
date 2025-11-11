@@ -1,5 +1,4 @@
-"""
-Input/Output operations for NAPT.
+"""Input/Output operations for NAPT.
 
 This module provides robust file download and upload capabilities with
 features like conditional requests, retry logic, atomic writes, and
@@ -26,6 +25,7 @@ Example:
         destination_folder=Path("./downloads"),
     )
     print(f"Downloaded to {file_path} with hash {sha256}")
+
 """
 
 from .download import NotModifiedError, download_file, make_session

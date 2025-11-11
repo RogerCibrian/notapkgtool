@@ -56,6 +56,7 @@ Note:
     query the MSI Property table for ProductVersion. The PowerShell approach
     uses COM (WindowsInstaller.Installer). Errors are chained for debugging
     (check 'from err' clause).
+
 """
 
 from __future__ import annotations
@@ -78,11 +79,9 @@ def version_from_msi_product_version(
 ) -> DiscoveredVersion:
     """Extract ProductVersion from an MSI file.
 
-    Backends (tried in order):
-    - Windows: 'msilib' from Python standard library (Python 3.11+).
-    - Windows: CPython '_msi' extension (alternative).
-    - Elsewhere: 'msiinfo' from 'msitools' if available in PATH.
-    - If none available, raises NotImplementedError.
+    Uses cross-platform backends to read the MSI Property table. On Windows,
+    tries msilib (Python 3.11+), _msi extension, then PowerShell COM API as
+    universal fallback. On Linux/macOS, requires msitools package.
 
     Args:
         file_path: Path to the MSI file.
@@ -98,6 +97,7 @@ def version_from_msi_product_version(
         FileNotFoundError: If the MSI file doesn't exist.
         RuntimeError: If version extraction fails.
         NotImplementedError: If no extraction backend is available on this system.
+
     """
     from notapkgtool.cli import print_debug, print_verbose
 

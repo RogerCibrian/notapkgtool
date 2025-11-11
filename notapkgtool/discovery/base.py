@@ -1,16 +1,18 @@
 """Discovery strategy base protocol and registry for NAPT.
 
 This module defines the foundational components for the discovery system:
-  - DiscoveryStrategy protocol: Interface that all strategies must implement
-  - Strategy registry: Global dict mapping strategy names to implementations
-  - Registration and lookup functions: register_strategy() and get_strategy()
+
+- DiscoveryStrategy protocol: Interface that all strategies must implement
+- Strategy registry: Global dict mapping strategy names to implementations
+- Registration and lookup functions: register_strategy() and get_strategy()
 
 The discovery system uses a strategy pattern to support multiple ways
 of obtaining application installers and their versions:
-  - http_static: Direct download from a static URL
-  - url_regex: Parse version from URL patterns using regex
-  - github_release: Fetch from GitHub releases API
-  - http_json: Query JSON API endpoints with JSONPath
+
+- http_static: Direct download from a static URL
+- url_regex: Parse version from URL patterns using regex
+- github_release: Fetch from GitHub releases API
+- http_json: Query JSON API endpoints with JSONPath
 
 Design Philosophy:
     - Strategies are Protocol classes (structural subtyping, not inheritance)
@@ -19,10 +21,12 @@ Design Philosophy:
     - Each strategy is stateless and can be instantiated on-demand
 
 Protocol Benefits:
-    Using typing.Protocol instead of ABC allows:
-      - Duck typing: Classes don't need explicit inheritance
-      - Better IDE support: Type checkers verify interface compliance
-      - Flexibility: Third-party code can add strategies without touching base
+
+Using typing.Protocol instead of ABC allows:
+
+- Duck typing: Classes don't need explicit inheritance
+- Better IDE support: Type checkers verify interface compliance
+- Flexibility: Third-party code can add strategies without touching base
 
 Example:
     Implementing a custom strategy:
@@ -46,6 +50,7 @@ Example:
         # source:
         #   strategy: my_custom
         #   ...
+
 """
 
 from __future__ import annotations
@@ -89,6 +94,7 @@ class DiscoveryStrategy(Protocol):
         Raises:
             ValueError: On discovery or download failures.
             RuntimeError: On discovery or download failures.
+
         """
         ...
 
@@ -122,6 +128,7 @@ class DiscoveryStrategy(Protocol):
             Should NOT make network calls or download files. Should check field
             presence, types, and format only. Used by 'napt validate' command
             for fast recipe checking.
+
         """
         ...
 
@@ -164,6 +171,7 @@ def register_strategy(name: str, strategy_class: type[DiscoveryStrategy]) -> Non
         No validation is performed at registration time. Type checkers will
         verify protocol compliance at static analysis time. Runtime errors
         occur at strategy instantiation or invocation.
+
     """
     _STRATEGY_REGISTRY[name] = strategy_class
 
@@ -205,6 +213,7 @@ def get_strategy(name: str) -> DiscoveryStrategy:
         Strategies must be registered before they can be retrieved. The
         http_static strategy is auto-registered when imported. New strategies
         can be added by creating a module and registering.
+
     """
     if name not in _STRATEGY_REGISTRY:
         available = ", ".join(_STRATEGY_REGISTRY.keys())

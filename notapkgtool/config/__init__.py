@@ -1,5 +1,4 @@
-"""
-Configuration loading and management for NAPT.
+"""Configuration loading and management for NAPT.
 
 This module provides tools for loading, merging, and validating YAML-based
 configuration files with a layered approach:
@@ -12,8 +11,8 @@ lists/scalars are replaced (last wins). Relative paths are resolved against
 the recipe file location for relocatability.
 
 Public API:
-load_effective_config : function
-    Load and merge configuration for a recipe.
+
+- load_effective_config: Load and merge configuration for a recipe
 
 Example:
     Basic usage:
@@ -24,6 +23,7 @@ Example:
         config = load_effective_config(Path("recipes/Google/chrome.yaml"))
         first_app = config.get("apps", [])[0]
         print(first_app["name"])  # "Google Chrome"
+
 """
 
 from .loader import load_effective_config
