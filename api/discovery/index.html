@@ -933,31 +933,31 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#notapkgtool.discovery.url_pattern" class="md-nav__link">
+  <a href="#notapkgtool.discovery.web_scrape" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;url_pattern
+        <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;web_scrape
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label=" url_pattern">
+    <nav class="md-nav" aria-label=" web_scrape">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.discovery.url_pattern.UrlPatternStrategy" class="md-nav__link">
+  <a href="#notapkgtool.discovery.web_scrape.WebScrapeStrategy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;UrlPatternStrategy
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;WebScrapeStrategy
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label=" UrlPatternStrategy">
+    <nav class="md-nav" aria-label=" WebScrapeStrategy">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.discovery.url_pattern.UrlPatternStrategy.get_version_info" class="md-nav__link">
+  <a href="#notapkgtool.discovery.web_scrape.WebScrapeStrategy.get_version_info" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_version_info
@@ -968,7 +968,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.discovery.url_pattern.UrlPatternStrategy.validate_config" class="md-nav__link">
+  <a href="#notapkgtool.discovery.web_scrape.WebScrapeStrategy.validate_config" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;validate_config
@@ -1506,31 +1506,31 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#notapkgtool.discovery.url_pattern" class="md-nav__link">
+  <a href="#notapkgtool.discovery.web_scrape" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;url_pattern
+        <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;web_scrape
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label=" url_pattern">
+    <nav class="md-nav" aria-label=" web_scrape">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.discovery.url_pattern.UrlPatternStrategy" class="md-nav__link">
+  <a href="#notapkgtool.discovery.web_scrape.WebScrapeStrategy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;UrlPatternStrategy
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;WebScrapeStrategy
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label=" UrlPatternStrategy">
+    <nav class="md-nav" aria-label=" WebScrapeStrategy">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.discovery.url_pattern.UrlPatternStrategy.get_version_info" class="md-nav__link">
+  <a href="#notapkgtool.discovery.web_scrape.WebScrapeStrategy.get_version_info" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_version_info
@@ -1541,7 +1541,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.discovery.url_pattern.UrlPatternStrategy.validate_config" class="md-nav__link">
+  <a href="#notapkgtool.discovery.web_scrape.WebScrapeStrategy.validate_config" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;validate_config
@@ -1698,7 +1698,7 @@
 <p>NAPT supports two types of discovery strategies:</p>
 <ul>
 <li>
-<p><strong>Version-First Strategies</strong> (url_pattern, api_github, api_json): Discover version without downloading, enabling instant update checks and the ability to skip downloads entirely when versions are unchanged.</p>
+<p><strong>Version-First Strategies</strong> (web_scrape, api_github, api_json): Discover version without downloading, enabling fast update checks (~100-300ms) and the ability to skip downloads entirely when versions are unchanged.</p>
 </li>
 <li>
 <p><strong>File-First Strategy</strong> (url_download): Must download file to extract version, uses HTTP ETag conditional requests for optimization.</p>
@@ -2836,8 +2836,8 @@ print(f"Version {result['version']} at {result['file_path']}")
 <li>Core orchestration automatically provides cached ETag if available</li>
 <li>Server must support ETag or Last-Modified headers for optimization</li>
 <li>If server doesn't support conditional requests, full download occurs every time</li>
-<li>Consider version-first strategies (url_pattern, api_github, api_json) for
-  better performance when version available via API or URL pattern</li>
+<li>Consider version-first strategies (web_scrape, api_github, api_json) for
+  better performance when version available via web scraping or API</li>
 </ul>
 </details>
 
@@ -3966,76 +3966,116 @@ SHA-256 hash, and headers contains HTTP response headers.</p>
 
 
 
-<h2 id="notapkgtool.discovery.url_pattern" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-module"></code>            <span class="doc doc-object-name doc-module-name">notapkgtool.discovery.url_pattern</span>
+<h2 id="notapkgtool.discovery.web_scrape" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-module"></code>            <span class="doc doc-object-name doc-module-name">notapkgtool.discovery.web_scrape</span>
 
 
 </h2>
 
     <div class="doc doc-contents first">
 
-        <p>URL pattern discovery strategy for NAPT.</p>
-<p>This is a VERSION-FIRST strategy that extracts version information directly
-from the download URL using regular expressions, WITHOUT downloading. This
-enables instant version checks and efficient caching.</p>
+        <p>Web scraping discovery strategy for NAPT.</p>
+<p>This is a VERSION-FIRST strategy that scrapes vendor download pages to find
+download links and extract version information from those links. This enables
+version discovery for vendors that don't provide APIs or static URLs.</p>
 <p>Key Advantages:</p>
 <ul>
-<li>Instant version discovery (regex only, zero network calls)</li>
-<li>Can skip downloads entirely when version unchanged</li>
-<li>Works with any file type (MSI, EXE, DMG, etc.)</li>
-<li>No file parsing overhead</li>
-<li>Ideal for CI/CD with scheduled checks</li>
+<li>Discovers versions from vendor download pages</li>
+<li>Works for vendors without APIs or GitHub releases</li>
+<li>Version-first caching (can skip downloads when version unchanged)</li>
+<li>Supports both CSS selectors (recommended) and regex (fallback)</li>
+<li>No dependency on HTML structure stability (with good selectors)</li>
+<li>Handles relative and absolute URLs automatically</li>
 </ul>
-<p>Supported Version Extraction:</p>
+<p>Supported Link Finding:</p>
 <ul>
-<li>regex: Extract version from URL using a regex pattern</li>
-<li>Supports named capture groups: (?P<version>...)</li>
-<li>Falls back to full match if no named group</li>
+<li>CSS selectors: Modern, robust, recommended approach</li>
+<li>Regex patterns: Fallback for edge cases or when CSS won't work</li>
+</ul>
+<p>Version Extraction:</p>
+<ul>
+<li>Extract version from the discovered download URL using regex</li>
+<li>Support for captured groups with formatting</li>
+<li>Transform version numbers (e.g., "2501" -&gt; "25.01")</li>
 </ul>
 <p>Use Cases:</p>
 <ul>
-<li>Vendors with version-encoded download URLs (e.g., https://vendor.com/app-v1.2.3-installer.msi)</li>
-<li>API endpoints that return version-specific download links (e.g., https://api.vendor.com/download/2024.10.28/setup.exe)</li>
-<li>URLs with predictable version patterns in the path</li>
-<li>CI/CD pipelines with frequent version checks</li>
+<li>Vendors with download pages listing multiple versions (7-Zip, etc.)</li>
+<li>Legacy software without modern APIs</li>
+<li>Small vendors with simple download pages</li>
+<li>When GitHub releases and JSON APIs aren't available</li>
 </ul>
 <p>Recipe Configuration:</p>
 <pre><code>source:
-  strategy: url_pattern
-  url: "https://vendor.com/downloads/app-v1.2.3-setup.msi"
-  pattern: "app-v(?P&lt;version&gt;[0-9.]+)-setup"
+  strategy: web_scrape
+  page_url: "https://www.7-zip.org/download.html"
+  link_selector: 'a[href$="-x64.msi"]'        # CSS (recommended)
+  version_pattern: "7z(\d{2})(\d{2})-x64"   # Extract from URL
+  version_format: "{0}.{1}"                    # Transform to "25.01"
 </code></pre>
-<p>The pattern supports full Python regex syntax. Use a named capture group
-(?P<version>) to extract only the version portion, or let the entire match
-be used as the version.</p>
+<p>Alternative with regex:</p>
+<pre><code>source:
+  strategy: web_scrape
+  page_url: "https://vendor.com/downloads"
+  link_pattern: 'href="(/files/app-v[0-9.]+-x64\.msi)"'
+  version_pattern: "app-v([0-9.]+)-x64"
+</code></pre>
+<p>Configuration Fields:</p>
+<ul>
+<li><strong>page_url</strong> (str, required): URL of the page to scrape for download links</li>
+<li><strong>link_selector</strong> (str, optional): CSS selector to find download link. Recommended approach. Example: 'a[href$=".msi"]' finds links ending with .msi</li>
+<li><strong>link_pattern</strong> (str, optional): Regex pattern as fallback when CSS won't work. Must have one capture group for the URL. Example: 'href="([^"]*.msi)"'</li>
+<li><strong>version_pattern</strong> (str, required): Regex pattern to extract version from the discovered URL. Use capture groups to extract version parts. Example: "app-(\d+.\d+)" or "7z(\d{2})(\d{2})"</li>
+<li><strong>version_format</strong> (str, optional): Python format string to combine captured groups. Use {0}, {1}, etc. for groups. Example: "{0}.{1}" transforms captures "25", "01" into "25.01". Defaults to "{0}" (first capture group only).</li>
+</ul>
 <p>Error Handling:</p>
 <ul>
-<li>ValueError: Missing or invalid configuration fields, pattern doesn't match</li>
-<li>re.error: Invalid regex patterns (propagates from regex compilation)</li>
+<li>ValueError: Missing or invalid configuration fields</li>
+<li>RuntimeError: Page download failures, selector/pattern not found</li>
+<li>Errors are chained with 'from err' for better debugging</li>
+</ul>
+<p>Finding CSS Selectors:</p>
+<pre><code>Use browser DevTools:
+
+1. Open download page in Chrome/Edge/Firefox
+2. Right-click download link -&gt; Inspect
+3. Right-click highlighted element -&gt; Copy -&gt; Copy selector
+4. Simplify selector (e.g., 'a[href$=".msi"]' instead of complex nth-child)
+</code></pre>
+<p>Common CSS Patterns:</p>
+<ul>
+<li>'a[href$=".msi"]' - Links ending with .msi</li>
+<li>'a[href*="x64"]' - Links containing "x64"</li>
+<li>'a.download' - Links with class="download"</li>
+<li>'a[href$="-x64.msi"]:first-of-type' - First matching link</li>
 </ul>
 <p>Example:
 In a recipe YAML:</p>
 <pre><code>apps:
-  - name: "My App"
-    id: "my-app"
+  - name: "7-Zip"
+    id: "napt-7zip"
     source:
-      strategy: url_pattern
-      url: "https://example.com/myapp-v2.1.0-setup.msi"
-      pattern: "myapp-v(?P&lt;version&gt;[0-9.]+)-setup"
+      strategy: web_scrape
+      page_url: "https://www.7-zip.org/download.html"
+      link_selector: 'a[href$="-x64.msi"]'
+      version_pattern: "7z(\d{2})(\d{2})-x64"
+      version_format: "{0}.{1}"
 </code></pre>
 <p>From Python (version-first approach):</p>
-<pre><code>from notapkgtool.discovery.url_pattern import UrlPatternStrategy
+<pre><code>from notapkgtool.discovery.web_scrape import WebScrapeStrategy
 from notapkgtool.io import download_file
 
-strategy = UrlPatternStrategy()
+strategy = WebScrapeStrategy()
 app_config = {
     "source": {
-        "url": "https://example.com/app-v1.2.3.msi",
-        "pattern": r"app-v(?P&lt;version&gt;[0-9.]+)\.msi",
+        "page_url": "https://www.7-zip.org/download.html",
+        "link_selector": 'a[href$="-x64.msi"]',
+        "version_pattern": "7z(\d{2})(\d{2})-x64",
+        "version_format": "{0}.{1}",
     }
 }
 
-# Get version WITHOUT downloading
+# Get version WITHOUT downloading installer
 version_info = strategy.get_version_info(app_config)
 print(f"Latest version: {version_info.version}")
 
@@ -4059,11 +4099,13 @@ print(f"Version {result['version']} at {result['file_path']}")
 <details class="note" open>
   <summary>Note</summary>
   <ul>
-<li>Version extraction happens WITHOUT download (instant)</li>
+<li>Version discovery via web scraping (no installer download required)</li>
 <li>Core orchestration automatically skips download if version unchanged</li>
-<li>The URL pattern must be stable and predictable</li>
-<li>Pattern matching is case-sensitive by default (use (?i) for case-insensitive)</li>
-<li>Consider url_download if URLs don't contain version information</li>
+<li>CSS selectors are recommended (more robust than regex)</li>
+<li>Use browser DevTools to find selectors easily</li>
+<li>Selector should match exactly one link (first match is used)</li>
+<li>BeautifulSoup4 required for CSS selectors</li>
+<li>Regex fallback works without BeautifulSoup</li>
 </ul>
 </details>
 
@@ -4089,8 +4131,8 @@ print(f"Version {result['version']} at {result['file_path']}")
 
 
 
-<h3 id="notapkgtool.discovery.url_pattern.UrlPatternStrategy" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">UrlPatternStrategy</span>
+<h3 id="notapkgtool.discovery.web_scrape.WebScrapeStrategy" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">WebScrapeStrategy</span>
 
 
 </h3>
@@ -4100,15 +4142,16 @@ print(f"Version {result['version']} at {result['file_path']}")
 
 
 
-        <p>Discovery strategy for extracting version from URL patterns.</p>
+        <p>Discovery strategy for web scraping download pages.</p>
 
 
 <details class="configuration-example" open>
   <summary>Configuration example</summary>
   <p>source:
-  strategy: url_pattern
-  url: "https://vendor.com/app-v1.2.3-installer.msi"
-  pattern: "app-v(?P<version>[0-9.]+)-installer"</p>
+  strategy: web_scrape
+  page_url: "https://vendor.com/download.html"
+  link_selector: 'a[href$=".msi"]'
+  version_pattern: "app-v([0-9.]+)"</p>
 </details>
 
 
@@ -4118,56 +4161,8 @@ print(f"Version {result['version']} at {result['file_path']}")
 
 
               <details class="mkdocstrings-source">
-                <summary>Source code in <code>notapkgtool/discovery/url_pattern.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">106</span>
-<span class="normal">107</span>
-<span class="normal">108</span>
-<span class="normal">109</span>
-<span class="normal">110</span>
-<span class="normal">111</span>
-<span class="normal">112</span>
-<span class="normal">113</span>
-<span class="normal">114</span>
-<span class="normal">115</span>
-<span class="normal">116</span>
-<span class="normal">117</span>
-<span class="normal">118</span>
-<span class="normal">119</span>
-<span class="normal">120</span>
-<span class="normal">121</span>
-<span class="normal">122</span>
-<span class="normal">123</span>
-<span class="normal">124</span>
-<span class="normal">125</span>
-<span class="normal">126</span>
-<span class="normal">127</span>
-<span class="normal">128</span>
-<span class="normal">129</span>
-<span class="normal">130</span>
-<span class="normal">131</span>
-<span class="normal">132</span>
-<span class="normal">133</span>
-<span class="normal">134</span>
-<span class="normal">135</span>
-<span class="normal">136</span>
-<span class="normal">137</span>
-<span class="normal">138</span>
-<span class="normal">139</span>
-<span class="normal">140</span>
-<span class="normal">141</span>
-<span class="normal">142</span>
-<span class="normal">143</span>
-<span class="normal">144</span>
-<span class="normal">145</span>
-<span class="normal">146</span>
-<span class="normal">147</span>
-<span class="normal">148</span>
-<span class="normal">149</span>
-<span class="normal">150</span>
-<span class="normal">151</span>
-<span class="normal">152</span>
-<span class="normal">153</span>
-<span class="normal">154</span>
+                <summary>Source code in <code>notapkgtool/discovery/web_scrape.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">154</span>
 <span class="normal">155</span>
 <span class="normal">156</span>
 <span class="normal">157</span>
@@ -4250,14 +4245,210 @@ print(f"Version {result['version']} at {result['file_path']}")
 <span class="normal">234</span>
 <span class="normal">235</span>
 <span class="normal">236</span>
-<span class="normal">237</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">UrlPatternStrategy</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Discovery strategy for extracting version from URL patterns.</span>
+<span class="normal">237</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span>
+<span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
+<span class="normal">251</span>
+<span class="normal">252</span>
+<span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span>
+<span class="normal">257</span>
+<span class="normal">258</span>
+<span class="normal">259</span>
+<span class="normal">260</span>
+<span class="normal">261</span>
+<span class="normal">262</span>
+<span class="normal">263</span>
+<span class="normal">264</span>
+<span class="normal">265</span>
+<span class="normal">266</span>
+<span class="normal">267</span>
+<span class="normal">268</span>
+<span class="normal">269</span>
+<span class="normal">270</span>
+<span class="normal">271</span>
+<span class="normal">272</span>
+<span class="normal">273</span>
+<span class="normal">274</span>
+<span class="normal">275</span>
+<span class="normal">276</span>
+<span class="normal">277</span>
+<span class="normal">278</span>
+<span class="normal">279</span>
+<span class="normal">280</span>
+<span class="normal">281</span>
+<span class="normal">282</span>
+<span class="normal">283</span>
+<span class="normal">284</span>
+<span class="normal">285</span>
+<span class="normal">286</span>
+<span class="normal">287</span>
+<span class="normal">288</span>
+<span class="normal">289</span>
+<span class="normal">290</span>
+<span class="normal">291</span>
+<span class="normal">292</span>
+<span class="normal">293</span>
+<span class="normal">294</span>
+<span class="normal">295</span>
+<span class="normal">296</span>
+<span class="normal">297</span>
+<span class="normal">298</span>
+<span class="normal">299</span>
+<span class="normal">300</span>
+<span class="normal">301</span>
+<span class="normal">302</span>
+<span class="normal">303</span>
+<span class="normal">304</span>
+<span class="normal">305</span>
+<span class="normal">306</span>
+<span class="normal">307</span>
+<span class="normal">308</span>
+<span class="normal">309</span>
+<span class="normal">310</span>
+<span class="normal">311</span>
+<span class="normal">312</span>
+<span class="normal">313</span>
+<span class="normal">314</span>
+<span class="normal">315</span>
+<span class="normal">316</span>
+<span class="normal">317</span>
+<span class="normal">318</span>
+<span class="normal">319</span>
+<span class="normal">320</span>
+<span class="normal">321</span>
+<span class="normal">322</span>
+<span class="normal">323</span>
+<span class="normal">324</span>
+<span class="normal">325</span>
+<span class="normal">326</span>
+<span class="normal">327</span>
+<span class="normal">328</span>
+<span class="normal">329</span>
+<span class="normal">330</span>
+<span class="normal">331</span>
+<span class="normal">332</span>
+<span class="normal">333</span>
+<span class="normal">334</span>
+<span class="normal">335</span>
+<span class="normal">336</span>
+<span class="normal">337</span>
+<span class="normal">338</span>
+<span class="normal">339</span>
+<span class="normal">340</span>
+<span class="normal">341</span>
+<span class="normal">342</span>
+<span class="normal">343</span>
+<span class="normal">344</span>
+<span class="normal">345</span>
+<span class="normal">346</span>
+<span class="normal">347</span>
+<span class="normal">348</span>
+<span class="normal">349</span>
+<span class="normal">350</span>
+<span class="normal">351</span>
+<span class="normal">352</span>
+<span class="normal">353</span>
+<span class="normal">354</span>
+<span class="normal">355</span>
+<span class="normal">356</span>
+<span class="normal">357</span>
+<span class="normal">358</span>
+<span class="normal">359</span>
+<span class="normal">360</span>
+<span class="normal">361</span>
+<span class="normal">362</span>
+<span class="normal">363</span>
+<span class="normal">364</span>
+<span class="normal">365</span>
+<span class="normal">366</span>
+<span class="normal">367</span>
+<span class="normal">368</span>
+<span class="normal">369</span>
+<span class="normal">370</span>
+<span class="normal">371</span>
+<span class="normal">372</span>
+<span class="normal">373</span>
+<span class="normal">374</span>
+<span class="normal">375</span>
+<span class="normal">376</span>
+<span class="normal">377</span>
+<span class="normal">378</span>
+<span class="normal">379</span>
+<span class="normal">380</span>
+<span class="normal">381</span>
+<span class="normal">382</span>
+<span class="normal">383</span>
+<span class="normal">384</span>
+<span class="normal">385</span>
+<span class="normal">386</span>
+<span class="normal">387</span>
+<span class="normal">388</span>
+<span class="normal">389</span>
+<span class="normal">390</span>
+<span class="normal">391</span>
+<span class="normal">392</span>
+<span class="normal">393</span>
+<span class="normal">394</span>
+<span class="normal">395</span>
+<span class="normal">396</span>
+<span class="normal">397</span>
+<span class="normal">398</span>
+<span class="normal">399</span>
+<span class="normal">400</span>
+<span class="normal">401</span>
+<span class="normal">402</span>
+<span class="normal">403</span>
+<span class="normal">404</span>
+<span class="normal">405</span>
+<span class="normal">406</span>
+<span class="normal">407</span>
+<span class="normal">408</span>
+<span class="normal">409</span>
+<span class="normal">410</span>
+<span class="normal">411</span>
+<span class="normal">412</span>
+<span class="normal">413</span>
+<span class="normal">414</span>
+<span class="normal">415</span>
+<span class="normal">416</span>
+<span class="normal">417</span>
+<span class="normal">418</span>
+<span class="normal">419</span>
+<span class="normal">420</span>
+<span class="normal">421</span>
+<span class="normal">422</span>
+<span class="normal">423</span>
+<span class="normal">424</span>
+<span class="normal">425</span>
+<span class="normal">426</span>
+<span class="normal">427</span>
+<span class="normal">428</span>
+<span class="normal">429</span>
+<span class="normal">430</span>
+<span class="normal">431</span>
+<span class="normal">432</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">WebScrapeStrategy</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Discovery strategy for web scraping download pages.</span>
 
 <span class="sd">    Configuration example:</span>
 <span class="sd">        source:</span>
-<span class="sd">          strategy: url_pattern</span>
-<span class="sd">          url: &quot;https://vendor.com/app-v1.2.3-installer.msi&quot;</span>
-<span class="sd">          pattern: &quot;app-v(?P&lt;version&gt;[0-9.]+)-installer&quot;</span>
+<span class="sd">          strategy: web_scrape</span>
+<span class="sd">          page_url: &quot;https://vendor.com/download.html&quot;</span>
+<span class="sd">          link_selector: &#39;a[href$=&quot;.msi&quot;]&#39;</span>
+<span class="sd">          version_pattern: &quot;app-v([0-9.]+)&quot;</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">get_version_info</span><span class="p">(</span>
@@ -4266,19 +4457,20 @@ print(f"Version {result['version']} at {result['file_path']}")
         <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">debug</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VersionInfo</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Extract version from URL without downloading (version-first path).</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Scrape download page for version and URL without downloading (version-first path).</span>
 
-<span class="sd">        This method enables fast version checking by extracting the version</span>
-<span class="sd">        directly from the URL pattern. If the version matches cached state,</span>
-<span class="sd">        the download can be skipped entirely.</span>
+<span class="sd">        This method scrapes an HTML page, finds a download link using CSS selector</span>
+<span class="sd">        or regex, extracts the version from that link, and returns version info.</span>
+<span class="sd">        If the version matches cached state, the download can be skipped entirely.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            app_config: App configuration containing source.url and</span>
-<span class="sd">                source.pattern.</span>
+<span class="sd">            app_config: App configuration containing source.page_url,</span>
+<span class="sd">                source.link_selector or source.link_pattern, and</span>
+<span class="sd">                source.version_pattern.</span>
 <span class="sd">            verbose: If True, print verbose logging messages.</span>
-<span class="sd">                Default is False.</span>
+<span class="sd">                Defaults to False.</span>
 <span class="sd">            debug: If True, print debug logging messages.</span>
-<span class="sd">                Default is False.</span>
+<span class="sd">                Defaults to False.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Version info with version string, download URL, and</span>
@@ -4286,58 +4478,167 @@ print(f"Version {result['version']} at {result['file_path']}")
 
 <span class="sd">        Raises:</span>
 <span class="sd">            ValueError: If required config fields are missing, invalid, or if</span>
-<span class="sd">                the regex pattern doesn&#39;t match the URL.</span>
+<span class="sd">                selectors/patterns don&#39;t match anything.</span>
+<span class="sd">            RuntimeError: If page download fails (chained with &#39;from err&#39;).</span>
 
 <span class="sd">        Example:</span>
-<span class="sd">            Extract version from URL using regex:</span>
+<span class="sd">            Scrape 7-Zip download page:</span>
 
-<span class="sd">                strategy = UrlPatternStrategy()</span>
+<span class="sd">                strategy = WebScrapeStrategy()</span>
 <span class="sd">                config = {</span>
 <span class="sd">                    &quot;source&quot;: {</span>
-<span class="sd">                        &quot;url&quot;: &quot;https://vendor.com/app-v1.0.0.msi&quot;,</span>
-<span class="sd">                        &quot;pattern&quot;: &quot;app-v(?P&lt;version&gt;[0-9.]+)\\\\.msi&quot;</span>
+<span class="sd">                        &quot;page_url&quot;: &quot;https://www.7-zip.org/download.html&quot;,</span>
+<span class="sd">                        &quot;link_selector&quot;: &#39;a[href$=&quot;-x64.msi&quot;]&#39;,</span>
+<span class="sd">                        &quot;version_pattern&quot;: &quot;7z(\\d{2})(\\d{2})-x64&quot;,</span>
+<span class="sd">                        &quot;version_format&quot;: &quot;{0}.{1}&quot;</span>
 <span class="sd">                    }</span>
 <span class="sd">                }</span>
 <span class="sd">                version_info = strategy.get_version_info(config)</span>
-<span class="sd">                # version_info.version returns: &#39;1.0.0&#39;</span>
+<span class="sd">                # version_info.version returns: &#39;25.01&#39;</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_verbose</span>
 
         <span class="c1"># Validate configuration</span>
         <span class="n">source</span> <span class="o">=</span> <span class="n">app_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;source&quot;</span><span class="p">,</span> <span class="p">{})</span>
-        <span class="n">url</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">url</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;url_pattern strategy requires &#39;source.url&#39; in config&quot;</span><span class="p">)</span>
+        <span class="n">page_url</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;page_url&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">page_url</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;web_scrape strategy requires &#39;source.page_url&#39; in config&quot;</span><span class="p">)</span>
 
-        <span class="n">pattern</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pattern&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">pattern</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;url_pattern strategy requires &#39;source.pattern&#39; in config&quot;</span><span class="p">)</span>
+        <span class="n">link_selector</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;link_selector&quot;</span><span class="p">)</span>
+        <span class="n">link_pattern</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;link_pattern&quot;</span><span class="p">)</span>
 
-        <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="s2">&quot;Strategy: url_pattern (version-first)&quot;</span><span class="p">)</span>
-        <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Source URL: </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Pattern: </span><span class="si">{</span><span class="n">pattern</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-        <span class="c1"># Extract version from URL (no download needed!)</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">discovered</span> <span class="o">=</span> <span class="n">version_from_regex_in_url</span><span class="p">(</span>
-                <span class="n">url</span><span class="p">,</span> <span class="n">pattern</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="n">debug</span>
-            <span class="p">)</span>
-        <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">link_selector</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">link_pattern</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Failed to extract version from URL using pattern: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="s2">&quot;web_scrape strategy requires either &#39;source.link_selector&#39; or &quot;</span>
+                <span class="s2">&quot;&#39;source.link_pattern&#39; in config&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">version_pattern</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;version_pattern&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">version_pattern</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;web_scrape strategy requires &#39;source.version_pattern&#39; in config&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">version_format</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;version_format&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">{0}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="s2">&quot;Strategy: web_scrape (version-first)&quot;</span><span class="p">)</span>
+        <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Page URL: </span><span class="si">{</span><span class="n">page_url</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">link_selector</span><span class="p">:</span>
+            <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Link selector (CSS): </span><span class="si">{</span><span class="n">link_selector</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">link_pattern</span><span class="p">:</span>
+            <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Link pattern (regex): </span><span class="si">{</span><span class="n">link_pattern</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Version pattern: </span><span class="si">{</span><span class="n">version_pattern</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Download the HTML page</span>
+        <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Fetching page: </span><span class="si">{</span><span class="n">page_url</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">page_url</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">HTTPError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Failed to fetch page: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">reason</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">err</span>
+        <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">RequestException</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to fetch page: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">err</span>
+
+        <span class="n">html_content</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span>
+        <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Page fetched (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">html_content</span><span class="p">)</span><span class="si">}</span><span class="s2"> bytes)&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Find download link using CSS selector or regex</span>
+        <span class="n">download_url</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">link_selector</span><span class="p">:</span>
+            <span class="c1"># Use CSS selector with BeautifulSoup4</span>
+            <span class="n">soup</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">html_content</span><span class="p">,</span> <span class="s2">&quot;html.parser&quot;</span><span class="p">)</span>
+            <span class="n">element</span> <span class="o">=</span> <span class="n">soup</span><span class="o">.</span><span class="n">select_one</span><span class="p">(</span><span class="n">link_selector</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">element</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;CSS selector </span><span class="si">{</span><span class="n">link_selector</span><span class="si">!r}</span><span class="s2"> did not match any elements on page&quot;</span>
+                <span class="p">)</span>
+
+            <span class="c1"># Get href attribute</span>
+            <span class="n">href</span> <span class="o">=</span> <span class="n">element</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;href&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">href</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Element matched by </span><span class="si">{</span><span class="n">link_selector</span><span class="si">!r}</span><span class="s2"> has no href attribute&quot;</span>
+                <span class="p">)</span>
+
+            <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Found link via CSS: </span><span class="si">{</span><span class="n">href</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="c1"># Build absolute URL</span>
+            <span class="n">download_url</span> <span class="o">=</span> <span class="n">urljoin</span><span class="p">(</span><span class="n">page_url</span><span class="p">,</span> <span class="n">href</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">link_pattern</span><span class="p">:</span>
+            <span class="c1"># Use regex fallback</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">pattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">link_pattern</span><span class="p">)</span>
+                <span class="n">match</span> <span class="o">=</span> <span class="n">pattern</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">html_content</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">match</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Regex pattern </span><span class="si">{</span><span class="n">link_pattern</span><span class="si">!r}</span><span class="s2"> did not match anything on page&quot;</span>
+                    <span class="p">)</span>
+
+                <span class="c1"># Get first capture group or full match</span>
+                <span class="k">if</span> <span class="n">pattern</span><span class="o">.</span><span class="n">groups</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">href</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">href</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+                <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Found link via regex: </span><span class="si">{</span><span class="n">href</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+                <span class="c1"># Build absolute URL</span>
+                <span class="n">download_url</span> <span class="o">=</span> <span class="n">urljoin</span><span class="p">(</span><span class="n">page_url</span><span class="p">,</span> <span class="n">href</span><span class="p">)</span>
+
+            <span class="k">except</span> <span class="n">re</span><span class="o">.</span><span class="n">error</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Invalid link_pattern regex: </span><span class="si">{</span><span class="n">link_pattern</span><span class="si">!r}</span><span class="s2">&quot;</span>
+                <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">err</span>
+
+        <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Download URL: </span><span class="si">{</span><span class="n">download_url</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Extract version from the download URL</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">version_regex</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">version_pattern</span><span class="p">)</span>
+            <span class="n">match</span> <span class="o">=</span> <span class="n">version_regex</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">download_url</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">match</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Version pattern </span><span class="si">{</span><span class="n">version_pattern</span><span class="si">!r}</span><span class="s2"> did not match URL </span><span class="si">{</span><span class="n">download_url</span><span class="si">!r}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+
+            <span class="c1"># Get captured groups</span>
+            <span class="n">groups</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">groups</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">groups</span><span class="p">:</span>
+                <span class="c1"># No capture groups, use full match</span>
+                <span class="n">version_str</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Format using captured groups</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">version_str</span> <span class="o">=</span> <span class="n">version_format</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">groups</span><span class="p">)</span>
+                <span class="k">except</span> <span class="p">(</span><span class="ne">IndexError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">)</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;version_format </span><span class="si">{</span><span class="n">version_format</span><span class="si">!r}</span><span class="s2"> failed with groups </span><span class="si">{</span><span class="n">groups</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">err</span>
+
+        <span class="k">except</span> <span class="n">re</span><span class="o">.</span><span class="n">error</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Invalid version_pattern regex: </span><span class="si">{</span><span class="n">version_pattern</span><span class="si">!r}</span><span class="s2">&quot;</span>
             <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">err</span>
 
-        <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Discovered version: </span><span class="si">{</span><span class="n">discovered</span><span class="o">.</span><span class="n">version</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Extracted version: </span><span class="si">{</span><span class="n">version_str</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">VersionInfo</span><span class="p">(</span>
-            <span class="n">version</span><span class="o">=</span><span class="n">discovered</span><span class="o">.</span><span class="n">version</span><span class="p">,</span>
-            <span class="n">download_url</span><span class="o">=</span><span class="n">url</span><span class="p">,</span>
-            <span class="n">source</span><span class="o">=</span><span class="s2">&quot;url_pattern&quot;</span><span class="p">,</span>
+            <span class="n">version</span><span class="o">=</span><span class="n">version_str</span><span class="p">,</span>
+            <span class="n">download_url</span><span class="o">=</span><span class="n">download_url</span><span class="p">,</span>
+            <span class="n">source</span><span class="o">=</span><span class="s2">&quot;web_scrape&quot;</span><span class="p">,</span>
         <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">validate_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app_config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validate url_pattern strategy configuration.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validate web_scrape strategy configuration.</span>
 
 <span class="sd">        Checks for required fields and correct types without making network calls.</span>
 
@@ -4351,35 +4652,71 @@ print(f"Version {result['version']} at {result['file_path']}")
         <span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">source</span> <span class="o">=</span> <span class="n">app_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;source&quot;</span><span class="p">,</span> <span class="p">{})</span>
 
-        <span class="c1"># Check required fields</span>
-        <span class="k">if</span> <span class="s2">&quot;url&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">source</span><span class="p">:</span>
-            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Missing required field: source.url&quot;</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
-            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.url must be a string&quot;</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="ow">not</span> <span class="n">source</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
-            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.url cannot be empty&quot;</span><span class="p">)</span>
+        <span class="c1"># Check page_url</span>
+        <span class="k">if</span> <span class="s2">&quot;page_url&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">source</span><span class="p">:</span>
+            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Missing required field: source.page_url&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;page_url&quot;</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.page_url must be a string&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">source</span><span class="p">[</span><span class="s2">&quot;page_url&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.page_url cannot be empty&quot;</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="s2">&quot;pattern&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">source</span><span class="p">:</span>
-            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Missing required field: source.pattern&quot;</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;pattern&quot;</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
-            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.pattern must be a string&quot;</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="ow">not</span> <span class="n">source</span><span class="p">[</span><span class="s2">&quot;pattern&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
-            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.pattern cannot be empty&quot;</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># Validate regex pattern syntax</span>
-            <span class="n">pattern</span> <span class="o">=</span> <span class="n">source</span><span class="p">[</span><span class="s2">&quot;pattern&quot;</span><span class="p">]</span>
-            <span class="k">if</span> <span class="s2">&quot;(?P&lt;version&gt;&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">pattern</span><span class="p">:</span>
-                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                    <span class="s2">&quot;source.pattern must contain named group (?P&lt;version&gt;...)&quot;</span>
-                <span class="p">)</span>
+        <span class="c1"># Check that at least one link finding method is provided</span>
+        <span class="n">link_selector</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;link_selector&quot;</span><span class="p">)</span>
+        <span class="n">link_pattern</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;link_pattern&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">link_selector</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">link_pattern</span><span class="p">:</span>
+            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="s2">&quot;Missing required field: must provide either source.link_selector or source.link_pattern&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Validate link_selector if provided</span>
+        <span class="k">if</span> <span class="n">link_selector</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">link_selector</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.link_selector must be a string&quot;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="ow">not</span> <span class="n">link_selector</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.link_selector cannot be empty&quot;</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="c1"># Try to compile the regex to check syntax</span>
-                <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
-
+                <span class="c1"># Try to validate CSS selector syntax</span>
                 <span class="k">try</span><span class="p">:</span>
-                    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+                    <span class="c1"># Test if selector is parseable</span>
+                    <span class="n">soup</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="s2">&quot;&lt;html&gt;&lt;/html&gt;&quot;</span><span class="p">,</span> <span class="s2">&quot;html.parser&quot;</span><span class="p">)</span>
+                    <span class="n">soup</span><span class="o">.</span><span class="n">select_one</span><span class="p">(</span><span class="n">link_selector</span><span class="p">)</span>  <span class="c1"># Will raise if invalid</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+                    <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid CSS selector: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Validate link_pattern if provided</span>
+        <span class="k">if</span> <span class="n">link_pattern</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">link_pattern</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.link_pattern must be a string&quot;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="ow">not</span> <span class="n">link_pattern</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.link_pattern cannot be empty&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Validate regex compiles</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">link_pattern</span><span class="p">)</span>
                 <span class="k">except</span> <span class="n">re</span><span class="o">.</span><span class="n">error</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
-                    <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid regex pattern: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid link_pattern regex: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Check version_pattern</span>
+        <span class="k">if</span> <span class="s2">&quot;version_pattern&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">source</span><span class="p">:</span>
+            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Missing required field: source.version_pattern&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;version_pattern&quot;</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.version_pattern must be a string&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">source</span><span class="p">[</span><span class="s2">&quot;version_pattern&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.version_pattern cannot be empty&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Validate regex compiles</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;version_pattern&quot;</span><span class="p">])</span>
+            <span class="k">except</span> <span class="n">re</span><span class="o">.</span><span class="n">error</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid version_pattern regex: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Validate version_format if provided</span>
+        <span class="k">if</span> <span class="s2">&quot;version_format&quot;</span> <span class="ow">in</span> <span class="n">source</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;version_format&quot;</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.version_format must be a string&quot;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="ow">not</span> <span class="n">source</span><span class="p">[</span><span class="s2">&quot;version_format&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.version_format cannot be empty&quot;</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">errors</span>
 </code></pre></div></td></tr></table></div>
@@ -4401,7 +4738,7 @@ print(f"Version {result['version']} at {result['file_path']}")
 <div class="doc doc-object doc-function">
 
 
-<h4 id="notapkgtool.discovery.url_pattern.UrlPatternStrategy.get_version_info" class="doc doc-heading">
+<h4 id="notapkgtool.discovery.web_scrape.WebScrapeStrategy.get_version_info" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">get_version_info</span>
 
 
@@ -4411,10 +4748,10 @@ print(f"Version {result['version']} at {result['file_path']}")
 
     <div class="doc doc-contents ">
 
-        <p>Extract version from URL without downloading (version-first path).</p>
-<p>This method enables fast version checking by extracting the version
-directly from the URL pattern. If the version matches cached state,
-the download can be skipped entirely.</p>
+        <p>Scrape download page for version and URL without downloading (version-first path).</p>
+<p>This method scrapes an HTML page, finds a download link using CSS selector
+or regex, extracts the version from that link, and returns version info.
+If the version matches cached state, the download can be skipped entirely.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -4437,8 +4774,9 @@ the download can be skipped entirely.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>App configuration containing source.url and
-source.pattern.</p>
+                <p>App configuration containing source.page_url,
+source.link_selector or source.link_pattern, and
+source.version_pattern.</p>
               </div>
             </td>
             <td>
@@ -4455,7 +4793,7 @@ source.pattern.</p>
             <td>
               <div class="doc-md-description">
                 <p>If True, print verbose logging messages.
-Default is False.</p>
+Defaults to False.</p>
               </div>
             </td>
             <td>
@@ -4472,7 +4810,7 @@ Default is False.</p>
             <td>
               <div class="doc-md-description">
                 <p>If True, print debug logging messages.
-Default is False.</p>
+Defaults to False.</p>
               </div>
             </td>
             <td>
@@ -4528,7 +4866,17 @@ source name.</p>
             <td>
               <div class="doc-md-description">
                 <p>If required config fields are missing, invalid, or if
-the regex pattern doesn't match the URL.</p>
+selectors/patterns don't match anything.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="RuntimeError">RuntimeError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If page download fails (chained with 'from err').</p>
               </div>
             </td>
           </tr>
@@ -4538,71 +4886,24 @@ the regex pattern doesn't match the URL.</p>
 
 <details class="example" open>
   <summary>Example</summary>
-  <p>Extract version from URL using regex:</p>
-<pre><code>strategy = UrlPatternStrategy()
+  <p>Scrape 7-Zip download page:</p>
+<pre><code>strategy = WebScrapeStrategy()
 config = {
     "source": {
-        "url": "https://vendor.com/app-v1.0.0.msi",
-        "pattern": "app-v(?P&lt;version&gt;[0-9.]+)\\.msi"
+        "page_url": "https://www.7-zip.org/download.html",
+        "link_selector": 'a[href$="-x64.msi"]',
+        "version_pattern": "7z(\d{2})(\d{2})-x64",
+        "version_format": "{0}.{1}"
     }
 }
 version_info = strategy.get_version_info(config)
-# version_info.version returns: '1.0.0'
+# version_info.version returns: '25.01'
 </code></pre>
 </details>
 
             <details class="mkdocstrings-source">
-              <summary>Source code in <code>notapkgtool/discovery/url_pattern.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">116</span>
-<span class="normal">117</span>
-<span class="normal">118</span>
-<span class="normal">119</span>
-<span class="normal">120</span>
-<span class="normal">121</span>
-<span class="normal">122</span>
-<span class="normal">123</span>
-<span class="normal">124</span>
-<span class="normal">125</span>
-<span class="normal">126</span>
-<span class="normal">127</span>
-<span class="normal">128</span>
-<span class="normal">129</span>
-<span class="normal">130</span>
-<span class="normal">131</span>
-<span class="normal">132</span>
-<span class="normal">133</span>
-<span class="normal">134</span>
-<span class="normal">135</span>
-<span class="normal">136</span>
-<span class="normal">137</span>
-<span class="normal">138</span>
-<span class="normal">139</span>
-<span class="normal">140</span>
-<span class="normal">141</span>
-<span class="normal">142</span>
-<span class="normal">143</span>
-<span class="normal">144</span>
-<span class="normal">145</span>
-<span class="normal">146</span>
-<span class="normal">147</span>
-<span class="normal">148</span>
-<span class="normal">149</span>
-<span class="normal">150</span>
-<span class="normal">151</span>
-<span class="normal">152</span>
-<span class="normal">153</span>
-<span class="normal">154</span>
-<span class="normal">155</span>
-<span class="normal">156</span>
-<span class="normal">157</span>
-<span class="normal">158</span>
-<span class="normal">159</span>
-<span class="normal">160</span>
-<span class="normal">161</span>
-<span class="normal">162</span>
-<span class="normal">163</span>
-<span class="normal">164</span>
-<span class="normal">165</span>
+              <summary>Source code in <code>notapkgtool/discovery/web_scrape.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">165</span>
 <span class="normal">166</span>
 <span class="normal">167</span>
 <span class="normal">168</span>
@@ -4627,25 +4928,185 @@ version_info = strategy.get_version_info(config)
 <span class="normal">187</span>
 <span class="normal">188</span>
 <span class="normal">189</span>
-<span class="normal">190</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_version_info</span><span class="p">(</span>
+<span class="normal">190</span>
+<span class="normal">191</span>
+<span class="normal">192</span>
+<span class="normal">193</span>
+<span class="normal">194</span>
+<span class="normal">195</span>
+<span class="normal">196</span>
+<span class="normal">197</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span>
+<span class="normal">201</span>
+<span class="normal">202</span>
+<span class="normal">203</span>
+<span class="normal">204</span>
+<span class="normal">205</span>
+<span class="normal">206</span>
+<span class="normal">207</span>
+<span class="normal">208</span>
+<span class="normal">209</span>
+<span class="normal">210</span>
+<span class="normal">211</span>
+<span class="normal">212</span>
+<span class="normal">213</span>
+<span class="normal">214</span>
+<span class="normal">215</span>
+<span class="normal">216</span>
+<span class="normal">217</span>
+<span class="normal">218</span>
+<span class="normal">219</span>
+<span class="normal">220</span>
+<span class="normal">221</span>
+<span class="normal">222</span>
+<span class="normal">223</span>
+<span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span>
+<span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span>
+<span class="normal">237</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span>
+<span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
+<span class="normal">251</span>
+<span class="normal">252</span>
+<span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span>
+<span class="normal">257</span>
+<span class="normal">258</span>
+<span class="normal">259</span>
+<span class="normal">260</span>
+<span class="normal">261</span>
+<span class="normal">262</span>
+<span class="normal">263</span>
+<span class="normal">264</span>
+<span class="normal">265</span>
+<span class="normal">266</span>
+<span class="normal">267</span>
+<span class="normal">268</span>
+<span class="normal">269</span>
+<span class="normal">270</span>
+<span class="normal">271</span>
+<span class="normal">272</span>
+<span class="normal">273</span>
+<span class="normal">274</span>
+<span class="normal">275</span>
+<span class="normal">276</span>
+<span class="normal">277</span>
+<span class="normal">278</span>
+<span class="normal">279</span>
+<span class="normal">280</span>
+<span class="normal">281</span>
+<span class="normal">282</span>
+<span class="normal">283</span>
+<span class="normal">284</span>
+<span class="normal">285</span>
+<span class="normal">286</span>
+<span class="normal">287</span>
+<span class="normal">288</span>
+<span class="normal">289</span>
+<span class="normal">290</span>
+<span class="normal">291</span>
+<span class="normal">292</span>
+<span class="normal">293</span>
+<span class="normal">294</span>
+<span class="normal">295</span>
+<span class="normal">296</span>
+<span class="normal">297</span>
+<span class="normal">298</span>
+<span class="normal">299</span>
+<span class="normal">300</span>
+<span class="normal">301</span>
+<span class="normal">302</span>
+<span class="normal">303</span>
+<span class="normal">304</span>
+<span class="normal">305</span>
+<span class="normal">306</span>
+<span class="normal">307</span>
+<span class="normal">308</span>
+<span class="normal">309</span>
+<span class="normal">310</span>
+<span class="normal">311</span>
+<span class="normal">312</span>
+<span class="normal">313</span>
+<span class="normal">314</span>
+<span class="normal">315</span>
+<span class="normal">316</span>
+<span class="normal">317</span>
+<span class="normal">318</span>
+<span class="normal">319</span>
+<span class="normal">320</span>
+<span class="normal">321</span>
+<span class="normal">322</span>
+<span class="normal">323</span>
+<span class="normal">324</span>
+<span class="normal">325</span>
+<span class="normal">326</span>
+<span class="normal">327</span>
+<span class="normal">328</span>
+<span class="normal">329</span>
+<span class="normal">330</span>
+<span class="normal">331</span>
+<span class="normal">332</span>
+<span class="normal">333</span>
+<span class="normal">334</span>
+<span class="normal">335</span>
+<span class="normal">336</span>
+<span class="normal">337</span>
+<span class="normal">338</span>
+<span class="normal">339</span>
+<span class="normal">340</span>
+<span class="normal">341</span>
+<span class="normal">342</span>
+<span class="normal">343</span>
+<span class="normal">344</span>
+<span class="normal">345</span>
+<span class="normal">346</span>
+<span class="normal">347</span>
+<span class="normal">348</span>
+<span class="normal">349</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_version_info</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">app_config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
     <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">debug</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VersionInfo</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract version from URL without downloading (version-first path).</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Scrape download page for version and URL without downloading (version-first path).</span>
 
-<span class="sd">    This method enables fast version checking by extracting the version</span>
-<span class="sd">    directly from the URL pattern. If the version matches cached state,</span>
-<span class="sd">    the download can be skipped entirely.</span>
+<span class="sd">    This method scrapes an HTML page, finds a download link using CSS selector</span>
+<span class="sd">    or regex, extracts the version from that link, and returns version info.</span>
+<span class="sd">    If the version matches cached state, the download can be skipped entirely.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        app_config: App configuration containing source.url and</span>
-<span class="sd">            source.pattern.</span>
+<span class="sd">        app_config: App configuration containing source.page_url,</span>
+<span class="sd">            source.link_selector or source.link_pattern, and</span>
+<span class="sd">            source.version_pattern.</span>
 <span class="sd">        verbose: If True, print verbose logging messages.</span>
-<span class="sd">            Default is False.</span>
+<span class="sd">            Defaults to False.</span>
 <span class="sd">        debug: If True, print debug logging messages.</span>
-<span class="sd">            Default is False.</span>
+<span class="sd">            Defaults to False.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Version info with version string, download URL, and</span>
@@ -4653,54 +5114,163 @@ version_info = strategy.get_version_info(config)
 
 <span class="sd">    Raises:</span>
 <span class="sd">        ValueError: If required config fields are missing, invalid, or if</span>
-<span class="sd">            the regex pattern doesn&#39;t match the URL.</span>
+<span class="sd">            selectors/patterns don&#39;t match anything.</span>
+<span class="sd">        RuntimeError: If page download fails (chained with &#39;from err&#39;).</span>
 
 <span class="sd">    Example:</span>
-<span class="sd">        Extract version from URL using regex:</span>
+<span class="sd">        Scrape 7-Zip download page:</span>
 
-<span class="sd">            strategy = UrlPatternStrategy()</span>
+<span class="sd">            strategy = WebScrapeStrategy()</span>
 <span class="sd">            config = {</span>
 <span class="sd">                &quot;source&quot;: {</span>
-<span class="sd">                    &quot;url&quot;: &quot;https://vendor.com/app-v1.0.0.msi&quot;,</span>
-<span class="sd">                    &quot;pattern&quot;: &quot;app-v(?P&lt;version&gt;[0-9.]+)\\\\.msi&quot;</span>
+<span class="sd">                    &quot;page_url&quot;: &quot;https://www.7-zip.org/download.html&quot;,</span>
+<span class="sd">                    &quot;link_selector&quot;: &#39;a[href$=&quot;-x64.msi&quot;]&#39;,</span>
+<span class="sd">                    &quot;version_pattern&quot;: &quot;7z(\\d{2})(\\d{2})-x64&quot;,</span>
+<span class="sd">                    &quot;version_format&quot;: &quot;{0}.{1}&quot;</span>
 <span class="sd">                }</span>
 <span class="sd">            }</span>
 <span class="sd">            version_info = strategy.get_version_info(config)</span>
-<span class="sd">            # version_info.version returns: &#39;1.0.0&#39;</span>
+<span class="sd">            # version_info.version returns: &#39;25.01&#39;</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.cli</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_verbose</span>
 
     <span class="c1"># Validate configuration</span>
     <span class="n">source</span> <span class="o">=</span> <span class="n">app_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;source&quot;</span><span class="p">,</span> <span class="p">{})</span>
-    <span class="n">url</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">url</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;url_pattern strategy requires &#39;source.url&#39; in config&quot;</span><span class="p">)</span>
+    <span class="n">page_url</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;page_url&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">page_url</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;web_scrape strategy requires &#39;source.page_url&#39; in config&quot;</span><span class="p">)</span>
 
-    <span class="n">pattern</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pattern&quot;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">pattern</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;url_pattern strategy requires &#39;source.pattern&#39; in config&quot;</span><span class="p">)</span>
+    <span class="n">link_selector</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;link_selector&quot;</span><span class="p">)</span>
+    <span class="n">link_pattern</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;link_pattern&quot;</span><span class="p">)</span>
 
-    <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="s2">&quot;Strategy: url_pattern (version-first)&quot;</span><span class="p">)</span>
-    <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Source URL: </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Pattern: </span><span class="si">{</span><span class="n">pattern</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-    <span class="c1"># Extract version from URL (no download needed!)</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">discovered</span> <span class="o">=</span> <span class="n">version_from_regex_in_url</span><span class="p">(</span>
-            <span class="n">url</span><span class="p">,</span> <span class="n">pattern</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="n">debug</span>
-        <span class="p">)</span>
-    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">link_selector</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">link_pattern</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;Failed to extract version from URL using pattern: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="s2">&quot;web_scrape strategy requires either &#39;source.link_selector&#39; or &quot;</span>
+            <span class="s2">&quot;&#39;source.link_pattern&#39; in config&quot;</span>
+        <span class="p">)</span>
+
+    <span class="n">version_pattern</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;version_pattern&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">version_pattern</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;web_scrape strategy requires &#39;source.version_pattern&#39; in config&quot;</span>
+        <span class="p">)</span>
+
+    <span class="n">version_format</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;version_format&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">{0}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="s2">&quot;Strategy: web_scrape (version-first)&quot;</span><span class="p">)</span>
+    <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Page URL: </span><span class="si">{</span><span class="n">page_url</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">link_selector</span><span class="p">:</span>
+        <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Link selector (CSS): </span><span class="si">{</span><span class="n">link_selector</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">link_pattern</span><span class="p">:</span>
+        <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Link pattern (regex): </span><span class="si">{</span><span class="n">link_pattern</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Version pattern: </span><span class="si">{</span><span class="n">version_pattern</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Download the HTML page</span>
+    <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Fetching page: </span><span class="si">{</span><span class="n">page_url</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">page_url</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+    <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">HTTPError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Failed to fetch page: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">reason</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">err</span>
+    <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">RequestException</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to fetch page: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">err</span>
+
+    <span class="n">html_content</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span>
+    <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Page fetched (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">html_content</span><span class="p">)</span><span class="si">}</span><span class="s2"> bytes)&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Find download link using CSS selector or regex</span>
+    <span class="n">download_url</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="n">link_selector</span><span class="p">:</span>
+        <span class="c1"># Use CSS selector with BeautifulSoup4</span>
+        <span class="n">soup</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">html_content</span><span class="p">,</span> <span class="s2">&quot;html.parser&quot;</span><span class="p">)</span>
+        <span class="n">element</span> <span class="o">=</span> <span class="n">soup</span><span class="o">.</span><span class="n">select_one</span><span class="p">(</span><span class="n">link_selector</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">element</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;CSS selector </span><span class="si">{</span><span class="n">link_selector</span><span class="si">!r}</span><span class="s2"> did not match any elements on page&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Get href attribute</span>
+        <span class="n">href</span> <span class="o">=</span> <span class="n">element</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;href&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">href</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Element matched by </span><span class="si">{</span><span class="n">link_selector</span><span class="si">!r}</span><span class="s2"> has no href attribute&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Found link via CSS: </span><span class="si">{</span><span class="n">href</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Build absolute URL</span>
+        <span class="n">download_url</span> <span class="o">=</span> <span class="n">urljoin</span><span class="p">(</span><span class="n">page_url</span><span class="p">,</span> <span class="n">href</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">link_pattern</span><span class="p">:</span>
+        <span class="c1"># Use regex fallback</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">pattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">link_pattern</span><span class="p">)</span>
+            <span class="n">match</span> <span class="o">=</span> <span class="n">pattern</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">html_content</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">match</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Regex pattern </span><span class="si">{</span><span class="n">link_pattern</span><span class="si">!r}</span><span class="s2"> did not match anything on page&quot;</span>
+                <span class="p">)</span>
+
+            <span class="c1"># Get first capture group or full match</span>
+            <span class="k">if</span> <span class="n">pattern</span><span class="o">.</span><span class="n">groups</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">href</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">href</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Found link via regex: </span><span class="si">{</span><span class="n">href</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="c1"># Build absolute URL</span>
+            <span class="n">download_url</span> <span class="o">=</span> <span class="n">urljoin</span><span class="p">(</span><span class="n">page_url</span><span class="p">,</span> <span class="n">href</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="n">re</span><span class="o">.</span><span class="n">error</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Invalid link_pattern regex: </span><span class="si">{</span><span class="n">link_pattern</span><span class="si">!r}</span><span class="s2">&quot;</span>
+            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">err</span>
+
+    <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Download URL: </span><span class="si">{</span><span class="n">download_url</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Extract version from the download URL</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">version_regex</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">version_pattern</span><span class="p">)</span>
+        <span class="n">match</span> <span class="o">=</span> <span class="n">version_regex</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">download_url</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">match</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Version pattern </span><span class="si">{</span><span class="n">version_pattern</span><span class="si">!r}</span><span class="s2"> did not match URL </span><span class="si">{</span><span class="n">download_url</span><span class="si">!r}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Get captured groups</span>
+        <span class="n">groups</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">groups</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">groups</span><span class="p">:</span>
+            <span class="c1"># No capture groups, use full match</span>
+            <span class="n">version_str</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Format using captured groups</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">version_str</span> <span class="o">=</span> <span class="n">version_format</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">groups</span><span class="p">)</span>
+            <span class="k">except</span> <span class="p">(</span><span class="ne">IndexError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">)</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;version_format </span><span class="si">{</span><span class="n">version_format</span><span class="si">!r}</span><span class="s2"> failed with groups </span><span class="si">{</span><span class="n">groups</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">err</span>
+
+    <span class="k">except</span> <span class="n">re</span><span class="o">.</span><span class="n">error</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Invalid version_pattern regex: </span><span class="si">{</span><span class="n">version_pattern</span><span class="si">!r}</span><span class="s2">&quot;</span>
         <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">err</span>
 
-    <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Discovered version: </span><span class="si">{</span><span class="n">discovered</span><span class="o">.</span><span class="n">version</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">print_verbose</span><span class="p">(</span><span class="s2">&quot;DISCOVERY&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Extracted version: </span><span class="si">{</span><span class="n">version_str</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">VersionInfo</span><span class="p">(</span>
-        <span class="n">version</span><span class="o">=</span><span class="n">discovered</span><span class="o">.</span><span class="n">version</span><span class="p">,</span>
-        <span class="n">download_url</span><span class="o">=</span><span class="n">url</span><span class="p">,</span>
-        <span class="n">source</span><span class="o">=</span><span class="s2">&quot;url_pattern&quot;</span><span class="p">,</span>
+        <span class="n">version</span><span class="o">=</span><span class="n">version_str</span><span class="p">,</span>
+        <span class="n">download_url</span><span class="o">=</span><span class="n">download_url</span><span class="p">,</span>
+        <span class="n">source</span><span class="o">=</span><span class="s2">&quot;web_scrape&quot;</span><span class="p">,</span>
     <span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -4711,7 +5281,7 @@ version_info = strategy.get_version_info(config)
 <div class="doc doc-object doc-function">
 
 
-<h4 id="notapkgtool.discovery.url_pattern.UrlPatternStrategy.validate_config" class="doc doc-heading">
+<h4 id="notapkgtool.discovery.web_scrape.WebScrapeStrategy.validate_config" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">validate_config</span>
 
 
@@ -4721,7 +5291,7 @@ version_info = strategy.get_version_info(config)
 
     <div class="doc doc-contents ">
 
-        <p>Validate url_pattern strategy configuration.</p>
+        <p>Validate web_scrape strategy configuration.</p>
 <p>Checks for required fields and correct types without making network calls.</p>
 
 
@@ -4780,54 +5350,90 @@ version_info = strategy.get_version_info(config)
 
 
             <details class="mkdocstrings-source">
-              <summary>Source code in <code>notapkgtool/discovery/url_pattern.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">192</span>
-<span class="normal">193</span>
-<span class="normal">194</span>
-<span class="normal">195</span>
-<span class="normal">196</span>
-<span class="normal">197</span>
-<span class="normal">198</span>
-<span class="normal">199</span>
-<span class="normal">200</span>
-<span class="normal">201</span>
-<span class="normal">202</span>
-<span class="normal">203</span>
-<span class="normal">204</span>
-<span class="normal">205</span>
-<span class="normal">206</span>
-<span class="normal">207</span>
-<span class="normal">208</span>
-<span class="normal">209</span>
-<span class="normal">210</span>
-<span class="normal">211</span>
-<span class="normal">212</span>
-<span class="normal">213</span>
-<span class="normal">214</span>
-<span class="normal">215</span>
-<span class="normal">216</span>
-<span class="normal">217</span>
-<span class="normal">218</span>
-<span class="normal">219</span>
-<span class="normal">220</span>
-<span class="normal">221</span>
-<span class="normal">222</span>
-<span class="normal">223</span>
-<span class="normal">224</span>
-<span class="normal">225</span>
-<span class="normal">226</span>
-<span class="normal">227</span>
-<span class="normal">228</span>
-<span class="normal">229</span>
-<span class="normal">230</span>
-<span class="normal">231</span>
-<span class="normal">232</span>
-<span class="normal">233</span>
-<span class="normal">234</span>
-<span class="normal">235</span>
-<span class="normal">236</span>
-<span class="normal">237</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">validate_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app_config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate url_pattern strategy configuration.</span>
+              <summary>Source code in <code>notapkgtool/discovery/web_scrape.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">351</span>
+<span class="normal">352</span>
+<span class="normal">353</span>
+<span class="normal">354</span>
+<span class="normal">355</span>
+<span class="normal">356</span>
+<span class="normal">357</span>
+<span class="normal">358</span>
+<span class="normal">359</span>
+<span class="normal">360</span>
+<span class="normal">361</span>
+<span class="normal">362</span>
+<span class="normal">363</span>
+<span class="normal">364</span>
+<span class="normal">365</span>
+<span class="normal">366</span>
+<span class="normal">367</span>
+<span class="normal">368</span>
+<span class="normal">369</span>
+<span class="normal">370</span>
+<span class="normal">371</span>
+<span class="normal">372</span>
+<span class="normal">373</span>
+<span class="normal">374</span>
+<span class="normal">375</span>
+<span class="normal">376</span>
+<span class="normal">377</span>
+<span class="normal">378</span>
+<span class="normal">379</span>
+<span class="normal">380</span>
+<span class="normal">381</span>
+<span class="normal">382</span>
+<span class="normal">383</span>
+<span class="normal">384</span>
+<span class="normal">385</span>
+<span class="normal">386</span>
+<span class="normal">387</span>
+<span class="normal">388</span>
+<span class="normal">389</span>
+<span class="normal">390</span>
+<span class="normal">391</span>
+<span class="normal">392</span>
+<span class="normal">393</span>
+<span class="normal">394</span>
+<span class="normal">395</span>
+<span class="normal">396</span>
+<span class="normal">397</span>
+<span class="normal">398</span>
+<span class="normal">399</span>
+<span class="normal">400</span>
+<span class="normal">401</span>
+<span class="normal">402</span>
+<span class="normal">403</span>
+<span class="normal">404</span>
+<span class="normal">405</span>
+<span class="normal">406</span>
+<span class="normal">407</span>
+<span class="normal">408</span>
+<span class="normal">409</span>
+<span class="normal">410</span>
+<span class="normal">411</span>
+<span class="normal">412</span>
+<span class="normal">413</span>
+<span class="normal">414</span>
+<span class="normal">415</span>
+<span class="normal">416</span>
+<span class="normal">417</span>
+<span class="normal">418</span>
+<span class="normal">419</span>
+<span class="normal">420</span>
+<span class="normal">421</span>
+<span class="normal">422</span>
+<span class="normal">423</span>
+<span class="normal">424</span>
+<span class="normal">425</span>
+<span class="normal">426</span>
+<span class="normal">427</span>
+<span class="normal">428</span>
+<span class="normal">429</span>
+<span class="normal">430</span>
+<span class="normal">431</span>
+<span class="normal">432</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">validate_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app_config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate web_scrape strategy configuration.</span>
 
 <span class="sd">    Checks for required fields and correct types without making network calls.</span>
 
@@ -4841,35 +5447,71 @@ version_info = strategy.get_version_info(config)
     <span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">source</span> <span class="o">=</span> <span class="n">app_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;source&quot;</span><span class="p">,</span> <span class="p">{})</span>
 
-    <span class="c1"># Check required fields</span>
-    <span class="k">if</span> <span class="s2">&quot;url&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">source</span><span class="p">:</span>
-        <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Missing required field: source.url&quot;</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
-        <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.url must be a string&quot;</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="ow">not</span> <span class="n">source</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
-        <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.url cannot be empty&quot;</span><span class="p">)</span>
+    <span class="c1"># Check page_url</span>
+    <span class="k">if</span> <span class="s2">&quot;page_url&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">source</span><span class="p">:</span>
+        <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Missing required field: source.page_url&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;page_url&quot;</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.page_url must be a string&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="ow">not</span> <span class="n">source</span><span class="p">[</span><span class="s2">&quot;page_url&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+        <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.page_url cannot be empty&quot;</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="s2">&quot;pattern&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">source</span><span class="p">:</span>
-        <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Missing required field: source.pattern&quot;</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;pattern&quot;</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
-        <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.pattern must be a string&quot;</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="ow">not</span> <span class="n">source</span><span class="p">[</span><span class="s2">&quot;pattern&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
-        <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.pattern cannot be empty&quot;</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="c1"># Validate regex pattern syntax</span>
-        <span class="n">pattern</span> <span class="o">=</span> <span class="n">source</span><span class="p">[</span><span class="s2">&quot;pattern&quot;</span><span class="p">]</span>
-        <span class="k">if</span> <span class="s2">&quot;(?P&lt;version&gt;&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">pattern</span><span class="p">:</span>
-            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                <span class="s2">&quot;source.pattern must contain named group (?P&lt;version&gt;...)&quot;</span>
-            <span class="p">)</span>
+    <span class="c1"># Check that at least one link finding method is provided</span>
+    <span class="n">link_selector</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;link_selector&quot;</span><span class="p">)</span>
+    <span class="n">link_pattern</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;link_pattern&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">link_selector</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">link_pattern</span><span class="p">:</span>
+        <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="s2">&quot;Missing required field: must provide either source.link_selector or source.link_pattern&quot;</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Validate link_selector if provided</span>
+    <span class="k">if</span> <span class="n">link_selector</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">link_selector</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.link_selector must be a string&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">link_selector</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.link_selector cannot be empty&quot;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># Try to compile the regex to check syntax</span>
-            <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
-
+            <span class="c1"># Try to validate CSS selector syntax</span>
             <span class="k">try</span><span class="p">:</span>
-                <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+                <span class="c1"># Test if selector is parseable</span>
+                <span class="n">soup</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="s2">&quot;&lt;html&gt;&lt;/html&gt;&quot;</span><span class="p">,</span> <span class="s2">&quot;html.parser&quot;</span><span class="p">)</span>
+                <span class="n">soup</span><span class="o">.</span><span class="n">select_one</span><span class="p">(</span><span class="n">link_selector</span><span class="p">)</span>  <span class="c1"># Will raise if invalid</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid CSS selector: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Validate link_pattern if provided</span>
+    <span class="k">if</span> <span class="n">link_pattern</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">link_pattern</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.link_pattern must be a string&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">link_pattern</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.link_pattern cannot be empty&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Validate regex compiles</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">link_pattern</span><span class="p">)</span>
             <span class="k">except</span> <span class="n">re</span><span class="o">.</span><span class="n">error</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
-                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid regex pattern: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid link_pattern regex: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Check version_pattern</span>
+    <span class="k">if</span> <span class="s2">&quot;version_pattern&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">source</span><span class="p">:</span>
+        <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Missing required field: source.version_pattern&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;version_pattern&quot;</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.version_pattern must be a string&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="ow">not</span> <span class="n">source</span><span class="p">[</span><span class="s2">&quot;version_pattern&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+        <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.version_pattern cannot be empty&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Validate regex compiles</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;version_pattern&quot;</span><span class="p">])</span>
+        <span class="k">except</span> <span class="n">re</span><span class="o">.</span><span class="n">error</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid version_pattern regex: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Validate version_format if provided</span>
+    <span class="k">if</span> <span class="s2">&quot;version_format&quot;</span> <span class="ow">in</span> <span class="n">source</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;version_format&quot;</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.version_format must be a string&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">source</span><span class="p">[</span><span class="s2">&quot;version_format&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;source.version_format cannot be empty&quot;</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">errors</span>
 </code></pre></div></td></tr></table></div>

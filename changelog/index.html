@@ -1346,16 +1346,20 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h3 id="added">Added</h3>
 <h3 id="changed">Changed</h3>
 <ul>
-<li><strong>BREAKING: Uniform Strategy Naming</strong> - Discovery strategies renamed to follow consistent <code>&lt;source&gt;_&lt;method&gt;</code> pattern for better discoverability and scalability:</li>
+<li><strong>Discovery Performance Optimization</strong> - Version-first strategies (web_scrape, api_github, api_json) now check versions before downloading, enabling ~100-300ms update checks when unchanged instead of full downloads</li>
+<li>State file now saves actual download URLs for all strategies</li>
+<li><strong>BREAKING: Uniform Strategy Naming</strong> - Discovery strategies renamed to follow consistent <code>&lt;source&gt;_&lt;method&gt;</code> pattern for better discoverability and scalability:<ul>
 <li><code>http_static</code> → <code>url_download</code> (fixed URL with file extraction)</li>
-<li><code>url_regex</code> → <code>url_pattern</code> (version extraction from URL patterns)</li>
+<li><code>url_regex</code> → <code>web_scrape</code> (web scraping for vendor download pages)</li>
 <li><code>http_json</code> → <code>api_json</code> (generic JSON API queries)</li>
 <li><code>github_release</code> → <code>api_github</code> (GitHub releases API)</li>
-<li><strong>BREAKING: Simplified Version Types</strong> - Version type names shortened for clarity:</li>
+</ul>
+</li>
+<li><strong>BREAKING: Simplified Version Types</strong> - Version type names shortened for clarity:<ul>
 <li><code>msi_product_version_from_file</code> → <code>msi</code></li>
-<li>Removed nested <code>version.type</code> for <code>url_pattern</code> (now uses <code>source.pattern</code> directly)</li>
-<li><strong>Discovery Performance Optimization</strong> - Version-first strategies (url_pattern, api_github, api_json) now check versions before downloading, enabling instant to ~100ms update checks when unchanged instead of full downloads</li>
-<li>State file now saves actual download URLs for all strategies</li>
+<li>Removed nested <code>version.type</code> for <code>web_scrape</code> (simplified to <code>source.link_selector</code> and <code>source.version_pattern</code>)</li>
+</ul>
+</li>
 <li><strong>Documentation Rendering</strong> - Fixed module docstrings to follow Google-style format with proper indentation for mkdocstrings</li>
 </ul>
 <h3 id="fixed">Fixed</h3>

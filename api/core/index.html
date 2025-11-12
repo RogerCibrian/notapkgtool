@@ -1170,10 +1170,10 @@
 <p>The orchestration uses a two-path architecture that automatically optimizes based on discovery strategy capabilities:</p>
 <ul>
 <li>
-<p><strong>Version-First Path</strong>: For strategies with <code>get_version_info()</code> method (url_pattern, api_github, api_json), discovers version first, compares to cache, and skips downloads entirely when unchanged.</p>
+<p><strong>Version-First Path</strong>: For strategies with <code>get_version_info()</code> method (web_scrape, api_github, api_json), discovers version first, compares to cache, and skips downloads entirely when unchanged.</p>
 </li>
 <li>
-<p><strong>File-First Path</strong>: For strategies with only <code>discover_version()</code> method (url_download), uses HTTP ETag conditional requests to minimize bandwidth.</p>
+<p><strong>File-First Path</strong>: For strategies with only <code>discover_version()</code> method (url_download), uses HTTP ETag conditional requests for optimization.</p>
 </li>
 </ul>
 
@@ -2110,7 +2110,7 @@ stdout via the download module. Strategy type detected via duck typing
     <span class="kn">import</span><span class="w"> </span><span class="nn">notapkgtool.discovery.api_github</span>  <span class="c1"># noqa: F401</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">notapkgtool.discovery.api_json</span>  <span class="c1"># noqa: F401</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">notapkgtool.discovery.url_download</span>  <span class="c1"># noqa: F401</span>
-    <span class="kn">import</span><span class="w"> </span><span class="nn">notapkgtool.discovery.url_pattern</span>  <span class="c1"># noqa: F401</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">notapkgtool.discovery.web_scrape</span>  <span class="c1"># noqa: F401</span>
 
     <span class="n">strategy</span> <span class="o">=</span> <span class="n">get_strategy</span><span class="p">(</span><span class="n">strategy_name</span><span class="p">)</span>
 

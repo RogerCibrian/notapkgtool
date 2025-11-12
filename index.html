@@ -1426,11 +1426,12 @@ napt<span class="w"> </span>package<span class="w"> </span>builds/napt-chrome/14
 <p>Recipes are declarative YAML files that define how to discover, download, and package applications.</p>
 <p><strong>Example recipes:</strong></p>
 <ul>
-<li><strong><a href="https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Google/chrome.yaml">chrome.yaml</a></strong> - HTTP static strategy with MSI version extraction</li>
-<li><strong><a href="https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Git/git.yaml">git.yaml</a></strong> - GitHub release strategy with asset pattern matching</li>
-<li><strong><a href="https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Examples/json-api-example.yaml">json-api-example.yaml</a></strong> - HTTP JSON API strategy</li>
+<li><strong><a href="https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Google/chrome.yaml">chrome.yaml</a></strong> - url_download strategy with MSI version extraction</li>
+<li><strong><a href="https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Git/git.yaml">git.yaml</a></strong> - api_github strategy with asset pattern matching</li>
+<li><strong><a href="https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Examples/json-api-example.yaml">json-api-example.yaml</a></strong> - api_json strategy with JSONPath extraction</li>
+<li><strong><a href="https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/7-Zip/7zip.yaml">7zip.yaml</a></strong> - web_scrape strategy for vendor download pages</li>
 </ul>
-<p>NAPT supports multiple discovery strategies (url_download, url_pattern, api_github, api_json) - see the <a href="user-guide/#discovery-strategies">Discovery Strategies</a> guide for detailed configuration and examples.</p>
+<p>NAPT supports multiple discovery strategies (url_download, web_scrape, api_github, api_json) - see the <a href="user-guide/#discovery-strategies">Discovery Strategies</a> guide for detailed configuration and examples.</p>
 <h2 id="contributing">Contributing</h2>
 <p>Contributions are welcome! Please ensure:</p>
 <ol>

@@ -620,28 +620,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#url_download" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        url_download
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#url_pattern" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        url_pattern
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#api_github" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -657,6 +635,28 @@
     <span class="md-ellipsis">
       
         api_json
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#url_download" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        url_download
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#web_scrape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        web_scrape
       
     </span>
   </a>
@@ -715,10 +715,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#version-first-strategies-url_pattern-api_github-api_json" class="md-nav__link">
+  <a href="#version-first-strategies-web_scrape-api_github-api_json" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Version-First Strategies (url_pattern, api_github, api_json)
+        Version-First Strategies (web_scrape, api_github, api_json)
       
     </span>
   </a>
@@ -1641,28 +1641,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#url_download" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        url_download
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#url_pattern" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        url_pattern
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#api_github" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1678,6 +1656,28 @@
     <span class="md-ellipsis">
       
         api_json
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#url_download" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        url_download
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#web_scrape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        web_scrape
       
     </span>
   </a>
@@ -1736,10 +1736,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#version-first-strategies-url_pattern-api_github-api_json" class="md-nav__link">
+  <a href="#version-first-strategies-web_scrape-api_github-api_json" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Version-First Strategies (url_pattern, api_github, api_json)
+        Version-First Strategies (web_scrape, api_github, api_json)
       
     </span>
   </a>
@@ -2169,10 +2169,10 @@ Options:
 </thead>
 <tbody>
 <tr>
-<td><strong>url_pattern</strong></td>
-<td>URL pattern</td>
-<td>Version-encoded URLs</td>
-<td>Instant (regex only)</td>
+<td><strong>api_github</strong></td>
+<td>Git tags</td>
+<td>GitHub-hosted releases</td>
+<td>Fast (GitHub API ~100ms)</td>
 </tr>
 <tr>
 <td><strong>api_json</strong></td>
@@ -2181,50 +2181,19 @@ Options:
 <td>Fast (API call ~100ms)</td>
 </tr>
 <tr>
-<td><strong>api_github</strong></td>
-<td>Git tags</td>
-<td>GitHub-hosted releases</td>
-<td>Fast (GitHub API ~100ms)</td>
-</tr>
-<tr>
 <td><strong>url_download</strong></td>
 <td>File metadata</td>
 <td>Fixed URLs, MSI installers</td>
 <td>Medium (HTTP conditional ~500ms)</td>
 </tr>
+<tr>
+<td><strong>web_scrape</strong></td>
+<td>Download page</td>
+<td>Vendors without APIs</td>
+<td>Fast (page scrape + regex)</td>
+</tr>
 </tbody>
 </table>
-<h3 id="url_download">url_download</h3>
-<p><strong>Best for:</strong></p>
-<ul>
-<li>Vendors with stable download URLs (Chrome, Firefox enterprise)</li>
-<li>MSI installers with ProductVersion embedded</li>
-<li>When version isn't in URL or easily parseable</li>
-</ul>
-<p><strong>Configuration:</strong></p>
-<div class="highlight"><pre><span></span><code><span class="nt">source</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">url_download</span>
-<span class="w">  </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://dl.google.com/chrome/install/googlechromestandaloneenterprise64.msi&quot;</span>
-<span class="w">  </span><span class="nt">version</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">msi</span>
-</code></pre></div>
-<p><strong>Pros:</strong> Simple and reliable, version directly from installer (most accurate)<br />
-<strong>Cons:</strong> Must download file to know version, slower update checks (HTTP conditional request)</p>
-<h3 id="url_pattern">url_pattern</h3>
-<p><strong>Best for:</strong></p>
-<ul>
-<li>URLs with version numbers embedded (e.g., <code>app-v1.2.3.msi</code>)</li>
-<li>When version is in download URL path</li>
-<li>Fast version checks without downloads</li>
-</ul>
-<p><strong>Configuration:</strong></p>
-<div class="highlight"><pre><span></span><code><span class="nt">source</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">url_pattern</span>
-<span class="w">  </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://vendor.com/app-v1.2.3-setup.msi&quot;</span>
-<span class="w">  </span><span class="nt">pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;app-v(?P&lt;version&gt;[0-9.]+)-setup&quot;</span>
-</code></pre></div>
-<p><strong>Pros:</strong> Know version before download, instant update checks (regex only, zero network), bandwidth-efficient<br />
-<strong>Cons:</strong> Relies on URL format stability</p>
 <h3 id="api_github">api_github</h3>
 <p><strong>Best for:</strong></p>
 <ul>
@@ -2259,6 +2228,40 @@ Options:
 </code></pre></div>
 <p><strong>Pros:</strong> Fast update checks (API only, ~100ms), flexible, supports complex APIs, no file parsing<br />
 <strong>Cons:</strong> Requires vendor API availability</p>
+<h3 id="url_download">url_download</h3>
+<p><strong>Best for:</strong></p>
+<ul>
+<li>Vendors with stable download URLs (Chrome, Firefox enterprise)</li>
+<li>MSI installers with ProductVersion embedded</li>
+<li>When version isn't in URL or easily parseable</li>
+</ul>
+<p><strong>Configuration:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="nt">source</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">url_download</span>
+<span class="w">  </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://dl.google.com/chrome/install/googlechromestandaloneenterprise64.msi&quot;</span>
+<span class="w">  </span><span class="nt">version</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">msi</span>
+</code></pre></div>
+<p><strong>Pros:</strong> Simple and reliable, version directly from installer (most accurate)<br />
+<strong>Cons:</strong> Must download file to know version, slower update checks (HTTP conditional request)</p>
+<h3 id="web_scrape">web_scrape</h3>
+<p><strong>Best for:</strong></p>
+<ul>
+<li>Vendors with download pages listing installers (7-Zip, etc.)</li>
+<li>When no direct download URL or API is available</li>
+<li>Version-encoded URLs on vendor websites</li>
+<li>Small vendors with simple HTML download pages</li>
+</ul>
+<p><strong>Configuration:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="nt">source</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">web_scrape</span>
+<span class="w">  </span><span class="nt">page_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://www.7-zip.org/download.html&quot;</span>
+<span class="w">  </span><span class="nt">link_selector</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;a[href$=&quot;-x64.msi&quot;]&#39;</span><span class="w">        </span><span class="c1"># CSS selector (recommended)</span>
+<span class="w">  </span><span class="nt">version_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;7z(\\d{2})(\\d{2})-x64&quot;</span><span class="w">   </span><span class="c1"># Extract from discovered URL</span>
+<span class="w">  </span><span class="nt">version_format</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{0}.{1}&quot;</span><span class="w">                    </span><span class="c1"># Transform to &quot;25.01&quot;</span>
+</code></pre></div>
+<p><strong>Pros:</strong> Fast version checks (~100-300ms page scrape), works without APIs, CSS selectors are robust<br />
+<strong>Cons:</strong> Requires page structure knowledge, may break if vendor redesigns site</p>
 <h3 id="decision-guide">Decision Guide</h3>
 <p>Use this flowchart to choose the right strategy:</p>
 <pre class="mermaid"><code>flowchart TD
@@ -2266,22 +2269,22 @@ Options:
     Start --&gt;|Yes| JSON[api_json&lt;br/&gt;Fast version checks]
     Start --&gt;|No| GitHub{App on&lt;br/&gt;GitHub?}
     GitHub --&gt;|Yes| GHRelease[api_github&lt;br/&gt;Reliable API, fast checks]
-    GitHub --&gt;|No| URLVersion{Version in&lt;br/&gt;download URL?}
-    URLVersion --&gt;|Yes| Regex[url_pattern&lt;br/&gt;Instant version checks]
-    URLVersion --&gt;|No| Static[url_download&lt;br/&gt;Must download to check]</code></pre>
+    GitHub --&gt;|No| DirectURL{Have direct&lt;br/&gt;download URL?}
+    DirectURL --&gt;|Yes| Static[url_download&lt;br/&gt;Must download to check]
+    DirectURL --&gt;|No| Scrape[web_scrape&lt;br/&gt;Scrape page for link]</code></pre>
 <p><strong>Performance Note</strong>: Version-first strategies (everything except url_download) can skip downloads entirely when versions haven't changed, making them ideal for scheduled CI/CD checks.</p>
 <h2 id="state-management-caching">State Management &amp; Caching</h2>
 <p>NAPT automatically tracks discovered versions and optimizes subsequent runs by avoiding unnecessary downloads.</p>
 <h3 id="how-it-works">How It Works</h3>
-<p>NAPT uses different caching approaches based on the discovery strategy, enabling significant performance and bandwidth savings:</p>
+<p>NAPT uses different caching approaches based on the discovery strategy, enabling significant performance optimization:</p>
 <ul>
-<li><strong>Version-First</strong> (url_pattern, api_github, api_json): Checks version via API/regex (~100ms or instant) before downloading. If unchanged and file exists, skips download entirely - saving 60+ MB bandwidth and minutes of time on every check.</li>
+<li><strong>Version-First</strong> (web_scrape, api_github, api_json): Checks version via API or page scraping (~100-300ms) before downloading. If unchanged and file exists, skips download entirely.</li>
 <li><strong>File-First</strong> (url_download): Uses HTTP conditional requests (ETags) to check if file changed. If server returns 304 Not Modified (~500ms), uses cached file without re-downloading.</li>
 </ul>
-<p>This intelligent caching is critical for CI/CD with frequent scheduled checks, dramatically reducing bandwidth costs and load on vendor CDNs while providing near-instant feedback when applications haven't changed.</p>
+<p>This intelligent caching is critical for CI/CD with frequent scheduled checks, providing fast feedback when applications haven't changed.</p>
 <h3 id="detailed-workflow">Detailed Workflow</h3>
-<h4 id="version-first-strategies-url_pattern-api_github-api_json">Version-First Strategies (url_pattern, api_github, api_json)</h4>
-<p>These strategies discover the version <strong>before</strong> downloading, enabling instant cache checks:</p>
+<h4 id="version-first-strategies-web_scrape-api_github-api_json">Version-First Strategies (web_scrape, api_github, api_json)</h4>
+<p>These strategies discover the version <strong>before</strong> downloading, enabling fast cache checks:</p>
 <pre class="mermaid"><code>flowchart TD
     Start([napt discover]) --&gt; LoadRecipe[Load Recipe YAML]
     LoadRecipe --&gt; CheckCache{Cached&lt;br/&gt;Version?}
@@ -2303,7 +2306,7 @@ Options:
     DiscoverFirst --&gt; DownloadFirstRun[Download Installer]
     DownloadFirstRun --&gt; CreateState[Create state.json]
     CreateState --&gt; Ready</code></pre>
-<p><strong>Key optimization:</strong> Version discovered via API/regex (~100ms or instant) <strong>before</strong> downloading. If unchanged and file exists, skip download entirely.</p>
+<p><strong>Key optimization:</strong> Version discovered via API or page scraping (~100-300ms) <strong>before</strong> downloading. If unchanged and file exists, skip download entirely.</p>
 <h4 id="file-first-strategy-url_download">File-First Strategy (url_download)</h4>
 <p>This strategy must download (or check) the file first to extract the version:</p>
 <pre class="mermaid"><code>flowchart TD
@@ -2343,7 +2346,7 @@ Options:
 </tr>
 <tr>
 <td><strong>Unchanged (most common)</strong></td>
-<td>~100ms API call (or instant regex)</td>
+<td>~100-300ms version check</td>
 <td>~500ms HTTP conditional request</td>
 </tr>
 <tr>
@@ -2353,7 +2356,7 @@ Options:
 </tr>
 </tbody>
 </table>
-<p><strong>Recommendation:</strong> Use version-first strategies (url_pattern, api_github, api_json) when available for fastest cache checks.</p>
+<p><strong>Recommendation:</strong> Use version-first strategies (web_scrape, api_github, api_json) when available for fastest cache checks.</p>
 <h3 id="default-behavior-stateful">Default Behavior (Stateful)</h3>
 <div class="highlight"><pre><span></span><code><span class="c1"># State tracking enabled by default</span>
 napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
