@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Discovery Performance Optimization** - Version-first strategies (web_scrape, api_github, api_json) now check versions before downloading, enabling instant to ~100ms update checks when unchanged instead of full downloads
+- **Discovery Performance Optimization** - Version-first strategies (web_scrape, api_github, api_json) now check versions before downloading, enabling ~100-300ms update checks when unchanged instead of full downloads
 - State file now saves actual download URLs for all strategies
 - **BREAKING: Uniform Strategy Naming** - Discovery strategies renamed to follow consistent `<source>_<method>` pattern for better discoverability and scalability:
     - `http_static` → `url_download` (fixed URL with file extraction)
