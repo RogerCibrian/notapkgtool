@@ -1,12 +1,12 @@
 """
-Manual test script for http_json discovery strategy.
+Manual test script for api_json discovery strategy.
 
-This script demonstrates and tests the http_json strategy with:
+This script demonstrates and tests the api_json strategy with:
 1. A mock local HTTP server
 2. Real public APIs (optional)
 
 Usage:
-    python tests/scripts/manual_test_http_json.py
+    python tests/scripts/manual_test_api_json.py
 """
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -20,7 +20,7 @@ import time
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from notapkgtool.discovery.http_json import HttpJsonStrategy
+from notapkgtool.discovery.api_json import ApiJsonStrategy
 
 
 class MockAPIHandler(BaseHTTPRequestHandler):
@@ -131,7 +131,7 @@ def test_simple_json():
     print("TEST 1: Simple Flat JSON")
     print("=" * 70)
 
-    strategy = HttpJsonStrategy()
+    strategy = ApiJsonStrategy()
     config = {
         "source": {
             "api_url": "http://localhost:8765/api/simple",
@@ -179,7 +179,7 @@ def test_nested_json():
     print("TEST 2: Nested JSON Structure")
     print("=" * 70)
 
-    strategy = HttpJsonStrategy()
+    strategy = ApiJsonStrategy()
     config = {
         "source": {
             "api_url": "http://localhost:8765/api/nested",
@@ -224,7 +224,7 @@ def test_array_indexing():
     print("TEST 3: Array Indexing")
     print("=" * 70)
 
-    strategy = HttpJsonStrategy()
+    strategy = ApiJsonStrategy()
     config = {
         "source": {
             "api_url": "http://localhost:8765/api/array",
@@ -269,7 +269,7 @@ def test_post_request():
     print("TEST 4: POST Request with Body")
     print("=" * 70)
 
-    strategy = HttpJsonStrategy()
+    strategy = ApiJsonStrategy()
     config = {
         "source": {
             "api_url": "http://localhost:8765/api/query",
@@ -366,7 +366,7 @@ def main():
     print("\n" + "=" * 70)
     print("HTTP JSON Strategy Manual Test Suite")
     print("=" * 70)
-    print("\nThis script tests the http_json discovery strategy with:")
+    print("\nThis script tests the api_json discovery strategy with:")
     print("  1. Simple flat JSON responses")
     print("  2. Nested JSON structures")
     print("  3. Array indexing with JSONPath")

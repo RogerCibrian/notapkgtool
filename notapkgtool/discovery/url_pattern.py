@@ -1,4 +1,4 @@
-"""URL regex discovery strategy for NAPT.
+"""URL pattern discovery strategy for NAPT.
 
 This is a VERSION-FIRST strategy that extracts version information directly
 from the download URL using regular expressions, WITHOUT downloading. This
@@ -14,7 +14,7 @@ Key Advantages:
 
 Supported Version Extraction:
 
-- regex_in_url: Extract version from URL using a regex pattern
+- regex: Extract version from URL using a regex pattern
   - Supports named capture groups: (?P<version>...)
   - Falls back to full match if no named group
 
@@ -28,11 +28,9 @@ Use Cases:
 Recipe Configuration:
 
     source:
-      strategy: url_regex
+      strategy: url_pattern
       url: "https://vendor.com/downloads/app-v1.2.3-setup.msi"
-      version:
-        type: regex_in_url
-        pattern: "app-v(?P<version>[0-9.]+)-setup"
+      pattern: "app-v(?P<version>[0-9.]+)-setup"
 
 The pattern supports full Python regex syntax. Use a named capture group
 (?P<version>) to extract only the version portion, or let the entire match
@@ -50,25 +48,20 @@ In a recipe YAML:
       - name: "My App"
         id: "my-app"
         source:
-          strategy: url_regex
+          strategy: url_pattern
           url: "https://example.com/myapp-v2.1.0-setup.msi"
-          version:
-            type: regex_in_url
-            pattern: "myapp-v(?P<version>[0-9.]+)-setup"
+          pattern: "myapp-v(?P<version>[0-9.]+)-setup"
 
 From Python (version-first approach):
 
-    from notapkgtool.discovery.url_regex import UrlRegexStrategy
+    from notapkgtool.discovery.url_pattern import UrlPatternStrategy
     from notapkgtool.io import download_file
 
-    strategy = UrlRegexStrategy()
+    strategy = UrlPatternStrategy()
     app_config = {
         "source": {
             "url": "https://example.com/app-v1.2.3.msi",
-            "version": {
-                "type": "regex_in_url",
-                "pattern": r"app-v(?P<version>[0-9.]+)\\.msi",
-            },
+            "pattern": r"app-v(?P<version>[0-9.]+)\\.msi",
         }
     }
 
@@ -97,7 +90,7 @@ Note:
     - Core orchestration automatically skips download if version unchanged
     - The URL pattern must be stable and predictable
     - Pattern matching is case-sensitive by default (use (?i) for case-insensitive)
-    - Consider http_static if URLs don't contain version information
+    - Consider url_download if URLs don't contain version information
 """
 
 from __future__ import annotations
@@ -110,16 +103,14 @@ from notapkgtool.versioning.url_regex import version_from_regex_in_url
 from .base import register_strategy
 
 
-class UrlRegexStrategy:
+class UrlPatternStrategy:
     """Discovery strategy for extracting version from URL patterns.
 
     Configuration example:
         source:
-          strategy: url_regex
+          strategy: url_pattern
           url: "https://vendor.com/app-v1.2.3-installer.msi"
-          version:
-            type: regex_in_url
-            pattern: "app-v(?P<version>[0-9.]+)-installer"
+          pattern: "app-v(?P<version>[0-9.]+)-installer"
     """
 
     def get_version_info(
@@ -135,8 +126,8 @@ class UrlRegexStrategy:
         the download can be skipped entirely.
 
         Args:
-            app_config: App configuration containing source.url,
-                source.version.type, and source.version.pattern.
+            app_config: App configuration containing source.url and
+                source.pattern.
             verbose: If True, print verbose logging messages.
                 Default is False.
             debug: If True, print debug logging messages.
@@ -153,14 +144,11 @@ class UrlRegexStrategy:
         Example:
             Extract version from URL using regex:
 
-                strategy = UrlRegexStrategy()
+                strategy = UrlPatternStrategy()
                 config = {
                     "source": {
                         "url": "https://vendor.com/app-v1.0.0.msi",
-                        "version": {
-                            "type": "regex_in_url",
-                            "pattern": "app-v(?P<version>[0-9.]+)\\\\.msi"
-                        }
+                        "pattern": "app-v(?P<version>[0-9.]+)\\\\.msi"
                     }
                 }
                 version_info = strategy.get_version_info(config)
@@ -173,30 +161,15 @@ class UrlRegexStrategy:
         source = app_config.get("source", {})
         url = source.get("url")
         if not url:
-            raise ValueError("url_regex strategy requires 'source.url' in config")
+            raise ValueError("url_pattern strategy requires 'source.url' in config")
 
-        version_config = source.get("version", {})
-        version_type = version_config.get("type")
-        if not version_type:
-            raise ValueError(
-                "url_regex strategy requires 'source.version.type' in config"
-            )
-
-        if version_type != "regex_in_url":
-            raise ValueError(
-                f"url_regex strategy requires version.type='regex_in_url', "
-                f"got {version_type!r}"
-            )
-
-        pattern = version_config.get("pattern")
+        pattern = source.get("pattern")
         if not pattern:
-            raise ValueError(
-                "url_regex strategy requires 'source.version.pattern' in config"
-            )
+            raise ValueError("url_pattern strategy requires 'source.pattern' in config")
 
-        print_verbose("DISCOVERY", "Strategy: url_regex (version-first)")
+        print_verbose("DISCOVERY", "Strategy: url_pattern (version-first)")
         print_verbose("DISCOVERY", f"Source URL: {url}")
-        print_verbose("DISCOVERY", f"Regex pattern: {pattern}")
+        print_verbose("DISCOVERY", f"Pattern: {pattern}")
 
         # Extract version from URL (no download needed!)
         try:
@@ -205,7 +178,7 @@ class UrlRegexStrategy:
             )
         except ValueError as err:
             raise ValueError(
-                f"Failed to extract version from URL using regex: {err}"
+                f"Failed to extract version from URL using pattern: {err}"
             ) from err
 
         print_verbose("DISCOVERY", f"Discovered version: {discovered.version}")
@@ -213,11 +186,11 @@ class UrlRegexStrategy:
         return VersionInfo(
             version=discovered.version,
             download_url=url,
-            source="url_regex",
+            source="url_pattern",
         )
 
     def validate_config(self, app_config: dict[str, Any]) -> list[str]:
-        """Validate url_regex strategy configuration.
+        """Validate url_pattern strategy configuration.
 
         Checks for required fields and correct types without making network calls.
 
@@ -265,4 +238,4 @@ class UrlRegexStrategy:
 
 
 # Register this strategy when the module is imported
-register_strategy("url_regex", UrlRegexStrategy)
+register_strategy("url_pattern", UrlPatternStrategy)

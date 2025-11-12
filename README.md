@@ -97,7 +97,7 @@ Recipes are declarative YAML files that define how to discover, download, and pa
 - **[git.yaml](https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Git/git.yaml)** - GitHub release strategy with asset pattern matching
 - **[json-api-example.yaml](https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Examples/json-api-example.yaml)** - HTTP JSON API strategy
 
-NAPT supports multiple discovery strategies (http_static, url_regex, github_release, http_json) - see the [Discovery Strategies](https://rogercibrian.github.io/notapkgtool/user-guide/#discovery-strategies) guide for detailed configuration and examples.
+NAPT supports multiple discovery strategies (url_download, url_pattern, api_github, api_json) - see the [Discovery Strategies](https://rogercibrian.github.io/notapkgtool/user-guide/#discovery-strategies) guide for detailed configuration and examples.
 
 ## Contributing
 

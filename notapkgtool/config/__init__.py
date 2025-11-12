@@ -2,6 +2,7 @@
 
 This module provides tools for loading, merging, and validating YAML-based
 configuration files with a layered approach:
+
   - Organization-wide defaults (defaults/org.yaml)
   - Vendor-specific defaults (defaults/vendors/<Vendor>.yaml)
   - Recipe-specific configuration (recipes/<Vendor>/<app>.yaml)

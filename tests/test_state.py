@@ -213,7 +213,7 @@ class TestStateTracker:
             etag='W/"xyz789"',
             last_modified="Mon, 28 Oct 2024 10:00:00 GMT",
             known_version="2.0.0",
-            strategy="http_static",
+            strategy="url_download",
         )
 
         cache = tracker.get_cache("test-app")
@@ -222,7 +222,7 @@ class TestStateTracker:
         assert cache["etag"] == 'W/"xyz789"'
         assert cache["last_modified"] == "Mon, 28 Oct 2024 10:00:00 GMT"
         assert cache["sha256"] == "abc123"
-        assert cache["strategy"] == "http_static"
+        assert cache["strategy"] == "url_download"
 
     def test_has_version_changed_true(self, tmp_path):
         """Test version change detection when version differs."""

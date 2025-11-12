@@ -6,7 +6,7 @@ apps:
     id: "napt-json-api-example"
 
     source:
-      strategy: http_json
+      strategy: api_json
       api_url: "https://api.vendor.com/latest"
       version_path: "version"
       download_url_path: "download_url"
@@ -37,7 +37,7 @@ apps:
     id: "napt-nested-json-example"
 
     source:
-      strategy: http_json
+      strategy: api_json
       api_url: "https://api.vendor.com/releases"
       version_path: "release.stable.version"
       download_url_path: "release.stable.platforms.windows.x64"
@@ -64,7 +64,7 @@ apps:
     id: "napt-post-api-example"
 
     source:
-      strategy: http_json
+      strategy: api_json
       api_url: "https://api.vendor.com/query"
       version_path: "result.version"
       download_url_path: "result.download.url"

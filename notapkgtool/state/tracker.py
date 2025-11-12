@@ -5,8 +5,8 @@ application versions, ETags, and download metadata between runs.
 
 The state file supports two optimization approaches:
 
-- VERSION-FIRST (url_regex, github_release, http_json): Uses known_version for comparison
-- FILE-FIRST (http_static): Uses etag/last_modified for HTTP conditional requests
+- VERSION-FIRST (url_pattern, api_github, api_json): Uses known_version for comparison
+- FILE-FIRST (url_download): Uses etag/last_modified for HTTP conditional requests
 
 Key Features:
 
@@ -132,8 +132,7 @@ class StateTracker:
         Creates parent directories if needed.
 
         Raises:
-        OSError
-            If file permissions prevent writing.
+            OSError: If file permissions prevent writing.
 
         """
         # Update metadata
@@ -149,10 +148,9 @@ class StateTracker:
         """Get cached information for a recipe.
 
         Args:
-        recipe_id: Recipe identifier (from recipe's 'id' field).
+            recipe_id: Recipe identifier (from recipe's 'id' field).
 
         Returns:
-        dict or None
             Cached data if available, None otherwise.
 
         Example:
@@ -181,15 +179,15 @@ class StateTracker:
         Args:
             recipe_id: Recipe identifier.
             url: Download URL for provenance tracking. For version-first strategies
-                (url_regex, github_release, http_json), this is the actual download URL
-                from version_info. For file-first (http_static), this is source.url.
+                (url_pattern, api_github, api_json), this is the actual download URL
+                from version_info. For file-first (url_download), this is source.url.
             sha256: SHA-256 hash of file (for integrity checks).
-            etag: ETag header from download response. Used by http_static for HTTP 304
+            etag: ETag header from download response. Used by url_download for HTTP 304
                 conditional requests. Saved but unused by version-first strategies.
-            last_modified: Last-Modified header from download response. Used by http_static
+            last_modified: Last-Modified header from download response. Used by url_download
                 as fallback for conditional requests. Saved but unused by version-first.
             known_version: Version string. PRIMARY cache key for version-first strategies
-                (compared to skip downloads). Informational only for http_static.
+                (compared to skip downloads). Informational only for url_download.
             strategy: Discovery strategy used (for debugging).
 
         Example:
@@ -236,11 +234,10 @@ class StateTracker:
         """Check if discovered version differs from cached known_version.
 
         Args:
-        recipe_id: Recipe identifier.
-        new_version: Newly discovered version.
+            recipe_id: Recipe identifier.
+            new_version: Newly discovered version.
 
         Returns:
-        bool
             True if version changed or no cached version exists.
 
         Example:
@@ -265,7 +262,6 @@ def create_default_state() -> dict[str, Any]:
     """Create a default empty state structure.
 
     Returns:
-    dict
         Empty state with metadata section.
 
     Example:
@@ -289,20 +285,15 @@ def load_state(state_file: Path) -> dict[str, Any]:
     """Load state from JSON file.
 
     Args:
-    state_file:
-        Path to JSON state file.
+        state_file: Path to JSON state file.
 
     Returns:
-    dict
         Loaded state dictionary.
 
     Raises:
-    FileNotFoundError
-        If state file doesn't exist.
-    json.JSONDecodeError
-        If file contains invalid JSON.
-    OSError
-        If file cannot be read due to permissions.
+        FileNotFoundError: If state file doesn't exist.
+        json.JSONDecodeError: If file contains invalid JSON.
+        OSError: If file cannot be read due to permissions.
 
     Example:
         Load state from file:
@@ -324,14 +315,11 @@ def save_state(state: dict[str, Any], state_file: Path) -> None:
     and sorted keys for consistent diffs in version control.
 
     Args:
-    state:
-        State dictionary to save.
-    state_file:
-        Path to JSON state file.
+        state: State dictionary to save.
+        state_file: Path to JSON state file.
 
     Raises:
-    OSError
-        If file cannot be written due to permissions.
+        OSError: If file cannot be written due to permissions.
 
     Example:
         Save state to file:

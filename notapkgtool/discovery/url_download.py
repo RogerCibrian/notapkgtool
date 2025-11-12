@@ -1,4 +1,4 @@
-"""HTTP static URL discovery strategy for NAPT.
+"""URL download discovery strategy for NAPT.
 
 This is a FILE-FIRST strategy that downloads an installer from a fixed HTTP(S)
 URL and extracts version information from the downloaded file. Uses HTTP ETag
@@ -14,9 +14,9 @@ Key Advantages:
 
 Supported Version Extraction:
 
-- msi_product_version_from_file: Extract ProductVersion property from MSI
-- (Future) exe_file_version: Extract FileVersion from PE headers
-- (Future) manual_version: Use a version specified in the recipe
+- msi: Extract ProductVersion property from MSI files
+- (Future) exe: Extract FileVersion from PE headers
+- (Future) manual: Use a version specified in the recipe
 
 Use Cases:
 
@@ -28,16 +28,16 @@ Use Cases:
 Recipe Configuration:
 
     source:
-      strategy: http_static
+      strategy: url_download
       url: "https://vendor.com/installer.msi"          # Required: download URL
       version:
-        type: msi_product_version_from_file            # Required: extraction method
+        type: msi                                      # Required: extraction method
         file: "installer.msi"                          # Optional: defaults to URL filename
 
 Configuration Fields:
 
 - **url** (str, required): HTTP(S) URL to download the installer from. The URL should be stable and point to the latest version.
-- **version.type** (str, required): Version extraction method. Currently supported: msi_product_version_from_file.
+- **version.type** (str, required): Version extraction method. Currently supported: msi.
 - **version.file** (str, optional): Specific filename to extract version from. Defaults to the downloaded filename derived from the URL or Content-Disposition header.
 
 Error Handling:
@@ -53,21 +53,21 @@ In a recipe YAML:
       - name: "My App"
         id: "my-app"
         source:
-          strategy: http_static
+          strategy: url_download
           url: "https://example.com/myapp-setup.msi"
           version:
-            type: msi_product_version_from_file
+            type: msi
 
 From Python:
 
     from pathlib import Path
-    from notapkgtool.discovery.http_static import HttpStaticStrategy
+    from notapkgtool.discovery.url_download import UrlDownloadStrategy
 
-    strategy = HttpStaticStrategy()
+    strategy = UrlDownloadStrategy()
     app_config = {
         "source": {
             "url": "https://example.com/app.msi",
-            "version": {"type": "msi_product_version_from_file"},
+            "version": {"type": "msi"},
         }
     }
 
@@ -93,8 +93,8 @@ Note:
     - Core orchestration automatically provides cached ETag if available
     - Server must support ETag or Last-Modified headers for optimization
     - If server doesn't support conditional requests, full download occurs every time
-    - Consider version-first strategies (url_regex, github_release, http_json) for
-  better performance when version available via API or URL pattern
+    - Consider version-first strategies (url_pattern, api_github, api_json) for
+      better performance when version available via API or URL pattern
 
 """
 
@@ -110,15 +110,15 @@ from notapkgtool.versioning.msi import version_from_msi_product_version
 from .base import register_strategy
 
 
-class HttpStaticStrategy:
+class UrlDownloadStrategy:
     """Discovery strategy for static HTTP(S) URLs.
 
     Configuration example:
         source:
-          strategy: http_static
+          strategy: url_download
           url: "https://example.com/installer.msi"
           version:
-            type: msi_product_version_from_file
+            type: msi
             file: "installer.msi"
     """
 
@@ -160,16 +160,16 @@ class HttpStaticStrategy:
         source = app_config.get("source", {})
         url = source.get("url")
         if not url:
-            raise ValueError("http_static strategy requires 'source.url' in config")
+            raise ValueError("url_download strategy requires 'source.url' in config")
 
         version_config = source.get("version", {})
         version_type = version_config.get("type")
         if not version_type:
             raise ValueError(
-                "http_static strategy requires 'source.version.type' in config"
+                "url_download strategy requires 'source.version.type' in config"
             )
 
-        print_verbose("DISCOVERY", "Strategy: http_static")
+        print_verbose("DISCOVERY", "Strategy: url_download (file-first)")
         print_verbose("DISCOVERY", f"Source URL: {url}")
         print_verbose("DISCOVERY", f"Version extraction: {version_type}")
 
@@ -218,7 +218,7 @@ class HttpStaticStrategy:
                 ) from None
 
             # Extract version from cached file
-            if version_type == "msi_product_version_from_file":
+            if version_type == "msi":
                 try:
                     discovered = version_from_msi_product_version(
                         cached_file, verbose=verbose, debug=debug
@@ -229,8 +229,7 @@ class HttpStaticStrategy:
                     ) from err
             else:
                 raise ValueError(
-                    f"Unsupported version type: {version_type!r}. "
-                    f"Supported: msi_product_version_from_file"
+                    f"Unsupported version type: {version_type!r}. " f"Supported: msi"
                 ) from None
 
             # Return cached info with preserved headers (prevents overwriting ETag)
@@ -248,7 +247,7 @@ class HttpStaticStrategy:
             raise RuntimeError(f"Failed to download {url}: {err}") from err
 
         # File was downloaded (not cached), extract version from it
-        if version_type == "msi_product_version_from_file":
+        if version_type == "msi":
             try:
                 discovered = version_from_msi_product_version(
                     file_path, verbose=verbose, debug=debug
@@ -259,14 +258,13 @@ class HttpStaticStrategy:
                 ) from err
         else:
             raise ValueError(
-                f"Unsupported version type: {version_type!r}. "
-                f"Supported: msi_product_version_from_file"
+                f"Unsupported version type: {version_type!r}. " f"Supported: msi"
             )
 
         return discovered, file_path, sha256, headers
 
     def validate_config(self, app_config: dict[str, Any]) -> list[str]:
-        """Validate http_static strategy configuration.
+        """Validate url_download strategy configuration.
 
         Checks for required fields and correct types without making network calls.
 
@@ -303,7 +301,7 @@ class HttpStaticStrategy:
                 errors.append("source.version.type must be a string")
             else:
                 version_type = version_config["type"]
-                supported_types = ["msi_product_version_from_file"]
+                supported_types = ["msi"]
                 if version_type not in supported_types:
                     errors.append(
                         f"Unsupported source.version.type: {version_type!r}. "
@@ -314,4 +312,4 @@ class HttpStaticStrategy:
 
 
 # Register this strategy when the module is imported
-register_strategy("http_static", HttpStaticStrategy)
+register_strategy("url_download", UrlDownloadStrategy)

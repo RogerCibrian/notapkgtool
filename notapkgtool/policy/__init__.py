@@ -5,10 +5,12 @@ version comparison strategies, hash-based change detection, and deployment
 wave/ring management.
 
 Modules:
+
 updates : module
     Update policies for deciding when to stage new application versions.
 
 Public API:
+
 UpdatePolicy : class
     Configuration for update staging decisions.
 should_stage : function

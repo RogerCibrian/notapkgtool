@@ -30,24 +30,22 @@ class TestDiscoverRecipe:
                     "name": "Test App",
                     "id": "test-app",
                     "source": {
-                        "strategy": "http_static",
+                        "strategy": "url_download",
                         "url": "https://example.com/test.msi",
-                        "version": {"type": "msi_product_version_from_file"},
+                        "version": {"type": "msi"},
                     },
                 }
             ],
         }
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
 
-        # Mock the discovery strategy (http_static - file-first)
+        # Mock the discovery strategy (url_download - file-first)
         with patch("notapkgtool.core.get_strategy") as mock_get_strategy:
             mock_strategy = mock_get_strategy.return_value
             # Ensure it doesn't have get_version_info (file-first strategy)
             del mock_strategy.get_version_info
             mock_strategy.discover_version.return_value = (
-                DiscoveredVersion(
-                    version="1.2.3", source="msi_product_version_from_file"
-                ),
+                DiscoveredVersion(version="1.2.3", source="msi"),
                 tmp_test_dir / "test.msi",
                 "abc123" * 8,  # fake SHA-256
                 {"ETag": 'W/"test123"'},  # HTTP headers
@@ -57,9 +55,9 @@ class TestDiscoverRecipe:
 
         assert result["app_name"] == "Test App"
         assert result["app_id"] == "test-app"
-        assert result["strategy"] == "http_static"
+        assert result["strategy"] == "url_download"
         assert result["version"] == "1.2.3"
-        assert result["version_source"] == "msi_product_version_from_file"
+        assert result["version_source"] == "msi"
         assert result["status"] == "success"
         assert "file_path" in result
         assert "sha256" in result
@@ -125,7 +123,7 @@ class TestVersionFirstFastPath:
         """Test that version-first strategies skip download when version matches cache."""
         from pathlib import Path
 
-        # Create a minimal recipe with url_regex strategy
+        # Create a minimal recipe with url_pattern strategy
         recipe_data = {
             "apiVersion": "napt/v1",
             "apps": [
@@ -133,12 +131,9 @@ class TestVersionFirstFastPath:
                     "name": "Test App",
                     "id": "test-app",
                     "source": {
-                        "strategy": "url_regex",
+                        "strategy": "url_pattern",
                         "url": "https://example.com/app-v1.2.3-installer.msi",
-                        "version": {
-                            "type": "regex_in_url",
-                            "pattern": r"app-v(?P<version>[0-9.]+)-installer",
-                        },
+                        "pattern": r"app-v(?P<version>[0-9.]+)-installer",
                     },
                 }
             ],
@@ -182,7 +177,7 @@ class TestVersionFirstFastPath:
         """Test that version-first strategies download when version changes."""
         from pathlib import Path
 
-        # Create a minimal recipe with url_regex strategy
+        # Create a minimal recipe with url_pattern strategy
         recipe_data = {
             "apiVersion": "napt/v1",
             "apps": [
@@ -190,12 +185,9 @@ class TestVersionFirstFastPath:
                     "name": "Test App",
                     "id": "test-app",
                     "source": {
-                        "strategy": "url_regex",
+                        "strategy": "url_pattern",
                         "url": "https://example.com/app-v2.0.0-installer.msi",
-                        "version": {
-                            "type": "regex_in_url",
-                            "pattern": r"app-v(?P<version>[0-9.]+)-installer",
-                        },
+                        "pattern": r"app-v(?P<version>[0-9.]+)-installer",
                     },
                 }
             ],
@@ -248,7 +240,7 @@ class TestVersionFirstFastPath:
 
         import requests_mock
 
-        # Create a minimal recipe with url_regex strategy
+        # Create a minimal recipe with url_pattern strategy
         recipe_data = {
             "apiVersion": "napt/v1",
             "apps": [
@@ -256,12 +248,9 @@ class TestVersionFirstFastPath:
                     "name": "Test App",
                     "id": "test-app",
                     "source": {
-                        "strategy": "url_regex",
+                        "strategy": "url_pattern",
                         "url": "https://example.com/app-v1.2.3-installer.msi",
-                        "version": {
-                            "type": "regex_in_url",
-                            "pattern": r"app-v(?P<version>[0-9.]+)-installer",
-                        },
+                        "pattern": r"app-v(?P<version>[0-9.]+)-installer",
                     },
                 }
             ],

@@ -51,9 +51,9 @@ class TestEndToEndWorkflow:
                     "name": "Test App",
                     "id": "test-app",
                     "source": {
-                        "strategy": "http_static",
+                        "strategy": "url_download",
                         "url": "https://example.com/installer.msi",
-                        "version": {"type": "msi_product_version_from_file"},
+                        "version": {"type": "msi"},
                     },
                 }
             ],
@@ -74,7 +74,7 @@ class TestEndToEndWorkflow:
             )
 
             with patch(
-                "notapkgtool.discovery.http_static.version_from_msi_product_version"
+                "notapkgtool.discovery.url_download.version_from_msi_product_version"
             ) as mock_extract:
                 mock_extract.return_value = DiscoveredVersion(
                     version="1.2.3", source="msi_product_version_from_file"
@@ -85,7 +85,7 @@ class TestEndToEndWorkflow:
         # Verify complete workflow results
         assert result["app_name"] == "Test App"
         assert result["version"] == "1.2.3"
-        assert result["strategy"] == "http_static"
+        assert result["strategy"] == "url_download"
         assert result["status"] == "success"
 
         # Verify file was downloaded
@@ -106,9 +106,9 @@ class TestConfigAndDiscoveryIntegration:
                     "name": "App",
                     "id": "app-id",
                     "source": {
-                        "strategy": "http_static",
+                        "strategy": "url_download",
                         "url": "https://test.com/app.msi",
-                        "version": {"type": "msi_product_version_from_file"},
+                        "version": {"type": "msi"},
                     },
                 }
             ],
@@ -123,7 +123,7 @@ class TestConfigAndDiscoveryIntegration:
             )
 
             with patch(
-                "notapkgtool.discovery.http_static.version_from_msi_product_version"
+                "notapkgtool.discovery.url_download.version_from_msi_product_version"
             ) as mock_extract:
                 mock_extract.return_value = DiscoveredVersion(
                     version="1.0.0", source="msi"
@@ -146,9 +146,9 @@ class TestErrorPropagation:
                 {
                     "name": "App",
                     "source": {
-                        "strategy": "http_static",
+                        "strategy": "url_download",
                         "url": "https://test.com/app.msi",
-                        "version": {"type": "msi_product_version_from_file"},
+                        "version": {"type": "msi"},
                     },
                 }
             ],
@@ -169,9 +169,9 @@ class TestErrorPropagation:
                 {
                     "name": "App",
                     "source": {
-                        "strategy": "http_static",
+                        "strategy": "url_download",
                         "url": "https://test.com/app.msi",
-                        "version": {"type": "msi_product_version_from_file"},
+                        "version": {"type": "msi"},
                     },
                 }
             ],
@@ -186,7 +186,7 @@ class TestErrorPropagation:
             )
 
             with patch(
-                "notapkgtool.discovery.http_static.version_from_msi_product_version"
+                "notapkgtool.discovery.url_download.version_from_msi_product_version"
             ) as mock_extract:
                 mock_extract.side_effect = RuntimeError("Invalid MSI")
 
