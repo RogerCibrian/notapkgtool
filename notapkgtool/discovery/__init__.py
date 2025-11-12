@@ -8,13 +8,13 @@ file-first (must download to extract version).
 Strategy Pattern:
     Discovery strategies implement one of two approaches:
 
-VERSION-FIRST (url_regex, github_release, http_json):
+VERSION-FIRST (url_pattern, api_github, api_json):
   - Implement get_version_info() -> VersionInfo
   - Can determine version and download URL without downloading installer
   - Core orchestration checks version first, then decides whether to download
   - Enables zero-bandwidth update checks when version unchanged
 
-FILE-FIRST (http_static):
+FILE-FIRST (url_download):
   - Implement discover_version() -> tuple[DiscoveredVersion, Path, str, dict]
   - Must download installer to extract version from file metadata
   - Uses HTTP ETag conditional requests for efficiency
@@ -23,16 +23,16 @@ The strategy registry allows dynamic lookup based on the strategy name
 in the recipe configuration.
 
 Available Strategies:
-    http_static : HttpStaticStrategy (FILE-FIRST)
+    url_download : UrlDownloadStrategy (FILE-FIRST)
         Download from a fixed URL and extract version from the file itself.
         Supports MSI ProductVersion extraction. Uses ETag caching.
-    url_regex : UrlRegexStrategy (VERSION-FIRST)
+    url_pattern : UrlPatternStrategy (VERSION-FIRST)
         Extract version from URL patterns using regex.
         Instant version checks with zero network calls.
-    github_release : GithubReleaseStrategy (VERSION-FIRST)
+    api_github : ApiGithubStrategy (VERSION-FIRST)
         Fetch from GitHub releases API and extract version from tags.
         Fast API-based version checks (~100ms).
-    http_json : HttpJsonStrategy (VERSION-FIRST)
+    api_json : ApiJsonStrategy (VERSION-FIRST)
         Query JSON API endpoints for version and download URL.
         Fast API-based version checks (~100ms).
 
@@ -48,14 +48,14 @@ Example:
         from pathlib import Path
 
         # Get a strategy by name (auto-registered on import)
-        strategy = get_strategy("http_static")
+        strategy = get_strategy("url_download")
 
         # Use it to discover a version
         app_config = {
             "source": {
-                "strategy": "http_static",
+                "strategy": "url_download",
                 "url": "https://example.com/app.msi",
-                "version": {"type": "msi_product_version_from_file"},
+                "version": {"type": "msi"},
             }
         }
 
@@ -68,10 +68,10 @@ Example:
 
 # Import strategy modules to trigger self-registration
 from . import (
-    github_release,  # noqa: F401
-    http_json,  # noqa: F401
-    http_static,  # noqa: F401
-    url_regex,  # noqa: F401
+    api_github,  # noqa: F401
+    api_json,  # noqa: F401
+    url_download,  # noqa: F401
+    url_pattern,  # noqa: F401
 )
 from .base import DiscoveryStrategy, get_strategy
 

@@ -6,10 +6,10 @@ apps:
     id: "napt-chrome"
 
     source:
-      strategy: http_static
+      strategy: url_download
       url: "https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi"
       version:
-        type: msi_product_version_from_file
+        type: msi
         file: "googlechromestandaloneenterprise64.msi"
 
     psadt:

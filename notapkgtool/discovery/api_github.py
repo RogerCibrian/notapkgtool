@@ -1,4 +1,4 @@
-"""GitHub releases discovery strategy for NAPT.
+"""GitHub API discovery strategy for NAPT.
 
 This is a VERSION-FIRST strategy that queries the GitHub API to get version
 and download URL WITHOUT downloading the installer. This enables fast version
@@ -33,9 +33,9 @@ Use Cases:
 Recipe Configuration:
 
     source:
-      strategy: github_release
+      strategy: api_github
       repo: "git-for-windows/git"                    # Required: owner/repo
-      asset_pattern: "Git-.*-64-bit\\.exe$"          # Optional: regex for asset
+      asset_pattern: "Git-.*-64-bit\\.exe$"          # Required: regex for asset
       version_pattern: "v?([0-9.]+)"                 # Optional: version extraction
       prerelease: false                              # Optional: include prereleases
       token: "${GITHUB_TOKEN}"                       # Optional: auth token
@@ -43,7 +43,7 @@ Recipe Configuration:
 Configuration Fields:
 
 - **repo** (str, required): GitHub repository in "owner/name" format (e.g., "git-for-windows/git")
-- **asset_pattern** (str, optional): Regular expression to match asset filename. If multiple assets match, the first match is used. If omitted, the first asset is selected. Example: ".*-x64\\.msi$" matches assets ending with "-x64.msi"
+- **asset_pattern** (str, required): Regular expression to match asset filename. If multiple assets match, the first match is used. Example: ".*-x64\\.msi$" matches assets ending with "-x64.msi"
 - **version_pattern** (str, optional): Regular expression to extract version from the release tag name. Use a named capture group (?P<version>...) or the entire match. Default: "v?([0-9.]+)" strips optional "v" prefix. Example: "release-([0-9.]+)" for tags like "release-1.2.3"
     - **prerelease** (bool, optional): If True, include pre-release versions. If False
       (default), only stable releases are considered. Uses GitHub's prerelease flag.
@@ -71,18 +71,16 @@ Example:
       - name: "Git for Windows"
         id: "git"
         source:
-          strategy: github_release
+          strategy: api_github
           repo: "git-for-windows/git"
           asset_pattern: "Git-.*-64-bit\\.exe$"
-          version:
-            type: tag  # Version comes from tag, not file
 
 From Python (version-first approach):
 
-    from notapkgtool.discovery.github_release import GithubReleaseStrategy
+    from notapkgtool.discovery.api_github import ApiGithubStrategy
     from notapkgtool.io import download_file
 
-    strategy = GithubReleaseStrategy()
+    strategy = ApiGithubStrategy()
     app_config = {
         "source": {
             "repo": "git-for-windows/git",
@@ -115,7 +113,7 @@ Note:
     Core orchestration automatically skips download if version unchanged.
     The GitHub API is stable and well-documented. Releases are fetched in order
     (latest first). Asset matching is case-sensitive by default (use (?i) for
-    case-insensitive). Consider http_static if you need a direct download URL instead.
+    case-insensitive). Consider url_download if you need a direct download URL instead.
 
 """
 
@@ -132,12 +130,12 @@ from notapkgtool.versioning.keys import VersionInfo
 from .base import register_strategy
 
 
-class GithubReleaseStrategy:
+class ApiGithubStrategy:
     """Discovery strategy for GitHub releases.
 
     Configuration example:
         source:
-          strategy: github_release
+          strategy: api_github
           repo: "owner/repository"
           asset_pattern: ".*\\.msi$"
           version_pattern: "v?([0-9.]+)"
@@ -177,7 +175,7 @@ class GithubReleaseStrategy:
         Example:
             Get version from GitHub releases:
 
-                strategy = GithubReleaseStrategy()
+                strategy = ApiGithubStrategy()
                 config = {
                     "source": {
                         "repo": "owner/repo",
@@ -194,7 +192,7 @@ class GithubReleaseStrategy:
         source = app_config.get("source", {})
         repo = source.get("repo")
         if not repo:
-            raise ValueError("github_release strategy requires 'source.repo' in config")
+            raise ValueError("api_github strategy requires 'source.repo' in config")
 
         # Validate repo format
         if "/" not in repo or repo.count("/") != 1:
@@ -204,6 +202,11 @@ class GithubReleaseStrategy:
 
         # Optional configuration
         asset_pattern = source.get("asset_pattern")
+        if not asset_pattern:
+            raise ValueError(
+                "api_github strategy requires 'source.asset_pattern' in config"
+            )
+
         version_pattern = source.get("version_pattern", r"v?([0-9.]+)")
         prerelease = source.get("prerelease", False)
         token = source.get("token")
@@ -219,7 +222,7 @@ class GithubReleaseStrategy:
                         f"Warning: Environment variable {env_var} not set",
                     )
 
-        print_verbose("DISCOVERY", "Strategy: github_release (version-first)")
+        print_verbose("DISCOVERY", "Strategy: api_github (version-first)")
         print_verbose("DISCOVERY", f"Repository: {repo}")
         print_verbose("DISCOVERY", f"Version pattern: {version_pattern}")
         if asset_pattern:
@@ -315,34 +318,25 @@ class GithubReleaseStrategy:
 
         print_verbose("DISCOVERY", f"Release has {len(assets)} asset(s)")
 
-        # Match asset by pattern or take first
+        # Match asset by pattern
         matched_asset = None
-        if asset_pattern:
-            try:
-                pattern = re.compile(asset_pattern)
-            except re.error as err:
-                raise ValueError(
-                    f"Invalid asset_pattern regex: {asset_pattern!r}"
-                ) from err
+        try:
+            pattern = re.compile(asset_pattern)
+        except re.error as err:
+            raise ValueError(f"Invalid asset_pattern regex: {asset_pattern!r}") from err
 
-            for asset in assets:
-                asset_name = asset.get("name", "")
-                if pattern.search(asset_name):
-                    matched_asset = asset
-                    print_verbose("DISCOVERY", f"Matched asset: {asset_name}")
-                    break
+        for asset in assets:
+            asset_name = asset.get("name", "")
+            if pattern.search(asset_name):
+                matched_asset = asset
+                print_verbose("DISCOVERY", f"Matched asset: {asset_name}")
+                break
 
-            if not matched_asset:
-                available = [a.get("name", "(unnamed)") for a in assets]
-                raise ValueError(
-                    f"No assets matched pattern {asset_pattern!r}. "
-                    f"Available assets: {', '.join(available)}"
-                )
-        else:
-            matched_asset = assets[0]
-            print_verbose(
-                "DISCOVERY",
-                f"No pattern specified, using first asset: {matched_asset.get('name')}",
+        if not matched_asset:
+            available = [a.get("name", "(unnamed)") for a in assets]
+            raise ValueError(
+                f"No assets matched pattern {asset_pattern!r}. "
+                f"Available assets: {', '.join(available)}"
             )
 
         # Get download URL
@@ -355,11 +349,11 @@ class GithubReleaseStrategy:
         return VersionInfo(
             version=version_str,
             download_url=download_url,
-            source="github_release",
+            source="api_github",
         )
 
     def validate_config(self, app_config: dict[str, Any]) -> list[str]:
-        """Validate github_release strategy configuration.
+        """Validate api_github strategy configuration.
 
         Checks for required fields and correct types without making network calls.
 
@@ -421,4 +415,4 @@ class GithubReleaseStrategy:
 
 
 # Register this strategy when the module is imported
-register_strategy("github_release", GithubReleaseStrategy)
+register_strategy("api_github", ApiGithubStrategy)

@@ -56,7 +56,7 @@ def sample_recipe_data() -> dict[str, Any]:
                 "name": "Test App",
                 "id": "test-app",
                 "source": {
-                    "strategy": "http_static",
+                    "strategy": "url_download",
                     "url": "https://example.com/installer.msi",
                     "version": {
                         "type": "msi_product_version_from_file",

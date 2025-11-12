@@ -5,6 +5,7 @@ releases from the official GitHub repository. It reuses NAPT's existing
 GitHub release discovery infrastructure for consistency.
 
 Key Features:
+
 - Fetch latest PSADT version from GitHub API
 - Download and cache specific PSADT versions
 - Extract releases to cache directory
@@ -59,16 +60,15 @@ def fetch_latest_psadt_version(verbose: bool = False) -> str:
     number from the tag name (e.g., "4.1.7" from tag "4.1.7").
 
     Args:
-    verbose : bool, optional
-        If True, print verbose output about the API request.
+        verbose: If True, print verbose output about the API request.
+            Defaults to False.
 
     Returns:
-    str
         Version number (e.g., "4.1.7").
 
     Raises:
-    RuntimeError
-        If the GitHub API request fails or version cannot be extracted.
+        RuntimeError: If the GitHub API request fails or version cannot be
+            extracted.
 
     Example:
         Get latest PSADT version from GitHub:
@@ -121,13 +121,10 @@ def is_psadt_cached(version: str, cache_dir: Path) -> bool:
     """Check if a PSADT version is already cached.
 
     Args:
-    version : str
-        PSADT version to check (e.g., "4.1.7").
-    cache_dir : Path
-        Base cache directory (e.g., Path("cache/psadt")).
+        version: PSADT version to check (e.g., "4.1.7").
+        cache_dir: Base cache directory (e.g., Path("cache/psadt")).
 
     Returns:
-    bool
         True if the version is cached and valid, False otherwise.
 
     Example:
@@ -161,24 +158,18 @@ def get_psadt_release(
     downloads the release .zip file and extracts it to the cache.
 
     Args:
-    release_spec : str
-        Version specifier - either "latest" or specific version (e.g., "4.1.7").
-    cache_dir : Path
-        Base cache directory for PSADT releases.
-    verbose : bool, optional
-        Show verbose progress output.
-    debug : bool, optional
-        Show debug output.
+        release_spec: Version specifier - either "latest" or specific version
+            (e.g., "4.1.7").
+        cache_dir: Base cache directory for PSADT releases.
+        verbose: Show verbose progress output. Defaults to False.
+        debug: Show debug output. Defaults to False.
 
     Returns:
-    Path
         Path to the cached PSADT directory (cache_dir/{version}).
 
     Raises:
-    RuntimeError
-        If download fails or extraction fails.
-    ValueError
-        If release_spec is invalid.
+        RuntimeError: If download fails or extraction fails.
+        ValueError: If release_spec is invalid.
 
     Example:
         Get latest version:

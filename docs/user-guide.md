@@ -119,12 +119,12 @@ Discovery strategies are the core mechanism for obtaining application installers
 
 | Strategy | Version Source | Use Case | Unchanged Check |
 |----------|---------------|----------|-----------------|
-| **url_regex** | URL pattern | Version-encoded URLs | Instant (regex only) |
-| **http_json** | JSON API | REST APIs with metadata | Fast (API call ~100ms) |
-| **github_release** | Git tags | GitHub-hosted releases | Fast (GitHub API ~100ms) |
-| **http_static** | File metadata | Fixed URLs, MSI installers | Medium (HTTP conditional ~500ms) |
+| **url_pattern** | URL pattern | Version-encoded URLs | Instant (regex only) |
+| **api_json** | JSON API | REST APIs with metadata | Fast (API call ~100ms) |
+| **api_github** | Git tags | GitHub-hosted releases | Fast (GitHub API ~100ms) |
+| **url_download** | File metadata | Fixed URLs, MSI installers | Medium (HTTP conditional ~500ms) |
 
-### http_static
+### url_download
 
 **Best for:**
 
@@ -136,16 +136,16 @@ Discovery strategies are the core mechanism for obtaining application installers
 
 ```yaml
 source:
-  strategy: http_static
+  strategy: url_download
   url: "https://dl.google.com/chrome/install/googlechromestandaloneenterprise64.msi"
   version:
-    type: msi_product_version_from_file
+    type: msi
 ```
 
 **Pros:** Simple and reliable, version directly from installer (most accurate)  
 **Cons:** Must download file to know version, slower update checks (HTTP conditional request)
 
-### url_regex
+### url_pattern
 
 **Best for:**
 
@@ -157,17 +157,15 @@ source:
 
 ```yaml
 source:
-  strategy: url_regex
+  strategy: url_pattern
   url: "https://vendor.com/app-v1.2.3-setup.msi"
-  version:
-    type: regex_in_url
-    pattern: "app-v(?P<version>[0-9.]+)-setup"
+  pattern: "app-v(?P<version>[0-9.]+)-setup"
 ```
 
 **Pros:** Know version before download, instant update checks (regex only, zero network), bandwidth-efficient  
 **Cons:** Relies on URL format stability
 
-### github_release
+### api_github
 
 **Best for:**
 
@@ -179,7 +177,7 @@ source:
 
 ```yaml
 source:
-  strategy: github_release
+  strategy: api_github
   repo: "git-for-windows/git"
   asset_pattern: "Git-.*-64-bit\\.exe$"
   version_pattern: "v?([0-9.]+)"
@@ -188,7 +186,7 @@ source:
 **Pros:** Official GitHub API, reliable, fast update checks (API only, ~100ms), supports authentication  
 **Cons:** GitHub API rate limits (60/hour unauthenticated)
 
-### http_json
+### api_json
 
 **Best for:**
 
@@ -200,7 +198,7 @@ source:
 
 ```yaml
 source:
-  strategy: http_json
+  strategy: api_json
   api_url: "https://vendor.com/api/latest"
   version_path: "version"
   download_url_path: "download_url"
@@ -218,15 +216,15 @@ Use this flowchart to choose the right strategy:
 ```mermaid
 flowchart TD
     Start{JSON API for<br/>version/download?}
-    Start -->|Yes| JSON[http_json<br/>Fast version checks]
+    Start -->|Yes| JSON[api_json<br/>Fast version checks]
     Start -->|No| GitHub{App on<br/>GitHub?}
-    GitHub -->|Yes| GHRelease[github_release<br/>Reliable API, fast checks]
+    GitHub -->|Yes| GHRelease[api_github<br/>Reliable API, fast checks]
     GitHub -->|No| URLVersion{Version in<br/>download URL?}
-    URLVersion -->|Yes| Regex[url_regex<br/>Instant version checks]
-    URLVersion -->|No| Static[http_static<br/>Must download to check]
+    URLVersion -->|Yes| Regex[url_pattern<br/>Instant version checks]
+    URLVersion -->|No| Static[url_download<br/>Must download to check]
 ```
 
-**Performance Note**: Version-first strategies (everything except http_static) can skip downloads entirely when versions haven't changed, making them ideal for scheduled CI/CD checks.
+**Performance Note**: Version-first strategies (everything except url_download) can skip downloads entirely when versions haven't changed, making them ideal for scheduled CI/CD checks.
 
 ## State Management & Caching
 
@@ -236,14 +234,14 @@ NAPT automatically tracks discovered versions and optimizes subsequent runs by a
 
 NAPT uses different caching approaches based on the discovery strategy, enabling significant performance and bandwidth savings:
 
-- **Version-First** (url_regex, github_release, http_json): Checks version via API/regex (~100ms or instant) before downloading. If unchanged and file exists, skips download entirely - saving 60+ MB bandwidth and minutes of time on every check.
-- **File-First** (http_static): Uses HTTP conditional requests (ETags) to check if file changed. If server returns 304 Not Modified (~500ms), uses cached file without re-downloading.
+- **Version-First** (url_pattern, api_github, api_json): Checks version via API/regex (~100ms or instant) before downloading. If unchanged and file exists, skips download entirely - saving 60+ MB bandwidth and minutes of time on every check.
+- **File-First** (url_download): Uses HTTP conditional requests (ETags) to check if file changed. If server returns 304 Not Modified (~500ms), uses cached file without re-downloading.
 
 This intelligent caching is critical for CI/CD with frequent scheduled checks, dramatically reducing bandwidth costs and load on vendor CDNs while providing near-instant feedback when applications haven't changed.
 
 ### Detailed Workflow
 
-#### Version-First Strategies (url_regex, github_release, http_json)
+#### Version-First Strategies (url_pattern, api_github, api_json)
 
 These strategies discover the version **before** downloading, enabling instant cache checks:
 
@@ -273,7 +271,7 @@ flowchart TD
 
 **Key optimization:** Version discovered via API/regex (~100ms or instant) **before** downloading. If unchanged and file exists, skip download entirely.
 
-#### File-First Strategy (http_static)
+#### File-First Strategy (url_download)
 
 This strategy must download (or check) the file first to extract the version:
 
@@ -309,7 +307,7 @@ flowchart TD
 | **Unchanged (most common)** | ~100ms API call (or instant regex) | ~500ms HTTP conditional request |
 | **Changed** | API call + Download | Full download |
 
-**Recommendation:** Use version-first strategies (url_regex, github_release, http_json) when available for fastest cache checks.
+**Recommendation:** Use version-first strategies (url_pattern, api_github, api_json) when available for fastest cache checks.
 
 ### Default Behavior (Stateful)
 
@@ -541,7 +539,7 @@ napt discover recipes/app.yaml --stateless
 # Solution: Use authentication token
 # In recipe:
 source:
-  strategy: github_release
+  strategy: api_github
   token: "${GITHUB_TOKEN}"
 
 # Set environment variable

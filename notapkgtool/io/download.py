@@ -64,10 +64,10 @@ Design Decisions:
 - **Why stream hashing?** Computing SHA-256 while streaming avoids a second file read, improving I/O efficiency especially for large installers.
 
 Note:
-- Progress output goes to stdout (can be captured/redirected)
-- User-Agent identifies NAPT to help with debugging/support
-- All HTTP errors are chained for better debugging
-- Timeouts are per-request, not total download time
+    - Progress output goes to stdout (can be captured/redirected)
+    - User-Agent identifies NAPT to help with debugging/support
+    - All HTTP errors are chained for better debugging
+    - Timeouts are per-request, not total download time
 
 """
 

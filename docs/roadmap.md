@@ -283,7 +283,7 @@ psadt:
 - Applications distributed as EXE (Git, VS Code, etc.)
 - Vendors who don't provide version in URL or API
 
-**Related**: Mentioned in `notapkgtool/discovery/http_static.py` docstring
+**Related**: Mentioned in `notapkgtool/discovery/url_download.py` docstring
 
 #### Parallel Package Building
 **Status**: 💡 Idea  

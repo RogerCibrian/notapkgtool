@@ -6,6 +6,7 @@ comparison strategies and handles various versioning schemes including
 semantic versioning, numeric versions, and prerelease tags.
 
 Modules:
+
 keys : module
     Core version comparison logic with semver-like parsing and robust fallbacks.
 msi : module
@@ -22,6 +23,7 @@ Public API:
 - version_key_any: Generate a sortable key for any version string
 
 Version Comparison Strategies:
+
 The versioning system supports multiple comparison modes:
 
 1. **Semantic Versioning (semver)**:

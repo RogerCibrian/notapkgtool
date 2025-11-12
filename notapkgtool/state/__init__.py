@@ -2,11 +2,13 @@
 
 This module provides state persistence for tracking discovered application
 versions, ETags, and file metadata between runs. This enables:
+
 - Efficient conditional downloads (HTTP 304 Not Modified)
 - Version change detection
 - Bandwidth optimization for scheduled workflows
 
 The state file is a JSON file that stores:
+
 - Discovered versions from vendors
 - HTTP ETags and Last-Modified headers for conditional requests
 - File paths and SHA-256 hashes for cached installers

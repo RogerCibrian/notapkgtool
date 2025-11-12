@@ -6,7 +6,7 @@ apps:
     id: "napt-git"
 
     source:
-      strategy: github_release
+      strategy: api_github
       repo: "git-for-windows/git"
       asset_pattern: "Git-.*-64-bit\\.exe$"
       version_pattern: "v?([0-9.]+)\\.windows"

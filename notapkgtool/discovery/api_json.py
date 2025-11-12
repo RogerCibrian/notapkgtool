@@ -1,4 +1,4 @@
-"""HTTP JSON API discovery strategy for NAPT.
+"""JSON API discovery strategy for NAPT.
 
 This is a VERSION-FIRST strategy that queries JSON API endpoints to get version
 and download URL WITHOUT downloading the installer. This enables fast version
@@ -35,7 +35,7 @@ Use Cases:
 Recipe Configuration:
 
     source:
-      strategy: http_json
+      strategy: api_json
       api_url: "https://vendor.com/api/latest"
       version_path: "version"                      # JSONPath to version
       download_url_path: "download_url"            # JSONPath to URL
@@ -77,7 +77,7 @@ In a recipe YAML (simple API):
       - name: "My App"
         id: "my-app"
         source:
-          strategy: http_json
+          strategy: api_json
           api_url: "https://api.vendor.com/latest"
           version_path: "version"
           download_url_path: "download_url"
@@ -88,7 +88,7 @@ In a recipe YAML (nested structure):
       - name: "My App"
         id: "my-app"
         source:
-          strategy: http_json
+          strategy: api_json
           api_url: "https://api.vendor.com/releases"
           version_path: "stable.version"
           download_url_path: "stable.platforms.windows.x64"
@@ -97,10 +97,10 @@ In a recipe YAML (nested structure):
 
 From Python (version-first approach):
 
-    from notapkgtool.discovery.http_json import HttpJsonStrategy
+    from notapkgtool.discovery.api_json import ApiJsonStrategy
     from notapkgtool.io import download_file
 
-    strategy = HttpJsonStrategy()
+    strategy = ApiJsonStrategy()
     app_config = {
         "source": {
             "api_url": "https://api.vendor.com/latest",
@@ -153,12 +153,12 @@ from notapkgtool.versioning.keys import VersionInfo
 from .base import register_strategy
 
 
-class HttpJsonStrategy:
+class ApiJsonStrategy:
     """Discovery strategy for JSON API endpoints.
 
     Configuration example:
         source:
-          strategy: http_json
+          strategy: api_json
           api_url: "https://api.vendor.com/latest"
           version_path: "version"
           download_url_path: "download_url"
@@ -199,7 +199,7 @@ class HttpJsonStrategy:
         Example:
             Get version info from JSON API:
 
-                strategy = HttpJsonStrategy()
+                strategy = ApiJsonStrategy()
                 config = {
                     "source": {
                         "api_url": "https://api.vendor.com/latest",
@@ -217,18 +217,18 @@ class HttpJsonStrategy:
         source = app_config.get("source", {})
         api_url = source.get("api_url")
         if not api_url:
-            raise ValueError("http_json strategy requires 'source.api_url' in config")
+            raise ValueError("api_json strategy requires 'source.api_url' in config")
 
         version_path = source.get("version_path")
         if not version_path:
             raise ValueError(
-                "http_json strategy requires 'source.version_path' in config"
+                "api_json strategy requires 'source.version_path' in config"
             )
 
         download_url_path = source.get("download_url_path")
         if not download_url_path:
             raise ValueError(
-                "http_json strategy requires 'source.download_url_path' in config"
+                "api_json strategy requires 'source.download_url_path' in config"
             )
 
         # Optional configuration
@@ -240,7 +240,7 @@ class HttpJsonStrategy:
         body = source.get("body", {})
         timeout = source.get("timeout", 30)
 
-        print_verbose("DISCOVERY", "Strategy: http_json (version-first)")
+        print_verbose("DISCOVERY", "Strategy: api_json (version-first)")
         print_verbose("DISCOVERY", f"API URL: {api_url}")
         print_verbose("DISCOVERY", f"Method: {method}")
         print_verbose("DISCOVERY", f"Version path: {version_path}")
@@ -350,11 +350,11 @@ class HttpJsonStrategy:
         return VersionInfo(
             version=version_str,
             download_url=download_url,
-            source="http_json",
+            source="api_json",
         )
 
     def validate_config(self, app_config: dict[str, Any]) -> list[str]:
-        """Validate http_json strategy configuration.
+        """Validate api_json strategy configuration.
 
         Checks for required fields and correct types without making network calls.
 
@@ -424,4 +424,4 @@ class HttpJsonStrategy:
 
 
 # Register this strategy when the module is imported
-register_strategy("http_json", HttpJsonStrategy)
+register_strategy("api_json", ApiJsonStrategy)

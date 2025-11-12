@@ -5,12 +5,14 @@ features like conditional requests, retry logic, atomic writes, and
 integrity verification.
 
 Modules:
+
 download : module
     HTTP(S) file download with retries, conditional requests, and checksums.
 upload : module
     File upload adapters for Intune and storage providers (planned).
 
 Public API:
+
 download_file : function
     Download a file from a URL with robustness and reproducibility.
 NotModifiedError : exception

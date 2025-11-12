@@ -67,7 +67,7 @@ tests/
 └── scripts/
     ├── smoke_test_chrome.py      # Manual smoke test
     ├── showcase_version_check.py # Version comparison demo
-    └── manual_test_http_json.py  # HTTP JSON API testing
+    └── manual_test_api_json.py  # HTTP JSON API testing
 ```
 
 ## Running Tests
@@ -179,10 +179,10 @@ pytest tests/ --cov=notapkgtool --cov-report=term-missing
 - ✅ Strategy registry and lookup
 - ✅ Custom strategy registration
 - ✅ HTTP static strategy (file-first) with MSI and ETag caching
-- ✅ Version-first strategies (url_regex, github_release, http_json):
+- ✅ Version-first strategies (url_pattern, api_github, api_json):
   - `get_version_info()` returns VersionInfo without downloading
   - Version extraction from URLs, GitHub tags, and JSON APIs
-- ✅ ETag caching support for http_static (HTTP 304)
+- ✅ ETag caching support for url_download (HTTP 304)
 - ✅ Configuration validation and error handling
 - ✅ Missing/invalid configuration detection
 
@@ -229,7 +229,7 @@ Note: Version-first strategy integration tests moved to test_core.py (TestVersio
 - ✅ Invalid YAML syntax detection
 - ✅ Empty file handling
 - ✅ Missing required fields (apiVersion, apps, source, strategy)
-- ✅ Strategy-specific validation (http_static, github_release, url_regex, http_json)
+- ✅ Strategy-specific validation (url_download, api_github, url_pattern, api_json)
 - ✅ Multiple apps validation
 - ✅ Verbose mode output
 - ✅ ValidationError exception handling

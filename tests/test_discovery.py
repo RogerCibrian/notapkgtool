@@ -15,25 +15,25 @@ from unittest.mock import patch
 import pytest
 import requests_mock
 
+from notapkgtool.discovery.api_github import ApiGithubStrategy
+from notapkgtool.discovery.api_json import ApiJsonStrategy
 from notapkgtool.discovery.base import get_strategy, register_strategy
-from notapkgtool.discovery.github_release import GithubReleaseStrategy
-from notapkgtool.discovery.http_json import HttpJsonStrategy
-from notapkgtool.discovery.http_static import HttpStaticStrategy
+from notapkgtool.discovery.url_download import UrlDownloadStrategy
 from notapkgtool.versioning import DiscoveredVersion
 
 
 class TestStrategyRegistry:
     """Tests for discovery strategy registration and lookup."""
 
-    def test_get_http_static_strategy(self):
-        """Test that http_static strategy can be retrieved."""
-        strategy = get_strategy("http_static")
-        assert isinstance(strategy, HttpStaticStrategy)
+    def test_get_url_download_strategy(self):
+        """Test that url_download strategy can be retrieved."""
+        strategy = get_strategy("url_download")
+        assert isinstance(strategy, UrlDownloadStrategy)
 
-    def test_get_github_release_strategy(self):
-        """Test that github_release strategy can be retrieved."""
-        strategy = get_strategy("github_release")
-        assert isinstance(strategy, GithubReleaseStrategy)
+    def test_get_api_github_strategy(self):
+        """Test that api_github strategy can be retrieved."""
+        strategy = get_strategy("api_github")
+        assert isinstance(strategy, ApiGithubStrategy)
 
     def test_get_unknown_strategy_raises(self):
         """Test that unknown strategy name raises ValueError."""
@@ -57,19 +57,19 @@ class TestStrategyRegistry:
         assert isinstance(strategy, CustomStrategy)
 
 
-class TestHttpStaticStrategy:
-    """Tests for HTTP static download strategy."""
+class TestUrlDownloadStrategy:
+    """Tests for URL download strategy."""
 
     def test_discover_version_with_msi(self, tmp_test_dir):
         """Test discovering version from MSI file."""
         app_config = {
             "source": {
                 "url": "https://example.com/installer.msi",
-                "version": {"type": "msi_product_version_from_file"},
+                "version": {"type": "msi"},
             }
         }
 
-        strategy = HttpStaticStrategy()
+        strategy = UrlDownloadStrategy()
 
         # Mock the download and MSI extraction
         fake_msi_content = b"fake MSI content"
@@ -82,10 +82,10 @@ class TestHttpStaticStrategy:
             )
 
             with patch(
-                "notapkgtool.discovery.http_static.version_from_msi_product_version"
+                "notapkgtool.discovery.url_download.version_from_msi_product_version"
             ) as mock_extract:
                 mock_extract.return_value = DiscoveredVersion(
-                    version="1.2.3", source="msi_product_version_from_file"
+                    version="1.2.3", source="msi"
                 )
 
                 discovered, file_path, sha256, headers = strategy.discover_version(
@@ -93,7 +93,7 @@ class TestHttpStaticStrategy:
                 )
 
         assert discovered.version == "1.2.3"
-        assert discovered.source == "msi_product_version_from_file"
+        assert discovered.source == "msi"
         assert file_path.exists()
         assert file_path.name == "installer.msi"
         assert isinstance(sha256, str)
@@ -103,11 +103,11 @@ class TestHttpStaticStrategy:
         """Test that missing URL raises ValueError."""
         app_config = {
             "source": {
-                "version": {"type": "msi_product_version_from_file"},
+                "version": {"type": "msi"},
             }
         }
 
-        strategy = HttpStaticStrategy()
+        strategy = UrlDownloadStrategy()
 
         with pytest.raises(ValueError, match="requires 'source.url'"):
             strategy.discover_version(app_config, tmp_test_dir)
@@ -120,7 +120,7 @@ class TestHttpStaticStrategy:
             }
         }
 
-        strategy = HttpStaticStrategy()
+        strategy = UrlDownloadStrategy()
 
         with pytest.raises(ValueError, match="requires 'source.version.type'"):
             strategy.discover_version(app_config, tmp_test_dir)
@@ -134,7 +134,7 @@ class TestHttpStaticStrategy:
             }
         }
 
-        strategy = HttpStaticStrategy()
+        strategy = UrlDownloadStrategy()
 
         fake_content = b"fake content"
         with requests_mock.Mocker() as m:
@@ -152,11 +152,11 @@ class TestHttpStaticStrategy:
         app_config = {
             "source": {
                 "url": "https://example.com/installer.msi",
-                "version": {"type": "msi_product_version_from_file"},
+                "version": {"type": "msi"},
             }
         }
 
-        strategy = HttpStaticStrategy()
+        strategy = UrlDownloadStrategy()
 
         with requests_mock.Mocker() as m:
             m.get("https://example.com/installer.msi", status_code=404)
@@ -169,11 +169,11 @@ class TestHttpStaticStrategy:
         app_config = {
             "source": {
                 "url": "https://example.com/installer.msi",
-                "version": {"type": "msi_product_version_from_file"},
+                "version": {"type": "msi"},
             }
         }
 
-        strategy = HttpStaticStrategy()
+        strategy = UrlDownloadStrategy()
 
         fake_content = b"not a real MSI"
         with requests_mock.Mocker() as m:
@@ -184,7 +184,7 @@ class TestHttpStaticStrategy:
             )
 
             with patch(
-                "notapkgtool.discovery.http_static.version_from_msi_product_version"
+                "notapkgtool.discovery.url_download.version_from_msi_product_version"
             ) as mock_extract:
                 mock_extract.side_effect = RuntimeError("Invalid MSI")
 
@@ -194,12 +194,12 @@ class TestHttpStaticStrategy:
                     strategy.discover_version(app_config, tmp_test_dir)
 
 
-# TestGithubReleaseStrategy removed - discover_version() method no longer exists
+# TestApiGithubStrategy removed - discover_version() method no longer exists
 # Strategy now only has get_version_info() which is tested in TestVersionFirstStrategies
 # Integration testing covered by TestVersionFirstFastPath in test_core.py
 
 
-# TestHttpJsonStrategy removed - discover_version() method no longer exists
+# TestApiJsonStrategy removed - discover_version() method no longer exists
 # Strategy now only has get_version_info() which is tested in TestVersionFirstStrategies
 # Integration testing covered by TestVersionFirstFastPath in test_core.py
 
@@ -207,17 +207,17 @@ class TestHttpStaticStrategy:
 class TestCacheAndETagSupport:
     """Tests for cache parameter and ETag-based conditional downloads."""
 
-    def test_http_static_with_cache_not_modified(self, tmp_test_dir):
-        """Test http_static with cache when file not modified (HTTP 304)."""
+    def test_url_download_with_cache_not_modified(self, tmp_test_dir):
+        """Test url_download with cache when file not modified (HTTP 304)."""
 
         app_config = {
             "source": {
                 "url": "https://example.com/installer.msi",
-                "version": {"type": "msi_product_version_from_file"},
+                "version": {"type": "msi"},
             }
         }
 
-        strategy = HttpStaticStrategy()
+        strategy = UrlDownloadStrategy()
 
         # Create a fake cached file
         cached_file = tmp_test_dir / "installer.msi"
@@ -235,10 +235,10 @@ class TestCacheAndETagSupport:
             m.get("https://example.com/installer.msi", status_code=304)
 
             with patch(
-                "notapkgtool.discovery.http_static.version_from_msi_product_version"
+                "notapkgtool.discovery.url_download.version_from_msi_product_version"
             ) as mock_extract:
                 mock_extract.return_value = DiscoveredVersion(
-                    version="1.0.0", source="msi_product_version_from_file"
+                    version="1.0.0", source="msi"
                 )
 
                 discovered, file_path, sha256, headers = strategy.discover_version(
@@ -250,18 +250,18 @@ class TestCacheAndETagSupport:
         assert sha256 == "cached_sha256"
         assert discovered.version == "1.0.0"
 
-    # test_github_release_with_cache_not_modified removed - discover_version() no longer exists
+    # test_api_github_with_cache_not_modified removed - discover_version() no longer exists
 
-    def test_http_static_with_cache_modified(self, tmp_test_dir):
-        """Test http_static downloads when file modified (HTTP 200)."""
+    def test_url_download_with_cache_modified(self, tmp_test_dir):
+        """Test url_download downloads when file modified (HTTP 200)."""
         app_config = {
             "source": {
                 "url": "https://example.com/installer.msi",
-                "version": {"type": "msi_product_version_from_file"},
+                "version": {"type": "msi"},
             }
         }
 
-        strategy = HttpStaticStrategy()
+        strategy = UrlDownloadStrategy()
 
         cache = {
             "version": "1.0.0",
@@ -284,10 +284,10 @@ class TestCacheAndETagSupport:
             )
 
             with patch(
-                "notapkgtool.discovery.http_static.version_from_msi_product_version"
+                "notapkgtool.discovery.url_download.version_from_msi_product_version"
             ) as mock_extract:
                 mock_extract.return_value = DiscoveredVersion(
-                    version="2.0.0", source="msi_product_version_from_file"
+                    version="2.0.0", source="msi"
                 )
 
                 discovered, file_path, sha256, headers = strategy.discover_version(
@@ -305,11 +305,11 @@ class TestCacheAndETagSupport:
         app_config = {
             "source": {
                 "url": "https://example.com/installer.msi",
-                "version": {"type": "msi_product_version_from_file"},
+                "version": {"type": "msi"},
             }
         }
 
-        strategy = HttpStaticStrategy()
+        strategy = UrlDownloadStrategy()
 
         fake_msi = b"fake MSI no cache"
 
@@ -321,10 +321,10 @@ class TestCacheAndETagSupport:
             )
 
             with patch(
-                "notapkgtool.discovery.http_static.version_from_msi_product_version"
+                "notapkgtool.discovery.url_download.version_from_msi_product_version"
             ) as mock_extract:
                 mock_extract.return_value = DiscoveredVersion(
-                    version="1.0.0", source="msi_product_version_from_file"
+                    version="1.0.0", source="msi"
                 )
 
                 # Call without cache parameter (None is default)
@@ -340,11 +340,11 @@ class TestCacheAndETagSupport:
         app_config = {
             "source": {
                 "url": "https://example.com/installer.msi",
-                "version": {"type": "msi_product_version_from_file"},
+                "version": {"type": "msi"},
             }
         }
 
-        strategy = HttpStaticStrategy()
+        strategy = UrlDownloadStrategy()
 
         # Cache points to non-existent file
         cache = {
@@ -363,21 +363,18 @@ class TestCacheAndETagSupport:
 
 
 class TestVersionFirstStrategies:
-    """Tests for version-first strategies (url_regex, github_release, http_json)."""
+    """Tests for version-first strategies (url_pattern, api_github, api_json)."""
 
-    def test_url_regex_get_version_info(self):
-        """Test url_regex.get_version_info() returns VersionInfo without downloading."""
-        from notapkgtool.discovery.url_regex import UrlRegexStrategy
+    def test_url_pattern_get_version_info(self):
+        """Test url_pattern.get_version_info() returns VersionInfo without downloading."""
+        from notapkgtool.discovery.url_pattern import UrlPatternStrategy
         from notapkgtool.versioning.keys import VersionInfo
 
-        strategy = UrlRegexStrategy()
+        strategy = UrlPatternStrategy()
         app_config = {
             "source": {
                 "url": "https://example.com/app-v1.2.3-installer.msi",
-                "version": {
-                    "type": "regex_in_url",
-                    "pattern": r"app-v(?P<version>[0-9.]+)-installer",
-                },
+                "pattern": r"app-v(?P<version>[0-9.]+)-installer",
             }
         }
 
@@ -388,13 +385,13 @@ class TestVersionFirstStrategies:
         assert (
             version_info.download_url == "https://example.com/app-v1.2.3-installer.msi"
         )
-        assert version_info.source == "url_regex"
+        assert version_info.source == "url_pattern"
 
-    def test_github_release_get_version_info(self):
-        """Test github_release.get_version_info() returns VersionInfo without downloading."""
+    def test_api_github_get_version_info(self):
+        """Test api_github.get_version_info() returns VersionInfo without downloading."""
         from notapkgtool.versioning.keys import VersionInfo
 
-        strategy = GithubReleaseStrategy()
+        strategy = ApiGithubStrategy()
         app_config = {
             "source": {
                 "repo": "owner/repo",
@@ -425,13 +422,13 @@ class TestVersionFirstStrategies:
         assert isinstance(version_info, VersionInfo)
         assert version_info.version == "1.2.3"
         assert "github.com" in version_info.download_url
-        assert version_info.source == "github_release"
+        assert version_info.source == "api_github"
 
-    def test_http_json_get_version_info(self):
-        """Test http_json.get_version_info() returns VersionInfo without downloading."""
+    def test_api_json_get_version_info(self):
+        """Test api_json.get_version_info() returns VersionInfo without downloading."""
         from notapkgtool.versioning.keys import VersionInfo
 
-        strategy = HttpJsonStrategy()
+        strategy = ApiJsonStrategy()
         app_config = {
             "source": {
                 "api_url": "https://api.example.com/latest",
@@ -453,4 +450,4 @@ class TestVersionFirstStrategies:
         assert isinstance(version_info, VersionInfo)
         assert version_info.version == "1.2.3"
         assert version_info.download_url == "https://example.com/installer.msi"
-        assert version_info.source == "http_json"
+        assert version_info.source == "api_json"

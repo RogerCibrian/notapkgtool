@@ -4,6 +4,7 @@ This module handles PSAppDeployToolkit (PSADT) release management, caching,
 and integration with NAPT's build system.
 
 Public API:
+
 fetch_latest_psadt_version : function
     Query GitHub API for the latest PSADT release version.
 get_psadt_release : function

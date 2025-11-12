@@ -13,8 +13,8 @@ from notapkgtool.validation import ValidationError, validate_recipe
 class TestValidateRecipe:
     """Tests for validate_recipe function."""
 
-    def test_valid_recipe_http_static(self, tmp_path):
-        """Test that a valid http_static recipe passes validation."""
+    def test_valid_recipe_url_download(self, tmp_path):
+        """Test that a valid url_download recipe passes validation."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text(
             """
@@ -23,10 +23,10 @@ apps:
   - name: "Test App"
     id: "test-app"
     source:
-      strategy: http_static
+      strategy: url_download
       url: "https://example.com/app.msi"
       version:
-        type: msi_product_version_from_file
+        type: msi
 """
         )
 
@@ -37,8 +37,8 @@ apps:
         assert len(result["errors"]) == 0
         assert len(result["warnings"]) == 0
 
-    def test_valid_recipe_github_release(self, tmp_path):
-        """Test that a valid github_release recipe passes validation."""
+    def test_valid_recipe_api_github(self, tmp_path):
+        """Test that a valid api_github recipe passes validation."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text(
             """
@@ -47,7 +47,7 @@ apps:
   - name: "Git"
     id: "git"
     source:
-      strategy: github_release
+      strategy: api_github
       repo: "git/git"
       asset_pattern: ".*\\\\.exe$"
 """
@@ -59,8 +59,8 @@ apps:
         assert result["app_count"] == 1
         assert len(result["errors"]) == 0
 
-    def test_valid_recipe_url_regex(self, tmp_path):
-        """Test that a valid url_regex recipe passes validation."""
+    def test_valid_recipe_url_pattern(self, tmp_path):
+        """Test that a valid url_pattern recipe passes validation."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text(
             """
@@ -69,7 +69,7 @@ apps:
   - name: "Test App"
     id: "test-app"
     source:
-      strategy: url_regex
+      strategy: url_pattern
       url: "https://example.com/app-v1.2.3.msi"
       pattern: "app-v(?P<version>[0-9.]+)\\\\.msi"
 """
@@ -81,8 +81,8 @@ apps:
         assert result["app_count"] == 1
         assert len(result["errors"]) == 0
 
-    def test_valid_recipe_http_json(self, tmp_path):
-        """Test that a valid http_json recipe passes validation."""
+    def test_valid_recipe_api_json(self, tmp_path):
+        """Test that a valid api_json recipe passes validation."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text(
             """
@@ -91,7 +91,7 @@ apps:
   - name: "Test App"
     id: "test-app"
     source:
-      strategy: http_json
+      strategy: api_json
       api_url: "https://api.example.com/latest"
       version_path: "version"
       download_url_path: "download_url"
@@ -161,10 +161,10 @@ apps:
   - name: "Test"
     id: "test"
     source:
-      strategy: http_static
+      strategy: url_download
       url: "https://example.com/app.msi"
       version:
-        type: msi_product_version_from_file
+        type: msi
 """
         )
 
@@ -183,10 +183,10 @@ apps:
   - name: "Test"
     id: "test"
     source:
-      strategy: http_static
+      strategy: url_download
       url: "https://example.com/app.msi"
       version:
-        type: msi_product_version_from_file
+        type: msi
 """
         )
 
@@ -248,10 +248,10 @@ apiVersion: napt/v1
 apps:
   - id: "test"
     source:
-      strategy: http_static
+      strategy: url_download
       url: "https://example.com/app.msi"
       version:
-        type: msi_product_version_from_file
+        type: msi
 """
         )
 
@@ -269,10 +269,10 @@ apiVersion: napt/v1
 apps:
   - name: "Test"
     source:
-      strategy: http_static
+      strategy: url_download
       url: "https://example.com/app.msi"
       version:
-        type: msi_product_version_from_file
+        type: msi
 """
         )
 
@@ -337,8 +337,8 @@ apps:
         assert result["status"] == "invalid"
         assert any("Unknown" in err or "nonexistent" in err for err in result["errors"])
 
-    def test_http_static_missing_url(self, tmp_path):
-        """Test that http_static validates missing url."""
+    def test_url_download_missing_url(self, tmp_path):
+        """Test that url_download validates missing url."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text(
             """
@@ -347,9 +347,9 @@ apps:
   - name: "Test"
     id: "test"
     source:
-      strategy: http_static
+      strategy: url_download
       version:
-        type: msi_product_version_from_file
+        type: msi
 """
         )
 
@@ -358,8 +358,8 @@ apps:
         assert result["status"] == "invalid"
         assert any("url" in err for err in result["errors"])
 
-    def test_http_static_missing_version_type(self, tmp_path):
-        """Test that http_static validates missing version type."""
+    def test_url_download_missing_version_type(self, tmp_path):
+        """Test that url_download validates missing version type."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text(
             """
@@ -368,7 +368,7 @@ apps:
   - name: "Test"
     id: "test"
     source:
-      strategy: http_static
+      strategy: url_download
       url: "https://example.com/app.msi"
 """
         )
@@ -378,8 +378,8 @@ apps:
         assert result["status"] == "invalid"
         assert any("version" in err for err in result["errors"])
 
-    def test_github_release_missing_repo(self, tmp_path):
-        """Test that github_release validates missing repo."""
+    def test_api_github_missing_repo(self, tmp_path):
+        """Test that api_github validates missing repo."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text(
             """
@@ -388,7 +388,7 @@ apps:
   - name: "Test"
     id: "test"
     source:
-      strategy: github_release
+      strategy: api_github
       asset_pattern: ".*\\\\.exe$"
 """
         )
@@ -398,8 +398,8 @@ apps:
         assert result["status"] == "invalid"
         assert any("repo" in err for err in result["errors"])
 
-    def test_github_release_invalid_repo_format(self, tmp_path):
-        """Test that github_release validates repo format."""
+    def test_api_github_invalid_repo_format(self, tmp_path):
+        """Test that api_github validates repo format."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text(
             """
@@ -408,7 +408,7 @@ apps:
   - name: "Test"
     id: "test"
     source:
-      strategy: github_release
+      strategy: api_github
       repo: "invalid-repo-format"
       asset_pattern: ".*\\\\.exe$"
 """
@@ -419,8 +419,8 @@ apps:
         assert result["status"] == "invalid"
         assert any("owner/repo" in err or "format" in err for err in result["errors"])
 
-    def test_url_regex_missing_pattern(self, tmp_path):
-        """Test that url_regex validates missing pattern."""
+    def test_url_pattern_missing_pattern(self, tmp_path):
+        """Test that url_pattern validates missing pattern."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text(
             """
@@ -429,7 +429,7 @@ apps:
   - name: "Test"
     id: "test"
     source:
-      strategy: url_regex
+      strategy: url_pattern
       url: "https://example.com/app-v1.2.3.msi"
 """
         )
@@ -439,8 +439,8 @@ apps:
         assert result["status"] == "invalid"
         assert any("pattern" in err for err in result["errors"])
 
-    def test_url_regex_invalid_pattern(self, tmp_path):
-        """Test that url_regex validates regex syntax."""
+    def test_url_pattern_invalid_pattern(self, tmp_path):
+        """Test that url_pattern validates regex syntax."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text(
             """
@@ -449,7 +449,7 @@ apps:
   - name: "Test"
     id: "test"
     source:
-      strategy: url_regex
+      strategy: url_pattern
       url: "https://example.com/app.msi"
       pattern: "[unclosed bracket"
 """
@@ -462,8 +462,8 @@ apps:
             "regex" in err.lower() or "pattern" in err for err in result["errors"]
         )
 
-    def test_http_json_missing_fields(self, tmp_path):
-        """Test that http_json validates missing required fields."""
+    def test_api_json_missing_fields(self, tmp_path):
+        """Test that api_json validates missing required fields."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text(
             """
@@ -472,7 +472,7 @@ apps:
   - name: "Test"
     id: "test"
     source:
-      strategy: http_json
+      strategy: api_json
       api_url: "https://api.example.com/latest"
 """
         )
@@ -493,14 +493,14 @@ apps:
   - name: "App1"
     id: "app1"
     source:
-      strategy: http_static
+      strategy: url_download
       url: "https://example.com/app1.msi"
       version:
-        type: msi_product_version_from_file
+        type: msi
   - name: "App2"
     id: "app2"
     source:
-      strategy: github_release
+      strategy: api_github
       repo: "owner/repo"
       asset_pattern: ".*\\\\.exe$"
 """
@@ -522,17 +522,17 @@ apps:
   - name: "Valid App"
     id: "app1"
     source:
-      strategy: http_static
+      strategy: url_download
       url: "https://example.com/app.msi"
       version:
-        type: msi_product_version_from_file
+        type: msi
   - name: "Invalid App"
     id: "app2"
     source:
-      strategy: http_static
+      strategy: url_download
       # Missing url
       version:
-        type: msi_product_version_from_file
+        type: msi
 """
         )
 
@@ -553,10 +553,10 @@ apps:
   - name: "Test"
     id: "test"
     source:
-      strategy: http_static
+      strategy: url_download
       url: "https://example.com/app.msi"
       version:
-        type: msi_product_version_from_file
+        type: msi
 """
         )
 
@@ -566,7 +566,7 @@ apps:
         assert result["status"] == "valid"
         assert "Validating recipe" in captured.out
         assert "YAML syntax is valid" in captured.out
-        assert "http_static" in captured.out
+        assert "url_download" in captured.out
 
     def test_result_contains_recipe_path(self, tmp_path):
         """Test that result includes the recipe path."""
@@ -578,10 +578,10 @@ apps:
   - name: "Test"
     id: "test"
     source:
-      strategy: http_static
+      strategy: url_download
       url: "https://example.com/app.msi"
       version:
-        type: msi_product_version_from_file
+        type: msi
 """
         )
 

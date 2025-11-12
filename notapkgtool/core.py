@@ -212,10 +212,10 @@ def discover_recipe(
 
     # 4. Get the strategy implementation
     # Import strategies to ensure they're registered
-    import notapkgtool.discovery.github_release  # noqa: F401
-    import notapkgtool.discovery.http_json  # noqa: F401
-    import notapkgtool.discovery.http_static  # noqa: F401
-    import notapkgtool.discovery.url_regex  # noqa: F401
+    import notapkgtool.discovery.api_github  # noqa: F401
+    import notapkgtool.discovery.api_json  # noqa: F401
+    import notapkgtool.discovery.url_download  # noqa: F401
+    import notapkgtool.discovery.url_pattern  # noqa: F401
 
     strategy = get_strategy(strategy_name)
 
