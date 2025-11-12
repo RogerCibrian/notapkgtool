@@ -119,51 +119,10 @@ Discovery strategies are the core mechanism for obtaining application installers
 
 | Strategy | Version Source | Use Case | Unchanged Check |
 |----------|---------------|----------|-----------------|
-| **url_pattern** | URL pattern | Version-encoded URLs | Instant (regex only) |
-| **api_json** | JSON API | REST APIs with metadata | Fast (API call ~100ms) |
 | **api_github** | Git tags | GitHub-hosted releases | Fast (GitHub API ~100ms) |
+| **api_json** | JSON API | REST APIs with metadata | Fast (API call ~100ms) |
 | **url_download** | File metadata | Fixed URLs, MSI installers | Medium (HTTP conditional ~500ms) |
-
-### url_download
-
-**Best for:**
-
-- Vendors with stable download URLs (Chrome, Firefox enterprise)
-- MSI installers with ProductVersion embedded
-- When version isn't in URL or easily parseable
-
-**Configuration:**
-
-```yaml
-source:
-  strategy: url_download
-  url: "https://dl.google.com/chrome/install/googlechromestandaloneenterprise64.msi"
-  version:
-    type: msi
-```
-
-**Pros:** Simple and reliable, version directly from installer (most accurate)  
-**Cons:** Must download file to know version, slower update checks (HTTP conditional request)
-
-### url_pattern
-
-**Best for:**
-
-- URLs with version numbers embedded (e.g., `app-v1.2.3.msi`)
-- When version is in download URL path
-- Fast version checks without downloads
-
-**Configuration:**
-
-```yaml
-source:
-  strategy: url_pattern
-  url: "https://vendor.com/app-v1.2.3-setup.msi"
-  pattern: "app-v(?P<version>[0-9.]+)-setup"
-```
-
-**Pros:** Know version before download, instant update checks (regex only, zero network), bandwidth-efficient  
-**Cons:** Relies on URL format stability
+| **web_scrape** | Download page | Vendors without APIs | Fast (page scrape + regex) |
 
 ### api_github
 
@@ -209,6 +168,50 @@ source:
 **Pros:** Fast update checks (API only, ~100ms), flexible, supports complex APIs, no file parsing  
 **Cons:** Requires vendor API availability
 
+### url_download
+
+**Best for:**
+
+- Vendors with stable download URLs (Chrome, Firefox enterprise)
+- MSI installers with ProductVersion embedded
+- When version isn't in URL or easily parseable
+
+**Configuration:**
+
+```yaml
+source:
+  strategy: url_download
+  url: "https://dl.google.com/chrome/install/googlechromestandaloneenterprise64.msi"
+  version:
+    type: msi
+```
+
+**Pros:** Simple and reliable, version directly from installer (most accurate)  
+**Cons:** Must download file to know version, slower update checks (HTTP conditional request)
+
+### web_scrape
+
+**Best for:**
+
+- Vendors with download pages listing installers (7-Zip, etc.)
+- When no direct download URL or API is available
+- Version-encoded URLs on vendor websites
+- Small vendors with simple HTML download pages
+
+**Configuration:**
+
+```yaml
+source:
+  strategy: web_scrape
+  page_url: "https://www.7-zip.org/download.html"
+  link_selector: 'a[href$="-x64.msi"]'        # CSS selector (recommended)
+  version_pattern: "7z(\\d{2})(\\d{2})-x64"   # Extract from discovered URL
+  version_format: "{0}.{1}"                    # Transform to "25.01"
+```
+
+**Pros:** Fast version checks (~100-300ms page scrape), works without APIs, CSS selectors are robust  
+**Cons:** Requires page structure knowledge, may break if vendor redesigns site
+
 ### Decision Guide
 
 Use this flowchart to choose the right strategy:
@@ -219,9 +222,9 @@ flowchart TD
     Start -->|Yes| JSON[api_json<br/>Fast version checks]
     Start -->|No| GitHub{App on<br/>GitHub?}
     GitHub -->|Yes| GHRelease[api_github<br/>Reliable API, fast checks]
-    GitHub -->|No| URLVersion{Version in<br/>download URL?}
-    URLVersion -->|Yes| Regex[url_pattern<br/>Instant version checks]
-    URLVersion -->|No| Static[url_download<br/>Must download to check]
+    GitHub -->|No| DirectURL{Have direct<br/>download URL?}
+    DirectURL -->|Yes| Static[url_download<br/>Must download to check]
+    DirectURL -->|No| Scrape[web_scrape<br/>Scrape page for link]
 ```
 
 **Performance Note**: Version-first strategies (everything except url_download) can skip downloads entirely when versions haven't changed, making them ideal for scheduled CI/CD checks.
@@ -232,18 +235,18 @@ NAPT automatically tracks discovered versions and optimizes subsequent runs by a
 
 ### How It Works
 
-NAPT uses different caching approaches based on the discovery strategy, enabling significant performance and bandwidth savings:
+NAPT uses different caching approaches based on the discovery strategy, enabling significant performance optimization:
 
-- **Version-First** (url_pattern, api_github, api_json): Checks version via API/regex (~100ms or instant) before downloading. If unchanged and file exists, skips download entirely - saving 60+ MB bandwidth and minutes of time on every check.
+- **Version-First** (web_scrape, api_github, api_json): Checks version via API or page scraping (~100-300ms) before downloading. If unchanged and file exists, skips download entirely.
 - **File-First** (url_download): Uses HTTP conditional requests (ETags) to check if file changed. If server returns 304 Not Modified (~500ms), uses cached file without re-downloading.
 
-This intelligent caching is critical for CI/CD with frequent scheduled checks, dramatically reducing bandwidth costs and load on vendor CDNs while providing near-instant feedback when applications haven't changed.
+This intelligent caching is critical for CI/CD with frequent scheduled checks, providing fast feedback when applications haven't changed.
 
 ### Detailed Workflow
 
-#### Version-First Strategies (url_pattern, api_github, api_json)
+#### Version-First Strategies (web_scrape, api_github, api_json)
 
-These strategies discover the version **before** downloading, enabling instant cache checks:
+These strategies discover the version **before** downloading, enabling fast cache checks:
 
 ```mermaid
 flowchart TD
@@ -269,7 +272,7 @@ flowchart TD
     CreateState --> Ready
 ```
 
-**Key optimization:** Version discovered via API/regex (~100ms or instant) **before** downloading. If unchanged and file exists, skip download entirely.
+**Key optimization:** Version discovered via API or page scraping (~100-300ms) **before** downloading. If unchanged and file exists, skip download entirely.
 
 #### File-First Strategy (url_download)
 
@@ -304,10 +307,10 @@ flowchart TD
 | Scenario | Version-First | File-First |
 |----------|--------------|------------|
 | **First run** | API call + Download | Download only |
-| **Unchanged (most common)** | ~100ms API call (or instant regex) | ~500ms HTTP conditional request |
+| **Unchanged (most common)** | ~100-300ms version check | ~500ms HTTP conditional request |
 | **Changed** | API call + Download | Full download |
 
-**Recommendation:** Use version-first strategies (url_pattern, api_github, api_json) when available for fastest cache checks.
+**Recommendation:** Use version-first strategies (web_scrape, api_github, api_json) when available for fastest cache checks.
 
 ### Default Behavior (Stateful)
 

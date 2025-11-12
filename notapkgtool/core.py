@@ -215,7 +215,7 @@ def discover_recipe(
     import notapkgtool.discovery.api_github  # noqa: F401
     import notapkgtool.discovery.api_json  # noqa: F401
     import notapkgtool.discovery.url_download  # noqa: F401
-    import notapkgtool.discovery.url_pattern  # noqa: F401
+    import notapkgtool.discovery.web_scrape  # noqa: F401
 
     strategy = get_strategy(strategy_name)
 

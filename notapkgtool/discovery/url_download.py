@@ -93,8 +93,8 @@ Note:
     - Core orchestration automatically provides cached ETag if available
     - Server must support ETag or Last-Modified headers for optimization
     - If server doesn't support conditional requests, full download occurs every time
-    - Consider version-first strategies (url_pattern, api_github, api_json) for
-      better performance when version available via API or URL pattern
+    - Consider version-first strategies (web_scrape, api_github, api_json) for
+      better performance when version available via web scraping or API
 
 """
 

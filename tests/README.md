@@ -179,7 +179,7 @@ pytest tests/ --cov=notapkgtool --cov-report=term-missing
 - ✅ Strategy registry and lookup
 - ✅ Custom strategy registration
 - ✅ HTTP static strategy (file-first) with MSI and ETag caching
-- ✅ Version-first strategies (url_pattern, api_github, api_json):
+- ✅ Version-first strategies (web_scrape, api_github, api_json):
   - `get_version_info()` returns VersionInfo without downloading
   - Version extraction from URLs, GitHub tags, and JSON APIs
 - ✅ ETag caching support for url_download (HTTP 304)
@@ -229,7 +229,7 @@ Note: Version-first strategy integration tests moved to test_core.py (TestVersio
 - ✅ Invalid YAML syntax detection
 - ✅ Empty file handling
 - ✅ Missing required fields (apiVersion, apps, source, strategy)
-- ✅ Strategy-specific validation (url_download, api_github, url_pattern, api_json)
+- ✅ Strategy-specific validation (url_download, api_github, web_scrape, api_json)
 - ✅ Multiple apps validation
 - ✅ Verbose mode output
 - ✅ ValidationError exception handling
