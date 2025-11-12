@@ -123,7 +123,7 @@ class TestVersionFirstFastPath:
         """Test that version-first strategies skip download when version matches cache."""
         from pathlib import Path
 
-        # Create a minimal recipe with url_pattern strategy
+        # Create a minimal recipe with web_scrape strategy
         recipe_data = {
             "apiVersion": "napt/v1",
             "apps": [
@@ -131,9 +131,10 @@ class TestVersionFirstFastPath:
                     "name": "Test App",
                     "id": "test-app",
                     "source": {
-                        "strategy": "url_pattern",
-                        "url": "https://example.com/app-v1.2.3-installer.msi",
-                        "pattern": r"app-v(?P<version>[0-9.]+)-installer",
+                        "strategy": "web_scrape",
+                        "page_url": "https://example.com/download.html",
+                        "link_selector": 'a[href$=".msi"]',
+                        "version_pattern": r"app-v([0-9.]+)-installer",
                     },
                 }
             ],
@@ -143,6 +144,9 @@ class TestVersionFirstFastPath:
         # Create cached file
         cached_file = tmp_test_dir / "app-v1.2.3-installer.msi"
         cached_file.write_bytes(b"fake installer content")
+
+        # Mock HTML page for web_scrape
+        html_content = '<a href="/app-v1.2.3-installer.msi">Download</a>'
 
         # Mock state with matching version
         state = {
@@ -156,17 +160,22 @@ class TestVersionFirstFastPath:
             },
         }
 
-        with patch("notapkgtool.core.load_state") as mock_load_state:
-            mock_load_state.return_value = state
+        import requests_mock
 
-            with patch("notapkgtool.core.save_state"):
-                with patch("notapkgtool.core.download_file") as mock_download:
-                    result = discover_recipe(
-                        recipe_path, tmp_test_dir, state_file=Path("state.json")
-                    )
+        with requests_mock.Mocker() as m:
+            m.get("https://example.com/download.html", text=html_content)
 
-                    # Verify download was NOT called (fast path)
-                    mock_download.assert_not_called()
+            with patch("notapkgtool.core.load_state") as mock_load_state:
+                mock_load_state.return_value = state
+
+                with patch("notapkgtool.core.save_state"):
+                    with patch("notapkgtool.core.download_file") as mock_download:
+                        result = discover_recipe(
+                            recipe_path, tmp_test_dir, state_file=Path("state.json")
+                        )
+
+                        # Verify download was NOT called (fast path)
+                        mock_download.assert_not_called()
 
         # Verify result uses cached version
         assert result["version"] == "1.2.3"
@@ -177,7 +186,7 @@ class TestVersionFirstFastPath:
         """Test that version-first strategies download when version changes."""
         from pathlib import Path
 
-        # Create a minimal recipe with url_pattern strategy
+        # Create a minimal recipe with web_scrape strategy
         recipe_data = {
             "apiVersion": "napt/v1",
             "apps": [
@@ -185,14 +194,18 @@ class TestVersionFirstFastPath:
                     "name": "Test App",
                     "id": "test-app",
                     "source": {
-                        "strategy": "url_pattern",
-                        "url": "https://example.com/app-v2.0.0-installer.msi",
-                        "pattern": r"app-v(?P<version>[0-9.]+)-installer",
+                        "strategy": "web_scrape",
+                        "page_url": "https://example.com/download.html",
+                        "link_selector": 'a[href$=".msi"]',
+                        "version_pattern": r"app-v([0-9.]+)-installer",
                     },
                 }
             ],
         }
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
+
+        # Mock HTML page for web_scrape (new version)
+        html_content = '<a href="/app-v2.0.0-installer.msi">Download</a>'
 
         # Mock state with OLD version
         state = {
@@ -209,28 +222,33 @@ class TestVersionFirstFastPath:
         fake_file = tmp_test_dir / "app-v2.0.0-installer.msi"
         fake_file.write_bytes(b"new installer content")
 
-        with patch("notapkgtool.core.load_state") as mock_load_state:
-            mock_load_state.return_value = state
+        import requests_mock
 
-            with patch("notapkgtool.core.save_state"):
-                with patch("notapkgtool.core.download_file") as mock_download:
-                    mock_download.return_value = (
-                        fake_file,
-                        "new_hash" * 8,
-                        {"ETag": 'W/"new123"'},
-                    )
+        with requests_mock.Mocker() as m:
+            m.get("https://example.com/download.html", text=html_content)
 
-                    result = discover_recipe(
-                        recipe_path, tmp_test_dir, state_file=Path("state.json")
-                    )
+            with patch("notapkgtool.core.load_state") as mock_load_state:
+                mock_load_state.return_value = state
 
-                    # Verify download WAS called (version changed)
-                    mock_download.assert_called_once()
+                with patch("notapkgtool.core.save_state"):
+                    with patch("notapkgtool.core.download_file") as mock_download:
+                        mock_download.return_value = (
+                            fake_file,
+                            "new_hash" * 8,
+                            {"ETag": 'W/"new123"'},
+                        )
 
-        # Verify result has new version
-        assert result["version"] == "2.0.0"
-        assert result["app_id"] == "test-app"
-        assert result["status"] == "success"
+                        result = discover_recipe(
+                            recipe_path, tmp_test_dir, state_file=Path("state.json")
+                        )
+
+                        # Verify download WAS called (version changed)
+                        mock_download.assert_called_once()
+
+            # Verify result has new version
+            assert result["version"] == "2.0.0"
+            assert result["app_id"] == "test-app"
+            assert result["status"] == "success"
 
     def test_version_first_missing_cached_file_redownloads(
         self, tmp_test_dir, create_yaml_file
@@ -240,7 +258,7 @@ class TestVersionFirstFastPath:
 
         import requests_mock
 
-        # Create a minimal recipe with url_pattern strategy
+        # Create a minimal recipe with web_scrape strategy
         recipe_data = {
             "apiVersion": "napt/v1",
             "apps": [
@@ -248,14 +266,18 @@ class TestVersionFirstFastPath:
                     "name": "Test App",
                     "id": "test-app",
                     "source": {
-                        "strategy": "url_pattern",
-                        "url": "https://example.com/app-v1.2.3-installer.msi",
-                        "pattern": r"app-v(?P<version>[0-9.]+)-installer",
+                        "strategy": "web_scrape",
+                        "page_url": "https://example.com/download.html",
+                        "link_selector": 'a[href$=".msi"]',
+                        "version_pattern": r"app-v([0-9.]+)-installer",
                     },
                 }
             ],
         }
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
+
+        # Mock HTML page for web_scrape
+        html_content = '<a href="/app-v1.2.3-installer.msi">Download</a>'
 
         # Mock state with matching version BUT no cached file exists
         state = {
@@ -271,17 +293,18 @@ class TestVersionFirstFastPath:
 
         fake_content = b"redownloaded installer content"
 
-        with patch("notapkgtool.core.load_state") as mock_load_state:
-            mock_load_state.return_value = state
+        with requests_mock.Mocker() as m:
+            m.get("https://example.com/download.html", text=html_content)
+            m.get(
+                "https://example.com/app-v1.2.3-installer.msi",
+                content=fake_content,
+                headers={"Content-Length": str(len(fake_content))},
+            )
 
-            with patch("notapkgtool.core.save_state"):
-                with requests_mock.Mocker() as m:
-                    m.get(
-                        "https://example.com/app-v1.2.3-installer.msi",
-                        content=fake_content,
-                        headers={"Content-Length": str(len(fake_content))},
-                    )
+            with patch("notapkgtool.core.load_state") as mock_load_state:
+                mock_load_state.return_value = state
 
+                with patch("notapkgtool.core.save_state"):
                     result = discover_recipe(
                         recipe_path, tmp_test_dir, state_file=Path("state.json")
                     )

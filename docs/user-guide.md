@@ -119,7 +119,7 @@ Discovery strategies are the core mechanism for obtaining application installers
 
 | Strategy | Version Source | Use Case | Unchanged Check |
 |----------|---------------|----------|-----------------|
-| **url_pattern** | URL pattern | Version-encoded URLs | Instant (regex only) |
+| **web_scrape** | Download page | Vendors without APIs | Fast (page scrape + regex) |
 | **api_json** | JSON API | REST APIs with metadata | Fast (API call ~100ms) |
 | **api_github** | Git tags | GitHub-hosted releases | Fast (GitHub API ~100ms) |
 | **url_download** | File metadata | Fixed URLs, MSI installers | Medium (HTTP conditional ~500ms) |
@@ -145,7 +145,7 @@ source:
 **Pros:** Simple and reliable, version directly from installer (most accurate)  
 **Cons:** Must download file to know version, slower update checks (HTTP conditional request)
 
-### url_pattern
+### web_scrape
 
 **Best for:**
 
@@ -157,7 +157,7 @@ source:
 
 ```yaml
 source:
-  strategy: url_pattern
+  strategy: web_scrape
   url: "https://vendor.com/app-v1.2.3-setup.msi"
   pattern: "app-v(?P<version>[0-9.]+)-setup"
 ```
@@ -220,7 +220,7 @@ flowchart TD
     Start -->|No| GitHub{App on<br/>GitHub?}
     GitHub -->|Yes| GHRelease[api_github<br/>Reliable API, fast checks]
     GitHub -->|No| URLVersion{Version in<br/>download URL?}
-    URLVersion -->|Yes| Regex[url_pattern<br/>Instant version checks]
+    URLVersion -->|Yes| Regex[web_scrape<br/>Instant version checks]
     URLVersion -->|No| Static[url_download<br/>Must download to check]
 ```
 
@@ -234,14 +234,14 @@ NAPT automatically tracks discovered versions and optimizes subsequent runs by a
 
 NAPT uses different caching approaches based on the discovery strategy, enabling significant performance and bandwidth savings:
 
-- **Version-First** (url_pattern, api_github, api_json): Checks version via API/regex (~100ms or instant) before downloading. If unchanged and file exists, skips download entirely - saving 60+ MB bandwidth and minutes of time on every check.
+- **Version-First** (web_scrape, api_github, api_json): Checks version via API/regex (~100ms or instant) before downloading. If unchanged and file exists, skips download entirely - saving 60+ MB bandwidth and minutes of time on every check.
 - **File-First** (url_download): Uses HTTP conditional requests (ETags) to check if file changed. If server returns 304 Not Modified (~500ms), uses cached file without re-downloading.
 
 This intelligent caching is critical for CI/CD with frequent scheduled checks, dramatically reducing bandwidth costs and load on vendor CDNs while providing near-instant feedback when applications haven't changed.
 
 ### Detailed Workflow
 
-#### Version-First Strategies (url_pattern, api_github, api_json)
+#### Version-First Strategies (web_scrape, api_github, api_json)
 
 These strategies discover the version **before** downloading, enabling instant cache checks:
 
@@ -307,7 +307,7 @@ flowchart TD
 | **Unchanged (most common)** | ~100ms API call (or instant regex) | ~500ms HTTP conditional request |
 | **Changed** | API call + Download | Full download |
 
-**Recommendation:** Use version-first strategies (url_pattern, api_github, api_json) when available for fastest cache checks.
+**Recommendation:** Use version-first strategies (web_scrape, api_github, api_json) when available for fastest cache checks.
 
 ### Default Behavior (Stateful)
 

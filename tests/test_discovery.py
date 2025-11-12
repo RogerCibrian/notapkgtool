@@ -363,29 +363,73 @@ class TestCacheAndETagSupport:
 
 
 class TestVersionFirstStrategies:
-    """Tests for version-first strategies (url_pattern, api_github, api_json)."""
+    """Tests for version-first strategies (web_scrape, api_github, api_json)."""
 
-    def test_url_pattern_get_version_info(self):
-        """Test url_pattern.get_version_info() returns VersionInfo without downloading."""
-        from notapkgtool.discovery.url_pattern import UrlPatternStrategy
+    def test_web_scrape_with_css_selector(self):
+        """Test web_scrape.get_version_info() with CSS selector."""
+        from notapkgtool.discovery.web_scrape import WebScrapeStrategy
         from notapkgtool.versioning.keys import VersionInfo
 
-        strategy = UrlPatternStrategy()
+        strategy = WebScrapeStrategy()
         app_config = {
             "source": {
-                "url": "https://example.com/app-v1.2.3-installer.msi",
-                "pattern": r"app-v(?P<version>[0-9.]+)-installer",
+                "page_url": "https://example.com/download.html",
+                "link_selector": 'a[href$="-x64.msi"]',
+                "version_pattern": r"7z(\d{2})(\d{2})-x64",
+                "version_format": "{0}.{1}",
             }
         }
 
-        version_info = strategy.get_version_info(app_config)
+        # Mock HTML page
+        html_content = """
+        <html>
+            <body>
+                <div class="downloads">
+                    <a href="/a/7z2501-x64.msi">Download 64-bit</a>
+                    <a href="/a/7z2501.msi">Download 32-bit</a>
+                </div>
+            </body>
+        </html>
+        """
+
+        with requests_mock.Mocker() as m:
+            m.get("https://example.com/download.html", text=html_content)
+
+            version_info = strategy.get_version_info(app_config)
+
+        assert isinstance(version_info, VersionInfo)
+        assert version_info.version == "25.01"
+        assert version_info.download_url == "https://example.com/a/7z2501-x64.msi"
+        assert version_info.source == "web_scrape"
+
+    def test_web_scrape_with_regex_pattern(self):
+        """Test web_scrape.get_version_info() with regex fallback."""
+        from notapkgtool.discovery.web_scrape import WebScrapeStrategy
+        from notapkgtool.versioning.keys import VersionInfo
+
+        strategy = WebScrapeStrategy()
+        app_config = {
+            "source": {
+                "page_url": "https://example.com/download.html",
+                "link_pattern": r'href="(/files/app-v[0-9.]+-installer\.msi)"',
+                "version_pattern": r"app-v([0-9.]+)-installer",
+            }
+        }
+
+        html_content = '<a href="/files/app-v1.2.3-installer.msi">Download</a>'
+
+        with requests_mock.Mocker() as m:
+            m.get("https://example.com/download.html", text=html_content)
+
+            version_info = strategy.get_version_info(app_config)
 
         assert isinstance(version_info, VersionInfo)
         assert version_info.version == "1.2.3"
         assert (
-            version_info.download_url == "https://example.com/app-v1.2.3-installer.msi"
+            version_info.download_url
+            == "https://example.com/files/app-v1.2.3-installer.msi"
         )
-        assert version_info.source == "url_pattern"
+        assert version_info.source == "web_scrape"
 
     def test_api_github_get_version_info(self):
         """Test api_github.get_version_info() returns VersionInfo without downloading."""

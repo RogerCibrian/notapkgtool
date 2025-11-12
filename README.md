@@ -93,11 +93,12 @@ Recipes are declarative YAML files that define how to discover, download, and pa
 
 **Example recipes:**
 
-- **[chrome.yaml](https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Google/chrome.yaml)** - HTTP static strategy with MSI version extraction
-- **[git.yaml](https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Git/git.yaml)** - GitHub release strategy with asset pattern matching
-- **[json-api-example.yaml](https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Examples/json-api-example.yaml)** - HTTP JSON API strategy
+- **[chrome.yaml](https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Google/chrome.yaml)** - url_download strategy with MSI version extraction
+- **[git.yaml](https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Git/git.yaml)** - api_github strategy with asset pattern matching
+- **[json-api-example.yaml](https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Examples/json-api-example.yaml)** - api_json strategy with JSONPath extraction
+- **[7zip.yaml](https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/7-Zip/7zip.yaml)** - web_scrape strategy for vendor download pages
 
-NAPT supports multiple discovery strategies (url_download, url_pattern, api_github, api_json) - see the [Discovery Strategies](https://rogercibrian.github.io/notapkgtool/user-guide/#discovery-strategies) guide for detailed configuration and examples.
+NAPT supports multiple discovery strategies (url_download, web_scrape, api_github, api_json) - see the [Discovery Strategies](https://rogercibrian.github.io/notapkgtool/user-guide/#discovery-strategies) guide for detailed configuration and examples.
 
 ## Contributing
 

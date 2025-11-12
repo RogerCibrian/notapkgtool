@@ -59,8 +59,8 @@ apps:
         assert result["app_count"] == 1
         assert len(result["errors"]) == 0
 
-    def test_valid_recipe_url_pattern(self, tmp_path):
-        """Test that a valid url_pattern recipe passes validation."""
+    def test_valid_recipe_web_scrape(self, tmp_path):
+        """Test that a valid web_scrape recipe passes validation."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text(
             """
@@ -69,9 +69,10 @@ apps:
   - name: "Test App"
     id: "test-app"
     source:
-      strategy: url_pattern
-      url: "https://example.com/app-v1.2.3.msi"
-      pattern: "app-v(?P<version>[0-9.]+)\\\\.msi"
+      strategy: web_scrape
+      page_url: "https://example.com/download.html"
+      link_selector: 'a[href$=".msi"]'
+      version_pattern: "app-v([0-9.]+)\\\\.msi"
 """
         )
 
@@ -419,8 +420,8 @@ apps:
         assert result["status"] == "invalid"
         assert any("owner/repo" in err or "format" in err for err in result["errors"])
 
-    def test_url_pattern_missing_pattern(self, tmp_path):
-        """Test that url_pattern validates missing pattern."""
+    def test_web_scrape_missing_fields(self, tmp_path):
+        """Test that web_scrape validates missing required fields."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text(
             """
@@ -429,18 +430,20 @@ apps:
   - name: "Test"
     id: "test"
     source:
-      strategy: url_pattern
-      url: "https://example.com/app-v1.2.3.msi"
+      strategy: web_scrape
+      page_url: "https://example.com/download.html"
 """
         )
 
         result = validate_recipe(recipe)
 
         assert result["status"] == "invalid"
-        assert any("pattern" in err for err in result["errors"])
+        assert any(
+            "link_selector" in err or "link_pattern" in err for err in result["errors"]
+        )
 
-    def test_url_pattern_invalid_pattern(self, tmp_path):
-        """Test that url_pattern validates regex syntax."""
+    def test_web_scrape_invalid_pattern(self, tmp_path):
+        """Test that web_scrape validates regex syntax."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text(
             """
@@ -449,9 +452,10 @@ apps:
   - name: "Test"
     id: "test"
     source:
-      strategy: url_pattern
-      url: "https://example.com/app.msi"
-      pattern: "[unclosed bracket"
+      strategy: web_scrape
+      page_url: "https://example.com/download.html"
+      link_selector: 'a[href$=".msi"]'
+      version_pattern: "[unclosed bracket"
 """
         )
 

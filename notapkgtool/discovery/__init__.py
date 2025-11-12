@@ -8,7 +8,7 @@ file-first (must download to extract version).
 Strategy Pattern:
     Discovery strategies implement one of two approaches:
 
-VERSION-FIRST (url_pattern, api_github, api_json):
+VERSION-FIRST (api_github, api_json, web_scrape):
   - Implement get_version_info() -> VersionInfo
   - Can determine version and download URL without downloading installer
   - Core orchestration checks version first, then decides whether to download
@@ -26,15 +26,15 @@ Available Strategies:
     url_download : UrlDownloadStrategy (FILE-FIRST)
         Download from a fixed URL and extract version from the file itself.
         Supports MSI ProductVersion extraction. Uses ETag caching.
-    url_pattern : UrlPatternStrategy (VERSION-FIRST)
-        Extract version from URL patterns using regex.
-        Instant version checks with zero network calls.
     api_github : ApiGithubStrategy (VERSION-FIRST)
         Fetch from GitHub releases API and extract version from tags.
         Fast API-based version checks (~100ms).
     api_json : ApiJsonStrategy (VERSION-FIRST)
         Query JSON API endpoints for version and download URL.
         Fast API-based version checks (~100ms).
+    web_scrape : WebScrapeStrategy (VERSION-FIRST)
+        Scrape vendor download pages to find links and extract versions.
+        Works for vendors without APIs or static URLs.
 
 Public API:
 
@@ -71,7 +71,7 @@ from . import (
     api_github,  # noqa: F401
     api_json,  # noqa: F401
     url_download,  # noqa: F401
-    url_pattern,  # noqa: F401
+    web_scrape,  # noqa: F401
 )
 from .base import DiscoveryStrategy, get_strategy
 

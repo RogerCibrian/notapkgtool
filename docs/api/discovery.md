@@ -4,7 +4,7 @@ The discovery module implements the strategy pattern for obtaining application i
 
 NAPT supports two types of discovery strategies:
 
-- **Version-First Strategies** (url_pattern, api_github, api_json): Discover version without downloading, enabling instant update checks and the ability to skip downloads entirely when versions are unchanged.
+- **Version-First Strategies** (web_scrape, api_github, api_json): Discover version without downloading, enabling instant update checks and the ability to skip downloads entirely when versions are unchanged.
 
 - **File-First Strategy** (url_download): Must download file to extract version, uses HTTP ETag conditional requests for optimization.
 
@@ -12,7 +12,7 @@ NAPT supports two types of discovery strategies:
 
 ::: notapkgtool.discovery.url_download
 
-::: notapkgtool.discovery.url_pattern
+::: notapkgtool.discovery.web_scrape
 
 ::: notapkgtool.discovery.api_github
 
