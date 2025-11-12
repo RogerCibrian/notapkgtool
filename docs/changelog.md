@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Discovery Performance Optimization** - Version-first strategies (url_pattern, api_github, api_json) now check versions before downloading, enabling instant to ~100ms update checks when unchanged instead of full downloads
+- State file now saves actual download URLs for all strategies
 - **BREAKING: Uniform Strategy Naming** - Discovery strategies renamed to follow consistent `<source>_<method>` pattern for better discoverability and scalability:
   - `http_static` → `url_download` (fixed URL with file extraction)
   - `url_regex` → `url_pattern` (version extraction from URL patterns)
@@ -19,8 +21,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BREAKING: Simplified Version Types** - Version type names shortened for clarity:
   - `msi_product_version_from_file` → `msi`
   - Removed nested `version.type` for `url_pattern` (now uses `source.pattern` directly)
-- **Discovery Performance Optimization** - Version-first strategies (url_pattern, api_github, api_json) now check versions before downloading, enabling instant to ~100ms update checks when unchanged instead of full downloads
-- State file now saves actual download URLs for all strategies
 - **Documentation Rendering** - Fixed module docstrings to follow Google-style format with proper indentation for mkdocstrings
 
 ### Fixed
