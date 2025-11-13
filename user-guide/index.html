@@ -853,6 +853,56 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#why-windows-for-packaging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Windows for Packaging?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recommended-workflows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended Workflows
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Recommended Workflows">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#workflow-1-all-windows-simplest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow 1: All-Windows (Simplest)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workflow-2-mixed-platform-development" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow 2: Mixed Platform Development
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#msi-extraction-backends" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1874,6 +1924,56 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#why-windows-for-packaging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Windows for Packaging?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recommended-workflows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended Workflows
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Recommended Workflows">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#workflow-1-all-windows-simplest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow 1: All-Windows (Simplest)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workflow-2-mixed-platform-development" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow 2: Mixed Platform Development
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#msi-extraction-backends" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2053,8 +2153,8 @@
 <h2 id="commands-reference">Commands Reference</h2>
 <h3 id="napt-validate">napt validate</h3>
 <p>Validates recipe syntax and configuration without making network calls.</p>
-<div class="highlight"><pre><span></span><code>napt<span class="w"> </span>validate<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span><span class="o">[</span>--verbose<span class="o">]</span>
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>napt<span class="w"> </span>validate<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span><span class="o">[</span>--verbose<span class="o">]</span>
+</span></code></pre></div>
 <p><strong>Purpose:</strong></p>
 <ul>
 <li>Quick feedback during recipe development</li>
@@ -2076,15 +2176,15 @@
 </ul>
 <h3 id="napt-discover">napt discover</h3>
 <p>Discovers the latest version by downloading the installer and extracting version information.</p>
-<div class="highlight"><pre><span></span><code>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
-
-Options:
-<span class="w">  </span>--output-dir<span class="w"> </span>DIR<span class="w">      </span>Download<span class="w"> </span>directory<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>./downloads<span class="o">)</span>
-<span class="w">  </span>--state-file<span class="w"> </span>FILE<span class="w">     </span>State<span class="w"> </span>file<span class="w"> </span>path<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>state/versions.json<span class="o">)</span>
-<span class="w">  </span>--stateless<span class="w">           </span>Disable<span class="w"> </span>state<span class="w"> </span>tracking
-<span class="w">  </span>-v,<span class="w"> </span>--verbose<span class="w">         </span>Show<span class="w"> </span>progress<span class="w"> </span>and<span class="w"> </span>status<span class="w"> </span>updates
-<span class="w">  </span>-d,<span class="w"> </span>--debug<span class="w">           </span>Show<span class="w"> </span>detailed<span class="w"> </span>debugging<span class="w"> </span>output
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>Options:
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>--output-dir<span class="w"> </span>DIR<span class="w">      </span>Download<span class="w"> </span>directory<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>./downloads<span class="o">)</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>--state-file<span class="w"> </span>FILE<span class="w">     </span>State<span class="w"> </span>file<span class="w"> </span>path<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>state/versions.json<span class="o">)</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span>--stateless<span class="w">           </span>Disable<span class="w"> </span>state<span class="w"> </span>tracking
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span>-v,<span class="w"> </span>--verbose<span class="w">         </span>Show<span class="w"> </span>progress<span class="w"> </span>and<span class="w"> </span>status<span class="w"> </span>updates
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span>-d,<span class="w"> </span>--debug<span class="w">           </span>Show<span class="w"> </span>detailed<span class="w"> </span>debugging<span class="w"> </span>output
+</span></code></pre></div>
 <p><strong>Features:</strong></p>
 <ul>
 <li>✅ Discovers version using configured strategy</li>
@@ -2095,14 +2195,14 @@ Options:
 </ul>
 <h3 id="napt-build">napt build</h3>
 <p>Builds a complete PSADT package from a recipe and downloaded installer.</p>
-<div class="highlight"><pre><span></span><code>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
-
-Options:
-<span class="w">  </span>--downloads-dir<span class="w"> </span>DIR<span class="w">   </span>Installer<span class="w"> </span>directory<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>./downloads<span class="o">)</span>
-<span class="w">  </span>--output-dir<span class="w"> </span>DIR<span class="w">      </span>Build<span class="w"> </span>output<span class="w"> </span>directory<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>./builds<span class="o">)</span>
-<span class="w">  </span>-v,<span class="w"> </span>--verbose<span class="w">         </span>Show<span class="w"> </span>progress
-<span class="w">  </span>-d,<span class="w"> </span>--debug<span class="w">           </span>Show<span class="w"> </span>detailed<span class="w"> </span>output
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>Options:
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>--downloads-dir<span class="w"> </span>DIR<span class="w">   </span>Installer<span class="w"> </span>directory<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>./downloads<span class="o">)</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span>--output-dir<span class="w"> </span>DIR<span class="w">      </span>Build<span class="w"> </span>output<span class="w"> </span>directory<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>./builds<span class="o">)</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span>-v,<span class="w"> </span>--verbose<span class="w">         </span>Show<span class="w"> </span>progress
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span>-d,<span class="w"> </span>--debug<span class="w">           </span>Show<span class="w"> </span>detailed<span class="w"> </span>output
+</span></code></pre></div>
 <p><strong>Features:</strong></p>
 <ul>
 <li>✅ Downloads PSADT release from GitHub (or uses cached version)</li>
@@ -2115,14 +2215,14 @@ Options:
 </ul>
 <h3 id="napt-package">napt package</h3>
 <p>Creates a .intunewin package from a built PSADT directory.</p>
-<div class="highlight"><pre><span></span><code>napt<span class="w"> </span>package<span class="w"> </span>BUILD_DIR<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
-
-Options:
-<span class="w">  </span>--output-dir<span class="w"> </span>DIR<span class="w">      </span>Output<span class="w"> </span>directory<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>packages/<span class="o">{</span>app_id<span class="o">}</span>/<span class="o">)</span>
-<span class="w">  </span>--clean-source<span class="w">        </span>Remove<span class="w"> </span>build<span class="w"> </span>directory<span class="w"> </span>after<span class="w"> </span>packaging
-<span class="w">  </span>-v,<span class="w"> </span>--verbose<span class="w">         </span>Show<span class="w"> </span>progress
-<span class="w">  </span>-d,<span class="w"> </span>--debug<span class="w">           </span>Show<span class="w"> </span>detailed<span class="w"> </span>output
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>napt<span class="w"> </span>package<span class="w"> </span>BUILD_DIR<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>Options:
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>--output-dir<span class="w"> </span>DIR<span class="w">      </span>Output<span class="w"> </span>directory<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>packages/<span class="o">{</span>app_id<span class="o">}</span>/<span class="o">)</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>--clean-source<span class="w">        </span>Remove<span class="w"> </span>build<span class="w"> </span>directory<span class="w"> </span>after<span class="w"> </span>packaging
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>-v,<span class="w"> </span>--verbose<span class="w">         </span>Show<span class="w"> </span>progress
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span>-d,<span class="w"> </span>--debug<span class="w">           </span>Show<span class="w"> </span>detailed<span class="w"> </span>output
+</span></code></pre></div>
 <p><strong>Features:</strong></p>
 <ul>
 <li>✅ Downloads IntuneWinAppUtil.exe (or uses cached version)</li>
@@ -2202,12 +2302,12 @@ Options:
 <li>Semantic versioned tags</li>
 </ul>
 <p><strong>Configuration:</strong></p>
-<div class="highlight"><pre><span></span><code><span class="nt">source</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
-<span class="w">  </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;git-for-windows/git&quot;</span>
-<span class="w">  </span><span class="nt">asset_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Git-.*-64-bit\\.exe$&quot;</span>
-<span class="w">  </span><span class="nt">version_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;v?([0-9.]+)&quot;</span>
-</code></pre></div>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">source</span><span class="p">:</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;git-for-windows/git&quot;</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">asset_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Git-.*-64-bit\\.exe$&quot;</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="nt">version_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;v?([0-9.]+)&quot;</span>
+</span></code></pre></div>
 <p><strong>Pros:</strong> Official GitHub API, reliable, fast update checks (API only, ~100ms), supports authentication<br />
 <strong>Cons:</strong> GitHub API rate limits (60/hour unauthenticated)</p>
 <h3 id="api_json">api_json</h3>
@@ -2218,14 +2318,14 @@ Options:
 <li>APIs requiring authentication or custom headers</li>
 </ul>
 <p><strong>Configuration:</strong></p>
-<div class="highlight"><pre><span></span><code><span class="nt">source</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_json</span>
-<span class="w">  </span><span class="nt">api_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://vendor.com/api/latest&quot;</span>
-<span class="w">  </span><span class="nt">version_path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;version&quot;</span>
-<span class="w">  </span><span class="nt">download_url_path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;download_url&quot;</span>
-<span class="w">  </span><span class="nt">headers</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">Authorization</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Bearer</span><span class="nv"> </span><span class="s">${API_TOKEN}&quot;</span>
-</code></pre></div>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">source</span><span class="p">:</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_json</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">api_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://vendor.com/api/latest&quot;</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">version_path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;version&quot;</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span><span class="nt">download_url_path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;download_url&quot;</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span><span class="nt">headers</span><span class="p">:</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="nt">Authorization</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Bearer</span><span class="nv"> </span><span class="s">${API_TOKEN}&quot;</span>
+</span></code></pre></div>
 <p><strong>Pros:</strong> Fast update checks (API only, ~100ms), flexible, supports complex APIs, no file parsing<br />
 <strong>Cons:</strong> Requires vendor API availability</p>
 <h3 id="url_download">url_download</h3>
@@ -2236,12 +2336,12 @@ Options:
 <li>When version isn't in URL or easily parseable</li>
 </ul>
 <p><strong>Configuration:</strong></p>
-<div class="highlight"><pre><span></span><code><span class="nt">source</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">url_download</span>
-<span class="w">  </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://dl.google.com/chrome/install/googlechromestandaloneenterprise64.msi&quot;</span>
-<span class="w">  </span><span class="nt">version</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">msi</span>
-</code></pre></div>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">source</span><span class="p">:</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">url_download</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://dl.google.com/chrome/install/googlechromestandaloneenterprise64.msi&quot;</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nt">version</span><span class="p">:</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">msi</span>
+</span></code></pre></div>
 <p><strong>Pros:</strong> Simple and reliable, version directly from installer (most accurate)<br />
 <strong>Cons:</strong> Must download file to know version, slower update checks (HTTP conditional request)</p>
 <h3 id="web_scrape">web_scrape</h3>
@@ -2253,13 +2353,13 @@ Options:
 <li>Small vendors with simple HTML download pages</li>
 </ul>
 <p><strong>Configuration:</strong></p>
-<div class="highlight"><pre><span></span><code><span class="nt">source</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">web_scrape</span>
-<span class="w">  </span><span class="nt">page_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://www.7-zip.org/download.html&quot;</span>
-<span class="w">  </span><span class="nt">link_selector</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;a[href$=&quot;-x64.msi&quot;]&#39;</span><span class="w">        </span><span class="c1"># CSS selector (recommended)</span>
-<span class="w">  </span><span class="nt">version_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;7z(\\d{2})(\\d{2})-x64&quot;</span><span class="w">   </span><span class="c1"># Extract from discovered URL</span>
-<span class="w">  </span><span class="nt">version_format</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{0}.{1}&quot;</span><span class="w">                    </span><span class="c1"># Transform to &quot;25.01&quot;</span>
-</code></pre></div>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">source</span><span class="p">:</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">web_scrape</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="nt">page_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://www.7-zip.org/download.html&quot;</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nt">link_selector</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;a[href$=&quot;-x64.msi&quot;]&#39;</span><span class="w">        </span><span class="c1"># CSS selector (recommended)</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="nt">version_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;7z(\\d{2})(\\d{2})-x64&quot;</span><span class="w">   </span><span class="c1"># Extract from discovered URL</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span><span class="nt">version_format</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{0}.{1}&quot;</span><span class="w">                    </span><span class="c1"># Transform to &quot;25.01&quot;</span>
+</span></code></pre></div>
 <p><strong>Pros:</strong> Fast version checks (~100-300ms page scrape), works without APIs, CSS selectors are robust<br />
 <strong>Cons:</strong> Requires page structure knowledge, may break if vendor redesigns site</p>
 <h3 id="decision-guide">Decision Guide</h3>
@@ -2358,18 +2458,18 @@ Options:
 </table>
 <p><strong>Recommendation:</strong> Use version-first strategies (web_scrape, api_github, api_json) when available for fastest cache checks.</p>
 <h3 id="default-behavior-stateful">Default Behavior (Stateful)</h3>
-<div class="highlight"><pre><span></span><code><span class="c1"># State tracking enabled by default</span>
-napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
-
-<span class="c1"># Creates/updates: state/versions.json</span>
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># State tracking enabled by default</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Creates/updates: state/versions.json</span>
+</span></code></pre></div>
 <h3 id="stateless-mode">Stateless Mode</h3>
-<div class="highlight"><pre><span></span><code><span class="c1"># Disable state tracking for one-off checks</span>
-napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span>--stateless
-
-<span class="c1"># Always downloads, no caching</span>
-<span class="c1"># Useful for CI/CD clean builds</span>
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Disable state tracking for one-off checks</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span>--stateless
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Always downloads, no caching</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="c1"># Useful for CI/CD clean builds</span>
+</span></code></pre></div>
 <h2 id="configuration-layers">Configuration Layers</h2>
 <p>NAPT uses a sophisticated 3-layer configuration system that promotes DRY (Don't Repeat Yourself) principles:</p>
 <h3 id="the-three-layers">The Three Layers</h3>
@@ -2392,37 +2492,37 @@ napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrom
 <li><strong>Scalars</strong>: Overwritten (strings, numbers, booleans)</li>
 </ul>
 <h3 id="example">Example</h3>
-<div class="highlight"><pre><span></span><code><span class="c1"># defaults/org.yaml</span>
-<span class="nt">defaults</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">psadt</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">release</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;latest&quot;</span>
-<span class="w">    </span><span class="nt">app_vars</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">AppVendor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Unknown&quot;</span>
-</code></pre></div>
-<div class="highlight"><pre><span></span><code><span class="c1"># defaults/vendors/Google.yaml</span>
-<span class="nt">defaults</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">psadt</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">app_vars</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">AppVendor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Google</span><span class="nv"> </span><span class="s">LLC&quot;</span>
-</code></pre></div>
-<div class="highlight"><pre><span></span><code><span class="c1"># recipes/Google/chrome.yaml</span>
-<span class="nt">apps</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Google</span><span class="nv"> </span><span class="s">Chrome&quot;</span>
-<span class="w">    </span><span class="c1"># AppVendor will be &quot;Google LLC&quot; (from vendor defaults)</span>
-<span class="w">    </span><span class="c1"># release will be &quot;latest&quot; (from org defaults)</span>
-</code></pre></div>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># defaults/org.yaml</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nt">defaults</span><span class="p">:</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span><span class="nt">psadt</span><span class="p">:</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="nt">release</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;latest&quot;</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="nt">app_vars</span><span class="p">:</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">      </span><span class="nt">AppVendor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Unknown&quot;</span>
+</span></code></pre></div>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># defaults/vendors/Google.yaml</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nt">defaults</span><span class="p">:</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nt">psadt</span><span class="p">:</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="nt">app_vars</span><span class="p">:</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">      </span><span class="nt">AppVendor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Google</span><span class="nv"> </span><span class="s">LLC&quot;</span>
+</span></code></pre></div>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># recipes/Google/chrome.yaml</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nt">apps</span><span class="p">:</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Google</span><span class="nv"> </span><span class="s">Chrome&quot;</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="c1"># AppVendor will be &quot;Google LLC&quot; (from vendor defaults)</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span><span class="c1"># release will be &quot;latest&quot; (from org defaults)</span>
+</span></code></pre></div>
 <h2 id="cross-platform-support">Cross-Platform Support</h2>
-<p>NAPT works on Windows, Linux, and macOS with full feature parity.</p>
+<p><strong>NAPT is a Windows tool</strong> for Microsoft Intune packaging. Develop on any platform, package on Windows.</p>
 <h3 id="platform-compatibility-matrix">Platform Compatibility Matrix</h3>
 <table>
 <thead>
 <tr>
 <th>Platform</th>
 <th>Download</th>
-<th>Config</th>
-<th>CLI</th>
+<th>Discovery</th>
+<th>Build</th>
+<th>Package</th>
 <th>MSI Extraction</th>
-<th>Status</th>
 </tr>
 </thead>
 <tbody>
@@ -2431,27 +2531,45 @@ napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrom
 <td>✅</td>
 <td>✅</td>
 <td>✅</td>
+<td>✅</td>
 <td>✅ Native (PowerShell COM)</td>
-<td>Fully Supported</td>
 </tr>
 <tr>
 <td><strong>Linux</strong></td>
 <td>✅</td>
 <td>✅</td>
 <td>✅</td>
+<td>⚫ Windows Only</td>
 <td>✅ Via msitools</td>
-<td>Fully Supported</td>
 </tr>
 <tr>
 <td><strong>macOS</strong></td>
 <td>✅</td>
 <td>✅</td>
 <td>✅</td>
+<td>⚫ Windows Only</td>
 <td>✅ Via msitools</td>
-<td>Fully Supported</td>
 </tr>
 </tbody>
 </table>
+<h3 id="why-windows-for-packaging">Why Windows for Packaging?</h3>
+<p>The <code>napt package</code> command uses Microsoft's <a href="https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool">IntuneWinAppUtil.exe</a>, which is a Windows-only .NET application. This is the official tool for creating .intunewin packages.</p>
+<h3 id="recommended-workflows">Recommended Workflows</h3>
+<h4 id="workflow-1-all-windows-simplest">Workflow 1: All-Windows (Simplest)</h4>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Run everything on Windows</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>napt<span class="w"> </span>package<span class="w"> </span>builds/napt-chrome/142.0.7444.163/
+</span></code></pre></div>
+<h4 id="workflow-2-mixed-platform-development">Workflow 2: Mixed Platform Development</h4>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># On Linux/macOS: Discovery and build</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="c1"># Transfer build directory to Windows (or use shared drive)</span>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="c1"># On Windows: Package</span>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>napt<span class="w"> </span>package<span class="w"> </span>builds/napt-chrome/142.0.7444.163/
+</span></code></pre></div>
 <h3 id="msi-extraction-backends">MSI Extraction Backends</h3>
 <p><strong>Windows</strong> (tried in order):</p>
 <ol>
@@ -2467,50 +2585,50 @@ napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrom
 <h2 id="programmatic-api">Programmatic API</h2>
 <p>NAPT can be used as a Python library for automation and integration.</p>
 <h3 id="basic-usage">Basic Usage</h3>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">discover_recipe</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.validation</span><span class="w"> </span><span class="kn">import</span> <span class="n">validate_recipe</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_effective_config</span>
-
-<span class="c1"># Validate recipe syntax (no downloads)</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">validate_recipe</span><span class="p">(</span>
-    <span class="n">recipe_path</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;recipes/Google/chrome.yaml&quot;</span><span class="p">),</span>
-    <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span>
-<span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Status: </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;status&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-<span class="c1"># Discover version and download installer</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">discover_recipe</span><span class="p">(</span>
-    <span class="n">recipe_path</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;recipes/Google/chrome.yaml&quot;</span><span class="p">),</span>
-    <span class="n">output_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./downloads&quot;</span><span class="p">),</span>
-    <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span>
-<span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Version: </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;version&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;SHA-256: </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;sha256&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-<span class="c1"># Load configuration</span>
-<span class="n">config</span> <span class="o">=</span> <span class="n">load_effective_config</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;recipes/Google/chrome.yaml&quot;</span><span class="p">))</span>
-</code></pre></div>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">discover_recipe</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.validation</span><span class="w"> </span><span class="kn">import</span> <span class="n">validate_recipe</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_effective_config</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="c1"># Validate recipe syntax (no downloads)</span>
+</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="n">result</span> <span class="o">=</span> <span class="n">validate_recipe</span><span class="p">(</span>
+</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>    <span class="n">recipe_path</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;recipes/Google/chrome.yaml&quot;</span><span class="p">),</span>
+</span><span id="__span-15-9"><a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a>    <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span>
+</span><span id="__span-15-10"><a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a><span class="p">)</span>
+</span><span id="__span-15-11"><a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Status: </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;status&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-15-12"><a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a>
+</span><span id="__span-15-13"><a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a><span class="c1"># Discover version and download installer</span>
+</span><span id="__span-15-14"><a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a><span class="n">result</span> <span class="o">=</span> <span class="n">discover_recipe</span><span class="p">(</span>
+</span><span id="__span-15-15"><a id="__codelineno-15-15" name="__codelineno-15-15" href="#__codelineno-15-15"></a>    <span class="n">recipe_path</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;recipes/Google/chrome.yaml&quot;</span><span class="p">),</span>
+</span><span id="__span-15-16"><a id="__codelineno-15-16" name="__codelineno-15-16" href="#__codelineno-15-16"></a>    <span class="n">output_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./downloads&quot;</span><span class="p">),</span>
+</span><span id="__span-15-17"><a id="__codelineno-15-17" name="__codelineno-15-17" href="#__codelineno-15-17"></a>    <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span>
+</span><span id="__span-15-18"><a id="__codelineno-15-18" name="__codelineno-15-18" href="#__codelineno-15-18"></a><span class="p">)</span>
+</span><span id="__span-15-19"><a id="__codelineno-15-19" name="__codelineno-15-19" href="#__codelineno-15-19"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Version: </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;version&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-15-20"><a id="__codelineno-15-20" name="__codelineno-15-20" href="#__codelineno-15-20"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;SHA-256: </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;sha256&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-15-21"><a id="__codelineno-15-21" name="__codelineno-15-21" href="#__codelineno-15-21"></a>
+</span><span id="__span-15-22"><a id="__codelineno-15-22" name="__codelineno-15-22" href="#__codelineno-15-22"></a><span class="c1"># Load configuration</span>
+</span><span id="__span-15-23"><a id="__codelineno-15-23" name="__codelineno-15-23" href="#__codelineno-15-23"></a><span class="n">config</span> <span class="o">=</span> <span class="n">load_effective_config</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;recipes/Google/chrome.yaml&quot;</span><span class="p">))</span>
+</span></code></pre></div>
 <h3 id="version-comparison">Version Comparison</h3>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.versioning</span><span class="w"> </span><span class="kn">import</span> <span class="n">compare_any</span><span class="p">,</span> <span class="n">is_newer_any</span>
-
-<span class="c1"># Compare versions</span>
-<span class="k">if</span> <span class="n">is_newer_any</span><span class="p">(</span><span class="s2">&quot;1.2.0&quot;</span><span class="p">,</span> <span class="s2">&quot;1.1.9&quot;</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Update available!&quot;</span><span class="p">)</span>
-
-<span class="c1"># Detailed comparison</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">compare_any</span><span class="p">(</span><span class="s2">&quot;2.0.0&quot;</span><span class="p">,</span> <span class="s2">&quot;1.9.9&quot;</span><span class="p">)</span>
-<span class="c1"># Returns: 1 (newer), 0 (same), or -1 (older)</span>
-</code></pre></div>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.versioning</span><span class="w"> </span><span class="kn">import</span> <span class="n">compare_any</span><span class="p">,</span> <span class="n">is_newer_any</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="c1"># Compare versions</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="k">if</span> <span class="n">is_newer_any</span><span class="p">(</span><span class="s2">&quot;1.2.0&quot;</span><span class="p">,</span> <span class="s2">&quot;1.1.9&quot;</span><span class="p">):</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Update available!&quot;</span><span class="p">)</span>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="c1"># Detailed comparison</span>
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="n">result</span> <span class="o">=</span> <span class="n">compare_any</span><span class="p">(</span><span class="s2">&quot;2.0.0&quot;</span><span class="p">,</span> <span class="s2">&quot;1.9.9&quot;</span><span class="p">)</span>
+</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="c1"># Returns: 1 (newer), 0 (same), or -1 (older)</span>
+</span></code></pre></div>
 <p>See the <a href="../api/core/">API Reference</a> for complete documentation.</p>
 <h2 id="best-practices">Best Practices</h2>
 <h3 id="recipe-organization">Recipe Organization</h3>
-<div class="highlight"><pre><span></span><code>recipes/
-├── &lt;Vendor&gt;/
-│   ├── &lt;app1&gt;.yaml
-│   ├── &lt;app2&gt;.yaml
-│   └── ...
-</code></pre></div>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>recipes/
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>├── &lt;Vendor&gt;/
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>│   ├── &lt;app1&gt;.yaml
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>│   ├── &lt;app2&gt;.yaml
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>│   └── ...
+</span></code></pre></div>
 <h3 id="vendor-detection">Vendor Detection</h3>
 <p>NAPT automatically detects vendor from directory structure:</p>
 <ul>
@@ -2538,48 +2656,49 @@ napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrom
 <li><code>1</code> = Error (configuration, download, validation failure)</li>
 </ul>
 <p>Use in scripts:</p>
-<div class="highlight"><pre><span></span><code><span class="k">if</span><span class="w"> </span>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="p">;</span><span class="w"> </span><span class="k">then</span>
-<span class="w">    </span>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
-<span class="k">else</span>
-<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Discovery failed&quot;</span>
-<span class="w">    </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
-<span class="k">fi</span>
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="k">if</span><span class="w"> </span>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">    </span>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="k">else</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Discovery failed&quot;</span>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">    </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="k">fi</span>
+</span></code></pre></div>
 <h2 id="troubleshooting">Troubleshooting</h2>
 <h3 id="common-issues">Common Issues</h3>
 <p><strong>Problem</strong>: "Command not found: napt"</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># Solution 1: Activate Poetry shell</span>
-poetry<span class="w"> </span>shell
-
-<span class="c1"># Solution 2: Use poetry run prefix</span>
-poetry<span class="w"> </span>run<span class="w"> </span>napt<span class="w"> </span>--version
-</code></pre></div>
+<div class="language-powershell highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c"># Solution 1: Activate Poetry shell</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="n">poetry</span> <span class="n">shell</span>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="c"># Solution 2: Use poetry run prefix</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="n">poetry</span> <span class="n">run</span> <span class="n">napt</span> <span class="p">-</span><span class="n">-version</span>
+</span></code></pre></div>
 <p><strong>Problem</strong>: MSI extraction fails on Linux/macOS</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># Solution: Install msitools</span>
-sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>msitools<span class="w">  </span><span class="c1"># Debian/Ubuntu</span>
-brew<span class="w"> </span>install<span class="w"> </span>msitools<span class="w">           </span><span class="c1"># macOS</span>
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Solution: Install msitools</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>msitools<span class="w">  </span><span class="c1"># Debian/Ubuntu</span>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>brew<span class="w"> </span>install<span class="w"> </span>msitools<span class="w">           </span><span class="c1"># macOS</span>
+</span></code></pre></div>
 <p><strong>Problem</strong>: State file corrupted</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># NAPT automatically creates backup</span>
-<span class="c1"># Backup saved to: state/versions.json.backup</span>
-
-<span class="c1"># Force re-download</span>
-napt<span class="w"> </span>discover<span class="w"> </span>recipes/app.yaml<span class="w"> </span>--stateless
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1"># NAPT automatically creates backup</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="c1"># Backup saved to: state/versions.json.backup</span>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="c1"># Force re-download</span>
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/app.yaml<span class="w"> </span>--stateless
+</span></code></pre></div>
 <p><strong>Problem</strong>: GitHub API rate limit</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># Solution: Use authentication token</span>
-<span class="c1"># In recipe:</span>
-source:
-<span class="w">  </span>strategy:<span class="w"> </span>api_github
-<span class="w">  </span>token:<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">GITHUB_TOKEN</span><span class="si">}</span><span class="s2">&quot;</span>
-
-<span class="c1"># Set environment variable</span>
-<span class="nb">export</span><span class="w"> </span><span class="nv">GITHUB_TOKEN</span><span class="o">=</span><span class="s2">&quot;your_token_here&quot;</span>
-</code></pre></div>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1"># Solution: Use authentication token in recipe</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="nt">source</span><span class="p">:</span>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${GITHUB_TOKEN}&quot;</span>
+</span></code></pre></div>
+<div class="language-powershell highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c"># Set environment variable (Windows)</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="nv">$env:GITHUB_TOKEN</span><span class="p">=</span><span class="s2">&quot;your_token_here&quot;</span>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="c"># On Linux/macOS: export GITHUB_TOKEN=&quot;your_token_here&quot;</span>
+</span></code></pre></div>
 <h3 id="debug-mode">Debug Mode</h3>
 <p>Always use <code>--debug</code> for troubleshooting:</p>
-<div class="highlight"><pre><span></span><code>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span>--debug
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span>--debug
+</span></code></pre></div>
 <p>This shows:</p>
 <ul>
 <li>Full configuration dumps</li>
@@ -2637,7 +2756,7 @@ source:
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.tabs.sticky"], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.tabs.sticky", "content.code.copy"], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
       <script src="../assets/javascripts/bundle.e71a0d61.min.js"></script>

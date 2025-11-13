@@ -1496,38 +1496,38 @@
 <h3 id="feature-ideas">Feature Ideas</h3>
 <p>Have an idea for NAPT? Check <a href="../roadmap/">docs/roadmap.md</a> to see what's planned and add your suggestions to the appropriate category!</p>
 <h3 id="development-setup">Development Setup</h3>
-<div class="highlight"><pre><span></span><code><span class="c1"># Clone and install with dev dependencies</span>
-git<span class="w"> </span>clone<span class="w"> </span>https://github.com/RogerCibrian/notapkgtool.git
-<span class="nb">cd</span><span class="w"> </span>notapkgtool
-poetry<span class="w"> </span>install
-poetry<span class="w"> </span>shell
-
-<span class="c1"># Verify installation</span>
-napt<span class="w"> </span>--version
-</code></pre></div>
+<div class="language-powershell highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c"># Clone and install with dev dependencies</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">://</span><span class="n">github</span><span class="p">.</span><span class="n">com</span><span class="p">/</span><span class="n">RogerCibrian</span><span class="p">/</span><span class="n">notapkgtool</span><span class="p">.</span><span class="n">git</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">cd </span><span class="n">notapkgtool</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">poetry</span> <span class="n">install</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">poetry</span> <span class="n">shell</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c"># Verify installation</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">napt</span> <span class="p">-</span><span class="n">-version</span>
+</span></code></pre></div>
 <h3 id="running-tests">Running Tests</h3>
-<div class="highlight"><pre><span></span><code><span class="c1"># Run all tests</span>
-poetry<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/
-
-<span class="c1"># Run only unit tests (fast)</span>
-poetry<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;not integration&quot;</span>
-
-<span class="c1"># Run with coverage</span>
-poetry<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/<span class="w"> </span>--cov<span class="o">=</span>notapkgtool<span class="w"> </span>--cov-report<span class="o">=</span>html
-</code></pre></div>
+<div class="language-powershell highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c"># Run all tests</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">poetry</span> <span class="n">run</span> <span class="n">pytest</span> <span class="n">tests</span><span class="p">/</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c"># Run only unit tests (fast)</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">poetry</span> <span class="n">run</span> <span class="n">pytest</span> <span class="n">tests</span><span class="p">/</span> <span class="n">-m</span> <span class="s2">&quot;not integration&quot;</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c"># Run with coverage</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">poetry</span> <span class="n">run</span> <span class="n">pytest</span> <span class="n">tests</span><span class="p">/</span> <span class="p">-</span><span class="n">-cov</span><span class="p">=</span><span class="n">notapkgtool</span> <span class="p">-</span><span class="n">-cov-report</span><span class="p">=</span><span class="n">html</span>
+</span></code></pre></div>
 <h3 id="code-quality">Code Quality</h3>
-<div class="highlight"><pre><span></span><code><span class="c1"># Format code</span>
-poetry<span class="w"> </span>run<span class="w"> </span>black<span class="w"> </span>notapkgtool/<span class="w"> </span>tests/
-
-<span class="c1"># Fix linting issues</span>
-poetry<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>check<span class="w"> </span>--fix<span class="w"> </span>notapkgtool/<span class="w"> </span>tests/
-
-<span class="c1"># Check docstring formatting</span>
-poetry<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>check<span class="w"> </span>--select<span class="w"> </span>D<span class="w"> </span>notapkgtool/
-
-<span class="c1"># Check types (if using mypy)</span>
-poetry<span class="w"> </span>run<span class="w"> </span>mypy<span class="w"> </span>notapkgtool/
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Format code</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>poetry<span class="w"> </span>run<span class="w"> </span>black<span class="w"> </span>notapkgtool/<span class="w"> </span>tests/
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Fix linting issues</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>poetry<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>check<span class="w"> </span>--fix<span class="w"> </span>notapkgtool/<span class="w"> </span>tests/
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Check docstring formatting</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>poetry<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>check<span class="w"> </span>--select<span class="w"> </span>D<span class="w"> </span>notapkgtool/
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="c1"># Check types (if using mypy)</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>poetry<span class="w"> </span>run<span class="w"> </span>mypy<span class="w"> </span>notapkgtool/
+</span></code></pre></div>
 <h2 id="branching-strategy">Branching Strategy</h2>
 <p>NAPT uses <strong>GitHub Flow</strong> - a simple, branch-based workflow. See <a href="../branching/">branching.md</a> for complete workflow details.</p>
 <p><strong>Quick Summary:</strong>
@@ -1630,28 +1630,28 @@ poetry<span class="w"> </span>run<span class="w"> </span>mypy<span class="w"> </
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Documentation is updated (README.md, docs/ if needed)</li>
 </ul>
 <h3 id="pr-description-template">PR Description Template</h3>
-<div class="highlight"><pre><span></span><code><span class="gu">## Description</span>
-Brief description of what this PR does.
-
-<span class="gu">## Motivation</span>
-Why is this change needed?
-
-<span class="gu">## Changes</span>
-<span class="k">-</span><span class="w"> </span>Bullet list of key changes
-<span class="k">-</span><span class="w"> </span>Include any breaking changes
-
-<span class="gu">## Testing</span>
-How was this tested?
-<span class="k">- [ ]</span> Unit tests added/updated
-<span class="k">- [ ]</span> Integration tests added/updated
-<span class="k">- [ ]</span> Manual testing performed
-
-<span class="gu">## Checklist</span>
-<span class="k">- [ ]</span> Code follows project conventions
-<span class="k">- [ ]</span> Documentation updated
-<span class="k">- [ ]</span> Tests pass
-<span class="k">- [ ]</span> No linting errors
-</code></pre></div>
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="gu">## Description</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>Brief description of what this PR does.
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="gu">## Motivation</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>Why is this change needed?
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="gu">## Changes</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="k">-</span><span class="w"> </span>Bullet list of key changes
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="k">-</span><span class="w"> </span>Include any breaking changes
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="gu">## Testing</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>How was this tested?
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="k">- [ ]</span> Unit tests added/updated
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="k">- [ ]</span> Integration tests added/updated
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="k">- [ ]</span> Manual testing performed
+</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>
+</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="gu">## Checklist</span>
+</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="k">- [ ]</span> Code follows project conventions
+</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="k">- [ ]</span> Documentation updated
+</span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="k">- [ ]</span> Tests pass
+</span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="k">- [ ]</span> No linting errors
+</span></code></pre></div>
 <h2 id="questions-or-issues">Questions or Issues?</h2>
 <ul>
 <li><strong>Questions</strong>: Open a GitHub Discussion</li>
@@ -1714,7 +1714,7 @@ How was this tested?
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.tabs.sticky"], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.tabs.sticky", "content.code.copy"], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
       <script src="../assets/javascripts/bundle.e71a0d61.min.js"></script>

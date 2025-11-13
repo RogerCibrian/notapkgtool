@@ -1577,12 +1577,12 @@
 <li><strong>Merge frequently</strong> - Keep branches short-lived (&lt; 1 week ideal)</li>
 </ol>
 <h2 id="branch-structure">Branch Structure</h2>
-<div class="highlight"><pre><span></span><code>main (always deployable)
-├── feature/add-rpm-support
-├── bugfix/fix-version-parsing
-├── docs/update-installation-guide
-└── refactor/simplify-config-loader
-</code></pre></div>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>main (always deployable)
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── feature/add-rpm-support
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── bugfix/fix-version-parsing
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>├── docs/update-installation-guide
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>└── refactor/simplify-config-loader
+</span></code></pre></div>
 <h2 id="branch-naming-convention">Branch Naming Convention</h2>
 <p>Use descriptive names with type prefixes:</p>
 <table>
@@ -1639,34 +1639,34 @@
 <li>No issue numbers in branch names (use commit messages instead)</li>
 </ul>
 <p><strong>Good Examples:</strong>
-<div class="highlight"><pre><span></span><code>feature/add-exe-version-extraction
-bugfix/fix-download-resume-logic
-docs/add-cross-platform-examples
-refactor/simplify-config-loader
-</code></pre></div></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>feature/add-exe-version-extraction
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>bugfix/fix-download-resume-logic
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>docs/add-cross-platform-examples
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>refactor/simplify-config-loader
+</span></code></pre></div></p>
 <p><strong>Bad Examples:</strong>
-<div class="highlight"><pre><span></span><code>my-branch              # No type prefix
-feature/stuff          # Not descriptive
-Feature/My_Branch      # Wrong case
-fix-bug                # Too generic
-</code></pre></div></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>my-branch              # No type prefix
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>feature/stuff          # Not descriptive
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>Feature/My_Branch      # Wrong case
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>fix-bug                # Too generic
+</span></code></pre></div></p>
 <h2 id="workflow">Workflow</h2>
 <h3 id="starting-new-work">Starting New Work</h3>
-<div class="highlight"><pre><span></span><code><span class="c1"># Always start from updated main</span>
-git<span class="w"> </span>checkout<span class="w"> </span>main
-git<span class="w"> </span>pull<span class="w"> </span>origin<span class="w"> </span>main
-
-<span class="c1"># Create your feature branch</span>
-git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feature/your-feature-name
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Always start from updated main</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>git<span class="w"> </span>checkout<span class="w"> </span>main
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>git<span class="w"> </span>pull<span class="w"> </span>origin<span class="w"> </span>main
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c1"># Create your feature branch</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feature/your-feature-name
+</span></code></pre></div>
 <h3 id="during-development">During Development</h3>
-<div class="highlight"><pre><span></span><code><span class="c1"># Make changes, commit frequently</span>
-git<span class="w"> </span>add<span class="w"> </span>.
-git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add your feature&quot;</span>
-
-<span class="c1"># Push your branch</span>
-git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>feature/your-feature-name
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Make changes, commit frequently</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>git<span class="w"> </span>add<span class="w"> </span>.
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add your feature&quot;</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c1"># Push your branch</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>feature/your-feature-name
+</span></code></pre></div>
 <h3 id="creating-a-pull-request">Creating a Pull Request</h3>
 <ol>
 <li>Push your branch to GitHub</li>
@@ -1679,21 +1679,21 @@ git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </
 <li>Address any feedback</li>
 </ol>
 <h3 id="after-merge">After Merge</h3>
-<div class="highlight"><pre><span></span><code><span class="c1"># Update your local main</span>
-git<span class="w"> </span>checkout<span class="w"> </span>main
-git<span class="w"> </span>pull<span class="w"> </span>origin<span class="w"> </span>main
-
-<span class="c1"># Delete your local feature branch</span>
-git<span class="w"> </span>branch<span class="w"> </span>-d<span class="w"> </span>feature/your-feature-name
-
-<span class="c1"># Remote branch is usually auto-deleted by GitHub</span>
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Update your local main</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>git<span class="w"> </span>checkout<span class="w"> </span>main
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>git<span class="w"> </span>pull<span class="w"> </span>origin<span class="w"> </span>main
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="c1"># Delete your local feature branch</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>git<span class="w"> </span>branch<span class="w"> </span>-d<span class="w"> </span>feature/your-feature-name
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="c1"># Remote branch is usually auto-deleted by GitHub</span>
+</span></code></pre></div>
 <h2 id="commit-message-format">Commit Message Format</h2>
 <p>Use conventional commit format for clarity:</p>
-<div class="highlight"><pre><span></span><code>&lt;type&gt;: &lt;description&gt;
-
-[optional body]
-</code></pre></div>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>&lt;type&gt;: &lt;description&gt;
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>[optional body]
+</span></code></pre></div>
 <h3 id="commit-types">Commit Types</h3>
 <table>
 <thead>
@@ -1750,15 +1750,15 @@ git<span class="w"> </span>branch<span class="w"> </span>-d<span class="w"> </sp
 <li>Separate subject from body with blank line</li>
 </ul>
 <p><strong>Good Examples:</strong>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add RPM version extraction support&quot;</span>
-git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;fix: handle missing ETag headers gracefully&quot;</span>
-git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;docs: add examples for Linux MSI extraction&quot;</span>
-</code></pre></div></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: add RPM version extraction support&quot;</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;fix: handle missing ETag headers gracefully&quot;</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;docs: add examples for Linux MSI extraction&quot;</span>
+</span></code></pre></div></p>
 <p><strong>Bad Examples:</strong>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;added stuff&quot;</span><span class="w">           </span><span class="c1"># Not descriptive</span>
-git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;Fix bug&quot;</span><span class="w">               </span><span class="c1"># No type prefix</span>
-git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;WIP&quot;</span><span class="w">                   </span><span class="c1"># Too vague</span>
-</code></pre></div></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;added stuff&quot;</span><span class="w">           </span><span class="c1"># Not descriptive</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;Fix bug&quot;</span><span class="w">               </span><span class="c1"># No type prefix</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;WIP&quot;</span><span class="w">                   </span><span class="c1"># Too vague</span>
+</span></code></pre></div></p>
 <h2 id="best-practices">Best Practices</h2>
 <h3 id="do">DO ✅</h3>
 <ul>
@@ -1781,42 +1781,42 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 </ul>
 <h2 id="quality-checks">Quality Checks</h2>
 <p>Before creating a Pull Request, ensure:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># Run tests</span>
-pytest<span class="w"> </span>tests/
-
-<span class="c1"># Format code</span>
-black<span class="w"> </span>notapkgtool/
-
-<span class="c1"># Check linting</span>
-ruff<span class="w"> </span>check<span class="w"> </span>notapkgtool/
-
-<span class="c1"># Run all checks at once</span>
-pytest<span class="w"> </span>tests/<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>black<span class="w"> </span>notapkgtool/<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ruff<span class="w"> </span>check<span class="w"> </span>notapkgtool/
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Run tests</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>pytest<span class="w"> </span>tests/
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Format code</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>black<span class="w"> </span>notapkgtool/
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="c1"># Check linting</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>ruff<span class="w"> </span>check<span class="w"> </span>notapkgtool/
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="c1"># Run all checks at once</span>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>pytest<span class="w"> </span>tests/<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>black<span class="w"> </span>notapkgtool/<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>ruff<span class="w"> </span>check<span class="w"> </span>notapkgtool/
+</span></code></pre></div>
 <h2 id="handling-merge-conflicts">Handling Merge Conflicts</h2>
 <p>If your branch conflicts with <code>main</code>:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># Update main</span>
-git<span class="w"> </span>checkout<span class="w"> </span>main
-git<span class="w"> </span>pull<span class="w"> </span>origin<span class="w"> </span>main
-
-<span class="c1"># Switch back to your branch</span>
-git<span class="w"> </span>checkout<span class="w"> </span>feature/your-feature
-
-<span class="c1"># Merge main into your branch</span>
-git<span class="w"> </span>merge<span class="w"> </span>main
-
-<span class="c1"># Resolve conflicts in your editor</span>
-<span class="c1"># Look for &lt;&lt;&lt;&lt;&lt;&lt;&lt; markers</span>
-
-<span class="c1"># After resolving, stage the files</span>
-git<span class="w"> </span>add<span class="w"> </span>path/to/resolved/file.py
-
-<span class="c1"># Complete the merge</span>
-git<span class="w"> </span>commit
-
-<span class="c1"># Push the updated branch</span>
-git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>feature/your-feature
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Update main</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>git<span class="w"> </span>checkout<span class="w"> </span>main
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>git<span class="w"> </span>pull<span class="w"> </span>origin<span class="w"> </span>main
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="c1"># Switch back to your branch</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>git<span class="w"> </span>checkout<span class="w"> </span>feature/your-feature
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="c1"># Merge main into your branch</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>git<span class="w"> </span>merge<span class="w"> </span>main
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>
+</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="c1"># Resolve conflicts in your editor</span>
+</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="c1"># Look for &lt;&lt;&lt;&lt;&lt;&lt;&lt; markers</span>
+</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>
+</span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="c1"># After resolving, stage the files</span>
+</span><span id="__span-10-15"><a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>git<span class="w"> </span>add<span class="w"> </span>path/to/resolved/file.py
+</span><span id="__span-10-16"><a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>
+</span><span id="__span-10-17"><a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="c1"># Complete the merge</span>
+</span><span id="__span-10-18"><a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>git<span class="w"> </span>commit
+</span><span id="__span-10-19"><a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a>
+</span><span id="__span-10-20"><a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a><span class="c1"># Push the updated branch</span>
+</span><span id="__span-10-21"><a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>feature/your-feature
+</span></code></pre></div>
 <h2 id="merge-strategy">Merge Strategy</h2>
 <p><strong>Default: Squash and Merge</strong></p>
 <p>NAPT uses <strong>squash and merge</strong> for most Pull Requests to maintain a clean, readable history in <code>main</code>.</p>
@@ -1842,15 +1842,15 @@ git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </
 3. Summarize all changes in the commit body
 4. Reference any issues with <code>Closes #XX</code></p>
 <p><strong>Example:</strong>
-<div class="highlight"><pre><span></span><code>feat: add RPM version extraction support
-
-- Implement RPM ProductVersion parser using rpm-py-installer
-- Add cross-platform support for RPM files (Linux/macOS)
-- Add comprehensive test coverage with mock RPM files
-- Update documentation with RPM examples
-
-Closes #42
-</code></pre></div></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>feat: add RPM version extraction support
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>- Implement RPM ProductVersion parser using rpm-py-installer
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>- Add cross-platform support for RPM files (Linux/macOS)
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>- Add comprehensive test coverage with mock RPM files
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>- Update documentation with RPM examples
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>Closes #42
+</span></code></pre></div></p>
 <p><strong>Regular Merge (Exceptional Cases)</strong></p>
 <p>Use only when:
 - Multiple authors need attribution for distinct contributions
@@ -1898,33 +1898,33 @@ Closes #42
 <h3 id="release-process">Release Process</h3>
 <h4 id="1-prepare-release-pr">1. Prepare Release PR</h4>
 <p>Create a dedicated PR for the version bump:</p>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>checkout<span class="w"> </span>main
-git<span class="w"> </span>pull<span class="w"> </span>origin<span class="w"> </span>main
-git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>chore/prepare-release-0.x.0
-
-<span class="c1"># Update versions</span>
-<span class="c1"># Edit pyproject.toml: version = &quot;0.x.0&quot;</span>
-<span class="c1"># Edit notapkgtool/__init__.py: __version__ = &quot;0.x.0&quot;</span>
-
-<span class="c1"># Update docs/changelog.md</span>
-<span class="c1"># - Change [Unreleased] to [0.x.0] - YYYY-MM-DD</span>
-<span class="c1"># - Add new [Unreleased] section at top</span>
-<span class="c1"># - Update version comparison links</span>
-
-git<span class="w"> </span>add<span class="w"> </span>pyproject.toml<span class="w"> </span>notapkgtool/__init__.py<span class="w"> </span>docs/changelog.md
-git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;chore: prepare release 0.x.0&quot;</span>
-git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>chore/prepare-release-0.x.0
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>git<span class="w"> </span>checkout<span class="w"> </span>main
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>git<span class="w"> </span>pull<span class="w"> </span>origin<span class="w"> </span>main
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>chore/prepare-release-0.x.0
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="c1"># Update versions</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="c1"># Edit pyproject.toml: version = &quot;0.x.0&quot;</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="c1"># Edit notapkgtool/__init__.py: __version__ = &quot;0.x.0&quot;</span>
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>
+</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="c1"># Update docs/changelog.md</span>
+</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="c1"># - Change [Unreleased] to [0.x.0] - YYYY-MM-DD</span>
+</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="c1"># - Add new [Unreleased] section at top</span>
+</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="c1"># - Update version comparison links</span>
+</span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>
+</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>git<span class="w"> </span>add<span class="w"> </span>pyproject.toml<span class="w"> </span>notapkgtool/__init__.py<span class="w"> </span>docs/changelog.md
+</span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;chore: prepare release 0.x.0&quot;</span>
+</span><span id="__span-12-16"><a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>chore/prepare-release-0.x.0
+</span></code></pre></div>
 <p><strong>PR Title</strong>: <code>chore: prepare release 0.x.0</code></p>
 <p><strong>PR Description</strong>: Brief summary of release highlights and link to docs/changelog.md</p>
 <h4 id="2-merge-release-pr">2. Merge Release PR</h4>
 <p>After review and approval, merge the PR to <code>main</code> using <strong>squash and merge</strong>.</p>
 <h4 id="3-create-and-push-git-tag">3. Create and Push Git Tag</h4>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>checkout<span class="w"> </span>main
-git<span class="w"> </span>pull<span class="w"> </span>origin<span class="w"> </span>main
-git<span class="w"> </span>tag<span class="w"> </span>-a<span class="w"> </span><span class="m">0</span>.x.0<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;Release 0.x.0&quot;</span>
-git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span><span class="m">0</span>.x.0
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>git<span class="w"> </span>checkout<span class="w"> </span>main
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>git<span class="w"> </span>pull<span class="w"> </span>origin<span class="w"> </span>main
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>git<span class="w"> </span>tag<span class="w"> </span>-a<span class="w"> </span><span class="m">0</span>.x.0<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;Release 0.x.0&quot;</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span><span class="m">0</span>.x.0
+</span></code></pre></div>
 <h4 id="4-create-github-release">4. Create GitHub Release</h4>
 <p>Go to https://github.com/RogerCibrian/notapkgtool/releases/new</p>
 <p><strong>Tag</strong>: Select the tag you just pushed (e.g., <code>0.x.0</code>)</p>
@@ -1933,36 +1933,36 @@ git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </
 <p><strong>Release Description</strong>: Follow the template in <code>.cursor/rules/napt-releases.mdc</code></p>
 <h3 id="creating-github-releases">Creating GitHub Releases</h3>
 <h4 id="release-title-format">Release Title Format</h4>
-<div class="highlight"><pre><span></span><code>NAPT {version}
-</code></pre></div>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>NAPT {version}
+</span></code></pre></div>
 <p>Examples:
 - <code>NAPT 0.2.0</code>
 - <code>NAPT 0.3.0</code>
 - <code>NAPT 1.0.0</code></p>
 <h4 id="release-description-template">Release Description Template</h4>
 <p>Use this structure for consistency:</p>
-<div class="highlight"><pre><span></span><code><span class="gh"># 🎉 NAPT {version} - {Feature Summary}</span>
-
-{One sentence hero statement describing the release}
-
-<span class="gu">## ✨ What&#39;s New</span>
-
-<span class="gu">### 🔨 {Category Name}</span>
-
-<span class="k">-</span><span class="w"> </span><span class="gs">**{Feature Name}**</span> with <span class="sb">`command`</span> details
-<span class="w">  </span><span class="k">-</span><span class="w"> </span>Bullet point details
-<span class="w">  </span><span class="k">-</span><span class="w"> </span>More details
-
-<span class="gu">### 🔍 {Another Category}</span>
-
-{Continue for all major features...}
-
-<span class="gu">## 🚀 Quick Start</span>
-
-```bash
-<span class="gh"># Show new commands or updated workflows</span>
-napt command args
-</code></pre></div>
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="gh"># 🎉 NAPT {version} - {Feature Summary}</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>{One sentence hero statement describing the release}
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="gu">## ✨ What&#39;s New</span>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>
+</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="gu">### 🔨 {Category Name}</span>
+</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>
+</span><span id="__span-15-9"><a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="k">-</span><span class="w"> </span><span class="gs">**{Feature Name}**</span> with <span class="sb">`command`</span> details
+</span><span id="__span-15-10"><a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a><span class="w">  </span><span class="k">-</span><span class="w"> </span>Bullet point details
+</span><span id="__span-15-11"><a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a><span class="w">  </span><span class="k">-</span><span class="w"> </span>More details
+</span><span id="__span-15-12"><a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a>
+</span><span id="__span-15-13"><a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a><span class="gu">### 🔍 {Another Category}</span>
+</span><span id="__span-15-14"><a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a>
+</span><span id="__span-15-15"><a id="__codelineno-15-15" name="__codelineno-15-15" href="#__codelineno-15-15"></a>{Continue for all major features...}
+</span><span id="__span-15-16"><a id="__codelineno-15-16" name="__codelineno-15-16" href="#__codelineno-15-16"></a>
+</span><span id="__span-15-17"><a id="__codelineno-15-17" name="__codelineno-15-17" href="#__codelineno-15-17"></a><span class="gu">## 🚀 Quick Start</span>
+</span><span id="__span-15-18"><a id="__codelineno-15-18" name="__codelineno-15-18" href="#__codelineno-15-18"></a>
+</span><span id="__span-15-19"><a id="__codelineno-15-19" name="__codelineno-15-19" href="#__codelineno-15-19"></a>```bash
+</span><span id="__span-15-20"><a id="__codelineno-15-20" name="__codelineno-15-20" href="#__codelineno-15-20"></a><span class="gh"># Show new commands or updated workflows</span>
+</span><span id="__span-15-21"><a id="__codelineno-15-21" name="__codelineno-15-21" href="#__codelineno-15-21"></a>napt command args
+</span></code></pre></div>
 <h2 id="what-you-can-do-now">📦 What You Can Do Now</h2>
 <p>Workflow checklist:
 1. ✅ {Step 1}
@@ -2004,107 +2004,107 @@ napt command args
 - {App 1 and version}
 - {App 2 and version}</p>
 <p><strong>Install</strong>: <code>pip install pyyaml requests</code>
-<div class="highlight"><pre><span></span><code>#### Emoji Guide for Categories
-
-Use these emojis for consistent categorization:
-
-- 🔨 Build &amp; Packaging
-- 🔍 Discovery &amp; Detection
-- 🗄️ State Management
-- 🧪 Testing Infrastructure
-- 📋 Recipes &amp; Configuration
-- 📚 Documentation
-- 🚀 Quick Start / Usage
-- 📦 Capabilities / Workflow
-- ⚠️ Breaking Changes / Warnings
-- 🐛 Bug Fixes
-- 📊 Statistics / Metrics
-- 🔗 External Links
-- 🎯 Roadmap / Future Plans
-- ✨ Highlights (header)
-- 🎉 Release Hero (title)
-
-#### Content Guidelines
-
-**Do Include**:
-- All significant changes from docs/changelog.md
-- Code examples for new commands
-- Migration instructions for breaking changes
-- Quick start guide updates
-- Test coverage and quality metrics
-- Links to full documentation
-- &quot;What you can do now&quot; workflow
-- Preview of next version features
-
-**Don&#39;t Include**:
-- Internal refactorings (unless visible impact)
-- Trivial formatting changes
-- Work-in-progress features
-- Overly technical implementation details
-- Every single bug fix (only notable ones)
-
-#### Writing Style
-
-- **Active voice**: &quot;This release adds...&quot; not &quot;Added in this release...&quot;
-- **Present tense**: &quot;This command creates...&quot; not &quot;This command will create...&quot;
-- **User-focused**: Emphasize benefits, not just features
-- **Concise**: One sentence per bullet when possible
-- **Scannable**: Use headers, bullets, and code blocks
-- **Complete**: Include all info needed to understand changes
-
-### Example Release (0.2.0)
-
-See the 0.2.0 release for a complete example:
-https://github.com/RogerCibrian/notapkgtool/releases/tag/0.2.0
-
-Key elements:
-- Clear feature categories with emojis
-- Code examples showing new capabilities  
-- Breaking changes highlighted with migration notes
-- Stats showing scope of changes
-- Links to detailed documentation
-- Preview of what&#39;s coming next
-
-### Post-Release
-
-After creating the GitHub release:
-
-1. **Announce** (if applicable):
-   - Internal communication channels
-   - Project discussion boards
-   - Social media (if public release)
-
-2. **Monitor**:
-   - GitHub issues for bug reports
-   - User feedback on new features
-   - Update docs/roadmap.md based on feedback
-
-3. **Prepare Next Version**:
-   - Create `[Unreleased]` section in docs/changelog.md (if not already done)
-   - Update docs/roadmap.md with next milestone
-   - Start planning next feature set
-
-### PyPI Publication (Future)
-
-When ready to publish to PyPI:
-
-```bash
-poetry build
-poetry publish
-</code></pre></div></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>#### Emoji Guide for Categories
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>Use these emojis for consistent categorization:
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>- 🔨 Build &amp; Packaging
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>- 🔍 Discovery &amp; Detection
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>- 🗄️ State Management
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>- 🧪 Testing Infrastructure
+</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>- 📋 Recipes &amp; Configuration
+</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a>- 📚 Documentation
+</span><span id="__span-16-11"><a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a>- 🚀 Quick Start / Usage
+</span><span id="__span-16-12"><a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a>- 📦 Capabilities / Workflow
+</span><span id="__span-16-13"><a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a>- ⚠️ Breaking Changes / Warnings
+</span><span id="__span-16-14"><a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a>- 🐛 Bug Fixes
+</span><span id="__span-16-15"><a id="__codelineno-16-15" name="__codelineno-16-15" href="#__codelineno-16-15"></a>- 📊 Statistics / Metrics
+</span><span id="__span-16-16"><a id="__codelineno-16-16" name="__codelineno-16-16" href="#__codelineno-16-16"></a>- 🔗 External Links
+</span><span id="__span-16-17"><a id="__codelineno-16-17" name="__codelineno-16-17" href="#__codelineno-16-17"></a>- 🎯 Roadmap / Future Plans
+</span><span id="__span-16-18"><a id="__codelineno-16-18" name="__codelineno-16-18" href="#__codelineno-16-18"></a>- ✨ Highlights (header)
+</span><span id="__span-16-19"><a id="__codelineno-16-19" name="__codelineno-16-19" href="#__codelineno-16-19"></a>- 🎉 Release Hero (title)
+</span><span id="__span-16-20"><a id="__codelineno-16-20" name="__codelineno-16-20" href="#__codelineno-16-20"></a>
+</span><span id="__span-16-21"><a id="__codelineno-16-21" name="__codelineno-16-21" href="#__codelineno-16-21"></a>#### Content Guidelines
+</span><span id="__span-16-22"><a id="__codelineno-16-22" name="__codelineno-16-22" href="#__codelineno-16-22"></a>
+</span><span id="__span-16-23"><a id="__codelineno-16-23" name="__codelineno-16-23" href="#__codelineno-16-23"></a>**Do Include**:
+</span><span id="__span-16-24"><a id="__codelineno-16-24" name="__codelineno-16-24" href="#__codelineno-16-24"></a>- All significant changes from docs/changelog.md
+</span><span id="__span-16-25"><a id="__codelineno-16-25" name="__codelineno-16-25" href="#__codelineno-16-25"></a>- Code examples for new commands
+</span><span id="__span-16-26"><a id="__codelineno-16-26" name="__codelineno-16-26" href="#__codelineno-16-26"></a>- Migration instructions for breaking changes
+</span><span id="__span-16-27"><a id="__codelineno-16-27" name="__codelineno-16-27" href="#__codelineno-16-27"></a>- Quick start guide updates
+</span><span id="__span-16-28"><a id="__codelineno-16-28" name="__codelineno-16-28" href="#__codelineno-16-28"></a>- Test coverage and quality metrics
+</span><span id="__span-16-29"><a id="__codelineno-16-29" name="__codelineno-16-29" href="#__codelineno-16-29"></a>- Links to full documentation
+</span><span id="__span-16-30"><a id="__codelineno-16-30" name="__codelineno-16-30" href="#__codelineno-16-30"></a>- &quot;What you can do now&quot; workflow
+</span><span id="__span-16-31"><a id="__codelineno-16-31" name="__codelineno-16-31" href="#__codelineno-16-31"></a>- Preview of next version features
+</span><span id="__span-16-32"><a id="__codelineno-16-32" name="__codelineno-16-32" href="#__codelineno-16-32"></a>
+</span><span id="__span-16-33"><a id="__codelineno-16-33" name="__codelineno-16-33" href="#__codelineno-16-33"></a>**Don&#39;t Include**:
+</span><span id="__span-16-34"><a id="__codelineno-16-34" name="__codelineno-16-34" href="#__codelineno-16-34"></a>- Internal refactorings (unless visible impact)
+</span><span id="__span-16-35"><a id="__codelineno-16-35" name="__codelineno-16-35" href="#__codelineno-16-35"></a>- Trivial formatting changes
+</span><span id="__span-16-36"><a id="__codelineno-16-36" name="__codelineno-16-36" href="#__codelineno-16-36"></a>- Work-in-progress features
+</span><span id="__span-16-37"><a id="__codelineno-16-37" name="__codelineno-16-37" href="#__codelineno-16-37"></a>- Overly technical implementation details
+</span><span id="__span-16-38"><a id="__codelineno-16-38" name="__codelineno-16-38" href="#__codelineno-16-38"></a>- Every single bug fix (only notable ones)
+</span><span id="__span-16-39"><a id="__codelineno-16-39" name="__codelineno-16-39" href="#__codelineno-16-39"></a>
+</span><span id="__span-16-40"><a id="__codelineno-16-40" name="__codelineno-16-40" href="#__codelineno-16-40"></a>#### Writing Style
+</span><span id="__span-16-41"><a id="__codelineno-16-41" name="__codelineno-16-41" href="#__codelineno-16-41"></a>
+</span><span id="__span-16-42"><a id="__codelineno-16-42" name="__codelineno-16-42" href="#__codelineno-16-42"></a>- **Active voice**: &quot;This release adds...&quot; not &quot;Added in this release...&quot;
+</span><span id="__span-16-43"><a id="__codelineno-16-43" name="__codelineno-16-43" href="#__codelineno-16-43"></a>- **Present tense**: &quot;This command creates...&quot; not &quot;This command will create...&quot;
+</span><span id="__span-16-44"><a id="__codelineno-16-44" name="__codelineno-16-44" href="#__codelineno-16-44"></a>- **User-focused**: Emphasize benefits, not just features
+</span><span id="__span-16-45"><a id="__codelineno-16-45" name="__codelineno-16-45" href="#__codelineno-16-45"></a>- **Concise**: One sentence per bullet when possible
+</span><span id="__span-16-46"><a id="__codelineno-16-46" name="__codelineno-16-46" href="#__codelineno-16-46"></a>- **Scannable**: Use headers, bullets, and code blocks
+</span><span id="__span-16-47"><a id="__codelineno-16-47" name="__codelineno-16-47" href="#__codelineno-16-47"></a>- **Complete**: Include all info needed to understand changes
+</span><span id="__span-16-48"><a id="__codelineno-16-48" name="__codelineno-16-48" href="#__codelineno-16-48"></a>
+</span><span id="__span-16-49"><a id="__codelineno-16-49" name="__codelineno-16-49" href="#__codelineno-16-49"></a>### Example Release (0.2.0)
+</span><span id="__span-16-50"><a id="__codelineno-16-50" name="__codelineno-16-50" href="#__codelineno-16-50"></a>
+</span><span id="__span-16-51"><a id="__codelineno-16-51" name="__codelineno-16-51" href="#__codelineno-16-51"></a>See the 0.2.0 release for a complete example:
+</span><span id="__span-16-52"><a id="__codelineno-16-52" name="__codelineno-16-52" href="#__codelineno-16-52"></a>https://github.com/RogerCibrian/notapkgtool/releases/tag/0.2.0
+</span><span id="__span-16-53"><a id="__codelineno-16-53" name="__codelineno-16-53" href="#__codelineno-16-53"></a>
+</span><span id="__span-16-54"><a id="__codelineno-16-54" name="__codelineno-16-54" href="#__codelineno-16-54"></a>Key elements:
+</span><span id="__span-16-55"><a id="__codelineno-16-55" name="__codelineno-16-55" href="#__codelineno-16-55"></a>- Clear feature categories with emojis
+</span><span id="__span-16-56"><a id="__codelineno-16-56" name="__codelineno-16-56" href="#__codelineno-16-56"></a>- Code examples showing new capabilities  
+</span><span id="__span-16-57"><a id="__codelineno-16-57" name="__codelineno-16-57" href="#__codelineno-16-57"></a>- Breaking changes highlighted with migration notes
+</span><span id="__span-16-58"><a id="__codelineno-16-58" name="__codelineno-16-58" href="#__codelineno-16-58"></a>- Stats showing scope of changes
+</span><span id="__span-16-59"><a id="__codelineno-16-59" name="__codelineno-16-59" href="#__codelineno-16-59"></a>- Links to detailed documentation
+</span><span id="__span-16-60"><a id="__codelineno-16-60" name="__codelineno-16-60" href="#__codelineno-16-60"></a>- Preview of what&#39;s coming next
+</span><span id="__span-16-61"><a id="__codelineno-16-61" name="__codelineno-16-61" href="#__codelineno-16-61"></a>
+</span><span id="__span-16-62"><a id="__codelineno-16-62" name="__codelineno-16-62" href="#__codelineno-16-62"></a>### Post-Release
+</span><span id="__span-16-63"><a id="__codelineno-16-63" name="__codelineno-16-63" href="#__codelineno-16-63"></a>
+</span><span id="__span-16-64"><a id="__codelineno-16-64" name="__codelineno-16-64" href="#__codelineno-16-64"></a>After creating the GitHub release:
+</span><span id="__span-16-65"><a id="__codelineno-16-65" name="__codelineno-16-65" href="#__codelineno-16-65"></a>
+</span><span id="__span-16-66"><a id="__codelineno-16-66" name="__codelineno-16-66" href="#__codelineno-16-66"></a>1. **Announce** (if applicable):
+</span><span id="__span-16-67"><a id="__codelineno-16-67" name="__codelineno-16-67" href="#__codelineno-16-67"></a>   - Internal communication channels
+</span><span id="__span-16-68"><a id="__codelineno-16-68" name="__codelineno-16-68" href="#__codelineno-16-68"></a>   - Project discussion boards
+</span><span id="__span-16-69"><a id="__codelineno-16-69" name="__codelineno-16-69" href="#__codelineno-16-69"></a>   - Social media (if public release)
+</span><span id="__span-16-70"><a id="__codelineno-16-70" name="__codelineno-16-70" href="#__codelineno-16-70"></a>
+</span><span id="__span-16-71"><a id="__codelineno-16-71" name="__codelineno-16-71" href="#__codelineno-16-71"></a>2. **Monitor**:
+</span><span id="__span-16-72"><a id="__codelineno-16-72" name="__codelineno-16-72" href="#__codelineno-16-72"></a>   - GitHub issues for bug reports
+</span><span id="__span-16-73"><a id="__codelineno-16-73" name="__codelineno-16-73" href="#__codelineno-16-73"></a>   - User feedback on new features
+</span><span id="__span-16-74"><a id="__codelineno-16-74" name="__codelineno-16-74" href="#__codelineno-16-74"></a>   - Update docs/roadmap.md based on feedback
+</span><span id="__span-16-75"><a id="__codelineno-16-75" name="__codelineno-16-75" href="#__codelineno-16-75"></a>
+</span><span id="__span-16-76"><a id="__codelineno-16-76" name="__codelineno-16-76" href="#__codelineno-16-76"></a>3. **Prepare Next Version**:
+</span><span id="__span-16-77"><a id="__codelineno-16-77" name="__codelineno-16-77" href="#__codelineno-16-77"></a>   - Create `[Unreleased]` section in docs/changelog.md (if not already done)
+</span><span id="__span-16-78"><a id="__codelineno-16-78" name="__codelineno-16-78" href="#__codelineno-16-78"></a>   - Update docs/roadmap.md with next milestone
+</span><span id="__span-16-79"><a id="__codelineno-16-79" name="__codelineno-16-79" href="#__codelineno-16-79"></a>   - Start planning next feature set
+</span><span id="__span-16-80"><a id="__codelineno-16-80" name="__codelineno-16-80" href="#__codelineno-16-80"></a>
+</span><span id="__span-16-81"><a id="__codelineno-16-81" name="__codelineno-16-81" href="#__codelineno-16-81"></a>### PyPI Publication (Future)
+</span><span id="__span-16-82"><a id="__codelineno-16-82" name="__codelineno-16-82" href="#__codelineno-16-82"></a>
+</span><span id="__span-16-83"><a id="__codelineno-16-83" name="__codelineno-16-83" href="#__codelineno-16-83"></a>When ready to publish to PyPI:
+</span><span id="__span-16-84"><a id="__codelineno-16-84" name="__codelineno-16-84" href="#__codelineno-16-84"></a>
+</span><span id="__span-16-85"><a id="__codelineno-16-85" name="__codelineno-16-85" href="#__codelineno-16-85"></a>```bash
+</span><span id="__span-16-86"><a id="__codelineno-16-86" name="__codelineno-16-86" href="#__codelineno-16-86"></a>poetry build
+</span><span id="__span-16-87"><a id="__codelineno-16-87" name="__codelineno-16-87" href="#__codelineno-16-87"></a>poetry publish
+</span></code></pre></div></p>
 <p>Ensure <code>pyproject.toml</code> metadata is complete before first publication.</p>
 <h2 id="common-scenarios">Common Scenarios</h2>
 <h3 id="multiple-related-changes">Multiple Related Changes</h3>
 <p>If changes are closely related, keep in one branch:
-<div class="highlight"><pre><span></span><code>feature/add-exe-support
-<span class="w">  </span>├──<span class="w"> </span>Add<span class="w"> </span>EXE<span class="w"> </span>parsing<span class="w"> </span>module
-<span class="w">  </span>├──<span class="w"> </span>Add<span class="w"> </span>tests
-<span class="w">  </span>└──<span class="w"> </span>Update<span class="w"> </span>documentation
-</code></pre></div></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>feature/add-exe-support
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span>├──<span class="w"> </span>Add<span class="w"> </span>EXE<span class="w"> </span>parsing<span class="w"> </span>module
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span>├──<span class="w"> </span>Add<span class="w"> </span>tests
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">  </span>└──<span class="w"> </span>Update<span class="w"> </span>documentation
+</span></code></pre></div></p>
 <p>If changes are independent, use separate branches:
-<div class="highlight"><pre><span></span><code>feature/add-exe-support
-feature/add-rpm-support
-</code></pre></div></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>feature/add-exe-support
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>feature/add-rpm-support
+</span></code></pre></div></p>
 <h3 id="long-running-features">Long-Running Features</h3>
 <p>For features taking multiple days/weeks:
 1. Keep branch updated with <code>main</code> regularly
@@ -2113,18 +2113,18 @@ feature/add-rpm-support
 4. Consider feature flags for incomplete features</p>
 <h3 id="urgent-hotfixes">Urgent Hotfixes</h3>
 <p>For critical production issues:
-<div class="highlight"><pre><span></span><code><span class="c1"># Branch from main</span>
-git<span class="w"> </span>checkout<span class="w"> </span>main
-git<span class="w"> </span>pull<span class="w"> </span>origin<span class="w"> </span>main
-git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>hotfix/fix-security-vulnerability
-
-<span class="c1"># Fix, test, and push</span>
-git<span class="w"> </span>commit<span class="w"> </span>-am<span class="w"> </span><span class="s2">&quot;fix: patch security vulnerability&quot;</span>
-git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>hotfix/fix-security-vulnerability
-
-<span class="c1"># Create PR with high priority</span>
-<span class="c1"># Fast-track review and merge</span>
-</code></pre></div></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Branch from main</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>git<span class="w"> </span>checkout<span class="w"> </span>main
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>git<span class="w"> </span>pull<span class="w"> </span>origin<span class="w"> </span>main
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>hotfix/fix-security-vulnerability
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="c1"># Fix, test, and push</span>
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>git<span class="w"> </span>commit<span class="w"> </span>-am<span class="w"> </span><span class="s2">&quot;fix: patch security vulnerability&quot;</span>
+</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>hotfix/fix-security-vulnerability
+</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a>
+</span><span id="__span-19-10"><a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a><span class="c1"># Create PR with high priority</span>
+</span><span id="__span-19-11"><a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a><span class="c1"># Fast-track review and merge</span>
+</span></code></pre></div></p>
 <h2 id="questions">Questions?</h2>
 <ul>
 <li>Check the <a href="https://rogercibrian.github.io/notapkgtool">Documentation Site</a> for technical details</li>
@@ -2183,7 +2183,7 @@ git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.tabs.sticky"], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.tabs.sticky", "content.code.copy"], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
       <script src="../assets/javascripts/bundle.e71a0d61.min.js"></script>
