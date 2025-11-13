@@ -15,14 +15,14 @@ Get up and running with NAPT in minutes!
 
 Best for users who just want to use the tool without extra tooling.
 
-```bash
+```powershell
 # Clone repository
 git clone https://github.com/RogerCibrian/notapkgtool.git
 cd notapkgtool
 
 # Create and activate virtual environment (recommended)
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+.venv\Scripts\Activate.ps1  # On Linux/macOS: source .venv/bin/activate
 
 # Install
 pip install -e .
@@ -37,7 +37,7 @@ Best for contributors and developers who want reproducible builds and dependency
 
 **Prerequisites:** Poetry must be installed. See [Poetry Installation Guide](https://python-poetry.org/docs/#installation)
 
-```bash
+```powershell
 # Clone and install
 git clone https://github.com/RogerCibrian/notapkgtool.git
 cd notapkgtool
@@ -52,7 +52,9 @@ napt --version
 
 ### Platform-Specific Requirements
 
-**Linux/macOS** - Install msitools for MSI version extraction:
+**Windows:** No additional requirements - NAPT uses native PowerShell COM API for MSI extraction.
+
+**Linux/macOS:** Install msitools for MSI version extraction:
 
 ```bash
 # Debian/Ubuntu
@@ -64,8 +66,6 @@ sudo dnf install msitools
 # macOS
 brew install msitools
 ```
-
-> **💡 Note:** Windows users don't need msitools - NAPT uses native PowerShell COM API for MSI extraction.
 
 ### Platform Requirements
 

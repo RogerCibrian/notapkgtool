@@ -10,6 +10,7 @@ theme:
   features:
     - navigation.tabs        
     - navigation.tabs.sticky 
+    - content.code.copy
   palette:
     # Dark mode (default)
     - scheme: slate

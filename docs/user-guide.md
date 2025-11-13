@@ -535,7 +535,7 @@ fi
 
 **Problem**: "Command not found: napt"
 
-```bash
+```powershell
 # Solution 1: Activate Poetry shell
 poetry shell
 
@@ -563,15 +563,18 @@ napt discover recipes/app.yaml --stateless
 
 **Problem**: GitHub API rate limit
 
-```bash
-# Solution: Use authentication token
-# In recipe:
+```yaml
+# Solution: Use authentication token in recipe
 source:
   strategy: api_github
   token: "${GITHUB_TOKEN}"
+```
 
-# Set environment variable
-export GITHUB_TOKEN="your_token_here"
+```powershell
+# Set environment variable (Windows)
+$env:GITHUB_TOKEN="your_token_here"
+
+# On Linux/macOS: export GITHUB_TOKEN="your_token_here"
 ```
 
 ### Debug Mode
