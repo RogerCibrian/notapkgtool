@@ -59,7 +59,7 @@ def sample_recipe_data() -> dict[str, Any]:
                     "strategy": "url_download",
                     "url": "https://example.com/installer.msi",
                     "version": {
-                        "type": "msi_product_version_from_file",
+                        "type": "msi",
                     },
                 },
                 "psadt": {

@@ -380,15 +380,64 @@ apps:
 
 ## Cross-Platform Support
 
-NAPT works on Windows, Linux, and macOS with full feature parity.
+**NAPT is a Windows tool** for Microsoft Intune packaging. The discovery and build commands work on Linux and macOS to support modern development workflows.
 
 ### Platform Compatibility Matrix
 
-| Platform | Download | Config | CLI | MSI Extraction | Status |
-|----------|----------|--------|-----|----------------|--------|
-| **Windows** | ✅ | ✅ | ✅ | ✅ Native (PowerShell COM) | Fully Supported |
-| **Linux** | ✅ | ✅ | ✅ | ✅ Via msitools | Fully Supported |
-| **macOS** | ✅ | ✅ | ✅ | ✅ Via msitools | Fully Supported |
+| Platform | Download | Discovery | Build | Package | MSI Extraction |
+|----------|----------|-----------|-------|---------|----------------|
+| **Windows** | ✅ | ✅ | ✅ | ✅ | ✅ Native (PowerShell COM) |
+| **Linux** | ✅ | ✅ | ✅ | ⚫ Windows Only | ✅ Via msitools |
+| **macOS** | ✅ | ✅ | ✅ | ⚫ Windows Only | ✅ Via msitools |
+
+### Why Windows for Packaging?
+
+The `napt package` command uses Microsoft's [IntuneWinAppUtil.exe](https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool), which is a Windows-only .NET application. This is the official tool for creating .intunewin packages, and there's no cross-platform alternative.
+
+This makes sense in context: Intune deploys to Windows endpoints, most Intune administrators have Windows infrastructure available, and CI/CD platforms offer Windows runners. The cross-platform discovery and build commands handle the development-heavy work, with packaging as a final Windows-based step.
+
+### Recommended Workflows
+
+#### Workflow 1: Mixed Platform Development
+```bash
+# On Linux/macOS: Discovery and build
+napt discover recipes/Google/chrome.yaml
+napt build recipes/Google/chrome.yaml
+
+# Transfer build directory to Windows (or use shared drive)
+# On Windows: Package
+napt package builds/napt-chrome/142.0.7444.163/
+```
+
+#### Workflow 2: CI/CD with Windows Runners
+```yaml
+# .github/workflows/package.yml
+jobs:
+  discover-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: napt discover recipes/app.yaml
+      - run: napt build recipes/app.yaml
+      - uses: actions/upload-artifact@v3
+        with:
+          name: build
+          path: builds/
+
+  package:
+    runs-on: windows-latest  # Windows for packaging
+    needs: discover-and-build
+    steps:
+      - uses: actions/download-artifact@v3
+      - run: napt package builds/app-name/1.0.0/
+```
+
+#### Workflow 3: All-Windows
+```bash
+# Simplest: Just use Windows for everything
+napt discover recipes/Google/chrome.yaml
+napt build recipes/Google/chrome.yaml
+napt package builds/napt-chrome/142.0.7444.163/
+```
 
 ### MSI Extraction Backends
 

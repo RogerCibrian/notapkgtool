@@ -65,7 +65,15 @@ sudo dnf install msitools
 brew install msitools
 ```
 
-> **Note:** Windows users don't need msitools - NAPT uses native PowerShell COM API for MSI extraction.
+> **💡 Note:** Windows users don't need msitools - NAPT uses native PowerShell COM API for MSI extraction.
+
+### Platform Requirements
+
+**Packaging requires Windows.** NAPT uses Microsoft's IntuneWinAppUtil.exe for creating .intunewin packages, which is Windows-only.
+
+**Discovery and building work on all platforms.** The cross-platform commands let you develop on your preferred OS and package on Windows when ready.
+
+See the [Cross-Platform Support](user-guide.md#cross-platform-support) section for CI/CD workflows and detailed examples.
 
 ## Basic Usage
 

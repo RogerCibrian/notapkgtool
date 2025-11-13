@@ -73,17 +73,19 @@ flowchart TD
 
 See the [User Guide](user-guide.md) for detailed architecture information and the [API Reference](api/core.md) for code-level documentation.
 
-## Cross-Platform Support
+## Platform Support
 
-NAPT works on Windows, Linux, and macOS with full feature parity.
+**NAPT is a Windows tool** for Microsoft Intune packaging. Discovery and building work on Linux and macOS, with final packaging on Windows.
 
-| Platform | Status |
-|----------|--------|
-| **Windows** | ✅ Fully Supported |
-| **Linux** | ✅ Fully Supported |
-| **macOS** | ✅ Fully Supported |
+| Command | Windows | Linux/macOS |
+|---------|---------|-------------|
+| `napt discover` | ✅ | ✅ |
+| `napt build` | ✅ | ✅ |
+| `napt package` | ✅ | ⚫ Windows Only |
 
-See the [Cross-Platform Support](user-guide.md#cross-platform-support) section for technical details on MSI extraction backends.
+This design makes sense: Intune deploys to Windows endpoints, most Intune administrators have Windows infrastructure, and CI/CD platforms offer Windows runners. The cross-platform discovery and build commands support modern development workflows.
+
+See the [Cross-Platform Support](user-guide.md#cross-platform-support) section for detailed workflows and CI/CD examples.
 
 ## Creating Recipes
 

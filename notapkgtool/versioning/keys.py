@@ -44,8 +44,7 @@ class DiscoveredVersion:
 
     Attributes:
         version: Raw version string (e.g., "140.0.7339.128").
-        source: Where it came from (e.g., "regex_in_url",
-            "msi_product_version_from_file").
+        source: Where it came from (e.g., "regex_in_url", "msi").
 
     """
 
