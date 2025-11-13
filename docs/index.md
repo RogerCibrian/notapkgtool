@@ -8,7 +8,7 @@
 
 ## Overview
 
-NAPT is a Python-based CLI tool that automates the entire workflow for packaging Windows applications and deploying them to Microsoft Intune. It eliminates repetitive manual work through declarative YAML-based recipes and intelligent version discovery.
+NAPT is a Python-based CLI tool that automates the entire workflow for packaging Windows applications and deploying them to Microsoft Intune. It runs on Windows, Linux, and macOS, though packaging (.intunewin creation) requires Windows.
 
 ### Key Features
 
@@ -75,15 +75,13 @@ See the [User Guide](user-guide.md) for detailed architecture information and th
 
 ## Cross-Platform Support
 
-NAPT works on Windows, Linux, and macOS with full feature parity.
+| Command | Windows | Linux/macOS |
+|---------|---------|-------------|
+| `napt discover` | ✅ | ✅ |
+| `napt build` | ✅ | ✅ |
+| `napt package` | ✅ | ⚫ Windows Only |
 
-| Platform | Status |
-|----------|--------|
-| **Windows** | ✅ Fully Supported |
-| **Linux** | ✅ Fully Supported |
-| **macOS** | ✅ Fully Supported |
-
-See the [Cross-Platform Support](user-guide.md#cross-platform-support) section for technical details on MSI extraction backends.
+See the [Cross-Platform Support](user-guide.md#cross-platform-support) section for detailed workflows and CI/CD examples.
 
 ## Creating Recipes
 

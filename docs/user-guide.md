@@ -380,15 +380,40 @@ apps:
 
 ## Cross-Platform Support
 
-NAPT works on Windows, Linux, and macOS with full feature parity.
+**NAPT is a Windows tool** for Microsoft Intune packaging. Develop on any platform, package on Windows.
 
 ### Platform Compatibility Matrix
 
-| Platform | Download | Config | CLI | MSI Extraction | Status |
-|----------|----------|--------|-----|----------------|--------|
-| **Windows** | ✅ | ✅ | ✅ | ✅ Native (PowerShell COM) | Fully Supported |
-| **Linux** | ✅ | ✅ | ✅ | ✅ Via msitools | Fully Supported |
-| **macOS** | ✅ | ✅ | ✅ | ✅ Via msitools | Fully Supported |
+| Platform | Download | Discovery | Build | Package | MSI Extraction |
+|----------|----------|-----------|-------|---------|----------------|
+| **Windows** | ✅ | ✅ | ✅ | ✅ | ✅ Native (PowerShell COM) |
+| **Linux** | ✅ | ✅ | ✅ | ⚫ Windows Only | ✅ Via msitools |
+| **macOS** | ✅ | ✅ | ✅ | ⚫ Windows Only | ✅ Via msitools |
+
+### Why Windows for Packaging?
+
+The `napt package` command uses Microsoft's [IntuneWinAppUtil.exe](https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool), which is a Windows-only .NET application. This is the official tool for creating .intunewin packages.
+
+### Recommended Workflows
+
+#### Workflow 1: All-Windows (Simplest)
+```bash
+# Run everything on Windows
+napt discover recipes/Google/chrome.yaml
+napt build recipes/Google/chrome.yaml
+napt package builds/napt-chrome/142.0.7444.163/
+```
+
+#### Workflow 2: Mixed Platform Development
+```bash
+# On Linux/macOS: Discovery and build
+napt discover recipes/Google/chrome.yaml
+napt build recipes/Google/chrome.yaml
+
+# Transfer build directory to Windows (or use shared drive)
+# On Windows: Package
+napt package builds/napt-chrome/142.0.7444.163/
+```
 
 ### MSI Extraction Backends
 
@@ -510,7 +535,7 @@ fi
 
 **Problem**: "Command not found: napt"
 
-```bash
+```powershell
 # Solution 1: Activate Poetry shell
 poetry shell
 
@@ -538,15 +563,18 @@ napt discover recipes/app.yaml --stateless
 
 **Problem**: GitHub API rate limit
 
-```bash
-# Solution: Use authentication token
-# In recipe:
+```yaml
+# Solution: Use authentication token in recipe
 source:
   strategy: api_github
   token: "${GITHUB_TOKEN}"
+```
 
-# Set environment variable
-export GITHUB_TOKEN="your_token_here"
+```powershell
+# Set environment variable (Windows)
+$env:GITHUB_TOKEN="your_token_here"
+
+# On Linux/macOS: export GITHUB_TOKEN="your_token_here"
 ```
 
 ### Debug Mode

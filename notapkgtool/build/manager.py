@@ -111,7 +111,7 @@ def _get_installer_version(
                 "No version.type specified in recipe. Add source.version.type or ensure state file exists."
             )
 
-    if version_type == "msi_product_version_from_file":
+    if version_type == "msi":
         try:
             discovered = version_from_msi_product_version(installer_file)
             print_verbose("BUILD", f"Extracted version: {discovered.version}")
@@ -122,8 +122,7 @@ def _get_installer_version(
             ) from err
     else:
         raise ValueError(
-            f"Unsupported version type for build: {version_type!r}. "
-            f"Supported: msi_product_version_from_file"
+            f"Unsupported version type for build: {version_type!r}. " f"Supported: msi"
         )
 
 

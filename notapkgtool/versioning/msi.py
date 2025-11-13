@@ -54,7 +54,7 @@ Example:
         from notapkgtool.versioning.msi import version_from_msi_product_version
         discovered = version_from_msi_product_version("chrome.msi")
         print(f"{discovered.version} from {discovered.source}")
-        # 141.0.7390.123 from msi_product_version_from_file
+        # 141.0.7390.123 from msi
 
     Error handling:
 
@@ -119,7 +119,7 @@ def version_from_msi_product_version(
     if not p.exists():
         raise FileNotFoundError(f"MSI not found: {p}")
 
-    print_verbose("VERSION", "Strategy: msi_product_version_from_file")
+    print_verbose("VERSION", "Strategy: msi")
     print_verbose("VERSION", f"Extracting version from: {p.name}")
 
     # Try msilib first (standard library on Windows)
@@ -140,9 +140,7 @@ def version_from_msi_product_version(
             if not version:
                 raise RuntimeError("Empty ProductVersion in MSI Property table.")
             print_verbose("VERSION", f"Success! Extracted: {version} (via msilib)")
-            return DiscoveredVersion(
-                version=version, source="msi_product_version_from_file"
-            )
+            return DiscoveredVersion(version=version, source="msi")
         except Exception as err:
             print_debug("VERSION", "msilib failed, trying next backend...")
             raise RuntimeError(
@@ -176,9 +174,7 @@ def version_from_msi_product_version(
                 view.Close()
                 db.Close()
                 print_verbose("VERSION", f"Success! Extracted: {version} (via _msi)")
-                return DiscoveredVersion(
-                    version=version, source="msi_product_version_from_file"
-                )
+                return DiscoveredVersion(version=version, source="msi")
             except Exception as err:
                 print_debug("VERSION", "_msi failed, trying next backend...")
                 raise RuntimeError(
@@ -214,9 +210,7 @@ if ($record) {{
                 print_verbose(
                     "VERSION", f"Success! Extracted: {version} (via PowerShell COM)"
                 )
-                return DiscoveredVersion(
-                    version=version, source="msi_product_version_from_file"
-                )
+                return DiscoveredVersion(version=version, source="msi")
         except subprocess.CalledProcessError as err:
             print_debug("VERSION", "PowerShell COM failed, trying next backend...")
             raise RuntimeError(f"PowerShell MSI query failed: {err}") from err
@@ -245,9 +239,7 @@ if ($record) {{
             if not version_str:
                 raise RuntimeError("ProductVersion not found in MSI Property output.")
             print_verbose("VERSION", f"Success! Extracted: {version_str} (via msiinfo)")
-            return DiscoveredVersion(
-                version=version_str, source="msi_product_version_from_file"
-            )
+            return DiscoveredVersion(version=version_str, source="msi")
         except subprocess.CalledProcessError as err:
             print_debug("VERSION", "msiinfo failed")
             raise RuntimeError(f"msiinfo failed: {err}") from err

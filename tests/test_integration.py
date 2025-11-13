@@ -77,7 +77,7 @@ class TestEndToEndWorkflow:
                 "notapkgtool.discovery.url_download.version_from_msi_product_version"
             ) as mock_extract:
                 mock_extract.return_value = DiscoveredVersion(
-                    version="1.2.3", source="msi_product_version_from_file"
+                    version="1.2.3", source="msi"
                 )
 
                 result = discover_recipe(recipe_path, output_dir)

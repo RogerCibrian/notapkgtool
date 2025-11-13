@@ -10,7 +10,7 @@ Have an idea for NAPT? Check [docs/roadmap.md](roadmap.md) to see what's planned
 
 ### Development Setup
 
-```bash
+```powershell
 # Clone and install with dev dependencies
 git clone https://github.com/RogerCibrian/notapkgtool.git
 cd notapkgtool
@@ -23,7 +23,7 @@ napt --version
 
 ### Running Tests
 
-```bash
+```powershell
 # Run all tests
 poetry run pytest tests/
 
