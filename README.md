@@ -8,7 +8,7 @@
 
 ## Overview
 
-NAPT is a Python-based CLI tool that automates the entire workflow for packaging Windows applications and deploying them to Microsoft Intune. It eliminates repetitive manual work through declarative YAML-based recipes and intelligent version discovery.
+NAPT is a Python-based CLI tool that automates the entire workflow for packaging Windows applications and deploying them to Microsoft Intune. It runs on Windows, Linux, and macOS, though packaging (.intunewin creation) requires Windows.
 
 📚 **[Full Documentation](https://rogercibrian.github.io/notapkgtool/)** | [Quick Start](https://rogercibrian.github.io/notapkgtool/quick-start/) | [User Guide](https://rogercibrian.github.io/notapkgtool/user-guide/) | [API Reference](https://rogercibrian.github.io/notapkgtool/api/core/)
 
@@ -75,17 +75,13 @@ flowchart TD
 
 See the [User Guide](https://rogercibrian.github.io/notapkgtool/user-guide/) for detailed architecture information and the [API Reference](https://rogercibrian.github.io/notapkgtool/api/core/) for code-level documentation.
 
-## Platform Support
-
-**NAPT is a Windows tool** for Microsoft Intune packaging. Discovery and building work on Linux and macOS, with final packaging on Windows.
+## Cross-Platform Support
 
 | Command | Windows | Linux/macOS |
 |---------|---------|-------------|
 | `napt discover` | ✅ | ✅ |
 | `napt build` | ✅ | ✅ |
 | `napt package` | ✅ | ⚫ Windows Only |
-
-This design makes sense: Intune deploys to Windows endpoints, most Intune administrators have Windows infrastructure, and CI/CD platforms offer Windows runners. The cross-platform discovery and build commands support modern development workflows.
 
 See the [Cross-Platform Support](https://rogercibrian.github.io/notapkgtool/user-guide/#cross-platform-support) section for detailed workflows and CI/CD examples.
 
