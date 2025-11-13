@@ -3,7 +3,7 @@ name = "notapkgtool"
 version = "0.2.0"
 description = "NAPT - Not a Pkg Tool for Windows/Intune packaging with PSADT"
 authors = ["Roger Cibrian"]
-license = "GPL-3.0-only"
+license = "Apache-2.0"
 readme = "README.md"
 homepage = "https://github.com/RogerCibrian/notapkgtool"
 repository = "https://github.com/RogerCibrian/notapkgtool"
@@ -12,7 +12,7 @@ keywords = ["intune", "psadt", "packaging", "windows", "deployment", "automation
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: System Administrators",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
