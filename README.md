@@ -38,26 +38,6 @@ This manual workflow is repetitive, difficult to automate in CI/CD pipelines, la
 - ✅ **Cross-platform workflow** - Run on Windows, Linux, and macOS (packaging requires Windows)
 - 🚧 **Direct Intune upload** - Automatic deployment (planned)
 
-## Getting Started
-
-```bash
-# Validate a recipe
-napt validate recipes/Google/chrome.yaml
-
-# Discover version and download installer
-napt discover recipes/Google/chrome.yaml
-
-# Build PSADT package
-napt build recipes/Google/chrome.yaml
-
-# Create .intunewin package
-napt package builds/napt-chrome/141.0.7444.60/
-```
-
-> **💡 Tip:** Add `--verbose` for progress updates or `--debug` for detailed diagnostics. See [Commands Reference](https://rogercibrian.github.io/notapkgtool/user-guide/#commands-reference) for details.
-
-Check out the [Quick Start Guide](https://rogercibrian.github.io/notapkgtool/quick-start/) for installation instructions and your first steps with NAPT.
-
 ## Cross-Platform Support
 
 | Command | Windows | Linux/macOS |
@@ -67,6 +47,10 @@ Check out the [Quick Start Guide](https://rogercibrian.github.io/notapkgtool/qui
 | `napt package` | ✅ | ⚫ Windows Only |
 
 See the [Cross-Platform Support](https://rogercibrian.github.io/notapkgtool/user-guide/#cross-platform-support) section for detailed workflows.
+
+## Getting Started
+
+Check out the [Quick Start Guide](https://rogercibrian.github.io/notapkgtool/quick-start/) for installation instructions and your first steps with NAPT.
 
 ## Creating Recipes
 
