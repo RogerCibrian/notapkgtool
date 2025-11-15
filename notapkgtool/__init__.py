@@ -18,7 +18,7 @@ A Python-based CLI tool for automating Windows application packaging and
 deployment to Microsoft Intune using PSAppDeployToolkit (PSADT).
 
 NAPT provides:
-  - Declarative YAML-based recipe configuration
+  - YAML-based recipe configuration
   - Automatic version discovery from multiple sources
   - Robust download with conditional requests and integrity verification
   - Intelligent update policies (version-based, hash-based, or combined)

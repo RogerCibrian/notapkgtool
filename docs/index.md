@@ -10,19 +10,33 @@
 
 NAPT is a Python-based CLI tool that automates the entire workflow for packaging Windows applications and deploying them to Microsoft Intune. It runs on Windows, Linux, and macOS, though packaging (.intunewin creation) requires Windows.
 
+### Why NAPT?
+
+Packaging applications for Microsoft Intune with PSAppDeployToolkit (PSADT) typically involves a manual, time-consuming process:
+
+1. **Manually check for new versions** - Check vendor sites/APIs for updates. Easy to miss versions or waste time when nothing changed.
+
+2. **Create PSADT deployment** - Copy template, manually edit `Invoke-AppDeployToolkit.ps1` with variables, configure install/uninstall logic. Error-prone and repetitive.
+
+3. **Create detection script** - Write PowerShell detection logic, test thoroughly, maintain version checks. Must update for each new version.
+
+4. **Package as .intunewin** - Run IntuneWinAppUtil.exe manually, manage paths, handle errors. Tedious and error-prone.
+
+5. **Upload to Intune** - Upload package via portal, fill metadata, configure app info and requirements manually.
+
+6. **Configure deployment** - Set up rollout assignments manually for each version.
+
+This manual workflow is repetitive, difficult to automate in CI/CD pipelines, lacks version tracking, and requires re-doing most of the work for every update. NAPT automates this entire workflow with YAML-based recipes and intelligent version tracking.
+
 ### Key Features
 
-- ✅ **Declarative YAML recipes** - Define app packaging once, run everywhere
-- ✅ **Automatic version discovery** - Extract versions from MSI, EXE, URLs, or APIs
-- ✅ **Robust downloads** - Retry logic, conditional requests (ETags), atomic writes
-- ✅ **Smart caching** - Skip unnecessary downloads with intelligent version checks
-- ✅ **Cross-platform support** - Windows, Linux, and macOS
-- ✅ **Layered configuration** - Organization → Vendor → Recipe inheritance
-- ✅ **PSADT packaging** - Generate Intune-ready packages with PSAppDeployToolkit
+- ✅ **Intelligent version tracking** - Automatic discovery from MSI, EXE, URLs, or APIs with smart caching to skip unnecessary downloads
+- ✅ **YAML-based recipes** - Define app packaging once with layered configuration (Organization → Vendor → Recipe)
+- ✅ **Automated PSADT packaging** - Generate Intune-ready packages with detection scripts, no manual template editing
+- ✅ **Cross-platform workflow** - Run on Windows, Linux, and macOS (packaging requires Windows)
 - 🚧 **Direct Intune upload** - Automatic deployment (planned)
-- 🚧 **Deployment waves** - Phased rollouts with rings (planned)
 
-## Quick Example
+## Getting Started
 
 ```bash
 # Validate a recipe
@@ -35,43 +49,12 @@ napt discover recipes/Google/chrome.yaml
 napt build recipes/Google/chrome.yaml
 
 # Create .intunewin package
-napt package builds/napt-chrome/141.0.7390.123/
+napt package builds/napt-chrome/141.0.7444.60/
 ```
 
 > **💡 Tip:** Add `--verbose` for progress updates or `--debug` for detailed diagnostics. See [Commands Reference](user-guide.md#commands-reference) for details.
 
-## Getting Started
-
-Ready to get started? Check out the [Quick Start Guide](quick-start.md) for installation instructions and your first steps with NAPT.
-
-## How It Works
-
-NAPT automates the complete packaging workflow with intelligent caching to skip unnecessary work:
-
-<div align="center">
-
-```mermaid
-flowchart TD
-    Start([napt discover]) --> LoadRecipe[Load Recipe YAML]
-    LoadRecipe --> CheckCache{Cached?}
-    
-    CheckCache -->|Yes| CheckUpdates[Check for Updates]
-    CheckUpdates --> IsUpdated{Updated?}
-    IsUpdated -->|No| Skip([✓ Already Current])
-    IsUpdated -->|Yes| Download[Download Installer]
-    
-    CheckCache -->|No| Download
-    Download --> UpdateState[Update state.json]
-    UpdateState --> Ready([✓ Ready for napt build])
-    
-    Ready --> Build([napt build])
-    Build --> Package([napt package])
-    Package --> Deploy([✓ Ready for Upload])
-```
-
-</div>
-
-See the [User Guide](user-guide.md) for detailed architecture information and the [API Reference](api/core.md) for code-level documentation.
+Check out the [Quick Start Guide](quick-start.md) for installation instructions and your first steps with NAPT.
 
 ## Cross-Platform Support
 
@@ -81,32 +64,22 @@ See the [User Guide](user-guide.md) for detailed architecture information and th
 | `napt build` | ✅ | ✅ |
 | `napt package` | ✅ | ⚫ Windows Only |
 
-See the [Cross-Platform Support](user-guide.md#cross-platform-support) section for detailed workflows and CI/CD examples.
+See the [Cross-Platform Support](user-guide.md#cross-platform-support) section for detailed workflows.
 
 ## Creating Recipes
 
-Recipes are declarative YAML files that define how to discover, download, and package applications.
+Recipes are YAML configuration files that define how to discover, download, and package applications.
 
 **Example recipes:**
 
 - **[chrome.yaml](https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Google/chrome.yaml)** - url_download strategy with MSI version extraction
-- **[git.yaml](https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Git/git.yaml)** - api_github strategy with asset pattern matching
-- **[json-api-example.yaml](https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Examples/json-api-example.yaml)** - api_json strategy with JSONPath extraction
 - **[7zip.yaml](https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/7-Zip/7zip.yaml)** - web_scrape strategy for vendor download pages
 
-NAPT supports multiple discovery strategies (url_download, web_scrape, api_github, api_json) - see the [Discovery Strategies](user-guide.md#discovery-strategies) guide for detailed configuration and examples.
+NAPT supports multiple discovery strategies (url_download, web_scrape, api_github, api_json) - see the [Discovery Strategies](user-guide.md#discovery-strategies) guide for detailed configuration and more examples.
 
 ## Contributing
 
-Contributions are welcome! Please ensure:
-
-1. Code follows existing patterns and conventions
-2. All functions have comprehensive docstrings
-3. Type annotations are included
-4. Tests are added for new features
-5. Documentation is updated
-
-See [Contributing](contributing.md) for detailed guidelines.
+Contributions are welcome! See [Contributing](contributing.md) for guidelines.
 
 ## License
 
