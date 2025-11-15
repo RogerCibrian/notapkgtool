@@ -56,24 +56,25 @@ Configuration Fields:
 
 Error Handling:
 
-- ValueError: Missing or invalid configuration fields
-- RuntimeError: Download failures, version extraction errors
+- ConfigError: Missing or invalid configuration fields
+- NetworkError: Download failures, version extraction errors
 - Errors are chained with 'from err' for better debugging
 
 Example:
-In a recipe YAML:
+    In a recipe YAML:
+        ```yaml
+        apps:
+          - name: "My App"
+            id: "my-app"
+            source:
+              strategy: url_download
+              url: "https://example.com/myapp-setup.msi"
+              version:
+                type: msi
+        ```
 
-    apps:
-      - name: "My App"
-        id: "my-app"
-        source:
-          strategy: url_download
-          url: "https://example.com/myapp-setup.msi"
-          version:
-            type: msi
-
-From Python:
-
+    From Python:
+    ```python
     from pathlib import Path
     from notapkgtool.discovery.url_download import UrlDownloadStrategy
 
@@ -91,15 +92,17 @@ From Python:
         app_config, Path("./downloads"), cache=cache
     )
     print(f"Version {discovered.version} at {file_path}")
+    ```
 
 From Python (using core orchestration):
-
+    ```python
     from pathlib import Path
     from notapkgtool.core import discover_recipe
 
     # Automatically uses ETag optimization
     result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
     print(f"Version {result['version']} at {result['file_path']}")
+    ```
 
 Note:
     - Must download file to extract version (architectural constraint)
@@ -117,6 +120,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from notapkgtool.exceptions import ConfigError, NetworkError
 from notapkgtool.io import NotModifiedError, download_file
 from notapkgtool.versioning.keys import DiscoveredVersion
 from notapkgtool.versioning.msi import version_from_msi_product_version
@@ -165,8 +169,8 @@ class UrlDownloadStrategy:
                 SHA-256 hash, and headers contains HTTP response headers.
 
         Raises:
-            ValueError: If required config fields are missing or invalid.
-            RuntimeError: If download or version extraction fails.
+            ConfigError: If required config fields are missing or invalid.
+            NetworkError: If download or version extraction fails.
 
         """
         from notapkgtool.logging import get_global_logger
@@ -175,12 +179,12 @@ class UrlDownloadStrategy:
         source = app_config.get("source", {})
         url = source.get("url")
         if not url:
-            raise ValueError("url_download strategy requires 'source.url' in config")
+            raise ConfigError("url_download strategy requires 'source.url' in config")
 
         version_config = source.get("version", {})
         version_type = version_config.get("type")
         if not version_type:
-            raise ValueError(
+            raise ConfigError(
                 "url_download strategy requires 'source.version.type' in config"
             )
 
@@ -215,7 +219,7 @@ class UrlDownloadStrategy:
             )
 
             if not cache or "sha256" not in cache:
-                raise RuntimeError(
+                raise NetworkError(
                     "Cache indicates file not modified, but missing SHA-256. "
                     "Try running with --stateless to force re-download."
                 ) from None
@@ -227,7 +231,7 @@ class UrlDownloadStrategy:
             cached_file = output_dir / filename
 
             if not cached_file.exists():
-                raise RuntimeError(
+                raise NetworkError(
                     f"Cached file {cached_file} not found. "
                     f"File may have been deleted. Try running with --stateless."
                 ) from None
@@ -239,11 +243,11 @@ class UrlDownloadStrategy:
                         cached_file, verbose=verbose, debug=debug
                     )
                 except Exception as err:
-                    raise RuntimeError(
+                    raise NetworkError(
                         f"Failed to extract MSI ProductVersion from cached file {cached_file}: {err}"
                     ) from err
             else:
-                raise ValueError(
+                raise ConfigError(
                     f"Unsupported version type: {version_type!r}. " f"Supported: msi"
                 ) from None
 
@@ -257,9 +261,9 @@ class UrlDownloadStrategy:
 
             return discovered, cached_file, cache["sha256"], preserved_headers
         except Exception as err:
-            if isinstance(err, (RuntimeError, ValueError)):
+            if isinstance(err, (NetworkError, ConfigError)):
                 raise
-            raise RuntimeError(f"Failed to download {url}: {err}") from err
+            raise NetworkError(f"Failed to download {url}: {err}") from err
 
         # File was downloaded (not cached), extract version from it
         if version_type == "msi":
@@ -268,11 +272,11 @@ class UrlDownloadStrategy:
                     file_path, verbose=verbose, debug=debug
                 )
             except Exception as err:
-                raise RuntimeError(
+                raise NetworkError(
                     f"Failed to extract MSI ProductVersion from {file_path}: {err}"
                 ) from err
         else:
-            raise ValueError(
+            raise ConfigError(
                 f"Unsupported version type: {version_type!r}. " f"Supported: msi"
             )
 

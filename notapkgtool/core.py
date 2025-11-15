@@ -28,7 +28,7 @@ Design Principles:
 
 Example:
     Programmatic usage:
-
+        ```python
         from pathlib import Path
         from notapkgtool.core import discover_recipe
 
@@ -42,6 +42,7 @@ Example:
         print(f"SHA-256: {result['sha256']}")
 
         # Version-first strategies: may have skipped download if unchanged!
+        ```
 
 """
 
@@ -53,6 +54,7 @@ from typing import Any
 from notapkgtool import __version__
 from notapkgtool.config.loader import load_effective_config
 from notapkgtool.discovery import get_strategy
+from notapkgtool.exceptions import ConfigError
 from notapkgtool.io import download_file
 from notapkgtool.logging import get_global_logger
 from notapkgtool.state import load_state, save_state
@@ -75,7 +77,7 @@ def derive_file_path_from_url(url: str, output_dir: Path) -> Path:
 
     Example:
         Get expected file path for a download URL:
-
+            ```python
             from pathlib import Path
 
             path = derive_file_path_from_url(
@@ -83,6 +85,7 @@ def derive_file_path_from_url(url: str, output_dir: Path) -> Path:
                 Path("./downloads")
             )
             # Returns: Path('./downloads/app.msi')
+            ```
 
     """
     from urllib.parse import urlparse
@@ -149,31 +152,31 @@ def discover_recipe(
             and status is always "success".
 
     Raises:
-        SystemExit: On YAML parse errors or missing recipe file (handled by
-            config loader).
-        ValueError: On missing or invalid configuration fields (no apps defined,
-            missing 'source.strategy' field, unknown discovery strategy name).
-        RuntimeError: On download failures or version extraction errors.
-        FileNotFoundError: If recipe file doesn't exist (before config loading).
+        ConfigError: On missing or invalid configuration fields (no apps defined,
+            missing 'source.strategy' field, unknown discovery strategy name),
+            YAML parse errors (from config loader), or if recipe file doesn't exist.
+        NetworkError: On download failures or version extraction errors.
 
     Example:
         Basic version discovery:
-
+            ```python
             from pathlib import Path
             result = discover_recipe(
                 Path("recipes/Google/chrome.yaml"),
                 Path("./downloads")
             )
             print(result['version'])  # 141.0.7390.123
+            ```
 
         Handling errors:
-
+            ```python
             try:
                 result = discover_recipe(Path("invalid.yaml"), Path("."))
-            except ValueError as e:
+            except ConfigError as e:
                 print(f"Config error: {e}")
-            except RuntimeError as e:
-                print(f"Download error: {e}")
+            except NetworkError as e:
+                print(f"Network error: {e}")
+            ```
 
     Note:
         Only the first app in a recipe is currently processed. The discovery
@@ -213,7 +216,7 @@ def discover_recipe(
     logger.step(2, 4, "Discovering version...")
     apps = config.get("apps", [])
     if not apps:
-        raise ValueError(f"No apps defined in recipe: {recipe_path}")
+        raise ConfigError(f"No apps defined in recipe: {recipe_path}")
 
     app = apps[0]
     app_name = app.get("name", "Unknown")
@@ -223,7 +226,7 @@ def discover_recipe(
     source = app.get("source", {})
     strategy_name = source.get("strategy")
     if not strategy_name:
-        raise ValueError(f"No 'source.strategy' defined for app: {app_name}")
+        raise ConfigError(f"No 'source.strategy' defined for app: {app_name}")
 
     # 4. Get the strategy implementation
     # Import strategies to ensure they're registered

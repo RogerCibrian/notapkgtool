@@ -32,17 +32,20 @@ Design Principles:
     - Merge org defaults with recipe overrides
 
 Example:
-    from pathlib import Path
-    from notapkgtool.build.template import generate_invoke_script
+    Basic usage:
+        ```python
+        from pathlib import Path
+        from notapkgtool.build.template import generate_invoke_script
 
-    script = generate_invoke_script(
-        template_path=Path("cache/psadt/4.1.7/Invoke-AppDeployToolkit.ps1"),
-        config=recipe_config,
-        version="141.0.7390.123",
-        psadt_version="4.1.7"
-    )
+        script = generate_invoke_script(
+            template_path=Path("cache/psadt/4.1.7/Invoke-AppDeployToolkit.ps1"),
+            config=recipe_config,
+            version="141.0.7390.123",
+            psadt_version="4.1.7"
+        )
 
-    Path("builds/app/version/Invoke-AppDeployToolkit.ps1").write_text(script)
+        Path("builds/app/version/Invoke-AppDeployToolkit.ps1").write_text(script)
+        ```
 """
 
 from __future__ import annotations
@@ -51,6 +54,8 @@ from datetime import date
 from pathlib import Path
 import re
 from typing import Any
+
+from notapkgtool.exceptions import PackagingError
 
 
 def _format_powershell_value(value: Any) -> str:
@@ -64,10 +69,11 @@ def _format_powershell_value(value: Any) -> str:
 
     Example:
         Format values for PowerShell:
-
+            ```python
             _format_powershell_value("hello")      # Returns: "'hello'"
             _format_powershell_value(True)         # Returns: '$true'
             _format_powershell_value([0, 1, 2])    # Returns: '@(0, 1, 2)'
+            ```
     """
     if isinstance(value, bool):
         return "$true" if value else "$false"
@@ -159,7 +165,7 @@ def _replace_session_block(template: str, vars_dict: dict[str, Any]) -> str:
 
     match = re.search(pattern, template, re.DOTALL)
     if not match:
-        raise RuntimeError(
+        raise PackagingError(
             "Could not find $adtSession hashtable in PSADT template. "
             "Template may be from an unsupported PSADT version."
         )
@@ -249,12 +255,11 @@ def generate_invoke_script(
         Generated PowerShell script text.
 
     Raises:
-        FileNotFoundError: If template doesn't exist.
-        RuntimeError: If template parsing fails.
+        PackagingError: If template doesn't exist or template parsing fails.
 
     Example:
         Generate deployment script from template:
-
+            ```python
             from pathlib import Path
 
             script = generate_invoke_script(
@@ -263,12 +268,13 @@ def generate_invoke_script(
                 "141.0.7390.123",
                 "4.1.7"
             )
+            ```
     """
     from notapkgtool.logging import get_global_logger
 
     logger = get_global_logger()
     if not template_path.exists():
-        raise FileNotFoundError(f"PSADT template not found: {template_path}")
+        raise PackagingError(f"PSADT template not found: {template_path}")
 
     logger.verbose("BUILD", f"Reading PSADT template: {template_path.name}")
 

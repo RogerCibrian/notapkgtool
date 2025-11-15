@@ -46,21 +46,23 @@ Use Cases:
 - When GitHub releases and JSON APIs aren't available
 
 Recipe Configuration:
-
+    ```yaml
     source:
       strategy: web_scrape
       page_url: "https://www.7-zip.org/download.html"
       link_selector: 'a[href$="-x64.msi"]'        # CSS (recommended)
       version_pattern: "7z(\\d{2})(\\d{2})-x64"   # Extract from URL
       version_format: "{0}.{1}"                    # Transform to "25.01"
+    ```
 
 Alternative with regex:
-
+    ```yaml
     source:
       strategy: web_scrape
       page_url: "https://vendor.com/downloads"
       link_pattern: 'href="(/files/app-v[0-9.]+-x64\\.msi)"'
       version_pattern: "app-v([0-9.]+)-x64"
+    ```
 
 Configuration Fields:
 
@@ -93,52 +95,55 @@ Common CSS Patterns:
 - 'a[href$="-x64.msi"]:first-of-type' - First matching link
 
 Example:
-In a recipe YAML:
+    In a recipe YAML:
+        ```yaml
+        apps:
+          - name: "7-Zip"
+            id: "napt-7zip"
+            source:
+              strategy: web_scrape
+              page_url: "https://www.7-zip.org/download.html"
+              link_selector: 'a[href$="-x64.msi"]'
+              version_pattern: "7z(\\d{2})(\\d{2})-x64"
+              version_format: "{0}.{1}"
+        ```
 
-    apps:
-      - name: "7-Zip"
-        id: "napt-7zip"
-        source:
-          strategy: web_scrape
-          page_url: "https://www.7-zip.org/download.html"
-          link_selector: 'a[href$="-x64.msi"]'
-          version_pattern: "7z(\\d{2})(\\d{2})-x64"
-          version_format: "{0}.{1}"
+    From Python (version-first approach):
+        ```python
+        from notapkgtool.discovery.web_scrape import WebScrapeStrategy
+        from notapkgtool.io import download_file
 
-From Python (version-first approach):
-
-    from notapkgtool.discovery.web_scrape import WebScrapeStrategy
-    from notapkgtool.io import download_file
-
-    strategy = WebScrapeStrategy()
-    app_config = {
-        "source": {
-            "page_url": "https://www.7-zip.org/download.html",
-            "link_selector": 'a[href$="-x64.msi"]',
-            "version_pattern": "7z(\\d{2})(\\d{2})-x64",
-            "version_format": "{0}.{1}",
+        strategy = WebScrapeStrategy()
+        app_config = {
+            "source": {
+                "page_url": "https://www.7-zip.org/download.html",
+                "link_selector": 'a[href$="-x64.msi"]',
+                "version_pattern": "7z(\\d{2})(\\d{2})-x64",
+                "version_format": "{0}.{1}",
+            }
         }
-    }
 
-    # Get version WITHOUT downloading installer
-    version_info = strategy.get_version_info(app_config)
-    print(f"Latest version: {version_info.version}")
+        # Get version WITHOUT downloading installer
+        version_info = strategy.get_version_info(app_config)
+        print(f"Latest version: {version_info.version}")
 
-    # Download only if needed
-    if need_to_download:
-        file_path, sha256, headers = download_file(
-            version_info.download_url, Path("./downloads")
-        )
-        print(f"Downloaded to {file_path}")
+        # Download only if needed
+        if need_to_download:
+            file_path, sha256, headers = download_file(
+                version_info.download_url, Path("./downloads")
+            )
+            print(f"Downloaded to {file_path}")
+        ```
 
-From Python (using core orchestration):
+    From Python (using core orchestration):
+        ```python
+        from pathlib import Path
+        from notapkgtool.core import discover_recipe
 
-    from pathlib import Path
-    from notapkgtool.core import discover_recipe
-
-    # Automatically uses version-first optimization
-    result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
-    print(f"Version {result['version']} at {result['file_path']}")
+        # Automatically uses version-first optimization
+        result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
+        print(f"Version {result['version']} at {result['file_path']}")
+        ```
 
 Note:
     - Version discovery via web scraping (no installer download required)
@@ -160,6 +165,7 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 import requests
 
+from notapkgtool.exceptions import ConfigError, NetworkError
 from notapkgtool.versioning.keys import VersionInfo
 
 from .base import register_strategy
@@ -169,11 +175,13 @@ class WebScrapeStrategy:
     """Discovery strategy for web scraping download pages.
 
     Configuration example:
+        ```yaml
         source:
           strategy: web_scrape
           page_url: "https://vendor.com/download.html"
           link_selector: 'a[href$=".msi"]'
           version_pattern: "app-v([0-9.]+)"
+        ```
     """
 
     def get_version_info(
@@ -208,7 +216,7 @@ class WebScrapeStrategy:
 
         Example:
             Scrape 7-Zip download page:
-
+                ```python
                 strategy = WebScrapeStrategy()
                 config = {
                     "source": {
@@ -220,6 +228,7 @@ class WebScrapeStrategy:
                 }
                 version_info = strategy.get_version_info(config)
                 # version_info.version returns: '25.01'
+                ```
 
         """
         from notapkgtool.logging import get_global_logger
@@ -229,20 +238,22 @@ class WebScrapeStrategy:
         source = app_config.get("source", {})
         page_url = source.get("page_url")
         if not page_url:
-            raise ValueError("web_scrape strategy requires 'source.page_url' in config")
+            raise ConfigError(
+                "web_scrape strategy requires 'source.page_url' in config"
+            )
 
         link_selector = source.get("link_selector")
         link_pattern = source.get("link_pattern")
 
         if not link_selector and not link_pattern:
-            raise ValueError(
+            raise ConfigError(
                 "web_scrape strategy requires either 'source.link_selector' or "
                 "'source.link_pattern' in config"
             )
 
         version_pattern = source.get("version_pattern")
         if not version_pattern:
-            raise ValueError(
+            raise ConfigError(
                 "web_scrape strategy requires 'source.version_pattern' in config"
             )
 
@@ -262,11 +273,11 @@ class WebScrapeStrategy:
             response = requests.get(page_url, timeout=30)
             response.raise_for_status()
         except requests.exceptions.HTTPError as err:
-            raise RuntimeError(
+            raise NetworkError(
                 f"Failed to fetch page: {response.status_code} {response.reason}"
             ) from err
         except requests.exceptions.RequestException as err:
-            raise RuntimeError(f"Failed to fetch page: {err}") from err
+            raise NetworkError(f"Failed to fetch page: {err}") from err
 
         html_content = response.text
         logger.verbose("DISCOVERY", f"Page fetched ({len(html_content)} bytes)")
@@ -280,14 +291,14 @@ class WebScrapeStrategy:
             element = soup.select_one(link_selector)
 
             if not element:
-                raise ValueError(
+                raise ConfigError(
                     f"CSS selector {link_selector!r} did not match any elements on page"
                 )
 
             # Get href attribute
             href = element.get("href")
             if not href:
-                raise ValueError(
+                raise ConfigError(
                     f"Element matched by {link_selector!r} has no href attribute"
                 )
 
@@ -303,7 +314,7 @@ class WebScrapeStrategy:
                 match = pattern.search(html_content)
 
                 if not match:
-                    raise ValueError(
+                    raise ConfigError(
                         f"Regex pattern {link_pattern!r} did not match anything on page"
                     )
 
@@ -319,7 +330,7 @@ class WebScrapeStrategy:
                 download_url = urljoin(page_url, href)
 
             except re.error as err:
-                raise ValueError(
+                raise ConfigError(
                     f"Invalid link_pattern regex: {link_pattern!r}"
                 ) from err
 
@@ -331,7 +342,7 @@ class WebScrapeStrategy:
             match = version_regex.search(download_url)
 
             if not match:
-                raise ValueError(
+                raise ConfigError(
                     f"Version pattern {version_pattern!r} did not match URL {download_url!r}"
                 )
 
@@ -346,12 +357,12 @@ class WebScrapeStrategy:
                 try:
                     version_str = version_format.format(*groups)
                 except (IndexError, KeyError) as err:
-                    raise ValueError(
+                    raise ConfigError(
                         f"version_format {version_format!r} failed with groups {groups}: {err}"
                     ) from err
 
         except re.error as err:
-            raise ValueError(
+            raise ConfigError(
                 f"Invalid version_pattern regex: {version_pattern!r}"
             ) from err
 

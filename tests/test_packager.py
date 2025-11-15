@@ -21,6 +21,7 @@ from notapkgtool.build.packager import (
     _verify_build_structure,
     create_intunewin,
 )
+from notapkgtool.exceptions import ConfigError, PackagingError
 
 # All tests in this file are unit tests (fast, mocked)
 pytestmark = pytest.mark.unit
@@ -51,7 +52,7 @@ class TestVerifyBuildStructure:
         (build_dir / "Invoke-AppDeployToolkit.ps1").write_text("script")
         (build_dir / "Invoke-AppDeployToolkit.exe").write_bytes(b"exe")
 
-        with pytest.raises(ValueError, match="Missing.*PSAppDeployToolkit"):
+        with pytest.raises(ConfigError, match="Missing.*PSAppDeployToolkit"):
             _verify_build_structure(build_dir)
 
     def test_verify_missing_files_raises(self, tmp_path):
@@ -62,7 +63,7 @@ class TestVerifyBuildStructure:
         (build_dir / "Invoke-AppDeployToolkit.ps1").write_text("script")
         (build_dir / "Invoke-AppDeployToolkit.exe").write_bytes(b"exe")
 
-        with pytest.raises(ValueError, match="Missing.*Files"):
+        with pytest.raises(ConfigError, match="Missing.*Files"):
             _verify_build_structure(build_dir)
 
     def test_verify_missing_script_raises(self, tmp_path):
@@ -73,7 +74,7 @@ class TestVerifyBuildStructure:
         (build_dir / "Files").mkdir()
         (build_dir / "Invoke-AppDeployToolkit.exe").write_bytes(b"exe")
 
-        with pytest.raises(ValueError, match="Missing.*Invoke-AppDeployToolkit.ps1"):
+        with pytest.raises(ConfigError, match="Missing.*Invoke-AppDeployToolkit.ps1"):
             _verify_build_structure(build_dir)
 
 
@@ -111,14 +112,14 @@ class TestCreateIntunewin:
         build_dir = tmp_path / "builds" / "test-app" / "1.0.0"
         build_dir.mkdir(parents=True)
 
-        with pytest.raises(ValueError, match="Invalid PSADT build directory"):
+        with pytest.raises(ConfigError, match="Invalid PSADT build directory"):
             create_intunewin(build_dir)
 
     def test_create_intunewin_missing_directory_raises(self, tmp_path):
         """Test error when build directory doesn't exist."""
         build_dir = tmp_path / "nonexistent" / "test-app" / "1.0.0"
 
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(PackagingError):
             create_intunewin(build_dir)
 
     @patch("notapkgtool.build.packager._get_intunewin_tool")

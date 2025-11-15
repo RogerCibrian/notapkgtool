@@ -29,15 +29,18 @@ Design Principles:
     - Tool is downloaded from Microsoft's official GitHub repository
 
 Example:
-    from pathlib import Path
-    from notapkgtool.build.packager import create_intunewin
+    Basic usage:
+        ```python
+        from pathlib import Path
+        from notapkgtool.build.packager import create_intunewin
 
-    result = create_intunewin(
-        build_dir=Path("builds/napt-chrome/141.0.7390.123"),
-        output_dir=Path("packages")
-    )
+        result = create_intunewin(
+            build_dir=Path("builds/napt-chrome/141.0.7390.123"),
+            output_dir=Path("packages")
+        )
 
-    print(f"Package: {result['package_path']}")
+        print(f"Package: {result['package_path']}")
+        ```
 """
 
 from __future__ import annotations
@@ -48,6 +51,8 @@ import subprocess
 from typing import Any
 
 import requests
+
+from notapkgtool.exceptions import ConfigError, NetworkError, PackagingError
 
 # TODO: Add version tracking for IntuneWinAppUtil.exe
 # Currently downloads from master branch (always latest), with no version tracking.
@@ -84,7 +89,7 @@ def _verify_build_structure(build_dir: Path) -> None:
             missing.append(item)
 
     if missing:
-        raise ValueError(
+        raise ConfigError(
             f"Invalid PSADT build directory: {build_dir}\n"
             f"Missing: {', '.join(missing)}"
         )
@@ -101,7 +106,7 @@ def _get_intunewin_tool(cache_dir: Path, verbose: bool = False) -> Path:
         Path to the IntuneWinAppUtil.exe tool.
 
     Raises:
-        RuntimeError: If download fails.
+        NetworkError: If download fails.
     """
     from notapkgtool.logging import get_global_logger
 
@@ -119,7 +124,7 @@ def _get_intunewin_tool(cache_dir: Path, verbose: bool = False) -> Path:
         response = requests.get(INTUNEWIN_TOOL_URL, timeout=60)
         response.raise_for_status()
     except requests.RequestException as err:
-        raise RuntimeError(f"Failed to download IntuneWinAppUtil.exe: {err}") from err
+        raise NetworkError(f"Failed to download IntuneWinAppUtil.exe: {err}") from err
 
     # Save to cache
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -150,7 +155,7 @@ def _execute_packaging(
         Path to the created .intunewin file.
 
     Raises:
-        RuntimeError: If packaging fails.
+        PackagingError: If packaging fails.
     """
     from notapkgtool.logging import get_global_logger
 
@@ -189,9 +194,9 @@ def _execute_packaging(
         error_msg = f"IntuneWinAppUtil.exe failed (exit code {err.returncode})"
         if err.stderr:
             error_msg += f"\n{err.stderr}"
-        raise RuntimeError(error_msg) from err
+        raise PackagingError(error_msg) from err
     except subprocess.TimeoutExpired as err:
-        raise RuntimeError(
+        raise PackagingError(
             f"IntuneWinAppUtil.exe timed out after {err.timeout}s"
         ) from err
 
@@ -199,7 +204,7 @@ def _execute_packaging(
     intunewin_files = list(output_dir.glob("*.intunewin"))
 
     if not intunewin_files:
-        raise RuntimeError(
+        raise PackagingError(
             f"IntuneWinAppUtil.exe completed but no .intunewin file found in {output_dir}"
         )
 
@@ -239,25 +244,28 @@ def create_intunewin(
             packaging status.
 
     Raises:
-        ValueError: If build directory structure is invalid.
-        RuntimeError: If packaging fails.
+        ConfigError: If build directory structure is invalid.
+        PackagingError: If packaging fails.
+        NetworkError: If IntuneWinAppUtil.exe download fails.
 
     Example:
         Basic packaging:
-
+            ```python
             result = create_intunewin(
                 build_dir=Path("builds/napt-chrome/141.0.7390.123")
             )
             print(result['package_path'])
             # packages/napt-chrome/napt-chrome-141.0.7390.123.intunewin
+            ```
 
         With cleanup:
-
+            ```python
             result = create_intunewin(
                 build_dir=Path("builds/napt-chrome/141.0.7390.123"),
                 clean_source=True
             )
             # Build directory is removed after packaging
+            ```
 
     Note:
         Requires build directory from 'napt build' command. IntuneWinAppUtil.exe
@@ -272,7 +280,7 @@ def create_intunewin(
     build_dir = build_dir.resolve()
 
     if not build_dir.exists():
-        raise FileNotFoundError(f"Build directory not found: {build_dir}")
+        raise PackagingError(f"Build directory not found: {build_dir}")
 
     # Extract app_id and version from directory structure (app_id/version/)
     version = build_dir.name

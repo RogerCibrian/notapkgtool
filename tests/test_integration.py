@@ -15,6 +15,7 @@ import pytest
 import requests_mock
 
 from notapkgtool.core import discover_recipe
+from notapkgtool.exceptions import NetworkError
 from notapkgtool.versioning import DiscoveredVersion
 
 
@@ -158,7 +159,7 @@ class TestErrorPropagation:
         with requests_mock.Mocker() as m:
             m.get("https://test.com/app.msi", status_code=404)
 
-            with pytest.raises(RuntimeError, match="Failed to download"):
+            with pytest.raises(NetworkError, match="Failed to download"):
                 discover_recipe(recipe_path, tmp_test_dir)
 
     def test_version_extraction_error_propagates(self, tmp_test_dir, create_yaml_file):
@@ -188,7 +189,7 @@ class TestErrorPropagation:
             with patch(
                 "notapkgtool.discovery.url_download.version_from_msi_product_version"
             ) as mock_extract:
-                mock_extract.side_effect = RuntimeError("Invalid MSI")
+                mock_extract.side_effect = NetworkError("Invalid MSI")
 
-                with pytest.raises(RuntimeError, match="Failed to extract"):
+                with pytest.raises(NetworkError, match="Failed to extract"):
                     discover_recipe(recipe_path, tmp_test_dir)

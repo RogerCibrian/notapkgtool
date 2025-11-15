@@ -37,18 +37,21 @@ Configuration Layers:
 
 Merge Behavior:
     The loader performs deep merging with "last wins" semantics:
-      - **Dicts**: Recursively merged (keys from overlay override base)
-      - **Lists**: Completely replaced (NOT appended/extended)
-      - **Scalars**: Overwritten (strings, numbers, booleans)
+
+    - **Dicts**: Recursively merged (keys from overlay override base)
+    - **Lists**: Completely replaced (NOT appended/extended)
+    - **Scalars**: Overwritten (strings, numbers, booleans)
 
 Path Resolution:
     Relative paths in configuration are resolved against the RECIPE FILE location,
     making recipes relocatable and portable. Currently resolved paths:
-      - defaults.psadt.brand_pack.path
+
+    - defaults.psadt.brand_pack.path
 
 Dynamic Injection:
     Some fields are injected at load time:
-      - defaults.psadt.app_vars.AppScriptDate: Today's date (YYYY-MM-DD)
+
+    - defaults.psadt.app_vars.AppScriptDate: Today's date (YYYY-MM-DD)
 
 Private Helpers:
     - _load_yaml_file: Load YAML with error handling
@@ -59,30 +62,32 @@ Private Helpers:
     - _inject_dynamic_values: Add runtime-determined fields
 
 Error Handling:
-    - FileNotFoundError: Recipe file doesn't exist
-    - SystemExit: YAML parse errors or empty files
+    - ConfigError: Recipe file doesn't exist, YAML parse errors, empty files, or invalid structure
     - All errors are chained with "from err" for better debugging
 
 Example:
     Basic usage:
-
+        ```python
         from pathlib import Path
         from notapkgtool.config import load_effective_config
 
         cfg = load_effective_config(Path("recipes/Google/chrome.yaml"))
         print(cfg["apps"][0]["name"])  # Output: Google Chrome
+        ```
 
     Access merged defaults:
-
+        ```python
         psadt_release = cfg["defaults"]["psadt"]["release"]
         print(psadt_release)  # Output: latest
+        ```
 
     Override vendor detection:
-
+        ```python
         cfg = load_effective_config(
             Path("recipes/Google/chrome.yaml"),
             vendor="CustomVendor"
         )
+        ```
 
 Note:
     - The loader walks upward from the recipe to find defaults/org.yaml
@@ -100,6 +105,8 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+
+from notapkgtool.exceptions import ConfigError
 
 # -------------------------------
 # Data types
@@ -128,21 +135,18 @@ def _load_yaml_file(p: Path) -> Any:
     """Load a YAML file and return the parsed Python object.
 
     Raises:
-      FileNotFoundError      - when file does not exist
-      SystemExit             - for invalid YAML (parse error) with chained context
+        ConfigError: When file does not exist, invalid YAML (parse error), or empty files.
 
     """
     if not p.exists():
-        raise FileNotFoundError(f"file not found: {p}")
+        raise ConfigError(f"file not found: {p}")
     try:
         with p.open("r", encoding="utf-8") as f:
             data = yaml.safe_load(f)
     except yaml.YAMLError as err:
-        print(f"Error parsing YAML: {p}: {err}")
-        raise SystemExit(1) from err
+        raise ConfigError(f"Error parsing YAML: {p}: {err}") from err
     if data is None:
-        print(f"Error: YAML file is empty: {p}")
-        raise SystemExit(1)
+        raise ConfigError(f"YAML file is empty: {p}")
     return data
 
 
@@ -324,8 +328,7 @@ def load_effective_config(
         as-is (with path resolution + injection).
 
     Raises:
-        SystemExit: On YAML parse errors (with chained context).
-        FileNotFoundError: If the recipe file itself is missing.
+        ConfigError: On YAML parse errors, empty files, invalid structure, or if the recipe file is missing.
 
     """
     from notapkgtool.logging import get_global_logger
@@ -339,8 +342,7 @@ def load_effective_config(
     # 1) Read recipe
     recipe_obj = _load_yaml_file(recipe_path)
     if not isinstance(recipe_obj, dict):
-        print(f"Error: top-level YAML must be a mapping (dict): {recipe_path}")
-        raise SystemExit(1)
+        raise ConfigError(f"top-level YAML must be a mapping (dict): {recipe_path}")
 
     # 2) Find defaults root
     defaults_root = _find_defaults_root(recipe_dir)

@@ -47,20 +47,21 @@ Use Cases:
 - CI/CD pipelines with frequent version checks
 
 Recipe Configuration:
-
+    ```yaml
     source:
-      strategy: api_json
-      api_url: "https://vendor.com/api/latest"
-      version_path: "version"                      # JSONPath to version
-      download_url_path: "download_url"            # JSONPath to URL
-      method: "GET"                                # Optional: GET or POST
-      headers:                                     # Optional: custom headers
+        strategy: api_json
+        api_url: "https://vendor.com/api/latest"
+        version_path: "version"                      # JSONPath to version
+        download_url_path: "download_url"            # JSONPath to URL
+        method: "GET"                                # Optional: GET or POST
+        headers:                                     # Optional: custom headers
         Authorization: "Bearer ${API_TOKEN}"
         Accept: "application/json"
-      body:                                        # Optional: POST body
+        body:                                        # Optional: POST body
         platform: "windows"
         arch: "x64"
-      timeout: 30                                  # Optional: timeout in seconds
+        timeout: 30                                  # Optional: timeout in seconds
+    ```
 
 Configuration Fields:
 
@@ -85,63 +86,67 @@ Error Handling:
 - Errors are chained with 'from err' for better debugging
 
 Example:
-In a recipe YAML (simple API):
+    In a recipe YAML (simple API):
+        ```yaml
+        apps:
+          - name: "My App"
+            id: "my-app"
+            source:
+              strategy: api_json
+              api_url: "https://api.vendor.com/latest"
+              version_path: "version"
+              download_url_path: "download_url"
+        ```
 
-    apps:
-      - name: "My App"
-        id: "my-app"
-        source:
-          strategy: api_json
-          api_url: "https://api.vendor.com/latest"
-          version_path: "version"
-          download_url_path: "download_url"
+    In a recipe YAML (nested structure):
+        ```yaml
+        apps:
+          - name: "My App"
+            id: "my-app"
+            source:
+              strategy: api_json
+              api_url: "https://api.vendor.com/releases"
+              version_path: "stable.version"
+              download_url_path: "stable.platforms.windows.x64"
+              headers:
+                Authorization: "Bearer ${API_TOKEN}"
+        ```
 
-In a recipe YAML (nested structure):
+    From Python (version-first approach):
+        ```python
+        from notapkgtool.discovery.api_json import ApiJsonStrategy
+        from notapkgtool.io import download_file
 
-    apps:
-      - name: "My App"
-        id: "my-app"
-        source:
-          strategy: api_json
-          api_url: "https://api.vendor.com/releases"
-          version_path: "stable.version"
-          download_url_path: "stable.platforms.windows.x64"
-          headers:
-            Authorization: "Bearer ${API_TOKEN}"
-
-From Python (version-first approach):
-
-    from notapkgtool.discovery.api_json import ApiJsonStrategy
-    from notapkgtool.io import download_file
-
-    strategy = ApiJsonStrategy()
-    app_config = {
-        "source": {
-            "api_url": "https://api.vendor.com/latest",
-            "version_path": "version",
-            "download_url_path": "download_url",
+        strategy = ApiJsonStrategy()
+        app_config = {
+            "source": {
+                "api_url": "https://api.vendor.com/latest",
+                "version_path": "version",
+                "download_url_path": "download_url",
+            }
         }
-    }
 
-    # Get version WITHOUT downloading
-    version_info = strategy.get_version_info(app_config)
-    print(f"Latest version: {version_info.version}")
+        # Get version WITHOUT downloading
+        version_info = strategy.get_version_info(app_config)
+        print(f"Latest version: {version_info.version}")
 
-    # Download only if needed
-    if need_to_download:
-        file_path, sha256, headers = download_file(
-            version_info.download_url, Path("./downloads")
-        )
-        print(f"Downloaded to {file_path}")
+        # Download only if needed
+        if need_to_download:
+            file_path, sha256, headers = download_file(
+                version_info.download_url, Path("./downloads")
+            )
+            print(f"Downloaded to {file_path}")
+        ```
 
-From Python (using core orchestration):
+    From Python (using core orchestration):
+        ```python
+        from pathlib import Path
+        from notapkgtool.core import discover_recipe
 
-    from pathlib import Path
-    from notapkgtool.core import discover_recipe
-
-    # Automatically uses version-first optimization
-    result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
-    print(f"Version {result['version']} at {result['file_path']}")
+        # Automatically uses version-first optimization
+        result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
+        print(f"Version {result['version']} at {result['file_path']}")
+        ```
 
 Note:
     - Version discovery via API only (no download required)
@@ -162,6 +167,7 @@ from typing import Any
 from jsonpath_ng import parse as jsonpath_parse
 import requests
 
+from notapkgtool.exceptions import ConfigError, NetworkError
 from notapkgtool.versioning.keys import VersionInfo
 
 from .base import register_strategy
@@ -212,7 +218,7 @@ class ApiJsonStrategy:
 
         Example:
             Get version info from JSON API:
-
+                ```python
                 strategy = ApiJsonStrategy()
                 config = {
                     "source": {
@@ -223,6 +229,7 @@ class ApiJsonStrategy:
                 }
                 version_info = strategy.get_version_info(config)
                 # version_info.version returns: '1.0.0'
+                ```
 
         """
         from notapkgtool.logging import get_global_logger
@@ -232,24 +239,24 @@ class ApiJsonStrategy:
         source = app_config.get("source", {})
         api_url = source.get("api_url")
         if not api_url:
-            raise ValueError("api_json strategy requires 'source.api_url' in config")
+            raise ConfigError("api_json strategy requires 'source.api_url' in config")
 
         version_path = source.get("version_path")
         if not version_path:
-            raise ValueError(
+            raise ConfigError(
                 "api_json strategy requires 'source.version_path' in config"
             )
 
         download_url_path = source.get("download_url_path")
         if not download_url_path:
-            raise ValueError(
+            raise ConfigError(
                 "api_json strategy requires 'source.download_url_path' in config"
             )
 
         # Optional configuration
         method = source.get("method", "GET").upper()
         if method not in ("GET", "POST"):
-            raise ValueError(f"Invalid method: {method!r}. Must be 'GET' or 'POST'")
+            raise ConfigError(f"Invalid method: {method!r}. Must be 'GET' or 'POST'")
 
         headers = source.get("headers", {})
         body = source.get("body", {})
@@ -297,11 +304,11 @@ class ApiJsonStrategy:
                 )
             response.raise_for_status()
         except requests.exceptions.HTTPError as err:
-            raise RuntimeError(
+            raise NetworkError(
                 f"API request failed: {response.status_code} {response.reason}"
             ) from err
         except requests.exceptions.RequestException as err:
-            raise RuntimeError(f"Failed to call API: {err}") from err
+            raise NetworkError(f"Failed to call API: {err}") from err
 
         logger.verbose("DISCOVERY", f"API response: {response.status_code} OK")
 
@@ -309,7 +316,7 @@ class ApiJsonStrategy:
         try:
             json_data = response.json()
         except json.JSONDecodeError as err:
-            raise RuntimeError(
+            raise NetworkError(
                 f"Invalid JSON response from API. Response: {response.text[:200]}"
             ) from err
 
@@ -325,15 +332,15 @@ class ApiJsonStrategy:
             version_matches = version_expr.find(json_data)
 
             if not version_matches:
-                raise ValueError(
+                raise ConfigError(
                     f"Version path {version_path!r} did not match anything in API response"
                 )
 
             version_str = str(version_matches[0].value)
         except Exception as err:
-            if isinstance(err, ValueError):
+            if isinstance(err, ConfigError):
                 raise
-            raise ValueError(
+            raise ConfigError(
                 f"Failed to extract version using path {version_path!r}: {err}"
             ) from err
 
@@ -348,15 +355,15 @@ class ApiJsonStrategy:
             url_matches = url_expr.find(json_data)
 
             if not url_matches:
-                raise ValueError(
+                raise ConfigError(
                     f"Download URL path {download_url_path!r} did not match anything in API response"
                 )
 
             download_url = str(url_matches[0].value)
         except Exception as err:
-            if isinstance(err, ValueError):
+            if isinstance(err, ConfigError):
                 raise
-            raise ValueError(
+            raise ConfigError(
                 f"Failed to extract download URL using path {download_url_path!r}: {err}"
             ) from err
 

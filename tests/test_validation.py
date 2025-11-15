@@ -7,7 +7,7 @@ and configuration without making network calls or downloading files.
 
 from __future__ import annotations
 
-from notapkgtool.validation import ValidationError, validate_recipe
+from notapkgtool.validation import validate_recipe
 
 
 class TestValidateRecipe:
@@ -593,16 +593,3 @@ apps:
 
         assert "recipe_path" in result
         assert str(recipe) in result["recipe_path"]
-
-
-class TestValidationError:
-    """Tests for ValidationError exception."""
-
-    def test_validation_error_creation(self):
-        """Test that ValidationError can be created."""
-        error = ValidationError("Test error message")
-        assert str(error) == "Test error message"
-
-    def test_validation_error_is_exception(self):
-        """Test that ValidationError is an Exception."""
-        assert issubclass(ValidationError, Exception)

@@ -44,7 +44,7 @@ Using typing.Protocol instead of ABC allows:
 
 Example:
     Implementing a custom strategy:
-
+        ```python
         from notapkgtool.discovery.base import register_strategy, DiscoveryStrategy
         from pathlib import Path
         from typing import Any
@@ -64,6 +64,7 @@ Example:
         # source:
         #   strategy: my_custom
         #   ...
+        ```
 
 """
 
@@ -72,6 +73,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Protocol
 
+from notapkgtool.exceptions import ConfigError
 from notapkgtool.versioning.keys import DiscoveredVersion
 
 # -------------------------------
@@ -129,13 +131,14 @@ class DiscoveryStrategy(Protocol):
 
         Example:
             Check required fields:
-
+                ```python
                 def validate_config(self, app_config):
                     errors = []
                     source = app_config.get("source", {})
                     if "url" not in source:
                         errors.append("Missing required field: source.url")
                     return errors
+                ```
 
         Note:
             This method is optional; strategies without it will skip validation.
@@ -171,7 +174,7 @@ def register_strategy(name: str, strategy_class: type[DiscoveryStrategy]) -> Non
 
     Example:
         Register at module import time:
-
+            ```python
             # In discovery/my_strategy.py
             from .base import register_strategy
 
@@ -180,6 +183,7 @@ def register_strategy(name: str, strategy_class: type[DiscoveryStrategy]) -> Non
                     ...
 
             register_strategy("my_strategy", MyStrategy)
+            ```
 
     Note:
         No validation is performed at registration time. Type checkers will
@@ -206,22 +210,24 @@ def get_strategy(name: str) -> DiscoveryStrategy:
             to use.
 
     Raises:
-        ValueError: If the strategy name is not registered. The error message
+        ConfigError: If the strategy name is not registered. The error message
             includes a list of available strategies for troubleshooting.
 
     Example:
         Get and use a strategy:
-
+            ```python
             from notapkgtool.discovery import get_strategy
             strategy = get_strategy("url_download")
             # Use strategy.discover_version(...)
+            ```
 
         Handle unknown strategy:
-
+            ```python
             try:
                 strategy = get_strategy("nonexistent")
-            except ValueError as e:
+            except ConfigError as e:
                 print(f"Strategy not found: {e}")
+            ```
 
     Note:
         Strategies must be registered before they can be retrieved. The
@@ -231,7 +237,7 @@ def get_strategy(name: str) -> DiscoveryStrategy:
     """
     if name not in _STRATEGY_REGISTRY:
         available = ", ".join(_STRATEGY_REGISTRY.keys())
-        raise ValueError(
+        raise ConfigError(
             f"Unknown discovery strategy: {name!r}. Available: {available or '(none)'}"
         )
     return _STRATEGY_REGISTRY[name]()

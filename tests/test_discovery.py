@@ -19,6 +19,7 @@ from notapkgtool.discovery.api_github import ApiGithubStrategy
 from notapkgtool.discovery.api_json import ApiJsonStrategy
 from notapkgtool.discovery.base import get_strategy, register_strategy
 from notapkgtool.discovery.url_download import UrlDownloadStrategy
+from notapkgtool.exceptions import ConfigError, NetworkError
 from notapkgtool.versioning import DiscoveredVersion
 
 
@@ -144,11 +145,11 @@ class TestUrlDownloadStrategy:
                 headers={"Content-Length": str(len(fake_content))},
             )
 
-            with pytest.raises(ValueError, match="Unsupported version type"):
+            with pytest.raises(ConfigError, match="Unsupported version type"):
                 strategy.discover_version(app_config, tmp_test_dir)
 
     def test_discover_version_download_failure_raises(self, tmp_test_dir):
-        """Test that download failures raise RuntimeError."""
+        """Test that download failures raise NetworkError."""
         app_config = {
             "source": {
                 "url": "https://example.com/installer.msi",
@@ -161,11 +162,11 @@ class TestUrlDownloadStrategy:
         with requests_mock.Mocker() as m:
             m.get("https://example.com/installer.msi", status_code=404)
 
-            with pytest.raises(RuntimeError, match="Failed to download"):
+            with pytest.raises(NetworkError, match="Failed to download"):
                 strategy.discover_version(app_config, tmp_test_dir)
 
     def test_discover_version_extraction_failure_raises(self, tmp_test_dir):
-        """Test that version extraction failures raise RuntimeError."""
+        """Test that version extraction failures raise NetworkError."""
         app_config = {
             "source": {
                 "url": "https://example.com/installer.msi",
@@ -186,10 +187,10 @@ class TestUrlDownloadStrategy:
             with patch(
                 "notapkgtool.discovery.url_download.version_from_msi_product_version"
             ) as mock_extract:
-                mock_extract.side_effect = RuntimeError("Invalid MSI")
+                mock_extract.side_effect = NetworkError("Invalid MSI")
 
                 with pytest.raises(
-                    RuntimeError, match="Failed to extract MSI ProductVersion"
+                    NetworkError, match="Failed to extract MSI ProductVersion"
                 ):
                     strategy.discover_version(app_config, tmp_test_dir)
 

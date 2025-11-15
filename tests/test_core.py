@@ -14,6 +14,7 @@ from unittest.mock import patch
 import pytest
 
 from notapkgtool.core import discover_recipe
+from notapkgtool.exceptions import ConfigError
 from notapkgtool.versioning import DiscoveredVersion
 
 
@@ -63,17 +64,17 @@ class TestDiscoverRecipe:
         assert "sha256" in result
 
     def test_discover_recipe_no_apps_raises(self, tmp_test_dir, create_yaml_file):
-        """Test that recipe with no apps raises ValueError."""
+        """Test that recipe with no apps raises ConfigError."""
         recipe_data = {"apiVersion": "napt/v1", "apps": []}
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
 
-        with pytest.raises(ValueError, match="No apps defined"):
+        with pytest.raises(ConfigError, match="No apps defined"):
             discover_recipe(recipe_path, tmp_test_dir)
 
     def test_discover_recipe_missing_strategy_raises(
         self, tmp_test_dir, create_yaml_file
     ):
-        """Test that missing strategy raises ValueError."""
+        """Test that missing strategy raises ConfigError."""
         recipe_data = {
             "apiVersion": "napt/v1",
             "apps": [
@@ -85,13 +86,13 @@ class TestDiscoverRecipe:
         }
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
 
-        with pytest.raises(ValueError, match="No 'source.strategy' defined"):
+        with pytest.raises(ConfigError, match="No 'source.strategy' defined"):
             discover_recipe(recipe_path, tmp_test_dir)
 
     def test_discover_recipe_unknown_strategy_raises(
         self, tmp_test_dir, create_yaml_file
     ):
-        """Test that unknown strategy raises ValueError."""
+        """Test that unknown strategy raises ConfigError."""
         recipe_data = {
             "apiVersion": "napt/v1",
             "apps": [
@@ -103,7 +104,7 @@ class TestDiscoverRecipe:
         }
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
 
-        with pytest.raises(ValueError, match="Unknown discovery strategy"):
+        with pytest.raises(ConfigError, match="Unknown discovery strategy"):
             discover_recipe(recipe_path, tmp_test_dir)
 
     def test_discover_recipe_missing_file_raises(self, tmp_test_dir):

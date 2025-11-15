@@ -49,21 +49,21 @@ Linux/macOS:
 
 Example:
     Extract version from MSI:
-
+        ```python
         from pathlib import Path
         from notapkgtool.versioning.msi import version_from_msi_product_version
         discovered = version_from_msi_product_version("chrome.msi")
         print(f"{discovered.version} from {discovered.source}")
         # 141.0.7390.123 from msi
+        ```
 
     Error handling:
-
+        ```python
         try:
             discovered = version_from_msi_product_version("missing.msi")
-        except FileNotFoundError:
-            print("MSI file not found")
-        except RuntimeError as e:
+        except PackagingError as e:
             print(f"Extraction failed: {e}")
+        ```
 
 Note:
     This is pure file introspection; no network calls are made. All backends
@@ -84,6 +84,8 @@ try:
     import msilib  # type: ignore  # Windows-only standard library module
 except ImportError:
     msilib = None  # type: ignore
+
+from notapkgtool.exceptions import PackagingError
 
 from .keys import DiscoveredVersion  # reuse the shared DTO
 
@@ -108,8 +110,7 @@ def version_from_msi_product_version(
         Discovered version with source information.
 
     Raises:
-        FileNotFoundError: If the MSI file doesn't exist.
-        RuntimeError: If version extraction fails.
+        PackagingError: If the MSI file doesn't exist or version extraction fails.
         NotImplementedError: If no extraction backend is available on this system.
 
     """
@@ -118,7 +119,7 @@ def version_from_msi_product_version(
     logger = get_global_logger()
     p = Path(file_path)
     if not p.exists():
-        raise FileNotFoundError(f"MSI not found: {p}")
+        raise PackagingError(f"MSI not found: {p}")
 
     logger.verbose("VERSION", "Strategy: msi")
     logger.verbose("VERSION", f"Extracting version from: {p.name}")
@@ -135,16 +136,16 @@ def version_from_msi_product_version(
             rec = view.Fetch()
             if rec is None:
                 db.Close()
-                raise RuntimeError("ProductVersion not found in MSI Property table.")
+                raise PackagingError("ProductVersion not found in MSI Property table.")
             version = rec.GetString(1)
             db.Close()
             if not version:
-                raise RuntimeError("Empty ProductVersion in MSI Property table.")
+                raise PackagingError("Empty ProductVersion in MSI Property table.")
             logger.verbose("VERSION", f"Success! Extracted: {version} (via msilib)")
             return DiscoveredVersion(version=version, source="msi")
         except Exception as err:
             logger.debug("VERSION", "msilib failed, trying next backend...")
-            raise RuntimeError(
+            raise PackagingError(
                 f"failed to read MSI ProductVersion via msilib: {err}"
             ) from err
 
@@ -166,19 +167,19 @@ def version_from_msi_product_version(
                 view.Execute(None)
                 rec = view.Fetch()
                 if rec is None:
-                    raise RuntimeError(
+                    raise PackagingError(
                         "ProductVersion not found in MSI Property table."
                     )
                 version = rec.GetString(1)
                 if not version:
-                    raise RuntimeError("Empty ProductVersion in MSI Property table.")
+                    raise PackagingError("Empty ProductVersion in MSI Property table.")
                 view.Close()
                 db.Close()
                 logger.verbose("VERSION", f"Success! Extracted: {version} (via _msi)")
                 return DiscoveredVersion(version=version, source="msi")
             except Exception as err:
                 logger.debug("VERSION", "_msi failed, trying next backend...")
-                raise RuntimeError(
+                raise PackagingError(
                     f"failed to read MSI ProductVersion via _msi: {err}"
                 ) from err
 
@@ -214,10 +215,10 @@ if ($record) {{
                 return DiscoveredVersion(version=version, source="msi")
         except subprocess.CalledProcessError as err:
             logger.debug("VERSION", "PowerShell COM failed, trying next backend...")
-            raise RuntimeError(f"PowerShell MSI query failed: {err}") from err
+            raise PackagingError(f"PowerShell MSI query failed: {err}") from err
         except subprocess.TimeoutExpired:
             logger.debug("VERSION", "PowerShell COM timed out, trying next backend...")
-            raise RuntimeError("PowerShell MSI query timed out") from None
+            raise PackagingError("PowerShell MSI query timed out") from None
 
     # Try msiinfo on Linux/macOS
     msiinfo = shutil.which("msiinfo")
@@ -238,12 +239,14 @@ if ($record) {{
                     version_str = parts[1]
                     break
             if not version_str:
-                raise RuntimeError("ProductVersion not found in MSI Property output.")
-            logger.verbose("VERSION", f"Success! Extracted: {version_str} (via msiinfo)")
+                raise PackagingError("ProductVersion not found in MSI Property output.")
+            logger.verbose(
+                "VERSION", f"Success! Extracted: {version_str} (via msiinfo)"
+            )
             return DiscoveredVersion(version=version_str, source="msi")
         except subprocess.CalledProcessError as err:
             logger.debug("VERSION", "msiinfo failed")
-            raise RuntimeError(f"msiinfo failed: {err}") from err
+            raise PackagingError(f"msiinfo failed: {err}") from err
 
     logger.debug("VERSION", "No MSI extraction backend available on this system")
     raise NotImplementedError(

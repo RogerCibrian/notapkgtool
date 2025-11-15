@@ -475,7 +475,54 @@ result = compare_any("2.0.0", "1.9.9")
 # Returns: 1 (newer), 0 (same), or -1 (older)
 ```
 
-See the [API Reference](api/core.md) for complete documentation.
+### Exception Handling
+
+NAPT uses a custom exception hierarchy that allows you to distinguish between different types of errors:
+
+- **`ConfigError`**: Configuration-related errors (YAML parse errors, missing fields, invalid strategy configuration, missing recipe files, validation failures)
+- **`NetworkError`**: Network/download-related errors (HTTP errors, API failures, download timeouts, network-related version extraction errors)
+- **`PackagingError`**: Packaging/build-related errors (build failures, missing tools, MSI extraction errors, packaging operations)
+
+All exceptions inherit from **`NAPTError`**, allowing you to catch all NAPT errors with a single `except` clause if needed.
+
+**Example: Catching specific error types**
+
+```python
+from pathlib import Path
+from notapkgtool.core import discover_recipe
+from notapkgtool.exceptions import ConfigError, NetworkError, PackagingError
+
+try:
+    result = discover_recipe(
+        recipe_path=Path("recipes/Google/chrome.yaml"),
+        output_dir=Path("./downloads")
+    )
+except ConfigError as e:
+    print(f"Configuration error: {e}")
+    # Handle config issues (fix recipe, check paths)
+except NetworkError as e:
+    print(f"Network error: {e}")
+    # Handle network issues (retry, check connectivity)
+except PackagingError as e:
+    print(f"Packaging error: {e}")
+    # Handle packaging issues (check tools, permissions)
+```
+
+**Example: Catching all NAPT errors**
+
+```python
+from notapkgtool.exceptions import NAPTError
+
+try:
+    result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
+except NAPTError as e:
+    print(f"NAPT error: {e}")
+    # Handle any NAPT error generically
+```
+
+**Note:** The CLI layer catches these exceptions and converts them to exit codes (`0` for success, `1` for errors). When using NAPT as a library, catch exceptions directly rather than relying on exit codes.
+
+See the [Exceptions API Reference](api/exceptions.md) for complete exception documentation, or the [Core API Reference](api/core.md) for function documentation.
 
 ## Best Practices
 
@@ -513,6 +560,8 @@ For development:
 
 ### Error Handling
 
+#### CLI Exit Codes
+
 All commands return proper exit codes:
 
 - `0` = Success
@@ -528,6 +577,10 @@ else
     exit 1
 fi
 ```
+
+#### Library Exception Handling
+
+When using NAPT as a Python library, catch exceptions directly rather than relying on exit codes. See the [Programmatic API](#programmatic-api) section for details on exception handling.
 
 ## Troubleshooting
 

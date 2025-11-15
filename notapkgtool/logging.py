@@ -25,20 +25,22 @@ The logger supports three output levels:
 
 Example:
     Configure global logger:
-
+        ```python
         from notapkgtool.logging import get_logger, set_global_logger
 
         logger = get_logger(verbose=True, debug=False)
         set_global_logger(logger)
+        ```
 
     Use in library code:
-
+        ```python
         from notapkgtool.logging import get_logger
 
         logger = get_logger()
         logger.step(1, 4, "Loading configuration...")
         logger.verbose("STATE", "Loaded state from file")
         logger.debug("VERSION", "Trying backend: msilib...")
+        ```
 
     Use with dependency injection:
 
@@ -157,14 +159,16 @@ def get_logger(verbose: bool = False, debug: bool = False) -> Logger:
 
     Example:
         Get a verbose logger:
-
+            ```python
             logger = get_logger(verbose=True)
             logger.verbose("MODULE", "Processing...")
+            ```
 
         Get a debug logger:
-
+            ```python
             logger = get_logger(debug=True)
             logger.debug("MODULE", "Debug info...")
+            ```
     """
     return DefaultLogger(verbose=verbose, debug=debug)
 
@@ -190,11 +194,12 @@ def set_global_logger(logger: Logger) -> None:
 
     Example:
         Configure global logger from CLI:
-
+            ```python
             from notapkgtool.logging import get_logger, set_global_logger
 
             logger = get_logger(verbose=args.verbose, debug=args.debug)
             set_global_logger(logger)
+            ```
 
     Note:
         This affects all library functions that use get_logger() without

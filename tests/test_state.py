@@ -13,6 +13,7 @@ import json
 
 import pytest
 
+from notapkgtool.exceptions import PackagingError
 from notapkgtool.state import StateTracker, load_state, save_state
 from notapkgtool.state.tracker import create_default_state
 
@@ -143,7 +144,7 @@ class TestStateTracker:
 
         tracker = StateTracker(state_file)
 
-        with pytest.raises(RuntimeError, match="Corrupted state file"):
+        with pytest.raises(PackagingError, match="Corrupted state file"):
             tracker.load()
 
         # Should create backup

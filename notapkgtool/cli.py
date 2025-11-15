@@ -26,28 +26,34 @@ Commands:
 
 Example:
     Validate recipe syntax:
-
+        ```bash
         $ napt validate recipes/Google/chrome.yaml
+        ```
 
     Discover latest version:
-
+        ```bash
         $ napt discover recipes/Google/chrome.yaml
+        ```
 
     Build PSADT package:
-
+        ```bash
         $ napt build recipes/Google/chrome.yaml
+        ```
 
     Create .intunewin package:
-
+        ```bash
         $ napt package builds/napt-chrome/142.0.7444.60/
+        ```
 
     Enable verbose output:
-
+        ```bash
         $ napt discover recipes/Google/chrome.yaml --verbose
+        ```
 
     Enable debug output:
-
+        ```bash
         $ napt discover recipes/Google/chrome.yaml --debug
+        ```
 
 Exit Codes:
 
@@ -72,6 +78,12 @@ import sys
 
 from notapkgtool.build import build_package, create_intunewin
 from notapkgtool.core import discover_recipe
+from notapkgtool.exceptions import (
+    ConfigError,
+    NAPTError,
+    NetworkError,
+    PackagingError,
+)
 from notapkgtool.logging import get_logger, set_global_logger
 from notapkgtool.validation import validate_recipe
 
@@ -189,7 +201,15 @@ def cmd_discover(args: argparse.Namespace) -> int:
             verbose=args.verbose,
             debug=args.debug,
         )
-    except Exception as err:
+    except (ConfigError, NetworkError, PackagingError) as err:
+        print(f"Error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+    except NAPTError as err:
+        # Catch any other NAPT errors we might have missed
         print(f"Error: {err}")
         if args.verbose or args.debug:
             import traceback
@@ -271,7 +291,15 @@ def cmd_build(args: argparse.Namespace) -> int:
             verbose=args.verbose,
             debug=args.debug,
         )
-    except Exception as err:
+    except (ConfigError, NetworkError, PackagingError) as err:
+        print(f"Error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+    except NAPTError as err:
+        # Catch any other NAPT errors we might have missed
         print(f"Error: {err}")
         if args.verbose or args.debug:
             import traceback
@@ -342,7 +370,15 @@ def cmd_package(args: argparse.Namespace) -> int:
             verbose=args.verbose,
             debug=args.debug,
         )
-    except Exception as err:
+    except (ConfigError, NetworkError, PackagingError) as err:
+        print(f"Error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+    except NAPTError as err:
+        # Catch any other NAPT errors we might have missed
         print(f"Error: {err}")
         if args.verbose or args.debug:
             import traceback

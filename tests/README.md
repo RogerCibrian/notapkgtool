@@ -232,7 +232,7 @@ Note: Version-first strategy integration tests moved to test_core.py (TestVersio
 - ✅ Strategy-specific validation (url_download, api_github, web_scrape, api_json)
 - ✅ Multiple apps validation
 - ✅ Verbose mode output
-- ✅ ValidationError exception handling
+- ✅ ConfigError exception handling
 
 **27 tests covering recipe validation**
 

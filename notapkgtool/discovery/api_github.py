@@ -45,14 +45,15 @@ Use Cases:
 - CI/CD pipelines with frequent version checks
 
 Recipe Configuration:
-
+    ```yaml
     source:
-      strategy: api_github
-      repo: "git-for-windows/git"                    # Required: owner/repo
-      asset_pattern: "Git-.*-64-bit\\.exe$"          # Required: regex for asset
-      version_pattern: "v?([0-9.]+)"                 # Optional: version extraction
-      prerelease: false                              # Optional: include prereleases
-      token: "${GITHUB_TOKEN}"                       # Optional: auth token
+        strategy: api_github
+        repo: "git-for-windows/git"                    # Required: owner/repo
+        asset_pattern: "Git-.*-64-bit\\.exe$"          # Required: regex for asset
+        version_pattern: "v?([0-9.]+)"                 # Optional: version extraction
+        prerelease: false                              # Optional: include prereleases
+        token: "${GITHUB_TOKEN}"                       # Optional: auth token
+    ```
 
 Configuration Fields:
 
@@ -80,47 +81,50 @@ Rate Limits:
 
 Example:
     In a recipe YAML:
+        ```yaml
+        apps:
+          - name: "Git for Windows"
+            id: "git"
+            source:
+              strategy: api_github
+              repo: "git-for-windows/git"
+              asset_pattern: "Git-.*-64-bit\\.exe$"
+        ```
 
-    apps:
-      - name: "Git for Windows"
-        id: "git"
-        source:
-          strategy: api_github
-          repo: "git-for-windows/git"
-          asset_pattern: "Git-.*-64-bit\\.exe$"
+    From Python (version-first approach):
+        ```python
+        from notapkgtool.discovery.api_github import ApiGithubStrategy
+        from notapkgtool.io import download_file
 
-From Python (version-first approach):
-
-    from notapkgtool.discovery.api_github import ApiGithubStrategy
-    from notapkgtool.io import download_file
-
-    strategy = ApiGithubStrategy()
-    app_config = {
-        "source": {
-            "repo": "git-for-windows/git",
-            "asset_pattern": ".*-64-bit\\.exe$",
+        strategy = ApiGithubStrategy()
+        app_config = {
+            "source": {
+                "repo": "git-for-windows/git",
+                "asset_pattern": ".*-64-bit\\.exe$",
+            }
         }
-    }
 
-    # Get version WITHOUT downloading
-    version_info = strategy.get_version_info(app_config)
-    print(f"Latest version: {version_info.version}")
+        # Get version WITHOUT downloading
+        version_info = strategy.get_version_info(app_config)
+        print(f"Latest version: {version_info.version}")
 
-    # Download only if needed
-    if need_to_download:
-        file_path, sha256, headers = download_file(
-            version_info.download_url, Path("./downloads")
-        )
-        print(f"Downloaded to {file_path}")
+        # Download only if needed
+        if need_to_download:
+            file_path, sha256, headers = download_file(
+                version_info.download_url, Path("./downloads")
+            )
+            print(f"Downloaded to {file_path}")
+        ```
 
-From Python (using core orchestration):
+    From Python (using core orchestration):
+        ```python
+        from pathlib import Path
+        from notapkgtool.core import discover_recipe
 
-    from pathlib import Path
-    from notapkgtool.core import discover_recipe
-
-    # Automatically uses version-first optimization
-    result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
-    print(f"Version {result['version']} at {result['file_path']}")
+        # Automatically uses version-first optimization
+        result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
+        print(f"Version {result['version']} at {result['file_path']}")
+        ```
 
 Note:
     Version discovery via API only (no download required).
@@ -139,6 +143,7 @@ from typing import Any
 
 import requests
 
+from notapkgtool.exceptions import ConfigError, NetworkError
 from notapkgtool.versioning.keys import VersionInfo
 
 from .base import register_strategy
@@ -188,7 +193,7 @@ class ApiGithubStrategy:
 
         Example:
             Get version from GitHub releases:
-
+                ```python
                 strategy = ApiGithubStrategy()
                 config = {
                     "source": {
@@ -198,6 +203,7 @@ class ApiGithubStrategy:
                 }
                 version_info = strategy.get_version_info(config)
                 # version_info.version returns: '1.0.0'
+                ```
 
         """
         from notapkgtool.logging import get_global_logger
@@ -207,18 +213,18 @@ class ApiGithubStrategy:
         source = app_config.get("source", {})
         repo = source.get("repo")
         if not repo:
-            raise ValueError("api_github strategy requires 'source.repo' in config")
+            raise ConfigError("api_github strategy requires 'source.repo' in config")
 
         # Validate repo format
         if "/" not in repo or repo.count("/") != 1:
-            raise ValueError(
+            raise ConfigError(
                 f"Invalid repo format: {repo!r}. Expected 'owner/repository'"
             )
 
         # Optional configuration
         asset_pattern = source.get("asset_pattern")
         if not asset_pattern:
-            raise ValueError(
+            raise ConfigError(
                 "api_github strategy requires 'source.asset_pattern' in config"
             )
 
@@ -264,26 +270,26 @@ class ApiGithubStrategy:
             response.raise_for_status()
         except requests.exceptions.HTTPError as err:
             if response.status_code == 404:
-                raise RuntimeError(
+                raise NetworkError(
                     f"Repository {repo!r} not found or has no releases"
                 ) from err
             elif response.status_code == 403:
-                raise RuntimeError(
+                raise NetworkError(
                     f"GitHub API rate limit exceeded. Consider using a token. "
                     f"Status: {response.status_code}"
                 ) from err
             else:
-                raise RuntimeError(
+                raise NetworkError(
                     f"GitHub API request failed: {response.status_code} {response.reason}"
                 ) from err
         except requests.exceptions.RequestException as err:
-            raise RuntimeError(f"Failed to fetch GitHub release: {err}") from err
+            raise NetworkError(f"Failed to fetch GitHub release: {err}") from err
 
         release_data = response.json()
 
         # Check if this is a prerelease and we don't want those
         if release_data.get("prerelease", False) and not prerelease:
-            raise RuntimeError(
+            raise NetworkError(
                 f"Latest release is a pre-release and prerelease=false. "
                 f"Tag: {release_data.get('tag_name')}"
             )
@@ -291,7 +297,7 @@ class ApiGithubStrategy:
         # Extract version from tag name
         tag_name = release_data.get("tag_name", "")
         if not tag_name:
-            raise RuntimeError("Release has no tag_name field")
+            raise NetworkError("Release has no tag_name field")
 
         logger.verbose("DISCOVERY", f"Release tag: {tag_name}")
 
@@ -299,7 +305,7 @@ class ApiGithubStrategy:
             pattern = re.compile(version_pattern)
             match = pattern.search(tag_name)
             if not match:
-                raise ValueError(
+                raise ConfigError(
                     f"Version pattern {version_pattern!r} did not match tag {tag_name!r}"
                 )
 
@@ -312,11 +318,11 @@ class ApiGithubStrategy:
                 version_str = match.group(0)
 
         except re.error as err:
-            raise ValueError(
+            raise ConfigError(
                 f"Invalid version_pattern regex: {version_pattern!r}"
             ) from err
         except (ValueError, IndexError) as err:
-            raise ValueError(
+            raise ConfigError(
                 f"Failed to extract version from tag {tag_name!r} "
                 f"using pattern {version_pattern!r}: {err}"
             ) from err
@@ -326,7 +332,7 @@ class ApiGithubStrategy:
         # Find matching asset
         assets = release_data.get("assets", [])
         if not assets:
-            raise RuntimeError(
+            raise NetworkError(
                 f"Release {tag_name} has no assets. "
                 f"Check if assets were uploaded to the release."
             )
@@ -338,7 +344,9 @@ class ApiGithubStrategy:
         try:
             pattern = re.compile(asset_pattern)
         except re.error as err:
-            raise ValueError(f"Invalid asset_pattern regex: {asset_pattern!r}") from err
+            raise ConfigError(
+                f"Invalid asset_pattern regex: {asset_pattern!r}"
+            ) from err
 
         for asset in assets:
             asset_name = asset.get("name", "")
@@ -349,7 +357,7 @@ class ApiGithubStrategy:
 
         if not matched_asset:
             available = [a.get("name", "(unnamed)") for a in assets]
-            raise ValueError(
+            raise ConfigError(
                 f"No assets matched pattern {asset_pattern!r}. "
                 f"Available assets: {', '.join(available)}"
             )
@@ -357,7 +365,7 @@ class ApiGithubStrategy:
         # Get download URL
         download_url = matched_asset.get("browser_download_url")
         if not download_url:
-            raise RuntimeError(f"Asset {matched_asset.get('name')} has no download URL")
+            raise NetworkError(f"Asset {matched_asset.get('name')} has no download URL")
 
         logger.verbose("DISCOVERY", f"Download URL: {download_url}")
 

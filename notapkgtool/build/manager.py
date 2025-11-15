@@ -33,15 +33,18 @@ Design Principles:
     - Branding applied by replacing files in root Assets/ directory (v4 structure)
 
 Example:
-    from pathlib import Path
-    from notapkgtool.build import build_package
+    Basic usage:
+        ```python
+        from pathlib import Path
+        from notapkgtool.build import build_package
 
-    result = build_package(
-        recipe_path=Path("recipes/Google/chrome.yaml"),
-        downloads_dir=Path("downloads"),
-    )
+        result = build_package(
+            recipe_path=Path("recipes/Google/chrome.yaml"),
+            downloads_dir=Path("downloads"),
+        )
 
-    print(f"Built: {result['build_dir']}")
+        print(f"Built: {result['build_dir']}")
+        ```
 """
 
 from __future__ import annotations
@@ -51,6 +54,7 @@ import shutil
 from typing import Any
 
 from notapkgtool.config import load_effective_config
+from notapkgtool.exceptions import ConfigError, PackagingError
 from notapkgtool.psadt import get_psadt_release
 from notapkgtool.versioning.msi import version_from_msi_product_version
 
@@ -74,8 +78,8 @@ def _get_installer_version(
         Extracted version string.
 
     Raises:
-        RuntimeError: If version extraction fails or version not found.
-        ValueError: If version type is unsupported.
+        PackagingError: If version extraction fails or version not found.
+        ConfigError: If version type is unsupported.
     """
     from notapkgtool.logging import get_global_logger
 
@@ -103,12 +107,12 @@ def _get_installer_version(
                 logger.verbose("BUILD", f"Using version from state: {known_version}")
                 return known_version
             else:
-                raise ValueError(
+                raise ConfigError(
                     f"No version.type specified and no known_version in state for {app_id}. "
                     f"Run 'napt discover' first or add version.type to recipe."
                 )
         else:
-            raise ValueError(
+            raise ConfigError(
                 "No version.type specified in recipe. Add source.version.type or ensure state file exists."
             )
 
@@ -118,11 +122,11 @@ def _get_installer_version(
             logger.verbose("BUILD", f"Extracted version: {discovered.version}")
             return discovered.version
         except Exception as err:
-            raise RuntimeError(
+            raise PackagingError(
                 f"Failed to extract MSI version from {installer_file}: {err}"
             ) from err
     else:
-        raise ValueError(
+        raise ConfigError(
             f"Unsupported version type for build: {version_type!r}. " f"Supported: msi"
         )
 
@@ -140,7 +144,7 @@ def _find_installer_file(downloads_dir: Path, config: dict[str, Any]) -> Path:
         Path to the installer file.
 
     Raises:
-        FileNotFoundError: If installer file cannot be found.
+        PackagingError: If installer file cannot be found.
     """
     from notapkgtool.logging import get_global_logger
 
@@ -188,7 +192,7 @@ def _find_installer_file(downloads_dir: Path, config: dict[str, Any]) -> Path:
         logger.verbose("BUILD", f"Found most recent installer: {installer_path}")
         return installer_path
 
-    raise FileNotFoundError(
+    raise PackagingError(
         f"No installer found in {downloads_dir}. "
         f"Run 'napt discover' first to download the installer."
     )
@@ -243,14 +247,14 @@ def _copy_psadt_pristine(psadt_cache_dir: Path, build_dir: Path) -> None:
         build_dir: Build directory where PSADT should be copied.
 
     Raises:
-        FileNotFoundError: If PSADT cache directory or required files don't exist.
+        PackagingError: If PSADT cache directory or required files don't exist.
         OSError: If copy operation fails.
     """
     from notapkgtool.logging import get_global_logger
 
     logger = get_global_logger()
     if not psadt_cache_dir.exists():
-        raise FileNotFoundError(f"PSADT cache directory not found: {psadt_cache_dir}")
+        raise PackagingError(f"PSADT cache directory not found: {psadt_cache_dir}")
 
     logger.verbose("BUILD", f"Copying PSADT template from cache: {psadt_cache_dir}")
 
@@ -400,16 +404,18 @@ def build_package(
 
     Example:
         Basic build:
-
+            ```python
             result = build_package(Path("recipes/Google/chrome.yaml"))
             print(result['build_dir'])  # builds/napt-chrome/141.0.7390.123
+            ```
 
         Custom output directory:
-
+            ```python
             result = build_package(
                 Path("recipes/Google/chrome.yaml"),
                 output_dir=Path("custom/builds")
             )
+            ```
 
     Note:
         Requires installer to be downloaded first (run 'napt discover').

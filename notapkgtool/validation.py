@@ -29,7 +29,7 @@ Validation Checks:
 
 Example:
     Validate a recipe and handle results:
-
+        ```python
         from pathlib import Path
         from notapkgtool.validation import validate_recipe
 
@@ -39,6 +39,7 @@ Example:
         else:
             for error in result["errors"]:
                 print(f"Error: {error}")
+        ```
 
 """
 
@@ -50,20 +51,16 @@ from typing import Any
 import yaml
 
 from notapkgtool.discovery import get_strategy
+from notapkgtool.exceptions import ConfigError
 
-__all__ = ["validate_recipe", "ValidationError"]
-
-
-class ValidationError(Exception):
-    """Raised when recipe validation fails."""
-
-    pass
+__all__ = ["validate_recipe"]
 
 
 def validate_recipe(recipe_path: Path, verbose: bool = False) -> dict[str, Any]:
     """Validate a recipe file without downloading anything.
 
     This function checks:
+
     1. YAML file can be parsed
     2. Required top-level fields are present
     3. apiVersion is supported
@@ -72,6 +69,7 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> dict[str, Any]:
     6. Strategy-specific configuration is valid
 
     Does NOT:
+
     - Make network calls
     - Download files
     - Verify URLs are accessible
@@ -91,7 +89,7 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> dict[str, Any]:
 
     Example:
         Validate a recipe and check results:
-
+            ```python
             from pathlib import Path
 
             result = validate_recipe(Path("recipes/app.yaml"))
@@ -100,6 +98,7 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> dict[str, Any]:
             else:
                 for error in result["errors"]:
                     print(f"Error: {error}")
+            ```
 
     """
     errors = []
@@ -258,7 +257,7 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> dict[str, Any]:
         # Check if strategy exists
         try:
             strategy = get_strategy(strategy_name)
-        except ValueError as err:
+        except ConfigError as err:
             errors.append(f"{app_prefix}.source.strategy: {err}")
             continue
 

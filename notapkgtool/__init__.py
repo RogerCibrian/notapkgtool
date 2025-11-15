@@ -18,14 +18,15 @@ A Python-based CLI tool for automating Windows application packaging and
 deployment to Microsoft Intune using PSAppDeployToolkit (PSADT).
 
 NAPT provides:
-  - YAML-based recipe configuration
-  - Automatic version discovery from multiple sources
-  - Robust download with conditional requests and integrity verification
-  - Intelligent update policies (version-based, hash-based, or combined)
-  - PSADT package generation with Template_v4
-  - .intunewin package creation for Intune deployment
-  - Direct upload to Microsoft Intune (planned)
-  - Deployment wave/ring management (planned)
+
+- YAML-based recipe configuration
+- Automatic version discovery from multiple sources
+- Robust download with conditional requests and integrity verification
+- Intelligent update policies (version-based, hash-based, or combined)
+- PSADT package generation with Template_v4
+- .intunewin package creation for Intune deployment
+- Direct upload to Microsoft Intune (planned)
+- Deployment wave/ring management (planned)
 
 Quick Start:
 Validate recipe syntax:
@@ -61,6 +62,12 @@ __description__ = "Not a Pkg Tool - Windows/Intune packaging with PSADT"
 # Re-export commonly used functions for convenience
 from notapkgtool.config import load_effective_config
 from notapkgtool.core import discover_recipe
+from notapkgtool.exceptions import (
+    ConfigError,
+    NAPTError,
+    NetworkError,
+    PackagingError,
+)
 from notapkgtool.io import download_file
 from notapkgtool.validation import validate_recipe
 from notapkgtool.versioning import DiscoveredVersion, compare_any, is_newer_any
@@ -77,4 +84,8 @@ __all__ = [
     "compare_any",
     "is_newer_any",
     "DiscoveredVersion",
+    "NAPTError",
+    "ConfigError",
+    "NetworkError",
+    "PackagingError",
 ]

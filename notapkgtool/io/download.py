@@ -36,7 +36,7 @@ Constants:
 
 Example:
     Basic download:
-
+        ```python
         from pathlib import Path
         from notapkgtool.io import download_file
 
@@ -46,9 +46,10 @@ Example:
         )
         print(f"Downloaded to {path}")
         print(f"SHA-256: {sha256}")
+        ```
 
     Conditional download (avoid re-downloading):
-
+        ```python
         from notapkgtool.io import NotModifiedError
 
         try:
@@ -59,17 +60,19 @@ Example:
             )
         except NotModifiedError:
             print("File unchanged, using cached version")
+        ```
 
     Checksum validation:
-
+        ```python
         try:
             path, sha256, headers = download_file(
                 url="https://example.com/installer.msi",
                 destination_folder=Path("./downloads"),
                 expected_sha256="abc123...",
             )
-        except ValueError as e:
+        except NetworkError as e:
             print(f"Checksum mismatch: {e}")
+        ```
 
 Design Decisions:
 
@@ -96,6 +99,8 @@ from urllib.parse import urlparse
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+
+from notapkgtool.exceptions import ConfigError, NetworkError
 
 # Stream size per chunk (1 MiB). Tune up/down if needed.
 DEFAULT_CHUNK = 1024 * 1024
@@ -210,8 +215,8 @@ def download_file(
 
     Raises:
         NotModifiedError: On HTTP 304 (conditional request satisfied).
-        requests.HTTPError: For non-2xx responses (after retries).
-        ValueError: For content-type mismatch or checksum mismatch.
+        NetworkError: For non-2xx responses (after retries) or checksum mismatch.
+        ConfigError: For content-type mismatch.
 
     """
     from notapkgtool.logging import get_global_logger
@@ -262,7 +267,7 @@ def download_file(
             resp.raise_for_status()
         except requests.HTTPError as err:
             # Chain for better context.
-            raise requests.HTTPError(f"download failed for {url}: {err}") from err
+            raise NetworkError(f"download failed for {url}: {err}") from err
 
         logger.verbose("HTTP", f"Response: {resp.status_code} {resp.reason}")
 
@@ -289,7 +294,7 @@ def download_file(
             ctype = resp.headers.get("Content-Type", "")
             if "text/html" in ctype.lower():
                 resp.close()
-                raise ValueError(f"expected binary, got content-type={ctype}")
+                raise ConfigError(f"expected binary, got content-type={ctype}")
 
         total_size = int(resp.headers.get("Content-Length", "0") or 0)
 
@@ -335,7 +340,7 @@ def download_file(
                 target.unlink()
             except OSError:
                 pass
-            raise ValueError(
+            raise NetworkError(
                 f"sha256 mismatch for {filename}: got {digest}, expected {expected_sha256}"
             )
 
