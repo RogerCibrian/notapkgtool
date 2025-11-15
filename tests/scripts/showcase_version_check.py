@@ -3,7 +3,6 @@
 Showcase runner for NAPT version_check module.
 
 What this does:
-- Demonstrates version extraction from URLs via regex.
 - Extracts MSI ProductVersion from the Chrome MSI you downloaded (if available).
 - Exercises compare_any() and is_newer_any() across sources: msi, exe, string.
 - Prints the internal sort keys (version_key_any) to help you understand ordering.
@@ -54,38 +53,6 @@ def show_key(label: str, value: str, source: str = "string") -> None:
     else:
         print(f"{label}: {value!r}")
         print(f"  key: {k}")
-
-
-def demo_regex_extraction() -> None:
-    title("URL regex extraction")
-    cases = [
-        (
-            "Chrome example with named group",
-            "https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi",
-            r"googlechromestandaloneenterprise(?P<version>\d+)?",  # often no version in MSI URL, just a demo
-        ),
-        (
-            "Generic vendor pattern",
-            "https://example.com/downloads/app-24.08-x64.exe",
-            r"app-(?P<version>\d+\.\d+)-x64\.exe",
-        ),
-        (
-            "Three-part version (no named group)",
-            "https://vendor.com/foo-9.9.9.exe",
-            r"\d+\.\d+\.\d+",
-        ),
-    ]
-    for desc, url, pattern in cases:
-        subtitle(desc)
-        try:
-            dv = vc.version_from_regex_in_url(url, pattern)
-            print(f"URL: {url}")
-            print(f"Pattern: {pattern}")
-            print(f"Extracted: version={dv.version!r}, source={dv.source}")
-        except ValueError as err:
-            print(f"URL: {url}")
-            print(f"Pattern: {pattern}")
-            print(f"Extraction failed: {err}")
 
 
 def describe_compare(
@@ -171,16 +138,13 @@ def demo_string_semverish() -> None:
 def main() -> int:
     title("NAPT version_check showcase")
 
-    # Section 1: URL regex extraction
-    demo_regex_extraction()
-
-    # Section 2: MSI ProductVersion extraction (Chrome MSI)
+    # Section 1: MSI ProductVersion extraction (Chrome MSI)
     demo_msi_section()
 
-    # Section 3: EXE-style dotted-quad comparisons
+    # Section 2: EXE-style dotted-quad comparisons
     demo_exe_style()
 
-    # Section 4: String (semverish) comparisons
+    # Section 3: String (semverish) comparisons
     demo_string_semverish()
 
     print("\nAll demos complete.")

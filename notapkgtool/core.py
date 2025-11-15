@@ -54,6 +54,7 @@ from notapkgtool import __version__
 from notapkgtool.config.loader import load_effective_config
 from notapkgtool.discovery import get_strategy
 from notapkgtool.io import download_file
+from notapkgtool.logging import get_global_logger
 from notapkgtool.state import load_state, save_state
 from notapkgtool.versioning.keys import DiscoveredVersion
 
@@ -177,39 +178,39 @@ def discover_recipe(
     Note:
         Only the first app in a recipe is currently processed. The discovery
         strategy must be registered before calling this function. Version-first
-        strategies (url_regex, github_release, http_json) can skip downloads
+        strategies (web_scrape, api_github, api_json) can skip downloads
         entirely when version unchanged (fast path optimization). File-first
-        strategy (http_static) uses ETag conditional requests. Downloaded files
+        strategy (url_download) uses ETag conditional requests. Downloaded files
         are written atomically (.part then renamed). Progress output goes to
         stdout via the download module. Strategy type detected via duck typing
         (hasattr for get_version_info).
 
     """
-    from notapkgtool.cli import print_step, print_verbose
+    logger = get_global_logger()
 
     # Load state file unless running in stateless mode
     state = None
     if not stateless and state_file:
         try:
             state = load_state(state_file)
-            print_verbose("STATE", f"Loaded state from {state_file}")
+            logger.verbose("STATE", f"Loaded state from {state_file}")
         except FileNotFoundError:
-            print_verbose("STATE", f"State file not found, will create: {state_file}")
+            logger.verbose("STATE", f"State file not found, will create: {state_file}")
             state = {
                 "metadata": {"napt_version": __version__, "schema_version": "2"},
                 "apps": {},
             }
         except Exception as err:
-            print_verbose("STATE", f"Warning: Failed to load state: {err}")
-            print_verbose("STATE", "Continuing without state tracking")
+            logger.verbose("STATE", f"Warning: Failed to load state: {err}")
+            logger.verbose("STATE", "Continuing without state tracking")
             state = None
 
     # 1. Load and merge configuration
-    print_step(1, 4, "Loading configuration...")
+    logger.step(1, 4, "Loading configuration...")
     config = load_effective_config(recipe_path, verbose=verbose, debug=debug)
 
     # 2. Extract the first app (for now we only process one app per recipe)
-    print_step(2, 4, "Discovering version...")
+    logger.step(2, 4, "Discovering version...")
     apps = config.get("apps", [])
     if not apps:
         raise ValueError(f"No apps defined in recipe: {recipe_path}")
@@ -238,26 +239,26 @@ def discover_recipe(
     if state and app_id:
         cache = state.get("apps", {}).get(app_id)
         if cache:
-            print_verbose("STATE", f"Using cache for {app_id}")
+            logger.verbose("STATE", f"Using cache for {app_id}")
             if cache.get("known_version"):
-                print_verbose(
+                logger.verbose(
                     "STATE", f"  Cached version: {cache.get('known_version')}"
                 )
             if cache.get("etag"):
-                print_verbose("STATE", f"  Cached ETag: {cache.get('etag')}")
+                logger.verbose("STATE", f"  Cached ETag: {cache.get('etag')}")
 
     # 5. Run discovery: version-first or file-first path
-    print_step(3, 4, "Discovering version...")
+    logger.step(3, 4, "Discovering version...")
 
     # Check if strategy supports version-first (has get_version_info method)
     download_url = None  # Track actual download URL for state file
     if hasattr(strategy, "get_version_info"):
-        # VERSION-FIRST PATH (url_regex, github_release, http_json)
+        # VERSION-FIRST PATH (web_scrape, api_github, api_json)
         # Get version without downloading
         version_info = strategy.get_version_info(app, verbose=verbose, debug=debug)
         download_url = version_info.download_url  # Save for state file
 
-        print_verbose("DISCOVERY", f"Version discovered: {version_info.version}")
+        logger.verbose("DISCOVERY", f"Version discovered: {version_info.version}")
 
         # Check if we can use cached file (version match + file exists)
         if cache and cache.get("known_version") == version_info.version:
@@ -266,11 +267,11 @@ def discover_recipe(
 
             if file_path.exists():
                 # Fast path: version unchanged, file exists, skip download!
-                print_verbose(
+                logger.verbose(
                     "CACHE",
                     f"Version {version_info.version} unchanged, using cached file",
                 )
-                print_step(4, 4, "Using cached file...")
+                logger.step(4, 4, "Using cached file...")
                 sha256 = cache.get("sha256")
                 discovered_version = DiscoveredVersion(
                     version_info.version, version_info.source
@@ -278,11 +279,11 @@ def discover_recipe(
                 headers = {}  # No download occurred, no headers
             else:
                 # File was deleted, re-download
-                print_verbose(
+                logger.verbose(
                     "WARNING",
                     f"Cached file {file_path} not found, re-downloading",
                 )
-                print_step(4, 4, "Downloading installer...")
+                logger.step(4, 4, "Downloading installer...")
                 file_path, sha256, headers = download_file(
                     version_info.download_url,
                     output_dir,
@@ -295,11 +296,11 @@ def discover_recipe(
         else:
             # Version changed or no cache, download new version
             if cache:
-                print_verbose(
+                logger.verbose(
                     "DISCOVERY",
                     f"Version changed: {cache.get('known_version')} → {version_info.version}",
                 )
-            print_step(4, 4, "Downloading installer...")
+            logger.step(4, 4, "Downloading installer...")
             file_path, sha256, headers = download_file(
                 version_info.download_url,
                 output_dir,
@@ -310,9 +311,9 @@ def discover_recipe(
                 version_info.version, version_info.source
             )
     else:
-        # FILE-FIRST PATH (http_static only)
+        # FILE-FIRST PATH (url_download only)
         # Must download to extract version
-        print_step(4, 4, "Downloading installer...")
+        logger.step(4, 4, "Downloading installer...")
         discovered_version, file_path, sha256, headers = strategy.discover_version(
             app, output_dir, cache=cache, verbose=verbose, debug=debug
         )
@@ -330,9 +331,9 @@ def discover_recipe(
         last_modified = headers.get("Last-Modified")
 
         if etag:
-            print_verbose("STATE", f"Saving ETag for next run: {etag}")
+            logger.verbose("STATE", f"Saving ETag for next run: {etag}")
         if last_modified:
-            print_verbose(
+            logger.verbose(
                 "STATE", f"Saving Last-Modified for next run: {last_modified}"
             )
 
@@ -340,10 +341,10 @@ def discover_recipe(
         cache_entry = {
             "url": download_url
             or "",  # Actual download URL (from version_info or source.url)
-            "etag": etag if etag else None,  # Only useful for http_static
+            "etag": etag if etag else None,  # Only useful for url_download
             "last_modified": (
                 last_modified if last_modified else None
-            ),  # Only useful for http_static
+            ),  # Only useful for url_download
             "sha256": sha256,
         }
 
@@ -363,9 +364,9 @@ def discover_recipe(
 
         try:
             save_state(state, state_file)
-            print_verbose("STATE", f"Updated state file: {state_file}")
+            logger.verbose("STATE", f"Updated state file: {state_file}")
         except Exception as err:
-            print_verbose("STATE", f"Warning: Failed to save state: {err}")
+            logger.verbose("STATE", f"Warning: Failed to save state: {err}")
 
     # 6. Return results
     return {

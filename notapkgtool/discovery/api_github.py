@@ -200,8 +200,9 @@ class ApiGithubStrategy:
                 # version_info.version returns: '1.0.0'
 
         """
-        from notapkgtool.cli import print_verbose
+        from notapkgtool.logging import get_global_logger
 
+        logger = get_global_logger()
         # Validate configuration
         source = app_config.get("source", {})
         repo = source.get("repo")
@@ -231,18 +232,18 @@ class ApiGithubStrategy:
                 env_var = token[2:-1]
                 token = os.environ.get(env_var)
                 if not token:
-                    print_verbose(
+                    logger.verbose(
                         "DISCOVERY",
                         f"Warning: Environment variable {env_var} not set",
                     )
 
-        print_verbose("DISCOVERY", "Strategy: api_github (version-first)")
-        print_verbose("DISCOVERY", f"Repository: {repo}")
-        print_verbose("DISCOVERY", f"Version pattern: {version_pattern}")
+        logger.verbose("DISCOVERY", "Strategy: api_github (version-first)")
+        logger.verbose("DISCOVERY", f"Repository: {repo}")
+        logger.verbose("DISCOVERY", f"Version pattern: {version_pattern}")
         if asset_pattern:
-            print_verbose("DISCOVERY", f"Asset pattern: {asset_pattern}")
+            logger.verbose("DISCOVERY", f"Asset pattern: {asset_pattern}")
         if prerelease:
-            print_verbose("DISCOVERY", "Including pre-releases")
+            logger.verbose("DISCOVERY", "Including pre-releases")
 
         # Fetch latest release from GitHub API
         api_url = f"https://api.github.com/repos/{repo}/releases/latest"
@@ -254,9 +255,9 @@ class ApiGithubStrategy:
         # Add authentication if token provided
         if token:
             headers["Authorization"] = f"token {token}"
-            print_verbose("DISCOVERY", "Using authenticated API request")
+            logger.verbose("DISCOVERY", "Using authenticated API request")
 
-        print_verbose("DISCOVERY", f"Fetching release from: {api_url}")
+        logger.verbose("DISCOVERY", f"Fetching release from: {api_url}")
 
         try:
             response = requests.get(api_url, headers=headers, timeout=30)
@@ -292,7 +293,7 @@ class ApiGithubStrategy:
         if not tag_name:
             raise RuntimeError("Release has no tag_name field")
 
-        print_verbose("DISCOVERY", f"Release tag: {tag_name}")
+        logger.verbose("DISCOVERY", f"Release tag: {tag_name}")
 
         try:
             pattern = re.compile(version_pattern)
@@ -320,7 +321,7 @@ class ApiGithubStrategy:
                 f"using pattern {version_pattern!r}: {err}"
             ) from err
 
-        print_verbose("DISCOVERY", f"Extracted version: {version_str}")
+        logger.verbose("DISCOVERY", f"Extracted version: {version_str}")
 
         # Find matching asset
         assets = release_data.get("assets", [])
@@ -330,7 +331,7 @@ class ApiGithubStrategy:
                 f"Check if assets were uploaded to the release."
             )
 
-        print_verbose("DISCOVERY", f"Release has {len(assets)} asset(s)")
+        logger.verbose("DISCOVERY", f"Release has {len(assets)} asset(s)")
 
         # Match asset by pattern
         matched_asset = None
@@ -343,7 +344,7 @@ class ApiGithubStrategy:
             asset_name = asset.get("name", "")
             if pattern.search(asset_name):
                 matched_asset = asset
-                print_verbose("DISCOVERY", f"Matched asset: {asset_name}")
+                logger.verbose("DISCOVERY", f"Matched asset: {asset_name}")
                 break
 
         if not matched_asset:
@@ -358,7 +359,7 @@ class ApiGithubStrategy:
         if not download_url:
             raise RuntimeError(f"Asset {matched_asset.get('name')} has no download URL")
 
-        print_verbose("DISCOVERY", f"Download URL: {download_url}")
+        logger.verbose("DISCOVERY", f"Download URL: {download_url}")
 
         return VersionInfo(
             version=version_str,

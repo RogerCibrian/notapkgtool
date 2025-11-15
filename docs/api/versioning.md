@@ -11,5 +11,3 @@ This module defines two key dataclasses for version information:
 
 ::: notapkgtool.versioning.msi
 
-::: notapkgtool.versioning.url_regex
-

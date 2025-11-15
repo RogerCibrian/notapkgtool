@@ -225,8 +225,9 @@ class ApiJsonStrategy:
                 # version_info.version returns: '1.0.0'
 
         """
-        from notapkgtool.cli import print_verbose
+        from notapkgtool.logging import get_global_logger
 
+        logger = get_global_logger()
         # Validate configuration
         source = app_config.get("source", {})
         api_url = source.get("api_url")
@@ -254,11 +255,11 @@ class ApiJsonStrategy:
         body = source.get("body", {})
         timeout = source.get("timeout", 30)
 
-        print_verbose("DISCOVERY", "Strategy: api_json (version-first)")
-        print_verbose("DISCOVERY", f"API URL: {api_url}")
-        print_verbose("DISCOVERY", f"Method: {method}")
-        print_verbose("DISCOVERY", f"Version path: {version_path}")
-        print_verbose("DISCOVERY", f"Download URL path: {download_url_path}")
+        logger.verbose("DISCOVERY", "Strategy: api_json (version-first)")
+        logger.verbose("DISCOVERY", f"API URL: {api_url}")
+        logger.verbose("DISCOVERY", f"Method: {method}")
+        logger.verbose("DISCOVERY", f"Version path: {version_path}")
+        logger.verbose("DISCOVERY", f"Download URL path: {download_url_path}")
 
         # Expand environment variables in headers
         expanded_headers = {}
@@ -271,7 +272,7 @@ class ApiJsonStrategy:
                 env_var = value[2:-1]
                 env_value = os.environ.get(env_var)
                 if not env_value:
-                    print_verbose(
+                    logger.verbose(
                         "DISCOVERY",
                         f"Warning: Environment variable {env_var} not set",
                     )
@@ -281,7 +282,7 @@ class ApiJsonStrategy:
                 expanded_headers[key] = value
 
         # Make API request
-        print_verbose("DISCOVERY", f"Calling API: {method} {api_url}")
+        logger.verbose("DISCOVERY", f"Calling API: {method} {api_url}")
         try:
             if method == "GET":
                 response = requests.get(
@@ -302,7 +303,7 @@ class ApiJsonStrategy:
         except requests.exceptions.RequestException as err:
             raise RuntimeError(f"Failed to call API: {err}") from err
 
-        print_verbose("DISCOVERY", f"API response: {response.status_code} OK")
+        logger.verbose("DISCOVERY", f"API response: {response.status_code} OK")
 
         # Parse JSON response
         try:
@@ -313,12 +314,12 @@ class ApiJsonStrategy:
             ) from err
 
         if debug:
-            print_verbose(
+            logger.verbose(
                 "DISCOVERY", f"JSON response: {json.dumps(json_data, indent=2)}"
             )
 
         # Extract version using JSONPath
-        print_verbose("DISCOVERY", f"Extracting version from path: {version_path}")
+        logger.verbose("DISCOVERY", f"Extracting version from path: {version_path}")
         try:
             version_expr = jsonpath_parse(version_path)
             version_matches = version_expr.find(json_data)
@@ -336,10 +337,10 @@ class ApiJsonStrategy:
                 f"Failed to extract version using path {version_path!r}: {err}"
             ) from err
 
-        print_verbose("DISCOVERY", f"Extracted version: {version_str}")
+        logger.verbose("DISCOVERY", f"Extracted version: {version_str}")
 
         # Extract download URL using JSONPath
-        print_verbose(
+        logger.verbose(
             "DISCOVERY", f"Extracting download URL from path: {download_url_path}"
         )
         try:
@@ -359,7 +360,7 @@ class ApiJsonStrategy:
                 f"Failed to extract download URL using path {download_url_path!r}: {err}"
             ) from err
 
-        print_verbose("DISCOVERY", f"Download URL: {download_url}")
+        logger.verbose("DISCOVERY", f"Download URL: {download_url}")
 
         return VersionInfo(
             version=version_str,

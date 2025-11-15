@@ -214,24 +214,25 @@ def download_file(
         ValueError: For content-type mismatch or checksum mismatch.
 
     """
-    from notapkgtool.cli import print_verbose
+    from notapkgtool.logging import get_global_logger
 
+    logger = get_global_logger()
     destination_folder = Path(destination_folder)
     destination_folder.mkdir(parents=True, exist_ok=True)
 
     headers: dict[str, str] = {}
     if etag:
         headers["If-None-Match"] = etag
-        print_verbose("HTTP", f"Using conditional request with ETag: {etag}")
+        logger.verbose("HTTP", f"Using conditional request with ETag: {etag}")
     elif last_modified:
         headers["If-Modified-Since"] = last_modified
-        print_verbose(
+        logger.verbose(
             "HTTP", f"Using conditional request with Last-Modified: {last_modified}"
         )
 
-    print_verbose("HTTP", f"GET {url}")
+    logger.verbose("HTTP", f"GET {url}")
     if verbose:
-        print_verbose(
+        logger.verbose(
             "HTTP",
             "Request headers: Accept-Encoding: identity, User-Agent: napt/0.1.0",
         )
@@ -245,14 +246,14 @@ def download_file(
         # Log redirects
         if verbose and len(resp.history) > 0:
             for hist in resp.history:
-                print_verbose(
+                logger.verbose(
                     "HTTP",
                     f"Redirect {hist.status_code} -> {hist.headers.get('Location', 'unknown')}",
                 )
 
         # Conditional request satisfied: nothing changed since last time.
         if resp.status_code == 304:
-            print_verbose("HTTP", "Response: 304 Not Modified")
+            logger.verbose("HTTP", "Response: 304 Not Modified")
             resp.close()
             raise NotModifiedError("Remote content not modified (HTTP 304).")
 
@@ -263,7 +264,7 @@ def download_file(
             # Chain for better context.
             raise requests.HTTPError(f"download failed for {url}: {err}") from err
 
-        print_verbose("HTTP", f"Response: {resp.status_code} {resp.reason}")
+        logger.verbose("HTTP", f"Response: {resp.status_code} {resp.reason}")
 
         # Content-Disposition beats URL when naming the file.
         cd_name = _filename_from_cd(resp.headers.get("Content-Disposition", ""))
@@ -275,13 +276,13 @@ def download_file(
             content_length = resp.headers.get("Content-Length", "unknown")
             if content_length != "unknown":
                 size_mb = int(content_length) / (1024 * 1024)
-                print_verbose(
+                logger.verbose(
                     "HTTP", f"Content-Length: {content_length} ({size_mb:.1f} MB)"
                 )
             etag_value = resp.headers.get("ETag", "not provided")
-            print_verbose("HTTP", f"ETag: {etag_value}")
+            logger.verbose("HTTP", f"ETag: {etag_value}")
             cd_header = resp.headers.get("Content-Disposition", "not provided")
-            print_verbose("HTTP", f"Content-Disposition: {cd_header}")
+            logger.verbose("HTTP", f"Content-Disposition: {cd_header}")
 
         # Optional content-type sanity check.
         if validate_content_type:
@@ -293,7 +294,7 @@ def download_file(
         total_size = int(resp.headers.get("Content-Length", "0") or 0)
 
         tmp = target.with_suffix(target.suffix + ".part")
-        print_verbose("FILE", f"Downloading to: {tmp}")
+        logger.verbose("FILE", f"Downloading to: {tmp}")
 
         sha = hashlib.sha256()
         downloaded = 0
@@ -319,15 +320,15 @@ def download_file(
         resp.close()
 
         digest = sha.hexdigest()
-        print_verbose("FILE", f"SHA-256: {digest} (computed during download)")
+        logger.verbose("FILE", f"SHA-256: {digest} (computed during download)")
 
         # Atomically "commit" the file.
-        print_verbose("FILE", f"Atomic rename: {tmp.name} -> {target.name}")
+        logger.verbose("FILE", f"Atomic rename: {tmp.name} -> {target.name}")
         tmp.replace(target)
 
         # Validate checksum if the caller expects a specific digest.
         if expected_sha256 and digest.lower() != expected_sha256.lower():
-            print_verbose(
+            logger.verbose(
                 "FILE", f"Checksum mismatch! Expected: {expected_sha256}, Got: {digest}"
             )
             try:
@@ -344,8 +345,8 @@ def download_file(
             print(f"\ndownload complete: {target} ({digest}) in {elapsed:.1f}s")
         else:
             # For verbose mode, show detailed file info
-            print_verbose("FILE", f"Download complete: {target}")
-            print_verbose("FILE", f"Time elapsed: {elapsed:.1f}s")
+            logger.verbose("FILE", f"Download complete: {target}")
+            logger.verbose("FILE", f"Time elapsed: {elapsed:.1f}s")
 
         # Hand back headers the caller may want to persist (ETag, Last-Modified).
         return target, digest, dict(resp.headers)

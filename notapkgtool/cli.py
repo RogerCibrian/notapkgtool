@@ -72,52 +72,8 @@ import sys
 
 from notapkgtool.build import build_package, create_intunewin
 from notapkgtool.core import discover_recipe
+from notapkgtool.logging import get_logger, set_global_logger
 from notapkgtool.validation import validate_recipe
-
-# Global verbose and debug flags set from CLI args
-_verbose = False
-_debug = False
-
-
-def set_verbose(enabled: bool) -> None:
-    """Set the global verbose flag."""
-    global _verbose
-    _verbose = enabled
-
-
-def is_verbose() -> bool:
-    """Check if verbose mode is enabled."""
-    return _verbose
-
-
-def set_debug(enabled: bool) -> None:
-    """Set the global debug flag. Debug mode implies verbose mode."""
-    global _debug, _verbose
-    _debug = enabled
-    if enabled:
-        _verbose = True  # Debug implies verbose
-
-
-def is_debug() -> bool:
-    """Check if debug mode is enabled."""
-    return _debug
-
-
-def print_step(step: int, total: int, message: str) -> None:
-    """Print a step indicator for non-verbose mode."""
-    print(f"[{step}/{total}] {message}")
-
-
-def print_verbose(prefix: str, message: str) -> None:
-    """Print a verbose log message (only when verbose mode is active)."""
-    if _verbose:
-        print(f"[{prefix}] {message}")
-
-
-def print_debug(prefix: str, message: str) -> None:
-    """Print a debug log message (only when debug mode is active)."""
-    if _debug:
-        print(f"[{prefix}] {message}")
 
 
 def cmd_validate(args: argparse.Namespace) -> int:
@@ -138,8 +94,9 @@ def cmd_validate(args: argparse.Namespace) -> int:
         Prints validation results, errors, and warnings to stdout.
 
     """
-    # Set global verbose flag
-    set_verbose(args.verbose)
+    # Configure global logger
+    logger = get_logger(verbose=args.verbose, debug=False)
+    set_global_logger(logger)
 
     recipe_path = Path(args.recipe).resolve()
 
@@ -208,9 +165,9 @@ def cmd_discover(args: argparse.Namespace) -> int:
         and results to stdout. Prints errors with optional traceback if verbose/debug.
 
     """
-    # Set global verbose and debug flags
-    set_verbose(args.verbose)
-    set_debug(args.debug)
+    # Configure global logger
+    logger = get_logger(verbose=args.verbose, debug=args.debug)
+    set_global_logger(logger)
 
     recipe_path = Path(args.recipe).resolve()
     output_dir = Path(args.output_dir).resolve()
@@ -283,9 +240,9 @@ def cmd_build(args: argparse.Namespace) -> int:
         Prints progress and results to stdout.
 
     """
-    # Set global verbose and debug flags
-    set_verbose(args.verbose)
-    set_debug(args.debug)
+    # Configure global logger
+    logger = get_logger(verbose=args.verbose, debug=args.debug)
+    set_global_logger(logger)
 
     recipe_path = Path(args.recipe).resolve()
     downloads_dir = Path(args.downloads_dir).resolve()
@@ -361,9 +318,9 @@ def cmd_package(args: argparse.Namespace) -> int:
         Prints progress and results to stdout.
 
     """
-    # Set global verbose and debug flags
-    set_verbose(args.verbose)
-    set_debug(args.debug)
+    # Configure global logger
+    logger = get_logger(verbose=args.verbose, debug=args.debug)
+    set_global_logger(logger)
 
     build_dir = Path(args.build_dir).resolve()
     output_dir = Path(args.output_dir) if args.output_dir else None

@@ -169,8 +169,9 @@ class UrlDownloadStrategy:
             RuntimeError: If download or version extraction fails.
 
         """
-        from notapkgtool.cli import print_verbose
+        from notapkgtool.logging import get_global_logger
 
+        logger = get_global_logger()
         source = app_config.get("source", {})
         url = source.get("url")
         if not url:
@@ -183,18 +184,18 @@ class UrlDownloadStrategy:
                 "url_download strategy requires 'source.version.type' in config"
             )
 
-        print_verbose("DISCOVERY", "Strategy: url_download (file-first)")
-        print_verbose("DISCOVERY", f"Source URL: {url}")
-        print_verbose("DISCOVERY", f"Version extraction: {version_type}")
+        logger.verbose("DISCOVERY", "Strategy: url_download (file-first)")
+        logger.verbose("DISCOVERY", f"Source URL: {url}")
+        logger.verbose("DISCOVERY", f"Version extraction: {version_type}")
 
         # Extract ETag/Last-Modified from cache if available
         etag = cache.get("etag") if cache else None
         last_modified = cache.get("last_modified") if cache else None
 
         if etag:
-            print_verbose("DISCOVERY", f"Using cached ETag: {etag}")
+            logger.verbose("DISCOVERY", f"Using cached ETag: {etag}")
         if last_modified:
-            print_verbose("DISCOVERY", f"Using cached Last-Modified: {last_modified}")
+            logger.verbose("DISCOVERY", f"Using cached Last-Modified: {last_modified}")
 
         # Download the file (with conditional request if cache available)
         try:
@@ -209,7 +210,7 @@ class UrlDownloadStrategy:
         except NotModifiedError:
             # File unchanged (HTTP 304), use cached version
             # Use convention-based path: derive filename from URL
-            print_verbose(
+            logger.verbose(
                 "DISCOVERY", "File not modified (HTTP 304), using cached version"
             )
 

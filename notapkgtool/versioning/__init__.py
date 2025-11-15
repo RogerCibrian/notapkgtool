@@ -25,8 +25,6 @@ keys : module
     Core version comparison logic with semver-like parsing and robust fallbacks.
 msi : module
     MSI ProductVersion extraction using msilib, _msi, PowerShell, or msitools.
-url_regex : module
-    Extract versions from URLs using regex patterns.
 
 Public API:
 

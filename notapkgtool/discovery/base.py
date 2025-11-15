@@ -23,10 +23,10 @@ This module defines the foundational components for the discovery system:
 The discovery system uses a strategy pattern to support multiple ways
 of obtaining application installers and their versions:
 
-- http_static: Direct download from a static URL
-- url_regex: Parse version from URL patterns using regex
-- github_release: Fetch from GitHub releases API
-- http_json: Query JSON API endpoints with JSONPath
+- url_download: Direct download from a static URL (FILE-FIRST)
+- web_scrape: Scrape vendor download pages to find links and extract versions (VERSION-FIRST)
+- api_github: Fetch from GitHub releases API (VERSION-FIRST)
+- api_json: Query JSON API endpoints for version and download URL (VERSION-FIRST)
 
 Design Philosophy:
     - Strategies are Protocol classes (structural subtyping, not inheritance)
@@ -162,7 +162,7 @@ def register_strategy(name: str, strategy_class: type[DiscoveryStrategy]) -> Non
     overwrite the previous registration (allows monkey-patching for tests).
 
     Args:
-        name: Strategy name (e.g., "http_static"). This is the value
+        name: Strategy name (e.g., "url_download"). This is the value
             used in recipe YAML files under source.strategy. Names should be
             lowercase with underscores for readability.
         strategy_class: The strategy class to
@@ -198,7 +198,7 @@ def get_strategy(name: str) -> DiscoveryStrategy:
     have been imported first for registration to occur.
 
     Args:
-        name: Strategy name (e.g., "http_static"). Must exactly match
+        name: Strategy name (e.g., "url_download"). Must exactly match
             a name registered via register_strategy(). Case-sensitive.
 
     Returns:
@@ -213,7 +213,7 @@ def get_strategy(name: str) -> DiscoveryStrategy:
         Get and use a strategy:
 
             from notapkgtool.discovery import get_strategy
-            strategy = get_strategy("http_static")
+            strategy = get_strategy("url_download")
             # Use strategy.discover_version(...)
 
         Handle unknown strategy:
@@ -225,7 +225,7 @@ def get_strategy(name: str) -> DiscoveryStrategy:
 
     Note:
         Strategies must be registered before they can be retrieved. The
-        http_static strategy is auto-registered when imported. New strategies
+        url_download strategy is auto-registered when imported. New strategies
         can be added by creating a module and registering.
 
     """

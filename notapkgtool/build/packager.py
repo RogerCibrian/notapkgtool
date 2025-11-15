@@ -103,15 +103,16 @@ def _get_intunewin_tool(cache_dir: Path, verbose: bool = False) -> Path:
     Raises:
         RuntimeError: If download fails.
     """
-    from notapkgtool.cli import print_verbose
+    from notapkgtool.logging import get_global_logger
 
+    logger = get_global_logger()
     tool_path = cache_dir / "IntuneWinAppUtil.exe"
 
     if tool_path.exists():
-        print_verbose("PACKAGE", f"Using cached IntuneWinAppUtil: {tool_path}")
+        logger.verbose("PACKAGE", f"Using cached IntuneWinAppUtil: {tool_path}")
         return tool_path
 
-    print_verbose("PACKAGE", "Downloading IntuneWinAppUtil.exe...")
+    logger.verbose("PACKAGE", "Downloading IntuneWinAppUtil.exe...")
 
     # Download the tool
     try:
@@ -124,7 +125,7 @@ def _get_intunewin_tool(cache_dir: Path, verbose: bool = False) -> Path:
     cache_dir.mkdir(parents=True, exist_ok=True)
     tool_path.write_bytes(response.content)
 
-    print_verbose("PACKAGE", f"[OK] IntuneWinAppUtil.exe cached: {tool_path}")
+    logger.verbose("PACKAGE", f"[OK] IntuneWinAppUtil.exe cached: {tool_path}")
 
     return tool_path
 
@@ -151,8 +152,9 @@ def _execute_packaging(
     Raises:
         RuntimeError: If packaging fails.
     """
-    from notapkgtool.cli import print_verbose
+    from notapkgtool.logging import get_global_logger
 
+    logger = get_global_logger()
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Build command
@@ -168,7 +170,7 @@ def _execute_packaging(
         "-q",  # Quiet mode
     ]
 
-    print_verbose("PACKAGE", f"Running: {' '.join(cmd)}")
+    logger.verbose("PACKAGE", f"Running: {' '.join(cmd)}")
 
     try:
         result = subprocess.run(
@@ -181,7 +183,7 @@ def _execute_packaging(
 
         if verbose and result.stdout:
             for line in result.stdout.strip().split("\n"):
-                print_verbose("PACKAGE", f"  {line}")
+                logger.verbose("PACKAGE", f"  {line}")
 
     except subprocess.CalledProcessError as err:
         error_msg = f"IntuneWinAppUtil.exe failed (exit code {err.returncode})"
@@ -203,7 +205,7 @@ def _execute_packaging(
 
     # Return the most recently created file
     intunewin_path = max(intunewin_files, key=lambda p: p.stat().st_mtime)
-    print_verbose("PACKAGE", f"[OK] Created: {intunewin_path.name}")
+    logger.verbose("PACKAGE", f"[OK] Created: {intunewin_path.name}")
 
     return intunewin_path
 
@@ -263,7 +265,9 @@ def create_intunewin(
         "Invoke-AppDeployToolkit.exe". Output follows convention:
         packages/{app_id}/{app_id}-{version}.intunewin
     """
-    from notapkgtool.cli import print_step, print_verbose
+    from notapkgtool.logging import get_global_logger
+
+    logger = get_global_logger()
 
     build_dir = build_dir.resolve()
 
@@ -274,10 +278,10 @@ def create_intunewin(
     version = build_dir.name
     app_id = build_dir.parent.name
 
-    print_verbose("PACKAGE", f"Packaging {app_id} v{version}")
+    logger.verbose("PACKAGE", f"Packaging {app_id} v{version}")
 
     # Verify build structure
-    print_step(1, 4, "Verifying build structure...")
+    logger.step(1, 4, "Verifying build structure...")
     _verify_build_structure(build_dir)
 
     # Determine output directory
@@ -287,12 +291,12 @@ def create_intunewin(
     output_dir = output_dir.resolve()
 
     # Get IntuneWinAppUtil tool
-    print_step(2, 4, "Getting IntuneWinAppUtil tool...")
+    logger.step(2, 4, "Getting IntuneWinAppUtil tool...")
     tool_cache = Path("cache/tools")
     tool_path = _get_intunewin_tool(tool_cache, verbose=verbose)
 
     # Create .intunewin package
-    print_step(3, 4, "Creating .intunewin package...")
+    logger.step(3, 4, "Creating .intunewin package...")
     package_path = _execute_packaging(
         tool_path,
         build_dir,
@@ -303,13 +307,13 @@ def create_intunewin(
 
     # Optionally clean source
     if clean_source:
-        print_step(4, 4, "Cleaning source build directory...")
+        logger.step(4, 4, "Cleaning source build directory...")
         shutil.rmtree(build_dir)
-        print_verbose("PACKAGE", f"[OK] Removed build directory: {build_dir}")
+        logger.verbose("PACKAGE", f"[OK] Removed build directory: {build_dir}")
     else:
-        print_step(4, 4, "Package complete")
+        logger.step(4, 4, "Package complete")
 
-    print_verbose("PACKAGE", f"[OK] Package created: {package_path}")
+    logger.verbose("PACKAGE", f"[OK] Package created: {package_path}")
 
     return {
         "build_dir": build_dir,

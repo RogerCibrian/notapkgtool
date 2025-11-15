@@ -222,8 +222,9 @@ class WebScrapeStrategy:
                 # version_info.version returns: '25.01'
 
         """
-        from notapkgtool.cli import print_verbose
+        from notapkgtool.logging import get_global_logger
 
+        logger = get_global_logger()
         # Validate configuration
         source = app_config.get("source", {})
         page_url = source.get("page_url")
@@ -247,16 +248,16 @@ class WebScrapeStrategy:
 
         version_format = source.get("version_format", "{0}")
 
-        print_verbose("DISCOVERY", "Strategy: web_scrape (version-first)")
-        print_verbose("DISCOVERY", f"Page URL: {page_url}")
+        logger.verbose("DISCOVERY", "Strategy: web_scrape (version-first)")
+        logger.verbose("DISCOVERY", f"Page URL: {page_url}")
         if link_selector:
-            print_verbose("DISCOVERY", f"Link selector (CSS): {link_selector}")
+            logger.verbose("DISCOVERY", f"Link selector (CSS): {link_selector}")
         if link_pattern:
-            print_verbose("DISCOVERY", f"Link pattern (regex): {link_pattern}")
-        print_verbose("DISCOVERY", f"Version pattern: {version_pattern}")
+            logger.verbose("DISCOVERY", f"Link pattern (regex): {link_pattern}")
+        logger.verbose("DISCOVERY", f"Version pattern: {version_pattern}")
 
         # Download the HTML page
-        print_verbose("DISCOVERY", f"Fetching page: {page_url}")
+        logger.verbose("DISCOVERY", f"Fetching page: {page_url}")
         try:
             response = requests.get(page_url, timeout=30)
             response.raise_for_status()
@@ -268,7 +269,7 @@ class WebScrapeStrategy:
             raise RuntimeError(f"Failed to fetch page: {err}") from err
 
         html_content = response.text
-        print_verbose("DISCOVERY", f"Page fetched ({len(html_content)} bytes)")
+        logger.verbose("DISCOVERY", f"Page fetched ({len(html_content)} bytes)")
 
         # Find download link using CSS selector or regex
         download_url = None
@@ -290,7 +291,7 @@ class WebScrapeStrategy:
                     f"Element matched by {link_selector!r} has no href attribute"
                 )
 
-            print_verbose("DISCOVERY", f"Found link via CSS: {href}")
+            logger.verbose("DISCOVERY", f"Found link via CSS: {href}")
 
             # Build absolute URL
             download_url = urljoin(page_url, href)
@@ -312,7 +313,7 @@ class WebScrapeStrategy:
                 else:
                     href = match.group(0)
 
-                print_verbose("DISCOVERY", f"Found link via regex: {href}")
+                logger.verbose("DISCOVERY", f"Found link via regex: {href}")
 
                 # Build absolute URL
                 download_url = urljoin(page_url, href)
@@ -322,7 +323,7 @@ class WebScrapeStrategy:
                     f"Invalid link_pattern regex: {link_pattern!r}"
                 ) from err
 
-        print_verbose("DISCOVERY", f"Download URL: {download_url}")
+        logger.verbose("DISCOVERY", f"Download URL: {download_url}")
 
         # Extract version from the download URL
         try:
@@ -354,7 +355,7 @@ class WebScrapeStrategy:
                 f"Invalid version_pattern regex: {version_pattern!r}"
             ) from err
 
-        print_verbose("DISCOVERY", f"Extracted version: {version_str}")
+        logger.verbose("DISCOVERY", f"Extracted version: {version_str}")
 
         return VersionInfo(
             version=version_str,

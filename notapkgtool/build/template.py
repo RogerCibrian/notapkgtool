@@ -264,28 +264,29 @@ def generate_invoke_script(
                 "4.1.7"
             )
     """
-    from notapkgtool.cli import print_debug, print_verbose
+    from notapkgtool.logging import get_global_logger
 
+    logger = get_global_logger()
     if not template_path.exists():
         raise FileNotFoundError(f"PSADT template not found: {template_path}")
 
-    print_verbose("BUILD", f"Reading PSADT template: {template_path.name}")
+    logger.verbose("BUILD", f"Reading PSADT template: {template_path.name}")
 
     # Read template
     template = template_path.read_text(encoding="utf-8")
 
     # Build $adtSession variables
-    print_verbose("BUILD", "Building $adtSession variables...")
+    logger.verbose("BUILD", "Building $adtSession variables...")
     session_vars = _build_adtsession_vars(config, version, psadt_version)
 
     if debug:
-        print_debug("BUILD", "--- $adtSession Variables ---")
+        logger.debug("BUILD", "--- $adtSession Variables ---")
         for key, value in session_vars.items():
-            print_debug("BUILD", f"  {key} = {value}")
+            logger.debug("BUILD", f"  {key} = {value}")
 
     # Replace $adtSession block
     script = _replace_session_block(template, session_vars)
-    print_verbose("BUILD", "[OK] Replaced $adtSession hashtable")
+    logger.verbose("BUILD", "[OK] Replaced $adtSession hashtable")
 
     # Insert recipe code
     app = config["apps"][0]
@@ -294,12 +295,12 @@ def generate_invoke_script(
     uninstall_code = psadt_config.get("uninstall")
 
     if install_code:
-        print_verbose("BUILD", "Inserting install code from recipe")
+        logger.verbose("BUILD", "Inserting install code from recipe")
     if uninstall_code:
-        print_verbose("BUILD", "Inserting uninstall code from recipe")
+        logger.verbose("BUILD", "Inserting uninstall code from recipe")
 
     script = _insert_recipe_code(script, install_code, uninstall_code)
 
-    print_verbose("BUILD", "[OK] Script generation complete")
+    logger.verbose("BUILD", "[OK] Script generation complete")
 
     return script

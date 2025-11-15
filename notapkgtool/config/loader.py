@@ -328,12 +328,13 @@ def load_effective_config(
         FileNotFoundError: If the recipe file itself is missing.
 
     """
-    from notapkgtool.cli import print_debug, print_verbose
+    from notapkgtool.logging import get_global_logger
 
+    logger = get_global_logger()
     recipe_path = recipe_path.resolve()
     recipe_dir = recipe_path.parent
 
-    print_verbose("CONFIG", f"Loading recipe: {recipe_path}")
+    logger.verbose("CONFIG", f"Loading recipe: {recipe_path}")
 
     # 1) Read recipe
     recipe_obj = _load_yaml_file(recipe_path)
@@ -344,7 +345,7 @@ def load_effective_config(
     # 2) Find defaults root
     defaults_root = _find_defaults_root(recipe_dir)
     if defaults_root and verbose:
-        print_verbose("CONFIG", f"Found defaults root: {defaults_root}")
+        logger.verbose("CONFIG", f"Found defaults root: {defaults_root}")
 
     merged: dict[str, Any] = {}
     layers_merged = 0
@@ -356,14 +357,14 @@ def load_effective_config(
         # 3) Load org defaults
         org_defaults_path = defaults_root / "org.yaml"
         if org_defaults_path.exists():
-            print_verbose(
+            logger.verbose(
                 "CONFIG",
                 f"Loading: {org_defaults_path.relative_to(defaults_root.parent)}",
             )
             org_defaults = _load_yaml_file(org_defaults_path)
             if isinstance(org_defaults, dict):
                 if debug:
-                    print_debug("CONFIG", "--- Content from org.yaml ---")
+                    logger.debug("CONFIG", "--- Content from org.yaml ---")
                     _print_yaml_content(org_defaults, debug)
                 merged = _deep_merge_dicts(merged, org_defaults)
                 layers_merged += 1
@@ -373,19 +374,19 @@ def load_effective_config(
             vendor_name = _detect_vendor(recipe_path, recipe_obj)
 
         if vendor_name and verbose:
-            print_verbose("CONFIG", f"Detected vendor: {vendor_name}")
+            logger.verbose("CONFIG", f"Detected vendor: {vendor_name}")
 
         # 5) Load vendor defaults if present
         if vendor_name:
             candidate = defaults_root / "vendors" / f"{vendor_name}.yaml"
             if candidate.exists():
-                print_verbose(
+                logger.verbose(
                     "CONFIG", f"Loading: {candidate.relative_to(defaults_root.parent)}"
                 )
                 vendor_defaults = _load_yaml_file(candidate)
                 if isinstance(vendor_defaults, dict):
                     if debug:
-                        print_debug(
+                        logger.debug(
                             "CONFIG", f"--- Content from {vendor_name}.yaml ---"
                         )
                         _print_yaml_content(vendor_defaults, debug)
@@ -394,9 +395,9 @@ def load_effective_config(
 
     # Show recipe content if verbose
     if verbose:
-        print_verbose("CONFIG", f"Loading: {recipe_path.name}")
+        logger.verbose("CONFIG", f"Loading: {recipe_path.name}")
     if debug:
-        print_debug("CONFIG", f"--- Content from {recipe_path.name} ---")
+        logger.debug("CONFIG", f"--- Content from {recipe_path.name} ---")
         _print_yaml_content(recipe_obj, debug)
 
     # 6) Merge recipe on top
@@ -404,16 +405,16 @@ def load_effective_config(
     layers_merged += 1
 
     if verbose:
-        print_verbose("CONFIG", f"Deep merging {layers_merged} layer(s)")
+        logger.verbose("CONFIG", f"Deep merging {layers_merged} layer(s)")
         # Show final config structure
         top_level_keys = list(merged.keys())
-        print_verbose(
+        logger.verbose(
             "CONFIG",
             f"Final config has {len(top_level_keys)} top-level keys: {', '.join(top_level_keys)}",
         )
     # Show the complete merged configuration in debug mode
     if debug:
-        print_debug("CONFIG", "--- Final Merged Configuration ---")
+        logger.debug("CONFIG", "--- Final Merged Configuration ---")
         _print_yaml_content(merged, debug)
 
     # 7) Resolve relative paths (branding paths relative to defaults_root)

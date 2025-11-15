@@ -56,13 +56,13 @@ class DiscoveredVersion:
 class VersionInfo:
     """Container for version information discovered without downloading.
 
-    Used by version-first strategies (url_regex, github_release, http_json)
+    Used by version-first strategies (web_scrape, api_github, api_json)
     that can determine version and download URL without fetching the installer.
 
     Attributes:
         version: Raw version string (e.g., "140.0.7339.128").
         download_url: URL to download the installer.
-        source: Strategy name for logging (e.g., "url_regex", "github_release").
+        source: Strategy name for logging (e.g., "web_scrape", "api_github").
 
     """
 

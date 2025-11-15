@@ -48,7 +48,7 @@ Example:
             print("Already cached!")
 
 Note:
-    - Reuses notapkgtool.discovery.github_release for API calls
+    - Reuses notapkgtool.discovery.api_github for API calls
     - Caches releases by version: cache/psadt/{version}/
     - Downloads .zip releases and extracts to cache
     - Validates extracted PSADT structure (PSAppDeployToolkit/ folder exists)
@@ -96,9 +96,10 @@ def fetch_latest_psadt_version(verbose: bool = False) -> str:
         - For higher rate limits, set GITHUB_TOKEN environment variable
 
     """
-    from notapkgtool.cli import print_verbose
+    from notapkgtool.logging import get_global_logger
 
-    print_verbose("PSADT", f"Querying GitHub API: {PSADT_GITHUB_API}")
+    logger = get_global_logger()
+    logger.verbose("PSADT", f"Querying GitHub API: {PSADT_GITHUB_API}")
 
     try:
         headers = {
@@ -126,7 +127,7 @@ def fetch_latest_psadt_version(verbose: bool = False) -> str:
         raise RuntimeError(f"Could not extract version from tag: {tag_name!r}")
 
     version = version_match.group(1)
-    print_verbose("PSADT", f"Latest PSADT version: {version}")
+    logger.verbose("PSADT", f"Latest PSADT version: {version}")
 
     return version
 
@@ -204,25 +205,26 @@ def get_psadt_release(
         - Extracts entire archive to version directory
 
     """
-    from notapkgtool.cli import print_verbose
+    from notapkgtool.logging import get_global_logger
 
+    logger = get_global_logger()
     # Resolve "latest" to actual version
     if release_spec == "latest":
-        print_verbose("PSADT", "Resolving 'latest' to current version...")
+        logger.verbose("PSADT", "Resolving 'latest' to current version...")
         version = fetch_latest_psadt_version(verbose=verbose)
     else:
         version = release_spec
 
-    print_verbose("PSADT", f"PSADT version: {version}")
+    logger.verbose("PSADT", f"PSADT version: {version}")
 
     # Check if already cached
     if is_psadt_cached(version, cache_dir):
         version_dir = cache_dir / version
-        print_verbose("PSADT", f"Using cached PSADT: {version_dir}")
+        logger.verbose("PSADT", f"Using cached PSADT: {version_dir}")
         return version_dir
 
     # Need to download
-    print_verbose("PSADT", f"Downloading PSADT {version}...")
+    logger.verbose("PSADT", f"Downloading PSADT {version}...")
 
     # Get release info from GitHub
     release_url = f"https://api.github.com/repos/{PSADT_REPO}/releases/tags/{version}"
@@ -271,7 +273,7 @@ def get_psadt_release(
     if not download_url:
         raise RuntimeError(f"Asset missing download URL: {zip_asset}")
 
-    print_verbose("PSADT", f"Downloading: {zip_asset['name']}")
+    logger.verbose("PSADT", f"Downloading: {zip_asset['name']}")
 
     # Download the .zip file
     try:
@@ -288,7 +290,7 @@ def get_psadt_release(
     zip_path = version_dir / f"psadt_{version}.zip"
     zip_path.write_bytes(zip_response.content)
 
-    print_verbose("PSADT", f"Extracting to: {version_dir}")
+    logger.verbose("PSADT", f"Extracting to: {version_dir}")
 
     # Extract .zip
     try:
@@ -307,6 +309,6 @@ def get_psadt_release(
             f"PSADT extraction failed: PSAppDeployToolkit/ folder not found in {version_dir}"
         )
 
-    print_verbose("PSADT", f"PSADT {version} cached successfully")
+    logger.verbose("PSADT", f"PSADT {version} cached successfully")
 
     return version_dir
