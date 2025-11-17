@@ -38,11 +38,11 @@ This manual workflow is repetitive, difficult to automate in CI/CD pipelines, la
 
 ## Cross-Platform Support
 
-| Command | Windows | Linux/macOS |
+| Feature | Windows | Linux/macOS |
 |---------|---------|-------------|
-| `napt discover` | ✅ | ✅ |
-| `napt build` | ✅ | ✅ |
-| `napt package` | ✅ | ⚫ Windows Only |
+| Discovery & Download | ✅ | ✅ |
+| PSADT Package Building | ✅ | ✅ |
+| Intune Packaging | ✅ | ⚫ Windows Only |
 
 See the [Cross-Platform Support](user-guide.md#cross-platform-support) section for detailed workflows.
 

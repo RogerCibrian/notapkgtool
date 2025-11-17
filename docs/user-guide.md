@@ -106,8 +106,8 @@ All commands support verbosity flags to control output detail:
 | Flag | What it shows |
 |------|---------------|
 | (none) | Clean output with step indicators `[1/4]` and progress |
-| `--verbose` or `-v` | + HTTP requests/responses, file operations, SHA-256 hashes, configuration loading |
-| `--debug` or `-d` | + Full YAML config dumps (org/vendor/recipe/merged), backend selection details, regex match groups |
+| `--verbose` or `-v` | All of the above, plus HTTP requests/responses, file operations, SHA-256 hashes, and configuration loading |
+| `--debug` or `-d` | All verbose output, plus full YAML config dumps (org/vendor/recipe/merged), backend selection details, and regex match groups |
 
 Debug mode includes all verbose output plus deep diagnostic information. Use `--verbose` for normal troubleshooting and `--debug` when you need to understand exactly what NAPT is doing internally.
 
