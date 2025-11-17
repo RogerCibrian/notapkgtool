@@ -481,6 +481,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#why-napt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why NAPT?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#key-features" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -497,10 +508,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#quick-example" class="md-nav__link">
+  <a href="#cross-platform-support" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick Example
+        Cross-Platform Support
       
     </span>
   </a>
@@ -512,28 +523,6 @@
     <span class="md-ellipsis">
       
         Getting Started
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#how-it-works" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        How It Works
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#cross-platform-support" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Cross-Platform Support
       
     </span>
   </a>
@@ -797,6 +786,62 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="api/exceptions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="api/results/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
     
@@ -809,10 +854,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_6" >
         
           
-          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_6" id="__nav_4_6_label" tabindex="0">
             
   
   
@@ -830,8 +875,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_4">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_6">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1200,6 +1245,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#why-napt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why NAPT?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#key-features" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1216,10 +1272,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#quick-example" class="md-nav__link">
+  <a href="#cross-platform-support" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick Example
+        Cross-Platform Support
       
     </span>
   </a>
@@ -1231,28 +1287,6 @@
     <span class="md-ellipsis">
       
         Getting Started
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#how-it-works" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        How It Works
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#cross-platform-support" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Cross-Platform Support
       
     </span>
   </a>
@@ -1343,108 +1377,77 @@
 <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg" /></a></p>
 <h2 id="overview">Overview</h2>
 <p>NAPT is a Python-based CLI tool that automates the entire workflow for packaging Windows applications and deploying them to Microsoft Intune. It runs on Windows, Linux, and macOS, though packaging (.intunewin creation) requires Windows.</p>
+<h3 id="why-napt">Why NAPT?</h3>
+<p>Packaging applications for Microsoft Intune with PSAppDeployToolkit (PSADT) typically involves a manual, time-consuming process:</p>
+<ol>
+<li>
+<p><strong>Manually check for new versions</strong> - Check vendor sites/APIs for updates. Easy to miss versions or waste time when nothing changed.</p>
+</li>
+<li>
+<p><strong>Create PSADT deployment</strong> - Copy template, manually edit <code>Invoke-AppDeployToolkit.ps1</code> with variables, configure install/uninstall logic. Error-prone and repetitive.</p>
+</li>
+<li>
+<p><strong>Create detection script</strong> - Write PowerShell detection logic, test thoroughly, maintain version checks. Must update for each new version.</p>
+</li>
+<li>
+<p><strong>Package as .intunewin</strong> - Run IntuneWinAppUtil.exe manually, manage paths, handle errors. Tedious and error-prone.</p>
+</li>
+<li>
+<p><strong>Upload to Intune</strong> - Upload package via portal, fill metadata, configure app info and requirements manually.</p>
+</li>
+<li>
+<p><strong>Configure deployment</strong> - Set up rollout assignments manually for each version.</p>
+</li>
+</ol>
+<p>This manual workflow is repetitive, difficult to automate in CI/CD pipelines, lacks version tracking, and requires re-doing most of the work for every update. NAPT automates this entire workflow with YAML-based recipes and intelligent version tracking.</p>
 <h3 id="key-features">Key Features</h3>
 <ul>
-<li>✅ <strong>Declarative YAML recipes</strong> - Define app packaging once, run everywhere</li>
-<li>✅ <strong>Automatic version discovery</strong> - Extract versions from MSI, EXE, URLs, or APIs</li>
-<li>✅ <strong>Robust downloads</strong> - Retry logic, conditional requests (ETags), atomic writes</li>
-<li>✅ <strong>Smart caching</strong> - Skip unnecessary downloads with intelligent version checks</li>
-<li>✅ <strong>Cross-platform support</strong> - Windows, Linux, and macOS</li>
-<li>✅ <strong>Layered configuration</strong> - Organization → Vendor → Recipe inheritance</li>
-<li>✅ <strong>PSADT packaging</strong> - Generate Intune-ready packages with PSAppDeployToolkit</li>
+<li>✅ <strong>Intelligent version tracking</strong> - Automatic discovery from MSI, EXE, URLs, or APIs with smart caching to skip unnecessary downloads</li>
+<li>✅ <strong>YAML-based recipes</strong> - Define app packaging once with layered configuration (Organization → Vendor → Recipe)</li>
+<li>✅ <strong>Automated PSADT packaging</strong> - Generate Intune-ready packages with detection scripts, no manual template editing</li>
+<li>✅ <strong>Cross-platform workflow</strong> - Run on Windows, Linux, and macOS (packaging requires Windows)</li>
 <li>🚧 <strong>Direct Intune upload</strong> - Automatic deployment (planned)</li>
-<li>🚧 <strong>Deployment waves</strong> - Phased rollouts with rings (planned)</li>
 </ul>
-<h2 id="quick-example">Quick Example</h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Validate a recipe</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>napt<span class="w"> </span>validate<span class="w"> </span>recipes/Google/chrome.yaml
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Discover version and download installer</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Build PSADT package</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1"># Create .intunewin package</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>napt<span class="w"> </span>package<span class="w"> </span>builds/napt-chrome/141.0.7390.123/
-</span></code></pre></div>
-<blockquote>
-<p><strong>💡 Tip:</strong> Add <code>--verbose</code> for progress updates or <code>--debug</code> for detailed diagnostics. See <a href="user-guide/#commands-reference">Commands Reference</a> for details.</p>
-</blockquote>
-<h2 id="getting-started">Getting Started</h2>
-<p>Ready to get started? Check out the <a href="quick-start/">Quick Start Guide</a> for installation instructions and your first steps with NAPT.</p>
-<h2 id="how-it-works">How It Works</h2>
-<p>NAPT automates the complete packaging workflow with intelligent caching to skip unnecessary work:</p>
-<div align="center">
-
-<pre class="mermaid"><code>flowchart TD
-    Start([napt discover]) --&gt; LoadRecipe[Load Recipe YAML]
-    LoadRecipe --&gt; CheckCache{Cached?}
-
-    CheckCache --&gt;|Yes| CheckUpdates[Check for Updates]
-    CheckUpdates --&gt; IsUpdated{Updated?}
-    IsUpdated --&gt;|No| Skip([✓ Already Current])
-    IsUpdated --&gt;|Yes| Download[Download Installer]
-
-    CheckCache --&gt;|No| Download
-    Download --&gt; UpdateState[Update state.json]
-    UpdateState --&gt; Ready([✓ Ready for napt build])
-
-    Ready --&gt; Build([napt build])
-    Build --&gt; Package([napt package])
-    Package --&gt; Deploy([✓ Ready for Upload])</code></pre>
-
-</div>
-
-<p>See the <a href="user-guide/">User Guide</a> for detailed architecture information and the <a href="api/core/">API Reference</a> for code-level documentation.</p>
 <h2 id="cross-platform-support">Cross-Platform Support</h2>
 <table>
 <thead>
 <tr>
-<th>Command</th>
+<th>Feature</th>
 <th>Windows</th>
 <th>Linux/macOS</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>napt discover</code></td>
+<td>Discovery &amp; Download</td>
 <td>✅</td>
 <td>✅</td>
 </tr>
 <tr>
-<td><code>napt build</code></td>
+<td>PSADT Package Building</td>
 <td>✅</td>
 <td>✅</td>
 </tr>
 <tr>
-<td><code>napt package</code></td>
+<td>Intune Packaging</td>
 <td>✅</td>
 <td>⚫ Windows Only</td>
 </tr>
 </tbody>
 </table>
-<p>See the <a href="user-guide/#cross-platform-support">Cross-Platform Support</a> section for detailed workflows and CI/CD examples.</p>
+<p>See the <a href="user-guide/#cross-platform-support">Cross-Platform Support</a> section for detailed workflows.</p>
+<h2 id="getting-started">Getting Started</h2>
+<p>Check out the <a href="quick-start/">Quick Start Guide</a> for installation instructions and your first steps with NAPT.</p>
 <h2 id="creating-recipes">Creating Recipes</h2>
-<p>Recipes are declarative YAML files that define how to discover, download, and package applications.</p>
+<p>Recipes are YAML configuration files that define how to discover, download, and package applications.</p>
 <p><strong>Example recipes:</strong></p>
 <ul>
 <li><strong><a href="https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Google/chrome.yaml">chrome.yaml</a></strong> - url_download strategy with MSI version extraction</li>
-<li><strong><a href="https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Git/git.yaml">git.yaml</a></strong> - api_github strategy with asset pattern matching</li>
-<li><strong><a href="https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Examples/json-api-example.yaml">json-api-example.yaml</a></strong> - api_json strategy with JSONPath extraction</li>
 <li><strong><a href="https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/7-Zip/7zip.yaml">7zip.yaml</a></strong> - web_scrape strategy for vendor download pages</li>
 </ul>
-<p>NAPT supports multiple discovery strategies (url_download, web_scrape, api_github, api_json) - see the <a href="user-guide/#discovery-strategies">Discovery Strategies</a> guide for detailed configuration and examples.</p>
+<p>NAPT supports multiple discovery strategies (url_download, web_scrape, api_github, api_json) - see the <a href="user-guide/#discovery-strategies">Discovery Strategies</a> guide for detailed configuration and more examples.</p>
 <h2 id="contributing">Contributing</h2>
-<p>Contributions are welcome! Please ensure:</p>
-<ol>
-<li>Code follows existing patterns and conventions</li>
-<li>All functions have comprehensive docstrings</li>
-<li>Type annotations are included</li>
-<li>Tests are added for new features</li>
-<li>Documentation is updated</li>
-</ol>
-<p>See <a href="contributing/">Contributing</a> for detailed guidelines.</p>
+<p>Contributions are welcome! See <a href="contributing/">Contributing</a> for guidelines.</p>
 <h2 id="license">License</h2>
 <p>This project is licensed under the Apache License 2.0 - see the <a href="https://github.com/RogerCibrian/notapkgtool/blob/main/LICENSE">LICENSE</a> file for details.</p>
 <h2 id="author">Author</h2>
