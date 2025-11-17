@@ -17,14 +17,6 @@
 This module orchestrates the complete build process for creating PSADT
 packages from recipes and downloaded installers.
 
-Private Helpers:
-    - _get_installer_version: Extract version from downloaded installer
-    - _find_installer_file: Locate installer in downloads directory
-    - _create_build_directory: Create build directory structure
-    - _copy_psadt_pristine: Copy PSADT files from cache
-    - _copy_installer: Copy installer to Files/ directory
-    - _apply_branding: Replace PSADT assets with custom branding
-
 Design Principles:
     - Filesystem is source of truth for version information
     - Entire PSADT Template_v4 structure copied pristine
@@ -33,15 +25,18 @@ Design Principles:
     - Branding applied by replacing files in root Assets/ directory (v4 structure)
 
 Example:
-    from pathlib import Path
-    from notapkgtool.build import build_package
+    Basic usage:
+        ```python
+        from pathlib import Path
+        from notapkgtool.build import build_package
 
-    result = build_package(
-        recipe_path=Path("recipes/Google/chrome.yaml"),
-        downloads_dir=Path("downloads"),
-    )
+        result = build_package(
+            recipe_path=Path("recipes/Google/chrome.yaml"),
+            downloads_dir=Path("downloads"),
+        )
 
-    print(f"Built: {result['build_dir']}")
+        print(f"Built: {result.build_dir}")
+        ```
 """
 
 from __future__ import annotations
@@ -51,7 +46,9 @@ import shutil
 from typing import Any
 
 from notapkgtool.config import load_effective_config
+from notapkgtool.exceptions import ConfigError, PackagingError
 from notapkgtool.psadt import get_psadt_release
+from notapkgtool.results import BuildResult
 from notapkgtool.versioning.msi import version_from_msi_product_version
 
 
@@ -62,7 +59,7 @@ def _get_installer_version(
 
     Uses the version extraction method specified in the recipe's
     source configuration. If no version.type is specified (e.g., for
-    github_release strategy), attempts to read from state file.
+    api_github strategy), attempts to read from state file.
 
     Args:
         installer_file: Path to the installer file.
@@ -74,54 +71,55 @@ def _get_installer_version(
         Extracted version string.
 
     Raises:
-        RuntimeError: If version extraction fails or version not found.
-        ValueError: If version type is unsupported.
+        PackagingError: If version extraction fails or version not found.
+        ConfigError: If version type is unsupported.
     """
-    from notapkgtool.cli import print_verbose
+    from notapkgtool.logging import get_global_logger
 
+    logger = get_global_logger()
     app = config["apps"][0]
     app_id = app.get("id", "unknown")
     source = app.get("source", {})
     version_config = source.get("version", {})
     version_type = version_config.get("type", "")
 
-    print_verbose("BUILD", f"Extracting version from: {installer_file.name}")
-    print_verbose("BUILD", f"Version type: {version_type}")
+    logger.verbose("BUILD", f"Extracting version from: {installer_file.name}")
+    logger.verbose("BUILD", f"Version type: {version_type}")
 
     # If no version type specified, try to use version from state
     if not version_type:
         if state_file and state_file.exists():
             from notapkgtool.state import load_state
 
-            print_verbose("BUILD", "No version type specified, using state file")
+            logger.verbose("BUILD", "No version type specified, using state file")
             state = load_state(state_file)
             app_state = state.get("apps", {}).get(app_id, {})
             known_version = app_state.get("known_version")
 
             if known_version:
-                print_verbose("BUILD", f"Using version from state: {known_version}")
+                logger.verbose("BUILD", f"Using version from state: {known_version}")
                 return known_version
             else:
-                raise ValueError(
+                raise ConfigError(
                     f"No version.type specified and no known_version in state for {app_id}. "
                     f"Run 'napt discover' first or add version.type to recipe."
                 )
         else:
-            raise ValueError(
+            raise ConfigError(
                 "No version.type specified in recipe. Add source.version.type or ensure state file exists."
             )
 
     if version_type == "msi":
         try:
             discovered = version_from_msi_product_version(installer_file)
-            print_verbose("BUILD", f"Extracted version: {discovered.version}")
+            logger.verbose("BUILD", f"Extracted version: {discovered.version}")
             return discovered.version
         except Exception as err:
-            raise RuntimeError(
+            raise PackagingError(
                 f"Failed to extract MSI version from {installer_file}: {err}"
             ) from err
     else:
-        raise ValueError(
+        raise ConfigError(
             f"Unsupported version type for build: {version_type!r}. " f"Supported: msi"
         )
 
@@ -139,10 +137,11 @@ def _find_installer_file(downloads_dir: Path, config: dict[str, Any]) -> Path:
         Path to the installer file.
 
     Raises:
-        FileNotFoundError: If installer file cannot be found.
+        PackagingError: If installer file cannot be found.
     """
-    from notapkgtool.cli import print_verbose
+    from notapkgtool.logging import get_global_logger
 
+    logger = get_global_logger()
     app = config["apps"][0]
     source = app.get("source", {})
     url = source.get("url", "")
@@ -153,7 +152,7 @@ def _find_installer_file(downloads_dir: Path, config: dict[str, Any]) -> Path:
         installer_path = downloads_dir / filename
 
         if installer_path.exists():
-            print_verbose("BUILD", f"Found installer: {installer_path}")
+            logger.verbose("BUILD", f"Found installer: {installer_path}")
             return installer_path
 
     # Fallback: Search for installer matching app name/id or use most recent
@@ -174,7 +173,7 @@ def _find_installer_file(downloads_dir: Path, config: dict[str, Any]) -> Path:
 
         if matching:
             installer_path = max(matching, key=lambda p: p.stat().st_mtime)
-            print_verbose("BUILD", f"Found installer matching app: {installer_path}")
+            logger.verbose("BUILD", f"Found installer matching app: {installer_path}")
             return installer_path
 
     # Ultimate fallback: Most recent installer of any type
@@ -183,10 +182,10 @@ def _find_installer_file(downloads_dir: Path, config: dict[str, Any]) -> Path:
     )
     if all_installers:
         installer_path = max(all_installers, key=lambda p: p.stat().st_mtime)
-        print_verbose("BUILD", f"Found most recent installer: {installer_path}")
+        logger.verbose("BUILD", f"Found most recent installer: {installer_path}")
         return installer_path
 
-    raise FileNotFoundError(
+    raise PackagingError(
         f"No installer found in {downloads_dir}. "
         f"Run 'napt discover' first to download the installer."
     )
@@ -206,19 +205,20 @@ def _create_build_directory(base_dir: Path, app_id: str, version: str) -> Path:
     Raises:
         OSError: If directory creation fails.
     """
-    from notapkgtool.cli import print_verbose
+    from notapkgtool.logging import get_global_logger
 
+    logger = get_global_logger()
     build_dir = base_dir / app_id / version
 
     if build_dir.exists():
-        print_verbose("BUILD", f"Build directory exists: {build_dir}")
-        print_verbose("BUILD", "Removing existing build...")
+        logger.verbose("BUILD", f"Build directory exists: {build_dir}")
+        logger.verbose("BUILD", "Removing existing build...")
         shutil.rmtree(build_dir)
 
     # Create the build directory (template will provide subdirectories)
     build_dir.mkdir(parents=True, exist_ok=True)
 
-    print_verbose("BUILD", f"Created build directory: {build_dir}")
+    logger.verbose("BUILD", f"Created build directory: {build_dir}")
 
     return build_dir
 
@@ -240,15 +240,16 @@ def _copy_psadt_pristine(psadt_cache_dir: Path, build_dir: Path) -> None:
         build_dir: Build directory where PSADT should be copied.
 
     Raises:
-        FileNotFoundError: If PSADT cache directory or required files don't exist.
+        PackagingError: If PSADT cache directory or required files don't exist.
         OSError: If copy operation fails.
     """
-    from notapkgtool.cli import print_verbose
+    from notapkgtool.logging import get_global_logger
 
+    logger = get_global_logger()
     if not psadt_cache_dir.exists():
-        raise FileNotFoundError(f"PSADT cache directory not found: {psadt_cache_dir}")
+        raise PackagingError(f"PSADT cache directory not found: {psadt_cache_dir}")
 
-    print_verbose("BUILD", f"Copying PSADT template from cache: {psadt_cache_dir}")
+    logger.verbose("BUILD", f"Copying PSADT template from cache: {psadt_cache_dir}")
 
     # Copy all files and directories from the template root
     for item in psadt_cache_dir.iterdir():
@@ -256,12 +257,12 @@ def _copy_psadt_pristine(psadt_cache_dir: Path, build_dir: Path) -> None:
 
         if item.is_dir():
             shutil.copytree(item, dest)
-            print_verbose("BUILD", f"  Copied directory: {item.name}/")
+            logger.verbose("BUILD", f"  Copied directory: {item.name}/")
         else:
             shutil.copy2(item, dest)
-            print_verbose("BUILD", f"  Copied file: {item.name}")
+            logger.verbose("BUILD", f"  Copied file: {item.name}")
 
-    print_verbose("BUILD", "[OK] PSADT template copied")
+    logger.verbose("BUILD", "[OK] PSADT template copied")
 
 
 def _copy_installer(installer_file: Path, build_dir: Path) -> None:
@@ -274,16 +275,17 @@ def _copy_installer(installer_file: Path, build_dir: Path) -> None:
     Raises:
         OSError: If copy operation fails.
     """
-    from notapkgtool.cli import print_verbose
+    from notapkgtool.logging import get_global_logger
 
+    logger = get_global_logger()
     files_dir = build_dir / "Files"
     dest = files_dir / installer_file.name
 
-    print_verbose("BUILD", f"Copying installer: {installer_file.name}")
+    logger.verbose("BUILD", f"Copying installer: {installer_file.name}")
 
     shutil.copy2(installer_file, dest)
 
-    print_verbose("BUILD", "[OK] Installer copied to Files/")
+    logger.verbose("BUILD", "[OK] Installer copied to Files/")
 
 
 def _apply_branding(config: dict[str, Any], build_dir: Path) -> None:
@@ -300,24 +302,25 @@ def _apply_branding(config: dict[str, Any], build_dir: Path) -> None:
         FileNotFoundError: If branding files don't exist.
         OSError: If file copy operation fails.
     """
-    from notapkgtool.cli import print_verbose
+    from notapkgtool.logging import get_global_logger
 
+    logger = get_global_logger()
     brand_pack = config.get("defaults", {}).get("psadt", {}).get("brand_pack")
 
     if not brand_pack:
-        print_verbose("BUILD", "No brand pack configured, using PSADT defaults")
+        logger.verbose("BUILD", "No brand pack configured, using PSADT defaults")
         return
 
     brand_path = Path(brand_pack.get("path", ""))
     mappings = brand_pack.get("mappings", [])
 
     if not brand_path.exists():
-        print_verbose(
+        logger.verbose(
             "BUILD", f"Brand pack path not found: {brand_path}, skipping branding"
         )
         return
 
-    print_verbose("BUILD", f"Applying branding from: {brand_path}")
+    logger.verbose("BUILD", f"Applying branding from: {brand_path}")
 
     for mapping in mappings:
         source_pattern = mapping.get("source", "")
@@ -330,7 +333,7 @@ def _apply_branding(config: dict[str, Any], build_dir: Path) -> None:
         source_files = list(brand_path.glob(source_pattern))
 
         if not source_files:
-            print_verbose("BUILD", f"No files match pattern: {source_pattern}")
+            logger.verbose("BUILD", f"No files match pattern: {source_pattern}")
             continue
 
         # Use first match
@@ -346,9 +349,9 @@ def _apply_branding(config: dict[str, Any], build_dir: Path) -> None:
 
         # Copy file
         shutil.copy2(source_file, target_with_ext)
-        print_verbose("BUILD", f"  {source_file.name} -> {target_with_ext.name}")
+        logger.verbose("BUILD", f"  {source_file.name} -> {target_with_ext.name}")
 
-    print_verbose("BUILD", "[OK] Branding applied")
+    logger.verbose("BUILD", "[OK] Branding applied")
 
 
 def build_package(
@@ -357,7 +360,7 @@ def build_package(
     output_dir: Path | None = None,
     verbose: bool = False,
     debug: bool = False,
-) -> dict[str, Any]:
+) -> BuildResult:
     """Build a PSADT package from a recipe and downloaded installer.
 
     This is the main entry point for the build process. It:
@@ -382,11 +385,16 @@ def build_package(
         debug: Show debug output. Default is False.
 
     Returns:
-        A dict (app_id, app_name, version, build_dir, psadt_version, status),
-            where app_id is the application ID, app_name is the application
-            name, version is the application version, build_dir is the Path
-            to the build directory, psadt_version is the PSADT version used,
-            and status is the build status.
+        BuildResult dataclass with the following fields:
+
+            - app_id (str): Unique application identifier from recipe configuration.
+            - app_name (str): Application display name from recipe configuration.
+            - version (str): Application version extracted from installer file (filesystem
+                is source of truth).
+            - build_dir (Path): Path to the created build directory, following the pattern
+                {output_dir}/{app_id}/{version}/.
+            - psadt_version (str): PSADT version used for the build (e.g., "4.1.7").
+            - status (str): Build status, typically "success" for completed builds.
 
     Raises:
         FileNotFoundError: If recipe or installer doesn't exist.
@@ -394,16 +402,18 @@ def build_package(
 
     Example:
         Basic build:
-
+            ```python
             result = build_package(Path("recipes/Google/chrome.yaml"))
-            print(result['build_dir'])  # builds/napt-chrome/141.0.7390.123
+            print(result.build_dir)  # builds/napt-chrome/141.0.7390.123
+            ```
 
         Custom output directory:
-
+            ```python
             result = build_package(
                 Path("recipes/Google/chrome.yaml"),
                 output_dir=Path("custom/builds")
             )
+            ```
 
     Note:
         Requires installer to be downloaded first (run 'napt discover').
@@ -411,10 +421,11 @@ def build_package(
         existing build directory if it exists. PSADT files are copied pristine
         from cache. Invoke-AppDeployToolkit.ps1 is generated (not copied).
     """
-    from notapkgtool.cli import print_step, print_verbose
+    from notapkgtool.logging import get_global_logger
 
+    logger = get_global_logger()
     # Load configuration
-    print_step(1, 6, "Loading configuration...")
+    logger.step(1, 6, "Loading configuration...")
     config = load_effective_config(recipe_path, verbose=verbose, debug=debug)
 
     app = config["apps"][0]
@@ -431,18 +442,18 @@ def build_package(
         )
 
     # Find installer file
-    print_step(2, 6, "Finding installer...")
+    logger.step(2, 6, "Finding installer...")
     installer_file = _find_installer_file(downloads_dir, config)
 
     # Extract version from installer or state (filesystem + state are truth)
-    print_step(3, 6, "Extracting version from installer...")
+    logger.step(3, 6, "Extracting version from installer...")
     state_file = Path("state/versions.json")  # Default state file location
     version = _get_installer_version(installer_file, config, state_file)
 
-    print_verbose("BUILD", f"Building {app_name} v{version}")
+    logger.verbose("BUILD", f"Building {app_name} v{version}")
 
     # Get PSADT release
-    print_step(4, 6, "Getting PSADT release...")
+    logger.step(4, 6, "Getting PSADT release...")
     psadt_config = config.get("defaults", {}).get("psadt", {})
     release_spec = psadt_config.get("release", "latest")
     cache_dir = Path(psadt_config.get("cache_dir", "cache/psadt"))
@@ -452,10 +463,10 @@ def build_package(
     )
     psadt_version = psadt_cache_dir.name  # Directory name is the version
 
-    print_verbose("BUILD", f"Using PSADT {psadt_version}")
+    logger.verbose("BUILD", f"Using PSADT {psadt_version}")
 
     # Create build directory
-    print_step(5, 6, "Creating build structure...")
+    logger.step(5, 6, "Creating build structure...")
     build_dir = _create_build_directory(output_dir, app_id, version)
 
     # Copy PSADT files (pristine)
@@ -472,22 +483,22 @@ def build_package(
     # Write generated script
     script_dest = build_dir / "Invoke-AppDeployToolkit.ps1"
     script_dest.write_text(invoke_script, encoding="utf-8")
-    print_verbose("BUILD", "[OK] Generated Invoke-AppDeployToolkit.ps1")
+    logger.verbose("BUILD", "[OK] Generated Invoke-AppDeployToolkit.ps1")
 
     # Copy installer
     _copy_installer(installer_file, build_dir)
 
     # Apply branding
-    print_step(6, 6, "Applying branding...")
+    logger.step(6, 6, "Applying branding...")
     _apply_branding(config, build_dir)
 
-    print_verbose("BUILD", f"[OK] Build complete: {build_dir}")
+    logger.verbose("BUILD", f"[OK] Build complete: {build_dir}")
 
-    return {
-        "app_id": app_id,
-        "app_name": app_name,
-        "version": version,
-        "build_dir": build_dir,
-        "psadt_version": psadt_version,
-        "status": "success",
-    }
+    return BuildResult(
+        app_id=app_id,
+        app_name=app_name,
+        version=version,
+        build_dir=build_dir,
+        psadt_version=psadt_version,
+        status="success",
+    )

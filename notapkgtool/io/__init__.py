@@ -25,13 +25,6 @@ download : module
 upload : module
     File upload adapters for Intune and storage providers (planned).
 
-Public API:
-
-download_file : function
-    Download a file from a URL with robustness and reproducibility.
-NotModifiedError : exception
-    Raised when a conditional request returns HTTP 304.
-
 Example:
     from pathlib import Path
     from notapkgtool.io import download_file

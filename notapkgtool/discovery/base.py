@@ -23,10 +23,11 @@ This module defines the foundational components for the discovery system:
 The discovery system uses a strategy pattern to support multiple ways
 of obtaining application installers and their versions:
 
-- http_static: Direct download from a static URL
-- url_regex: Parse version from URL patterns using regex
-- github_release: Fetch from GitHub releases API
-- http_json: Query JSON API endpoints with JSONPath
+- url_download: Direct download from a static URL (FILE-FIRST)
+- web_scrape: Scrape vendor download pages to find links and extract versions
+    (VERSION-FIRST)
+- api_github: Fetch from GitHub releases API (VERSION-FIRST)
+- api_json: Query JSON API endpoints for version and download URL (VERSION-FIRST)
 
 Design Philosophy:
     - Strategies are Protocol classes (structural subtyping, not inheritance)
@@ -44,7 +45,7 @@ Using typing.Protocol instead of ABC allows:
 
 Example:
     Implementing a custom strategy:
-
+        ```python
         from notapkgtool.discovery.base import register_strategy, DiscoveryStrategy
         from pathlib import Path
         from typing import Any
@@ -64,6 +65,7 @@ Example:
         # source:
         #   strategy: my_custom
         #   ...
+        ```
 
 """
 
@@ -72,6 +74,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Protocol
 
+from notapkgtool.exceptions import ConfigError
 from notapkgtool.versioning.keys import DiscoveredVersion
 
 # -------------------------------
@@ -129,13 +132,14 @@ class DiscoveryStrategy(Protocol):
 
         Example:
             Check required fields:
-
+                ```python
                 def validate_config(self, app_config):
                     errors = []
                     source = app_config.get("source", {})
                     if "url" not in source:
                         errors.append("Missing required field: source.url")
                     return errors
+                ```
 
         Note:
             This method is optional; strategies without it will skip validation.
@@ -162,7 +166,7 @@ def register_strategy(name: str, strategy_class: type[DiscoveryStrategy]) -> Non
     overwrite the previous registration (allows monkey-patching for tests).
 
     Args:
-        name: Strategy name (e.g., "http_static"). This is the value
+        name: Strategy name (e.g., "url_download"). This is the value
             used in recipe YAML files under source.strategy. Names should be
             lowercase with underscores for readability.
         strategy_class: The strategy class to
@@ -171,7 +175,7 @@ def register_strategy(name: str, strategy_class: type[DiscoveryStrategy]) -> Non
 
     Example:
         Register at module import time:
-
+            ```python
             # In discovery/my_strategy.py
             from .base import register_strategy
 
@@ -180,6 +184,7 @@ def register_strategy(name: str, strategy_class: type[DiscoveryStrategy]) -> Non
                     ...
 
             register_strategy("my_strategy", MyStrategy)
+            ```
 
     Note:
         No validation is performed at registration time. Type checkers will
@@ -198,7 +203,7 @@ def get_strategy(name: str) -> DiscoveryStrategy:
     have been imported first for registration to occur.
 
     Args:
-        name: Strategy name (e.g., "http_static"). Must exactly match
+        name: Strategy name (e.g., "url_download"). Must exactly match
             a name registered via register_strategy(). Case-sensitive.
 
     Returns:
@@ -206,32 +211,34 @@ def get_strategy(name: str) -> DiscoveryStrategy:
             to use.
 
     Raises:
-        ValueError: If the strategy name is not registered. The error message
+        ConfigError: If the strategy name is not registered. The error message
             includes a list of available strategies for troubleshooting.
 
     Example:
         Get and use a strategy:
-
+            ```python
             from notapkgtool.discovery import get_strategy
-            strategy = get_strategy("http_static")
+            strategy = get_strategy("url_download")
             # Use strategy.discover_version(...)
+            ```
 
         Handle unknown strategy:
-
+            ```python
             try:
                 strategy = get_strategy("nonexistent")
-            except ValueError as e:
+            except ConfigError as e:
                 print(f"Strategy not found: {e}")
+            ```
 
     Note:
         Strategies must be registered before they can be retrieved. The
-        http_static strategy is auto-registered when imported. New strategies
+        url_download strategy is auto-registered when imported. New strategies
         can be added by creating a module and registering.
 
     """
     if name not in _STRATEGY_REGISTRY:
         available = ", ".join(_STRATEGY_REGISTRY.keys())
-        raise ValueError(
+        raise ConfigError(
             f"Unknown discovery strategy: {name!r}. Available: {available or '(none)'}"
         )
     return _STRATEGY_REGISTRY[name]()

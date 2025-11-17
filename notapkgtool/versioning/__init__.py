@@ -25,16 +25,6 @@ keys : module
     Core version comparison logic with semver-like parsing and robust fallbacks.
 msi : module
     MSI ProductVersion extraction using msilib, _msi, PowerShell, or msitools.
-url_regex : module
-    Extract versions from URLs using regex patterns.
-
-Public API:
-
-- DiscoveredVersion: Container for discovered version information with source tracking
-- SourceHint: Type hint for version source ("msi", "exe", or "string")
-- compare_any: Compare two version strings, returning -1, 0, or 1
-- is_newer_any: Check if a remote version is newer than the current version
-- version_key_any: Generate a sortable key for any version string
 
 Version Comparison Strategies:
 
@@ -56,7 +46,7 @@ The versioning system supports multiple comparison modes:
 
 Example:
     Basic version comparison:
-
+        ```python
         from notapkgtool.versioning import compare_any, is_newer_any
 
         # Compare versions (returns 1 for newer, 0 for equal, -1 for older)
@@ -64,14 +54,16 @@ Example:
 
         # Check if version is newer
         is_newer = is_newer_any("1.2.0", "1.1.9")  # Returns: True
+        ```
 
     Prerelease handling:
-
+        ```python
         # rc is newer than beta
         compare_any("1.0.0-rc.1", "1.0.0-beta.5")  # Returns: 1
 
         # Release is newer than prerelease
         compare_any("1.0.0", "1.0.0-rc.1")  # Returns: 1
+        ```
 
     MSI version extraction:
 

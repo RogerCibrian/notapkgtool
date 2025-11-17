@@ -29,41 +29,38 @@ Validation Checks:
 
 Example:
     Validate a recipe and handle results:
-
+        ```python
         from pathlib import Path
         from notapkgtool.validation import validate_recipe
 
         result = validate_recipe(Path("recipes/Google/chrome.yaml"))
-        if result["status"] == "valid":
-            print(f"Recipe is valid with {result['app_count']} app(s)")
+        if result.status == "valid":
+            print(f"Recipe is valid with {result.app_count} app(s)")
         else:
-            for error in result["errors"]:
+            for error in result.errors:
                 print(f"Error: {error}")
+        ```
 
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import yaml
 
 from notapkgtool.discovery import get_strategy
+from notapkgtool.exceptions import ConfigError
+from notapkgtool.results import ValidationResult
 
-__all__ = ["validate_recipe", "ValidationError"]
-
-
-class ValidationError(Exception):
-    """Raised when recipe validation fails."""
-
-    pass
+__all__ = ["validate_recipe"]
 
 
-def validate_recipe(recipe_path: Path, verbose: bool = False) -> dict[str, Any]:
+def validate_recipe(recipe_path: Path, verbose: bool = False) -> ValidationResult:
     """Validate a recipe file without downloading anything.
 
     This function checks:
+
     1. YAML file can be parsed
     2. Required top-level fields are present
     3. apiVersion is supported
@@ -72,6 +69,7 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> dict[str, Any]:
     6. Strategy-specific configuration is valid
 
     Does NOT:
+
     - Make network calls
     - Download files
     - Verify URLs are accessible
@@ -83,23 +81,33 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> dict[str, Any]:
             Default is False.
 
     Returns:
-        A dict (status, errors, warnings, app_count, recipe_path), where
-            status is "valid" or "invalid", errors is a list of error messages
-            (empty if valid), warnings is a list of warning messages, app_count
-            is the number of apps in the recipe, and recipe_path is the string
-            path to the validated recipe.
+        ValidationResult dataclass with the following fields:
+
+            - status (str): Validation status, either "valid" (no errors) or "invalid"
+                (has errors). Warnings do not affect status.
+            - errors (list[str]): List of error messages found during validation. Empty
+                list if recipe is valid. Each error describes a specific validation
+                failure (e.g., missing required field, invalid strategy configuration).
+            - warnings (list[str]): List of warning messages found during validation.
+                Warnings indicate potential issues but do not prevent validation from
+                passing (e.g., unsupported apiVersion, deprecated configuration).
+            - app_count (int): Number of apps defined in the recipe. Zero if recipe
+                structure is invalid.
+            - recipe_path (str): String path to the validated recipe file, useful for
+                error reporting and logging.
 
     Example:
         Validate a recipe and check results:
-
+            ```python
             from pathlib import Path
 
             result = validate_recipe(Path("recipes/app.yaml"))
-            if result["status"] == "valid":
+            if result.status == "valid":
                 print("Recipe is valid!")
             else:
-                for error in result["errors"]:
+                for error in result.errors:
                     print(f"Error: {error}")
+            ```
 
     """
     errors = []
@@ -112,13 +120,13 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> dict[str, Any]:
     # Check file exists
     if not recipe_path.exists():
         errors.append(f"Recipe file not found: {recipe_path}")
-        return {
-            "status": "invalid",
-            "errors": errors,
-            "warnings": warnings,
-            "app_count": 0,
-            "recipe_path": str(recipe_path),
-        }
+        return ValidationResult(
+            status="invalid",
+            errors=errors,
+            warnings=warnings,
+            app_count=0,
+            recipe_path=str(recipe_path),
+        )
 
     # Parse YAML
     try:
@@ -126,22 +134,22 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> dict[str, Any]:
             recipe = yaml.safe_load(f)
     except yaml.YAMLError as err:
         errors.append(f"Invalid YAML syntax: {err}")
-        return {
-            "status": "invalid",
-            "errors": errors,
-            "warnings": warnings,
-            "app_count": 0,
-            "recipe_path": str(recipe_path),
-        }
+        return ValidationResult(
+            status="invalid",
+            errors=errors,
+            warnings=warnings,
+            app_count=0,
+            recipe_path=str(recipe_path),
+        )
     except Exception as err:
         errors.append(f"Failed to read recipe file: {err}")
-        return {
-            "status": "invalid",
-            "errors": errors,
-            "warnings": warnings,
-            "app_count": 0,
-            "recipe_path": str(recipe_path),
-        }
+        return ValidationResult(
+            status="invalid",
+            errors=errors,
+            warnings=warnings,
+            app_count=0,
+            recipe_path=str(recipe_path),
+        )
 
     if verbose:
         print("  [OK] YAML syntax is valid")
@@ -149,13 +157,13 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> dict[str, Any]:
     # Validate recipe is a dict
     if not isinstance(recipe, dict):
         errors.append("Recipe must be a YAML dictionary/mapping")
-        return {
-            "status": "invalid",
-            "errors": errors,
-            "warnings": warnings,
-            "app_count": 0,
-            "recipe_path": str(recipe_path),
-        }
+        return ValidationResult(
+            status="invalid",
+            errors=errors,
+            warnings=warnings,
+            app_count=0,
+            recipe_path=str(recipe_path),
+        )
 
     # Check apiVersion
     if "apiVersion" not in recipe:
@@ -174,34 +182,34 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> dict[str, Any]:
     # Check apps list
     if "apps" not in recipe:
         errors.append("Missing required field: apps")
-        return {
-            "status": "invalid",
-            "errors": errors,
-            "warnings": warnings,
-            "app_count": 0,
-            "recipe_path": str(recipe_path),
-        }
+        return ValidationResult(
+            status="invalid",
+            errors=errors,
+            warnings=warnings,
+            app_count=0,
+            recipe_path=str(recipe_path),
+        )
 
     apps = recipe["apps"]
     if not isinstance(apps, list):
         errors.append("Field 'apps' must be a list")
-        return {
-            "status": "invalid",
-            "errors": errors,
-            "warnings": warnings,
-            "app_count": 0,
-            "recipe_path": str(recipe_path),
-        }
+        return ValidationResult(
+            status="invalid",
+            errors=errors,
+            warnings=warnings,
+            app_count=0,
+            recipe_path=str(recipe_path),
+        )
 
     if len(apps) == 0:
         errors.append("Field 'apps' must contain at least one app")
-        return {
-            "status": "invalid",
-            "errors": errors,
-            "warnings": warnings,
-            "app_count": 0,
-            "recipe_path": str(recipe_path),
-        }
+        return ValidationResult(
+            status="invalid",
+            errors=errors,
+            warnings=warnings,
+            app_count=0,
+            recipe_path=str(recipe_path),
+        )
 
     app_count = len(apps)
     if verbose:
@@ -252,13 +260,14 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> dict[str, Any]:
 
         if verbose:
             print(
-                f"  [OK] App '{app.get('name', 'unnamed')}' uses strategy: {strategy_name}"
+                f"  [OK] App '{app.get('name', 'unnamed')}' "
+                f"uses strategy: {strategy_name}"
             )
 
         # Check if strategy exists
         try:
             strategy = get_strategy(strategy_name)
-        except ValueError as err:
+        except ConfigError as err:
             errors.append(f"{app_prefix}.source.strategy: {err}")
             continue
 
@@ -280,10 +289,10 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> dict[str, Any]:
         else:
             print(f"  [ERROR] Recipe has {len(errors)} error(s)")
 
-    return {
-        "status": status,
-        "errors": errors,
-        "warnings": warnings,
-        "app_count": app_count,
-        "recipe_path": str(recipe_path),
-    }
+    return ValidationResult(
+        status=status,
+        errors=errors,
+        warnings=warnings,
+        app_count=app_count,
+        recipe_path=str(recipe_path),
+    )

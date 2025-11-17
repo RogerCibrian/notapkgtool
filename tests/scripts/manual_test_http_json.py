@@ -163,14 +163,14 @@ def test_simple_json():
                     config, Path(tmpdir), verbose=True
                 )
 
-                print("\n✅ SUCCESS!")
+                print("\n[OK] SUCCESS!")
                 print(f"  Version: {discovered.version}")
                 print(f"  Source: {discovered.source}")
                 print(f"  File: {file_path.name}")
                 print(f"  SHA-256: {sha256[:16]}...")
 
     except Exception as e:
-        print(f"\n❌ FAILED: {e}")
+        print(f"\n[FAILED] FAILED: {e}")
 
 
 def test_nested_json():
@@ -208,14 +208,14 @@ def test_nested_json():
                     config, Path(tmpdir), verbose=True
                 )
 
-                print("\n✅ SUCCESS!")
+                print("\n[OK] SUCCESS!")
                 print(f"  Version: {discovered.version}")
                 print(f"  Source: {discovered.source}")
                 print(f"  File: {file_path.name}")
                 print(f"  SHA-256: {sha256[:16]}...")
 
     except Exception as e:
-        print(f"\n❌ FAILED: {e}")
+        print(f"\n[FAILED] FAILED: {e}")
 
 
 def test_array_indexing():
@@ -253,14 +253,14 @@ def test_array_indexing():
                     config, Path(tmpdir), verbose=True
                 )
 
-                print("\n✅ SUCCESS!")
+                print("\n[OK] SUCCESS!")
                 print(f"  Version: {discovered.version}")
                 print(f"  Source: {discovered.source}")
                 print(f"  File: {file_path.name}")
                 print(f"  SHA-256: {sha256[:16]}...")
 
     except Exception as e:
-        print(f"\n❌ FAILED: {e}")
+        print(f"\n[FAILED] FAILED: {e}")
 
 
 def test_post_request():
@@ -302,14 +302,14 @@ def test_post_request():
                     config, Path(tmpdir), verbose=True
                 )
 
-                print("\n✅ SUCCESS!")
+                print("\n[OK] SUCCESS!")
                 print(f"  Version: {discovered.version}")
                 print(f"  Source: {discovered.source}")
                 print(f"  File: {file_path.name}")
                 print(f"  SHA-256: {sha256[:16]}...")
 
     except Exception as e:
-        print(f"\n❌ FAILED: {e}")
+        print(f"\n[FAILED] FAILED: {e}")
 
 
 def test_real_api():
@@ -352,13 +352,13 @@ def test_real_api():
             data["assets"][0]["browser_download_url"] if data.get("assets") else "N/A"
         )
 
-        print("\n✅ API Response Received!")
+        print("\n[OK] API Response Received!")
         print(f"  Latest Tag: {tag_name}")
         print(f"  First Asset URL: {first_asset_url[:60]}...")
         print("\nNote: Full download test skipped to save bandwidth and time.")
 
     except Exception as e:
-        print(f"\n❌ FAILED: {e}")
+        print(f"\n[FAILED] FAILED: {e}")
 
 
 def main():

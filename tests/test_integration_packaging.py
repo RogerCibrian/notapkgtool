@@ -82,7 +82,9 @@ class TestBuildStructureValidation:
         # Remove the exe
         (build_dir / "Invoke-AppDeployToolkit.exe").unlink()
 
-        with pytest.raises(ValueError, match="Missing.*Invoke-AppDeployToolkit.exe"):
+        from notapkgtool.exceptions import ConfigError
+
+        with pytest.raises(ConfigError, match="Missing.*Invoke-AppDeployToolkit.exe"):
             _verify_build_structure(build_dir)
 
     def test_verify_detects_missing_psadt_module(
@@ -101,5 +103,7 @@ class TestBuildStructureValidation:
         # Remove PSAppDeployToolkit module
         shutil.rmtree(build_dir / "PSAppDeployToolkit")
 
-        with pytest.raises(ValueError, match="Missing.*PSAppDeployToolkit"):
+        from notapkgtool.exceptions import ConfigError
+
+        with pytest.raises(ConfigError, match="Missing.*PSAppDeployToolkit"):
             _verify_build_structure(build_dir)

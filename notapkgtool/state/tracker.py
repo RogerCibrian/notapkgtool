@@ -32,7 +32,7 @@ Key Features:
 
 Example:
     High-level API with StateTracker:
-
+        ```python
         from pathlib import Path
         from notapkgtool.state import StateTracker
 
@@ -45,15 +45,17 @@ Example:
         # Update after discovery
         tracker.update_cache("napt-chrome", version="130.0.0", ...)
         tracker.save()
+        ```
 
     Low-level API with functions:
-
+        ```python
         from pathlib import Path
         from notapkgtool.state import load_state, save_state
 
         state = load_state(Path("state/versions.json"))
         # ... modify state dict ...
         save_state(state, Path("state/versions.json"))
+        ```
 
 """
 
@@ -65,6 +67,7 @@ from pathlib import Path
 from typing import Any
 
 from notapkgtool import __version__
+from notapkgtool.exceptions import PackagingError
 
 
 class StateTracker:
@@ -80,7 +83,7 @@ class StateTracker:
 
     Example:
         Basic usage:
-
+            ```python
             from pathlib import Path
 
             tracker = StateTracker(Path("state/versions.json"))
@@ -93,6 +96,7 @@ class StateTracker:
                 known_version="130.0.0"
             )
             tracker.save()
+            ```
 
     """
 
@@ -132,7 +136,7 @@ class StateTracker:
             self.state_file.rename(backup)
             self.state = create_default_state()
             self.save()
-            raise RuntimeError(
+            raise PackagingError(
                 f"Corrupted state file backed up to {backup}. "
                 f"Created fresh state file."
             ) from err
@@ -169,11 +173,12 @@ class StateTracker:
 
         Example:
             Retrieve cached information:
-
+                ```python
                 cache = tracker.get_cache("napt-chrome")
                 if cache:
                     etag = cache.get('etag')
                     known_version = cache.get('known_version')
+                ```
 
         """
         return self.state.get("apps", {}).get(recipe_id)
@@ -198,30 +203,36 @@ class StateTracker:
             sha256: SHA-256 hash of file (for integrity checks).
             etag: ETag header from download response. Used by url_download for HTTP 304
                 conditional requests. Saved but unused by version-first strategies.
-            last_modified: Last-Modified header from download response. Used by url_download
-                as fallback for conditional requests. Saved but unused by version-first.
-            known_version: Version string. PRIMARY cache key for version-first strategies
-                (compared to skip downloads). Informational only for url_download.
+            last_modified: Last-Modified header from download response.
+                Used by url_download as fallback for conditional requests.
+                Saved but unused by version-first.
+            known_version: Version string. PRIMARY cache key for
+                version-first strategies (compared to skip downloads).
+                Informational only for url_download.
             strategy: Discovery strategy used (for debugging).
 
         Example:
             Update cache entry:
-
+                ```python
                 tracker.update_cache(
                     "napt-chrome",
                     url="https://dl.google.com/chrome.msi",
-        ...     sha256="abc123...",
-        ...     etag='W/"def456"',
-        ...     known_version="130.0.0"
-        ... )
+                    sha256="abc123...",
+                    etag='W/"def456"',
+                    known_version="130.0.0"
+                )
+                ```
 
         Note:
-            Schema v2: Removed file_path, last_checked, and renamed version→known_version.
+            Schema v2: Removed file_path, last_checked, and renamed
+            version -> known_version.
 
             Field usage differs by strategy type:
 
-            - Version-first: known_version is PRIMARY cache key, etag/last_modified unused
-            - File-first: etag/last_modified are PRIMARY cache keys, known_version informational
+            - Version-first: known_version is PRIMARY cache key,
+                etag/last_modified unused
+            - File-first: etag/last_modified are PRIMARY cache keys,
+                known_version informational
 
             Filesystem is the source of truth; state is for optimization only.
 
@@ -256,9 +267,10 @@ class StateTracker:
 
         Example:
             Check if version has changed:
-
+                ```python
                 if tracker.has_version_changed("napt-chrome", "130.0.0"):
                     print("New version available!")
+                ```
 
         Note:
             Uses 'known_version' field which is informational only.
@@ -280,9 +292,10 @@ def create_default_state() -> dict[str, Any]:
 
     Example:
         Create default state structure:
-
+            ```python
             state = create_default_state()
             state["apps"] = {}
+            ```
 
     """
     return {
@@ -311,11 +324,12 @@ def load_state(state_file: Path) -> dict[str, Any]:
 
     Example:
         Load state from file:
-
+            ```python
             from pathlib import Path
 
             state = load_state(Path("state/versions.json"))
             apps = state.get("apps", {})
+            ```
 
     """
     with open(state_file, encoding="utf-8") as f:
@@ -337,11 +351,12 @@ def save_state(state: dict[str, Any], state_file: Path) -> None:
 
     Example:
         Save state to file:
-
+            ```python
             from pathlib import Path
 
             state = {"metadata": {}, "apps": {}}
             save_state(state, Path("state/versions.json"))
+            ```
 
     Note:
         - Uses 2-space indentation for readability

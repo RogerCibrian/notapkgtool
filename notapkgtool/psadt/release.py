@@ -25,15 +25,9 @@ Key Features:
 - Extract releases to cache directory
 - Version resolution ("latest" keyword support)
 
-Public API:
-
-- fetch_latest_psadt_version: Query GitHub for the latest PSADT release version
-- get_psadt_release: Download and extract a PSADT release to cache
-- is_psadt_cached: Check if a PSADT version is already cached
-
 Example:
     Get and cache PSADT releases:
-
+        ```python
         from pathlib import Path
         from notapkgtool.psadt import get_psadt_release, is_psadt_cached
 
@@ -46,9 +40,10 @@ Example:
         # Check if cached
         if is_psadt_cached("4.1.7", Path("cache/psadt")):
             print("Already cached!")
+        ```
 
 Note:
-    - Reuses notapkgtool.discovery.github_release for API calls
+    - Reuses notapkgtool.discovery.api_github for API calls
     - Caches releases by version: cache/psadt/{version}/
     - Downloads .zip releases and extracts to cache
     - Validates extracted PSADT structure (PSAppDeployToolkit/ folder exists)
@@ -62,6 +57,8 @@ import re
 import zipfile
 
 import requests
+
+from notapkgtool.exceptions import NetworkError, PackagingError
 
 PSADT_REPO = "PSAppDeployToolkit/PSAppDeployToolkit"
 PSADT_GITHUB_API = f"https://api.github.com/repos/{PSADT_REPO}/releases/latest"
@@ -86,9 +83,10 @@ def fetch_latest_psadt_version(verbose: bool = False) -> str:
 
     Example:
         Get latest PSADT version from GitHub:
-
+            ```python
             version = fetch_latest_psadt_version()
             print(version)  # Output: "4.1.7"
+            ```
 
     Note:
         - Uses GitHub's public API (60 requests/hour limit without auth)
@@ -96,9 +94,10 @@ def fetch_latest_psadt_version(verbose: bool = False) -> str:
         - For higher rate limits, set GITHUB_TOKEN environment variable
 
     """
-    from notapkgtool.cli import print_verbose
+    from notapkgtool.logging import get_global_logger
 
-    print_verbose("PSADT", f"Querying GitHub API: {PSADT_GITHUB_API}")
+    logger = get_global_logger()
+    logger.verbose("PSADT", f"Querying GitHub API: {PSADT_GITHUB_API}")
 
     try:
         headers = {
@@ -109,7 +108,7 @@ def fetch_latest_psadt_version(verbose: bool = False) -> str:
         response = requests.get(PSADT_GITHUB_API, headers=headers, timeout=30)
         response.raise_for_status()
     except requests.RequestException as err:
-        raise RuntimeError(
+        raise NetworkError(
             f"Failed to fetch latest PSADT release from GitHub: {err}"
         ) from err
 
@@ -117,16 +116,16 @@ def fetch_latest_psadt_version(verbose: bool = False) -> str:
     tag_name = data.get("tag_name", "")
 
     if not tag_name:
-        raise RuntimeError("GitHub API response missing 'tag_name' field")
+        raise NetworkError("GitHub API response missing 'tag_name' field")
 
     # Extract version from tag (e.g., "4.1.7" or "v4.1.7")
     # PSADT uses tags without 'v' prefix
     version_match = re.match(r"v?(\d+\.\d+\.\d+)", tag_name)
     if not version_match:
-        raise RuntimeError(f"Could not extract version from tag: {tag_name!r}")
+        raise NetworkError(f"Could not extract version from tag: {tag_name!r}")
 
     version = version_match.group(1)
-    print_verbose("PSADT", f"Latest PSADT version: {version}")
+    logger.verbose("PSADT", f"Latest PSADT version: {version}")
 
     return version
 
@@ -143,11 +142,12 @@ def is_psadt_cached(version: str, cache_dir: Path) -> bool:
 
     Example:
         Check if PSADT version is cached:
-
+            ```python
             from pathlib import Path
 
             if is_psadt_cached("4.1.7", Path("cache/psadt")):
                 print("Already downloaded!")
+            ```
 
     Note:
         Validates that the cache contains the expected PSADT structure:
@@ -182,20 +182,23 @@ def get_psadt_release(
         Path to the cached PSADT directory (cache_dir/{version}).
 
     Raises:
-        RuntimeError: If download fails or extraction fails.
-        ValueError: If release_spec is invalid.
+        NetworkError: If download fails.
+        PackagingError: If extraction fails.
+        ConfigError: If release_spec is invalid.
 
     Example:
         Get latest version:
-
+            ```python
             from pathlib import Path
 
             psadt = get_psadt_release("latest", Path("cache/psadt"))
             print(psadt)  # Output: cache/psadt/4.1.7
+            ```
 
         Get specific version:
-
+            ```python
             psadt = get_psadt_release("4.1.7", Path("cache/psadt"))
+            ```
 
     Note:
         - Caches by version: cache/psadt/{version}/PSAppDeployToolkit/
@@ -204,25 +207,26 @@ def get_psadt_release(
         - Extracts entire archive to version directory
 
     """
-    from notapkgtool.cli import print_verbose
+    from notapkgtool.logging import get_global_logger
 
+    logger = get_global_logger()
     # Resolve "latest" to actual version
     if release_spec == "latest":
-        print_verbose("PSADT", "Resolving 'latest' to current version...")
+        logger.verbose("PSADT", "Resolving 'latest' to current version...")
         version = fetch_latest_psadt_version(verbose=verbose)
     else:
         version = release_spec
 
-    print_verbose("PSADT", f"PSADT version: {version}")
+    logger.verbose("PSADT", f"PSADT version: {version}")
 
     # Check if already cached
     if is_psadt_cached(version, cache_dir):
         version_dir = cache_dir / version
-        print_verbose("PSADT", f"Using cached PSADT: {version_dir}")
+        logger.verbose("PSADT", f"Using cached PSADT: {version_dir}")
         return version_dir
 
     # Need to download
-    print_verbose("PSADT", f"Downloading PSADT {version}...")
+    logger.verbose("PSADT", f"Downloading PSADT {version}...")
 
     # Get release info from GitHub
     release_url = f"https://api.github.com/repos/{PSADT_REPO}/releases/tags/{version}"
@@ -236,7 +240,7 @@ def get_psadt_release(
         response = requests.get(release_url, headers=headers, timeout=30)
         response.raise_for_status()
     except requests.RequestException as err:
-        raise RuntimeError(
+        raise NetworkError(
             f"Failed to fetch PSADT release {version} from GitHub: {err}"
         ) from err
 
@@ -262,23 +266,23 @@ def get_psadt_release(
                 break
 
     if not zip_asset:
-        raise RuntimeError(
+        raise NetworkError(
             f"No .zip asset found in PSADT release {version}. "
             f"Available assets: {[a.get('name') for a in assets]}"
         )
 
     download_url = zip_asset.get("browser_download_url")
     if not download_url:
-        raise RuntimeError(f"Asset missing download URL: {zip_asset}")
+        raise NetworkError(f"Asset missing download URL: {zip_asset}")
 
-    print_verbose("PSADT", f"Downloading: {zip_asset['name']}")
+    logger.verbose("PSADT", f"Downloading: {zip_asset['name']}")
 
     # Download the .zip file
     try:
         zip_response = requests.get(download_url, timeout=300)
         zip_response.raise_for_status()
     except requests.RequestException as err:
-        raise RuntimeError(f"Failed to download PSADT release: {err}") from err
+        raise NetworkError(f"Failed to download PSADT release: {err}") from err
 
     # Create cache directory
     version_dir = cache_dir / version
@@ -288,14 +292,14 @@ def get_psadt_release(
     zip_path = version_dir / f"psadt_{version}.zip"
     zip_path.write_bytes(zip_response.content)
 
-    print_verbose("PSADT", f"Extracting to: {version_dir}")
+    logger.verbose("PSADT", f"Extracting to: {version_dir}")
 
     # Extract .zip
     try:
         with zipfile.ZipFile(zip_path, "r") as zf:
             zf.extractall(version_dir)
     except zipfile.BadZipFile as err:
-        raise RuntimeError(f"Failed to extract PSADT archive: {err}") from err
+        raise PackagingError(f"Failed to extract PSADT archive: {err}") from err
     finally:
         # Clean up .zip file
         if zip_path.exists():
@@ -303,10 +307,11 @@ def get_psadt_release(
 
     # Verify extracted structure
     if not is_psadt_cached(version, cache_dir):
-        raise RuntimeError(
-            f"PSADT extraction failed: PSAppDeployToolkit/ folder not found in {version_dir}"
+        raise PackagingError(
+            f"PSADT extraction failed: PSAppDeployToolkit/ folder "
+            f"not found in {version_dir}"
         )
 
-    print_verbose("PSADT", f"PSADT {version} cached successfully")
+    logger.verbose("PSADT", f"PSADT {version} cached successfully")
 
     return version_dir

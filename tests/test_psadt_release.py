@@ -52,7 +52,9 @@ class TestFetchLatestPSADTVersion:
             status_code=404,
         )
 
-        with pytest.raises(RuntimeError, match="Failed to fetch latest PSADT release"):
+        from notapkgtool.exceptions import NetworkError
+
+        with pytest.raises(NetworkError, match="Failed to fetch latest PSADT release"):
             fetch_latest_psadt_version()
 
     def test_fetch_latest_missing_tag(self, requests_mock):
@@ -62,7 +64,9 @@ class TestFetchLatestPSADTVersion:
             json={},
         )
 
-        with pytest.raises(RuntimeError, match="missing 'tag_name'"):
+        from notapkgtool.exceptions import NetworkError
+
+        with pytest.raises(NetworkError, match="missing 'tag_name'"):
             fetch_latest_psadt_version()
 
     def test_fetch_latest_invalid_tag_format(self, requests_mock):
@@ -72,7 +76,9 @@ class TestFetchLatestPSADTVersion:
             json={"tag_name": "invalid-tag"},
         )
 
-        with pytest.raises(RuntimeError, match="Could not extract version from tag"):
+        from notapkgtool.exceptions import NetworkError
+
+        with pytest.raises(NetworkError, match="Could not extract version from tag"):
             fetch_latest_psadt_version()
 
 
@@ -190,7 +196,9 @@ class TestGetPSADTRelease:
             json={"tag_name": "4.1.7", "assets": []},
         )
 
-        with pytest.raises(RuntimeError, match="No .zip asset found"):
+        from notapkgtool.exceptions import NetworkError
+
+        with pytest.raises(NetworkError, match="No .zip asset found"):
             get_psadt_release("4.1.7", cache_dir)
 
     def test_get_release_api_404(self, tmp_path, requests_mock):
@@ -202,5 +210,7 @@ class TestGetPSADTRelease:
             status_code=404,
         )
 
-        with pytest.raises(RuntimeError, match="Failed to fetch PSADT release"):
+        from notapkgtool.exceptions import NetworkError
+
+        with pytest.raises(NetworkError, match="Failed to fetch PSADT release"):
             get_psadt_release("9.9.9", cache_dir)

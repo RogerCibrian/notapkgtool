@@ -17,14 +17,6 @@
 This module is format-agnostic: it does NOT download or read files.
 It only parses and compares version strings consistently across sources
 (MSI, EXE, generic strings).
-
-Public API:
-
-- DiscoveredVersion: Container for version discovered from downloaded files (file-first)
-- VersionInfo: Container for version discovered without downloading (version-first)
-- version_key_any(): Build a comparable key for any version string
-- compare_any(): Tri-state compare (-1, 0, 1)
-- is_newer_any(): True if remote > current
 """
 
 from __future__ import annotations
@@ -56,13 +48,13 @@ class DiscoveredVersion:
 class VersionInfo:
     """Container for version information discovered without downloading.
 
-    Used by version-first strategies (url_regex, github_release, http_json)
+    Used by version-first strategies (web_scrape, api_github, api_json)
     that can determine version and download URL without fetching the installer.
 
     Attributes:
         version: Raw version string (e.g., "140.0.7339.128").
         download_url: URL to download the installer.
-        source: Strategy name for logging (e.g., "url_regex", "github_release").
+        source: Strategy name for logging (e.g., "web_scrape", "api_github").
 
     """
 
@@ -236,7 +228,8 @@ def version_key_any(s: str, *, source: SourceHint = "string") -> tuple:
     """Compute a comparable key for any version string.
 
     - MSI/EXE: purely numeric (truncated to 3/4 parts).
-    - Generic string: semver-like robust key; if no numeric prefix, fallback to ("text", raw).
+    - Generic string: semver-like robust key; if no numeric prefix,
+        fallback to ("text", raw).
     """
     if source in ("msi", "exe"):
         nums = _clip_for_source(_ints_from_text(s), source)
@@ -301,7 +294,8 @@ def is_newer_any(
     if current is None:
         if verbose:
             print(
-                f"[is_newer_any] No current version. Treat {remote!r} as newer (source={source})"
+                f"[is_newer_any] No current version. Treat {remote!r} "
+                f"as newer (source={source})"
             )
         return True
 
@@ -309,14 +303,17 @@ def is_newer_any(
     if verbose:
         if cmpv > 0:
             print(
-                f"[is_newer_any] Remote {remote!r} is newer than current {current!r} (source={source})"
+                f"[is_newer_any] Remote {remote!r} is newer than "
+                f"current {current!r} (source={source})"
             )
         elif cmpv == 0:
             print(
-                f"[is_newer_any] Remote {remote!r} is the same as current {current!r} (source={source})"
+                f"[is_newer_any] Remote {remote!r} is the same as "
+                f"current {current!r} (source={source})"
             )
         else:
             print(
-                f"[is_newer_any] Remote {remote!r} is older than current {current!r} (source={source})"
+                f"[is_newer_any] Remote {remote!r} is older than "
+                f"current {current!r} (source={source})"
             )
     return cmpv > 0

@@ -14,6 +14,7 @@ from unittest.mock import patch
 import pytest
 
 from notapkgtool.core import discover_recipe
+from notapkgtool.exceptions import ConfigError
 from notapkgtool.versioning import DiscoveredVersion
 
 
@@ -53,27 +54,27 @@ class TestDiscoverRecipe:
 
             result = discover_recipe(recipe_path, tmp_test_dir)
 
-        assert result["app_name"] == "Test App"
-        assert result["app_id"] == "test-app"
-        assert result["strategy"] == "url_download"
-        assert result["version"] == "1.2.3"
-        assert result["version_source"] == "msi"
-        assert result["status"] == "success"
-        assert "file_path" in result
-        assert "sha256" in result
+        assert result.app_name == "Test App"
+        assert result.app_id == "test-app"
+        assert result.strategy == "url_download"
+        assert result.version == "1.2.3"
+        assert result.version_source == "msi"
+        assert result.status == "success"
+        assert hasattr(result, "file_path")
+        assert hasattr(result, "sha256")
 
     def test_discover_recipe_no_apps_raises(self, tmp_test_dir, create_yaml_file):
-        """Test that recipe with no apps raises ValueError."""
+        """Test that recipe with no apps raises ConfigError."""
         recipe_data = {"apiVersion": "napt/v1", "apps": []}
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
 
-        with pytest.raises(ValueError, match="No apps defined"):
+        with pytest.raises(ConfigError, match="No apps defined"):
             discover_recipe(recipe_path, tmp_test_dir)
 
     def test_discover_recipe_missing_strategy_raises(
         self, tmp_test_dir, create_yaml_file
     ):
-        """Test that missing strategy raises ValueError."""
+        """Test that missing strategy raises ConfigError."""
         recipe_data = {
             "apiVersion": "napt/v1",
             "apps": [
@@ -85,13 +86,13 @@ class TestDiscoverRecipe:
         }
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
 
-        with pytest.raises(ValueError, match="No 'source.strategy' defined"):
+        with pytest.raises(ConfigError, match="No 'source.strategy' defined"):
             discover_recipe(recipe_path, tmp_test_dir)
 
     def test_discover_recipe_unknown_strategy_raises(
         self, tmp_test_dir, create_yaml_file
     ):
-        """Test that unknown strategy raises ValueError."""
+        """Test that unknown strategy raises ConfigError."""
         recipe_data = {
             "apiVersion": "napt/v1",
             "apps": [
@@ -103,14 +104,14 @@ class TestDiscoverRecipe:
         }
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
 
-        with pytest.raises(ValueError, match="Unknown discovery strategy"):
+        with pytest.raises(ConfigError, match="Unknown discovery strategy"):
             discover_recipe(recipe_path, tmp_test_dir)
 
     def test_discover_recipe_missing_file_raises(self, tmp_test_dir):
         """Test that missing recipe file raises error."""
         nonexistent = tmp_test_dir / "nonexistent.yaml"
 
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(ConfigError):
             discover_recipe(nonexistent, tmp_test_dir)
 
 
@@ -120,7 +121,8 @@ class TestVersionFirstFastPath:
     def test_version_first_cache_hit_skips_download(
         self, tmp_test_dir, create_yaml_file
     ):
-        """Test that version-first strategies skip download when version matches cache."""
+        """Test that version-first strategies skip download when version
+        matches cache."""
         from pathlib import Path
 
         # Create a minimal recipe with web_scrape strategy
@@ -178,9 +180,9 @@ class TestVersionFirstFastPath:
                         mock_download.assert_not_called()
 
         # Verify result uses cached version
-        assert result["version"] == "1.2.3"
-        assert result["app_id"] == "test-app"
-        assert result["status"] == "success"
+        assert result.version == "1.2.3"
+        assert result.app_id == "test-app"
+        assert result.status == "success"
 
     def test_version_first_cache_miss_downloads(self, tmp_test_dir, create_yaml_file):
         """Test that version-first strategies download when version changes."""
@@ -246,14 +248,15 @@ class TestVersionFirstFastPath:
                         mock_download.assert_called_once()
 
             # Verify result has new version
-            assert result["version"] == "2.0.0"
-            assert result["app_id"] == "test-app"
-            assert result["status"] == "success"
+            assert result.version == "2.0.0"
+            assert result.app_id == "test-app"
+            assert result.status == "success"
 
     def test_version_first_missing_cached_file_redownloads(
         self, tmp_test_dir, create_yaml_file
     ):
-        """Test that missing cached file triggers re-download even if version matches."""
+        """Test that missing cached file triggers re-download even if
+        version matches."""
         from pathlib import Path
 
         import requests_mock
@@ -310,7 +313,7 @@ class TestVersionFirstFastPath:
                     )
 
         # Verify result and that file was downloaded
-        assert result["version"] == "1.2.3"
-        assert result["status"] == "success"
+        assert result.version == "1.2.3"
+        assert result.status == "success"
         fake_file = tmp_test_dir / "app-v1.2.3-installer.msi"
         assert fake_file.exists()

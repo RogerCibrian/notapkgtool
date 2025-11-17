@@ -37,52 +37,50 @@ Configuration Layers:
 
 Merge Behavior:
     The loader performs deep merging with "last wins" semantics:
-      - **Dicts**: Recursively merged (keys from overlay override base)
-      - **Lists**: Completely replaced (NOT appended/extended)
-      - **Scalars**: Overwritten (strings, numbers, booleans)
+
+    - **Dicts**: Recursively merged (keys from overlay override base)
+    - **Lists**: Completely replaced (NOT appended/extended)
+    - **Scalars**: Overwritten (strings, numbers, booleans)
 
 Path Resolution:
     Relative paths in configuration are resolved against the RECIPE FILE location,
     making recipes relocatable and portable. Currently resolved paths:
-      - defaults.psadt.brand_pack.path
+
+    - defaults.psadt.brand_pack.path
 
 Dynamic Injection:
     Some fields are injected at load time:
-      - defaults.psadt.app_vars.AppScriptDate: Today's date (YYYY-MM-DD)
 
-Private Helpers:
-    - _load_yaml_file: Load YAML with error handling
-    - _deep_merge_dicts: Recursive dict merging
-    - _find_defaults_root: Locate defaults directory
-    - _detect_vendor: Determine vendor from recipe location or content
-    - _resolve_known_paths: Resolve relative paths to absolute
-    - _inject_dynamic_values: Add runtime-determined fields
+    - defaults.psadt.app_vars.AppScriptDate: Today's date (YYYY-MM-DD)
 
 Error Handling:
-    - FileNotFoundError: Recipe file doesn't exist
-    - SystemExit: YAML parse errors or empty files
+    - ConfigError: Recipe file doesn't exist, YAML parse errors, empty files,
+        or invalid structure
     - All errors are chained with "from err" for better debugging
 
 Example:
     Basic usage:
-
+        ```python
         from pathlib import Path
         from notapkgtool.config import load_effective_config
 
         cfg = load_effective_config(Path("recipes/Google/chrome.yaml"))
         print(cfg["apps"][0]["name"])  # Output: Google Chrome
+        ```
 
     Access merged defaults:
-
+        ```python
         psadt_release = cfg["defaults"]["psadt"]["release"]
         print(psadt_release)  # Output: latest
+        ```
 
     Override vendor detection:
-
+        ```python
         cfg = load_effective_config(
             Path("recipes/Google/chrome.yaml"),
             vendor="CustomVendor"
         )
+        ```
 
 Note:
     - The loader walks upward from the recipe to find defaults/org.yaml
@@ -100,6 +98,8 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+
+from notapkgtool.exceptions import ConfigError
 
 # -------------------------------
 # Data types
@@ -128,21 +128,19 @@ def _load_yaml_file(p: Path) -> Any:
     """Load a YAML file and return the parsed Python object.
 
     Raises:
-      FileNotFoundError      - when file does not exist
-      SystemExit             - for invalid YAML (parse error) with chained context
+        ConfigError: When file does not exist, invalid YAML (parse error),
+            or empty files.
 
     """
     if not p.exists():
-        raise FileNotFoundError(f"file not found: {p}")
+        raise ConfigError(f"file not found: {p}")
     try:
         with p.open("r", encoding="utf-8") as f:
             data = yaml.safe_load(f)
     except yaml.YAMLError as err:
-        print(f"Error parsing YAML: {p}: {err}")
-        raise SystemExit(1) from err
+        raise ConfigError(f"Error parsing YAML: {p}: {err}") from err
     if data is None:
-        print(f"Error: YAML file is empty: {p}")
-        raise SystemExit(1)
+        raise ConfigError(f"YAML file is empty: {p}")
     return data
 
 
@@ -324,27 +322,27 @@ def load_effective_config(
         as-is (with path resolution + injection).
 
     Raises:
-        SystemExit: On YAML parse errors (with chained context).
-        FileNotFoundError: If the recipe file itself is missing.
+        ConfigError: On YAML parse errors, empty files, invalid structure,
+            or if the recipe file is missing.
 
     """
-    from notapkgtool.cli import print_debug, print_verbose
+    from notapkgtool.logging import get_global_logger
 
+    logger = get_global_logger()
     recipe_path = recipe_path.resolve()
     recipe_dir = recipe_path.parent
 
-    print_verbose("CONFIG", f"Loading recipe: {recipe_path}")
+    logger.verbose("CONFIG", f"Loading recipe: {recipe_path}")
 
     # 1) Read recipe
     recipe_obj = _load_yaml_file(recipe_path)
     if not isinstance(recipe_obj, dict):
-        print(f"Error: top-level YAML must be a mapping (dict): {recipe_path}")
-        raise SystemExit(1)
+        raise ConfigError(f"top-level YAML must be a mapping (dict): {recipe_path}")
 
     # 2) Find defaults root
     defaults_root = _find_defaults_root(recipe_dir)
     if defaults_root and verbose:
-        print_verbose("CONFIG", f"Found defaults root: {defaults_root}")
+        logger.verbose("CONFIG", f"Found defaults root: {defaults_root}")
 
     merged: dict[str, Any] = {}
     layers_merged = 0
@@ -356,14 +354,14 @@ def load_effective_config(
         # 3) Load org defaults
         org_defaults_path = defaults_root / "org.yaml"
         if org_defaults_path.exists():
-            print_verbose(
+            logger.verbose(
                 "CONFIG",
                 f"Loading: {org_defaults_path.relative_to(defaults_root.parent)}",
             )
             org_defaults = _load_yaml_file(org_defaults_path)
             if isinstance(org_defaults, dict):
                 if debug:
-                    print_debug("CONFIG", "--- Content from org.yaml ---")
+                    logger.debug("CONFIG", "--- Content from org.yaml ---")
                     _print_yaml_content(org_defaults, debug)
                 merged = _deep_merge_dicts(merged, org_defaults)
                 layers_merged += 1
@@ -373,19 +371,19 @@ def load_effective_config(
             vendor_name = _detect_vendor(recipe_path, recipe_obj)
 
         if vendor_name and verbose:
-            print_verbose("CONFIG", f"Detected vendor: {vendor_name}")
+            logger.verbose("CONFIG", f"Detected vendor: {vendor_name}")
 
         # 5) Load vendor defaults if present
         if vendor_name:
             candidate = defaults_root / "vendors" / f"{vendor_name}.yaml"
             if candidate.exists():
-                print_verbose(
+                logger.verbose(
                     "CONFIG", f"Loading: {candidate.relative_to(defaults_root.parent)}"
                 )
                 vendor_defaults = _load_yaml_file(candidate)
                 if isinstance(vendor_defaults, dict):
                     if debug:
-                        print_debug(
+                        logger.debug(
                             "CONFIG", f"--- Content from {vendor_name}.yaml ---"
                         )
                         _print_yaml_content(vendor_defaults, debug)
@@ -394,9 +392,9 @@ def load_effective_config(
 
     # Show recipe content if verbose
     if verbose:
-        print_verbose("CONFIG", f"Loading: {recipe_path.name}")
+        logger.verbose("CONFIG", f"Loading: {recipe_path.name}")
     if debug:
-        print_debug("CONFIG", f"--- Content from {recipe_path.name} ---")
+        logger.debug("CONFIG", f"--- Content from {recipe_path.name} ---")
         _print_yaml_content(recipe_obj, debug)
 
     # 6) Merge recipe on top
@@ -404,16 +402,19 @@ def load_effective_config(
     layers_merged += 1
 
     if verbose:
-        print_verbose("CONFIG", f"Deep merging {layers_merged} layer(s)")
+        logger.verbose("CONFIG", f"Deep merging {layers_merged} layer(s)")
         # Show final config structure
         top_level_keys = list(merged.keys())
-        print_verbose(
+        logger.verbose(
             "CONFIG",
-            f"Final config has {len(top_level_keys)} top-level keys: {', '.join(top_level_keys)}",
+            (
+                f"Final config has {len(top_level_keys)} top-level keys: "
+                f"{', '.join(top_level_keys)}"
+            ),
         )
     # Show the complete merged configuration in debug mode
     if debug:
-        print_debug("CONFIG", "--- Final Merged Configuration ---")
+        logger.debug("CONFIG", "--- Final Merged Configuration ---")
         _print_yaml_content(merged, debug)
 
     # 7) Resolve relative paths (branding paths relative to defaults_root)

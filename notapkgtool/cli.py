@@ -26,28 +26,34 @@ Commands:
 
 Example:
     Validate recipe syntax:
-
+        ```bash
         $ napt validate recipes/Google/chrome.yaml
+        ```
 
     Discover latest version:
-
+        ```bash
         $ napt discover recipes/Google/chrome.yaml
+        ```
 
     Build PSADT package:
-
+        ```bash
         $ napt build recipes/Google/chrome.yaml
+        ```
 
     Create .intunewin package:
-
+        ```bash
         $ napt package builds/napt-chrome/142.0.7444.60/
+        ```
 
     Enable verbose output:
-
+        ```bash
         $ napt discover recipes/Google/chrome.yaml --verbose
+        ```
 
     Enable debug output:
-
+        ```bash
         $ napt discover recipes/Google/chrome.yaml --debug
+        ```
 
 Exit Codes:
 
@@ -72,52 +78,14 @@ import sys
 
 from notapkgtool.build import build_package, create_intunewin
 from notapkgtool.core import discover_recipe
+from notapkgtool.exceptions import (
+    ConfigError,
+    NAPTError,
+    NetworkError,
+    PackagingError,
+)
+from notapkgtool.logging import get_logger, set_global_logger
 from notapkgtool.validation import validate_recipe
-
-# Global verbose and debug flags set from CLI args
-_verbose = False
-_debug = False
-
-
-def set_verbose(enabled: bool) -> None:
-    """Set the global verbose flag."""
-    global _verbose
-    _verbose = enabled
-
-
-def is_verbose() -> bool:
-    """Check if verbose mode is enabled."""
-    return _verbose
-
-
-def set_debug(enabled: bool) -> None:
-    """Set the global debug flag. Debug mode implies verbose mode."""
-    global _debug, _verbose
-    _debug = enabled
-    if enabled:
-        _verbose = True  # Debug implies verbose
-
-
-def is_debug() -> bool:
-    """Check if debug mode is enabled."""
-    return _debug
-
-
-def print_step(step: int, total: int, message: str) -> None:
-    """Print a step indicator for non-verbose mode."""
-    print(f"[{step}/{total}] {message}")
-
-
-def print_verbose(prefix: str, message: str) -> None:
-    """Print a verbose log message (only when verbose mode is active)."""
-    if _verbose:
-        print(f"[{prefix}] {message}")
-
-
-def print_debug(prefix: str, message: str) -> None:
-    """Print a debug log message (only when debug mode is active)."""
-    if _debug:
-        print(f"[{prefix}] {message}")
 
 
 def cmd_validate(args: argparse.Namespace) -> int:
@@ -138,8 +106,9 @@ def cmd_validate(args: argparse.Namespace) -> int:
         Prints validation results, errors, and warnings to stdout.
 
     """
-    # Set global verbose flag
-    set_verbose(args.verbose)
+    # Configure global logger
+    logger = get_logger(verbose=args.verbose, debug=False)
+    set_global_logger(logger)
 
     recipe_path = Path(args.recipe).resolve()
 
@@ -153,36 +122,34 @@ def cmd_validate(args: argparse.Namespace) -> int:
     print("=" * 70)
     print("VALIDATION RESULTS")
     print("=" * 70)
-    print(f"Recipe:      {result['recipe_path']}")
-    print(f"Status:      {result['status'].upper()}")
-    print(f"App Count:   {result['app_count']}")
+    print(f"Recipe:      {result.recipe_path}")
+    print(f"Status:      {result.status.upper()}")
+    print(f"App Count:   {result.app_count}")
     print()
 
     # Show warnings if any
-    if result["warnings"]:
-        print(f"Warnings ({len(result['warnings'])}):")
-        for warning in result["warnings"]:
+    if result.warnings:
+        print(f"Warnings ({len(result.warnings)}):")
+        for warning in result.warnings:
             print(f"  [WARNING] {warning}")
         print()
 
     # Show errors if any
-    if result["errors"]:
-        print(f"Errors ({len(result['errors'])}):")
-        for error in result["errors"]:
+    if result.errors:
+        print(f"Errors ({len(result.errors)}):")
+        for error in result.errors:
             print(f"  [X] {error}")
         print()
 
     print("=" * 70)
 
-    if result["status"] == "valid":
+    if result.status == "valid":
         print()
         print("[SUCCESS] Recipe is valid!")
         return 0
     else:
         print()
-        print(
-            f"[FAILED] Recipe validation failed with {len(result['errors'])} error(s)."
-        )
+        print(f"[FAILED] Recipe validation failed with {len(result.errors)} error(s).")
         return 1
 
 
@@ -208,9 +175,9 @@ def cmd_discover(args: argparse.Namespace) -> int:
         and results to stdout. Prints errors with optional traceback if verbose/debug.
 
     """
-    # Set global verbose and debug flags
-    set_verbose(args.verbose)
-    set_debug(args.debug)
+    # Configure global logger
+    logger = get_logger(verbose=args.verbose, debug=args.debug)
+    set_global_logger(logger)
 
     recipe_path = Path(args.recipe).resolve()
     output_dir = Path(args.output_dir).resolve()
@@ -232,7 +199,15 @@ def cmd_discover(args: argparse.Namespace) -> int:
             verbose=args.verbose,
             debug=args.debug,
         )
-    except Exception as err:
+    except (ConfigError, NetworkError, PackagingError) as err:
+        print(f"Error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+    except NAPTError as err:
+        # Catch any other NAPT errors we might have missed
         print(f"Error: {err}")
         if args.verbose or args.debug:
             import traceback
@@ -244,14 +219,14 @@ def cmd_discover(args: argparse.Namespace) -> int:
     print("=" * 70)
     print("DISCOVERY RESULTS")
     print("=" * 70)
-    print(f"App Name:        {result['app_name']}")
-    print(f"App ID:          {result['app_id']}")
-    print(f"Strategy:        {result['strategy']}")
-    print(f"Version:         {result['version']}")
-    print(f"Version Source:  {result['version_source']}")
-    print(f"File Path:       {result['file_path']}")
-    print(f"SHA-256:         {result['sha256']}")
-    print(f"Status:          {result['status']}")
+    print(f"App Name:        {result.app_name}")
+    print(f"App ID:          {result.app_id}")
+    print(f"Strategy:        {result.strategy}")
+    print(f"Version:         {result.version}")
+    print(f"Version Source:  {result.version_source}")
+    print(f"File Path:       {result.file_path}")
+    print(f"SHA-256:         {result.sha256}")
+    print(f"Status:          {result.status}")
     print("=" * 70)
     print()
     print("[SUCCESS] Version discovered successfully!")
@@ -283,9 +258,9 @@ def cmd_build(args: argparse.Namespace) -> int:
         Prints progress and results to stdout.
 
     """
-    # Set global verbose and debug flags
-    set_verbose(args.verbose)
-    set_debug(args.debug)
+    # Configure global logger
+    logger = get_logger(verbose=args.verbose, debug=args.debug)
+    set_global_logger(logger)
 
     recipe_path = Path(args.recipe).resolve()
     downloads_dir = Path(args.downloads_dir).resolve()
@@ -314,7 +289,15 @@ def cmd_build(args: argparse.Namespace) -> int:
             verbose=args.verbose,
             debug=args.debug,
         )
-    except Exception as err:
+    except (ConfigError, NetworkError, PackagingError) as err:
+        print(f"Error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+    except NAPTError as err:
+        # Catch any other NAPT errors we might have missed
         print(f"Error: {err}")
         if args.verbose or args.debug:
             import traceback
@@ -326,12 +309,12 @@ def cmd_build(args: argparse.Namespace) -> int:
     print("=" * 70)
     print("BUILD RESULTS")
     print("=" * 70)
-    print(f"App Name:        {result['app_name']}")
-    print(f"App ID:          {result['app_id']}")
-    print(f"Version:         {result['version']}")
-    print(f"PSADT Version:   {result['psadt_version']}")
-    print(f"Build Directory: {result['build_dir']}")
-    print(f"Status:          {result['status']}")
+    print(f"App Name:        {result.app_name}")
+    print(f"App ID:          {result.app_id}")
+    print(f"Version:         {result.version}")
+    print(f"PSADT Version:   {result.psadt_version}")
+    print(f"Build Directory: {result.build_dir}")
+    print(f"Status:          {result.status}")
     print("=" * 70)
     print()
     print("[SUCCESS] PSADT package built successfully!")
@@ -361,9 +344,9 @@ def cmd_package(args: argparse.Namespace) -> int:
         Prints progress and results to stdout.
 
     """
-    # Set global verbose and debug flags
-    set_verbose(args.verbose)
-    set_debug(args.debug)
+    # Configure global logger
+    logger = get_logger(verbose=args.verbose, debug=args.debug)
+    set_global_logger(logger)
 
     build_dir = Path(args.build_dir).resolve()
     output_dir = Path(args.output_dir) if args.output_dir else None
@@ -385,7 +368,15 @@ def cmd_package(args: argparse.Namespace) -> int:
             verbose=args.verbose,
             debug=args.debug,
         )
-    except Exception as err:
+    except (ConfigError, NetworkError, PackagingError) as err:
+        print(f"Error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+    except NAPTError as err:
+        # Catch any other NAPT errors we might have missed
         print(f"Error: {err}")
         if args.verbose or args.debug:
             import traceback
@@ -397,14 +388,14 @@ def cmd_package(args: argparse.Namespace) -> int:
     print("=" * 70)
     print("PACKAGE RESULTS")
     print("=" * 70)
-    print(f"App ID:          {result['app_id']}")
-    print(f"Version:         {result['version']}")
-    print(f"Package Path:    {result['package_path']}")
+    print(f"App ID:          {result.app_id}")
+    print(f"Version:         {result.version}")
+    print(f"Package Path:    {result.package_path}")
     if args.clean_source:
-        print(f"Build Directory: {result['build_dir']} (removed)")
+        print(f"Build Directory: {result.build_dir} (removed)")
     else:
-        print(f"Build Directory: {result['build_dir']}")
-    print(f"Status:          {result['status']}")
+        print(f"Build Directory: {result.build_dir}")
+    print(f"Status:          {result.status}")
     print("=" * 70)
     print()
     print("[SUCCESS] .intunewin package created successfully!")
@@ -439,7 +430,10 @@ def main() -> None:
     parser_validate = subparsers.add_parser(
         "validate",
         help="Validate recipe syntax and configuration (no downloads)",
-        description="Check recipe YAML for syntax errors and configuration issues without making network calls.",
+        description=(
+            "Check recipe YAML for syntax errors and configuration issues "
+            "without making network calls."
+        ),
     )
     parser_validate.add_argument(
         "recipe",
@@ -457,7 +451,10 @@ def main() -> None:
     parser_discover = subparsers.add_parser(
         "discover",
         help="Discover latest version and download installer",
-        description="Find the latest version using the configured discovery strategy and download the installer.",
+        description=(
+            "Find the latest version using the configured discovery strategy "
+            "and download the installer."
+        ),
     )
     parser_discover.add_argument(
         "recipe",
@@ -472,7 +469,10 @@ def main() -> None:
         "--state-file",
         type=Path,
         default=Path("state/versions.json"),
-        help="State file for version tracking and ETag caching (default: state/versions.json)",
+        help=(
+            "State file for version tracking and ETag caching "
+            "(default: state/versions.json)"
+        ),
     )
     parser_discover.add_argument(
         "--stateless",
@@ -497,7 +497,10 @@ def main() -> None:
     parser_build = subparsers.add_parser(
         "build",
         help="Build PSADT package from recipe and installer",
-        description="Create a PSADT deployment package from a recipe and downloaded installer.",
+        description=(
+            "Create a PSADT deployment package from a recipe and "
+            "downloaded installer."
+        ),
     )
     parser_build.add_argument(
         "recipe",
@@ -531,7 +534,10 @@ def main() -> None:
     parser_package = subparsers.add_parser(
         "package",
         help="Create .intunewin package from PSADT build directory",
-        description="Package a built PSADT directory into a .intunewin file for Intune deployment.",
+        description=(
+            "Package a built PSADT directory into a .intunewin file "
+            "for Intune deployment."
+        ),
     )
     parser_package.add_argument(
         "build_dir",

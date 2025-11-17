@@ -18,12 +18,6 @@ This module handles generating the Invoke-AppDeployToolkit.ps1 script by
 reading PSADT's template, substituting configuration values, and inserting
 recipe-specific install/uninstall code.
 
-Private Helpers:
-    - _build_adtsession_vars: Build $adtSession hashtable from config
-    - _replace_session_block: Replace $adtSession = @{...} in template
-    - _insert_recipe_code: Insert install/uninstall code at markers
-    - _format_powershell_value: Format Python values as PowerShell literals
-
 Design Principles:
     - PSADT template remains pristine in cache
     - Generate script by substitution, not modification
@@ -32,17 +26,20 @@ Design Principles:
     - Merge org defaults with recipe overrides
 
 Example:
-    from pathlib import Path
-    from notapkgtool.build.template import generate_invoke_script
+    Basic usage:
+        ```python
+        from pathlib import Path
+        from notapkgtool.build.template import generate_invoke_script
 
-    script = generate_invoke_script(
-        template_path=Path("cache/psadt/4.1.7/Invoke-AppDeployToolkit.ps1"),
-        config=recipe_config,
-        version="141.0.7390.123",
-        psadt_version="4.1.7"
-    )
+        script = generate_invoke_script(
+            template_path=Path("cache/psadt/4.1.7/Invoke-AppDeployToolkit.ps1"),
+            config=recipe_config,
+            version="141.0.7390.123",
+            psadt_version="4.1.7"
+        )
 
-    Path("builds/app/version/Invoke-AppDeployToolkit.ps1").write_text(script)
+        Path("builds/app/version/Invoke-AppDeployToolkit.ps1").write_text(script)
+        ```
 """
 
 from __future__ import annotations
@@ -51,6 +48,8 @@ from datetime import date
 from pathlib import Path
 import re
 from typing import Any
+
+from notapkgtool.exceptions import PackagingError
 
 
 def _format_powershell_value(value: Any) -> str:
@@ -64,10 +63,11 @@ def _format_powershell_value(value: Any) -> str:
 
     Example:
         Format values for PowerShell:
-
+            ```python
             _format_powershell_value("hello")      # Returns: "'hello'"
             _format_powershell_value(True)         # Returns: '$true'
             _format_powershell_value([0, 1, 2])    # Returns: '@(0, 1, 2)'
+            ```
     """
     if isinstance(value, bool):
         return "$true" if value else "$false"
@@ -101,7 +101,7 @@ def _build_adtsession_vars(
         psadt_version: PSADT version being used.
 
     Returns:
-        Dictionary of variable name → value mappings.
+        Dictionary of variable name -> value mappings.
 
     Note:
         Organization defaults come from config['defaults']['psadt']['app_vars'].
@@ -145,7 +145,7 @@ def _replace_session_block(template: str, vars_dict: dict[str, Any]) -> str:
 
     Args:
         template: PSADT template script text.
-        vars_dict: Variable name → value mappings.
+        vars_dict: Variable name -> value mappings.
 
     Returns:
         Script with replaced $adtSession block.
@@ -159,7 +159,7 @@ def _replace_session_block(template: str, vars_dict: dict[str, Any]) -> str:
 
     match = re.search(pattern, template, re.DOTALL)
     if not match:
-        raise RuntimeError(
+        raise PackagingError(
             "Could not find $adtSession hashtable in PSADT template. "
             "Template may be from an unsupported PSADT version."
         )
@@ -249,12 +249,11 @@ def generate_invoke_script(
         Generated PowerShell script text.
 
     Raises:
-        FileNotFoundError: If template doesn't exist.
-        RuntimeError: If template parsing fails.
+        PackagingError: If template doesn't exist or template parsing fails.
 
     Example:
         Generate deployment script from template:
-
+            ```python
             from pathlib import Path
 
             script = generate_invoke_script(
@@ -263,29 +262,31 @@ def generate_invoke_script(
                 "141.0.7390.123",
                 "4.1.7"
             )
+            ```
     """
-    from notapkgtool.cli import print_debug, print_verbose
+    from notapkgtool.logging import get_global_logger
 
+    logger = get_global_logger()
     if not template_path.exists():
-        raise FileNotFoundError(f"PSADT template not found: {template_path}")
+        raise PackagingError(f"PSADT template not found: {template_path}")
 
-    print_verbose("BUILD", f"Reading PSADT template: {template_path.name}")
+    logger.verbose("BUILD", f"Reading PSADT template: {template_path.name}")
 
     # Read template
     template = template_path.read_text(encoding="utf-8")
 
     # Build $adtSession variables
-    print_verbose("BUILD", "Building $adtSession variables...")
+    logger.verbose("BUILD", "Building $adtSession variables...")
     session_vars = _build_adtsession_vars(config, version, psadt_version)
 
     if debug:
-        print_debug("BUILD", "--- $adtSession Variables ---")
+        logger.debug("BUILD", "--- $adtSession Variables ---")
         for key, value in session_vars.items():
-            print_debug("BUILD", f"  {key} = {value}")
+            logger.debug("BUILD", f"  {key} = {value}")
 
     # Replace $adtSession block
     script = _replace_session_block(template, session_vars)
-    print_verbose("BUILD", "[OK] Replaced $adtSession hashtable")
+    logger.verbose("BUILD", "[OK] Replaced $adtSession hashtable")
 
     # Insert recipe code
     app = config["apps"][0]
@@ -294,12 +295,12 @@ def generate_invoke_script(
     uninstall_code = psadt_config.get("uninstall")
 
     if install_code:
-        print_verbose("BUILD", "Inserting install code from recipe")
+        logger.verbose("BUILD", "Inserting install code from recipe")
     if uninstall_code:
-        print_verbose("BUILD", "Inserting uninstall code from recipe")
+        logger.verbose("BUILD", "Inserting uninstall code from recipe")
 
     script = _insert_recipe_code(script, install_code, uninstall_code)
 
-    print_verbose("BUILD", "[OK] Script generation complete")
+    logger.verbose("BUILD", "[OK] Script generation complete")
 
     return script

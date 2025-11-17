@@ -46,34 +46,39 @@ Recipe Configuration:
       url: "https://vendor.com/installer.msi"          # Required: download URL
       version:
         type: msi                                      # Required: extraction method
-        file: "installer.msi"                          # Optional: defaults to URL filename
+        file: "installer.msi"  # Optional: defaults to URL filename
 
 Configuration Fields:
 
-- **url** (str, required): HTTP(S) URL to download the installer from. The URL should be stable and point to the latest version.
-- **version.type** (str, required): Version extraction method. Currently supported: msi.
-- **version.file** (str, optional): Specific filename to extract version from. Defaults to the downloaded filename derived from the URL or Content-Disposition header.
+- **url** (str, required): HTTP(S) URL to download the installer from. The URL
+    should be stable and point to the latest version.
+- **version.type** (str, required): Version extraction method. Currently
+    supported: msi.
+- **version.file** (str, optional): Specific filename to extract version from.
+    Defaults to the downloaded filename derived from the URL or
+    Content-Disposition header.
 
 Error Handling:
 
-- ValueError: Missing or invalid configuration fields
-- RuntimeError: Download failures, version extraction errors
+- ConfigError: Missing or invalid configuration fields
+- NetworkError: Download failures, version extraction errors
 - Errors are chained with 'from err' for better debugging
 
 Example:
-In a recipe YAML:
+    In a recipe YAML:
+        ```yaml
+        apps:
+          - name: "My App"
+            id: "my-app"
+            source:
+              strategy: url_download
+              url: "https://example.com/myapp-setup.msi"
+              version:
+                type: msi
+        ```
 
-    apps:
-      - name: "My App"
-        id: "my-app"
-        source:
-          strategy: url_download
-          url: "https://example.com/myapp-setup.msi"
-          version:
-            type: msi
-
-From Python:
-
+    From Python:
+    ```python
     from pathlib import Path
     from notapkgtool.discovery.url_download import UrlDownloadStrategy
 
@@ -91,15 +96,17 @@ From Python:
         app_config, Path("./downloads"), cache=cache
     )
     print(f"Version {discovered.version} at {file_path}")
+    ```
 
 From Python (using core orchestration):
-
+    ```python
     from pathlib import Path
     from notapkgtool.core import discover_recipe
 
     # Automatically uses ETag optimization
     result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
-    print(f"Version {result['version']} at {result['file_path']}")
+    print(f"Version {result.version} at {result.file_path}")
+    ```
 
 Note:
     - Must download file to extract version (architectural constraint)
@@ -117,6 +124,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from notapkgtool.exceptions import ConfigError, NetworkError
 from notapkgtool.io import NotModifiedError, download_file
 from notapkgtool.versioning.keys import DiscoveredVersion
 from notapkgtool.versioning.msi import version_from_msi_product_version
@@ -165,36 +173,37 @@ class UrlDownloadStrategy:
                 SHA-256 hash, and headers contains HTTP response headers.
 
         Raises:
-            ValueError: If required config fields are missing or invalid.
-            RuntimeError: If download or version extraction fails.
+            ConfigError: If required config fields are missing or invalid.
+            NetworkError: If download or version extraction fails.
 
         """
-        from notapkgtool.cli import print_verbose
+        from notapkgtool.logging import get_global_logger
 
+        logger = get_global_logger()
         source = app_config.get("source", {})
         url = source.get("url")
         if not url:
-            raise ValueError("url_download strategy requires 'source.url' in config")
+            raise ConfigError("url_download strategy requires 'source.url' in config")
 
         version_config = source.get("version", {})
         version_type = version_config.get("type")
         if not version_type:
-            raise ValueError(
+            raise ConfigError(
                 "url_download strategy requires 'source.version.type' in config"
             )
 
-        print_verbose("DISCOVERY", "Strategy: url_download (file-first)")
-        print_verbose("DISCOVERY", f"Source URL: {url}")
-        print_verbose("DISCOVERY", f"Version extraction: {version_type}")
+        logger.verbose("DISCOVERY", "Strategy: url_download (file-first)")
+        logger.verbose("DISCOVERY", f"Source URL: {url}")
+        logger.verbose("DISCOVERY", f"Version extraction: {version_type}")
 
         # Extract ETag/Last-Modified from cache if available
         etag = cache.get("etag") if cache else None
         last_modified = cache.get("last_modified") if cache else None
 
         if etag:
-            print_verbose("DISCOVERY", f"Using cached ETag: {etag}")
+            logger.verbose("DISCOVERY", f"Using cached ETag: {etag}")
         if last_modified:
-            print_verbose("DISCOVERY", f"Using cached Last-Modified: {last_modified}")
+            logger.verbose("DISCOVERY", f"Using cached Last-Modified: {last_modified}")
 
         # Download the file (with conditional request if cache available)
         try:
@@ -209,12 +218,12 @@ class UrlDownloadStrategy:
         except NotModifiedError:
             # File unchanged (HTTP 304), use cached version
             # Use convention-based path: derive filename from URL
-            print_verbose(
+            logger.verbose(
                 "DISCOVERY", "File not modified (HTTP 304), using cached version"
             )
 
             if not cache or "sha256" not in cache:
-                raise RuntimeError(
+                raise NetworkError(
                     "Cache indicates file not modified, but missing SHA-256. "
                     "Try running with --stateless to force re-download."
                 ) from None
@@ -226,7 +235,7 @@ class UrlDownloadStrategy:
             cached_file = output_dir / filename
 
             if not cached_file.exists():
-                raise RuntimeError(
+                raise NetworkError(
                     f"Cached file {cached_file} not found. "
                     f"File may have been deleted. Try running with --stateless."
                 ) from None
@@ -238,16 +247,18 @@ class UrlDownloadStrategy:
                         cached_file, verbose=verbose, debug=debug
                     )
                 except Exception as err:
-                    raise RuntimeError(
-                        f"Failed to extract MSI ProductVersion from cached file {cached_file}: {err}"
+                    raise NetworkError(
+                        f"Failed to extract MSI ProductVersion from cached "
+                        f"file {cached_file}: {err}"
                     ) from err
             else:
-                raise ValueError(
+                raise ConfigError(
                     f"Unsupported version type: {version_type!r}. " f"Supported: msi"
                 ) from None
 
             # Return cached info with preserved headers (prevents overwriting ETag)
-            # When 304, no new headers received, so return cached values to preserve them
+            # When 304, no new headers received, so return cached values to
+            # preserve them
             preserved_headers = {}
             if cache.get("etag"):
                 preserved_headers["ETag"] = cache["etag"]
@@ -256,9 +267,9 @@ class UrlDownloadStrategy:
 
             return discovered, cached_file, cache["sha256"], preserved_headers
         except Exception as err:
-            if isinstance(err, (RuntimeError, ValueError)):
+            if isinstance(err, (NetworkError, ConfigError)):
                 raise
-            raise RuntimeError(f"Failed to download {url}: {err}") from err
+            raise NetworkError(f"Failed to download {url}: {err}") from err
 
         # File was downloaded (not cached), extract version from it
         if version_type == "msi":
@@ -267,11 +278,11 @@ class UrlDownloadStrategy:
                     file_path, verbose=verbose, debug=debug
                 )
             except Exception as err:
-                raise RuntimeError(
+                raise NetworkError(
                     f"Failed to extract MSI ProductVersion from {file_path}: {err}"
                 ) from err
         else:
-            raise ValueError(
+            raise ConfigError(
                 f"Unsupported version type: {version_type!r}. " f"Supported: msi"
             )
 

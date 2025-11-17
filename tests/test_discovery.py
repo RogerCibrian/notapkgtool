@@ -19,6 +19,7 @@ from notapkgtool.discovery.api_github import ApiGithubStrategy
 from notapkgtool.discovery.api_json import ApiJsonStrategy
 from notapkgtool.discovery.base import get_strategy, register_strategy
 from notapkgtool.discovery.url_download import UrlDownloadStrategy
+from notapkgtool.exceptions import ConfigError, NetworkError
 from notapkgtool.versioning import DiscoveredVersion
 
 
@@ -37,7 +38,9 @@ class TestStrategyRegistry:
 
     def test_get_unknown_strategy_raises(self):
         """Test that unknown strategy name raises ValueError."""
-        with pytest.raises(ValueError, match="Unknown discovery strategy"):
+        from notapkgtool.exceptions import ConfigError
+
+        with pytest.raises(ConfigError, match="Unknown discovery strategy"):
             get_strategy("nonexistent_strategy")
 
     def test_register_custom_strategy(self):
@@ -109,7 +112,9 @@ class TestUrlDownloadStrategy:
 
         strategy = UrlDownloadStrategy()
 
-        with pytest.raises(ValueError, match="requires 'source.url'"):
+        from notapkgtool.exceptions import ConfigError
+
+        with pytest.raises(ConfigError, match="requires 'source.url'"):
             strategy.discover_version(app_config, tmp_test_dir)
 
     def test_discover_version_missing_version_type_raises(self, tmp_test_dir):
@@ -122,7 +127,9 @@ class TestUrlDownloadStrategy:
 
         strategy = UrlDownloadStrategy()
 
-        with pytest.raises(ValueError, match="requires 'source.version.type'"):
+        from notapkgtool.exceptions import ConfigError
+
+        with pytest.raises(ConfigError, match="requires 'source.version.type'"):
             strategy.discover_version(app_config, tmp_test_dir)
 
     def test_discover_version_unsupported_type_raises(self, tmp_test_dir):
@@ -144,11 +151,11 @@ class TestUrlDownloadStrategy:
                 headers={"Content-Length": str(len(fake_content))},
             )
 
-            with pytest.raises(ValueError, match="Unsupported version type"):
+            with pytest.raises(ConfigError, match="Unsupported version type"):
                 strategy.discover_version(app_config, tmp_test_dir)
 
     def test_discover_version_download_failure_raises(self, tmp_test_dir):
-        """Test that download failures raise RuntimeError."""
+        """Test that download failures raise NetworkError."""
         app_config = {
             "source": {
                 "url": "https://example.com/installer.msi",
@@ -161,11 +168,13 @@ class TestUrlDownloadStrategy:
         with requests_mock.Mocker() as m:
             m.get("https://example.com/installer.msi", status_code=404)
 
-            with pytest.raises(RuntimeError, match="Failed to download"):
+            from notapkgtool.exceptions import NetworkError
+
+            with pytest.raises(NetworkError, match="download failed"):
                 strategy.discover_version(app_config, tmp_test_dir)
 
     def test_discover_version_extraction_failure_raises(self, tmp_test_dir):
-        """Test that version extraction failures raise RuntimeError."""
+        """Test that version extraction failures raise NetworkError."""
         app_config = {
             "source": {
                 "url": "https://example.com/installer.msi",
@@ -186,10 +195,10 @@ class TestUrlDownloadStrategy:
             with patch(
                 "notapkgtool.discovery.url_download.version_from_msi_product_version"
             ) as mock_extract:
-                mock_extract.side_effect = RuntimeError("Invalid MSI")
+                mock_extract.side_effect = NetworkError("Invalid MSI")
 
                 with pytest.raises(
-                    RuntimeError, match="Failed to extract MSI ProductVersion"
+                    NetworkError, match="Failed to extract MSI ProductVersion"
                 ):
                     strategy.discover_version(app_config, tmp_test_dir)
 
@@ -250,7 +259,8 @@ class TestCacheAndETagSupport:
         assert sha256 == "cached_sha256"
         assert discovered.version == "1.0.0"
 
-    # test_api_github_with_cache_not_modified removed - discover_version() no longer exists
+    # test_api_github_with_cache_not_modified removed -
+    # discover_version() no longer exists
 
     def test_url_download_with_cache_modified(self, tmp_test_dir):
         """Test url_download downloads when file modified (HTTP 200)."""
@@ -358,7 +368,9 @@ class TestCacheAndETagSupport:
             # Mock 304 response
             m.get("https://example.com/installer.msi", status_code=304)
 
-            with pytest.raises(RuntimeError, match="Cached file.*not found"):
+            from notapkgtool.exceptions import NetworkError
+
+            with pytest.raises(NetworkError, match="Cached file.*not found"):
                 strategy.discover_version(app_config, tmp_test_dir, cache=cache)
 
 
@@ -432,7 +444,8 @@ class TestVersionFirstStrategies:
         assert version_info.source == "web_scrape"
 
     def test_api_github_get_version_info(self):
-        """Test api_github.get_version_info() returns VersionInfo without downloading."""
+        """Test api_github.get_version_info() returns VersionInfo without
+        downloading."""
         from notapkgtool.versioning.keys import VersionInfo
 
         strategy = ApiGithubStrategy()

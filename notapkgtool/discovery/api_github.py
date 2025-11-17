@@ -32,9 +32,9 @@ Key Advantages:
 Supported Version Extraction:
 
 - Tag-based: Extract version from release tag names
-  - Supports named capture groups: (?P<version>...)
-  - Default pattern strips "v" prefix: v1.2.3 → 1.2.3
-  - Falls back to full tag if no pattern match
+    - Supports named capture groups: (?P<version>...)
+    - Default pattern strips "v" prefix: v1.2.3 -> 1.2.3
+    - Falls back to full tag if no pattern match
 
 Use Cases:
 
@@ -45,20 +45,27 @@ Use Cases:
 - CI/CD pipelines with frequent version checks
 
 Recipe Configuration:
-
+    ```yaml
     source:
-      strategy: api_github
-      repo: "git-for-windows/git"                    # Required: owner/repo
-      asset_pattern: "Git-.*-64-bit\\.exe$"          # Required: regex for asset
-      version_pattern: "v?([0-9.]+)"                 # Optional: version extraction
-      prerelease: false                              # Optional: include prereleases
-      token: "${GITHUB_TOKEN}"                       # Optional: auth token
+        strategy: api_github
+        repo: "git-for-windows/git"                    # Required: owner/repo
+        asset_pattern: "Git-.*-64-bit\\.exe$"          # Required: regex for asset
+        version_pattern: "v?([0-9.]+)"                 # Optional: version extraction
+        prerelease: false                              # Optional: include prereleases
+        token: "${GITHUB_TOKEN}"                       # Optional: auth token
+    ```
 
 Configuration Fields:
 
-- **repo** (str, required): GitHub repository in "owner/name" format (e.g., "git-for-windows/git")
-- **asset_pattern** (str, required): Regular expression to match asset filename. If multiple assets match, the first match is used. Example: ".*-x64\\.msi$" matches assets ending with "-x64.msi"
-- **version_pattern** (str, optional): Regular expression to extract version from the release tag name. Use a named capture group (?P<version>...) or the entire match. Default: "v?([0-9.]+)" strips optional "v" prefix. Example: "release-([0-9.]+)" for tags like "release-1.2.3"
+- **repo** (str, required): GitHub repository in "owner/name" format
+    (e.g., "git-for-windows/git")
+- **asset_pattern** (str, required): Regular expression to match asset
+    filename. If multiple assets match, the first match is used. Example:
+    ".*-x64\\.msi$" matches assets ending with "-x64.msi"
+- **version_pattern** (str, optional): Regular expression to extract version
+    from the release tag name. Use a named capture group (?P<version>...) or
+    the entire match. Default: "v?([0-9.]+)" strips optional "v" prefix.
+    Example: "release-([0-9.]+)" for tags like "release-1.2.3".
     - **prerelease** (bool, optional): If True, include pre-release versions. If False
       (default), only stable releases are considered. Uses GitHub's prerelease flag.
     - **token** (str, optional): GitHub personal access token for authentication.
@@ -80,47 +87,50 @@ Rate Limits:
 
 Example:
     In a recipe YAML:
+        ```yaml
+        apps:
+          - name: "Git for Windows"
+            id: "git"
+            source:
+              strategy: api_github
+              repo: "git-for-windows/git"
+              asset_pattern: "Git-.*-64-bit\\.exe$"
+        ```
 
-    apps:
-      - name: "Git for Windows"
-        id: "git"
-        source:
-          strategy: api_github
-          repo: "git-for-windows/git"
-          asset_pattern: "Git-.*-64-bit\\.exe$"
+    From Python (version-first approach):
+        ```python
+        from notapkgtool.discovery.api_github import ApiGithubStrategy
+        from notapkgtool.io import download_file
 
-From Python (version-first approach):
-
-    from notapkgtool.discovery.api_github import ApiGithubStrategy
-    from notapkgtool.io import download_file
-
-    strategy = ApiGithubStrategy()
-    app_config = {
-        "source": {
-            "repo": "git-for-windows/git",
-            "asset_pattern": ".*-64-bit\\.exe$",
+        strategy = ApiGithubStrategy()
+        app_config = {
+            "source": {
+                "repo": "git-for-windows/git",
+                "asset_pattern": ".*-64-bit\\.exe$",
+            }
         }
-    }
 
-    # Get version WITHOUT downloading
-    version_info = strategy.get_version_info(app_config)
-    print(f"Latest version: {version_info.version}")
+        # Get version WITHOUT downloading
+        version_info = strategy.get_version_info(app_config)
+        print(f"Latest version: {version_info.version}")
 
-    # Download only if needed
-    if need_to_download:
-        file_path, sha256, headers = download_file(
-            version_info.download_url, Path("./downloads")
-        )
-        print(f"Downloaded to {file_path}")
+        # Download only if needed
+        if need_to_download:
+            file_path, sha256, headers = download_file(
+                version_info.download_url, Path("./downloads")
+            )
+            print(f"Downloaded to {file_path}")
+        ```
 
-From Python (using core orchestration):
+    From Python (using core orchestration):
+        ```python
+        from pathlib import Path
+        from notapkgtool.core import discover_recipe
 
-    from pathlib import Path
-    from notapkgtool.core import discover_recipe
-
-    # Automatically uses version-first optimization
-    result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
-    print(f"Version {result['version']} at {result['file_path']}")
+        # Automatically uses version-first optimization
+        result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
+        print(f"Version {result.version} at {result.file_path}")
+        ```
 
 Note:
     Version discovery via API only (no download required).
@@ -139,6 +149,7 @@ from typing import Any
 
 import requests
 
+from notapkgtool.exceptions import ConfigError, NetworkError
 from notapkgtool.versioning.keys import VersionInfo
 
 from .base import register_strategy
@@ -163,7 +174,8 @@ class ApiGithubStrategy:
         verbose: bool = False,
         debug: bool = False,
     ) -> VersionInfo:
-        """Fetch latest release from GitHub API without downloading (version-first path).
+        """Fetch latest release from GitHub API without downloading
+        (version-first path).
 
         This method queries the GitHub API for the latest release and extracts
         the version from the tag name and the download URL from matching assets.
@@ -188,7 +200,7 @@ class ApiGithubStrategy:
 
         Example:
             Get version from GitHub releases:
-
+                ```python
                 strategy = ApiGithubStrategy()
                 config = {
                     "source": {
@@ -198,26 +210,28 @@ class ApiGithubStrategy:
                 }
                 version_info = strategy.get_version_info(config)
                 # version_info.version returns: '1.0.0'
+                ```
 
         """
-        from notapkgtool.cli import print_verbose
+        from notapkgtool.logging import get_global_logger
 
+        logger = get_global_logger()
         # Validate configuration
         source = app_config.get("source", {})
         repo = source.get("repo")
         if not repo:
-            raise ValueError("api_github strategy requires 'source.repo' in config")
+            raise ConfigError("api_github strategy requires 'source.repo' in config")
 
         # Validate repo format
         if "/" not in repo or repo.count("/") != 1:
-            raise ValueError(
+            raise ConfigError(
                 f"Invalid repo format: {repo!r}. Expected 'owner/repository'"
             )
 
         # Optional configuration
         asset_pattern = source.get("asset_pattern")
         if not asset_pattern:
-            raise ValueError(
+            raise ConfigError(
                 "api_github strategy requires 'source.asset_pattern' in config"
             )
 
@@ -231,18 +245,18 @@ class ApiGithubStrategy:
                 env_var = token[2:-1]
                 token = os.environ.get(env_var)
                 if not token:
-                    print_verbose(
+                    logger.verbose(
                         "DISCOVERY",
                         f"Warning: Environment variable {env_var} not set",
                     )
 
-        print_verbose("DISCOVERY", "Strategy: api_github (version-first)")
-        print_verbose("DISCOVERY", f"Repository: {repo}")
-        print_verbose("DISCOVERY", f"Version pattern: {version_pattern}")
+        logger.verbose("DISCOVERY", "Strategy: api_github (version-first)")
+        logger.verbose("DISCOVERY", f"Repository: {repo}")
+        logger.verbose("DISCOVERY", f"Version pattern: {version_pattern}")
         if asset_pattern:
-            print_verbose("DISCOVERY", f"Asset pattern: {asset_pattern}")
+            logger.verbose("DISCOVERY", f"Asset pattern: {asset_pattern}")
         if prerelease:
-            print_verbose("DISCOVERY", "Including pre-releases")
+            logger.verbose("DISCOVERY", "Including pre-releases")
 
         # Fetch latest release from GitHub API
         api_url = f"https://api.github.com/repos/{repo}/releases/latest"
@@ -254,35 +268,36 @@ class ApiGithubStrategy:
         # Add authentication if token provided
         if token:
             headers["Authorization"] = f"token {token}"
-            print_verbose("DISCOVERY", "Using authenticated API request")
+            logger.verbose("DISCOVERY", "Using authenticated API request")
 
-        print_verbose("DISCOVERY", f"Fetching release from: {api_url}")
+        logger.verbose("DISCOVERY", f"Fetching release from: {api_url}")
 
         try:
             response = requests.get(api_url, headers=headers, timeout=30)
             response.raise_for_status()
         except requests.exceptions.HTTPError as err:
             if response.status_code == 404:
-                raise RuntimeError(
+                raise NetworkError(
                     f"Repository {repo!r} not found or has no releases"
                 ) from err
             elif response.status_code == 403:
-                raise RuntimeError(
+                raise NetworkError(
                     f"GitHub API rate limit exceeded. Consider using a token. "
                     f"Status: {response.status_code}"
                 ) from err
             else:
-                raise RuntimeError(
-                    f"GitHub API request failed: {response.status_code} {response.reason}"
+                raise NetworkError(
+                    f"GitHub API request failed: {response.status_code} "
+                    f"{response.reason}"
                 ) from err
         except requests.exceptions.RequestException as err:
-            raise RuntimeError(f"Failed to fetch GitHub release: {err}") from err
+            raise NetworkError(f"Failed to fetch GitHub release: {err}") from err
 
         release_data = response.json()
 
         # Check if this is a prerelease and we don't want those
         if release_data.get("prerelease", False) and not prerelease:
-            raise RuntimeError(
+            raise NetworkError(
                 f"Latest release is a pre-release and prerelease=false. "
                 f"Tag: {release_data.get('tag_name')}"
             )
@@ -290,19 +305,21 @@ class ApiGithubStrategy:
         # Extract version from tag name
         tag_name = release_data.get("tag_name", "")
         if not tag_name:
-            raise RuntimeError("Release has no tag_name field")
+            raise NetworkError("Release has no tag_name field")
 
-        print_verbose("DISCOVERY", f"Release tag: {tag_name}")
+        logger.verbose("DISCOVERY", f"Release tag: {tag_name}")
 
         try:
             pattern = re.compile(version_pattern)
             match = pattern.search(tag_name)
             if not match:
-                raise ValueError(
-                    f"Version pattern {version_pattern!r} did not match tag {tag_name!r}"
+                raise ConfigError(
+                    f"Version pattern {version_pattern!r} did not match "
+                    f"tag {tag_name!r}"
                 )
 
-            # Try to get named capture group 'version' first, else use group 1, else full match
+            # Try to get named capture group 'version' first, else use group 1,
+            # else full match
             if "version" in pattern.groupindex:
                 version_str = match.group("version")
             elif pattern.groups > 0:
@@ -311,44 +328,46 @@ class ApiGithubStrategy:
                 version_str = match.group(0)
 
         except re.error as err:
-            raise ValueError(
+            raise ConfigError(
                 f"Invalid version_pattern regex: {version_pattern!r}"
             ) from err
         except (ValueError, IndexError) as err:
-            raise ValueError(
+            raise ConfigError(
                 f"Failed to extract version from tag {tag_name!r} "
                 f"using pattern {version_pattern!r}: {err}"
             ) from err
 
-        print_verbose("DISCOVERY", f"Extracted version: {version_str}")
+        logger.verbose("DISCOVERY", f"Extracted version: {version_str}")
 
         # Find matching asset
         assets = release_data.get("assets", [])
         if not assets:
-            raise RuntimeError(
+            raise NetworkError(
                 f"Release {tag_name} has no assets. "
                 f"Check if assets were uploaded to the release."
             )
 
-        print_verbose("DISCOVERY", f"Release has {len(assets)} asset(s)")
+        logger.verbose("DISCOVERY", f"Release has {len(assets)} asset(s)")
 
         # Match asset by pattern
         matched_asset = None
         try:
             pattern = re.compile(asset_pattern)
         except re.error as err:
-            raise ValueError(f"Invalid asset_pattern regex: {asset_pattern!r}") from err
+            raise ConfigError(
+                f"Invalid asset_pattern regex: {asset_pattern!r}"
+            ) from err
 
         for asset in assets:
             asset_name = asset.get("name", "")
             if pattern.search(asset_name):
                 matched_asset = asset
-                print_verbose("DISCOVERY", f"Matched asset: {asset_name}")
+                logger.verbose("DISCOVERY", f"Matched asset: {asset_name}")
                 break
 
         if not matched_asset:
             available = [a.get("name", "(unnamed)") for a in assets]
-            raise ValueError(
+            raise ConfigError(
                 f"No assets matched pattern {asset_pattern!r}. "
                 f"Available assets: {', '.join(available)}"
             )
@@ -356,9 +375,9 @@ class ApiGithubStrategy:
         # Get download URL
         download_url = matched_asset.get("browser_download_url")
         if not download_url:
-            raise RuntimeError(f"Asset {matched_asset.get('name')} has no download URL")
+            raise NetworkError(f"Asset {matched_asset.get('name')} has no download URL")
 
-        print_verbose("DISCOVERY", f"Download URL: {download_url}")
+        logger.verbose("DISCOVERY", f"Download URL: {download_url}")
 
         return VersionInfo(
             version=version_str,

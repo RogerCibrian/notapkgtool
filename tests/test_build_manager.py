@@ -97,7 +97,9 @@ class TestFindInstallerFile:
 
         config = {"apps": [{"source": {}}]}
 
-        with pytest.raises(FileNotFoundError, match="No installer found"):
+        from notapkgtool.exceptions import PackagingError
+
+        with pytest.raises(PackagingError, match="No installer found"):
             _find_installer_file(downloads_dir, config)
 
 
@@ -159,7 +161,9 @@ class TestCopyPSADTPristine:
         build_dir = tmp_path / "build"
         build_dir.mkdir()
 
-        with pytest.raises(FileNotFoundError, match="PSADT.*not found"):
+        from notapkgtool.exceptions import PackagingError
+
+        with pytest.raises(PackagingError, match="PSADT.*not found"):
             _copy_psadt_pristine(cache_dir, build_dir)
 
 
