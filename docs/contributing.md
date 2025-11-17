@@ -146,7 +146,7 @@ When contributing code:
 
 1. **Follow existing patterns** - Use the same style and structure as existing code
 2. **Chain exceptions** - Use `raise ... from err` for better debugging
-3. **Return structured data** - Functions return dicts/dataclasses for testing
+3. **Return structured data** - Public API functions return frozen dataclasses for testing
 4. **Single responsibility** - Each function does one thing well
 5. **Document design decisions** - Explain "why" in docstrings
 6. **Test cross-platform** - Ensure Linux/Windows/macOS compatibility

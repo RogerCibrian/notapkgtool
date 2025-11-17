@@ -446,7 +446,7 @@ result = validate_recipe(
     recipe_path=Path("recipes/Google/chrome.yaml"),
     verbose=True
 )
-print(f"Status: {result['status']}")
+print(f"Status: {result.status}")
 
 # Discover version and download installer
 result = discover_recipe(
@@ -454,8 +454,8 @@ result = discover_recipe(
     output_dir=Path("./downloads"),
     verbose=True
 )
-print(f"Version: {result['version']}")
-print(f"SHA-256: {result['sha256']}")
+print(f"Version: {result.version}")
+print(f"SHA-256: {result.sha256}")
 
 # Load configuration
 config = load_effective_config(Path("recipes/Google/chrome.yaml"))
