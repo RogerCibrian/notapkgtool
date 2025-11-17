@@ -30,12 +30,6 @@ The state file is a JSON file that stores:
 
 State tracking is enabled by default and can be disabled with --stateless flag.
 
-Public API:
-
-- StateTracker: Main interface for state management operations
-- load_state: Load state from JSON file
-- save_state: Save state to JSON file with pretty-printing
-
 Example:
     Basic usage:
 

@@ -17,11 +17,6 @@
 This module handles creating .intunewin packages from built PSADT directories
 using Microsoft's IntuneWinAppUtil.exe tool.
 
-Private Helpers:
-    - _get_intunewin_tool: Download and cache IntuneWinAppUtil.exe
-    - _execute_packaging: Run IntuneWinAppUtil.exe to create .intunewin
-    - _verify_build_structure: Validate PSADT build directory
-
 Design Principles:
     - IntuneWinAppUtil.exe is cached globally (not per-build)
     - Package output follows convention: {app_id}-{version}.intunewin

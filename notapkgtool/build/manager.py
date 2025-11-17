@@ -17,14 +17,6 @@
 This module orchestrates the complete build process for creating PSADT
 packages from recipes and downloaded installers.
 
-Private Helpers:
-    - _get_installer_version: Extract version from downloaded installer
-    - _find_installer_file: Locate installer in downloads directory
-    - _create_build_directory: Create build directory structure
-    - _copy_psadt_pristine: Copy PSADT files from cache
-    - _copy_installer: Copy installer to Files/ directory
-    - _apply_branding: Replace PSADT assets with custom branding
-
 Design Principles:
     - Filesystem is source of truth for version information
     - Entire PSADT Template_v4 structure copied pristine

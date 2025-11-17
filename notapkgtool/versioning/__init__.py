@@ -26,14 +26,6 @@ keys : module
 msi : module
     MSI ProductVersion extraction using msilib, _msi, PowerShell, or msitools.
 
-Public API:
-
-- DiscoveredVersion: Container for discovered version information with source tracking
-- SourceHint: Type hint for version source ("msi", "exe", or "string")
-- compare_any: Compare two version strings, returning -1, 0, or 1
-- is_newer_any: Check if a remote version is newer than the current version
-- version_key_any: Generate a sortable key for any version string
-
 Version Comparison Strategies:
 
 The versioning system supports multiple comparison modes:

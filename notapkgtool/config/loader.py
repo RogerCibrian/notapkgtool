@@ -53,14 +53,6 @@ Dynamic Injection:
 
     - defaults.psadt.app_vars.AppScriptDate: Today's date (YYYY-MM-DD)
 
-Private Helpers:
-    - _load_yaml_file: Load YAML with error handling
-    - _deep_merge_dicts: Recursive dict merging
-    - _find_defaults_root: Locate defaults directory
-    - _detect_vendor: Determine vendor from recipe location or content
-    - _resolve_known_paths: Resolve relative paths to absolute
-    - _inject_dynamic_values: Add runtime-determined fields
-
 Error Handling:
     - ConfigError: Recipe file doesn't exist, YAML parse errors, empty files, or invalid structure
     - All errors are chained with "from err" for better debugging

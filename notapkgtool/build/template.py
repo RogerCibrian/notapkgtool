@@ -18,12 +18,6 @@ This module handles generating the Invoke-AppDeployToolkit.ps1 script by
 reading PSADT's template, substituting configuration values, and inserting
 recipe-specific install/uninstall code.
 
-Private Helpers:
-    - _build_adtsession_vars: Build $adtSession hashtable from config
-    - _replace_session_block: Replace $adtSession = @{...} in template
-    - _insert_recipe_code: Insert install/uninstall code at markers
-    - _format_powershell_value: Format Python values as PowerShell literals
-
 Design Principles:
     - PSADT template remains pristine in cache
     - Generate script by substitution, not modification

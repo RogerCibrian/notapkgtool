@@ -17,14 +17,6 @@
 This module is format-agnostic: it does NOT download or read files.
 It only parses and compares version strings consistently across sources
 (MSI, EXE, generic strings).
-
-Public API:
-
-- DiscoveredVersion: Container for version discovered from downloaded files (file-first)
-- VersionInfo: Container for version discovered without downloading (version-first)
-- version_key_any(): Build a comparable key for any version string
-- compare_any(): Tri-state compare (-1, 0, 1)
-- is_newer_any(): True if remote > current
 """
 
 from __future__ import annotations

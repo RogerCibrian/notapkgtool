@@ -32,9 +32,9 @@ Key Advantages:
 Supported Version Extraction:
 
 - Tag-based: Extract version from release tag names
-  - Supports named capture groups: (?P<version>...)
-  - Default pattern strips "v" prefix: v1.2.3 → 1.2.3
-  - Falls back to full tag if no pattern match
+    - Supports named capture groups: (?P<version>...)
+    - Default pattern strips "v" prefix: v1.2.3 → 1.2.3
+    - Falls back to full tag if no pattern match
 
 Use Cases:
 

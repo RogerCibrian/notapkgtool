@@ -50,11 +50,6 @@ Available Strategies:
         Scrape vendor download pages to find links and extract versions.
         Works for vendors without APIs or static URLs.
 
-Public API:
-
-- DiscoveryStrategy: Protocol that all discovery strategies must implement
-- get_strategy: Get a discovery strategy instance by name from the registry
-
 Example:
     Register and use a custom strategy:
 

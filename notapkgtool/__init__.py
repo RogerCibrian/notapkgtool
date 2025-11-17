@@ -41,16 +41,6 @@ For full CLI documentation:
 
     $ napt --help
 
-Public API:
-The primary interface is the CLI, but key functions are exported for
-programmatic use:
-
-    from notapkgtool.core import discover_recipe
-    from notapkgtool.validation import validate_recipe
-    from notapkgtool.config import load_effective_config
-    from notapkgtool.versioning import compare_any, is_newer_any
-    from notapkgtool.io import download_file
-
 For more details, see the individual module docstrings.
 """
 

@@ -25,12 +25,6 @@ Key Features:
 - Extract releases to cache directory
 - Version resolution ("latest" keyword support)
 
-Public API:
-
-- fetch_latest_psadt_version: Query GitHub for the latest PSADT release version
-- get_psadt_release: Download and extract a PSADT release to cache
-- is_psadt_cached: Check if a PSADT version is already cached
-
 Example:
     Get and cache PSADT releases:
         ```python
