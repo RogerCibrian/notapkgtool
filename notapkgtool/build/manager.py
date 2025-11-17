@@ -35,7 +35,7 @@ Example:
             downloads_dir=Path("downloads"),
         )
 
-        print(f"Built: {result['build_dir']}")
+        print(f"Built: {result.build_dir}")
         ```
 """
 
@@ -48,6 +48,7 @@ from typing import Any
 from notapkgtool.config import load_effective_config
 from notapkgtool.exceptions import ConfigError, PackagingError
 from notapkgtool.psadt import get_psadt_release
+from notapkgtool.results import BuildResult
 from notapkgtool.versioning.msi import version_from_msi_product_version
 
 
@@ -359,7 +360,7 @@ def build_package(
     output_dir: Path | None = None,
     verbose: bool = False,
     debug: bool = False,
-) -> dict[str, Any]:
+) -> BuildResult:
     """Build a PSADT package from a recipe and downloaded installer.
 
     This is the main entry point for the build process. It:
@@ -384,11 +385,16 @@ def build_package(
         debug: Show debug output. Default is False.
 
     Returns:
-        A dict (app_id, app_name, version, build_dir, psadt_version, status),
-            where app_id is the application ID, app_name is the application
-            name, version is the application version, build_dir is the Path
-            to the build directory, psadt_version is the PSADT version used,
-            and status is the build status.
+        BuildResult dataclass with the following fields:
+
+            - app_id (str): Unique application identifier from recipe configuration.
+            - app_name (str): Application display name from recipe configuration.
+            - version (str): Application version extracted from installer file (filesystem
+                is source of truth).
+            - build_dir (Path): Path to the created build directory, following the pattern
+                {output_dir}/{app_id}/{version}/.
+            - psadt_version (str): PSADT version used for the build (e.g., "4.1.7").
+            - status (str): Build status, typically "success" for completed builds.
 
     Raises:
         FileNotFoundError: If recipe or installer doesn't exist.
@@ -398,7 +404,7 @@ def build_package(
         Basic build:
             ```python
             result = build_package(Path("recipes/Google/chrome.yaml"))
-            print(result['build_dir'])  # builds/napt-chrome/141.0.7390.123
+            print(result.build_dir)  # builds/napt-chrome/141.0.7390.123
             ```
 
         Custom output directory:
@@ -488,11 +494,11 @@ def build_package(
 
     logger.verbose("BUILD", f"[OK] Build complete: {build_dir}")
 
-    return {
-        "app_id": app_id,
-        "app_name": app_name,
-        "version": version,
-        "build_dir": build_dir,
-        "psadt_version": psadt_version,
-        "status": "success",
-    }
+    return BuildResult(
+        app_id=app_id,
+        app_name=app_name,
+        version=version,
+        build_dir=build_dir,
+        psadt_version=psadt_version,
+        status="success",
+    )

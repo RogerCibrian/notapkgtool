@@ -32,10 +32,10 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "valid"
-        assert result["app_count"] == 1
-        assert len(result["errors"]) == 0
-        assert len(result["warnings"]) == 0
+        assert result.status == "valid"
+        assert result.app_count == 1
+        assert len(result.errors) == 0
+        assert len(result.warnings) == 0
 
     def test_valid_recipe_api_github(self, tmp_path):
         """Test that a valid api_github recipe passes validation."""
@@ -55,9 +55,9 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "valid"
-        assert result["app_count"] == 1
-        assert len(result["errors"]) == 0
+        assert result.status == "valid"
+        assert result.app_count == 1
+        assert len(result.errors) == 0
 
     def test_valid_recipe_web_scrape(self, tmp_path):
         """Test that a valid web_scrape recipe passes validation."""
@@ -78,9 +78,9 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "valid"
-        assert result["app_count"] == 1
-        assert len(result["errors"]) == 0
+        assert result.status == "valid"
+        assert result.app_count == 1
+        assert len(result.errors) == 0
 
     def test_valid_recipe_api_json(self, tmp_path):
         """Test that a valid api_json recipe passes validation."""
@@ -101,9 +101,9 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "valid"
-        assert result["app_count"] == 1
-        assert len(result["errors"]) == 0
+        assert result.status == "valid"
+        assert result.app_count == 1
+        assert len(result.errors) == 0
 
     def test_missing_file(self, tmp_path):
         """Test that missing recipe file is reported."""
@@ -111,9 +111,9 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "invalid"
-        assert len(result["errors"]) == 1
-        assert "not found" in result["errors"][0]
+        assert result.status == "invalid"
+        assert len(result.errors) == 1
+        assert "not found" in result.errors[0]
 
     def test_invalid_yaml_syntax(self, tmp_path):
         """Test that invalid YAML syntax is detected."""
@@ -129,9 +129,9 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "invalid"
-        assert len(result["errors"]) == 1
-        assert "YAML syntax" in result["errors"][0]
+        assert result.status == "invalid"
+        assert len(result.errors) == 1
+        assert "YAML syntax" in result.errors[0]
 
     def test_empty_file(self, tmp_path):
         """Test that empty YAML file is handled."""
@@ -140,8 +140,8 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "invalid"
-        assert len(result["errors"]) >= 1
+        assert result.status == "invalid"
+        assert len(result.errors) >= 1
 
     def test_non_dict_yaml(self, tmp_path):
         """Test that non-dictionary YAML is rejected."""
@@ -150,8 +150,8 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "invalid"
-        assert any("dictionary" in err.lower() for err in result["errors"])
+        assert result.status == "invalid"
+        assert any("dictionary" in err.lower() for err in result.errors)
 
     def test_missing_api_version(self, tmp_path):
         """Test that missing apiVersion is detected."""
@@ -171,8 +171,8 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "invalid"
-        assert any("apiVersion" in err for err in result["errors"])
+        assert result.status == "invalid"
+        assert any("apiVersion" in err for err in result.errors)
 
     def test_unsupported_api_version_warning(self, tmp_path):
         """Test that unsupported apiVersion generates warning."""
@@ -193,8 +193,8 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert len(result["warnings"]) >= 1
-        assert any("napt/v99" in warn for warn in result["warnings"])
+        assert len(result.warnings) >= 1
+        assert any("napt/v99" in warn for warn in result.warnings)
 
     def test_missing_apps(self, tmp_path):
         """Test that missing apps field is detected."""
@@ -207,8 +207,8 @@ apiVersion: napt/v1
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "invalid"
-        assert any("apps" in err for err in result["errors"])
+        assert result.status == "invalid"
+        assert any("apps" in err for err in result.errors)
 
     def test_apps_not_list(self, tmp_path):
         """Test that apps must be a list."""
@@ -222,8 +222,8 @@ apps: "not a list"
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "invalid"
-        assert any("list" in err for err in result["errors"])
+        assert result.status == "invalid"
+        assert any("list" in err for err in result.errors)
 
     def test_empty_apps_list(self, tmp_path):
         """Test that empty apps list is detected."""
@@ -237,8 +237,8 @@ apps: []
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "invalid"
-        assert any("at least one app" in err for err in result["errors"])
+        assert result.status == "invalid"
+        assert any("at least one app" in err for err in result.errors)
 
     def test_missing_app_name(self, tmp_path):
         """Test that missing app name is detected."""
@@ -258,8 +258,8 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "invalid"
-        assert any("name" in err for err in result["errors"])
+        assert result.status == "invalid"
+        assert any("name" in err for err in result.errors)
 
     def test_missing_app_id(self, tmp_path):
         """Test that missing app id is detected."""
@@ -279,8 +279,8 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "invalid"
-        assert any("id" in err for err in result["errors"])
+        assert result.status == "invalid"
+        assert any("id" in err for err in result.errors)
 
     def test_missing_source(self, tmp_path):
         """Test that missing source is detected."""
@@ -296,8 +296,8 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "invalid"
-        assert any("source" in err for err in result["errors"])
+        assert result.status == "invalid"
+        assert any("source" in err for err in result.errors)
 
     def test_missing_strategy(self, tmp_path):
         """Test that missing strategy is detected."""
@@ -315,8 +315,8 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "invalid"
-        assert any("strategy" in err for err in result["errors"])
+        assert result.status == "invalid"
+        assert any("strategy" in err for err in result.errors)
 
     def test_unknown_strategy(self, tmp_path):
         """Test that unknown strategy is detected."""
@@ -335,8 +335,8 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "invalid"
-        assert any("Unknown" in err or "nonexistent" in err for err in result["errors"])
+        assert result.status == "invalid"
+        assert any("Unknown" in err or "nonexistent" in err for err in result.errors)
 
     def test_url_download_missing_url(self, tmp_path):
         """Test that url_download validates missing url."""
@@ -356,8 +356,8 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "invalid"
-        assert any("url" in err for err in result["errors"])
+        assert result.status == "invalid"
+        assert any("url" in err for err in result.errors)
 
     def test_url_download_missing_version_type(self, tmp_path):
         """Test that url_download validates missing version type."""
@@ -376,8 +376,8 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "invalid"
-        assert any("version" in err for err in result["errors"])
+        assert result.status == "invalid"
+        assert any("version" in err for err in result.errors)
 
     def test_api_github_missing_repo(self, tmp_path):
         """Test that api_github validates missing repo."""
@@ -396,8 +396,8 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "invalid"
-        assert any("repo" in err for err in result["errors"])
+        assert result.status == "invalid"
+        assert any("repo" in err for err in result.errors)
 
     def test_api_github_invalid_repo_format(self, tmp_path):
         """Test that api_github validates repo format."""
@@ -417,8 +417,8 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "invalid"
-        assert any("owner/repo" in err or "format" in err for err in result["errors"])
+        assert result.status == "invalid"
+        assert any("owner/repo" in err or "format" in err for err in result.errors)
 
     def test_web_scrape_missing_fields(self, tmp_path):
         """Test that web_scrape validates missing required fields."""
@@ -437,9 +437,9 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "invalid"
+        assert result.status == "invalid"
         assert any(
-            "link_selector" in err or "link_pattern" in err for err in result["errors"]
+            "link_selector" in err or "link_pattern" in err for err in result.errors
         )
 
     def test_web_scrape_invalid_pattern(self, tmp_path):
@@ -461,10 +461,8 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "invalid"
-        assert any(
-            "regex" in err.lower() or "pattern" in err for err in result["errors"]
-        )
+        assert result.status == "invalid"
+        assert any("regex" in err.lower() or "pattern" in err for err in result.errors)
 
     def test_api_json_missing_fields(self, tmp_path):
         """Test that api_json validates missing required fields."""
@@ -483,9 +481,9 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "invalid"
+        assert result.status == "invalid"
         # Should be missing version_path and download_url_path
-        assert len(result["errors"]) >= 2
+        assert len(result.errors) >= 2
 
     def test_multiple_apps_all_valid(self, tmp_path):
         """Test validation with multiple valid apps."""
@@ -512,9 +510,9 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "valid"
-        assert result["app_count"] == 2
-        assert len(result["errors"]) == 0
+        assert result.status == "valid"
+        assert result.app_count == 2
+        assert len(result.errors) == 0
 
     def test_multiple_apps_one_invalid(self, tmp_path):
         """Test that validation catches errors in any app."""
@@ -542,10 +540,10 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert result["status"] == "invalid"
-        assert result["app_count"] == 2
-        assert len(result["errors"]) >= 1
-        assert any("apps[1]" in err for err in result["errors"])
+        assert result.status == "invalid"
+        assert result.app_count == 2
+        assert len(result.errors) >= 1
+        assert any("apps[1]" in err for err in result.errors)
 
     def test_verbose_mode(self, tmp_path, capsys):
         """Test that verbose mode prints progress."""
@@ -567,7 +565,7 @@ apps:
         result = validate_recipe(recipe, verbose=True)
         captured = capsys.readouterr()
 
-        assert result["status"] == "valid"
+        assert result.status == "valid"
         assert "Validating recipe" in captured.out
         assert "YAML syntax is valid" in captured.out
         assert "url_download" in captured.out
@@ -592,4 +590,4 @@ apps:
         result = validate_recipe(recipe)
 
         assert "recipe_path" in result
-        assert str(recipe) in result["recipe_path"]
+        assert str(recipe) in result.recipe_path

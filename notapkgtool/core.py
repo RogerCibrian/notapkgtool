@@ -17,14 +17,29 @@
 This module provides high-level orchestration functions that coordinate the
 complete workflow for recipe validation, package building, and deployment.
 
+Two-Path Architecture:
+
+The orchestration automatically selects the optimal path based on what each
+discovery strategy can do:
+
+- **Version-First Path** (web_scrape, api_github, api_json): These strategies
+    can check the version without downloading the file. NAPT compares the
+    discovered version to the cached version. If they match and the file
+    already exists, the download is skipped entirely. This makes update checks
+    very fast (~100-300ms) since no large installer files are downloaded.
+
+- **File-First Path** (url_download): This strategy requires downloading the
+    file to extract the version. NAPT uses HTTP ETag headers to check if the
+    file has changed. If the server responds with HTTP 304 (Not Modified),
+    the existing cached file is reused, avoiding unnecessary re-downloads.
+
 Design Principles:
 
 - Each function has a single, clear responsibility
-- Functions return structured data (dicts) for easy testing and extension
+- Functions return structured data (dataclasses) for easy testing and extension
 - Error handling uses exceptions; CLI layer formats for user display
 - Discovery strategies are dynamically loaded via registry pattern
 - Configuration is immutable once loaded
-- Two-path architecture optimizes for different strategy types
 
 Example:
     Programmatic usage:
@@ -37,9 +52,9 @@ Example:
             output_dir=Path("./downloads"),
         )
 
-        print(f"App: {result['app_name']}")
-        print(f"Version: {result['version']}")
-        print(f"SHA-256: {result['sha256']}")
+        print(f"App: {result.app_name}")
+        print(f"Version: {result.version}")
+        print(f"SHA-256: {result.sha256}")
 
         # Version-first strategies: may have skipped download if unchanged!
         ```
@@ -49,7 +64,6 @@ Example:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 from notapkgtool import __version__
 from notapkgtool.config.loader import load_effective_config
@@ -57,6 +71,7 @@ from notapkgtool.discovery import get_strategy
 from notapkgtool.exceptions import ConfigError
 from notapkgtool.io import download_file
 from notapkgtool.logging import get_global_logger
+from notapkgtool.results import DiscoverResult
 from notapkgtool.state import load_state, save_state
 from notapkgtool.versioning.keys import DiscoveredVersion
 
@@ -101,7 +116,7 @@ def discover_recipe(
     stateless: bool = False,
     verbose: bool = False,
     debug: bool = False,
-) -> dict[str, Any]:
+) -> DiscoverResult:
     """Discover the latest version by loading config and downloading installer.
 
     This is the main entry point for the 'napt discover' command. It orchestrates
@@ -143,13 +158,19 @@ def discover_recipe(
         debug: If True, print debug output. Default is False.
 
     Returns:
-        A dict (app_name, app_id, strategy, version, version_source,
-            file_path, sha256, status), where app_name is the application
-            display name, app_id is the unique identifier, strategy is the
-            discovery strategy used, version is the extracted version string,
-            version_source describes how version was determined, file_path
-            is the Path to the downloaded installer, sha256 is the file hash,
-            and status is always "success".
+        DiscoverResult dataclass with the following fields:
+
+            - app_name (str): Application display name from recipe configuration.
+            - app_id (str): Unique application identifier from recipe configuration.
+            - strategy (str): Discovery strategy used (e.g., "web_scrape", "api_github",
+                "api_json", "url_download").
+            - version (str): Extracted version string (e.g., "141.0.7390.123").
+            - version_source (str): How version was determined (e.g., "regex_in_url",
+                "msi", "api_tag", "api_json").
+            - file_path (Path): Path to the downloaded installer file in output_dir.
+            - sha256 (str): SHA-256 hash of the downloaded file for integrity
+                verification.
+            - status (str): Always "success" for successful discovery operations.
 
     Raises:
         ConfigError: On missing or invalid configuration fields (no apps defined,
@@ -165,7 +186,7 @@ def discover_recipe(
                 Path("recipes/Google/chrome.yaml"),
                 Path("./downloads")
             )
-            print(result['version'])  # 141.0.7390.123
+            print(result.version)  # 141.0.7390.123
             ```
 
         Handling errors:
@@ -301,7 +322,10 @@ def discover_recipe(
             if cache:
                 logger.verbose(
                     "DISCOVERY",
-                    f"Version changed: {cache.get('known_version')} → {version_info.version}",
+                    (
+                        f"Version changed: {cache.get('known_version')} -> "
+                        f"{version_info.version}"
+                    ),
                 )
             logger.step(4, 4, "Downloading installer...")
             file_path, sha256, headers = download_file(
@@ -372,13 +396,13 @@ def discover_recipe(
             logger.verbose("STATE", f"Warning: Failed to save state: {err}")
 
     # 6. Return results
-    return {
-        "app_name": app_name,
-        "app_id": app_id,
-        "strategy": strategy_name,
-        "version": discovered_version.version,
-        "version_source": discovered_version.source,
-        "file_path": file_path,
-        "sha256": sha256,
-        "status": "success",
-    }
+    return DiscoverResult(
+        app_name=app_name,
+        app_id=app_id,
+        strategy=strategy_name,
+        version=discovered_version.version,
+        version_source=discovered_version.source,
+        file_path=file_path,
+        sha256=sha256,
+        status="success",
+    )

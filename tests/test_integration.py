@@ -84,10 +84,10 @@ class TestEndToEndWorkflow:
                 result = discover_recipe(recipe_path, output_dir)
 
         # Verify complete workflow results
-        assert result["app_name"] == "Test App"
-        assert result["version"] == "1.2.3"
-        assert result["strategy"] == "url_download"
-        assert result["status"] == "success"
+        assert result.app_name == "Test App"
+        assert result.version == "1.2.3"
+        assert result.strategy == "url_download"
+        assert result.status == "success"
 
         # Verify file was downloaded
         downloaded_file = output_dir / "installer.msi"
@@ -133,7 +133,7 @@ class TestConfigAndDiscoveryIntegration:
                 result = discover_recipe(recipe_path, tmp_test_dir)
 
                 # Verify config was properly passed to discovery
-                assert result["version"] == "1.0.0"
+                assert result.version == "1.0.0"
 
 
 class TestErrorPropagation:

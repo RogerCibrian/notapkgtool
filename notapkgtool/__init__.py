@@ -59,6 +59,12 @@ from notapkgtool.exceptions import (
     PackagingError,
 )
 from notapkgtool.io import download_file
+from notapkgtool.results import (
+    BuildResult,
+    DiscoverResult,
+    PackageResult,
+    ValidationResult,
+)
 from notapkgtool.validation import validate_recipe
 from notapkgtool.versioning import DiscoveredVersion, compare_any, is_newer_any
 
@@ -66,6 +72,10 @@ __all__ = [
     "__version__",
     "__author__",
     "__license__",
+    "BuildResult",
+    "DiscoverResult",
+    "PackageResult",
+    "ValidationResult",
     "__description__",
     "discover_recipe",
     "validate_recipe",

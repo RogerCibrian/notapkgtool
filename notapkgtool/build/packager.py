@@ -34,7 +34,7 @@ Example:
             output_dir=Path("packages")
         )
 
-        print(f"Package: {result['package_path']}")
+        print(f"Package: {result.package_path}")
         ```
 """
 
@@ -43,11 +43,11 @@ from __future__ import annotations
 from pathlib import Path
 import shutil
 import subprocess
-from typing import Any
 
 import requests
 
 from notapkgtool.exceptions import ConfigError, NetworkError, PackagingError
+from notapkgtool.results import PackageResult
 
 # TODO: Add version tracking for IntuneWinAppUtil.exe
 # Currently downloads from master branch (always latest), with no version tracking.
@@ -216,7 +216,7 @@ def create_intunewin(
     clean_source: bool = False,
     verbose: bool = False,
     debug: bool = False,
-) -> dict[str, Any]:
+) -> PackageResult:
     """Create a .intunewin package from a PSADT build directory.
 
     Uses Microsoft's IntuneWinAppUtil.exe tool to package a PSADT build
@@ -232,11 +232,16 @@ def create_intunewin(
         debug: Show debug output. Default is False.
 
     Returns:
-        A dict (build_dir, package_path, app_id, version, status), where
-            build_dir is the Path to the build directory, package_path is
-            the Path to the created .intunewin file, app_id is the application
-            ID, version is the application version, and status is the
-            packaging status.
+        PackageResult dataclass with the following fields:
+
+            - build_dir (Path): Path to the PSADT build directory that was packaged.
+                This directory may have been removed if clean_source=True.
+            - package_path (Path): Path to the created .intunewin file, following the
+                pattern {output_dir}/{app_id}/{app_id}-{version}.intunewin.
+            - app_id (str): Unique application identifier extracted from build directory
+                structure.
+            - version (str): Application version extracted from build directory structure.
+            - status (str): Packaging status, typically "success" for completed packaging.
 
     Raises:
         ConfigError: If build directory structure is invalid.
@@ -249,7 +254,7 @@ def create_intunewin(
             result = create_intunewin(
                 build_dir=Path("builds/napt-chrome/141.0.7390.123")
             )
-            print(result['package_path'])
+            print(result.package_path)
             # packages/napt-chrome/napt-chrome-141.0.7390.123.intunewin
             ```
 
@@ -318,10 +323,10 @@ def create_intunewin(
 
     logger.verbose("PACKAGE", f"[OK] Package created: {package_path}")
 
-    return {
-        "build_dir": build_dir,
-        "package_path": package_path,
-        "app_id": app_id,
-        "version": version,
-        "status": "success",
-    }
+    return PackageResult(
+        build_dir=build_dir,
+        package_path=package_path,
+        app_id=app_id,
+        version=version,
+        status="success",
+    )

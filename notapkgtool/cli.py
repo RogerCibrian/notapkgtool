@@ -122,36 +122,34 @@ def cmd_validate(args: argparse.Namespace) -> int:
     print("=" * 70)
     print("VALIDATION RESULTS")
     print("=" * 70)
-    print(f"Recipe:      {result['recipe_path']}")
-    print(f"Status:      {result['status'].upper()}")
-    print(f"App Count:   {result['app_count']}")
+    print(f"Recipe:      {result.recipe_path}")
+    print(f"Status:      {result.status.upper()}")
+    print(f"App Count:   {result.app_count}")
     print()
 
     # Show warnings if any
-    if result["warnings"]:
-        print(f"Warnings ({len(result['warnings'])}):")
-        for warning in result["warnings"]:
+    if result.warnings:
+        print(f"Warnings ({len(result.warnings)}):")
+        for warning in result.warnings:
             print(f"  [WARNING] {warning}")
         print()
 
     # Show errors if any
-    if result["errors"]:
-        print(f"Errors ({len(result['errors'])}):")
-        for error in result["errors"]:
+    if result.errors:
+        print(f"Errors ({len(result.errors)}):")
+        for error in result.errors:
             print(f"  [X] {error}")
         print()
 
     print("=" * 70)
 
-    if result["status"] == "valid":
+    if result.status == "valid":
         print()
         print("[SUCCESS] Recipe is valid!")
         return 0
     else:
         print()
-        print(
-            f"[FAILED] Recipe validation failed with {len(result['errors'])} error(s)."
-        )
+        print(f"[FAILED] Recipe validation failed with {len(result.errors)} error(s).")
         return 1
 
 
@@ -221,14 +219,14 @@ def cmd_discover(args: argparse.Namespace) -> int:
     print("=" * 70)
     print("DISCOVERY RESULTS")
     print("=" * 70)
-    print(f"App Name:        {result['app_name']}")
-    print(f"App ID:          {result['app_id']}")
-    print(f"Strategy:        {result['strategy']}")
-    print(f"Version:         {result['version']}")
-    print(f"Version Source:  {result['version_source']}")
-    print(f"File Path:       {result['file_path']}")
-    print(f"SHA-256:         {result['sha256']}")
-    print(f"Status:          {result['status']}")
+    print(f"App Name:        {result.app_name}")
+    print(f"App ID:          {result.app_id}")
+    print(f"Strategy:        {result.strategy}")
+    print(f"Version:         {result.version}")
+    print(f"Version Source:  {result.version_source}")
+    print(f"File Path:       {result.file_path}")
+    print(f"SHA-256:         {result.sha256}")
+    print(f"Status:          {result.status}")
     print("=" * 70)
     print()
     print("[SUCCESS] Version discovered successfully!")
@@ -311,12 +309,12 @@ def cmd_build(args: argparse.Namespace) -> int:
     print("=" * 70)
     print("BUILD RESULTS")
     print("=" * 70)
-    print(f"App Name:        {result['app_name']}")
-    print(f"App ID:          {result['app_id']}")
-    print(f"Version:         {result['version']}")
-    print(f"PSADT Version:   {result['psadt_version']}")
-    print(f"Build Directory: {result['build_dir']}")
-    print(f"Status:          {result['status']}")
+    print(f"App Name:        {result.app_name}")
+    print(f"App ID:          {result.app_id}")
+    print(f"Version:         {result.version}")
+    print(f"PSADT Version:   {result.psadt_version}")
+    print(f"Build Directory: {result.build_dir}")
+    print(f"Status:          {result.status}")
     print("=" * 70)
     print()
     print("[SUCCESS] PSADT package built successfully!")
@@ -390,14 +388,14 @@ def cmd_package(args: argparse.Namespace) -> int:
     print("=" * 70)
     print("PACKAGE RESULTS")
     print("=" * 70)
-    print(f"App ID:          {result['app_id']}")
-    print(f"Version:         {result['version']}")
-    print(f"Package Path:    {result['package_path']}")
+    print(f"App ID:          {result.app_id}")
+    print(f"Version:         {result.version}")
+    print(f"Package Path:    {result.package_path}")
     if args.clean_source:
-        print(f"Build Directory: {result['build_dir']} (removed)")
+        print(f"Build Directory: {result.build_dir} (removed)")
     else:
-        print(f"Build Directory: {result['build_dir']}")
-    print(f"Status:          {result['status']}")
+        print(f"Build Directory: {result.build_dir}")
+    print(f"Status:          {result.status}")
     print("=" * 70)
     print()
     print("[SUCCESS] .intunewin package created successfully!")
@@ -432,7 +430,10 @@ def main() -> None:
     parser_validate = subparsers.add_parser(
         "validate",
         help="Validate recipe syntax and configuration (no downloads)",
-        description="Check recipe YAML for syntax errors and configuration issues without making network calls.",
+        description=(
+            "Check recipe YAML for syntax errors and configuration issues "
+            "without making network calls."
+        ),
     )
     parser_validate.add_argument(
         "recipe",
@@ -450,7 +451,10 @@ def main() -> None:
     parser_discover = subparsers.add_parser(
         "discover",
         help="Discover latest version and download installer",
-        description="Find the latest version using the configured discovery strategy and download the installer.",
+        description=(
+            "Find the latest version using the configured discovery strategy "
+            "and download the installer."
+        ),
     )
     parser_discover.add_argument(
         "recipe",
@@ -465,7 +469,10 @@ def main() -> None:
         "--state-file",
         type=Path,
         default=Path("state/versions.json"),
-        help="State file for version tracking and ETag caching (default: state/versions.json)",
+        help=(
+            "State file for version tracking and ETag caching "
+            "(default: state/versions.json)"
+        ),
     )
     parser_discover.add_argument(
         "--stateless",
@@ -490,7 +497,10 @@ def main() -> None:
     parser_build = subparsers.add_parser(
         "build",
         help="Build PSADT package from recipe and installer",
-        description="Create a PSADT deployment package from a recipe and downloaded installer.",
+        description=(
+            "Create a PSADT deployment package from a recipe and "
+            "downloaded installer."
+        ),
     )
     parser_build.add_argument(
         "recipe",
@@ -524,7 +534,10 @@ def main() -> None:
     parser_package = subparsers.add_parser(
         "package",
         help="Create .intunewin package from PSADT build directory",
-        description="Package a built PSADT directory into a .intunewin file for Intune deployment.",
+        description=(
+            "Package a built PSADT directory into a .intunewin file "
+            "for Intune deployment."
+        ),
     )
     parser_package.add_argument(
         "build_dir",

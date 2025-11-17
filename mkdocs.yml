@@ -81,6 +81,7 @@ nav:
     - core: api/core.md
     - validation: api/validation.md
     - exceptions: api/exceptions.md
+    - results: api/results.md
     - Modules:
       - build: api/build.md
       - config: api/config.md

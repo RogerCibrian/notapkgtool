@@ -102,10 +102,10 @@ class TestCreateIntunewin:
 
         result = create_intunewin(build_dir)
 
-        assert result["app_id"] == "test-app"
-        assert result["version"] == "1.0.0"
-        assert result["status"] == "success"
-        assert result["package_path"] == package_path
+        assert result.app_id == "test-app"
+        assert result.version == "1.0.0"
+        assert result.status == "success"
+        assert result.package_path == package_path
 
     def test_create_intunewin_invalid_structure_raises(self, tmp_path):
         """Test error when build directory is invalid."""
@@ -147,4 +147,4 @@ class TestCreateIntunewin:
 
         # Build directory should be removed
         assert not build_dir.exists()
-        assert result["status"] == "success"
+        assert result.status == "success"
