@@ -30,15 +30,15 @@ Example:
         verbose=True
     )
 
-    print(f"Built: {build_result['build_dir']}")
+    print(f"Built: {build_result.build_dir}")
 
     # Create .intunewin
     package_result = create_intunewin(
-        build_dir=build_result['build_dir'],
+        build_dir=build_result.build_dir,
         verbose=True
     )
 
-    print(f"Package: {package_result['package_path']}")
+    print(f"Package: {package_result.package_path}")
 """
 
 from .manager import build_package
