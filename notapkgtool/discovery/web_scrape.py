@@ -67,10 +67,17 @@ Alternative with regex:
 Configuration Fields:
 
 - **page_url** (str, required): URL of the page to scrape for download links
-- **link_selector** (str, optional): CSS selector to find download link. Recommended approach. Example: 'a[href$=".msi"]' finds links ending with .msi
-- **link_pattern** (str, optional): Regex pattern as fallback when CSS won't work. Must have one capture group for the URL. Example: 'href="([^"]*\\.msi)"'
-- **version_pattern** (str, required): Regex pattern to extract version from the discovered URL. Use capture groups to extract version parts. Example: "app-(\\d+\\.\\d+)" or "7z(\\d{2})(\\d{2})"
-- **version_format** (str, optional): Python format string to combine captured groups. Use {0}, {1}, etc. for groups. Example: "{0}.{1}" transforms captures "25", "01" into "25.01". Defaults to "{0}" (first capture group only).
+- **link_selector** (str, optional): CSS selector to find download link.
+    Recommended approach. Example: 'a[href$=".msi"]' finds links ending with .msi
+- **link_pattern** (str, optional): Regex pattern as fallback when CSS won't
+    work. Must have one capture group for the URL. Example: 'href="([^"]*\\.msi)"'
+- **version_pattern** (str, required): Regex pattern to extract version from
+    the discovered URL. Use capture groups to extract version parts. Example:
+    "app-(\\d+\\.\\d+)" or "7z(\\d{2})(\\d{2})"
+- **version_format** (str, optional): Python format string to combine captured
+    groups. Use {0}, {1}, etc. for groups. Example: "{0}.{1}" transforms
+    captures "25", "01" into "25.01". Defaults to "{0}" (first capture group
+    only).
 
 Error Handling:
 
@@ -142,7 +149,7 @@ Example:
 
         # Automatically uses version-first optimization
         result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
-        print(f"Version {result['version']} at {result['file_path']}")
+        print(f"Version {result.version} at {result.file_path}")
         ```
 
 Note:
@@ -190,7 +197,8 @@ class WebScrapeStrategy:
         verbose: bool = False,
         debug: bool = False,
     ) -> VersionInfo:
-        """Scrape download page for version and URL without downloading (version-first path).
+        """Scrape download page for version and URL without downloading
+        (version-first path).
 
         This method scrapes an HTML page, finds a download link using CSS selector
         or regex, extracts the version from that link, and returns version info.
@@ -343,7 +351,8 @@ class WebScrapeStrategy:
 
             if not match:
                 raise ConfigError(
-                    f"Version pattern {version_pattern!r} did not match URL {download_url!r}"
+                    f"Version pattern {version_pattern!r} did not match "
+                    f"URL {download_url!r}"
                 )
 
             # Get captured groups
@@ -358,7 +367,8 @@ class WebScrapeStrategy:
                     version_str = version_format.format(*groups)
                 except (IndexError, KeyError) as err:
                     raise ConfigError(
-                        f"version_format {version_format!r} failed with groups {groups}: {err}"
+                        f"version_format {version_format!r} failed with "
+                        f"groups {groups}: {err}"
                     ) from err
 
         except re.error as err:
@@ -403,7 +413,8 @@ class WebScrapeStrategy:
 
         if not link_selector and not link_pattern:
             errors.append(
-                "Missing required field: must provide either source.link_selector or source.link_pattern"
+                "Missing required field: must provide either "
+                "source.link_selector or source.link_pattern"
             )
 
         # Validate link_selector if provided

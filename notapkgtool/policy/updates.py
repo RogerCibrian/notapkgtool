@@ -88,7 +88,8 @@ def should_stage(
         if current_version is None
         else is_newer_any(remote_version, current_version, policy.comparator)
         or remote_version != current_version
-        # Treat "different version string" as change even if comparator treats them equal
+        # Treat "different version string" as change even if comparator
+        # treats them equal
     )
 
     hash_changed = (current_hash or "").lower() != (remote_hash or "").lower()

@@ -15,14 +15,9 @@
 """Exception hierarchy for NAPT.
 
 This module defines a custom exception hierarchy that allows library users
-to distinguish between different types of errors:
-
-- ConfigError: Configuration-related errors (YAML parse, missing fields, validation failures)
-- NetworkError: Network/download-related errors (API failures, download errors)
-- PackagingError: Packaging/build-related errors (build failures, missing tools)
-
-All exceptions inherit from NAPTError, allowing users to catch all NAPT errors
-with a single except clause if needed.
+to distinguish between different types of errors. All exceptions inherit from
+NAPTError, allowing users to catch all NAPT errors with a single except clause
+if needed.
 
 Example:
     Catching specific error types:
@@ -74,11 +69,14 @@ class ConfigError(NAPTError):
 
     This exception is raised when there are problems with:
 
-    - YAML parsing (syntax errors, invalid structure)
-    - Missing or invalid configuration fields
-    - Invalid strategy configuration
-    - Missing recipe files
-    - Recipe validation failures
+    - YAML parse errors (syntax errors, invalid structure)
+    - Missing required configuration fields (e.g., no apps defined, missing
+        'source.strategy' field)
+    - Invalid strategy configuration (unknown strategy name, invalid strategy
+        parameters)
+    - Missing recipe files (file not found)
+    - Recipe validation failures (invalid recipe structure, missing required
+        app fields)
 
     Example:
         Catching configuration errors:
@@ -100,9 +98,12 @@ class NetworkError(NAPTError):
 
     This exception is raised when there are problems with:
 
-    - Download failures (HTTP errors, connection timeouts)
-    - API call failures (GitHub API, JSON API endpoints)
-    - Network-related version extraction errors
+    - Download failures (HTTP errors, connection timeouts, network
+        unreachable)
+    - API call failures (GitHub API errors, JSON API endpoint failures,
+        authentication issues)
+    - Network-related version extraction errors (API response parsing
+        failures)
 
     Example:
         Catching network errors:
@@ -124,10 +125,14 @@ class PackagingError(NAPTError):
 
     This exception is raised when there are problems with:
 
-    - Build failures (PSADT template processing, file operations)
-    - Missing build tools (IntuneWinAppUtil.exe, PSADT template)
-    - MSI extraction errors
-    - Packaging operations
+    - Build failures (PSADT template processing errors, file operations,
+        directory creation failures)
+    - Missing build tools (IntuneWinAppUtil.exe not found, PSADT template
+        missing)
+    - MSI extraction errors (failed to read MSI ProductVersion, unsupported
+        MSI format)
+    - Packaging operations (IntuneWinAppUtil.exe execution failures, invalid
+        build directory structure)
 
     Example:
         Catching packaging errors:

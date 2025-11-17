@@ -24,7 +24,8 @@ The discovery system uses a strategy pattern to support multiple ways
 of obtaining application installers and their versions:
 
 - url_download: Direct download from a static URL (FILE-FIRST)
-- web_scrape: Scrape vendor download pages to find links and extract versions (VERSION-FIRST)
+- web_scrape: Scrape vendor download pages to find links and extract versions
+    (VERSION-FIRST)
 - api_github: Fetch from GitHub releases API (VERSION-FIRST)
 - api_json: Query JSON API endpoints for version and download URL (VERSION-FIRST)
 

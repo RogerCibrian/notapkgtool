@@ -203,10 +203,12 @@ class StateTracker:
             sha256: SHA-256 hash of file (for integrity checks).
             etag: ETag header from download response. Used by url_download for HTTP 304
                 conditional requests. Saved but unused by version-first strategies.
-            last_modified: Last-Modified header from download response. Used by url_download
-                as fallback for conditional requests. Saved but unused by version-first.
-            known_version: Version string. PRIMARY cache key for version-first strategies
-                (compared to skip downloads). Informational only for url_download.
+            last_modified: Last-Modified header from download response.
+                Used by url_download as fallback for conditional requests.
+                Saved but unused by version-first.
+            known_version: Version string. PRIMARY cache key for
+                version-first strategies (compared to skip downloads).
+                Informational only for url_download.
             strategy: Discovery strategy used (for debugging).
 
         Example:
@@ -222,12 +224,15 @@ class StateTracker:
                 ```
 
         Note:
-            Schema v2: Removed file_path, last_checked, and renamed version→known_version.
+            Schema v2: Removed file_path, last_checked, and renamed
+            version -> known_version.
 
             Field usage differs by strategy type:
 
-            - Version-first: known_version is PRIMARY cache key, etag/last_modified unused
-            - File-first: etag/last_modified are PRIMARY cache keys, known_version informational
+            - Version-first: known_version is PRIMARY cache key,
+                etag/last_modified unused
+            - File-first: etag/last_modified are PRIMARY cache keys,
+                known_version informational
 
             Filesystem is the source of truth; state is for optimization only.
 

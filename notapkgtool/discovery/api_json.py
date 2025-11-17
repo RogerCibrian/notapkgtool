@@ -65,12 +65,20 @@ Recipe Configuration:
 
 Configuration Fields:
 
-- **api_url** (str, required): API endpoint URL that returns JSON with version and download information
-- **version_path** (str, required): JSONPath expression to extract version from the API response. Examples: "version", "release.version", "data.version"
-- **download_url_path** (str, required): JSONPath expression to extract download URL from the API response. Examples: "download_url", "assets.url", "platforms.windows.x64"
-- **method** (str, optional): HTTP method to use. Either "GET" or "POST". Default is "GET"
-- **headers** (dict, optional): Custom HTTP headers to send with the request. Useful for authentication or setting Accept headers. Values support environment variable expansion. Example: {"Authorization": "Bearer ${API_TOKEN}"}
-- **body** (dict, optional): Request body for POST requests. Sent as JSON. Only used when method="POST". Example: {"platform": "windows", "arch": "x64"}
+- **api_url** (str, required): API endpoint URL that returns JSON with version
+    and download information
+- **version_path** (str, required): JSONPath expression to extract version from
+    the API response. Examples: "version", "release.version", "data.version"
+- **download_url_path** (str, required): JSONPath expression to extract
+    download URL from the API response. Examples: "download_url", "assets.url",
+    "platforms.windows.x64"
+- **method** (str, optional): HTTP method to use. Either "GET" or "POST".
+    Default is "GET"
+- **headers** (dict, optional): Custom HTTP headers to send with the request.
+    Useful for authentication or setting Accept headers. Values support
+    environment variable expansion. Example: {"Authorization": "Bearer ${API_TOKEN}"}
+- **body** (dict, optional): Request body for POST requests. Sent as JSON.
+    Only used when method="POST". Example: {"platform": "windows", "arch": "x64"}
     - **timeout** (int, optional): Request timeout in seconds. Default is 30.
 
 JSONPath Syntax:
@@ -145,7 +153,7 @@ Example:
 
         # Automatically uses version-first optimization
         result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
-        print(f"Version {result['version']} at {result['file_path']}")
+        print(f"Version {result.version} at {result.file_path}")
         ```
 
 Note:
@@ -193,7 +201,8 @@ class ApiJsonStrategy:
         verbose: bool = False,
         debug: bool = False,
     ) -> VersionInfo:
-        """Query JSON API for version and download URL without downloading (version-first path).
+        """Query JSON API for version and download URL without downloading
+        (version-first path).
 
         This method calls a JSON API, extracts version and download URL using
         JSONPath expressions. If the version matches cached state, the download
@@ -333,7 +342,8 @@ class ApiJsonStrategy:
 
             if not version_matches:
                 raise ConfigError(
-                    f"Version path {version_path!r} did not match anything in API response"
+                    f"Version path {version_path!r} did not match anything "
+                    f"in API response"
                 )
 
             version_str = str(version_matches[0].value)
@@ -356,7 +366,8 @@ class ApiJsonStrategy:
 
             if not url_matches:
                 raise ConfigError(
-                    f"Download URL path {download_url_path!r} did not match anything in API response"
+                    f"Download URL path {download_url_path!r} did not match "
+                    f"anything in API response"
                 )
 
             download_url = str(url_matches[0].value)
@@ -364,7 +375,8 @@ class ApiJsonStrategy:
             if isinstance(err, ConfigError):
                 raise
             raise ConfigError(
-                f"Failed to extract download URL using path {download_url_path!r}: {err}"
+                f"Failed to extract download URL using path "
+                f"{download_url_path!r}: {err}"
             ) from err
 
         logger.verbose("DISCOVERY", f"Download URL: {download_url}")

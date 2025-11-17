@@ -46,13 +46,17 @@ Recipe Configuration:
       url: "https://vendor.com/installer.msi"          # Required: download URL
       version:
         type: msi                                      # Required: extraction method
-        file: "installer.msi"                          # Optional: defaults to URL filename
+        file: "installer.msi"  # Optional: defaults to URL filename
 
 Configuration Fields:
 
-- **url** (str, required): HTTP(S) URL to download the installer from. The URL should be stable and point to the latest version.
-- **version.type** (str, required): Version extraction method. Currently supported: msi.
-- **version.file** (str, optional): Specific filename to extract version from. Defaults to the downloaded filename derived from the URL or Content-Disposition header.
+- **url** (str, required): HTTP(S) URL to download the installer from. The URL
+    should be stable and point to the latest version.
+- **version.type** (str, required): Version extraction method. Currently
+    supported: msi.
+- **version.file** (str, optional): Specific filename to extract version from.
+    Defaults to the downloaded filename derived from the URL or
+    Content-Disposition header.
 
 Error Handling:
 
@@ -101,7 +105,7 @@ From Python (using core orchestration):
 
     # Automatically uses ETag optimization
     result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
-    print(f"Version {result['version']} at {result['file_path']}")
+    print(f"Version {result.version} at {result.file_path}")
     ```
 
 Note:
@@ -244,7 +248,8 @@ class UrlDownloadStrategy:
                     )
                 except Exception as err:
                     raise NetworkError(
-                        f"Failed to extract MSI ProductVersion from cached file {cached_file}: {err}"
+                        f"Failed to extract MSI ProductVersion from cached "
+                        f"file {cached_file}: {err}"
                     ) from err
             else:
                 raise ConfigError(
@@ -252,7 +257,8 @@ class UrlDownloadStrategy:
                 ) from None
 
             # Return cached info with preserved headers (prevents overwriting ETag)
-            # When 304, no new headers received, so return cached values to preserve them
+            # When 304, no new headers received, so return cached values to
+            # preserve them
             preserved_headers = {}
             if cache.get("etag"):
                 preserved_headers["ETag"] = cache["etag"]

@@ -228,7 +228,8 @@ def version_key_any(s: str, *, source: SourceHint = "string") -> tuple:
     """Compute a comparable key for any version string.
 
     - MSI/EXE: purely numeric (truncated to 3/4 parts).
-    - Generic string: semver-like robust key; if no numeric prefix, fallback to ("text", raw).
+    - Generic string: semver-like robust key; if no numeric prefix,
+        fallback to ("text", raw).
     """
     if source in ("msi", "exe"):
         nums = _clip_for_source(_ints_from_text(s), source)
@@ -293,7 +294,8 @@ def is_newer_any(
     if current is None:
         if verbose:
             print(
-                f"[is_newer_any] No current version. Treat {remote!r} as newer (source={source})"
+                f"[is_newer_any] No current version. Treat {remote!r} "
+                f"as newer (source={source})"
             )
         return True
 
@@ -301,14 +303,17 @@ def is_newer_any(
     if verbose:
         if cmpv > 0:
             print(
-                f"[is_newer_any] Remote {remote!r} is newer than current {current!r} (source={source})"
+                f"[is_newer_any] Remote {remote!r} is newer than "
+                f"current {current!r} (source={source})"
             )
         elif cmpv == 0:
             print(
-                f"[is_newer_any] Remote {remote!r} is the same as current {current!r} (source={source})"
+                f"[is_newer_any] Remote {remote!r} is the same as "
+                f"current {current!r} (source={source})"
             )
         else:
             print(
-                f"[is_newer_any] Remote {remote!r} is older than current {current!r} (source={source})"
+                f"[is_newer_any] Remote {remote!r} is older than "
+                f"current {current!r} (source={source})"
             )
     return cmpv > 0

@@ -33,7 +33,7 @@ Supported Version Extraction:
 
 - Tag-based: Extract version from release tag names
     - Supports named capture groups: (?P<version>...)
-    - Default pattern strips "v" prefix: v1.2.3 → 1.2.3
+    - Default pattern strips "v" prefix: v1.2.3 -> 1.2.3
     - Falls back to full tag if no pattern match
 
 Use Cases:
@@ -57,9 +57,15 @@ Recipe Configuration:
 
 Configuration Fields:
 
-- **repo** (str, required): GitHub repository in "owner/name" format (e.g., "git-for-windows/git")
-- **asset_pattern** (str, required): Regular expression to match asset filename. If multiple assets match, the first match is used. Example: ".*-x64\\.msi$" matches assets ending with "-x64.msi"
-- **version_pattern** (str, optional): Regular expression to extract version from the release tag name. Use a named capture group (?P<version>...) or the entire match. Default: "v?([0-9.]+)" strips optional "v" prefix. Example: "release-([0-9.]+)" for tags like "release-1.2.3"
+- **repo** (str, required): GitHub repository in "owner/name" format
+    (e.g., "git-for-windows/git")
+- **asset_pattern** (str, required): Regular expression to match asset
+    filename. If multiple assets match, the first match is used. Example:
+    ".*-x64\\.msi$" matches assets ending with "-x64.msi"
+- **version_pattern** (str, optional): Regular expression to extract version
+    from the release tag name. Use a named capture group (?P<version>...) or
+    the entire match. Default: "v?([0-9.]+)" strips optional "v" prefix.
+    Example: "release-([0-9.]+)" for tags like "release-1.2.3".
     - **prerelease** (bool, optional): If True, include pre-release versions. If False
       (default), only stable releases are considered. Uses GitHub's prerelease flag.
     - **token** (str, optional): GitHub personal access token for authentication.
@@ -123,7 +129,7 @@ Example:
 
         # Automatically uses version-first optimization
         result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
-        print(f"Version {result['version']} at {result['file_path']}")
+        print(f"Version {result.version} at {result.file_path}")
         ```
 
 Note:
@@ -168,7 +174,8 @@ class ApiGithubStrategy:
         verbose: bool = False,
         debug: bool = False,
     ) -> VersionInfo:
-        """Fetch latest release from GitHub API without downloading (version-first path).
+        """Fetch latest release from GitHub API without downloading
+        (version-first path).
 
         This method queries the GitHub API for the latest release and extracts
         the version from the tag name and the download URL from matching assets.
@@ -280,7 +287,8 @@ class ApiGithubStrategy:
                 ) from err
             else:
                 raise NetworkError(
-                    f"GitHub API request failed: {response.status_code} {response.reason}"
+                    f"GitHub API request failed: {response.status_code} "
+                    f"{response.reason}"
                 ) from err
         except requests.exceptions.RequestException as err:
             raise NetworkError(f"Failed to fetch GitHub release: {err}") from err
@@ -306,10 +314,12 @@ class ApiGithubStrategy:
             match = pattern.search(tag_name)
             if not match:
                 raise ConfigError(
-                    f"Version pattern {version_pattern!r} did not match tag {tag_name!r}"
+                    f"Version pattern {version_pattern!r} did not match "
+                    f"tag {tag_name!r}"
                 )
 
-            # Try to get named capture group 'version' first, else use group 1, else full match
+            # Try to get named capture group 'version' first, else use group 1,
+            # else full match
             if "version" in pattern.groupindex:
                 version_str = match.group("version")
             elif pattern.groups > 0:

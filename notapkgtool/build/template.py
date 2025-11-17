@@ -101,7 +101,7 @@ def _build_adtsession_vars(
         psadt_version: PSADT version being used.
 
     Returns:
-        Dictionary of variable name → value mappings.
+        Dictionary of variable name -> value mappings.
 
     Note:
         Organization defaults come from config['defaults']['psadt']['app_vars'].
@@ -145,7 +145,7 @@ def _replace_session_block(template: str, vars_dict: dict[str, Any]) -> str:
 
     Args:
         template: PSADT template script text.
-        vars_dict: Variable name → value mappings.
+        vars_dict: Variable name -> value mappings.
 
     Returns:
         Script with replaced $adtSession block.

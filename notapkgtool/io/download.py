@@ -19,20 +19,29 @@ for reliability, reproducibility, and efficiency in automated packaging workflow
 
 Key Features:
 
-- **Retry Logic with Exponential Backoff** - Automatically retries on transient failures (429, 500, 502, 503, 504) with exponential backoff. Configurable via urllib3.util.Retry.
-- **Conditional Requests (HTTP 304 Not Modified)** - Supports ETag and Last-Modified headers to avoid re-downloading unchanged files.
-- **Atomic Writes** - Downloads to temporary .part files with atomic rename on success to prevent partial files.
-- **Integrity Verification** - SHA-256 hashing during download with optional checksum validation. Corrupted files are automatically removed.
-- **Smart Filename Detection** - Respects Content-Disposition headers, falls back to URL path, handles edge cases.
-- **Stable ETags** - Forces Accept-Encoding: identity to avoid representation-specific ETags and prevent false cache misses.
+- **Retry Logic with Exponential Backoff** - Automatically retries on
+    transient failures (429, 500, 502, 503, 504) with exponential backoff.
+    Configurable via urllib3.util.Retry.
+- **Conditional Requests (HTTP 304 Not Modified)** - Supports ETag and
+    Last-Modified headers to avoid re-downloading unchanged files.
+- **Atomic Writes** - Downloads to temporary .part files with atomic rename
+    on success to prevent partial files.
+- **Integrity Verification** - SHA-256 hashing during download with
+    optional checksum validation. Corrupted files are automatically removed.
+- **Smart Filename Detection** - Respects Content-Disposition headers,
+    falls back to URL path, handles edge cases.
+- **Stable ETags** - Forces Accept-Encoding: identity to avoid
+    representation-specific ETags and prevent false cache misses.
 
 Exception Classes:
 
-- NotModifiedError: Raised when conditional request returns HTTP 304 (not an error condition).
+- NotModifiedError: Raised when conditional request returns HTTP 304
+    (not an error condition).
 
 Constants:
 
-- DEFAULT_CHUNK (int): Stream chunk size (1 MiB). Balance memory vs. progress granularity.
+- DEFAULT_CHUNK (int): Stream chunk size (1 MiB). Balance memory vs.
+    progress granularity.
 
 Example:
     Basic download:
@@ -76,9 +85,15 @@ Example:
 
 Design Decisions:
 
-- **Why identity encoding?** CDNs like Cloudflare compute representation-specific ETags. Requesting gzip vs identity yields different ETags for the same content, causing unnecessary re-downloads. We pin to identity for stability.
-- **Why atomic writes?** Prevents partial files from appearing in the destination. Critical for automation where another process might start using a file before download completes.
-- **Why stream hashing?** Computing SHA-256 while streaming avoids a second file read, improving I/O efficiency especially for large installers.
+- **Why identity encoding?** CDNs like Cloudflare compute
+    representation-specific ETags. Requesting gzip vs identity yields
+    different ETags for the same content, causing unnecessary re-downloads.
+    We pin to identity for stability.
+- **Why atomic writes?** Prevents partial files from appearing in the
+    destination. Critical for automation where another process might start
+    using a file before download completes.
+- **Why stream hashing?** Computing SHA-256 while streaming avoids a second
+    file read, improving I/O efficiency especially for large installers.
 
 Note:
     - Progress output goes to stdout (can be captured/redirected)
@@ -204,7 +219,8 @@ def download_file(
         validate_content_type: If True, rejects responses with text/html content-type.
         timeout: Per-request timeout (seconds).
         etag: Previous ETag to use for If-None-Match (conditional GET).
-        last_modified: Previous Last-Modified to use for If-Modified-Since (conditional GET).
+        last_modified: Previous Last-Modified to use for If-Modified-Since
+            (conditional GET).
         verbose: Print verbose progress.
         debug: Print debug information.
 
@@ -253,7 +269,10 @@ def download_file(
             for hist in resp.history:
                 logger.verbose(
                     "HTTP",
-                    f"Redirect {hist.status_code} -> {hist.headers.get('Location', 'unknown')}",
+                    (
+                        f"Redirect {hist.status_code} -> "
+                        f"{hist.headers.get('Location', 'unknown')}"
+                    ),
                 )
 
         # Conditional request satisfied: nothing changed since last time.
@@ -341,7 +360,8 @@ def download_file(
             except OSError:
                 pass
             raise NetworkError(
-                f"sha256 mismatch for {filename}: got {digest}, expected {expected_sha256}"
+                f"sha256 mismatch for {filename}: got {digest}, "
+                f"expected {expected_sha256}"
             )
 
         elapsed = time.time() - started_at

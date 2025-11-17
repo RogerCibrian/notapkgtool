@@ -175,7 +175,8 @@ class TestVendorDetection:
 
     def test_vendor_from_directory_name(self, tmp_test_dir):
         """Test that vendor is detected from directory structure."""
-        # Create structure: defaults/org.yaml, defaults/vendors/Google.yaml, recipes/Google/chrome.yaml
+        # Create structure: defaults/org.yaml, defaults/vendors/Google.yaml,
+        # recipes/Google/chrome.yaml
         defaults_dir = tmp_test_dir / "defaults"
         defaults_dir.mkdir()
         vendors_dir = defaults_dir / "vendors"

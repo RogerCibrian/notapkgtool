@@ -308,7 +308,8 @@ def get_psadt_release(
     # Verify extracted structure
     if not is_psadt_cached(version, cache_dir):
         raise PackagingError(
-            f"PSADT extraction failed: PSAppDeployToolkit/ folder not found in {version_dir}"
+            f"PSADT extraction failed: PSAppDeployToolkit/ folder "
+            f"not found in {version_dir}"
         )
 
     logger.verbose("PSADT", f"PSADT {version} cached successfully")

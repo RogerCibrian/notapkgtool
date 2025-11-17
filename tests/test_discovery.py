@@ -251,7 +251,8 @@ class TestCacheAndETagSupport:
         assert sha256 == "cached_sha256"
         assert discovered.version == "1.0.0"
 
-    # test_api_github_with_cache_not_modified removed - discover_version() no longer exists
+    # test_api_github_with_cache_not_modified removed -
+    # discover_version() no longer exists
 
     def test_url_download_with_cache_modified(self, tmp_test_dir):
         """Test url_download downloads when file modified (HTTP 200)."""
@@ -433,7 +434,8 @@ class TestVersionFirstStrategies:
         assert version_info.source == "web_scrape"
 
     def test_api_github_get_version_info(self):
-        """Test api_github.get_version_info() returns VersionInfo without downloading."""
+        """Test api_github.get_version_info() returns VersionInfo without
+        downloading."""
         from notapkgtool.versioning.keys import VersionInfo
 
         strategy = ApiGithubStrategy()

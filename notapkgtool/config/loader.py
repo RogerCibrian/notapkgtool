@@ -54,7 +54,8 @@ Dynamic Injection:
     - defaults.psadt.app_vars.AppScriptDate: Today's date (YYYY-MM-DD)
 
 Error Handling:
-    - ConfigError: Recipe file doesn't exist, YAML parse errors, empty files, or invalid structure
+    - ConfigError: Recipe file doesn't exist, YAML parse errors, empty files,
+        or invalid structure
     - All errors are chained with "from err" for better debugging
 
 Example:
@@ -127,7 +128,8 @@ def _load_yaml_file(p: Path) -> Any:
     """Load a YAML file and return the parsed Python object.
 
     Raises:
-        ConfigError: When file does not exist, invalid YAML (parse error), or empty files.
+        ConfigError: When file does not exist, invalid YAML (parse error),
+            or empty files.
 
     """
     if not p.exists():
@@ -320,7 +322,8 @@ def load_effective_config(
         as-is (with path resolution + injection).
 
     Raises:
-        ConfigError: On YAML parse errors, empty files, invalid structure, or if the recipe file is missing.
+        ConfigError: On YAML parse errors, empty files, invalid structure,
+            or if the recipe file is missing.
 
     """
     from notapkgtool.logging import get_global_logger
@@ -404,7 +407,10 @@ def load_effective_config(
         top_level_keys = list(merged.keys())
         logger.verbose(
             "CONFIG",
-            f"Final config has {len(top_level_keys)} top-level keys: {', '.join(top_level_keys)}",
+            (
+                f"Final config has {len(top_level_keys)} top-level keys: "
+                f"{', '.join(top_level_keys)}"
+            ),
         )
     # Show the complete merged configuration in debug mode
     if debug:
