@@ -83,7 +83,9 @@ def test_checksum_mismatch_raises_and_cleans_file(tmp_test_dir: Path) -> None:
     with requests_mock.Mocker() as m:
         m.get(url, content=b"wrong", headers={"Content-Length": "5"})
 
-        with pytest.raises(ValueError, match="sha256 mismatch"):
+        from notapkgtool.exceptions import NetworkError
+
+        with pytest.raises(NetworkError, match="sha256 mismatch"):
             download_file(url, tmp_test_dir, expected_sha256="00" * 32)
 
     # Ensure file was removed after mismatch
@@ -113,7 +115,9 @@ def test_rejects_html_when_validate_content_type(tmp_test_dir: Path) -> None:
     with requests_mock.Mocker() as m:
         m.get(url, text="<html>oops</html>", headers={"Content-Type": "text/html"})
 
-        with pytest.raises(ValueError, match="expected binary"):
+        from notapkgtool.exceptions import ConfigError
+
+        with pytest.raises(ConfigError, match="expected binary"):
             download_file(url, tmp_test_dir, validate_content_type=True)
 
 

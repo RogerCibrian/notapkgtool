@@ -589,5 +589,5 @@ apps:
 
         result = validate_recipe(recipe)
 
-        assert "recipe_path" in result
+        assert hasattr(result, "recipe_path")
         assert str(recipe) in result.recipe_path

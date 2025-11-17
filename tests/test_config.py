@@ -14,6 +14,7 @@ from __future__ import annotations
 import pytest
 
 from notapkgtool.config.loader import load_effective_config
+from notapkgtool.exceptions import ConfigError
 
 
 class TestConfigLoading:
@@ -58,7 +59,9 @@ class TestConfigLoading:
         """Test that missing recipe file raises FileNotFoundError."""
         nonexistent = tmp_test_dir / "nonexistent.yaml"
 
-        with pytest.raises(FileNotFoundError):
+        from notapkgtool.exceptions import ConfigError
+
+        with pytest.raises(ConfigError):
             load_effective_config(nonexistent)
 
 
@@ -242,26 +245,26 @@ class TestDynamicInjection:
 class TestErrorHandling:
     """Tests for error handling in config loading."""
 
-    def test_invalid_yaml_raises_system_exit(self, tmp_test_dir):
-        """Test that invalid YAML raises SystemExit."""
+    def test_invalid_yaml_raises_config_error(self, tmp_test_dir):
+        """Test that invalid YAML raises ConfigError."""
         recipe_path = tmp_test_dir / "bad.yaml"
         recipe_path.write_text("invalid: yaml: syntax: error:")
 
-        with pytest.raises(SystemExit):
+        with pytest.raises(ConfigError):
             load_effective_config(recipe_path)
 
-    def test_empty_yaml_raises_system_exit(self, tmp_test_dir):
-        """Test that empty YAML raises SystemExit."""
+    def test_empty_yaml_raises_config_error(self, tmp_test_dir):
+        """Test that empty YAML raises ConfigError."""
         recipe_path = tmp_test_dir / "empty.yaml"
         recipe_path.write_text("")
 
-        with pytest.raises(SystemExit):
+        with pytest.raises(ConfigError):
             load_effective_config(recipe_path)
 
-    def test_non_dict_yaml_raises_system_exit(self, tmp_test_dir):
-        """Test that non-dict YAML raises SystemExit."""
+    def test_non_dict_yaml_raises_config_error(self, tmp_test_dir):
+        """Test that non-dict YAML raises ConfigError."""
         recipe_path = tmp_test_dir / "list.yaml"
         recipe_path.write_text("- item1\n- item2\n")
 
-        with pytest.raises(SystemExit):
+        with pytest.raises(ConfigError):
             load_effective_config(recipe_path)

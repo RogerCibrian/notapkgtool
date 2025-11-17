@@ -111,7 +111,7 @@ class TestDiscoverRecipe:
         """Test that missing recipe file raises error."""
         nonexistent = tmp_test_dir / "nonexistent.yaml"
 
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(ConfigError):
             discover_recipe(nonexistent, tmp_test_dir)
 
 

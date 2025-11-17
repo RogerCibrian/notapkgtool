@@ -159,7 +159,9 @@ class TestErrorPropagation:
         with requests_mock.Mocker() as m:
             m.get("https://test.com/app.msi", status_code=404)
 
-            with pytest.raises(NetworkError, match="Failed to download"):
+            from notapkgtool.exceptions import NetworkError
+
+            with pytest.raises(NetworkError, match="download failed"):
                 discover_recipe(recipe_path, tmp_test_dir)
 
     def test_version_extraction_error_propagates(self, tmp_test_dir, create_yaml_file):

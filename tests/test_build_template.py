@@ -151,7 +151,9 @@ $adtSession = @{
         template = "# No session block here"
         vars_dict = {}
 
-        with pytest.raises(RuntimeError, match="Could not find \\$adtSession"):
+        from notapkgtool.exceptions import PackagingError
+
+        with pytest.raises(PackagingError, match="Could not find \\$adtSession"):
             _replace_session_block(template, vars_dict)
 
 
