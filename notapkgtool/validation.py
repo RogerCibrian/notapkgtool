@@ -182,34 +182,34 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> ValidationResul
     # Check apps list
     if "apps" not in recipe:
         errors.append("Missing required field: apps")
-        return {
-            "status": "invalid",
-            "errors": errors,
-            "warnings": warnings,
-            "app_count": 0,
-            "recipe_path": str(recipe_path),
-        }
+        return ValidationResult(
+            status="invalid",
+            errors=errors,
+            warnings=warnings,
+            app_count=0,
+            recipe_path=str(recipe_path),
+        )
 
     apps = recipe["apps"]
     if not isinstance(apps, list):
         errors.append("Field 'apps' must be a list")
-        return {
-            "status": "invalid",
-            "errors": errors,
-            "warnings": warnings,
-            "app_count": 0,
-            "recipe_path": str(recipe_path),
-        }
+        return ValidationResult(
+            status="invalid",
+            errors=errors,
+            warnings=warnings,
+            app_count=0,
+            recipe_path=str(recipe_path),
+        )
 
     if len(apps) == 0:
         errors.append("Field 'apps' must contain at least one app")
-        return {
-            "status": "invalid",
-            "errors": errors,
-            "warnings": warnings,
-            "app_count": 0,
-            "recipe_path": str(recipe_path),
-        }
+        return ValidationResult(
+            status="invalid",
+            errors=errors,
+            warnings=warnings,
+            app_count=0,
+            recipe_path=str(recipe_path),
+        )
 
     app_count = len(apps)
     if verbose:
