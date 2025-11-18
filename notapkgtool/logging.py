@@ -19,6 +19,7 @@ can use for output without depending on the CLI. The logger can be configured
 globally or passed as a parameter for better isolation.
 
 The logger supports three output levels:
+
 - Step: Always printed (for progress indicators)
 - Verbose: Only printed when verbose mode is enabled
 - Debug: Only printed when debug mode is enabled (implies verbose)

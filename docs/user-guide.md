@@ -4,6 +4,8 @@ This guide covers NAPT's key features, configuration system, and advanced usage 
 
 ## Commands Reference
 
+> **💡 Tip:** All commands support `--help` (or `-h`) to show detailed usage, options, and examples. Try `napt discover --help` to see what's available.
+
 ### napt validate
 
 Validates recipe syntax and configuration without making network calls.
@@ -126,91 +128,70 @@ Discovery strategies are the core mechanism for obtaining application installers
 
 ### api_github
 
-**Best for:**
-
-- Open-source projects on GitHub (Git, VS Code, Node.js)
-- Projects with GitHub releases and release assets
-- Semantic versioned tags
+**Best for:** Open-source projects on GitHub with releases and semantic versioned tags.
 
 **Configuration:**
 
 ```yaml
 source:
-  strategy: api_github
-  repo: "git-for-windows/git"
-  asset_pattern: "Git-.*-64-bit\\.exe$"
-  version_pattern: "v?([0-9.]+)"
+  strategy: api_github  # Discovery strategy type
+  repo: "git-for-windows/git"  # GitHub repository (owner/repo format)
+  asset_pattern: "Git-.*-64-bit\\.exe$"  # Regex to match installer filename in release assets
+  version_pattern: "v?([0-9.]+)"  # Regex to extract version from Git tag
 ```
 
-**Pros:** Official GitHub API, reliable, fast update checks (API only, ~100ms), supports authentication  
-**Cons:** GitHub API rate limits (60/hour unauthenticated)
+> **Note:** For implementation details, see [api_github](api/discovery.md#notapkgtool.discovery.api_github) in Developer Reference.
 
 ### api_json
 
-**Best for:**
-
-- Vendors with JSON REST APIs (Microsoft, Mozilla)
-- Cloud services with version endpoints
-- APIs requiring authentication or custom headers
+**Best for:** Vendors with JSON REST APIs, cloud services with version endpoints, or APIs requiring authentication.
 
 **Configuration:**
 
 ```yaml
 source:
-  strategy: api_json
-  api_url: "https://vendor.com/api/latest"
-  version_path: "version"
-  download_url_path: "download_url"
-  headers:
-    Authorization: "Bearer ${API_TOKEN}"
+  strategy: api_json  # Discovery strategy type
+  api_url: "https://vendor.com/api/latest"  # JSON API endpoint URL
+  version_path: "version"  # JSONPath to version field (e.g., "version" or "data.version")
+  download_url_path: "download_url"  # JSONPath to download URL field
+  headers:  # Optional HTTP headers for authentication
+    Authorization: "Bearer ${API_TOKEN}"  # Environment variable substitution supported
 ```
 
-**Pros:** Fast update checks (API only, ~100ms), flexible, supports complex APIs, no file parsing  
-**Cons:** Requires vendor API availability
+> **Note:** For implementation details, see [api_json](api/discovery.md#notapkgtool.discovery.api_json) in Developer Reference.
 
 ### url_download
 
-**Best for:**
-
-- Vendors with stable download URLs (Chrome, Firefox enterprise)
-- MSI installers with ProductVersion embedded
-- When version isn't in URL or easily parseable
+**Best for:** Vendors with stable download URLs and MSI installers with embedded ProductVersion.
 
 **Configuration:**
 
 ```yaml
 source:
-  strategy: url_download
-  url: "https://dl.google.com/chrome/install/googlechromestandaloneenterprise64.msi"
-  version:
-    type: msi
+  strategy: url_download  # Discovery strategy type
+  url: "https://dl.google.com/chrome/install/googlechromestandaloneenterprise64.msi"  # Stable download URL
+  version:  # Version extraction configuration
+    type: msi  # Extract version from MSI ProductVersion property
 ```
 
-**Pros:** Simple and reliable, version directly from installer (most accurate)  
-**Cons:** Must download file to know version, slower update checks (HTTP conditional request)
+> **Note:** For implementation details, see [url_download](api/discovery.md#notapkgtool.discovery.url_download) in Developer Reference.
 
 ### web_scrape
 
-**Best for:**
-
-- Vendors with download pages listing installers (7-Zip, etc.)
-- When no direct download URL or API is available
-- Version-encoded URLs on vendor websites
-- Small vendors with simple HTML download pages
+**Best for:** Vendors with download pages listing installers when no direct download URL or API is available.
 
 **Configuration:**
 
 ```yaml
 source:
-  strategy: web_scrape
-  page_url: "https://www.7-zip.org/download.html"
-  link_selector: 'a[href$="-x64.msi"]'        # CSS selector (recommended)
-  version_pattern: "7z(\\d{2})(\\d{2})-x64"   # Extract from discovered URL
-  version_format: "{0}.{1}"                    # Transform to "25.01"
+  strategy: web_scrape  # Discovery strategy type
+  page_url: "https://www.7-zip.org/download.html"  # URL of vendor download page
+  link_selector: 'a[href$="-x64.msi"]'  # CSS selector to find download link (recommended)
+  version_pattern: "7z(\\d{2})(\\d{2})-x64"  # Regex to extract version from URL (captures groups)
+  version_format: "{0}.{1}"  # Format captured groups (e.g., "25.01" from year.month)
 ```
 
-**Pros:** Fast version checks (~100-300ms page scrape), works without APIs, CSS selectors are robust  
-**Cons:** Requires page structure knowledge, may break if vendor redesigns site
+> **Note:** For implementation details, see [web_scrape](api/discovery.md#notapkgtool.discovery.web_scrape) in Developer Reference.
 
 ### Decision Guide
 
@@ -229,6 +210,157 @@ flowchart TD
 
 **Performance Note**: Version-first strategies (everything except url_download) can skip downloads entirely when versions haven't changed, making them ideal for scheduled CI/CD checks.
 
+## Recipe Schema Reference
+
+A recipe file defines how to discover, download, and package an application. This section documents all available fields and their purposes.
+
+### Top-Level Fields
+
+```yaml
+apiVersion: v1  # Required: Recipe format version (currently v1)
+project: "Optional project name"  # Optional: Project identifier
+apps:  # Required: List of applications to package
+  - name: "Application Name"
+    # ... app configuration
+```
+
+### App Configuration
+
+Each item in the `apps` array defines one application:
+
+```yaml
+apps:
+  - name: "Application Name"  # Required: Display name for the application
+    id: "napt-app-id"  # Required: Unique identifier (used for build directories, package names)
+    source:  # Required: Discovery configuration
+      # ... strategy-specific configuration
+    psadt:  # Required: PSAppDeployToolkit configuration
+      # ... PSADT settings
+```
+
+### Source Configuration
+
+The `source` section defines how NAPT discovers and downloads the installer. The configuration depends on the chosen `strategy`:
+
+#### Common Fields (All Strategies)
+
+- `strategy`: Required. One of: `api_github`, `api_json`, `url_download`, `web_scrape`
+
+#### api_github Strategy
+
+```yaml
+source:
+  strategy: api_github  # Discovery strategy type
+  repo: "owner/repository"  # Required: GitHub repository in owner/repo format
+  asset_pattern: ".*\\.exe$"  # Required: Regex pattern to match installer filename in release assets
+  version_pattern: "v?([0-9.]+)"  # Required: Regex pattern to extract version from Git tag
+  token: "${GITHUB_TOKEN}"  # Optional: GitHub personal access token (use env var for security)
+```
+
+**How it works:** Queries GitHub Releases API, finds the latest release, matches assets using `asset_pattern`, extracts version from tag using `version_pattern`.
+
+#### api_json Strategy
+
+```yaml
+source:
+  strategy: api_json  # Discovery strategy type
+  api_url: "https://api.vendor.com/latest"  # Required: JSON API endpoint URL
+  version_path: "version"  # Required: JSONPath to version field (e.g., "version" or "data.version")
+  download_url_path: "download_url"  # Required: JSONPath to download URL field
+  headers:  # Optional: HTTP headers for authentication
+    Authorization: "Bearer ${API_TOKEN}"  # Environment variable substitution supported
+```
+
+**How it works:** Makes HTTP GET request to `api_url`, extracts version using `version_path`, extracts download URL using `download_url_path`. Supports nested paths like `"data.version"`.
+
+#### url_download Strategy
+
+```yaml
+source:
+  strategy: url_download  # Discovery strategy type
+  url: "https://vendor.com/installer.msi"  # Required: Stable download URL (must not change with versions)
+  version:  # Required: Version extraction configuration
+    type: msi  # Required: Extract version from MSI ProductVersion property
+    file: "installer.msi"  # Optional: Specific filename if multiple files downloaded
+```
+
+**How it works:** Downloads file from `url`, extracts version from MSI ProductVersion property (or other methods in future). Uses HTTP conditional requests (ETags) for caching.
+
+#### web_scrape Strategy
+
+```yaml
+source:
+  strategy: web_scrape  # Discovery strategy type
+  page_url: "https://vendor.com/download"  # Required: URL of vendor download page
+  link_selector: 'a[href$=".msi"]'  # Required: CSS selector to find download link
+  version_pattern: "app-(\\d+\\.\\d+)\\.msi"  # Required: Regex to extract version from discovered URL
+  version_format: "{0}"  # Optional: Format string for captured groups (default: use first capture group)
+```
+
+**How it works:** Downloads HTML from `page_url`, finds link using CSS selector, extracts version from URL using regex pattern, formats version using `version_format` if provided.
+
+### PSADT Configuration
+
+The `psadt` section defines PowerShell deployment scripts and PSADT variables:
+
+```yaml
+psadt:
+  app_vars:  # Optional: PSADT application variables
+    AppName: "Application Name"  # Display name in PSADT dialogs
+    AppVersion: "${discovered_version}"  # Version (use ${discovered_version} for auto-substitution)
+    AppArch: "x64"  # Architecture: x64, x86, or All
+    # ... other PSADT variables
+  install: |  # Required: PowerShell script executed during installation
+    # Your installation logic here
+    Start-ADTMsiProcess -Action Install -Path "$dirFiles\installer.msi" -Parameters "ALLUSERS=1"
+  uninstall: |  # Required: PowerShell script executed during uninstallation
+    # Your uninstallation logic here
+    Uninstall-ADTApplication -Name "Application Name"
+```
+
+**Commonly Used PSADT Functions:**
+
+These are some of the most frequently used PSADT functions. PSADT provides 134+ functions - see the [PSADT Reference Documentation](https://psappdeploytoolkit.com/) for the complete function reference.
+
+- `Start-ADTProcess`: Execute EXE installers with parameters
+- `Start-ADTMsiProcess`: Install MSI files with parameters
+- `Uninstall-ADTApplication`: Uninstall applications by name (handles ProductCode lookup automatically)
+
+**Available PSADT Variables:**
+- `$dirFiles`: Path to installer files directory
+- `$discovered_version`: Version discovered by NAPT (auto-substituted)
+- Standard PSADT variables: `$dirApp`, `$dirSupportFiles`, etc.
+
+**Environment Variable Substitution:**
+- Use `${VARIABLE_NAME}` syntax in recipe YAML
+- NAPT substitutes environment variables at runtime
+- Useful for API tokens, credentials, etc.
+
+### Complete Example
+
+```yaml
+apiVersion: v1
+project: "My Organization Apps"
+
+apps:
+  - name: "Example Application"
+    id: "napt-example"
+    source:
+      strategy: api_github
+      repo: "owner/repo"
+      asset_pattern: ".*-x64\\.exe$"
+      version_pattern: "v?([0-9.]+)"
+    psadt:
+      app_vars:
+        AppName: "Example Application"
+        AppVersion: "${discovered_version}"
+        AppArch: "x64"
+      install: |
+        Start-ADTProcess -Path "$dirFiles\*.exe" -Parameters "/S"
+      uninstall: |
+        Uninstall-ADTApplication -Name "Example Application"
+```
+
 ## State Management & Caching
 
 NAPT automatically tracks discovered versions and optimizes subsequent runs by avoiding unnecessary downloads.
@@ -242,75 +374,35 @@ NAPT uses different caching approaches based on the discovery strategy, enabling
 
 This intelligent caching is critical for CI/CD with frequent scheduled checks, providing fast feedback when applications haven't changed.
 
-### Detailed Workflow
+### How Caching Works
 
-#### Version-First Strategies (web_scrape, api_github, api_json)
-
-These strategies discover the version **before** downloading, enabling fast cache checks:
+NAPT uses two caching approaches depending on the discovery strategy:
 
 ```mermaid
 flowchart TD
-    Start([napt discover]) --> LoadRecipe[Load Recipe YAML]
-    LoadRecipe --> CheckCache{Cached<br/>Version?}
+    Start([napt discover]) --> Strategy{Strategy Type?}
     
-    CheckCache -->|Yes| DiscoverAPI[Discover Version via API/Regex]
-    CheckCache -->|No - First Run| DiscoverFirst[Discover Version via API/Regex]
+    Strategy -->|Version-First<br/>api_github, api_json, web_scrape| CheckVersion[Check Version via API/Page]
+    Strategy -->|File-First<br/>url_download| CheckETag[Check File via HTTP ETag]
     
-    DiscoverAPI --> Compare{Version<br/>Changed?}
-    Compare -->|No - Same Version| CheckFile{File<br/>Exists?}
-    CheckFile -->|Yes| Done([✓ Already Current<br/>No download needed])
-    CheckFile -->|No| DownloadMissing[Download Missing File]
-    DownloadMissing --> UpdateState1[Update state.json]
-    UpdateState1 --> Done
+    CheckVersion --> VersionChanged{Version<br/>Changed?}
+    VersionChanged -->|No| FileExists{File<br/>Exists?}
+    FileExists -->|Yes| SkipDownload1([✓ Skip Download<br/>Use cached file])
+    FileExists -->|No| Download1[Download File]
+    VersionChanged -->|Yes| Download1
     
-    Compare -->|Yes - New Version| DownloadNew[Download New Installer]
-    DownloadNew --> UpdateState2[Update state.json]
-    UpdateState2 --> Ready([✓ Ready for napt build])
+    CheckETag --> ETagResponse{Server<br/>Response?}
+    ETagResponse -->|304 Not Modified| SkipDownload2([✓ Skip Download<br/>Use cached file])
+    ETagResponse -->|200 OK Changed| Download2[Download File]
     
-    DiscoverFirst --> DownloadFirstRun[Download Installer]
-    DownloadFirstRun --> CreateState[Create state.json]
-    CreateState --> Ready
-```
-
-**Key optimization:** Version discovered via API or page scraping (~100-300ms) **before** downloading. If unchanged and file exists, skip download entirely.
-
-#### File-First Strategy (url_download)
-
-This strategy must download (or check) the file first to extract the version:
-
-```mermaid
-flowchart TD
-    Start([napt discover]) --> LoadRecipe[Load Recipe YAML]
-    LoadRecipe --> CheckCache{Cached<br/>ETag?}
-    
-    CheckCache -->|Yes| ConditionalRequest[HTTP Request with ETag]
-    CheckCache -->|No - First Run| DownloadFirst[Download File]
-    
-    ConditionalRequest --> ServerResponse{Server<br/>Response?}
-    ServerResponse -->|304 Not Modified| UpdateTimestamp[Update state.json timestamp]
-    UpdateTimestamp --> Done([✓ Already Current<br/>Using cached file])
-    
-    ServerResponse -->|200 OK - Changed| DownloadNew[Download New File]
-    DownloadNew --> ExtractVersion[Extract Version from File]
-    ExtractVersion --> UpdateState[Update state.json]
+    Download1 --> UpdateState[Update state.json]
+    Download2 --> UpdateState
     UpdateState --> Ready([✓ Ready for napt build])
-    
-    DownloadFirst --> ExtractFirst[Extract Version from File]
-    ExtractFirst --> CreateState[Create state.json with ETag]
-    CreateState --> Ready
 ```
 
-**Key optimization:** HTTP conditional request with ETag (~500ms). Server returns 304 Not Modified if unchanged, avoiding re-download. Version extracted **after** download/check.
+**Performance:** Version-first strategies check versions before downloading (~100-300ms), while file-first uses HTTP conditional requests (~500ms). Both skip downloads when nothing has changed.
 
-#### Performance Comparison
-
-| Scenario | Version-First | File-First |
-|----------|--------------|------------|
-| **First run** | API call + Download | Download only |
-| **Unchanged (most common)** | ~100-300ms version check | ~500ms HTTP conditional request |
-| **Changed** | API call + Download | Full download |
-
-**Recommendation:** Use version-first strategies (web_scrape, api_github, api_json) when available for fastest cache checks.
+> **Note:** For state tracking implementation, see [State Module](api/state.md) in Developer Reference.
 
 ### Default Behavior (Stateful)
 
@@ -343,14 +435,6 @@ NAPT uses a sophisticated 3-layer configuration system that promotes DRY (Don't 
 
 3. **Recipe configuration** (`recipes/<Vendor>/<app>.yaml`) - App-specific settings. Always required; defines the specific app with final overrides.
 
-### Merge Behavior
-
-The loader performs deep merging with "last wins" semantics:
-
-- **Dicts**: Recursively merged (keys from overlay override base)
-- **Lists**: Completely replaced (NOT appended/extended)
-- **Scalars**: Overwritten (strings, numbers, booleans)
-
 ### Example
 
 ```yaml
@@ -377,6 +461,8 @@ apps:
     # AppVendor will be "Google LLC" (from vendor defaults)
     # release will be "latest" (from org defaults)
 ```
+
+> **Note:** For configuration loading implementation, see [Config Module](api/config.md) in Developer Reference.
 
 ## Cross-Platform Support
 
@@ -429,100 +515,7 @@ napt package builds/napt-chrome/142.0.7444.163/
 
 The PowerShell fallback makes MSI extraction truly universal on Windows systems, even when Python MSI libraries aren't available.
 
-## Programmatic API
-
-NAPT can be used as a Python library for automation and integration.
-
-### Basic Usage
-
-```python
-from pathlib import Path
-from notapkgtool.core import discover_recipe
-from notapkgtool.validation import validate_recipe
-from notapkgtool.config import load_effective_config
-
-# Validate recipe syntax (no downloads)
-result = validate_recipe(
-    recipe_path=Path("recipes/Google/chrome.yaml"),
-    verbose=True
-)
-print(f"Status: {result.status}")
-
-# Discover version and download installer
-result = discover_recipe(
-    recipe_path=Path("recipes/Google/chrome.yaml"),
-    output_dir=Path("./downloads"),
-    verbose=True
-)
-print(f"Version: {result.version}")
-print(f"SHA-256: {result.sha256}")
-
-# Load configuration
-config = load_effective_config(Path("recipes/Google/chrome.yaml"))
-```
-
-### Version Comparison
-
-```python
-from notapkgtool.versioning import compare_any, is_newer_any
-
-# Compare versions
-if is_newer_any("1.2.0", "1.1.9"):
-    print("Update available!")
-
-# Detailed comparison
-result = compare_any("2.0.0", "1.9.9")
-# Returns: 1 (newer), 0 (same), or -1 (older)
-```
-
-### Exception Handling
-
-NAPT uses a custom exception hierarchy that allows you to distinguish between different types of errors:
-
-- **`ConfigError`**: Configuration-related errors (YAML parse errors, missing fields, invalid strategy configuration, missing recipe files, validation failures)
-- **`NetworkError`**: Network/download-related errors (HTTP errors, API failures, download timeouts, network-related version extraction errors)
-- **`PackagingError`**: Packaging/build-related errors (build failures, missing tools, MSI extraction errors, packaging operations)
-
-All exceptions inherit from **`NAPTError`**, allowing you to catch all NAPT errors with a single `except` clause if needed.
-
-**Example: Catching specific error types**
-
-```python
-from pathlib import Path
-from notapkgtool.core import discover_recipe
-from notapkgtool.exceptions import ConfigError, NetworkError, PackagingError
-
-try:
-    result = discover_recipe(
-        recipe_path=Path("recipes/Google/chrome.yaml"),
-        output_dir=Path("./downloads")
-    )
-except ConfigError as e:
-    print(f"Configuration error: {e}")
-    # Handle config issues (fix recipe, check paths)
-except NetworkError as e:
-    print(f"Network error: {e}")
-    # Handle network issues (retry, check connectivity)
-except PackagingError as e:
-    print(f"Packaging error: {e}")
-    # Handle packaging issues (check tools, permissions)
-```
-
-**Example: Catching all NAPT errors**
-
-```python
-from notapkgtool.exceptions import NAPTError
-
-try:
-    result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
-except NAPTError as e:
-    print(f"NAPT error: {e}")
-    # Handle any NAPT error generically
-```
-
-**Note:** The CLI layer catches these exceptions and converts them to exit codes (`0` for success, `1` for errors). When using NAPT as a library, catch exceptions directly rather than relying on exit codes.
-
-See the [Exceptions API Reference](api/exceptions.md) for complete exception documentation, or the [Core API Reference](api/core.md) for function documentation.
+NAPT can be used as a Python library for automation and integration. For library usage, see [Developer Reference](api/core.md).
 
 ## Best Practices
 
@@ -580,7 +573,7 @@ fi
 
 #### Library Exception Handling
 
-When using NAPT as a Python library, catch exceptions directly rather than relying on exit codes. See the [Programmatic API](#programmatic-api) section for details on exception handling.
+When using NAPT as a Python library, catch exceptions directly rather than relying on exit codes. See [Developer Reference](api/exceptions.md) for exception handling details.
 
 ## Troubleshooting
 

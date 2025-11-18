@@ -48,7 +48,7 @@ See the [Cross-Platform Support](user-guide.md#cross-platform-support) section f
 
 ## Getting Started
 
-Check out the [Quick Start Guide](quick-start.md) for installation instructions and your first steps with NAPT.
+Most users interact with NAPT via CLI - see the [Quick Start Guide](quick-start.md) for installation instructions and your first steps with NAPT.
 
 ## Creating Recipes
 

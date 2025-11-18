@@ -10,7 +10,7 @@
 
 NAPT is a Python-based CLI tool that automates the entire workflow for packaging Windows applications and deploying them to Microsoft Intune. It runs on Windows, Linux, and macOS, though packaging (.intunewin creation) requires Windows.
 
-📚 **[Full Documentation](https://rogercibrian.github.io/notapkgtool/)** | [Quick Start](https://rogercibrian.github.io/notapkgtool/quick-start/) | [User Guide](https://rogercibrian.github.io/notapkgtool/user-guide/) | [API Reference](https://rogercibrian.github.io/notapkgtool/api/core/)
+📚 **[Full Documentation](https://rogercibrian.github.io/notapkgtool/)** | [Quick Start](https://rogercibrian.github.io/notapkgtool/quick-start/) | [User Guide](https://rogercibrian.github.io/notapkgtool/user-guide/) | [Developer Reference](https://rogercibrian.github.io/notapkgtool/api/core/)
 
 ### Why NAPT?
 
