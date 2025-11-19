@@ -29,9 +29,9 @@ pip install -e .
 napt --version
 ```
 
-#### Option 2: Poetry (For Contributing)
+#### Option 2: Poetry (For Development)
 
-Best for contributors and developers who want reproducible builds and dependency management.
+Best for developers who want reproducible builds and dependency management.
 
 **Prerequisites:** Poetry must be installed. See [Poetry Installation Guide](https://python-poetry.org/docs/#installation)
 

@@ -83,6 +83,7 @@ napt discover recipes/7-Zip/7zip.yaml --verbose
 ```
 
 **What to customize:**
+
 - `page_url`: Vendor download page URL
 - `link_selector`: CSS selector to find the download link
 - `version_pattern`: Regex to extract version from URL
@@ -134,6 +135,7 @@ napt discover recipes/Vendor/app.yaml --verbose
 ```
 
 **What to customize:**
+
 - `api_url`: JSON API endpoint URL
 - `version_path`: JSONPath to version field (e.g., "version" or "data.version")
 - `download_url_path`: JSONPath to download URL field
@@ -173,6 +175,7 @@ napt discover recipes/Google/chrome.yaml --verbose
 ```
 
 **What to customize:**
+
 - `url`: Direct download URL (must be stable, not version-specific)
 - `version.type`: How to extract version (`msi` for MSI files)
 
@@ -217,18 +220,14 @@ Common issues and solutions when `napt discover` fails.
 **Solution:**
 
 1. Create a GitHub personal access token
-
 2. Add to recipe:
-
    ```yaml
    source:
      strategy: api_github
      repo: "owner/repo"
      token: "${GITHUB_TOKEN}"
    ```
-
 3. Set environment variable:
-
    ```bash
    $env:GITHUB_TOKEN="ghp_your_token_here"  # Windows
    export GITHUB_TOKEN="ghp_your_token_here"  # Linux/macOS
