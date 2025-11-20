@@ -8,7 +8,7 @@ Thank you for your interest in contributing to NAPT! We welcome ideas and feedba
 
 Have an idea for NAPT? We'd love to hear it!
 
-1. **Check the roadmap** - See [docs/roadmap.md](roadmap.md) to see what's planned
+1. **Check the roadmap** - See [Roadmap](roadmap.md) to see what's planned
 2. **Open a GitHub Discussion** - Share your idea and get feedback
 3. **Or open a GitHub Issue** - For more structured feature requests
 

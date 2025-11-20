@@ -69,7 +69,7 @@ The package process creates a `.intunewin` file from the built PSADT directory:
 2. **Get IntuneWinAppUtil** - Downloads/caches `IntuneWinAppUtil.exe` from Microsoft's GitHub repository if not already cached
 3. **Create Package** - Runs `IntuneWinAppUtil.exe` to create `.intunewin` file:
     - Input: Build directory (entire PSADT structure)
-    - Output: `{app_id}-{version}.intunewin` file
+    - Output: `Invoke-AppDeployToolkit.intunewin` file (named by IntuneWinAppUtil.exe based on setup file)
     - Package contains all files from build directory in compressed format
 4. **Optional Cleanup** - If `--clean-source` flag is used, removes the build directory after successful packaging
 

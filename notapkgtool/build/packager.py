@@ -19,7 +19,7 @@ using Microsoft's IntuneWinAppUtil.exe tool.
 
 Design Principles:
     - IntuneWinAppUtil.exe is cached globally (not per-build)
-    - Package output follows convention: {app_id}-{version}.intunewin
+    - Package output is named by IntuneWinAppUtil.exe: Invoke-AppDeployToolkit.intunewin
     - Build directory can optionally be cleaned after packaging
     - Tool is downloaded from Microsoft's official GitHub repository
 
@@ -236,8 +236,8 @@ def create_intunewin(
 
             - build_dir (Path): Path to the PSADT build directory that was packaged.
                 This directory may have been removed if clean_source=True.
-            - package_path (Path): Path to the created .intunewin file, following the
-                pattern {output_dir}/{app_id}/{app_id}-{version}.intunewin.
+            - package_path (Path): Path to the created .intunewin file, located at
+                {output_dir}/{app_id}/Invoke-AppDeployToolkit.intunewin (named by IntuneWinAppUtil.exe).
             - app_id (str): Unique application identifier extracted from build directory
                 structure.
             - version (str): Application version extracted from build directory structure.
@@ -255,7 +255,7 @@ def create_intunewin(
                 build_dir=Path("builds/napt-chrome/141.0.7390.123")
             )
             print(result.package_path)
-            # packages/napt-chrome/napt-chrome-141.0.7390.123.intunewin
+            # packages/napt-chrome/Invoke-AppDeployToolkit.intunewin
             ```
 
         With cleanup:
@@ -270,8 +270,8 @@ def create_intunewin(
     Note:
         Requires build directory from 'napt build' command. IntuneWinAppUtil.exe
         is downloaded and cached on first use. Setup file is always
-        "Invoke-AppDeployToolkit.exe". Output follows convention:
-        packages/{app_id}/{app_id}-{version}.intunewin
+        "Invoke-AppDeployToolkit.exe". Output file is named by IntuneWinAppUtil.exe:
+        packages/{app_id}/Invoke-AppDeployToolkit.intunewin
     """
     from notapkgtool.logging import get_global_logger
 

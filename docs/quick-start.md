@@ -285,7 +285,6 @@ For step-by-step guides on common workflows, see [Common Tasks](common-tasks.md)
 - Create a recipe for a GitHub release app
 - Create a recipe for a vendor download page
 - Create a recipe for a JSON API endpoint
-- Set up CI/CD with NAPT
 - Troubleshoot discovery failures
 
 ## What's Next?
