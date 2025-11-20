@@ -10,7 +10,7 @@
 
 NAPT is a Python-based CLI tool that automates the entire workflow for packaging Windows applications and deploying them to Microsoft Intune. It runs on Windows, Linux, and macOS, though packaging (.intunewin creation) requires Windows.
 
-📚 **[Full Documentation](https://rogercibrian.github.io/notapkgtool/)** | [Quick Start](https://rogercibrian.github.io/notapkgtool/quick-start/) | [User Guide](https://rogercibrian.github.io/notapkgtool/user-guide/) | [API Reference](https://rogercibrian.github.io/notapkgtool/api/core/)
+📚 **[Full Documentation](https://rogercibrian.github.io/notapkgtool/)** | [Quick Start](https://rogercibrian.github.io/notapkgtool/quick-start/) | [User Guide](https://rogercibrian.github.io/notapkgtool/user-guide/) | [Developer Reference](https://rogercibrian.github.io/notapkgtool/api/core/)
 
 ### Why NAPT?
 
@@ -28,11 +28,11 @@ Packaging applications for Microsoft Intune with PSAppDeployToolkit (PSADT) typi
 
 6. **Configure deployment** - Set up rollout assignments manually for each version.
 
-This manual workflow is repetitive, difficult to automate in CI/CD pipelines, lacks version tracking, and requires re-doing most of the work for every update. NAPT automates this entire workflow with YAML-based recipes and intelligent version tracking.
+This manual workflow is repetitive, difficult to automate in CI/CD pipelines, lacks version tracking, and requires re-doing most of the work for every update. NAPT automates this entire workflow with YAML-based recipes and automatic version tracking.
 
 ### Key Features
 
-- ✅ **Intelligent version tracking** - Automatic discovery from MSI, EXE, URLs, or APIs with smart caching to skip unnecessary downloads
+- ✅ **Automatic version tracking** - Automatic discovery from MSI, EXE, URLs, or APIs with smart caching to skip unnecessary downloads
 - ✅ **YAML-based recipes** - Define app packaging once with layered configuration (Organization → Vendor → Recipe)
 - ✅ **Automated PSADT packaging** - Generate Intune-ready packages with detection scripts, no manual template editing
 - ✅ **Cross-platform workflow** - Run on Windows, Linux, and macOS (packaging requires Windows)
@@ -65,7 +65,7 @@ NAPT supports multiple discovery strategies (url_download, web_scrape, api_githu
 
 ## Contributing
 
-Contributions are welcome! See [Contributing](https://rogercibrian.github.io/notapkgtool/contributing/) for guidelines.
+Ideas and feedback are welcome! See [Contributing](https://rogercibrian.github.io/notapkgtool/contributing/) for guidelines.
 
 ## License
 
@@ -77,7 +77,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](https:
 
 ## Acknowledgments
 
-- Built for automating Windows application deployment
-- Uses PSAppDeployToolkit (PSADT) for packaging
-- Targets Microsoft Intune for distribution
+- Draws inspiration from [AutoPkg](https://github.com/autopkg/autopkg) for macOS application packaging automation
+- Uses [PSAppDeployToolkit](https://psappdeploytoolkit.com/) (PSADT) for Windows application packaging
+- Uses [IntuneWinAppUtil](https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool) for creating .intunewin packages
 

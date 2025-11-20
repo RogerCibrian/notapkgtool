@@ -432,8 +432,13 @@ def main() -> None:
         help="Validate recipe syntax and configuration (no downloads)",
         description=(
             "Check recipe YAML for syntax errors and configuration issues "
-            "without making network calls."
+            "without making network calls.\n\n"
+            "Examples:\n"
+            "  napt validate recipes/Google/chrome.yaml\n"
+            "  napt validate recipes/Google/chrome.yaml --verbose\n\n"
+            "See docs for more examples and workflows."
         ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser_validate.add_argument(
         "recipe",
@@ -453,8 +458,14 @@ def main() -> None:
         help="Discover latest version and download installer",
         description=(
             "Find the latest version using the configured discovery strategy "
-            "and download the installer."
+            "and download the installer.\n\n"
+            "Examples:\n"
+            "  napt discover recipes/Google/chrome.yaml\n"
+            "  napt discover recipes/Google/chrome.yaml --verbose\n"
+            "  napt discover recipes/Google/chrome.yaml --stateless\n\n"
+            "See docs for more examples and workflows."
         ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser_discover.add_argument(
         "recipe",
@@ -499,8 +510,14 @@ def main() -> None:
         help="Build PSADT package from recipe and installer",
         description=(
             "Create a PSADT deployment package from a recipe and "
-            "downloaded installer."
+            "downloaded installer.\n\n"
+            "Examples:\n"
+            "  napt build recipes/Google/chrome.yaml\n"
+            "  napt build recipes/Google/chrome.yaml --verbose\n"
+            "  napt build recipes/Google/chrome.yaml --output-dir ./builds\n\n"
+            "See docs for more examples and workflows."
         ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser_build.add_argument(
         "recipe",
@@ -536,8 +553,14 @@ def main() -> None:
         help="Create .intunewin package from PSADT build directory",
         description=(
             "Package a built PSADT directory into a .intunewin file "
-            "for Intune deployment."
+            "for Intune deployment.\n\n"
+            "Examples:\n"
+            "  napt package builds/napt-chrome/142.0.7444.60/\n"
+            "  napt package builds/napt-chrome/142.0.7444.60/ --clean-source\n"
+            "  napt package builds/napt-chrome/142.0.7444.60/ --verbose\n\n"
+            "See docs for more examples and workflows."
         ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser_package.add_argument(
         "build_dir",

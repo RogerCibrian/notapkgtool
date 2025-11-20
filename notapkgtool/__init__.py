@@ -22,7 +22,7 @@ NAPT provides:
 - YAML-based recipe configuration
 - Automatic version discovery from multiple sources
 - Robust download with conditional requests and integrity verification
-- Intelligent update policies (version-based, hash-based, or combined)
+- Automatic update policies (version-based, hash-based, or combined)
 - PSADT package generation with Template_v4
 - .intunewin package creation for Intune deployment
 - Direct upload to Microsoft Intune (planned)

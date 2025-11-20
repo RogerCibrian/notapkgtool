@@ -2,102 +2,144 @@
 
 This guide covers NAPT's key features, configuration system, and advanced usage patterns.
 
+## How NAPT Works
+
+NAPT automates the complete workflow from version discovery to Intune package creation. Understanding how each step works helps you troubleshoot issues and customize recipes effectively.
+
+### Discovery Process (`napt discover`)
+
+The discovery process finds the latest version and downloads the installer:
+
+1. **Load Configuration** - Merges organization defaults, vendor defaults, and recipe configuration
+2. **Check Version** - Uses the configured discovery strategy to check for new versions
+3. **Compare with Cache** - Compares discovered version to cached `known_version` in state file
+4. **Skip or Download**:
+    - If version unchanged and file exists → Skip download 
+    - If version changed or file missing → Download installer
+5. **Extract Version** - Extracts version from installer (MSI ProductVersion) or uses discovered version
+6. **Update State** - Updates `state/versions.json` with new version, file path, SHA-256 hash, and ETag (if download occurred). 
+
+**Output**: Downloaded installer in `downloads/` directory, updated state file
+
+### Build Process (`napt build`)
+
+The build process creates a complete PSADT package from the recipe and downloaded installer:
+
+1. **Load Configuration** - Merges configuration layers (org → vendor → recipe)
+2. **Find Installer** - Locates installer in `downloads/` directory (tries URL filename, then app name/id, then most recent)
+3. **Extract Version** - Extracts from installer file if `version.type` specified, otherwise uses state file version
+4. **Get PSADT Release** - Downloads/caches PSADT Template_v4 from GitHub if not already cached
+5. **Create Build Directory** - Creates versioned directory using discovered app version: `builds/{app_id}/{version}/`
+6. **Copy PSADT Template** - Copies entire PSADT template structure (unmodified) from cache:
+    - `PSAppDeployToolkit/` - Core PSADT module
+    - `PSAppDeployToolkit.Extensions/` - Extension modules
+    - `Assets/` - Default icons and banners
+    - `Config/` - Default configuration files
+    - `Strings/` - Localization strings
+    - `Files/` - Empty directory for installer files
+    - `SupportFiles/` - Empty directory for additional files
+    - `Invoke-AppDeployToolkit.exe` - Compiled launcher
+    - `Invoke-AppDeployToolkit.ps1` - Template script (will be overwritten)
+7. **Generate Deployment Script** - Generates `Invoke-AppDeployToolkit.ps1` from template:
+    - Substitutes PSADT variables (`$appVendor`, `$appName`, `$appVersion`, etc.) from recipe configuration
+    - Inserts install script from `psadt.install` field
+    - Inserts uninstall script from `psadt.uninstall` field
+    - Sets dynamic values (AppScriptDate, discovered version, PSADT version)
+    - Preserves PSADT's structure and comments
+8. **Copy Installer** - Copies downloaded installer file to `Files/` directory:
+    - Source: `downloads/{installer_filename}`
+    - Destination: `builds/{app_id}/{version}/Files/{installer_filename}`
+    - Installer is accessible in scripts via `$dirFiles` variable
+9. **Apply Branding** - Replaces PSADT default assets with custom branding (if configured):
+    - Reads `brand_pack` configuration from org/vendor defaults
+    - Replaces files in `Assets/` directory (AppIcon.png, Banner.Classic.png, etc.)
+    - Uses pattern matching to find source files in brand pack directory
+
+**Output**: Complete PSADT package in `builds/{app_id}/{version}/` ready for deployment
+
+### Package Process (`napt package`)
+
+The package process creates a `.intunewin` file from the built PSADT directory:
+
+1. **Verify Structure** - Validates build directory has required PSADT structure:
+    - `PSAppDeployToolkit/` directory
+    - `Files/` directory
+    - `Invoke-AppDeployToolkit.ps1` script
+    - `Invoke-AppDeployToolkit.exe` launcher
+2. **Get IntuneWinAppUtil** - Downloads/caches `IntuneWinAppUtil.exe` from Microsoft's GitHub repository if not already cached
+3. **Create Package** - Runs `IntuneWinAppUtil.exe` to create `.intunewin` file:
+    - Input: Build directory (entire PSADT structure)
+    - Output: `Invoke-AppDeployToolkit.intunewin` file (named by IntuneWinAppUtil.exe based on setup file)
+    - Package contains all files from build directory in compressed format
+4. **Optional Cleanup** - If `--clean-source` flag is used, removes the build directory after successful packaging
+
+**Output**: `.intunewin` package file in `packages/{app_id}/` directory, ready for Intune upload
+
+### Directory Structure
+
+After a complete workflow, your directory structure looks like:
+
+```
+downloads/
+  └── googlechromestandaloneenterprise64.msi
+
+builds/
+  └── napt-chrome/
+      └── 142.0.7444.163/
+          ├── PSAppDeployToolkit/          # PSADT module (from template)
+          ├── PSAppDeployToolkit.Extensions/
+          ├── Assets/                      # Custom branding (if configured)
+          ├── Config/
+          ├── Strings/
+          ├── Files/                       # Installer copied here
+          │   └── googlechromestandaloneenterprise64.msi
+          ├── SupportFiles/                # Empty (for additional files)
+          ├── Invoke-AppDeployToolkit.ps1  # Generated script
+          └── Invoke-AppDeployToolkit.exe # From template
+
+packages/
+  └── napt-chrome/
+      └── Invoke-AppDeployToolkit.intunewin
+
+state/
+  └── versions.json                        # Version tracking
+```
+
 ## Commands Reference
+
+> **💡 Tip:** All commands support `--help` (or `-h`) to show detailed usage, options, and examples. Try `napt discover --help` to see what's available.
 
 ### napt validate
 
-Validates recipe syntax and configuration without making network calls.
+Validates recipe syntax and configuration without making network calls. Checks YAML syntax, required fields, and strategy configuration. Does not verify URLs are accessible or files can be downloaded.
 
 ```bash
-napt validate recipes/Google/chrome.yaml [--verbose]
+napt validate recipes/Google/chrome.yaml [OPTIONS]
 ```
-
-**Purpose:**
-
-- Quick feedback during recipe development
-- CI/CD pre-checks
-- Syntax validation
-
-**What it checks:**
-
-- YAML syntax is valid
-- Required fields present (apiVersion, apps, source)
-- Discovery strategy exists and is registered
-- Strategy-specific configuration is valid
-
-**What it doesn't check:**
-
-- URLs are accessible
-- Files can be downloaded
-- Version extraction will work
 
 ### napt discover
 
-Discovers the latest version by downloading the installer and extracting version information.
+Discovers the latest version and downloads the installer. Uses version-based caching to skip downloads when versions haven't changed.
 
 ```bash
 napt discover recipes/Google/chrome.yaml [OPTIONS]
-
-Options:
-  --output-dir DIR      Download directory (default: ./downloads)
-  --state-file FILE     State file path (default: state/versions.json)
-  --stateless           Disable state tracking
-  -v, --verbose         Show progress and status updates
-  -d, --debug           Show detailed debugging output
 ```
-
-**Features:**
-
-- ✅ Discovers version using configured strategy
-- ✅ Downloads installer (or HTTP 304 if cached)
-- ✅ Extracts version from downloaded file
-- ✅ Updates state file with ETag caching
-- ✅ SHA-256 hash verification
 
 ### napt build
 
-Builds a complete PSADT package from a recipe and downloaded installer.
+Builds a complete PSADT package from a recipe and downloaded installer. Generates deployment scripts, applies branding, and creates versioned build directories.
 
 ```bash
 napt build recipes/Google/chrome.yaml [OPTIONS]
-
-Options:
-  --downloads-dir DIR   Installer directory (default: ./downloads)
-  --output-dir DIR      Build output directory (default: ./builds)
-  -v, --verbose         Show progress
-  -d, --debug           Show detailed output
 ```
-
-**Features:**
-
-- ✅ Downloads PSADT release from GitHub (or uses cached version)
-- ✅ Extracts version from installer file
-- ✅ Generates Invoke-AppDeployToolkit.ps1 from template
-- ✅ Merges organization defaults with recipe-specific values
-- ✅ Inserts recipe install/uninstall code
-- ✅ Applies custom branding (logo, banner)
-- ✅ Creates versioned build directories
 
 ### napt package
 
-Creates a .intunewin package from a built PSADT directory.
+Creates a .intunewin package from a built PSADT directory for Intune deployment.
 
 ```bash
 napt package BUILD_DIR [OPTIONS]
-
-Options:
-  --output-dir DIR      Output directory (default: packages/{app_id}/)
-  --clean-source        Remove build directory after packaging
-  -v, --verbose         Show progress
-  -d, --debug           Show detailed output
 ```
-
-**Features:**
-
-- ✅ Downloads IntuneWinAppUtil.exe (or uses cached version)
-- ✅ Validates build structure before packaging
-- ✅ Creates .intunewin file for Intune deployment
-- ✅ Optional source cleanup
 
 ### Output Modes
 
@@ -105,7 +147,7 @@ All commands support verbosity flags to control output detail:
 
 | Flag | What it shows |
 |------|---------------|
-| (none) | Clean output with step indicators `[1/4]` and progress |
+| (none) | Clean output with step indicators (e.g., `[1/4]`) and progress |
 | `--verbose` or `-v` | All of the above, plus HTTP requests/responses, file operations, SHA-256 hashes, and configuration loading |
 | `--debug` or `-d` | All verbose output, plus full YAML config dumps (org/vendor/recipe/merged), backend selection details, and regex match groups |
 
@@ -117,100 +159,14 @@ Discovery strategies are the core mechanism for obtaining application installers
 
 ### Available Strategies
 
-| Strategy | Version Source | Use Case | Unchanged Check |
-|----------|---------------|----------|-----------------|
+| Strategy | Version Source | Use Case | Unchanged Version Detection Speed |
+|----------|---------------|----------|---------------------|
 | **api_github** | Git tags | GitHub-hosted releases | Fast (GitHub API ~100ms) |
 | **api_json** | JSON API | REST APIs with metadata | Fast (API call ~100ms) |
 | **url_download** | File metadata | Fixed URLs, MSI installers | Medium (HTTP conditional ~500ms) |
 | **web_scrape** | Download page | Vendors without APIs | Fast (page scrape + regex) |
 
-### api_github
-
-**Best for:**
-
-- Open-source projects on GitHub (Git, VS Code, Node.js)
-- Projects with GitHub releases and release assets
-- Semantic versioned tags
-
-**Configuration:**
-
-```yaml
-source:
-  strategy: api_github
-  repo: "git-for-windows/git"
-  asset_pattern: "Git-.*-64-bit\\.exe$"
-  version_pattern: "v?([0-9.]+)"
-```
-
-**Pros:** Official GitHub API, reliable, fast update checks (API only, ~100ms), supports authentication  
-**Cons:** GitHub API rate limits (60/hour unauthenticated)
-
-### api_json
-
-**Best for:**
-
-- Vendors with JSON REST APIs (Microsoft, Mozilla)
-- Cloud services with version endpoints
-- APIs requiring authentication or custom headers
-
-**Configuration:**
-
-```yaml
-source:
-  strategy: api_json
-  api_url: "https://vendor.com/api/latest"
-  version_path: "version"
-  download_url_path: "download_url"
-  headers:
-    Authorization: "Bearer ${API_TOKEN}"
-```
-
-**Pros:** Fast update checks (API only, ~100ms), flexible, supports complex APIs, no file parsing  
-**Cons:** Requires vendor API availability
-
-### url_download
-
-**Best for:**
-
-- Vendors with stable download URLs (Chrome, Firefox enterprise)
-- MSI installers with ProductVersion embedded
-- When version isn't in URL or easily parseable
-
-**Configuration:**
-
-```yaml
-source:
-  strategy: url_download
-  url: "https://dl.google.com/chrome/install/googlechromestandaloneenterprise64.msi"
-  version:
-    type: msi
-```
-
-**Pros:** Simple and reliable, version directly from installer (most accurate)  
-**Cons:** Must download file to know version, slower update checks (HTTP conditional request)
-
-### web_scrape
-
-**Best for:**
-
-- Vendors with download pages listing installers (7-Zip, etc.)
-- When no direct download URL or API is available
-- Version-encoded URLs on vendor websites
-- Small vendors with simple HTML download pages
-
-**Configuration:**
-
-```yaml
-source:
-  strategy: web_scrape
-  page_url: "https://www.7-zip.org/download.html"
-  link_selector: 'a[href$="-x64.msi"]'        # CSS selector (recommended)
-  version_pattern: "7z(\\d{2})(\\d{2})-x64"   # Extract from discovered URL
-  version_format: "{0}.{1}"                    # Transform to "25.01"
-```
-
-**Pros:** Fast version checks (~100-300ms page scrape), works without APIs, CSS selectors are robust  
-**Cons:** Requires page structure knowledge, may break if vendor redesigns site
+> **Note:** For complete configuration examples and field documentation for each strategy, see [Recipe Reference](recipe-reference.md). For implementation details, see [Discovery Module](api/discovery.md) in Developer Reference.
 
 ### Decision Guide
 
@@ -229,88 +185,84 @@ flowchart TD
 
 **Performance Note**: Version-first strategies (everything except url_download) can skip downloads entirely when versions haven't changed, making them ideal for scheduled CI/CD checks.
 
+## Recipe Basics
+
+A recipe file defines how to discover, download, and package an application. Recipes are YAML files that specify:
+
+- **Discovery strategy** - How to find the latest version and download URL
+- **PSADT configuration** - PowerShell deployment scripts and variables
+
+### Basic Structure
+
+```yaml
+apiVersion: v1  # Recipe format version
+apps:
+  - name: "Application Name"  # Display name
+    id: "napt-app-id"  # Unique identifier
+    source:  # Discovery configuration
+      strategy: api_github  # One of: api_github, api_json, url_download, web_scrape
+      # ... strategy-specific fields
+    psadt:  # PSADT configuration
+      install: |  # Installation script
+        # PowerShell code here
+      uninstall: |  # Uninstallation script
+        # PowerShell code here
+```
+
+### Quick Reference
+
+- **Top-level fields:** `apiVersion` (required), `apps` (required)
+- **App fields:** `name` (required), `id` (required), `source` (required), `psadt` (required)
+- **Discovery strategies:** See [Discovery Strategies](#discovery-strategies) section above for strategy selection and examples
+- **PSADT scripts:** Use `${discovered_version}` for auto-substituted version, `$dirFiles` for installer path
+
+### Complete Documentation
+
+For complete field documentation, all options, and detailed examples, see the [Recipe Reference](recipe-reference.md) page.
+
+For practical workflows and copy-paste examples, see [Common Tasks](common-tasks.md).
+
 ## State Management & Caching
 
-NAPT automatically tracks discovered versions and optimizes subsequent runs by avoiding unnecessary downloads.
+NAPT automatically tracks discovered versions and optimizes subsequent runs by avoiding unnecessary downloads. This version-based caching is critical for CI/CD with frequent scheduled checks, providing fast feedback when applications haven't changed.
 
 ### How It Works
 
-NAPT uses different caching approaches based on the discovery strategy, enabling significant performance optimization:
-
-- **Version-First** (web_scrape, api_github, api_json): Checks version via API or page scraping (~100-300ms) before downloading. If unchanged and file exists, skips download entirely.
-- **File-First** (url_download): Uses HTTP conditional requests (ETags) to check if file changed. If server returns 304 Not Modified (~500ms), uses cached file without re-downloading.
-
-This intelligent caching is critical for CI/CD with frequent scheduled checks, providing fast feedback when applications haven't changed.
-
-### Detailed Workflow
-
-#### Version-First Strategies (web_scrape, api_github, api_json)
-
-These strategies discover the version **before** downloading, enabling fast cache checks:
+NAPT uses two caching approaches depending on the discovery strategy:
 
 ```mermaid
 flowchart TD
-    Start([napt discover]) --> LoadRecipe[Load Recipe YAML]
-    LoadRecipe --> CheckCache{Cached<br/>Version?}
+    Start([napt discover]) --> Strategy{Strategy Type?}
     
-    CheckCache -->|Yes| DiscoverAPI[Discover Version via API/Regex]
-    CheckCache -->|No - First Run| DiscoverFirst[Discover Version via API/Regex]
+    Strategy -->|Version-First<br/>api_github, api_json, web_scrape| CheckVersion[Check Version via API/Page]
+    Strategy -->|File-First<br/>url_download| CheckETag[Check File via HTTP ETag]
     
-    DiscoverAPI --> Compare{Version<br/>Changed?}
-    Compare -->|No - Same Version| CheckFile{File<br/>Exists?}
-    CheckFile -->|Yes| Done([✓ Already Current<br/>No download needed])
-    CheckFile -->|No| DownloadMissing[Download Missing File]
-    DownloadMissing --> UpdateState1[Update state.json]
-    UpdateState1 --> Done
+    CheckVersion --> VersionChanged{Version<br/>Changed?}
+    VersionChanged -->|No| FileExists1{File<br/>Exists?}
+    VersionChanged -->|Yes| Download1[Download File]
     
-    Compare -->|Yes - New Version| DownloadNew[Download New Installer]
-    DownloadNew --> UpdateState2[Update state.json]
-    UpdateState2 --> Ready([✓ Ready for napt build])
+    CheckETag --> ETagResponse{Server<br/>Response?}
+    ETagResponse -->|304 Not Modified| FileExists2{File<br/>Exists?}
+    ETagResponse -->|200 OK Changed| Download2[Download File]
     
-    DiscoverFirst --> DownloadFirstRun[Download Installer]
-    DownloadFirstRun --> CreateState[Create state.json]
-    CreateState --> Ready
-```
-
-**Key optimization:** Version discovered via API or page scraping (~100-300ms) **before** downloading. If unchanged and file exists, skip download entirely.
-
-#### File-First Strategy (url_download)
-
-This strategy must download (or check) the file first to extract the version:
-
-```mermaid
-flowchart TD
-    Start([napt discover]) --> LoadRecipe[Load Recipe YAML]
-    LoadRecipe --> CheckCache{Cached<br/>ETag?}
+    FileExists1 -->|Yes| SkipDownload1([✓ Skip Download<br/>Use cached file])
+    FileExists1 -->|No| Download1
     
-    CheckCache -->|Yes| ConditionalRequest[HTTP Request with ETag]
-    CheckCache -->|No - First Run| DownloadFirst[Download File]
+    FileExists2 -->|Yes| SkipDownload2([✓ Skip Download<br/>Use cached file])
+    FileExists2 -->|No| Download2
     
-    ConditionalRequest --> ServerResponse{Server<br/>Response?}
-    ServerResponse -->|304 Not Modified| UpdateTimestamp[Update state.json timestamp]
-    UpdateTimestamp --> Done([✓ Already Current<br/>Using cached file])
-    
-    ServerResponse -->|200 OK - Changed| DownloadNew[Download New File]
-    DownloadNew --> ExtractVersion[Extract Version from File]
-    ExtractVersion --> UpdateState[Update state.json]
+    Download1 --> UpdateState[Update state.json]
+    Download2 --> UpdateState
+    SkipDownload1 --> UpdateState
+    SkipDownload2 --> UpdateState
     UpdateState --> Ready([✓ Ready for napt build])
-    
-    DownloadFirst --> ExtractFirst[Extract Version from File]
-    ExtractFirst --> CreateState[Create state.json with ETag]
-    CreateState --> Ready
 ```
 
-**Key optimization:** HTTP conditional request with ETag (~500ms). Server returns 304 Not Modified if unchanged, avoiding re-download. Version extracted **after** download/check.
+**Performance:** Version-first strategies (api_github, api_json, web_scrape) check versions before downloading (~100-300ms) and skip downloads entirely if unchanged. File-first strategy (url_download) uses HTTP conditional requests (~500ms) with ETag caching.
 
-#### Performance Comparison
+**Note:** State is updated after every discovery run, even when skipping downloads. This updates the `last_updated` timestamp and confirms the cached version is still current.
 
-| Scenario | Version-First | File-First |
-|----------|--------------|------------|
-| **First run** | API call + Download | Download only |
-| **Unchanged (most common)** | ~100-300ms version check | ~500ms HTTP conditional request |
-| **Changed** | API call + Download | Full download |
-
-**Recommendation:** Use version-first strategies (web_scrape, api_github, api_json) when available for fastest cache checks.
+> **Note:** For state tracking implementation, see [State Module](api/state.md) in Developer Reference.
 
 ### Default Behavior (Stateful)
 
@@ -341,15 +293,7 @@ NAPT uses a sophisticated 3-layer configuration system that promotes DRY (Don't 
 
 2. **Vendor defaults** (`defaults/vendors/<Vendor>.yaml`) - Vendor-specific overrides. Optional; only loaded if vendor is detected (e.g., Google-specific settings).
 
-3. **Recipe configuration** (`recipes/<Vendor>/<app>.yaml`) - App-specific settings. Always required; defines the specific app with final overrides.
-
-### Merge Behavior
-
-The loader performs deep merging with "last wins" semantics:
-
-- **Dicts**: Recursively merged (keys from overlay override base)
-- **Lists**: Completely replaced (NOT appended/extended)
-- **Scalars**: Overwritten (strings, numbers, booleans)
+3. **Recipe configuration** (`recipes/<Vendor>/<app>.yaml`) - App-specific settings. Always required; defines the specific app with final overrides. Any field defined in higher layers can be overridden.
 
 ### Example
 
@@ -378,17 +322,19 @@ apps:
     # release will be "latest" (from org defaults)
 ```
 
+> **Note:** For configuration loading implementation, see [Config Module](api/config.md) in Developer Reference.
+
 ## Cross-Platform Support
 
 **NAPT is a Windows tool** for Microsoft Intune packaging. Develop on any platform, package on Windows.
 
 ### Platform Compatibility Matrix
 
-| Platform | Download | Discovery | Build | Package | MSI Extraction |
-|----------|----------|-----------|-------|---------|----------------|
-| **Windows** | ✅ | ✅ | ✅ | ✅ | ✅ Native (PowerShell COM) |
-| **Linux** | ✅ | ✅ | ✅ | ⚫ Windows Only | ✅ Via msitools |
-| **macOS** | ✅ | ✅ | ✅ | ⚫ Windows Only | ✅ Via msitools |
+| Platform | Discover & Download | Build | Package |
+|----------|---------------------|-------|---------|
+| **Windows** | ✅ | ✅ | ✅ |
+| **Linux** | ✅ | ✅ | ⚫ Windows Only |
+| **macOS** | ✅ | ✅ | ⚫ Windows Only |
 
 ### Why Windows for Packaging?
 
@@ -410,191 +356,42 @@ napt package builds/napt-chrome/142.0.7444.163/
 napt discover recipes/Google/chrome.yaml
 napt build recipes/Google/chrome.yaml
 
-# Transfer build directory to Windows (or use shared drive)
+# Transfer build directory to Windows (e.g., via shared storage)
 # On Windows: Package
 napt package builds/napt-chrome/142.0.7444.163/
 ```
 
-### MSI Extraction Backends
+> **Note:** For MSI extraction backend details and implementation information, see [Versioning Module](api/versioning.md) in Developer Reference.
 
-**Windows** (tried in order):
-
-1. `msilib` (Python standard library)
-2. `_msi` (CPython extension)
-3. **PowerShell COM** (always available, universal fallback)
-
-**Linux/macOS**:
-
-1. `msiinfo` from msitools package
-
-The PowerShell fallback makes MSI extraction truly universal on Windows systems, even when Python MSI libraries aren't available.
-
-## Programmatic API
-
-NAPT can be used as a Python library for automation and integration.
-
-### Basic Usage
-
-```python
-from pathlib import Path
-from notapkgtool.core import discover_recipe
-from notapkgtool.validation import validate_recipe
-from notapkgtool.config import load_effective_config
-
-# Validate recipe syntax (no downloads)
-result = validate_recipe(
-    recipe_path=Path("recipes/Google/chrome.yaml"),
-    verbose=True
-)
-print(f"Status: {result.status}")
-
-# Discover version and download installer
-result = discover_recipe(
-    recipe_path=Path("recipes/Google/chrome.yaml"),
-    output_dir=Path("./downloads"),
-    verbose=True
-)
-print(f"Version: {result.version}")
-print(f"SHA-256: {result.sha256}")
-
-# Load configuration
-config = load_effective_config(Path("recipes/Google/chrome.yaml"))
-```
-
-### Version Comparison
-
-```python
-from notapkgtool.versioning import compare_any, is_newer_any
-
-# Compare versions
-if is_newer_any("1.2.0", "1.1.9"):
-    print("Update available!")
-
-# Detailed comparison
-result = compare_any("2.0.0", "1.9.9")
-# Returns: 1 (newer), 0 (same), or -1 (older)
-```
-
-### Exception Handling
-
-NAPT uses a custom exception hierarchy that allows you to distinguish between different types of errors:
-
-- **`ConfigError`**: Configuration-related errors (YAML parse errors, missing fields, invalid strategy configuration, missing recipe files, validation failures)
-- **`NetworkError`**: Network/download-related errors (HTTP errors, API failures, download timeouts, network-related version extraction errors)
-- **`PackagingError`**: Packaging/build-related errors (build failures, missing tools, MSI extraction errors, packaging operations)
-
-All exceptions inherit from **`NAPTError`**, allowing you to catch all NAPT errors with a single `except` clause if needed.
-
-**Example: Catching specific error types**
-
-```python
-from pathlib import Path
-from notapkgtool.core import discover_recipe
-from notapkgtool.exceptions import ConfigError, NetworkError, PackagingError
-
-try:
-    result = discover_recipe(
-        recipe_path=Path("recipes/Google/chrome.yaml"),
-        output_dir=Path("./downloads")
-    )
-except ConfigError as e:
-    print(f"Configuration error: {e}")
-    # Handle config issues (fix recipe, check paths)
-except NetworkError as e:
-    print(f"Network error: {e}")
-    # Handle network issues (retry, check connectivity)
-except PackagingError as e:
-    print(f"Packaging error: {e}")
-    # Handle packaging issues (check tools, permissions)
-```
-
-**Example: Catching all NAPT errors**
-
-```python
-from notapkgtool.exceptions import NAPTError
-
-try:
-    result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
-except NAPTError as e:
-    print(f"NAPT error: {e}")
-    # Handle any NAPT error generically
-```
-
-**Note:** The CLI layer catches these exceptions and converts them to exit codes (`0` for success, `1` for errors). When using NAPT as a library, catch exceptions directly rather than relying on exit codes.
-
-See the [Exceptions API Reference](api/exceptions.md) for complete exception documentation, or the [Core API Reference](api/core.md) for function documentation.
+NAPT can be used as a Python library for automation and integration. For library usage, see [Developer Reference](api/core.md).
 
 ## Best Practices
 
 ### Recipe Organization
 
-```
-recipes/
-├── <Vendor>/
-│   ├── <app1>.yaml
-│   ├── <app2>.yaml
-│   └── ...
-```
-
-### Vendor Detection
-
-NAPT automatically detects vendor from directory structure:
-
-- `recipes/Google/chrome.yaml` → Vendor: "Google"
-- Loads `defaults/vendors/Google.yaml` if it exists
+Organize recipes by vendor: `recipes/<Vendor>/<app>.yaml`. NAPT automatically detects vendor from directory structure and loads `defaults/vendors/<Vendor>.yaml` if it exists.
 
 ### State Management
 
-For production use:
+**Production:** Keep state tracking enabled (default), use version control for state files, run on schedule to detect updates, use `--verbose` in CI/CD.
 
-- ✅ Keep state tracking enabled (default)
-- ✅ Use version control for state files
-- ✅ Run on schedule to detect updates
-- ✅ Use `--verbose` in CI/CD for debugging
-
-For development:
-
-- Use `--stateless` for testing
-- Use `--debug` for troubleshooting
-- Delete state file to force re-discovery
+**Development:** Use `--stateless` for testing, `--debug` for troubleshooting, delete state file to force re-discovery.
 
 ### Error Handling
 
-#### CLI Exit Codes
-
-All commands return proper exit codes:
-
-- `0` = Success
-- `1` = Error (configuration, download, validation failure)
-
-Use in scripts:
+All commands return exit codes: `0` = Success, `1` = Error. Use in scripts:
 
 ```bash
 if napt discover recipes/Google/chrome.yaml; then
     napt build recipes/Google/chrome.yaml
-else
-    echo "Discovery failed"
-    exit 1
 fi
 ```
 
-#### Library Exception Handling
-
-When using NAPT as a Python library, catch exceptions directly rather than relying on exit codes. See the [Programmatic API](#programmatic-api) section for details on exception handling.
+When using NAPT as a Python library, catch exceptions directly. See [Developer Reference](api/exceptions.md) for details.
 
 ## Troubleshooting
 
 ### Common Issues
-
-**Problem**: "Command not found: napt"
-
-```powershell
-# Solution 1: Activate Poetry shell
-poetry shell
-
-# Solution 2: Use poetry run prefix
-poetry run napt --version
-```
 
 **Problem**: MSI extraction fails on Linux/macOS
 
@@ -616,33 +413,22 @@ napt discover recipes/app.yaml --stateless
 
 **Problem**: GitHub API rate limit
 
+> **⚠️ Security Note:** Never put tokens directly in recipe files (e.g., `token: "ghp_abc123"`). Always use environment variable substitution (`token: "${GITHUB_TOKEN}"`) to keep tokens out of version control. See [Handle Authentication Tokens](common-tasks.md#handle-authentication-tokens) for best practices.
+
 ```yaml
-# Solution: Use authentication token in recipe
+# Solution: Use authentication token via environment variable
 source:
   strategy: api_github
-  token: "${GITHUB_TOKEN}"
+  token: "${GITHUB_TOKEN}"  # Environment variable substitution (secure)
 ```
 
 ```powershell
-# Set environment variable (Windows)
+# Set environment variable on Windows:
 $env:GITHUB_TOKEN="your_token_here"
-
-# On Linux/macOS: export GITHUB_TOKEN="your_token_here"
 ```
-
-### Debug Mode
-
-Always use `--debug` for troubleshooting:
-
 ```bash
-napt discover recipes/Google/chrome.yaml --debug
+# Set environment variable on Linux/macOS: 
+export GITHUB_TOKEN="your_token_here"
 ```
 
-This shows:
-
-- Full configuration dumps
-- HTTP request/response details
-- Backend selection (MSI extraction method)
-- File operations with paths
-- Complete error tracebacks
 
