@@ -12,29 +12,31 @@
         <meta name="author" content="Roger Cibrian">
       
       
-        <link rel="canonical" href="https://rogercibrian.github.io/notapkgtool/">
+        <link rel="canonical" href="https://rogercibrian.github.io/notapkgtool/api/">
       
       
+        <link rel="prev" href="../recipe-reference/">
       
-        <link rel="next" href="quick-start/">
+      
+        <link rel="next" href="cli/">
       
       
         
       
       
-      <link rel="icon" href="assets/images/favicon.png">
+      <link rel="icon" href="../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
     
     
       
-        <title>NAPT Documentation</title>
+        <title>Overview - NAPT Documentation</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.618322db.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.618322db.min.css">
       
         
-        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -53,9 +55,9 @@
       
     
     
-      <link rel="stylesheet" href="assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -80,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#napt-not-a-pkg-tool" class="md-skip">
+        <a href="#developer-reference" class="md-skip">
           Skip to content
         </a>
       
@@ -96,7 +98,7 @@
 
 <header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="NAPT Documentation" class="md-header__button md-logo" aria-label="NAPT Documentation" data-md-component="logo">
+    <a href=".." title="NAPT Documentation" class="md-header__button md-logo" aria-label="NAPT Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -116,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Home
+              Overview
             
           </span>
         </div>
@@ -219,11 +221,9 @@
   
   
   
-    
   
-  
-    <li class="md-tabs__item md-tabs__item--active">
-      <a href="." class="md-tabs__link">
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
         
   
   
@@ -242,7 +242,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="quick-start/" class="md-tabs__link">
+      <a href="../quick-start/" class="md-tabs__link">
         
   
   
@@ -263,7 +263,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="user-guide/" class="md-tabs__link">
+        <a href="../user-guide/" class="md-tabs__link">
           
   
   
@@ -279,11 +279,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="api/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
           
   
   
@@ -303,7 +305,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="changelog/" class="md-tabs__link">
+        <a href="../changelog/" class="md-tabs__link">
           
   
   
@@ -343,7 +345,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="NAPT Documentation" class="md-nav__button md-logo" aria-label="NAPT Documentation" data-md-component="logo">
+    <a href=".." title="NAPT Documentation" class="md-nav__button md-logo" aria-label="NAPT Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -370,37 +372,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Home
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="." class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
         
   
   
@@ -416,142 +391,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Overview
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Overview">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#why-napt" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why NAPT?
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#key-features" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Key Features
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#cross-platform-support" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Cross-Platform Support
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Getting Started
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#creating-recipes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Creating Recipes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#contributing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Contributing
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#license" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        License
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#author" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Author
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#acknowledgments" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Acknowledgments
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -563,7 +402,7 @@
   
   
     <li class="md-nav__item">
-      <a href="quick-start/" class="md-nav__link">
+      <a href="../quick-start/" class="md-nav__link">
         
   
   
@@ -640,7 +479,7 @@
   
   
     <li class="md-nav__item">
-      <a href="user-guide/" class="md-nav__link">
+      <a href="../user-guide/" class="md-nav__link">
         
   
   
@@ -668,7 +507,7 @@
   
   
     <li class="md-nav__item">
-      <a href="common-tasks/" class="md-nav__link">
+      <a href="../common-tasks/" class="md-nav__link">
         
   
   
@@ -696,7 +535,7 @@
   
   
     <li class="md-nav__item">
-      <a href="recipe-reference/" class="md-nav__link">
+      <a href="../recipe-reference/" class="md-nav__link">
         
   
   
@@ -728,24 +567,29 @@
       
   
   
+    
   
   
+  
     
     
     
     
-      
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
             
   
   
@@ -763,7 +607,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -778,10 +622,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="api/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -797,6 +668,109 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#code-organization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Code Organization
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Code Organization">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-concepts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Concepts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#design-principles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Design Principles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extending-napt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extending NAPT
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See Also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -809,7 +783,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/cli/" class="md-nav__link">
+      <a href="cli/" class="md-nav__link">
         
   
   
@@ -837,7 +811,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/core/" class="md-nav__link">
+      <a href="core/" class="md-nav__link">
         
   
   
@@ -865,7 +839,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/exceptions/" class="md-nav__link">
+      <a href="exceptions/" class="md-nav__link">
         
   
   
@@ -893,7 +867,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/logging/" class="md-nav__link">
+      <a href="logging/" class="md-nav__link">
         
   
   
@@ -921,7 +895,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/results/" class="md-nav__link">
+      <a href="results/" class="md-nav__link">
         
   
   
@@ -949,7 +923,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/validation/" class="md-nav__link">
+      <a href="validation/" class="md-nav__link">
         
   
   
@@ -1027,7 +1001,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/build/" class="md-nav__link">
+      <a href="build/" class="md-nav__link">
         
   
   
@@ -1055,7 +1029,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/config/" class="md-nav__link">
+      <a href="config/" class="md-nav__link">
         
   
   
@@ -1083,7 +1057,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/discovery/" class="md-nav__link">
+      <a href="discovery/" class="md-nav__link">
         
   
   
@@ -1111,7 +1085,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/io/" class="md-nav__link">
+      <a href="io/" class="md-nav__link">
         
   
   
@@ -1139,7 +1113,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/policy/" class="md-nav__link">
+      <a href="policy/" class="md-nav__link">
         
   
   
@@ -1167,7 +1141,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/psadt/" class="md-nav__link">
+      <a href="psadt/" class="md-nav__link">
         
   
   
@@ -1195,7 +1169,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/state/" class="md-nav__link">
+      <a href="state/" class="md-nav__link">
         
   
   
@@ -1223,7 +1197,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/versioning/" class="md-nav__link">
+      <a href="versioning/" class="md-nav__link">
         
   
   
@@ -1316,7 +1290,7 @@
   
   
     <li class="md-nav__item">
-      <a href="changelog/" class="md-nav__link">
+      <a href="../changelog/" class="md-nav__link">
         
   
   
@@ -1344,7 +1318,7 @@
   
   
     <li class="md-nav__item">
-      <a href="roadmap/" class="md-nav__link">
+      <a href="../roadmap/" class="md-nav__link">
         
   
   
@@ -1372,7 +1346,7 @@
   
   
     <li class="md-nav__item">
-      <a href="contributing/" class="md-nav__link">
+      <a href="../contributing/" class="md-nav__link">
         
   
   
@@ -1427,33 +1401,22 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
+  <a href="#code-organization" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Overview
+        Code Organization
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Overview">
+    <nav class="md-nav" aria-label="Code Organization">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#why-napt" class="md-nav__link">
+  <a href="#data-flow" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why NAPT?
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#key-features" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Key Features
+        Data Flow
       
     </span>
   </a>
@@ -1466,10 +1429,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#cross-platform-support" class="md-nav__link">
+  <a href="#quick-start" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Cross-Platform Support
+        Quick Start
       
     </span>
   </a>
@@ -1477,10 +1440,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
+  <a href="#key-concepts" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Getting Started
+        Key Concepts
       
     </span>
   </a>
@@ -1488,10 +1451,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#creating-recipes" class="md-nav__link">
+  <a href="#design-principles" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Creating Recipes
+        Design Principles
       
     </span>
   </a>
@@ -1499,10 +1462,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#contributing" class="md-nav__link">
+  <a href="#extending-napt" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Contributing
+        Extending NAPT
       
     </span>
   </a>
@@ -1510,32 +1473,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#license" class="md-nav__link">
+  <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
-        License
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#author" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Author
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#acknowledgments" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Acknowledgments
+        See Also
       
     </span>
   </a>
@@ -1562,95 +1503,104 @@
   
 
 
-<h1 id="napt-not-a-pkg-tool">NAPT - Not a Pkg Tool</h1>
-<blockquote>
-<p><strong>Automated Windows application packaging and deployment to Microsoft Intune using PSAppDeployToolkit</strong></p>
-</blockquote>
-<p><a href="https://www.apache.org/licenses/LICENSE-2.0"><img alt="License" src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" /></a>
-<a href="https://www.python.org/downloads/"><img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11+-blue.svg" /></a>
-<a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg" /></a></p>
-<h2 id="overview">Overview</h2>
-<p>NAPT is a Python-based CLI tool that automates the entire workflow for packaging Windows applications and deploying them to Microsoft Intune. It runs on Windows, Linux, and macOS, though packaging (.intunewin creation) requires Windows.</p>
-<h3 id="why-napt">Why NAPT?</h3>
-<p>Packaging applications for Microsoft Intune with PSAppDeployToolkit (PSADT) typically involves a manual, time-consuming process:</p>
-<ol>
-<li>
-<p><strong>Manually check for new versions</strong> - Check vendor sites/APIs for updates. Easy to miss versions or waste time when nothing changed.</p>
-</li>
-<li>
-<p><strong>Create PSADT deployment</strong> - Copy template, manually edit <code>Invoke-AppDeployToolkit.ps1</code> with variables, configure install/uninstall logic. Error-prone and repetitive.</p>
-</li>
-<li>
-<p><strong>Create detection script</strong> - Write PowerShell detection logic, test thoroughly, maintain version checks. Must update for each new version.</p>
-</li>
-<li>
-<p><strong>Package as .intunewin</strong> - Run IntuneWinAppUtil.exe manually, manage paths, handle errors. Tedious and error-prone.</p>
-</li>
-<li>
-<p><strong>Upload to Intune</strong> - Upload package via portal, fill metadata, configure app info and requirements manually.</p>
-</li>
-<li>
-<p><strong>Configure deployment</strong> - Set up rollout assignments manually for each version.</p>
-</li>
-</ol>
-<p>This manual workflow is repetitive, difficult to automate in CI/CD pipelines, lacks version tracking, and requires re-doing most of the work for every update. NAPT automates this entire workflow with YAML-based recipes and automatic version tracking.</p>
-<h3 id="key-features">Key Features</h3>
+<h1 id="developer-reference">Developer Reference</h1>
+<p>Overview of NAPT's codebase structure, architecture, and key concepts for developers extending or integrating with NAPT.</p>
+<h2 id="code-organization">Code Organization</h2>
+<p>NAPT's codebase structure matches the module organization. Here's the file structure:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>notapkgtool/
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── __init__.py              # Package initialization and public API exports
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── cli.py                   # Command-line interface
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>├── core.py                  # Main public API functions (orchestration)
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>├── exceptions.py            # Exception hierarchy
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>├── logging.py               # Logging configuration
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>├── results.py               # Public API return types (dataclasses)
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>├── validation.py            # Recipe validation logic
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>├── build/                   # PSADT package building
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│   ├── manager.py              # Package building orchestration
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│   ├── packager.py             # .intunewin package creation
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│   └── template.py             # PSADT template generation
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>├── config/                  # Configuration loading
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│   └── loader.py               # 3-layer configuration system
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>├── discovery/               # Discovery strategies
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>│   ├── api_github.py           # GitHub Releases API strategy
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>│   ├── api_json.py             # Generic JSON API strategy
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>│   ├── base.py                 # Strategy protocol and registry
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>│   ├── url_download.py         # Direct URL download strategy
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>│   └── web_scrape.py           # Web scraping strategy
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>│
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>├── io/                      # File operations
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>│   ├── download.py             # HTTP file downloads with ETag support
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>│   └── upload.py               # File upload operations (planned)
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>│
+</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>├── policy/                  # Update policy enforcement (planned)
+</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>│   └── updates.py              # Update policy logic
+</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>│
+</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>├── psadt/                   # PSADT release management
+</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>│   └── release.py              # PSADT release download and caching
+</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>│
+</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>├── state/                   # Version tracking and caching
+</span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>│   └── tracker.py              # State file management
+</span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>│
+</span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>└── versioning/              # Version extraction and comparison
+</span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>    ├── keys.py                 # Version key extraction (DiscoveredVersion)
+</span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>    └── msi.py                  # MSI version extraction backends
+</span></code></pre></div>
+<h3 id="data-flow">Data Flow</h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Recipe YAML
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    ↓
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>[config/loader.py] Load and merge configuration
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    ↓
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>[core.py] Orchestrate workflow
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    ↓
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>[discovery/] Discover version and download
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    ↓
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>[state/tracker.py] Update version cache
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    ↓
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>[build/manager.py] Build PSADT package
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    ↓
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>[build/packager.py] Create .intunewin
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    ↓
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>Result (dataclass)
+</span></code></pre></div>
+<h2 id="quick-start">Quick Start</h2>
 <ul>
-<li>✅ <strong>Automatic version tracking</strong> - Automatic discovery from MSI, EXE, URLs, or APIs with caching to skip unnecessary downloads</li>
-<li>✅ <strong>YAML-based recipes</strong> - Define app packaging once with layered configuration (Organization → Vendor → Recipe)</li>
-<li>✅ <strong>Automated PSADT packaging</strong> - Generate Intune-ready packages with detection scripts, no manual template editing</li>
-<li>✅ <strong>Cross-platform workflow</strong> - Run on Windows, Linux, and macOS (packaging requires Windows)</li>
-<li>🚧 <strong>Direct Intune upload</strong> - Automatic deployment (planned)</li>
+<li><strong>Using NAPT as a library:</strong> Start with <a href="core/"><code>core.py</code></a> - <code>discover_recipe()</code>, <code>build_package()</code>, <code>create_intunewin()</code></li>
+<li><strong>Extending the CLI:</strong> See <a href="cli/"><code>cli.py</code></a> for command registration patterns</li>
+<li><strong>Adding discovery strategies:</strong> Implement <code>DiscoveryStrategy</code> protocol from <a href="discovery/"><code>discovery/base.py</code></a></li>
 </ul>
-<h2 id="cross-platform-support">Cross-Platform Support</h2>
-<table>
-<thead>
-<tr>
-<th>Feature</th>
-<th>Windows</th>
-<th>Linux/macOS</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Discovery &amp; Download</td>
-<td>✅</td>
-<td>✅</td>
-</tr>
-<tr>
-<td>PSADT Package Building</td>
-<td>✅</td>
-<td>✅</td>
-</tr>
-<tr>
-<td>Intune Packaging</td>
-<td>✅</td>
-<td>⚫ Windows Only</td>
-</tr>
-</tbody>
-</table>
-<p>See the <a href="user-guide/#cross-platform-support">Cross-Platform Support</a> section for detailed workflows.</p>
-<h2 id="getting-started">Getting Started</h2>
-<p>Most users interact with NAPT via CLI - see the <a href="quick-start/">Quick Start Guide</a> for installation instructions and your first steps with NAPT.</p>
-<h2 id="creating-recipes">Creating Recipes</h2>
-<p>Recipes are YAML configuration files that define how to discover, download, and package applications.</p>
-<p><strong>Example recipes:</strong></p>
+<h2 id="key-concepts">Key Concepts</h2>
 <ul>
-<li><strong><a href="https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Google/chrome.yaml">chrome.yaml</a></strong> - url_download strategy with MSI version extraction</li>
-<li><strong><a href="https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/7-Zip/7zip.yaml">7zip.yaml</a></strong> - web_scrape strategy for vendor download pages</li>
+<li><strong>Discovery Strategies:</strong> Protocol-based, stateless, registered in global registry. Two paths: version-first (api_github, api_json, web_scrape) and file-first (url_download with ETag)</li>
+<li><strong>Configuration:</strong> 3-layer system (org → vendor → recipe) with deep merging</li>
+<li><strong>State Management:</strong> Tracks versions in <code>state/versions.json</code> for caching</li>
+<li><strong>Exceptions:</strong> All NAPT domain errors use custom exceptions inheriting from <code>NAPTError</code> (ConfigError, NetworkError, PackagingError) - allows catching all NAPT errors or specific types</li>
+<li><strong>Return Types:</strong> Frozen dataclasses from <code>results.py</code> for public API functions only (type-safe, immutable returns)</li>
 </ul>
-<p>NAPT supports multiple discovery strategies (url_download, web_scrape, api_github, api_json) - see the <a href="user-guide/#discovery-strategies">Discovery Strategies</a> guide for detailed configuration and more examples.</p>
-<h2 id="contributing">Contributing</h2>
-<p>Ideas and feedback are welcome! See <a href="contributing/">Contributing</a> for guidelines.</p>
-<h2 id="license">License</h2>
-<p>This project is licensed under the Apache License 2.0 - see the <a href="https://github.com/RogerCibrian/notapkgtool/blob/main/LICENSE">LICENSE</a> file for details.</p>
-<h2 id="author">Author</h2>
-<p><strong>Roger Cibrian</strong></p>
-<h2 id="acknowledgments">Acknowledgments</h2>
+<h2 id="design-principles">Design Principles</h2>
 <ul>
-<li>Draws inspiration from <a href="https://github.com/autopkg/autopkg">AutoPkg</a> for macOS application packaging automation</li>
-<li>Uses <a href="https://psappdeploytoolkit.com/">PSAppDeployToolkit</a> (PSADT) for Windows application packaging</li>
-<li>Uses <a href="https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool">IntuneWinAppUtil</a> for creating .intunewin packages</li>
+<li>Single Responsibility per module</li>
+<li>Protocol-based interfaces (typing.Protocol)</li>
+<li>Stateless strategies (instantiated on-demand)</li>
+<li>Structured returns (frozen dataclasses)</li>
+<li>Exception-based error handling</li>
+<li>Immutable configuration</li>
+</ul>
+<h2 id="extending-napt">Extending NAPT</h2>
+<ul>
+<li><strong>New discovery strategy:</strong> Implement <code>DiscoveryStrategy</code>, register with <code>register_strategy()</code>, add to <code>discovery/__init__.py</code></li>
+<li><strong>New CLI command:</strong> Add parser in <code>cli.py</code>, create <code>cmd_&lt;name&gt;()</code> handler, register with <code>set_defaults()</code></li>
+<li><strong>New config option:</strong> Update schema in <code>config/loader.py</code>, add validation in <code>validation.py</code>, document in recipe schema</li>
+</ul>
+<h2 id="see-also">See Also</h2>
+<ul>
+<li><a href="core/">Core API</a> - Main orchestration functions</li>
+<li><a href="discovery/">Discovery API</a> - Discovery strategy implementations</li>
+<li><a href="build/">Build API</a> - Package building functions</li>
+<li><a href="config/">Config API</a> - Configuration loading</li>
+<li><a href="exceptions/">Exceptions API</a> - Exception hierarchy</li>
 </ul>
 
 
@@ -1701,10 +1651,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.tabs", "navigation.tabs.sticky", "content.code.copy"], "search": "assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.tabs.sticky", "content.code.copy"], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="assets/javascripts/bundle.e71a0d61.min.js"></script>
+      <script src="../assets/javascripts/bundle.e71a0d61.min.js"></script>
       
     
   </body>
