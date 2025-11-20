@@ -2,6 +2,109 @@
 
 This guide covers NAPT's key features, configuration system, and advanced usage patterns.
 
+## How NAPT Works
+
+NAPT automates the complete workflow from version discovery to Intune package creation. Understanding how each step works helps you troubleshoot issues and customize recipes effectively.
+
+### Discovery Process (`napt discover`)
+
+The discovery process finds the latest version and downloads the installer:
+
+1. **Load Configuration** - Merges organization defaults, vendor defaults, and recipe configuration
+2. **Check Version** - Uses the configured discovery strategy to check for new versions
+3. **Compare with Cache** - Compares discovered version to cached `known_version` in state file
+4. **Skip or Download**:
+    - If version unchanged and file exists → Skip download 
+    - If version changed or file missing → Download installer
+5. **Extract Version** - Extracts version from installer (MSI ProductVersion) or uses discovered version
+6. **Update State** - Updates `state/versions.json` with new version, file path, SHA-256 hash, and ETag (if download occurred). 
+
+**Output**: Downloaded installer in `downloads/` directory, updated state file
+
+### Build Process (`napt build`)
+
+The build process creates a complete PSADT package from the recipe and downloaded installer:
+
+1. **Load Configuration** - Merges configuration layers (org → vendor → recipe)
+2. **Find Installer** - Locates installer in `downloads/` directory (tries URL filename, then app name/id, then most recent)
+3. **Extract Version** - Extracts from installer file if `version.type` specified, otherwise uses state file version
+4. **Get PSADT Release** - Downloads/caches PSADT Template_v4 from GitHub if not already cached
+5. **Create Build Directory** - Creates versioned directory using discovered app version: `builds/{app_id}/{version}/`
+6. **Copy PSADT Template** - Copies entire PSADT template structure (unmodified) from cache:
+    - `PSAppDeployToolkit/` - Core PSADT module
+    - `PSAppDeployToolkit.Extensions/` - Extension modules
+    - `Assets/` - Default icons and banners
+    - `Config/` - Default configuration files
+    - `Strings/` - Localization strings
+    - `Files/` - Empty directory for installer files
+    - `SupportFiles/` - Empty directory for additional files
+    - `Invoke-AppDeployToolkit.exe` - Compiled launcher
+    - `Invoke-AppDeployToolkit.ps1` - Template script (will be overwritten)
+7. **Generate Deployment Script** - Generates `Invoke-AppDeployToolkit.ps1` from template:
+    - Substitutes PSADT variables (`$appVendor`, `$appName`, `$appVersion`, etc.) from recipe configuration
+    - Inserts install script from `psadt.install` field
+    - Inserts uninstall script from `psadt.uninstall` field
+    - Sets dynamic values (AppScriptDate, discovered version, PSADT version)
+    - Preserves PSADT's structure and comments
+8. **Copy Installer** - Copies downloaded installer file to `Files/` directory:
+    - Source: `downloads/{installer_filename}`
+    - Destination: `builds/{app_id}/{version}/Files/{installer_filename}`
+    - Installer is accessible in scripts via `$dirFiles` variable
+9. **Apply Branding** - Replaces PSADT default assets with custom branding (if configured):
+    - Reads `brand_pack` configuration from org/vendor defaults
+    - Replaces files in `Assets/` directory (AppIcon.png, Banner.Classic.png, etc.)
+    - Uses pattern matching to find source files in brand pack directory
+
+**Output**: Complete PSADT package in `builds/{app_id}/{version}/` ready for deployment
+
+### Package Process (`napt package`)
+
+The package process creates a `.intunewin` file from the built PSADT directory:
+
+1. **Verify Structure** - Validates build directory has required PSADT structure:
+    - `PSAppDeployToolkit/` directory
+    - `Files/` directory
+    - `Invoke-AppDeployToolkit.ps1` script
+    - `Invoke-AppDeployToolkit.exe` launcher
+2. **Get IntuneWinAppUtil** - Downloads/caches `IntuneWinAppUtil.exe` from Microsoft's GitHub repository if not already cached
+3. **Create Package** - Runs `IntuneWinAppUtil.exe` to create `.intunewin` file:
+    - Input: Build directory (entire PSADT structure)
+    - Output: `{app_id}-{version}.intunewin` file
+    - Package contains all files from build directory in compressed format
+4. **Optional Cleanup** - If `--clean-source` flag is used, removes the build directory after successful packaging
+
+**Output**: `.intunewin` package file in `packages/{app_id}/` directory, ready for Intune upload
+
+### Directory Structure
+
+After a complete workflow, your directory structure looks like:
+
+```
+downloads/
+  └── googlechromestandaloneenterprise64.msi
+
+builds/
+  └── napt-chrome/
+      └── 142.0.7444.163/
+          ├── PSAppDeployToolkit/          # PSADT module (from template)
+          ├── PSAppDeployToolkit.Extensions/
+          ├── Assets/                      # Custom branding (if configured)
+          ├── Config/
+          ├── Strings/
+          ├── Files/                       # Installer copied here
+          │   └── googlechromestandaloneenterprise64.msi
+          ├── SupportFiles/                # Empty (for additional files)
+          ├── Invoke-AppDeployToolkit.ps1  # Generated script
+          └── Invoke-AppDeployToolkit.exe # From template
+
+packages/
+  └── napt-chrome/
+      └── Invoke-AppDeployToolkit.intunewin
+
+state/
+  └── versions.json                        # Version tracking
+```
+
 ## Commands Reference
 
 > **💡 Tip:** All commands support `--help` (or `-h`) to show detailed usage, options, and examples. Try `napt discover --help` to see what's available.

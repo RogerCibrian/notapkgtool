@@ -56,6 +56,7 @@ Display name for the application. Used in PSADT dialogs and package metadata.
 **Format:** Lowercase, alphanumeric, hyphens only (e.g., `napt-chrome`, `napt-git`)
 
 Unique identifier for the application. Used to generate:
+
 - Build directory names: `builds/{id}/{version}/`
 - Package names: `packages/{id}/Invoke-AppDeployToolkit.intunewin`
 
@@ -146,6 +147,7 @@ Regular expression pattern to extract version from the Git tag. Should include c
 GitHub personal access token for authenticated API requests. Use environment variable substitution (e.g., `"${GITHUB_TOKEN}"`) for security.
 
 **When to use:**
+
 - Avoid GitHub API rate limits (60 requests/hour unauthenticated, 5000/hour authenticated)
 - Access private repositories
 
@@ -352,6 +354,7 @@ psadt:
 **Default:** `"latest"` (from organization defaults)
 
 PSADT release version to use. Can be:
+
 - `"latest"` - Use the latest PSADT release from GitHub
 - Specific version: `"4.1.7"` - Use a specific PSADT version
 

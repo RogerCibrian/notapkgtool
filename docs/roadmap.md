@@ -17,75 +17,33 @@ This roadmap is a living document showing potential future directions for NAPT. 
 - 🚧 **In Progress**: Actively being developed
 - ✅ **Completed**: Implemented and released
 
-## How to Use This Roadmap
-
-### Adding New Ideas
-1. Add to appropriate category section with status 💡
-2. Include complexity estimate and value assessment
-3. Describe the problem it solves
-4. No need to design the solution yet
-
-### Promoting Ideas
-When an idea becomes clearer:
-1. Move to "Investigating" 🔬 if research needed
-2. Move to "Ready for Implementation" 📋 when well-defined
-3. Assign to milestone when scheduling work
-4. Move to "Completed" when released
-
-### Declining Ideas
-If we decide not to pursue something:
-1. Move to "Declined / Won't Implement"
-2. Add brief rationale
-3. Keep for future reference (prevents re-discussion)
-
 ---
 
 ## Quick Reference
 
 | Feature | Status | Category | Complexity | Value |
 |---------|--------|----------|------------|-------|
-| Update Policy Enforcement | 📋 Ready | Technical | Low | Medium |
 | Microsoft Intune Upload | 🔬 Investigating | User-Facing | High | Very High |
 | Deployment Wave Management | 🔬 Investigating | User-Facing | Very High | High |
-| Detection Script Generation | 💡 Idea | User-Facing | Medium | High |
+| Detection Script Generation | 💡 Idea | User-Facing | High | High |
 | Pre/Post Install/Uninstall Script Support | 💡 Idea | User-Facing | Low | Medium |
 | Enhanced CLI Help Menu | 💡 Idea | User-Facing | Low | Medium |
-| Recipe Creation Tutorial | 💡 Idea | User-Facing | Low | High |
-| PowerShell Validation | 💡 Idea | Code Quality | Medium | High |
+| PowerShell Validation | 💡 Idea | Code Quality | High | High |
 | Recipe Linting & Best Practices | 💡 Idea | Code Quality | High | Medium |
-| EXE Version Extraction | 💡 Idea | Technical | Medium | Medium |
+| EXE Version Extraction | 💡 Idea | Technical | High | Medium |
 | Parallel Package Building | 💡 Idea | Technical | Medium | Medium |
 | IntuneWinAppUtil Version Tracking | 💡 Idea | Technical | Low | Low |
 
 **Summary:**
 
-- 📋 **Ready**: 1
+- 📋 **Ready**: 0
 - 🔬 **Investigating**: 2
-- 💡 **Ideas**: 9
-- **Total**: 12 features
+- 💡 **Ideas**: 8
+- **Total**: 10 features
 
 ---
 
 ## Active Work
-
-### Ready for Implementation 📋
-
-#### Update Policy Enforcement
-**Complexity**: Low (few hours to 1 day)  
-**Value**: Medium
-
-**Description**: Complete the `policy/updates.py` module with actual logic.
-
-**Current State**: Module exists with data structures, no implementation
-
-**Requirements**:
-
-- Implement version comparison logic
-- Implement hash comparison logic
-- Support all strategy types (version_only, hash_or_version, etc.)
-- Integration with state tracking
-
-**Design**: Already specified in `defaults/org.yaml` config
 
 ### Investigating 🔬
 
@@ -93,23 +51,21 @@ If we decide not to pursue something:
 **Complexity**: High (3-5 days)  
 **Value**: Very High
 
-**Description**: Direct upload of .intunewin packages to Microsoft Intune via Graph API.
+**Description**: Direct upload of .intunewin packages to Microsoft Intune via Graph API. Requires research into authentication strategies (OAuth, service principal, managed identity), Graph API endpoints and permissions, Win32 app metadata requirements, error handling, and rate limiting.
 
-**Research Needed**:
+**Benefits**:
 
-- Authentication strategy (OAuth, service principal, managed identity?)
-- Graph API endpoints and permissions required
-- Win32 app metadata requirements
-- Error handling and retry logic
-- Rate limiting considerations
+- Streamlines deployment workflow by eliminating manual upload steps
+- Enables automation of Intune app publishing
+- Reduces time from package creation to deployment
+- Useful for organizations managing multiple apps and frequent updates
 
-**Blockers**:
+**Dependencies**:
 
-- Need to decide on authentication approach
 - Requires Azure AD app registration
-- May need different auth for different deployment scenarios
+- May need different authentication approaches for different deployment scenarios
 
-**References**:
+**Related**:
 
 - [Microsoft Graph API - Win32 Apps](https://learn.microsoft.com/en-us/graph/api/resources/intune-apps-win32lobapp)
 - [Intune App Upload Process](https://learn.microsoft.com/en-us/mem/intune/apps/apps-win32-app-management)
@@ -120,13 +76,13 @@ If we decide not to pursue something:
 
 **Description**: Phased deployment with rings (Pilot → Production) and gradual rollout.
 
-**Features Under Consideration**:
+**Benefits**:
 
-- Ring definitions (Pilot, UAT, Production)
-- Assignment group management
-- Rollout scheduling (% of users per day)
-- Health monitoring integration
-- Rollback capabilities
+- Enables controlled, staged deployments to reduce risk
+- Supports ring-based deployment (Pilot, UAT, Production)
+- Allows gradual rollout with percentage-based scheduling
+- Provides rollback capabilities for failed deployments
+- Useful for organizations requiring careful change management
 
 **Dependencies**:
 
@@ -134,75 +90,41 @@ If we decide not to pursue something:
 - Requires Graph API for assignment groups
 - May need separate monitoring/alerting
 
-**Blockers**:
-
-- Complex domain requiring deep Intune knowledge
-- Needs real-world deployment patterns study
-
 ---
 
 ## Future Ideas (By Category)
+
+> **Note:** Categories are organized by how they impact users:
+>
+> - **User-Facing Features**: Features and improvements that directly help recipe developers use NAPT more effectively, including new capabilities, UX enhancements, documentation, and tooling.
+> - **Code Quality & Validation**: Tools that validate and improve recipe quality, including syntax checking, linting, and best practices enforcement.
+> - **Technical Enhancements**: Internal improvements and infrastructure enhancements that improve performance, add backend capabilities, or optimize the tool's operation.
 
 ### User-Facing Features
 
 #### Detection Script Generation
 **Status**: 💡 Idea  
-**Complexity**: Medium (1-3 days)  
+**Complexity**: High (3-5 days)  
 **Value**: High
 
 **Description**: Automatically generate detection scripts for Intune that check if an application is already installed.
 
-**Approach Options**:
-
-- For MSI: Generate script that checks ProductCode in registry
-- For EXE: Generate script that checks file version or registry keys
-- Template-based generation with recipe hints
-- Support for custom detection logic in recipes
-
 **Benefits**:
 
 - Reduces manual work for Intune app creation
-- Ensures consistent detection logic
+- Ensures consistent detection logic across all apps
 - Leverages information we already have (ProductCode, version, paths)
-
-**Use Cases**:
-
-- Automatic detection for Win32 apps in Intune
-- Prevent re-installation of already-installed apps
-- Version-based detection for upgrades
-
-**Technical Considerations**:
-
-- Need to handle both MSI and EXE installers
-- PowerShell detection script format for Intune
-- Support for custom registry keys or file paths
-- Version comparison in detection script
+- Supports both MSI and EXE installers with appropriate detection methods
+- Prevents re-installation of already-installed apps
+- Enables version-based detection for upgrades
+- Useful for organizations creating multiple Win32 apps in Intune
 
 #### Pre/Post Install/Uninstall Script Support
 **Status**: 💡 Idea  
 **Complexity**: Low (few hours to 1 day)  
 **Value**: Medium
 
-**Description**: Add support for pre-install, post-install, pre-uninstall, and post-uninstall script blocks in recipes.
-
-**Proposed Recipe Format**:
-```yaml
-psadt:
-  pre_install: |
-    # Close running processes
-    # Backup user data
-  install: |
-    # Main installation
-  post_install: |
-    # Configure settings
-    # Create shortcuts
-  pre_uninstall: |
-    # Backup settings
-  uninstall: |
-    # Main uninstallation
-  post_uninstall: |
-    # Clean up user data
-```
+**Description**: Add support for pre-install, post-install, pre-uninstall, and post-uninstall script blocks in recipes, allowing separate script sections for each deployment phase.
 
 **Benefits**:
 
@@ -210,13 +132,7 @@ psadt:
 - Separation of concerns (prep vs install vs cleanup)
 - Aligns with PSADT's deployment phase structure
 - Cleaner recipe organization
-
-**Implementation**:
-
-- Add new fields to recipe schema
-- Insert into appropriate sections of Invoke-AppDeployToolkit.ps1
-- Map to PSADT's Pre-Installation, Installation, Post-Installation sections
-- Validate all script blocks
+- Enables better error handling and rollback capabilities
 
 **Related**: PSADT already has these phases in the template structure
 
@@ -227,67 +143,33 @@ psadt:
 
 **Description**: Improve the `napt -h` help output with more detailed information, examples, and better organization.
 
-**Potential Enhancements**:
-
-- Add examples for common workflows in help text
-- Group commands by category (Discovery, Building, Packaging)
-- Show performance characteristics of strategies
-- Add tips for troubleshooting (--verbose, --debug flags)
-- Include links to online documentation
-- Better formatting with colors/sections (via rich or similar)
-
 **Benefits**:
 
 - Better discoverability of features
 - Reduces need to consult docs for basic usage
 - Improves new user onboarding experience
 - Quick reference for command options
+- Examples for common workflows directly in help text
+- Grouped commands by category (Discovery, Building, Packaging)
+- Tips for troubleshooting (--verbose, --debug flags)
 
 **Related**: CLI help currently minimal, relies on online documentation
-
-#### Recipe Creation Tutorial
-**Status**: 💡 Idea  
-**Complexity**: Low (few hours to 1 day)  
-**Value**: High
-
-**Description**: Step-by-step tutorial for creating recipes from scratch.
-
-**Potential Content**:
-
-- Recipe structure and required fields
-- Choosing the right discovery strategy
-- Testing recipes with napt validate/discover
-- Common patterns and examples
-- Troubleshooting tips
-
-**Benefits**:
-
-- Lower barrier to entry for new users
-- Reduces trial-and-error in recipe development
-- Consolidates recipe knowledge in one place
-
-**Waiting On**: Recipe schema stabilization and user feedback on patterns
 
 ### Code Quality & Validation
 
 #### PowerShell Validation
 **Status**: 💡 Idea  
-**Complexity**: Medium (1-3 days)  
+**Complexity**: High (3-5 days)  
 **Value**: High
 
 **Description**: Validate PowerShell syntax in recipe install/uninstall blocks to catch errors before deployment.
-
-**Approach Options**:
-
-- Basic structural checks (balanced braces, quotes)
-- PowerShell parser integration (PSParser tokenizer)
-- Hybrid: Basic checks + optional advanced validation
 
 **Benefits**:
 
 - Catch syntax errors at recipe validation time
 - Prevent broken deployments
 - Better developer experience
+- Reduces debugging time during deployment
 
 **Related**: TODO in `notapkgtool/build/packager.py` - discovered during testing
 
@@ -296,41 +178,30 @@ psadt:
 **Complexity**: High (3-5 days)  
 **Value**: Medium
 
-**Description**: Advanced recipe validation beyond syntax checking.
-
-**Features**:
-
-- Validate PSADT function names exist in v4
-- Warn on deprecated patterns or old v3 functions
-- Check for common anti-patterns
-- Suggest improvements (e.g., use Uninstall-ADTApplication)
-- Style guide enforcement
+**Description**: Advanced recipe validation beyond syntax checking, including PSADT function validation, deprecation warnings, anti-pattern detection, and style guide enforcement.
 
 **Benefits**:
 
 - Higher quality recipes
-- Consistent code style
+- Consistent code style across all recipes
 - Educational for new users
+- Validates PSADT function names exist in v4
+- Warns on deprecated patterns or old v3 functions
+- Suggests improvements (e.g., use Uninstall-ADTApplication)
 
 ### Technical Enhancements
 
 #### EXE Version Extraction
 **Status**: 💡 Idea  
-**Complexity**: Medium (1-3 days)  
+**Complexity**: High (3-5 days)  
 **Value**: Medium
 
 **Description**: Extract version information from PE (Portable Executable) headers for .exe installers.
 
-**Technical Details**:
+**Benefits**:
 
-- New version types: `exe_file_version`, `exe_product_version`
-- Use `pefile` library for cross-platform support
-- Fallback to PowerShell on Windows
-
-**Use Cases**:
-
-- Applications distributed as EXE (Git, VS Code, etc.)
-- Vendors who don't provide version in URL or API
+- Enables version discovery for applications distributed as EXE
+- Useful for vendors who don't provide version in URL or API
 
 **Related**: Mentioned in `notapkgtool/discovery/url_download.py` docstring
 
@@ -341,49 +212,32 @@ psadt:
 
 **Description**: Build multiple PSADT packages in parallel for faster multi-app workflows.
 
-**Technical Details**:
+**Benefits**:
 
-- Use Python multiprocessing or asyncio
-- Parallel PSADT downloads and builds
-- Maintain state consistency
-- Progress reporting for multiple builds
-
-**Use Cases**:
-
-- Organizations with 50+ apps
-- Monthly update cycles
-- CI/CD pipelines
+- Significantly faster builds for organizations with 50+ apps
+- Reduces time for monthly update cycles
+- Improves CI/CD pipeline performance
+- Progress reporting for multiple concurrent builds
 
 #### IntuneWinAppUtil Version Tracking
 **Status**: 💡 Idea  
 **Complexity**: Low (few hours to 1 day)  
 **Value**: Low
 
-**Description**: Track version of IntuneWinAppUtil.exe in cache metadata instead of always using latest from master.
-
-**Current Behavior**: Downloads from `master` branch (always latest)
-
-**Proposed Enhancement**:
-
-- Track tool version in cache metadata
-- Allow pinning to specific commit/release
-- Auto-detect when tool updates available
-- Optional config setting for tool version/source
+**Description**: Track version of IntuneWinAppUtil.exe in cache metadata instead of always using latest from master, allowing pinning to specific commits/releases and optional configuration for tool version/source.
 
 **Benefits**:
 
 - Reproducible builds (pin to known-good version)
 - Control over tool updates
 - Better for air-gapped environments
+- Auto-detect when tool updates are available
 
 **Related**: TODO in `notapkgtool/build/packager.py:47`
 
 ---
 
 ## Declined / Won't Implement
-
-### Built-in PR Creation
-**Reason**: NAPT should focus on discovery and packaging. Git operations and PR creation should remain in CI/CD workflows (GitHub Actions, etc.). This keeps NAPT platform-agnostic and focused on its core mission.
 
 ---
 

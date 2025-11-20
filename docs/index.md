@@ -75,7 +75,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](https:
 
 ## Acknowledgments
 
-- Built for automating Windows application deployment
-- Uses PSAppDeployToolkit (PSADT) for packaging
-- Targets Microsoft Intune for distribution
+- Draws inspiration from [AutoPkg](https://github.com/autopkg/autopkg) for macOS application packaging automation
+- Uses [PSAppDeployToolkit](https://psappdeploytoolkit.com/) (PSADT) for Windows application packaging
+- Uses [IntuneWinAppUtil](https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool) for creating .intunewin packages
 

@@ -17,36 +17,36 @@ notapkgtool/
 ├── validation.py            # Recipe validation logic
 │
 ├── build/                   # PSADT package building
-│   ├── manager.py           # Package building orchestration
-│   ├── packager.py          # .intunewin package creation
-│   └── template.py          # PSADT template generation
+│   ├── manager.py              # Package building orchestration
+│   ├── packager.py             # .intunewin package creation
+│   └── template.py             # PSADT template generation
 │
 ├── config/                  # Configuration loading
-│   └── loader.py            # 3-layer configuration system
+│   └── loader.py               # 3-layer configuration system
 │
 ├── discovery/               # Discovery strategies
-│   ├── api_github.py       # GitHub Releases API strategy
-│   ├── api_json.py         # Generic JSON API strategy
-│   ├── base.py             # Strategy protocol and registry
-│   ├── url_download.py     # Direct URL download strategy
-│   └── web_scrape.py       # Web scraping strategy
+│   ├── api_github.py           # GitHub Releases API strategy
+│   ├── api_json.py             # Generic JSON API strategy
+│   ├── base.py                 # Strategy protocol and registry
+│   ├── url_download.py         # Direct URL download strategy
+│   └── web_scrape.py           # Web scraping strategy
 │
 ├── io/                      # File operations
-│   ├── download.py         # HTTP file downloads with ETag support
-│   └── upload.py           # File upload operations (planned)
+│   ├── download.py             # HTTP file downloads with ETag support
+│   └── upload.py               # File upload operations (planned)
 │
 ├── policy/                  # Update policy enforcement (planned)
-│   └── updates.py          # Update policy logic
+│   └── updates.py              # Update policy logic
 │
 ├── psadt/                   # PSADT release management
-│   └── release.py          # PSADT release download and caching
+│   └── release.py              # PSADT release download and caching
 │
 ├── state/                   # Version tracking and caching
-│   └── tracker.py          # State file management
+│   └── tracker.py              # State file management
 │
 └── versioning/              # Version extraction and comparison
-    ├── keys.py             # Version key extraction (DiscoveredVersion)
-    └── msi.py              # MSI version extraction backends
+    ├── keys.py                 # Version key extraction (DiscoveredVersion)
+    └── msi.py                  # MSI version extraction backends
 ```
 
 ### Data Flow
