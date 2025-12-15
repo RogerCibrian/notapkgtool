@@ -85,9 +85,27 @@ try:
 except ImportError:
     msilib = None  # type: ignore
 
+from dataclasses import dataclass
+
 from notapkgtool.exceptions import PackagingError
 
 from .keys import DiscoveredVersion  # reuse the shared DTO
+
+
+@dataclass(frozen=True)
+class MSIMetadata:
+    """MSI Property table metadata.
+
+    Attributes:
+        product_name: ProductName from MSI (display name).
+        product_version: ProductVersion from MSI.
+        product_code: ProductCode GUID (optional, may be None if not found).
+
+    """
+
+    product_name: str
+    product_version: str
+    product_code: str | None = None
 
 
 def version_from_msi_product_version(
@@ -251,6 +269,264 @@ if ($record) {{
     logger.debug("VERSION", "No MSI extraction backend available on this system")
     raise NotImplementedError(
         "MSI version extraction is not available on this host. "
+        "On Windows, ensure PowerShell is available. "
+        "On Linux/macOS, install 'msitools'."
+    )
+
+
+def extract_msi_metadata(
+    file_path: str | Path, verbose: bool = False, debug: bool = False
+) -> MSIMetadata:
+    """Extract ProductName, ProductVersion, and ProductCode from MSI file.
+
+    Uses cross-platform backends to read the MSI Property table. On Windows,
+    tries msilib (Python 3.11+), _msi extension, then PowerShell COM API as
+    universal fallback. On Linux/macOS, requires msitools package.
+
+    This function extracts multiple properties in one pass for efficiency.
+
+    Args:
+        file_path: Path to the MSI file.
+        verbose: If True, print verbose logging messages.
+            Default is False.
+        debug: If True, print debug logging messages.
+            Default is False.
+
+    Returns:
+        MSIMetadata with product information. ProductCode may be None if not
+        found in Property table.
+
+    Raises:
+        PackagingError: If the MSI file doesn't exist or metadata extraction
+            fails.
+        NotImplementedError: If no extraction backend is available on this
+            system.
+
+    Example:
+        Extract MSI metadata:
+            ```python
+            from pathlib import Path
+            from notapkgtool.versioning.msi import extract_msi_metadata
+
+            metadata = extract_msi_metadata(Path("chrome.msi"))
+            print(f"{metadata.product_name} {metadata.product_version}")
+            # Google Chrome 131.0.6778.86
+            ```
+
+    Note:
+        ProductName may be empty string if not found in MSI. ProductCode is
+        optional and will be None if not present. This is handled gracefully
+        - build phase will fallback to recipe AppName if ProductName is empty.
+
+    """
+    from notapkgtool.logging import get_global_logger
+
+    logger = get_global_logger()
+    p = Path(file_path)
+    if not p.exists():
+        raise PackagingError(f"MSI not found: {p}")
+
+    logger.verbose("MSI", f"Extracting metadata from: {p.name}")
+
+    # Try msilib first (standard library on Windows)
+    if sys.platform.startswith("win") and msilib is not None:
+        logger.debug("MSI", "Trying backend: msilib...")
+        try:
+            db = msilib.OpenDatabase(str(p), msilib.MSIDBOPEN_READONLY)
+            # Query for all three properties in one view
+            view = db.OpenView(
+                "SELECT `Property`,`Value` FROM `Property` "
+                "WHERE `Property` IN ('ProductName','ProductVersion','ProductCode')"
+            )
+            view.Execute(None)
+
+            metadata = {"ProductName": "", "ProductVersion": "", "ProductCode": None}
+            while True:
+                rec = view.Fetch()
+                if rec is None:
+                    break
+                prop_name = rec.GetString(1)
+                prop_value = rec.GetString(2)
+                if prop_name in metadata:
+                    metadata[prop_name] = prop_value
+
+            view.Close()
+            db.Close()
+
+            if not metadata["ProductVersion"]:
+                raise PackagingError("ProductVersion not found in MSI Property table.")
+
+            logger.verbose(
+                "MSI",
+                f"Success! Extracted: {metadata['ProductName']} "
+                f"{metadata['ProductVersion']} (via msilib)",
+            )
+            return MSIMetadata(
+                product_name=metadata["ProductName"] or "",
+                product_version=metadata["ProductVersion"],
+                product_code=metadata["ProductCode"],
+            )
+        except Exception as err:
+            logger.debug("MSI", "msilib failed, trying next backend...")
+            raise PackagingError(
+                f"failed to read MSI metadata via msilib: {err}"
+            ) from err
+
+    # Try _msi module (alternative Windows approach)
+    if sys.platform.startswith("win"):
+        logger.debug("MSI", "Trying backend: _msi...")
+        try:
+            import _msi  # type: ignore
+        except ImportError:
+            logger.debug("MSI", "_msi not available, trying next backend...")
+            pass
+        else:
+            try:
+                db = _msi.OpenDatabase(str(p), 0)  # 0: read-only
+                view = db.OpenView(
+                    "SELECT `Property`,`Value` FROM `Property` "
+                    "WHERE `Property` IN ('ProductName','ProductVersion','ProductCode')"
+                )
+                view.Execute(None)
+
+                metadata = {
+                    "ProductName": "",
+                    "ProductVersion": "",
+                    "ProductCode": None,
+                }
+                while True:
+                    rec = view.Fetch()
+                    if rec is None:
+                        break
+                    prop_name = rec.GetString(1)
+                    prop_value = rec.GetString(2)
+                    if prop_name in metadata:
+                        metadata[prop_name] = prop_value
+
+                view.Close()
+                db.Close()
+
+                if not metadata["ProductVersion"]:
+                    raise PackagingError(
+                        "ProductVersion not found in MSI Property table."
+                    )
+
+                logger.verbose(
+                    "MSI",
+                    f"Success! Extracted: {metadata['ProductName']} "
+                    f"{metadata['ProductVersion']} (via _msi)",
+                )
+                return MSIMetadata(
+                    product_name=metadata["ProductName"] or "",
+                    product_version=metadata["ProductVersion"],
+                    product_code=metadata["ProductCode"],
+                )
+            except Exception as err:
+                logger.debug("MSI", "_msi failed, trying next backend...")
+                raise PackagingError(
+                    f"failed to read MSI metadata via _msi: {err}"
+                ) from err
+
+    # Try PowerShell with Windows Installer COM on Windows
+    if sys.platform.startswith("win"):
+        logger.debug("MSI", "Trying backend: PowerShell COM...")
+        try:
+            ps_script = f"""
+$installer = New-Object -ComObject WindowsInstaller.Installer
+$db = $installer.OpenDatabase('{p}', 0)
+$view = $db.OpenView("SELECT Property, Value FROM Property WHERE Property IN ('ProductName','ProductVersion','ProductCode')")
+$view.Execute()
+$metadata = @{{}}
+while ($record = $view.Fetch()) {{
+    $prop = $record.StringData(1)
+    $value = $record.StringData(2)
+    if ($prop -in @('ProductName','ProductVersion','ProductCode')) {{
+        $metadata[$prop] = $value
+    }}
+}}
+$view.Close()
+$db.Close()
+if (-not $metadata['ProductVersion']) {{
+    Write-Error "ProductVersion not found"
+    exit 1
+}}
+@($metadata['ProductName'], $metadata['ProductVersion'], $metadata['ProductCode']) -join "`n"
+"""
+            result = subprocess.run(
+                ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_script],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            lines = result.stdout.strip().split("\n")
+            product_name = lines[0] if len(lines) > 0 else ""
+            product_version = lines[1] if len(lines) > 1 else ""
+            # ProductCode may be empty string if not found - convert to None
+            product_code_raw = lines[2] if len(lines) > 2 else ""
+            product_code = product_code_raw if product_code_raw else None
+
+            if not product_version:
+                raise PackagingError("ProductVersion not found in MSI Property table.")
+
+            logger.verbose(
+                "MSI",
+                f"Success! Extracted: {product_name} {product_version} "
+                "(via PowerShell COM)",
+            )
+            return MSIMetadata(
+                product_name=product_name or "",
+                product_version=product_version,
+                product_code=product_code,
+            )
+        except subprocess.CalledProcessError as err:
+            logger.debug("MSI", "PowerShell COM failed, trying next backend...")
+            raise PackagingError(f"PowerShell MSI query failed: {err}") from err
+        except subprocess.TimeoutExpired:
+            logger.debug("MSI", "PowerShell COM timed out, trying next backend...")
+            raise PackagingError("PowerShell MSI query timed out") from None
+
+    # Try msiinfo on Linux/macOS
+    msiinfo = shutil.which("msiinfo")
+    if msiinfo:
+        logger.debug("MSI", "Trying backend: msiinfo (msitools)...")
+        try:
+            # msiinfo export <package> Property -> stdout (tab-separated)
+            result = subprocess.run(
+                [msiinfo, "export", str(p), "Property"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            metadata = {"ProductName": "", "ProductVersion": "", "ProductCode": None}
+            for line in result.stdout.splitlines():
+                parts = line.strip().split("\t", 1)  # "Property<TAB>Value"
+                if len(parts) == 2:
+                    prop_name = parts[0]
+                    prop_value = parts[1]
+                    if prop_name in metadata:
+                        metadata[prop_name] = prop_value
+
+            if not metadata["ProductVersion"]:
+                raise PackagingError("ProductVersion not found in MSI Property output.")
+
+            logger.verbose(
+                "MSI",
+                f"Success! Extracted: {metadata['ProductName']} "
+                f"{metadata['ProductVersion']} (via msiinfo)",
+            )
+            return MSIMetadata(
+                product_name=metadata["ProductName"] or "",
+                product_version=metadata["ProductVersion"],
+                product_code=metadata["ProductCode"],
+            )
+        except subprocess.CalledProcessError as err:
+            logger.debug("MSI", "msiinfo failed")
+            raise PackagingError(f"msiinfo failed: {err}") from err
+
+    logger.debug("MSI", "No MSI extraction backend available on this system")
+    raise NotImplementedError(
+        "MSI metadata extraction is not available on this host. "
         "On Windows, ensure PowerShell is available. "
         "On Linux/macOS, install 'msitools'."
     )

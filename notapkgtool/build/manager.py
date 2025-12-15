@@ -46,10 +46,18 @@ import shutil
 from typing import Any
 
 from notapkgtool.config import load_effective_config
+from notapkgtool.detection import (
+    DetectionConfig,
+    generate_detection_script,
+    sanitize_filename,
+)
 from notapkgtool.exceptions import ConfigError, PackagingError
 from notapkgtool.psadt import get_psadt_release
 from notapkgtool.results import BuildResult
-from notapkgtool.versioning.msi import version_from_msi_product_version
+from notapkgtool.versioning.msi import (
+    extract_msi_metadata,
+    version_from_msi_product_version,
+)
 
 
 def _get_installer_version(
@@ -194,13 +202,21 @@ def _find_installer_file(downloads_dir: Path, config: dict[str, Any]) -> Path:
 def _create_build_directory(base_dir: Path, app_id: str, version: str) -> Path:
     """Create the build directory structure.
 
+    Creates the directory structure:
+        {base_dir}/{app_id}/{version}/packagefiles/
+
+    The packagefiles/ subdirectory contains the PSADT files that will be
+    packaged into the .intunewin file. Detection scripts are saved as
+    siblings to packagefiles/ to prevent them from being included in the
+    package.
+
     Args:
         base_dir: Base builds directory.
         app_id: Application ID.
         version: Application version.
 
     Returns:
-        Path to the created build directory.
+        Path to the packagefiles subdirectory (build_dir/packagefiles/).
 
     Raises:
         OSError: If directory creation fails.
@@ -208,19 +224,20 @@ def _create_build_directory(base_dir: Path, app_id: str, version: str) -> Path:
     from notapkgtool.logging import get_global_logger
 
     logger = get_global_logger()
-    build_dir = base_dir / app_id / version
+    version_dir = base_dir / app_id / version
+    packagefiles_dir = version_dir / "packagefiles"
 
-    if build_dir.exists():
-        logger.verbose("BUILD", f"Build directory exists: {build_dir}")
+    if version_dir.exists():
+        logger.verbose("BUILD", f"Build directory exists: {version_dir}")
         logger.verbose("BUILD", "Removing existing build...")
-        shutil.rmtree(build_dir)
+        shutil.rmtree(version_dir)
 
-    # Create the build directory (template will provide subdirectories)
-    build_dir.mkdir(parents=True, exist_ok=True)
+    # Create the packagefiles subdirectory
+    packagefiles_dir.mkdir(parents=True, exist_ok=True)
 
-    logger.verbose("BUILD", f"Created build directory: {build_dir}")
+    logger.verbose("BUILD", f"Created build directory: {packagefiles_dir}")
 
-    return build_dir
+    return packagefiles_dir
 
 
 def _copy_psadt_pristine(psadt_cache_dir: Path, build_dir: Path) -> None:
@@ -237,7 +254,8 @@ def _copy_psadt_pristine(psadt_cache_dir: Path, build_dir: Path) -> None:
     Args:
         psadt_cache_dir: Path to cached PSADT version directory (root
             of Template_v4 extraction).
-        build_dir: Build directory where PSADT should be copied.
+        build_dir: Build directory (packagefiles subdirectory) where PSADT
+            should be copied.
 
     Raises:
         PackagingError: If PSADT cache directory or required files don't exist.
@@ -270,7 +288,7 @@ def _copy_installer(installer_file: Path, build_dir: Path) -> None:
 
     Args:
         installer_file: Path to the installer file.
-        build_dir: Build directory.
+        build_dir: Build directory (packagefiles subdirectory).
 
     Raises:
         OSError: If copy operation fails.
@@ -296,7 +314,8 @@ def _apply_branding(config: dict[str, Any], build_dir: Path) -> None:
 
     Args:
         config: Merged configuration with brand_pack settings.
-        build_dir: Build directory containing PSAppDeployToolkit/.
+        build_dir: Build directory (packagefiles subdirectory) containing
+            PSAppDeployToolkit/.
 
     Raises:
         FileNotFoundError: If branding files don't exist.
@@ -352,6 +371,120 @@ def _apply_branding(config: dict[str, Any], build_dir: Path) -> None:
         logger.verbose("BUILD", f"  {source_file.name} -> {target_with_ext.name}")
 
     logger.verbose("BUILD", "[OK] Branding applied")
+
+
+def _generate_detection_script(
+    installer_file: Path,
+    config: dict[str, Any],
+    version: str,
+    app_id: str,
+    build_dir: Path,
+    verbose: bool = False,
+    debug: bool = False,
+) -> Path:
+    """Generate detection script for Intune Win32 app.
+
+    Extracts metadata from installer (MSI ProductName for MSIs, recipe
+    AppName for EXEs), generates PowerShell detection script, and saves
+    it as a sibling to the packagefiles directory.
+
+    Args:
+        installer_file: Path to the installer file.
+        config: Recipe configuration.
+        version: Extracted version string.
+        app_id: Application ID.
+        build_dir: Build directory (packagefiles subdirectory).
+        verbose: Show verbose output. Default is False.
+        debug: Show debug output. Default is False.
+
+    Returns:
+        Path to the generated detection script.
+
+    Raises:
+        PackagingError: If detection script generation fails.
+        ConfigError: If required configuration is missing.
+    """
+    from notapkgtool.logging import get_global_logger
+
+    logger = get_global_logger()
+    app = config["apps"][0]
+
+    # Get detection configuration (merged defaults + app-specific)
+    defaults_detection = config.get("defaults", {}).get("detection", {})
+    app_detection = app.get("detection", {})
+    detection_config_dict = {**defaults_detection, **app_detection}
+
+    # Determine AppName for detection
+    # For MSI: Use ProductName from MSI (fallback to recipe AppName)
+    # For EXE: Use recipe AppName (from psadt.app_vars.AppName or apps[0].name)
+    app_name_for_detection = None
+    installer_ext = installer_file.suffix.lower()
+
+    if installer_ext == ".msi":
+        try:
+            msi_metadata = extract_msi_metadata(
+                installer_file, verbose=verbose, debug=debug
+            )
+            # Use MSI ProductName if available, otherwise fall back to recipe
+            if msi_metadata.product_name:
+                app_name_for_detection = msi_metadata.product_name
+                logger.verbose(
+                    "DETECTION",
+                    f"Using MSI ProductName for detection: {app_name_for_detection}",
+                )
+        except Exception as err:
+            logger.verbose(
+                "DETECTION",
+                f"Could not extract MSI ProductName, using recipe AppName: {err}",
+            )
+
+    # Fallback to recipe AppName (from psadt.app_vars.AppName or apps[0].name)
+    if not app_name_for_detection:
+        psadt_app_vars = app.get("psadt", {}).get("app_vars", {})
+        app_name_for_detection = psadt_app_vars.get("AppName") or app.get("name", "")
+        logger.verbose(
+            "DETECTION",
+            f"Using recipe AppName for detection: {app_name_for_detection}",
+        )
+
+    if not app_name_for_detection:
+        raise ConfigError(
+            "Cannot determine AppName for detection script. "
+            "For MSI installers, ensure ProductName is in the MSI. "
+            "For EXE installers, set psadt.app_vars.AppName in the recipe."
+        )
+
+    # Create DetectionConfig from merged configuration
+    detection_config_obj = DetectionConfig(
+        app_name=app_name_for_detection,
+        version=version,
+        log_format=detection_config_dict.get("log_format", "cmtrace"),
+        log_level=detection_config_dict.get("log_level", "INFO"),
+        log_rotation_mb=detection_config_dict.get("log_rotation_mb", 10),
+        exact_match=detection_config_dict.get("exact_match", True),
+        app_id=app_id,
+    )
+
+    # Sanitize AppName for filename
+    sanitized_app_name = sanitize_filename(app_name_for_detection, app_id)
+    sanitized_version = version.replace(
+        " ", "-"
+    )  # Versions shouldn't have spaces, but be safe
+
+    # Build detection script filename: {AppName}-{Version}-Detection.ps1
+    detection_filename = f"{sanitized_app_name}-{sanitized_version}-Detection.ps1"
+
+    # Save as sibling to packagefiles/ (build_dir.parent is the version directory)
+    detection_script_path = build_dir.parent / detection_filename
+
+    logger.verbose("DETECTION", f"Generating detection script: {detection_filename}")
+    logger.verbose("DETECTION", f"AppName: {app_name_for_detection}")
+    logger.verbose("DETECTION", f"Version: {version}")
+
+    # Generate the script
+    generate_detection_script(detection_config_obj, detection_script_path)
+
+    return detection_script_path
 
 
 def build_package(
@@ -489,8 +622,34 @@ def build_package(
     _copy_installer(installer_file, build_dir)
 
     # Apply branding
-    logger.step(6, 6, "Applying branding...")
+    logger.step(6, 7, "Applying branding...")
     _apply_branding(config, build_dir)
+
+    # Generate detection script
+    logger.step(7, 7, "Generating detection script...")
+    detection_script_path = None
+    try:
+        detection_script_path = _generate_detection_script(
+            installer_file, config, version, app_id, build_dir, verbose, debug
+        )
+        logger.verbose("BUILD", "[OK] Detection script generated")
+    except Exception as err:
+        detection_config = config.get("defaults", {}).get("detection", {}) or app.get(
+            "detection", {}
+        )
+        fail_on_error = detection_config.get("fail_on_error", True)
+
+        if fail_on_error:
+            logger.error("BUILD", f"Detection script generation failed: {err}")
+            raise PackagingError(
+                f"Detection script generation failed (fail_on_error=true): {err}"
+            ) from err
+        else:
+            logger.verbose(
+                "BUILD",
+                f"Detection script generation failed (non-fatal): {err}",
+            )
+            logger.verbose("BUILD", "Continuing build without detection script...")
 
     logger.verbose("BUILD", f"[OK] Build complete: {build_dir}")
 
@@ -501,4 +660,5 @@ def build_package(
         build_dir=build_dir,
         psadt_version=psadt_version,
         status="success",
+        detection_script_path=detection_script_path,
     )

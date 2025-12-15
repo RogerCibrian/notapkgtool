@@ -80,9 +80,12 @@ class BuildResult:
         app_id: Unique application identifier.
         app_name: Application display name.
         version: Application version.
-        build_dir: Path to the build directory.
+        build_dir: Path to the build directory (packagefiles subdirectory).
         psadt_version: PSADT version used for the build.
         status: Build status (typically "success").
+        detection_script_path: Path to the generated detection script, if
+            created. None if detection script generation was skipped or failed
+            (and fail_on_error was False).
     """
 
     app_id: str
@@ -91,6 +94,7 @@ class BuildResult:
     build_dir: Path
     psadt_version: str
     status: str
+    detection_script_path: Path | None = None
 
 
 @dataclass(frozen=True)

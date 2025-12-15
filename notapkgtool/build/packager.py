@@ -282,9 +282,13 @@ def create_intunewin(
     if not build_dir.exists():
         raise PackagingError(f"Build directory not found: {build_dir}")
 
-    # Extract app_id and version from directory structure (app_id/version/)
-    version = build_dir.name
-    app_id = build_dir.parent.name
+    # Extract app_id and version from directory structure
+    # Structure: {base_dir}/{app_id}/{version}/packagefiles/
+    # build_dir is packagefiles/, so:
+    # - version = build_dir.parent.name
+    # - app_id = build_dir.parent.parent.name
+    version = build_dir.parent.name
+    app_id = build_dir.parent.parent.name
 
     logger.verbose("PACKAGE", f"Packaging {app_id} v{version}")
 

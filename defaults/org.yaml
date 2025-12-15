@@ -70,6 +70,24 @@ defaults:
     # Supported placeholders: {app_id}, {version}, {vendor}
     naming: "{app_id}/{version}"
 
+  detection:
+    # Detection script generation settings for Intune Win32 apps
+    # Log format (currently only "cmtrace" supported)
+    log_format: "cmtrace"
+    
+    # Minimum log level (INFO, WARNING, ERROR, DEBUG)
+    log_level: "INFO"
+    
+    # Maximum log file size in MB before rotation
+    log_rotation_mb: 3
+    
+    # If true, version must match exactly. If false, minimum version comparison (installed >= expected)
+    exact_match: true
+    
+    # If true, detection script generation failures are fatal (build fails).
+    # If false, failures are non-fatal (build continues without detection script).
+    fail_on_error: true
+
   # Future configuration sections (not yet implemented):
   # - package: Intune package metadata and requirements
   # - assignments: Deployment waves and ring management

@@ -30,6 +30,7 @@ This roadmap is a living document showing potential future directions for NAPT. 
 | Enhanced CLI Help Menu | 💡 Idea | User-Facing | Low | Medium |
 | PowerShell Validation | 💡 Idea | Code Quality | High | High |
 | Recipe Linting & Best Practices | 💡 Idea | Code Quality | High | Medium |
+| One App Per Recipe File | 💡 Idea | Technical | Medium | Medium |
 | EXE Version Extraction | 💡 Idea | Technical | High | Medium |
 | Parallel Package Building | 💡 Idea | Technical | Medium | Medium |
 | IntuneWinAppUtil Version Tracking | 💡 Idea | Technical | Low | Low |
@@ -38,8 +39,8 @@ This roadmap is a living document showing potential future directions for NAPT. 
 
 - 📋 **Ready**: 0
 - 🔬 **Investigating**: 2
-- 💡 **Ideas**: 8
-- **Total**: 10 features
+- 💡 **Ideas**: 9
+- **Total**: 11 features
 
 ---
 
@@ -188,6 +189,23 @@ This roadmap is a living document showing potential future directions for NAPT. 
 - Validates PSADT function names exist in v4
 - Warns on deprecated patterns or old v3 functions
 - Suggests improvements (e.g., use Uninstall-ADTApplication)
+
+#### One App Per Recipe File
+**Status**: 💡 Idea  
+**Complexity**: Medium (1-2 days)  
+**Value**: Medium
+
+**Description**: Change recipe schema to require exactly one app per recipe file (currently supports multiple but only processes first). Update validation, schema, and documentation to reflect single-app requirement.
+
+**Benefits**:
+
+- Simpler recipe structure (one file = one app)
+- Clearer semantics (no confusion about which app is processed)
+- Simplifies code that currently uses `apps[0]`
+- Better organization (one recipe file per application)
+- Easier to reason about and maintain
+
+**Related**: Current implementation already processes only `apps[0]`, this would make schema match behavior
 
 ### Technical Enhancements
 
