@@ -228,44 +228,53 @@ function Initialize-LogFile {
     
     # Try primary location first
     try {
-        if (-not (Test-Path -Path $$PrimaryLogDir)) {
-            New-Item -Path $$PrimaryLogDir -ItemType Directory -Force | Out-Null
+        # Ensure parent directory exists (fails with -ErrorAction Stop if no perms)
+        $$PrimaryLogParent = Split-Path -Path $$PrimaryLogFile -Parent
+        if (-not (Test-Path -Path $$PrimaryLogParent)) {
+            New-Item -Path $$PrimaryLogParent -ItemType Directory -Force -ErrorAction Stop | Out-Null
         }
+        
+        # Handle log rotation if needed
         if (Test-Path -Path $$PrimaryLogFile) {
             $$LogSize = (Get-Item $$PrimaryLogFile).Length
-            $$MaxSize = ${log_rotation_mb} * 1024 * 1024  # Convert MB to bytes
+            $$MaxSize = ${log_rotation_mb} * 1024 * 1024
             if ($$LogSize -ge $$MaxSize) {
                 $$OldLogFile = "$$PrimaryLogFile.old"
-                if (Test-Path $$OldLogFile) {
-                    Remove-Item $$OldLogFile -Force
-                }
-                Move-Item -Path $$PrimaryLogFile -Destination $$OldLogFile -Force
+                if (Test-Path $$OldLogFile) { Remove-Item $$OldLogFile -Force -ErrorAction Stop }
+                Move-Item -Path $$PrimaryLogFile -Destination $$OldLogFile -Force -ErrorAction Stop
             }
         }
+        
+        # Verify write access (appends empty string - fails if no write permission)
+        [System.IO.File]::AppendAllText($$PrimaryLogFile, "")
         $$script:LogFilePath = $$PrimaryLogFile
         return
     } catch {
-        # Fall through to fallback
+        # Fall through to fallback (directory creation, rotation, or write failed)
     }
     
     # Fallback location
     try {
-        if (-not (Test-Path -Path $$FallbackLogDir)) {
-            New-Item -Path $$FallbackLogDir -ItemType Directory -Force | Out-Null
+        $$FallbackLogParent = Split-Path -Path $$FallbackLogFile -Parent
+        if (-not (Test-Path -Path $$FallbackLogParent)) {
+            New-Item -Path $$FallbackLogParent -ItemType Directory -Force -ErrorAction Stop | Out-Null
         }
+        
         if (Test-Path -Path $$FallbackLogFile) {
             $$LogSize = (Get-Item $$FallbackLogFile).Length
             $$MaxSize = ${log_rotation_mb} * 1024 * 1024
             if ($$LogSize -ge $$MaxSize) {
                 $$OldLogFile = "$$FallbackLogFile.old"
-                if (Test-Path $$OldLogFile) {
-                    Remove-Item $$OldLogFile -Force
-                }
-                Move-Item -Path $$FallbackLogFile -Destination $$OldLogFile -Force
+                if (Test-Path $$OldLogFile) { Remove-Item $$OldLogFile -Force -ErrorAction Stop }
+                Move-Item -Path $$FallbackLogFile -Destination $$OldLogFile -Force -ErrorAction Stop
             }
         }
+        
+        [System.IO.File]::AppendAllText($$FallbackLogFile, "")
         $$script:LogFilePath = $$FallbackLogFile
     } catch {
+        # All log locations failed - log warning to stderr and continue
+        Write-Warning "NAPT Detection: Failed to initialize logging (primary and fallback locations unavailable). Detection will continue but no log file will be created."
         $$script:LogFilePath = $$null
     }
 }
@@ -310,8 +319,8 @@ Initialize-LogFile
 $$SanitizedAppName = $$AppName -replace '[^a-zA-Z0-9]', '-' -replace '-+', '-' -replace '^-|-$', ''
 $$script:ComponentName = "$$SanitizedAppName-$$ExpectedVersion"
 
-Write-CMTraceLog -Message "[Initialization] Running as: $$($$script:CurrentIdentity.Name)" -Type "INFO"
-Write-CMTraceLog -Message "[Initialization] Starting detection for: $$AppName (Expected: $$ExpectedVersion)" -Type "INFO"
+Write-CMTraceLog -Message "[Initialization] Detection script running as user: $$($$script:CurrentIdentity.Name)" -Type "INFO"
+Write-CMTraceLog -Message "[Initialization] Starting detection for: $$AppName (Expected: $$ExpectedVersion, Mode: $$(if ($$ExactMatch) { 'Exact Match' } else { 'Minimum Version' }))" -Type "INFO"
 
 # Detect if PowerShell is running as 64-bit process
 $$Is64BitProcess = [Environment]::Is64BitProcess
@@ -362,18 +371,18 @@ foreach ($$RegPath in $$RegPaths) {
                 $$DisplayName = $$DisplayNameValue
                 $$InstalledVersion = $$VersionValue
                 
-                Write-CMTraceLog -Message "[Detection] Found matching DisplayName: $$DisplayName (Version: $$InstalledVersion)" -Type "INFO"
+                Write-CMTraceLog -Message "[Detection] Found matching DisplayName in registry path '$$RegPath': $$DisplayName (Installed Version: $$InstalledVersion)" -Type "INFO"
                 
                 if ($$InstalledVersion) {
                     if (Compare-Version -InstalledVersion $$InstalledVersion -ExpectedVersion $$ExpectedVersion -ExactMatch $$ExactMatch) {
-                        Write-CMTraceLog -Message "[Detection] Version check passed: $$InstalledVersion matches requirement" -Type "INFO"
+                        Write-CMTraceLog -Message "[Detection] Version check PASSED: Installed version $$InstalledVersion $$(if ($$ExactMatch) { 'exactly matches' } else { 'meets or exceeds' }) expected version $$ExpectedVersion" -Type "INFO"
                         $$Found = $$true
                         break
                     } else {
-                        Write-CMTraceLog -Message "[Detection] Version check failed: $$InstalledVersion does not match requirement" -Type "INFO"
+                        Write-CMTraceLog -Message "[Detection] Version check FAILED: Installed version $$InstalledVersion $$(if ($$ExactMatch) { 'does not exactly match' } else { 'is less than' }) expected version $$ExpectedVersion" -Type "INFO"
                     }
                 } else {
-                    Write-CMTraceLog -Message "[Detection] No version found for $$DisplayName" -Type "WARNING"
+                    Write-CMTraceLog -Message "[Detection] DisplayName '$$DisplayName' found in registry path '$$RegPath' but no DisplayVersion value is present" -Type "WARNING"
                 }
             }
         }
@@ -386,11 +395,11 @@ foreach ($$RegPath in $$RegPaths) {
 }
 
 if ($$Found) {
-    Write-CMTraceLog -Message "[Result] Detection SUCCESS: $$AppName is installed with required version" -Type "INFO"
+    Write-CMTraceLog -Message "[Result] Detection SUCCESS: $$AppName (version $$InstalledVersion) is installed and meets version requirements (Expected: $$ExpectedVersion, Match Type: $$(if ($$ExactMatch) { 'Exact' } else { 'Minimum' }))" -Type "INFO"
     Write-Output "Installed"
     exit 0
 } else {
-    Write-CMTraceLog -Message "[Result] Detection FAILED: $$AppName not found or version mismatch" -Type "INFO"
+    Write-CMTraceLog -Message "[Result] Detection FAILED: $$AppName not found in registry paths or installed version does not meet requirements (Expected: $$ExpectedVersion, Match Type: $$(if ($$ExactMatch) { 'Exact' } else { 'Minimum' }))" -Type "INFO"
     exit 1
 }
 """
