@@ -19,11 +19,16 @@ deployments. Scripts check Windows uninstall registry keys for installed
 software and version information using CMTrace-formatted logging.
 
 Detection Logic:
-    - Checks HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall
+    - Checks HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall (always)
+    - Checks HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall (always)
     - Checks HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall
-    - Checks HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall
+        (only on 64-bit OS with 64-bit PowerShell process)
+    - Checks HKCU:\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall
+        (only on 64-bit OS with 64-bit PowerShell process)
     - Matches by DisplayName (using AppName from recipe or MSI ProductName)
     - Compares version (exact or minimum version match based on config)
+    - Provides verbose logging with detailed detection results, registry paths,
+        installed vs expected versions, and match type information
 
 Logging:
     - Primary (System): C:\\ProgramData\\Microsoft\\IntuneManagementExtension\\Logs\\NAPTDetections.log
@@ -33,6 +38,9 @@ Logging:
     - Log rotation: 2-file rotation (.log and .log.old), configurable max size
         (default: 3MB)
     - Format: CMTrace format for compatibility with Intune diagnostics
+    - Features: Write permission testing with automatic fallback to alternate
+        locations, verbose component-based logging with dynamic component names
+        based on app name and version, detailed detection workflow logging
 
 Example:
     Generate detection script:
@@ -410,7 +418,9 @@ def generate_detection_script(config: DetectionConfig, output_path: Path) -> Pat
 
     Creates a PowerShell script that checks Windows uninstall registry keys
     for software installation and version. The script uses CMTrace-formatted
-    logging and includes log rotation logic.
+    logging with verbose output, includes log rotation logic, and performs
+    write permission testing with automatic fallback to alternate log locations
+    if primary locations are unavailable.
 
     Args:
         config: Detection configuration (app name, version, logging settings).
@@ -468,10 +478,8 @@ def generate_detection_script(config: DetectionConfig, output_path: Path) -> Pat
         output_path.write_bytes(script_bytes)
         logger.verbose("DETECTION", f"Detection script written to: {output_path}")
     except OSError as err:
-        logger.error(
-            "DETECTION",
-            f"Failed to write detection script to {output_path}: {err}",
-        )
-        raise
+        raise OSError(
+            f"Failed to write detection script to {output_path}: {err}"
+        ) from err
 
     return output_path

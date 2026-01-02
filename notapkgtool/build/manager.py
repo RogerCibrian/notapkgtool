@@ -91,7 +91,6 @@ def _get_installer_version(
     version_config = source.get("version", {})
     version_type = version_config.get("type", "")
 
-    logger.verbose("BUILD", f"Extracting version from: {installer_file.name}")
     logger.verbose("BUILD", f"Version type: {version_type}")
 
     # If no version type specified, try to use version from state
@@ -118,6 +117,9 @@ def _get_installer_version(
             )
 
     if version_type == "msi":
+        logger.verbose(
+            "BUILD", f"Extracting version from installer: {installer_file.name}"
+        )
         try:
             discovered = version_from_msi_product_version(installer_file)
             logger.verbose("BUILD", f"Extracted version: {discovered.version}")
@@ -132,14 +134,21 @@ def _get_installer_version(
         )
 
 
-def _find_installer_file(downloads_dir: Path, config: dict[str, Any]) -> Path:
+def _find_installer_file(
+    downloads_dir: Path, config: dict[str, Any], state_file: Path | None = None
+) -> Path:
     """Find the installer file in the downloads directory.
 
-    Uses the URL from the recipe to determine the expected filename.
+    Uses multiple strategies to locate the installer:
+    1. URL from recipe (for url_download strategy)
+    2. URL from state file (for web_scrape, api_github, api_json strategies)
+    3. Filename matching by app name/id
+    4. Most recent installer (last resort)
 
     Args:
         downloads_dir: Downloads directory to search.
         config: Recipe configuration.
+        state_file: Optional state file to check for cached URL.
 
     Returns:
         Path to the installer file.
@@ -148,23 +157,51 @@ def _find_installer_file(downloads_dir: Path, config: dict[str, Any]) -> Path:
         PackagingError: If installer file cannot be found.
     """
     from notapkgtool.logging import get_global_logger
+    from urllib.parse import urlparse
 
     logger = get_global_logger()
     app = config["apps"][0]
+    app_id = app.get("id", "")
     source = app.get("source", {})
     url = source.get("url", "")
 
-    # Extract filename from URL
+    # Strategy 1: Extract filename from recipe URL (for url_download)
     if url:
-        filename = url.split("/")[-1]
-        installer_path = downloads_dir / filename
+        parsed = urlparse(url)
+        filename = Path(parsed.path).name
+        if filename:
+            installer_path = downloads_dir / filename
 
-        if installer_path.exists():
-            logger.verbose("BUILD", f"Found installer: {installer_path}")
-            return installer_path
+            if installer_path.exists():
+                logger.verbose(
+                    "BUILD", f"Found installer from recipe URL: {installer_path}"
+                )
+                return installer_path
 
-    # Fallback: Search for installer matching app name/id or use most recent
-    app_id = app.get("id", "")
+    # Strategy 2: Extract filename from state file URL (for web_scrape, etc.)
+    if state_file and state_file.exists():
+        try:
+            from notapkgtool.state import load_state
+
+            state = load_state(state_file)
+            app_state = state.get("apps", {}).get(app_id, {})
+            state_url = app_state.get("url", "")
+
+            if state_url:
+                parsed = urlparse(state_url)
+                filename = Path(parsed.path).name
+                if filename:
+                    installer_path = downloads_dir / filename
+
+                    if installer_path.exists():
+                        logger.verbose(
+                            "BUILD", f"Found installer from state URL: {installer_path}"
+                        )
+                        return installer_path
+        except Exception as err:
+            logger.warning("BUILD", f"Could not check state file: {err}")
+
+    # Strategy 3: Fallback - Search for installer matching app name/id
     app_name = app.get("name", "").lower()
 
     # Try to find installer matching app_id or app_name in filename
@@ -184,18 +221,11 @@ def _find_installer_file(downloads_dir: Path, config: dict[str, Any]) -> Path:
             logger.verbose("BUILD", f"Found installer matching app: {installer_path}")
             return installer_path
 
-    # Ultimate fallback: Most recent installer of any type
-    all_installers = list(downloads_dir.glob("*.msi")) + list(
-        downloads_dir.glob("*.exe")
-    )
-    if all_installers:
-        installer_path = max(all_installers, key=lambda p: p.stat().st_mtime)
-        logger.verbose("BUILD", f"Found most recent installer: {installer_path}")
-        return installer_path
-
+    # No installer found after trying all strategies
     raise PackagingError(
-        f"No installer found in {downloads_dir}. "
-        f"Run 'napt discover' first to download the installer."
+        f"Cannot locate installer file for {app_id} in {downloads_dir}. "
+        f"Tried locating via recipe URL, state file URL, and filename matching, "
+        f"but no matching installer found. Verify the installer file exists in {downloads_dir}."
     )
 
 
@@ -433,7 +463,7 @@ def _generate_detection_script(
                     f"Using MSI ProductName for detection: {app_name_for_detection}",
                 )
         except Exception as err:
-            logger.verbose(
+            logger.warning(
                 "DETECTION",
                 f"Could not extract MSI ProductName, using recipe AppName: {err}",
             )
@@ -507,6 +537,7 @@ def build_package(
     7. Generates Invoke-AppDeployToolkit.ps1 from template
     8. Copies installer to Files/
     9. Applies custom branding
+    10. Generates detection script for Intune Win32 app deployment
 
     Args:
         recipe_path: Path to the recipe YAML file.
@@ -528,10 +559,14 @@ def build_package(
                 {output_dir}/{app_id}/{version}/.
             - psadt_version (str): PSADT version used for the build (e.g., "4.1.7").
             - status (str): Build status, typically "success" for completed builds.
+            - detection_script_path (Path | None): Path to the generated detection script,
+                or None if detection script generation was skipped or failed (non-fatal).
 
     Raises:
         FileNotFoundError: If recipe or installer doesn't exist.
-        RuntimeError: If build process fails.
+        PackagingError: If build process fails or detection script generation fails
+            (when fail_on_error=true in detection config).
+        ConfigError: If required configuration is missing.
 
     Example:
         Basic build:
@@ -553,6 +588,10 @@ def build_package(
         Version extracted from installer file, not state cache. Overwrites
         existing build directory if it exists. PSADT files are copied pristine
         from cache. Invoke-AppDeployToolkit.ps1 is generated (not copied).
+        Detection script is generated as a sibling to the packagefiles directory
+        (not included in .intunewin package - must be uploaded separately to Intune).
+        Detection script generation can be configured as non-fatal via
+        detection.fail_on_error setting in recipe configuration.
     """
     from notapkgtool.logging import get_global_logger
 
@@ -576,11 +615,11 @@ def build_package(
 
     # Find installer file
     logger.step(2, 6, "Finding installer...")
-    installer_file = _find_installer_file(downloads_dir, config)
+    state_file = Path("state/versions.json")  # Default state file location
+    installer_file = _find_installer_file(downloads_dir, config, state_file)
 
     # Extract version from installer or state (filesystem + state are truth)
-    logger.step(3, 6, "Extracting version from installer...")
-    state_file = Path("state/versions.json")  # Default state file location
+    logger.step(3, 6, "Determining version...")
     version = _get_installer_version(installer_file, config, state_file)
 
     logger.verbose("BUILD", f"Building {app_name} v{version}")
@@ -640,12 +679,11 @@ def build_package(
         fail_on_error = detection_config.get("fail_on_error", True)
 
         if fail_on_error:
-            logger.error("BUILD", f"Detection script generation failed: {err}")
             raise PackagingError(
                 f"Detection script generation failed (fail_on_error=true): {err}"
             ) from err
         else:
-            logger.verbose(
+            logger.warning(
                 "BUILD",
                 f"Detection script generation failed (non-fatal): {err}",
             )

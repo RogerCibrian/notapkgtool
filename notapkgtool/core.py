@@ -225,7 +225,7 @@ def discover_recipe(
                 "apps": {},
             }
         except Exception as err:
-            logger.verbose("STATE", f"Warning: Failed to load state: {err}")
+            logger.warning("STATE", f"Failed to load state: {err}")
             logger.verbose("STATE", "Continuing without state tracking")
             state = None
 
@@ -393,7 +393,7 @@ def discover_recipe(
             save_state(state, state_file)
             logger.verbose("STATE", f"Updated state file: {state_file}")
         except Exception as err:
-            logger.verbose("STATE", f"Warning: Failed to save state: {err}")
+            logger.warning("STATE", f"Failed to save state: {err}")
 
     # 6. Return results
     return DiscoverResult(
