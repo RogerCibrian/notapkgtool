@@ -63,24 +63,25 @@ from notapkgtool.versioning.msi import (
 def _get_installer_version(
     installer_file: Path, config: dict[str, Any], state_file: Path | None = None
 ) -> str:
-    """Extract version from installer file or state.
+    """Get version for the installer file.
 
-    Uses the version extraction method specified in the recipe's
-    source configuration. If no version.type is specified (e.g., for
-    api_github strategy), attempts to read from state file.
+    Priority:
+        1. If version.type is explicitly set to "msi", extract from MSI
+        2. If no version.type but installer is MSI, auto-detect and extract
+        3. Fall back to known_version from state file
+        4. If all else fails, raise an error
 
     Args:
         installer_file: Path to the installer file.
         config: Recipe configuration.
-        state_file: Path to state file for fallback version
-            lookup.
+        state_file: Path to state file for fallback version lookup.
 
     Returns:
         Extracted version string.
 
     Raises:
-        PackagingError: If version extraction fails or version not found.
-        ConfigError: If version type is unsupported.
+        PackagingError: If MSI version extraction fails (when explicitly requested).
+        ConfigError: If version cannot be determined from any source.
     """
     from notapkgtool.logging import get_global_logger
 
@@ -93,29 +94,7 @@ def _get_installer_version(
 
     logger.verbose("BUILD", f"Version type: {version_type}")
 
-    # If no version type specified, try to use version from state
-    if not version_type:
-        if state_file and state_file.exists():
-            from notapkgtool.state import load_state
-
-            logger.verbose("BUILD", "No version type specified, using state file")
-            state = load_state(state_file)
-            app_state = state.get("apps", {}).get(app_id, {})
-            known_version = app_state.get("known_version")
-
-            if known_version:
-                logger.verbose("BUILD", f"Using version from state: {known_version}")
-                return known_version
-            else:
-                raise ConfigError(
-                    f"No version.type specified and no known_version in state for {app_id}. "
-                    f"Run 'napt discover' first or add version.type to recipe."
-                )
-        else:
-            raise ConfigError(
-                "No version.type specified in recipe. Add source.version.type or ensure state file exists."
-            )
-
+    # Priority 1: Explicit version.type in recipe
     if version_type == "msi":
         logger.verbose(
             "BUILD", f"Extracting version from installer: {installer_file.name}"
@@ -128,10 +107,47 @@ def _get_installer_version(
             raise PackagingError(
                 f"Failed to extract MSI version from {installer_file}: {err}"
             ) from err
-    else:
+
+    if version_type and version_type != "msi":
         raise ConfigError(
-            f"Unsupported version type for build: {version_type!r}. " f"Supported: msi"
+            f"Unsupported version type for build: {version_type!r}. Supported: msi"
         )
+
+    # Priority 2: Auto-detect MSI files (when no explicit version.type)
+    if not version_type and installer_file.suffix.lower() == ".msi":
+        logger.verbose(
+            "BUILD", f"Auto-detected MSI, extracting version: {installer_file.name}"
+        )
+        try:
+            discovered = version_from_msi_product_version(installer_file)
+            logger.verbose("BUILD", f"Extracted version: {discovered.version}")
+            return discovered.version
+        except Exception as err:
+            # MSI extraction failed, fall through to state file
+            logger.verbose(
+                "BUILD", f"MSI version extraction failed, trying state file: {err}"
+            )
+
+    # Priority 3: Fall back to state file
+    if state_file and state_file.exists():
+        from notapkgtool.state import load_state
+
+        logger.verbose("BUILD", "Using version from state file")
+        state = load_state(state_file)
+        app_state = state.get("apps", {}).get(app_id, {})
+        known_version = app_state.get("known_version")
+
+        if known_version:
+            logger.verbose("BUILD", f"Using version from state: {known_version}")
+            return known_version
+
+    # No version found - provide error
+    raise ConfigError(
+        f"Could not determine version for {app_id}. Either:\n"
+        f"  - Add version.type to recipe\n"
+        f"  - Use an MSI installer (auto-detected)\n"
+        f"  - Run 'napt discover' first to populate state"
+    )
 
 
 def _find_installer_file(
@@ -156,8 +172,9 @@ def _find_installer_file(
     Raises:
         PackagingError: If installer file cannot be found.
     """
-    from notapkgtool.logging import get_global_logger
     from urllib.parse import urlparse
+
+    from notapkgtool.logging import get_global_logger
 
     logger = get_global_logger()
     app = config["apps"][0]
@@ -501,8 +518,8 @@ def _generate_detection_script(
         " ", "-"
     )  # Versions shouldn't have spaces, but be safe
 
-    # Build detection script filename: {AppName}-{Version}-Detection.ps1
-    detection_filename = f"{sanitized_app_name}-{sanitized_version}-Detection.ps1"
+    # Build detection script filename: {AppName}_{Version}-Detection.ps1
+    detection_filename = f"{sanitized_app_name}_{sanitized_version}-Detection.ps1"
 
     # Save as sibling to packagefiles/ (build_dir.parent is the version directory)
     detection_script_path = build_dir.parent / detection_filename

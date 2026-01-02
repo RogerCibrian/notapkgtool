@@ -70,6 +70,18 @@ defaults:
     # Supported placeholders: {app_id}, {version}, {vendor}
     naming: "{app_id}/{version}"
 
+  detection:
+    # If true, version must match exactly. If false, installed >= required passes.
+    # Default: false (allows users to have newer versions without triggering reinstall)
+    exact_match: false
+
+    # If true, detection script generation failures abort the build.
+    # Default: true (detection scripts are required for Intune deployment)
+    fail_on_error: true
+
+    # Maximum log file size in MB before rotation 
+    log_rotation_mb: 3
+
   # Future configuration sections (not yet implemented):
   # - package: Intune package metadata and requirements
   # - assignments: Deployment waves and ring management

@@ -101,7 +101,7 @@ class DetectionConfig:
     log_format: LogFormat = "cmtrace"
     log_level: LogLevel = "INFO"
     log_rotation_mb: int = 3
-    exact_match: bool = True
+    exact_match: bool = False
     app_id: str = ""
 
 
