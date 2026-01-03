@@ -99,7 +99,7 @@ class TestFindInstallerFile:
 
         from notapkgtool.exceptions import PackagingError
 
-        with pytest.raises(PackagingError, match="No installer found"):
+        with pytest.raises(PackagingError, match="Cannot locate installer file"):
             _find_installer_file(downloads_dir, config)
 
 
@@ -114,7 +114,7 @@ class TestCreateBuildDirectory:
 
         result = _create_build_directory(base_dir, app_id, version)
 
-        expected = base_dir / "test-app" / "1.0.0"
+        expected = base_dir / "test-app" / "1.0.0" / "packagefiles"
         assert result == expected
         assert result.exists()
         # Note: Files/ and SupportFiles/ come from template, not created here
@@ -132,8 +132,9 @@ class TestCreateBuildDirectory:
 
         result = _create_build_directory(base_dir, app_id, version)
 
-        assert result == existing
-        assert not (result / "old_file.txt").exists()
+        expected = base_dir / "test-app" / "1.0.0" / "packagefiles"
+        assert result == expected
+        assert not (existing / "old_file.txt").exists()
 
 
 class TestCopyPSADTPristine:
