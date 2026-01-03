@@ -379,7 +379,7 @@ foreach ($$RegPath in $$RegPaths) {
                 $$DisplayName = $$DisplayNameValue
                 $$InstalledVersion = $$VersionValue
                 
-                Write-CMTraceLog -Message "[Detection] Found matching DisplayName in registry path '$$RegPath': $$DisplayName (Installed Version: $$InstalledVersion)" -Type "INFO"
+                Write-CMTraceLog -Message "[Detection] Found matching registry key: '$$($$Key.PSPath)' - DisplayName: $$DisplayName, Installed Version: $$InstalledVersion" -Type "INFO"
                 
                 if ($$InstalledVersion) {
                     if (Compare-Version -InstalledVersion $$InstalledVersion -ExpectedVersion $$ExpectedVersion -ExactMatch $$ExactMatch) {
@@ -390,7 +390,7 @@ foreach ($$RegPath in $$RegPaths) {
                         Write-CMTraceLog -Message "[Detection] Version check FAILED: Installed version $$InstalledVersion $$(if ($$ExactMatch) { 'does not exactly match' } else { 'is less than' }) expected version $$ExpectedVersion" -Type "INFO"
                     }
                 } else {
-                    Write-CMTraceLog -Message "[Detection] DisplayName '$$DisplayName' found in registry path '$$RegPath' but no DisplayVersion value is present" -Type "WARNING"
+                    Write-CMTraceLog -Message "[Detection] DisplayName '$$DisplayName' found in registry key '$$($$Key.PSPath)' but no DisplayVersion value is present" -Type "WARNING"
                 }
             }
         }
