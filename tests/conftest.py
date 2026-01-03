@@ -58,9 +58,6 @@ def sample_recipe_data() -> dict[str, Any]:
                 "source": {
                     "strategy": "url_download",
                     "url": "https://example.com/installer.msi",
-                    "version": {
-                        "type": "msi",
-                    },
                 },
                 "psadt": {
                     "app_vars": {

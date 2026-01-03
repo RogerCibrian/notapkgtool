@@ -38,7 +38,6 @@ class TestStrategyRegistry:
 
     def test_get_unknown_strategy_raises(self):
         """Test that unknown strategy name raises ValueError."""
-        from notapkgtool.exceptions import ConfigError
 
         with pytest.raises(ConfigError, match="Unknown discovery strategy"):
             get_strategy("nonexistent_strategy")
@@ -68,7 +67,6 @@ class TestUrlDownloadStrategy:
         app_config = {
             "source": {
                 "url": "https://example.com/installer.msi",
-                "version": {"type": "msi"},
             }
         }
 
@@ -104,62 +102,18 @@ class TestUrlDownloadStrategy:
 
     def test_discover_version_missing_url_raises(self, tmp_test_dir):
         """Test that missing URL raises ValueError."""
-        app_config = {
-            "source": {
-                "version": {"type": "msi"},
-            }
-        }
+        app_config = {"source": {}}
 
         strategy = UrlDownloadStrategy()
-
-        from notapkgtool.exceptions import ConfigError
 
         with pytest.raises(ConfigError, match="requires 'source.url'"):
             strategy.discover_version(app_config, tmp_test_dir)
-
-    def test_discover_version_missing_version_type_raises(self, tmp_test_dir):
-        """Test that missing version type raises ValueError."""
-        app_config = {
-            "source": {
-                "url": "https://example.com/installer.msi",
-            }
-        }
-
-        strategy = UrlDownloadStrategy()
-
-        from notapkgtool.exceptions import ConfigError
-
-        with pytest.raises(ConfigError, match="requires 'source.version.type'"):
-            strategy.discover_version(app_config, tmp_test_dir)
-
-    def test_discover_version_unsupported_type_raises(self, tmp_test_dir):
-        """Test that unsupported version type raises ValueError."""
-        app_config = {
-            "source": {
-                "url": "https://example.com/installer.msi",
-                "version": {"type": "unsupported_type"},
-            }
-        }
-
-        strategy = UrlDownloadStrategy()
-
-        fake_content = b"fake content"
-        with requests_mock.Mocker() as m:
-            m.get(
-                "https://example.com/installer.msi",
-                content=fake_content,
-                headers={"Content-Length": str(len(fake_content))},
-            )
-
-            with pytest.raises(ConfigError, match="Unsupported version type"):
-                strategy.discover_version(app_config, tmp_test_dir)
 
     def test_discover_version_download_failure_raises(self, tmp_test_dir):
         """Test that download failures raise NetworkError."""
         app_config = {
             "source": {
                 "url": "https://example.com/installer.msi",
-                "version": {"type": "msi"},
             }
         }
 

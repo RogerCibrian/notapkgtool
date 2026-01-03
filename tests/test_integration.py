@@ -54,7 +54,6 @@ class TestEndToEndWorkflow:
                     "source": {
                         "strategy": "url_download",
                         "url": "https://example.com/installer.msi",
-                        "version": {"type": "msi"},
                     },
                 }
             ],
