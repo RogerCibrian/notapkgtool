@@ -110,7 +110,7 @@ def sanitize_filename(name: str, app_id: str = "") -> str:
 
     Rules:
         - Replace spaces with hyphens
-        - Remove invalid Windows filename characters (< > : " | ? * \ /)
+        - Remove invalid Windows filename characters (< > : " | ? * \\ /)
         - Normalize multiple consecutive hyphens to single hyphen
         - Remove leading/trailing hyphens and dots
         - If result is empty, fallback to app_id (or "app" if app_id is empty)
@@ -218,7 +218,7 @@ function Write-CMTraceLog {
 # Determine log file location
 function Initialize-LogFile {
     $$script:CurrentIdentity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
-    $$IsSystemContext = $$script:CurrentIdentity.Name -eq "NT AUTHORITY\SYSTEM"
+    $$IsSystemContext = $$script:CurrentIdentity.Name -eq "NT AUTHORITY\\SYSTEM"
     
     if ($$IsSystemContext) {
         # System context - try Intune log folder first
@@ -300,7 +300,7 @@ function Compare-Version {
     }
     
     # Minimum version comparison (installed >= expected)
-    $$InstalledParts = $$InstalledVersion -split '[.\-]' | ForEach-Object { [int]$$_ }
+    $$InstalledParts = $$InstalledVersion -split '[.\\-]' | ForEach-Object { [int]$$_ }
     $$ExpectedParts = $$ExpectedVersion -split '[.\-]' | ForEach-Object { [int]$$_ }
     
     $$MaxLength = [Math]::Max($$InstalledParts.Count, $$ExpectedParts.Count)
