@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
     
     
       
@@ -33,7 +33,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.618322db.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -574,6 +574,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Build Process (napt build)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#detection-scripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detection Scripts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -1223,6 +1240,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../api/detection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    detection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/exceptions/" class="md-nav__link">
         
   
@@ -1346,10 +1391,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_8" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_9" >
         
           
-          <label class="md-nav__link" for="__nav_4_8" id="__nav_4_8_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_9" id="__nav_4_9_label" tabindex="0">
             
   
   
@@ -1367,8 +1412,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_8">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_9">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1815,6 +1860,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Build Process (napt build)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#detection-scripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detection Scripts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -2295,7 +2357,7 @@
 <ol>
 <li><strong>Load Configuration</strong> - Merges configuration layers (org → vendor → recipe)</li>
 <li><strong>Find Installer</strong> - Locates installer in <code>downloads/</code> directory (tries URL filename, then app name/id, then most recent)</li>
-<li><strong>Extract Version</strong> - Extracts from installer file if <code>version.type</code> specified, otherwise uses state file version</li>
+<li><strong>Extract Version</strong> - Extracts version from installer file (MSI files auto-detected by extension), otherwise uses state file version</li>
 <li><strong>Get PSADT Release</strong> - Downloads/caches PSADT Template_v4 from GitHub if not already cached</li>
 <li><strong>Create Build Directory</strong> - Creates versioned directory using discovered app version: <code>builds/{app_id}/{version}/</code></li>
 <li><strong>Copy PSADT Template</strong> - Copies entire PSADT template structure (unmodified) from cache:<ul>
@@ -2330,8 +2392,67 @@
 <li>Uses pattern matching to find source files in brand pack directory</li>
 </ul>
 </li>
+<li><strong>Generate Detection Script</strong> - Creates PowerShell detection script for Intune Win32 app deployment:<ul>
+<li>Extracts app name from MSI ProductName (for MSI installers) or uses detection.display_name (for non-MSI installers)</li>
+<li>Generates script that checks Windows uninstall registry keys</li>
+<li>Saves as <code>{AppName}_{Version}-Detection.ps1</code> sibling to <code>packagefiles/</code> directory</li>
+<li>Script uses CMTrace-formatted logging</li>
+<li>Configurable via <code>detection</code> section in defaults or recipe</li>
+</ul>
+</li>
 </ol>
-<p><strong>Output</strong>: Complete PSADT package in <code>builds/{app_id}/{version}/</code> ready for deployment</p>
+<p><strong>Output</strong>: Complete PSADT package in <code>builds/{app_id}/{version}/</code> with detection script ready for deployment</p>
+<h4 id="detection-scripts">Detection Scripts</h4>
+<p>NAPT automatically generates PowerShell detection scripts during the build process (step 10). These scripts are used by Microsoft Intune to determine if an application is installed and whether it meets version requirements.</p>
+<p><strong>How Detection Scripts Work:</strong></p>
+<p>Detection scripts check Windows uninstall registry keys for installed software:</p>
+<ul>
+<li>
+<p><strong>Registry Locations Checked:</strong></p>
+<ul>
+<li><code>HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall</code> (machine-level, 64-bit)</li>
+<li><code>HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall</code> (user-level)</li>
+<li><code>HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall</code> (machine-level, 32-bit on 64-bit OS)</li>
+<li><code>HKCU:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall</code> (user-level, 32-bit on 64-bit OS)</li>
+</ul>
+</li>
+<li>
+<p><strong>Detection Logic:</strong></p>
+<ul>
+<li>Matches by <code>DisplayName</code> (from MSI ProductName for MSI installers, or detection.display_name for non-MSI installers)</li>
+<li>Compares installed version to expected version</li>
+<li>Supports exact match or minimum version (installed &gt;= expected)</li>
+<li>Returns exit code 0 if installed and meets requirements, 1 otherwise</li>
+</ul>
+</li>
+<li>
+<p><strong>App Name Determination:</strong></p>
+<ul>
+<li><strong>MSI installers:</strong> Uses MSI <code>ProductName</code> property (authoritative source for registry DisplayName)</li>
+<li><strong>Non-MSI installers:</strong> Requires <code>detection.display_name</code> in recipe configuration</li>
+</ul>
+</li>
+<li>
+<p><strong>Logging:</strong></p>
+<ul>
+<li>Uses CMTrace format for Intune diagnostics</li>
+<li>Logs to <code>C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\NAPTDetections.log</code> (system context)</li>
+<li>Logs to <code>C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\NAPTDetectionsUser.log</code> (user context)</li>
+<li>Automatic log rotation (default: 3MB max size)</li>
+<li>Fallback locations if primary locations unavailable</li>
+</ul>
+</li>
+</ul>
+<p><strong>Detection Script Files:</strong></p>
+<p>Detection scripts are saved as siblings to the <code>packagefiles/</code> directory:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>builds/napt-chrome/142.0.7444.163/
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  ├── packagefiles/              # PSADT package (packaged into .intunewin)
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  │   └── ...
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  └── Google-Chrome-142.0.7444.163-Detection.ps1  # Detection script (upload separately)
+</span></code></pre></div>
+<p><strong>Important:</strong> Detection scripts are NOT included in the <code>.intunewin</code> package. They must be uploaded separately to Intune when configuring the Win32 app. The script filename follows the pattern: <code>{AppName}_{Version}-Detection.ps1</code>.</p>
+<p><strong>Configuration:</strong></p>
+<p>Detection script behavior can be configured via the <code>detection</code> section in defaults or recipe. See <a href="../recipe-reference/#detection-configuration">Recipe Reference - Detection Configuration</a> for complete options.</p>
 <h3 id="package-process-napt-package">Package Process (<code>napt package</code>)</h3>
 <p>The package process creates a <code>.intunewin</code> file from the built PSADT directory:</p>
 <ol>
@@ -2354,29 +2475,31 @@
 <p><strong>Output</strong>: <code>.intunewin</code> package file in <code>packages/{app_id}/</code> directory, ready for Intune upload</p>
 <h3 id="directory-structure">Directory Structure</h3>
 <p>After a complete workflow, your directory structure looks like:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>downloads/
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  └── googlechromestandaloneenterprise64.msi
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>builds/
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  └── napt-chrome/
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>      └── 142.0.7444.163/
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>          ├── PSAppDeployToolkit/          # PSADT module (from template)
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>          ├── PSAppDeployToolkit.Extensions/
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>          ├── Assets/                      # Custom branding (if configured)
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>          ├── Config/
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>          ├── Strings/
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>          ├── Files/                       # Installer copied here
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>          │   └── googlechromestandaloneenterprise64.msi
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>          ├── SupportFiles/                # Empty (for additional files)
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>          ├── Invoke-AppDeployToolkit.ps1  # Generated script
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>          └── Invoke-AppDeployToolkit.exe # From template
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>
-</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>packages/
-</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>  └── napt-chrome/
-</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>      └── Invoke-AppDeployToolkit.intunewin
-</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>
-</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>state/
-</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>  └── versions.json                        # Version tracking
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>downloads/
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  └── googlechromestandaloneenterprise64.msi
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>builds/
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>  └── napt-chrome/
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>      └── 142.0.7444.163/
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>          ├── packagefiles/                # PSADT package contents
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>          │   ├── PSAppDeployToolkit/      # PSADT module (from template)
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>          │   ├── PSAppDeployToolkit.Extensions/
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>          │   ├── Assets/                  # Custom branding (if configured)
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>          │   ├── Config/
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>          │   ├── Strings/
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>          │   ├── Files/                   # Installer copied here
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>          │   │   └── googlechromestandaloneenterprise64.msi
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>          │   ├── SupportFiles/            # Empty (for additional files)
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>          │   ├── Invoke-AppDeployToolkit.ps1  # Generated script
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>          │   └── Invoke-AppDeployToolkit.exe  # From template
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>          └── Google-Chrome-142.0.7444.163-Detection.ps1  # Detection script (upload separately to Intune)
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>packages/
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>  └── napt-chrome/
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>      └── Invoke-AppDeployToolkit.intunewin
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>state/
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>  └── versions.json                        # Version tracking
 </span></code></pre></div>
 <h2 id="commands-reference">Commands Reference</h2>
 <blockquote>
@@ -2384,19 +2507,19 @@
 </blockquote>
 <h3 id="napt-validate">napt validate</h3>
 <p>Validates recipe syntax and configuration without making network calls. Checks YAML syntax, required fields, and strategy configuration. Does not verify URLs are accessible or files can be downloaded.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>napt<span class="w"> </span>validate<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>napt<span class="w"> </span>validate<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </span></code></pre></div>
 <h3 id="napt-discover">napt discover</h3>
 <p>Discovers the latest version and downloads the installer. Uses version-based caching to skip downloads when versions haven't changed.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </span></code></pre></div>
 <h3 id="napt-build">napt build</h3>
 <p>Builds a complete PSADT package from a recipe and downloaded installer. Generates deployment scripts, applies branding, and creates versioned build directories.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </span></code></pre></div>
 <h3 id="napt-package">napt package</h3>
 <p>Creates a .intunewin package from a built PSADT directory for Intune deployment.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>napt<span class="w"> </span>package<span class="w"> </span>BUILD_DIR<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>napt<span class="w"> </span>package<span class="w"> </span>BUILD_DIR<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </span></code></pre></div>
 <h3 id="output-modes">Output Modes</h3>
 <p>All commands support verbosity flags to control output detail:</p>
@@ -2483,18 +2606,18 @@
 <li><strong>PSADT configuration</strong> - PowerShell deployment scripts and variables</li>
 </ul>
 <h3 id="basic-structure">Basic Structure</h3>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span><span class="w">  </span><span class="c1"># Recipe format version</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nt">apps</span><span class="p">:</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Application</span><span class="nv"> </span><span class="s">Name&quot;</span><span class="w">  </span><span class="c1"># Display name</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;napt-app-id&quot;</span><span class="w">  </span><span class="c1"># Unique identifier</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="nt">source</span><span class="p">:</span><span class="w">  </span><span class="c1"># Discovery configuration</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">      </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span><span class="w">  </span><span class="c1"># One of: api_github, api_json, url_download, web_scrape</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">      </span><span class="c1"># ... strategy-specific fields</span>
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="nt">psadt</span><span class="p">:</span><span class="w">  </span><span class="c1"># PSADT configuration</span>
-</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">      </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># Installation script</span>
-</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">        </span><span class="no"># PowerShell code here</span>
-</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">      </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># Uninstallation script</span>
-</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">        </span><span class="no"># PowerShell code here</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span><span class="w">  </span><span class="c1"># Recipe format version</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">apps</span><span class="p">:</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Application</span><span class="nv"> </span><span class="s">Name&quot;</span><span class="w">  </span><span class="c1"># Display name</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;napt-app-id&quot;</span><span class="w">  </span><span class="c1"># Unique identifier</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="nt">source</span><span class="p">:</span><span class="w">  </span><span class="c1"># Discovery configuration</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">      </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span><span class="w">  </span><span class="c1"># One of: api_github, api_json, url_download, web_scrape</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">      </span><span class="c1"># ... strategy-specific fields</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="nt">psadt</span><span class="p">:</span><span class="w">  </span><span class="c1"># PSADT configuration</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">      </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># Installation script</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">        </span><span class="no"># PowerShell code here</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">      </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># Uninstallation script</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">        </span><span class="no"># PowerShell code here</span>
 </span></code></pre></div>
 <h3 id="quick-reference">Quick Reference</h3>
 <ul>
@@ -2541,17 +2664,17 @@
 <p><strong>Note:</strong> For state tracking implementation, see <a href="../api/state/">State Module</a> in Developer Reference.</p>
 </blockquote>
 <h3 id="default-behavior-stateful">Default Behavior (Stateful)</h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># State tracking enabled by default</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Creates/updates: state/versions.json</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># State tracking enabled by default</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Creates/updates: state/versions.json</span>
 </span></code></pre></div>
 <h3 id="stateless-mode">Stateless Mode</h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Disable state tracking for one-off checks</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span>--stateless
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Always downloads, no caching</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="c1"># Useful for CI/CD clean builds</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Disable state tracking for one-off checks</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span>--stateless
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Always downloads, no caching</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="c1"># Useful for CI/CD clean builds</span>
 </span></code></pre></div>
 <h2 id="configuration-layers">Configuration Layers</h2>
 <p>NAPT uses a sophisticated 3-layer configuration system that promotes DRY (Don't Repeat Yourself) principles:</p>
@@ -2568,24 +2691,24 @@
 </li>
 </ol>
 <h3 id="example">Example</h3>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># defaults/org.yaml</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nt">defaults</span><span class="p">:</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="nt">psadt</span><span class="p">:</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nt">release</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;latest&quot;</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="nt">app_vars</span><span class="p">:</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">      </span><span class="nt">AppVendor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Unknown&quot;</span>
-</span></code></pre></div>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># defaults/vendors/Google.yaml</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># defaults/org.yaml</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nt">defaults</span><span class="p">:</span>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nt">psadt</span><span class="p">:</span>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="nt">app_vars</span><span class="p">:</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">      </span><span class="nt">AppVendor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Google</span><span class="nv"> </span><span class="s">LLC&quot;</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="nt">release</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;latest&quot;</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="nt">app_vars</span><span class="p">:</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">      </span><span class="nt">AppVendor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Unknown&quot;</span>
 </span></code></pre></div>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># recipes/Google/chrome.yaml</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nt">apps</span><span class="p">:</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Google</span><span class="nv"> </span><span class="s">Chrome&quot;</span>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="c1"># AppVendor will be &quot;Google LLC&quot; (from vendor defaults)</span>
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="c1"># release will be &quot;latest&quot; (from org defaults)</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># defaults/vendors/Google.yaml</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nt">defaults</span><span class="p">:</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span><span class="nt">psadt</span><span class="p">:</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="nt">app_vars</span><span class="p">:</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">      </span><span class="nt">AppVendor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Google</span><span class="nv"> </span><span class="s">LLC&quot;</span>
+</span></code></pre></div>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># recipes/Google/chrome.yaml</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nt">apps</span><span class="p">:</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Google</span><span class="nv"> </span><span class="s">Chrome&quot;</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="c1"># AppVendor will be &quot;Google LLC&quot; (from vendor defaults)</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="c1"># release will be &quot;latest&quot; (from org defaults)</span>
 </span></code></pre></div>
 <blockquote>
 <p><strong>Note:</strong> For configuration loading implementation, see <a href="../api/config/">Config Module</a> in Developer Reference.</p>
@@ -2627,19 +2750,19 @@
 <p>The <code>napt package</code> command uses Microsoft's <a href="https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool">IntuneWinAppUtil.exe</a>, which is a Windows-only .NET application. This is the official tool for creating .intunewin packages.</p>
 <h3 id="recommended-workflows">Recommended Workflows</h3>
 <h4 id="workflow-1-all-windows-simplest">Workflow 1: All-Windows (Simplest)</h4>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Run everything on Windows</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>napt<span class="w"> </span>package<span class="w"> </span>builds/napt-chrome/142.0.7444.163/
-</span></code></pre></div>
-<h4 id="workflow-2-mixed-platform-development">Workflow 2: Mixed Platform Development</h4>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># On Linux/macOS: Discovery and build</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Run everything on Windows</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="c1"># Transfer build directory to Windows (e.g., via shared storage)</span>
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="c1"># On Windows: Package</span>
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>napt<span class="w"> </span>package<span class="w"> </span>builds/napt-chrome/142.0.7444.163/
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>napt<span class="w"> </span>package<span class="w"> </span>builds/napt-chrome/142.0.7444.163/
+</span></code></pre></div>
+<h4 id="workflow-2-mixed-platform-development">Workflow 2: Mixed Platform Development</h4>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># On Linux/macOS: Discovery and build</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="c1"># Transfer build directory to Windows (e.g., via shared storage)</span>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="c1"># On Windows: Package</span>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>napt<span class="w"> </span>package<span class="w"> </span>builds/napt-chrome/142.0.7444.163/
 </span></code></pre></div>
 <blockquote>
 <p><strong>Note:</strong> For MSI extraction backend details and implementation information, see <a href="../api/versioning/">Versioning Module</a> in Developer Reference.</p>
@@ -2653,39 +2776,39 @@
 <p><strong>Development:</strong> Use <code>--stateless</code> for testing, <code>--debug</code> for troubleshooting, delete state file to force re-discovery.</p>
 <h3 id="error-handling">Error Handling</h3>
 <p>All commands return exit codes: <code>0</code> = Success, <code>1</code> = Error. Use in scripts:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="k">if</span><span class="w"> </span>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="k">fi</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="k">if</span><span class="w"> </span>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">    </span>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="k">fi</span>
 </span></code></pre></div>
 <p>When using NAPT as a Python library, catch exceptions directly. See <a href="../api/exceptions/">Developer Reference</a> for details.</p>
 <h2 id="troubleshooting">Troubleshooting</h2>
 <h3 id="common-issues">Common Issues</h3>
 <p><strong>Problem</strong>: MSI extraction fails on Linux/macOS</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Solution: Install msitools</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>msitools<span class="w">  </span><span class="c1"># Debian/Ubuntu</span>
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>brew<span class="w"> </span>install<span class="w"> </span>msitools<span class="w">           </span><span class="c1"># macOS</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># Solution: Install msitools</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>msitools<span class="w">  </span><span class="c1"># Debian/Ubuntu</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>brew<span class="w"> </span>install<span class="w"> </span>msitools<span class="w">           </span><span class="c1"># macOS</span>
 </span></code></pre></div>
 <p><strong>Problem</strong>: State file corrupted</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># NAPT automatically creates backup</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="c1"># Backup saved to: state/versions.json.backup</span>
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
-</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="c1"># Force re-download</span>
-</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/app.yaml<span class="w"> </span>--stateless
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># NAPT automatically creates backup</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="c1"># Backup saved to: state/versions.json.backup</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="c1"># Force re-download</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/app.yaml<span class="w"> </span>--stateless
 </span></code></pre></div>
 <p><strong>Problem</strong>: GitHub API rate limit</p>
 <blockquote>
 <p><strong>⚠️ Security Note:</strong> Never put tokens directly in recipe files (e.g., <code>token: "ghp_abc123"</code>). Always use environment variable substitution (<code>token: "${GITHUB_TOKEN}"</code>) to keep tokens out of version control. See <a href="../common-tasks/#handle-authentication-tokens">Handle Authentication Tokens</a> for best practices.</p>
 </blockquote>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># Solution: Use authentication token via environment variable</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="nt">source</span><span class="p">:</span>
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
-</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${GITHUB_TOKEN}&quot;</span><span class="w">  </span><span class="c1"># Environment variable substitution (secure)</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># Solution: Use authentication token via environment variable</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="nt">source</span><span class="p">:</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${GITHUB_TOKEN}&quot;</span><span class="w">  </span><span class="c1"># Environment variable substitution (secure)</span>
 </span></code></pre></div>
-<p><div class="language-powershell highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c"># Set environment variable on Windows:</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="nv">$env:GITHUB_TOKEN</span><span class="p">=</span><span class="s2">&quot;your_token_here&quot;</span>
+<p><div class="language-powershell highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c"># Set environment variable on Windows:</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="nv">$env:GITHUB_TOKEN</span><span class="p">=</span><span class="s2">&quot;your_token_here&quot;</span>
 </span></code></pre></div>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1"># Set environment variable on Linux/macOS: </span>
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GITHUB_TOKEN</span><span class="o">=</span><span class="s2">&quot;your_token_here&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Set environment variable on Linux/macOS: </span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GITHUB_TOKEN</span><span class="o">=</span><span class="s2">&quot;your_token_here&quot;</span>
 </span></code></pre></div></p>
 
 
@@ -2736,10 +2859,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.tabs.sticky", "content.code.copy"], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.tabs.sticky", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>
