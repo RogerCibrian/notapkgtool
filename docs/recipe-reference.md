@@ -236,30 +236,9 @@ source:
 
 Stable download URL for the installer. **Important:** This URL must not change when new versions are released. If the URL changes with each version, use `web_scrape` strategy instead.
 
-#### version
+**How it works:** Downloads file from `url`, auto-detects MSI files by extension (`.msi`) and extracts version from MSI ProductVersion property. Uses HTTP conditional requests (ETags) for caching to avoid re-downloading unchanged files.
 
-**Type:** `object`  
-**Required:** Yes
-
-Version extraction configuration.
-
-##### type
-
-**Type:** `string`  
-**Required:** Yes  
-**Values:** `msi` (currently only supported type)
-
-Method to extract version from the downloaded file. Currently only `msi` is supported, which extracts the `ProductVersion` property from MSI files.
-
-##### file
-
-**Type:** `string`  
-**Required:** No  
-**Default:** Auto-detected from download
-
-Specific filename to use for version extraction if multiple files are downloaded or the filename differs from the URL.
-
-**How it works:** Downloads file from `url`, extracts version from MSI ProductVersion property. Uses HTTP conditional requests (ETags) for caching to avoid re-downloading unchanged files.
+**Version Extraction:** Automatically detected by file extension. MSI files (`.msi` extension) automatically extract ProductVersion. No configuration needed. Other file types are not supported for version extraction - use a version-first strategy (api_github, api_json, web_scrape) instead.
 
 ### web_scrape Strategy
 

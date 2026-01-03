@@ -66,10 +66,9 @@ def _get_installer_version(
     """Get version for the installer file.
 
     Priority:
-        1. If version.type is explicitly set to "msi", extract from MSI
-        2. If no version.type but installer is MSI, auto-detect and extract
-        3. Fall back to known_version from state file
-        4. If all else fails, raise an error
+        1. Auto-detect MSI files (`.msi` extension) and extract version
+        2. Fall back to known_version from state file
+        3. If all else fails, raise an error
 
     Args:
         installer_file: Path to the installer file.
@@ -88,33 +87,9 @@ def _get_installer_version(
     logger = get_global_logger()
     app = config["apps"][0]
     app_id = app.get("id", "unknown")
-    source = app.get("source", {})
-    version_config = source.get("version", {})
-    version_type = version_config.get("type", "")
 
-    logger.verbose("BUILD", f"Version type: {version_type}")
-
-    # Priority 1: Explicit version.type in recipe
-    if version_type == "msi":
-        logger.verbose(
-            "BUILD", f"Extracting version from installer: {installer_file.name}"
-        )
-        try:
-            discovered = version_from_msi_product_version(installer_file)
-            logger.verbose("BUILD", f"Extracted version: {discovered.version}")
-            return discovered.version
-        except Exception as err:
-            raise PackagingError(
-                f"Failed to extract MSI version from {installer_file}: {err}"
-            ) from err
-
-    if version_type and version_type != "msi":
-        raise ConfigError(
-            f"Unsupported version type for build: {version_type!r}. Supported: msi"
-        )
-
-    # Priority 2: Auto-detect MSI files (when no explicit version.type)
-    if not version_type and installer_file.suffix.lower() == ".msi":
+    # Priority 1: Auto-detect MSI files and extract version
+    if installer_file.suffix.lower() == ".msi":
         logger.verbose(
             "BUILD", f"Auto-detected MSI, extracting version: {installer_file.name}"
         )
@@ -128,7 +103,7 @@ def _get_installer_version(
                 "BUILD", f"MSI version extraction failed, trying state file: {err}"
             )
 
-    # Priority 3: Fall back to state file
+    # Priority 2: Fall back to state file
     if state_file and state_file.exists():
         from notapkgtool.state import load_state
 
@@ -144,9 +119,8 @@ def _get_installer_version(
     # No version found - provide error
     raise ConfigError(
         f"Could not determine version for {app_id}. Either:\n"
-        f"  - Add version.type to recipe\n"
-        f"  - Use an MSI installer (auto-detected)\n"
-        f"  - Run 'napt discover' first to populate state"
+        f"  - Use an MSI installer (auto-detected from file extension)\n"
+        f"  - Run 'napt discover' first to populate state file with version"
     )
 
 
