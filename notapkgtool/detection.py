@@ -301,7 +301,7 @@ function Compare-Version {
     
     # Minimum version comparison (installed >= expected)
     $$InstalledParts = $$InstalledVersion -split '[.\\-]' | ForEach-Object { [int]$$_ }
-    $$ExpectedParts = $$ExpectedVersion -split '[.\-]' | ForEach-Object { [int]$$_ }
+    $$ExpectedParts = $$ExpectedVersion -split '[.\\-]' | ForEach-Object { [int]$$_ }
     
     $$MaxLength = [Math]::Max($$InstalledParts.Count, $$ExpectedParts.Count)
     
