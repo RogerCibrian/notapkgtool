@@ -403,11 +403,11 @@ foreach ($$RegPath in $$RegPaths) {
 }
 
 if ($$Found) {
-    Write-CMTraceLog -Message "[Result] Detection SUCCESS: $$AppName (version $$InstalledVersion) is installed and meets version requirements (Expected: $$ExpectedVersion, Match Type: $$(if ($$ExactMatch) { 'Exact' } else { 'Minimum' }))" -Type "INFO"
+    Write-CMTraceLog -Message "[Result] Detection SUCCESS: $$AppName (version $$InstalledVersion) is installed and meets version requirements (Expected: $$ExpectedVersion, Mode: $$(if ($$ExactMatch) { 'Exact Match' } else { 'Minimum Version' }))" -Type "INFO"
     Write-Output "Installed"
     exit 0
 } else {
-    Write-CMTraceLog -Message "[Result] Detection FAILED: $$AppName not found in registry paths or installed version does not meet requirements (Expected: $$ExpectedVersion, Match Type: $$(if ($$ExactMatch) { 'Exact' } else { 'Minimum' }))" -Type "INFO"
+    Write-CMTraceLog -Message "[Result] Detection FAILED: $$AppName not found in registry paths or installed version does not meet requirements (Expected: $$ExpectedVersion, Mode: $$(if ($$ExactMatch) { 'Exact Match' } else { 'Minimum Version' }))" -Type "INFO"
     exit 1
 }
 """
