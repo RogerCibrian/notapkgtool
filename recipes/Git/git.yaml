@@ -11,6 +11,8 @@ apps:
       asset_pattern: "Git-.*-64-bit\\.exe$"
       version_pattern: "v?([0-9.]+)\\.windows"
 
+    detection:
+      display_name: "Git"
     psadt:
       app_vars:
         AppName: "Git for Windows"

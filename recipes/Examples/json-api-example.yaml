@@ -45,6 +45,8 @@ apps:
       headers:
         Accept: "application/json"
 
+    detection:
+      display_name: "Nested API App"
     psadt:
       app_vars:
         AppName: "Nested API App"
@@ -77,6 +79,8 @@ apps:
         arch: "x64"
         channel: "stable"
 
+    detection:
+      display_name: "POST API App"
     psadt:
       app_vars:
         AppName: "POST API App"
