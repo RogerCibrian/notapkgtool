@@ -28,9 +28,11 @@ Key Advantages:
 
 Supported Version Extraction:
 
-- msi: Extract ProductVersion property from MSI files
-- (Future) exe: Extract FileVersion from PE headers
-- (Future) manual: Use a version specified in the recipe
+- **MSI files** (`.msi` extension): Automatically detected, extracts
+  ProductVersion property from MSI files
+- **Other file types**: Not supported. Use a version-first strategy
+  (api_github, api_json, web_scrape) or ensure file is an MSI installer.
+- **(Future)** EXE files: Auto-detect and extract FileVersion from PE headers
 
 Use Cases:
 
@@ -44,19 +46,16 @@ Recipe Configuration:
     source:
       strategy: url_download
       url: "https://vendor.com/installer.msi"          # Required: download URL
-      version:
-        type: msi                                      # Required: extraction method
-        file: "installer.msi"  # Optional: defaults to URL filename
 
 Configuration Fields:
 
 - **url** (str, required): HTTP(S) URL to download the installer from. The URL
     should be stable and point to the latest version.
-- **version.type** (str, required): Version extraction method. Currently
-    supported: msi.
-- **version.file** (str, optional): Specific filename to extract version from.
-    Defaults to the downloaded filename derived from the URL or
-    Content-Disposition header.
+
+**Version Extraction:** Automatically detected by file extension. MSI files
+    (`.msi` extension) have versions extracted from ProductVersion property.
+    Other file types are not supported for version extraction - use a
+    version-first strategy (api_github, api_json, web_scrape) instead.
 
 Error Handling:
 
@@ -73,8 +72,6 @@ Example:
             source:
               strategy: url_download
               url: "https://example.com/myapp-setup.msi"
-              version:
-                type: msi
         ```
 
     From Python:
@@ -86,7 +83,6 @@ Example:
     app_config = {
         "source": {
             "url": "https://example.com/app.msi",
-            "version": {"type": "msi"},
         }
     }
 
@@ -139,9 +135,6 @@ class UrlDownloadStrategy:
         source:
           strategy: url_download
           url: "https://example.com/installer.msi"
-          version:
-            type: msi
-            file: "installer.msi"
     """
 
     def discover_version(
@@ -185,16 +178,8 @@ class UrlDownloadStrategy:
         if not url:
             raise ConfigError("url_download strategy requires 'source.url' in config")
 
-        version_config = source.get("version", {})
-        version_type = version_config.get("type")
-        if not version_type:
-            raise ConfigError(
-                "url_download strategy requires 'source.version.type' in config"
-            )
-
         logger.verbose("DISCOVERY", "Strategy: url_download (file-first)")
         logger.verbose("DISCOVERY", f"Source URL: {url}")
-        logger.verbose("DISCOVERY", f"Version extraction: {version_type}")
 
         # Extract ETag/Last-Modified from cache if available
         etag = cache.get("etag") if cache else None
@@ -240,8 +225,11 @@ class UrlDownloadStrategy:
                     f"File may have been deleted. Try running with --stateless."
                 ) from None
 
-            # Extract version from cached file
-            if version_type == "msi":
+            # Extract version from cached file (auto-detect by extension)
+            if cached_file.suffix.lower() == ".msi":
+                logger.verbose(
+                    "DISCOVERY", "Auto-detected MSI file, extracting version"
+                )
                 try:
                     discovered = version_from_msi_product_version(
                         cached_file, verbose=verbose, debug=debug
@@ -253,7 +241,10 @@ class UrlDownloadStrategy:
                     ) from err
             else:
                 raise ConfigError(
-                    f"Unsupported version type: {version_type!r}. " f"Supported: msi"
+                    f"Cannot extract version from file type: {cached_file.suffix!r}. "
+                    f"url_download strategy currently supports MSI files only. "
+                    f"For other file types, use a version-first strategy (api_github, "
+                    f"api_json, web_scrape) or ensure the file is an MSI installer."
                 ) from None
 
             # Return cached info with preserved headers (prevents overwriting ETag)
@@ -271,8 +262,9 @@ class UrlDownloadStrategy:
                 raise
             raise NetworkError(f"Failed to download {url}: {err}") from err
 
-        # File was downloaded (not cached), extract version from it
-        if version_type == "msi":
+        # File was downloaded (not cached), extract version from it (auto-detect by extension)
+        if file_path.suffix.lower() == ".msi":
+            logger.verbose("DISCOVERY", "Auto-detected MSI file, extracting version")
             try:
                 discovered = version_from_msi_product_version(
                     file_path, verbose=verbose, debug=debug
@@ -283,7 +275,10 @@ class UrlDownloadStrategy:
                 ) from err
         else:
             raise ConfigError(
-                f"Unsupported version type: {version_type!r}. " f"Supported: msi"
+                f"Cannot extract version from file type: {file_path.suffix!r}. "
+                f"url_download strategy currently supports MSI files only. "
+                f"For other file types, use a version-first strategy (api_github, "
+                f"api_json, web_scrape) or ensure the file is an MSI installer."
             )
 
         return discovered, file_path, sha256, headers
@@ -311,27 +306,8 @@ class UrlDownloadStrategy:
         elif not source["url"].strip():
             errors.append("source.url cannot be empty")
 
-        # Check version configuration
-        if "version" not in source:
-            errors.append("Missing required field: source.version")
-        elif not isinstance(source["version"], dict):
-            errors.append("source.version must be a dictionary")
-        else:
-            version_config = source["version"]
-
-            # Check version.type
-            if "type" not in version_config:
-                errors.append("Missing required field: source.version.type")
-            elif not isinstance(version_config["type"], str):
-                errors.append("source.version.type must be a string")
-            else:
-                version_type = version_config["type"]
-                supported_types = ["msi"]
-                if version_type not in supported_types:
-                    errors.append(
-                        f"Unsupported source.version.type: {version_type!r}. "
-                        f"Supported: {', '.join(supported_types)}"
-                    )
+        # Version extraction is now auto-detected by file extension
+        # No version configuration validation needed
 
         return errors
 

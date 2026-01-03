@@ -177,7 +177,8 @@ napt discover recipes/Google/chrome.yaml --verbose
 **What to customize:**
 
 - `url`: Direct download URL (must be stable, not version-specific)
-- `version.type`: How to extract version (`msi` for MSI files)
+
+Note: MSI files (`.msi` extension) are automatically detected and versions are extracted from the MSI ProductVersion property.
 
 ## Troubleshoot Discovery Failures
 

@@ -83,6 +83,7 @@ nav:
     - Overview: api/index.md
     - cli: api/cli.md
     - core: api/core.md
+    - detection: api/detection.md
     - exceptions: api/exceptions.md
     - logging: api/logging.md
     - results: api/results.md

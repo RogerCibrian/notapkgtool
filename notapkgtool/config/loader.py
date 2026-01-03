@@ -270,7 +270,10 @@ def _inject_dynamic_values(cfg: dict[str, Any]) -> None:
         app_vars.setdefault("AppScriptDate", today_str)
     except Exception as err:
         # Be defensive but quiet; dynamic injection is best-effort
-        print(f"Warning: could not inject AppScriptDate: {err}")
+        from notapkgtool.logging import get_global_logger
+
+        logger = get_global_logger()
+        logger.warning("CONFIG", f"Could not inject AppScriptDate: {err}")
 
 
 # -------------------------------

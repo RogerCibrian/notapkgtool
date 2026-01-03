@@ -359,26 +359,6 @@ apps:
         assert result.status == "invalid"
         assert any("url" in err for err in result.errors)
 
-    def test_url_download_missing_version_type(self, tmp_path):
-        """Test that url_download validates missing version type."""
-        recipe = tmp_path / "recipe.yaml"
-        recipe.write_text(
-            """
-apiVersion: napt/v1
-apps:
-  - name: "Test"
-    id: "test"
-    source:
-      strategy: url_download
-      url: "https://example.com/app.msi"
-"""
-        )
-
-        result = validate_recipe(recipe)
-
-        assert result.status == "invalid"
-        assert any("version" in err for err in result.errors)
-
     def test_api_github_missing_repo(self, tmp_path):
         """Test that api_github validates missing repo."""
         recipe = tmp_path / "recipe.yaml"

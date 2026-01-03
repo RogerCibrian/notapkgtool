@@ -46,92 +46,99 @@ import shutil
 from typing import Any
 
 from notapkgtool.config import load_effective_config
+from notapkgtool.detection import (
+    DetectionConfig,
+    generate_detection_script,
+    sanitize_filename,
+)
 from notapkgtool.exceptions import ConfigError, PackagingError
 from notapkgtool.psadt import get_psadt_release
 from notapkgtool.results import BuildResult
-from notapkgtool.versioning.msi import version_from_msi_product_version
+from notapkgtool.versioning.msi import (
+    extract_msi_metadata,
+    version_from_msi_product_version,
+)
 
 
 def _get_installer_version(
     installer_file: Path, config: dict[str, Any], state_file: Path | None = None
 ) -> str:
-    """Extract version from installer file or state.
+    """Get version for the installer file.
 
-    Uses the version extraction method specified in the recipe's
-    source configuration. If no version.type is specified (e.g., for
-    api_github strategy), attempts to read from state file.
+    Priority:
+        1. Auto-detect MSI files (`.msi` extension) and extract version
+        2. Fall back to known_version from state file
+        3. If all else fails, raise an error
 
     Args:
         installer_file: Path to the installer file.
         config: Recipe configuration.
-        state_file: Path to state file for fallback version
-            lookup.
+        state_file: Path to state file for fallback version lookup.
 
     Returns:
         Extracted version string.
 
     Raises:
-        PackagingError: If version extraction fails or version not found.
-        ConfigError: If version type is unsupported.
+        PackagingError: If MSI version extraction fails (when explicitly requested).
+        ConfigError: If version cannot be determined from any source.
     """
     from notapkgtool.logging import get_global_logger
 
     logger = get_global_logger()
     app = config["apps"][0]
     app_id = app.get("id", "unknown")
-    source = app.get("source", {})
-    version_config = source.get("version", {})
-    version_type = version_config.get("type", "")
 
-    logger.verbose("BUILD", f"Extracting version from: {installer_file.name}")
-    logger.verbose("BUILD", f"Version type: {version_type}")
-
-    # If no version type specified, try to use version from state
-    if not version_type:
-        if state_file and state_file.exists():
-            from notapkgtool.state import load_state
-
-            logger.verbose("BUILD", "No version type specified, using state file")
-            state = load_state(state_file)
-            app_state = state.get("apps", {}).get(app_id, {})
-            known_version = app_state.get("known_version")
-
-            if known_version:
-                logger.verbose("BUILD", f"Using version from state: {known_version}")
-                return known_version
-            else:
-                raise ConfigError(
-                    f"No version.type specified and no known_version in state for {app_id}. "
-                    f"Run 'napt discover' first or add version.type to recipe."
-                )
-        else:
-            raise ConfigError(
-                "No version.type specified in recipe. Add source.version.type or ensure state file exists."
-            )
-
-    if version_type == "msi":
+    # Priority 1: Auto-detect MSI files and extract version
+    if installer_file.suffix.lower() == ".msi":
+        logger.verbose(
+            "BUILD", f"Auto-detected MSI, extracting version: {installer_file.name}"
+        )
         try:
             discovered = version_from_msi_product_version(installer_file)
             logger.verbose("BUILD", f"Extracted version: {discovered.version}")
             return discovered.version
         except Exception as err:
-            raise PackagingError(
-                f"Failed to extract MSI version from {installer_file}: {err}"
-            ) from err
-    else:
-        raise ConfigError(
-            f"Unsupported version type for build: {version_type!r}. " f"Supported: msi"
-        )
+            # MSI extraction failed, fall through to state file
+            logger.verbose(
+                "BUILD", f"MSI version extraction failed, trying state file: {err}"
+            )
+
+    # Priority 2: Fall back to state file
+    if state_file and state_file.exists():
+        from notapkgtool.state import load_state
+
+        logger.verbose("BUILD", "Using version from state file")
+        state = load_state(state_file)
+        app_state = state.get("apps", {}).get(app_id, {})
+        known_version = app_state.get("known_version")
+
+        if known_version:
+            logger.verbose("BUILD", f"Using version from state: {known_version}")
+            return known_version
+
+    # No version found - provide error
+    raise ConfigError(
+        f"Could not determine version for {app_id}. Either:\n"
+        f"  - Use an MSI installer (auto-detected from file extension)\n"
+        f"  - Run 'napt discover' first to populate state file with version"
+    )
 
 
-def _find_installer_file(downloads_dir: Path, config: dict[str, Any]) -> Path:
+def _find_installer_file(
+    downloads_dir: Path, config: dict[str, Any], state_file: Path | None = None
+) -> Path:
     """Find the installer file in the downloads directory.
 
-    Uses the URL from the recipe to determine the expected filename.
+    Uses multiple strategies to locate the installer:
+    1. URL from recipe (for url_download strategy)
+    2. URL from state file (for web_scrape, api_github, api_json strategies)
+    3. Filename matching by app name/id
+    4. Most recent installer (last resort)
 
     Args:
         downloads_dir: Downloads directory to search.
         config: Recipe configuration.
+        state_file: Optional state file to check for cached URL.
 
     Returns:
         Path to the installer file.
@@ -139,24 +146,53 @@ def _find_installer_file(downloads_dir: Path, config: dict[str, Any]) -> Path:
     Raises:
         PackagingError: If installer file cannot be found.
     """
+    from urllib.parse import urlparse
+
     from notapkgtool.logging import get_global_logger
 
     logger = get_global_logger()
     app = config["apps"][0]
+    app_id = app.get("id", "")
     source = app.get("source", {})
     url = source.get("url", "")
 
-    # Extract filename from URL
+    # Strategy 1: Extract filename from recipe URL (for url_download)
     if url:
-        filename = url.split("/")[-1]
-        installer_path = downloads_dir / filename
+        parsed = urlparse(url)
+        filename = Path(parsed.path).name
+        if filename:
+            installer_path = downloads_dir / filename
 
-        if installer_path.exists():
-            logger.verbose("BUILD", f"Found installer: {installer_path}")
-            return installer_path
+            if installer_path.exists():
+                logger.verbose(
+                    "BUILD", f"Found installer from recipe URL: {installer_path}"
+                )
+                return installer_path
 
-    # Fallback: Search for installer matching app name/id or use most recent
-    app_id = app.get("id", "")
+    # Strategy 2: Extract filename from state file URL (for web_scrape, etc.)
+    if state_file and state_file.exists():
+        try:
+            from notapkgtool.state import load_state
+
+            state = load_state(state_file)
+            app_state = state.get("apps", {}).get(app_id, {})
+            state_url = app_state.get("url", "")
+
+            if state_url:
+                parsed = urlparse(state_url)
+                filename = Path(parsed.path).name
+                if filename:
+                    installer_path = downloads_dir / filename
+
+                    if installer_path.exists():
+                        logger.verbose(
+                            "BUILD", f"Found installer from state URL: {installer_path}"
+                        )
+                        return installer_path
+        except Exception as err:
+            logger.warning("BUILD", f"Could not check state file: {err}")
+
+    # Strategy 3: Fallback - Search for installer matching app name/id
     app_name = app.get("name", "").lower()
 
     # Try to find installer matching app_id or app_name in filename
@@ -176,23 +212,24 @@ def _find_installer_file(downloads_dir: Path, config: dict[str, Any]) -> Path:
             logger.verbose("BUILD", f"Found installer matching app: {installer_path}")
             return installer_path
 
-    # Ultimate fallback: Most recent installer of any type
-    all_installers = list(downloads_dir.glob("*.msi")) + list(
-        downloads_dir.glob("*.exe")
-    )
-    if all_installers:
-        installer_path = max(all_installers, key=lambda p: p.stat().st_mtime)
-        logger.verbose("BUILD", f"Found most recent installer: {installer_path}")
-        return installer_path
-
+    # No installer found after trying all strategies
     raise PackagingError(
-        f"No installer found in {downloads_dir}. "
-        f"Run 'napt discover' first to download the installer."
+        f"Cannot locate installer file for {app_id} in {downloads_dir}. "
+        f"Tried locating via recipe URL, state file URL, and filename matching, "
+        f"but no matching installer found. Verify the installer file exists in {downloads_dir}."
     )
 
 
 def _create_build_directory(base_dir: Path, app_id: str, version: str) -> Path:
     """Create the build directory structure.
+
+    Creates the directory structure:
+        {base_dir}/{app_id}/{version}/packagefiles/
+
+    The packagefiles/ subdirectory contains the PSADT files that will be
+    packaged into the .intunewin file. Detection scripts are saved as
+    siblings to packagefiles/ to prevent them from being included in the
+    package.
 
     Args:
         base_dir: Base builds directory.
@@ -200,7 +237,7 @@ def _create_build_directory(base_dir: Path, app_id: str, version: str) -> Path:
         version: Application version.
 
     Returns:
-        Path to the created build directory.
+        Path to the packagefiles subdirectory (build_dir/packagefiles/).
 
     Raises:
         OSError: If directory creation fails.
@@ -208,19 +245,20 @@ def _create_build_directory(base_dir: Path, app_id: str, version: str) -> Path:
     from notapkgtool.logging import get_global_logger
 
     logger = get_global_logger()
-    build_dir = base_dir / app_id / version
+    version_dir = base_dir / app_id / version
+    packagefiles_dir = version_dir / "packagefiles"
 
-    if build_dir.exists():
-        logger.verbose("BUILD", f"Build directory exists: {build_dir}")
+    if version_dir.exists():
+        logger.verbose("BUILD", f"Build directory exists: {version_dir}")
         logger.verbose("BUILD", "Removing existing build...")
-        shutil.rmtree(build_dir)
+        shutil.rmtree(version_dir)
 
-    # Create the build directory (template will provide subdirectories)
-    build_dir.mkdir(parents=True, exist_ok=True)
+    # Create the packagefiles subdirectory
+    packagefiles_dir.mkdir(parents=True, exist_ok=True)
 
-    logger.verbose("BUILD", f"Created build directory: {build_dir}")
+    logger.verbose("BUILD", f"Created build directory: {packagefiles_dir}")
 
-    return build_dir
+    return packagefiles_dir
 
 
 def _copy_psadt_pristine(psadt_cache_dir: Path, build_dir: Path) -> None:
@@ -237,7 +275,8 @@ def _copy_psadt_pristine(psadt_cache_dir: Path, build_dir: Path) -> None:
     Args:
         psadt_cache_dir: Path to cached PSADT version directory (root
             of Template_v4 extraction).
-        build_dir: Build directory where PSADT should be copied.
+        build_dir: Build directory (packagefiles subdirectory) where PSADT
+            should be copied.
 
     Raises:
         PackagingError: If PSADT cache directory or required files don't exist.
@@ -270,7 +309,7 @@ def _copy_installer(installer_file: Path, build_dir: Path) -> None:
 
     Args:
         installer_file: Path to the installer file.
-        build_dir: Build directory.
+        build_dir: Build directory (packagefiles subdirectory).
 
     Raises:
         OSError: If copy operation fails.
@@ -296,7 +335,8 @@ def _apply_branding(config: dict[str, Any], build_dir: Path) -> None:
 
     Args:
         config: Merged configuration with brand_pack settings.
-        build_dir: Build directory containing PSAppDeployToolkit/.
+        build_dir: Build directory (packagefiles subdirectory) containing
+            PSAppDeployToolkit/.
 
     Raises:
         FileNotFoundError: If branding files don't exist.
@@ -354,6 +394,134 @@ def _apply_branding(config: dict[str, Any], build_dir: Path) -> None:
     logger.verbose("BUILD", "[OK] Branding applied")
 
 
+def _generate_detection_script(
+    installer_file: Path,
+    config: dict[str, Any],
+    version: str,
+    app_id: str,
+    build_dir: Path,
+    verbose: bool = False,
+    debug: bool = False,
+) -> Path:
+    """Generate detection script for Intune Win32 app.
+
+    Extracts metadata from installer (MSI ProductName for MSIs, detection.display_name
+    for non-MSI installers), generates PowerShell detection script, and saves it as a
+    sibling to the packagefiles directory.
+
+    Args:
+        installer_file: Path to the installer file.
+        config: Recipe configuration.
+        version: Extracted version string.
+        app_id: Application ID.
+        build_dir: Build directory (packagefiles subdirectory).
+        verbose: Show verbose output. Default is False.
+        debug: Show debug output. Default is False.
+
+    Returns:
+        Path to the generated detection script.
+
+    Raises:
+        PackagingError: If detection script generation fails.
+        ConfigError: If required configuration is missing (detection.display_name
+            required for non-MSI installers).
+    """
+    from notapkgtool.logging import get_global_logger
+
+    logger = get_global_logger()
+    app = config["apps"][0]
+
+    # Get detection configuration (merged defaults + app-specific)
+    defaults_detection = config.get("defaults", {}).get("detection", {})
+    app_detection = app.get("detection", {})
+    detection_config_dict = {**defaults_detection, **app_detection}
+
+    # Determine AppName for detection
+    app_name_for_detection = None
+    installer_ext = installer_file.suffix.lower()
+
+    # Check if display_name is set for MSI installers (not allowed)
+    if installer_ext == ".msi" and detection_config_dict.get("display_name"):
+        logger.warning(
+            "DETECTION",
+            "detection.display_name is set but will be ignored for MSI installers. "
+            "MSI ProductName is used as the authoritative source for registry "
+            "DisplayName.",
+        )
+
+    if installer_ext == ".msi":
+        # MSI: Use ProductName (required, no fallback - authoritative source)
+        try:
+            msi_metadata = extract_msi_metadata(
+                installer_file, verbose=verbose, debug=debug
+            )
+            if not msi_metadata.product_name:
+                raise ConfigError(
+                    "MSI ProductName property not found. Cannot generate detection "
+                    "script. Ensure the MSI file is valid and contains ProductName "
+                    "property."
+                )
+            app_name_for_detection = msi_metadata.product_name
+            logger.verbose(
+                "DETECTION",
+                f"Using MSI ProductName for detection: {app_name_for_detection}",
+            )
+        except ConfigError:
+            # Re-raise ConfigError as-is (e.g., ProductName not found)
+            raise
+        except Exception as err:
+            # Wrap other exceptions (extraction failures) as ConfigError
+            raise ConfigError(
+                f"Failed to extract MSI ProductName. Cannot generate detection script. "
+                f"Error: {err}"
+            ) from err
+    elif detection_config_dict.get("display_name"):
+        # Non-MSI: Use explicit display_name (required)
+        app_name_for_detection = detection_config_dict["display_name"]
+        logger.verbose(
+            "DETECTION",
+            f"Using detection.display_name: {app_name_for_detection}",
+        )
+    else:
+        # Non-MSI: display_name required
+        raise ConfigError(
+            "detection.display_name is required for non-MSI installers. "
+            "Set detection.display_name in recipe configuration."
+        )
+
+    # Create DetectionConfig from merged configuration
+    detection_config_obj = DetectionConfig(
+        app_name=app_name_for_detection,
+        version=version,
+        log_format=detection_config_dict.get("log_format", "cmtrace"),
+        log_level=detection_config_dict.get("log_level", "INFO"),
+        log_rotation_mb=detection_config_dict.get("log_rotation_mb", 10),
+        exact_match=detection_config_dict.get("exact_match", True),
+        app_id=app_id,
+    )
+
+    # Sanitize AppName for filename
+    sanitized_app_name = sanitize_filename(app_name_for_detection, app_id)
+    sanitized_version = version.replace(
+        " ", "-"
+    )  # Versions shouldn't have spaces, but be safe
+
+    # Build detection script filename: {AppName}_{Version}-Detection.ps1
+    detection_filename = f"{sanitized_app_name}_{sanitized_version}-Detection.ps1"
+
+    # Save as sibling to packagefiles/ (build_dir.parent is the version directory)
+    detection_script_path = build_dir.parent / detection_filename
+
+    logger.verbose("DETECTION", f"Generating detection script: {detection_filename}")
+    logger.verbose("DETECTION", f"AppName: {app_name_for_detection}")
+    logger.verbose("DETECTION", f"Version: {version}")
+
+    # Generate the script
+    generate_detection_script(detection_config_obj, detection_script_path)
+
+    return detection_script_path
+
+
 def build_package(
     recipe_path: Path,
     downloads_dir: Path | None = None,
@@ -374,6 +542,7 @@ def build_package(
     7. Generates Invoke-AppDeployToolkit.ps1 from template
     8. Copies installer to Files/
     9. Applies custom branding
+    10. Generates detection script for Intune Win32 app deployment
 
     Args:
         recipe_path: Path to the recipe YAML file.
@@ -395,10 +564,14 @@ def build_package(
                 {output_dir}/{app_id}/{version}/.
             - psadt_version (str): PSADT version used for the build (e.g., "4.1.7").
             - status (str): Build status, typically "success" for completed builds.
+            - detection_script_path (Path | None): Path to the generated detection script,
+                or None if detection script generation was skipped or failed (non-fatal).
 
     Raises:
         FileNotFoundError: If recipe or installer doesn't exist.
-        RuntimeError: If build process fails.
+        PackagingError: If build process fails or detection script generation fails
+            (when fail_on_error=true in detection config).
+        ConfigError: If required configuration is missing.
 
     Example:
         Basic build:
@@ -420,6 +593,10 @@ def build_package(
         Version extracted from installer file, not state cache. Overwrites
         existing build directory if it exists. PSADT files are copied pristine
         from cache. Invoke-AppDeployToolkit.ps1 is generated (not copied).
+        Detection script is generated as a sibling to the packagefiles directory
+        (not included in .intunewin package - must be uploaded separately to Intune).
+        Detection script generation can be configured as non-fatal via
+        detection.fail_on_error setting in recipe configuration.
     """
     from notapkgtool.logging import get_global_logger
 
@@ -443,11 +620,11 @@ def build_package(
 
     # Find installer file
     logger.step(2, 6, "Finding installer...")
-    installer_file = _find_installer_file(downloads_dir, config)
+    state_file = Path("state/versions.json")  # Default state file location
+    installer_file = _find_installer_file(downloads_dir, config, state_file)
 
     # Extract version from installer or state (filesystem + state are truth)
-    logger.step(3, 6, "Extracting version from installer...")
-    state_file = Path("state/versions.json")  # Default state file location
+    logger.step(3, 6, "Determining version...")
     version = _get_installer_version(installer_file, config, state_file)
 
     logger.verbose("BUILD", f"Building {app_name} v{version}")
@@ -489,8 +666,33 @@ def build_package(
     _copy_installer(installer_file, build_dir)
 
     # Apply branding
-    logger.step(6, 6, "Applying branding...")
+    logger.step(6, 7, "Applying branding...")
     _apply_branding(config, build_dir)
+
+    # Generate detection script
+    logger.step(7, 7, "Generating detection script...")
+    detection_script_path = None
+    try:
+        detection_script_path = _generate_detection_script(
+            installer_file, config, version, app_id, build_dir, verbose, debug
+        )
+        logger.verbose("BUILD", "[OK] Detection script generated")
+    except Exception as err:
+        detection_config = config.get("defaults", {}).get("detection", {}) or app.get(
+            "detection", {}
+        )
+        fail_on_error = detection_config.get("fail_on_error", True)
+
+        if fail_on_error:
+            raise PackagingError(
+                f"Detection script generation failed (fail_on_error=true): {err}"
+            ) from err
+        else:
+            logger.warning(
+                "BUILD",
+                f"Detection script generation failed (non-fatal): {err}",
+            )
+            logger.verbose("BUILD", "Continuing build without detection script...")
 
     logger.verbose("BUILD", f"[OK] Build complete: {build_dir}")
 
@@ -501,4 +703,5 @@ def build_package(
         build_dir=build_dir,
         psadt_version=psadt_version,
         status="success",
+        detection_script_path=detection_script_path,
     )

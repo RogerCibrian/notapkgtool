@@ -18,9 +18,10 @@ This module provides a configurable logging interface that library modules
 can use for output without depending on the CLI. The logger can be configured
 globally or passed as a parameter for better isolation.
 
-The logger supports three output levels:
+The logger supports four output levels:
 
 - Step: Always printed (for progress indicators)
+- Warning: Always printed (for important warnings that users should see)
 - Verbose: Only printed when verbose mode is enabled
 - Debug: Only printed when debug mode is enabled (implies verbose)
 
@@ -39,6 +40,7 @@ Example:
 
         logger = get_logger()
         logger.step(1, 4, "Loading configuration...")
+        logger.warning("DETECTION", "Could not extract MSI metadata")
         logger.verbose("STATE", "Loaded state from file")
         logger.debug("VERSION", "Trying backend: msilib...")
         ```
@@ -71,6 +73,15 @@ class Logger(Protocol):
             step: Current step number (1-based).
             total: Total number of steps.
             message: Step description.
+        """
+        ...
+
+    def warning(self, prefix: str, message: str) -> None:
+        """Print a warning message (always visible).
+
+        Args:
+            prefix: Message prefix (e.g., "DETECTION", "BUILD").
+            message: Warning message.
         """
         ...
 
@@ -114,6 +125,10 @@ class DefaultLogger:
         """Print a step indicator for non-verbose mode."""
         print(f"[{step}/{total}] {message}")
 
+    def warning(self, prefix: str, message: str) -> None:
+        """Print a warning message (always visible)."""
+        print(f"[{prefix}] {message}")
+
     def verbose(self, prefix: str, message: str) -> None:
         """Print a verbose log message (only when verbose mode is active)."""
         if self._verbose:
@@ -133,6 +148,10 @@ class SilentLogger:
 
     def step(self, step: int, total: int, message: str) -> None:
         """Suppress step output."""
+        pass
+
+    def warning(self, prefix: str, message: str) -> None:
+        """Suppress warning output."""
         pass
 
     def verbose(self, prefix: str, message: str) -> None:

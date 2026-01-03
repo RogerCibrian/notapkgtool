@@ -8,9 +8,6 @@ apps:
     source:
       strategy: url_download
       url: "https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi"
-      version:
-        type: msi
-        file: "googlechromestandaloneenterprise64.msi"
 
     psadt:
       app_vars:

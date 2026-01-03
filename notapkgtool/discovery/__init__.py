@@ -64,7 +64,6 @@ Example:
             "source": {
                 "strategy": "url_download",
                 "url": "https://example.com/app.msi",
-                "version": {"type": "msi"},
             }
         }
 

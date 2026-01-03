@@ -9,10 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Detection Script Generation** - Automatic PowerShell detection script generation for Intune Win32 app deployments during build process. Scripts check Windows uninstall registry keys, support exact or minimum version matching, and include CMTrace-formatted logging
+
 ### Changed
 
 - **Discovery Performance Optimization** - Version-first strategies (web_scrape, api_github, api_json) now check versions before downloading, enabling ~100-300ms update checks when unchanged instead of full downloads
 - State file now saves actual download URLs for all strategies
+- **url_download Strategy Simplification** - Removed `version.type` configuration requirement. MSI files are now auto-detected by file extension (`.msi`) for version extraction
 - **BREAKING: Uniform Strategy Naming** - Discovery strategies renamed to follow consistent `<source>_<method>` pattern for better discoverability and scalability:
     - `http_static` → `url_download` (fixed URL with file extraction)
     - `url_regex` → `web_scrape` (web scraping for vendor download pages)

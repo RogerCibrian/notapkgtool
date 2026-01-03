@@ -1,0 +1,4 @@
+# detection
+
+::: notapkgtool.detection
+
