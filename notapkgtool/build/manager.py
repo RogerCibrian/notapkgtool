@@ -405,9 +405,9 @@ def _generate_detection_script(
 ) -> Path:
     """Generate detection script for Intune Win32 app.
 
-    Extracts metadata from installer (MSI ProductName for MSIs, recipe
-    AppName for EXEs), generates PowerShell detection script, and saves
-    it as a sibling to the packagefiles directory.
+    Extracts metadata from installer (MSI ProductName for MSIs, detection.display_name
+    for non-MSI installers), generates PowerShell detection script, and saves it as a
+    sibling to the packagefiles directory.
 
     Args:
         installer_file: Path to the installer file.
@@ -423,7 +423,8 @@ def _generate_detection_script(
 
     Raises:
         PackagingError: If detection script generation fails.
-        ConfigError: If required configuration is missing.
+        ConfigError: If required configuration is missing (detection.display_name
+            required for non-MSI installers).
     """
     from notapkgtool.logging import get_global_logger
 
@@ -436,43 +437,56 @@ def _generate_detection_script(
     detection_config_dict = {**defaults_detection, **app_detection}
 
     # Determine AppName for detection
-    # For MSI: Use ProductName from MSI (fallback to recipe AppName)
-    # For EXE: Use recipe AppName (from psadt.app_vars.AppName or apps[0].name)
     app_name_for_detection = None
     installer_ext = installer_file.suffix.lower()
 
+    # Check if display_name is set for MSI installers (not allowed)
+    if installer_ext == ".msi" and detection_config_dict.get("display_name"):
+        logger.warning(
+            "DETECTION",
+            "detection.display_name is set but will be ignored for MSI installers. "
+            "MSI ProductName is used as the authoritative source for registry "
+            "DisplayName.",
+        )
+
     if installer_ext == ".msi":
+        # MSI: Use ProductName (required, no fallback - authoritative source)
         try:
             msi_metadata = extract_msi_metadata(
                 installer_file, verbose=verbose, debug=debug
             )
-            # Use MSI ProductName if available, otherwise fall back to recipe
-            if msi_metadata.product_name:
-                app_name_for_detection = msi_metadata.product_name
-                logger.verbose(
-                    "DETECTION",
-                    f"Using MSI ProductName for detection: {app_name_for_detection}",
+            if not msi_metadata.product_name:
+                raise ConfigError(
+                    "MSI ProductName property not found. Cannot generate detection "
+                    "script. Ensure the MSI file is valid and contains ProductName "
+                    "property."
                 )
-        except Exception as err:
-            logger.warning(
+            app_name_for_detection = msi_metadata.product_name
+            logger.verbose(
                 "DETECTION",
-                f"Could not extract MSI ProductName, using recipe AppName: {err}",
+                f"Using MSI ProductName for detection: {app_name_for_detection}",
             )
-
-    # Fallback to recipe AppName (from psadt.app_vars.AppName or apps[0].name)
-    if not app_name_for_detection:
-        psadt_app_vars = app.get("psadt", {}).get("app_vars", {})
-        app_name_for_detection = psadt_app_vars.get("AppName") or app.get("name", "")
+        except ConfigError:
+            # Re-raise ConfigError as-is (e.g., ProductName not found)
+            raise
+        except Exception as err:
+            # Wrap other exceptions (extraction failures) as ConfigError
+            raise ConfigError(
+                f"Failed to extract MSI ProductName. Cannot generate detection script. "
+                f"Error: {err}"
+            ) from err
+    elif detection_config_dict.get("display_name"):
+        # Non-MSI: Use explicit display_name (required)
+        app_name_for_detection = detection_config_dict["display_name"]
         logger.verbose(
             "DETECTION",
-            f"Using recipe AppName for detection: {app_name_for_detection}",
+            f"Using detection.display_name: {app_name_for_detection}",
         )
-
-    if not app_name_for_detection:
+    else:
+        # Non-MSI: display_name required
         raise ConfigError(
-            "Cannot determine AppName for detection script. "
-            "For MSI installers, ensure ProductName is in the MSI. "
-            "For EXE installers, set psadt.app_vars.AppName in the recipe."
+            "detection.display_name is required for non-MSI installers. "
+            "Set detection.display_name in recipe configuration."
         )
 
     # Create DetectionConfig from merged configuration

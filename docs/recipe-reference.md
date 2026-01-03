@@ -224,9 +224,6 @@ headers:
 source:
   strategy: url_download  # Discovery strategy type
   url: "https://vendor.com/installer.msi"  # Required: Stable download URL (must not change with versions)
-  version:  # Required: Version extraction configuration
-    type: msi  # Required: Extract version from MSI ProductVersion property
-    file: "installer.msi"  # Optional: Specific filename if multiple files downloaded
 ```
 
 #### url
@@ -416,6 +413,99 @@ Same as `install` script (see above).
 uninstall: |
   Uninstall-ADTApplication -Name "Application Name"
 ```
+
+## Detection Configuration
+
+The `detection` section (in `defaults` or per-app) configures detection script generation for Intune Win32 app deployments. Detection scripts are automatically generated during the build process and check Windows uninstall registry keys to determine if an application is installed.
+
+**Configuration Location:**
+
+- **Organization defaults:** `defaults/org.yaml` → `defaults.detection`
+- **Vendor defaults:** `defaults/vendors/<Vendor>.yaml` → `defaults.detection`
+- **Recipe (per-app):** `apps[].detection` (overrides defaults)
+
+**Configuration:**
+
+```yaml
+defaults:
+  detection:
+    exact_match: false          # If true, version must match exactly. If false, installed >= required passes.
+    fail_on_error: true         # If true, detection script generation failures abort the build.
+    log_rotation_mb: 3          # Maximum log file size in MB before rotation
+
+# Or per-app override:
+apps:
+  - name: "My App"
+    detection:
+      display_name: "My Application"  # Required for non-MSI installers, ignored for MSI
+      exact_match: true         # Override default for this app
+```
+
+### display_name
+
+**Type:** `string`  
+**Required:** Yes for non-MSI installers, ignored for MSI installers
+
+Application name used in detection script to match registry `DisplayName`. This value is used both in the detection script logic and in the generated script filename.
+
+**Behavior:**
+- **MSI installers:** This field is ignored (a warning is logged if set). MSI `ProductName` is used as the authoritative source since it directly corresponds to the registry `DisplayName`.
+- **Non-MSI installers (EXE, etc.):** Required. Must be set in recipe configuration. The detection script checks Windows uninstall registry keys for this exact `DisplayName` value.
+
+**Note:** The value is sanitized for use in Windows filenames (spaces become hyphens, invalid characters removed). The detection script filename follows the pattern: `{DisplayName}_{Version}-Detection.ps1`.
+
+**Example:**
+```yaml
+apps:
+  - name: "My App"
+    detection:
+      display_name: "My Application"  # Matches registry DisplayName for EXE installers
+```
+
+### exact_match
+
+**Type:** `boolean`  
+**Required:** No  
+**Default:** `false`
+
+If `true`, the detection script requires an exact version match. If `false`, the detection script passes if the installed version is greater than or equal to the required version (minimum version check).
+
+**Behavior:**
+- `exact_match: false` (default): Allows users to have newer versions installed without triggering reinstall
+- `exact_match: true`: Requires exact version match (useful for compliance scenarios)
+
+### fail_on_error
+
+**Type:** `boolean`  
+**Required:** No  
+**Default:** `true`
+
+If `true`, detection script generation failures will abort the build. If `false`, build continues even if detection script generation fails (useful for development/testing).
+
+**Behavior:**
+- `fail_on_error: true` (default): Build fails if detection script cannot be generated
+- `fail_on_error: false`: Build continues, detection script path will be `None` in BuildResult
+
+### log_rotation_mb
+
+**Type:** `integer`  
+**Required:** No  
+**Default:** `3`
+
+Maximum log file size in megabytes before rotation. Detection scripts use a 2-file rotation scheme (`.log` and `.log.old`).
+
+**Note:** Detection scripts log to `C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\NAPTDetections.log` (system context) or `NAPTDetectionsUser.log` (user context) with automatic fallback to alternate locations if primary locations are unavailable.
+
+**How Detection Scripts Work:**
+
+- **App Name Detection:**
+    - **MSI installers:** Uses MSI `ProductName` property (authoritative source for registry `DisplayName`). The `display_name` field is ignored for MSI installers.
+    - **Non-MSI installers:** Requires `detection.display_name` in recipe configuration. This value is matched against the registry `DisplayName`.
+- **Registry Checking:** Checks Windows uninstall registry keys (HKLM/HKCU, native and Wow6432Node paths).
+- **Version Comparison:** Uses `DisplayVersion` registry value, compares based on `exact_match` setting.
+- **Script Location:** Generated scripts are saved as `{DisplayName}_{Version}-Detection.ps1` sibling to the `packagefiles/` directory (not included in `.intunewin` package - must be uploaded separately to Intune).
+
+See [Detection Scripts](user-guide.md#detection-scripts) in the User Guide for detailed information about how detection scripts work and how to use them in Intune.
 
 ## Environment Variable Substitution
 

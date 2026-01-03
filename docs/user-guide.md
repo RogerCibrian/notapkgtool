@@ -27,7 +27,7 @@ The build process creates a complete PSADT package from the recipe and downloade
 
 1. **Load Configuration** - Merges configuration layers (org → vendor → recipe)
 2. **Find Installer** - Locates installer in `downloads/` directory (tries URL filename, then app name/id, then most recent)
-3. **Extract Version** - Extracts from installer file if `version.type` specified, otherwise uses state file version
+3. **Extract Version** - Extracts version from installer file (MSI files auto-detected by extension), otherwise uses state file version
 4. **Get PSADT Release** - Downloads/caches PSADT Template_v4 from GitHub if not already cached
 5. **Create Build Directory** - Creates versioned directory using discovered app version: `builds/{app_id}/{version}/`
 6. **Copy PSADT Template** - Copies entire PSADT template structure (unmodified) from cache:
@@ -54,8 +54,62 @@ The build process creates a complete PSADT package from the recipe and downloade
     - Reads `brand_pack` configuration from org/vendor defaults
     - Replaces files in `Assets/` directory (AppIcon.png, Banner.Classic.png, etc.)
     - Uses pattern matching to find source files in brand pack directory
+10. **Generate Detection Script** - Creates PowerShell detection script for Intune Win32 app deployment:
+    - Extracts app name from MSI ProductName (for MSI installers) or uses detection.display_name (for non-MSI installers)
+    - Generates script that checks Windows uninstall registry keys
+    - Saves as `{AppName}_{Version}-Detection.ps1` sibling to `packagefiles/` directory
+    - Script uses CMTrace-formatted logging
+    - Configurable via `detection` section in defaults or recipe
 
-**Output**: Complete PSADT package in `builds/{app_id}/{version}/` ready for deployment
+**Output**: Complete PSADT package in `builds/{app_id}/{version}/` with detection script ready for deployment
+
+#### Detection Scripts
+
+NAPT automatically generates PowerShell detection scripts during the build process (step 10). These scripts are used by Microsoft Intune to determine if an application is installed and whether it meets version requirements.
+
+**How Detection Scripts Work:**
+
+Detection scripts check Windows uninstall registry keys for installed software:
+
+- **Registry Locations Checked:**
+    - `HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall` (machine-level, 64-bit)
+    - `HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall` (user-level)
+    - `HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall` (machine-level, 32-bit on 64-bit OS)
+    - `HKCU:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall` (user-level, 32-bit on 64-bit OS)
+
+- **Detection Logic:**
+    - Matches by `DisplayName` (from MSI ProductName for MSI installers, or detection.display_name for non-MSI installers)
+    - Compares installed version to expected version
+    - Supports exact match or minimum version (installed >= expected)
+    - Returns exit code 0 if installed and meets requirements, 1 otherwise
+
+- **App Name Determination:**
+    - **MSI installers:** Uses MSI `ProductName` property (authoritative source for registry DisplayName)
+    - **Non-MSI installers:** Requires `detection.display_name` in recipe configuration
+
+- **Logging:**
+    - Uses CMTrace format for Intune diagnostics
+    - Logs to `C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\NAPTDetections.log` (system context)
+    - Logs to `C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\NAPTDetectionsUser.log` (user context)
+    - Automatic log rotation (default: 3MB max size)
+    - Fallback locations if primary locations unavailable
+
+**Detection Script Files:**
+
+Detection scripts are saved as siblings to the `packagefiles/` directory:
+
+```
+builds/napt-chrome/142.0.7444.163/
+  ├── packagefiles/              # PSADT package (packaged into .intunewin)
+  │   └── ...
+  └── Google-Chrome-142.0.7444.163-Detection.ps1  # Detection script (upload separately)
+```
+
+**Important:** Detection scripts are NOT included in the `.intunewin` package. They must be uploaded separately to Intune when configuring the Win32 app. The script filename follows the pattern: `{AppName}_{Version}-Detection.ps1`.
+
+**Configuration:**
+
+Detection script behavior can be configured via the `detection` section in defaults or recipe. See [Recipe Reference - Detection Configuration](recipe-reference.md#detection-configuration) for complete options.
 
 ### Package Process (`napt package`)
 
@@ -86,16 +140,18 @@ downloads/
 builds/
   └── napt-chrome/
       └── 142.0.7444.163/
-          ├── PSAppDeployToolkit/          # PSADT module (from template)
-          ├── PSAppDeployToolkit.Extensions/
-          ├── Assets/                      # Custom branding (if configured)
-          ├── Config/
-          ├── Strings/
-          ├── Files/                       # Installer copied here
-          │   └── googlechromestandaloneenterprise64.msi
-          ├── SupportFiles/                # Empty (for additional files)
-          ├── Invoke-AppDeployToolkit.ps1  # Generated script
-          └── Invoke-AppDeployToolkit.exe # From template
+          ├── packagefiles/                # PSADT package contents
+          │   ├── PSAppDeployToolkit/      # PSADT module (from template)
+          │   ├── PSAppDeployToolkit.Extensions/
+          │   ├── Assets/                  # Custom branding (if configured)
+          │   ├── Config/
+          │   ├── Strings/
+          │   ├── Files/                   # Installer copied here
+          │   │   └── googlechromestandaloneenterprise64.msi
+          │   ├── SupportFiles/            # Empty (for additional files)
+          │   ├── Invoke-AppDeployToolkit.ps1  # Generated script
+          │   └── Invoke-AppDeployToolkit.exe  # From template
+          └── Google-Chrome-142.0.7444.163-Detection.ps1  # Detection script (upload separately to Intune)
 
 packages/
   └── napt-chrome/

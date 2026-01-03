@@ -11,6 +11,7 @@ notapkgtool/
 ├── __init__.py              # Package initialization and public API exports
 ├── cli.py                   # Command-line interface
 ├── core.py                  # Main public API functions (orchestration)
+├── detection.py             # Detection script generation for Intune Win32 apps
 ├── exceptions.py            # Exception hierarchy
 ├── logging.py               # Logging configuration
 ├── results.py               # Public API return types (dataclasses)
