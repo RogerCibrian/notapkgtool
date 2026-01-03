@@ -379,7 +379,10 @@ foreach ($$RegPath in $$RegPaths) {
                 $$DisplayName = $$DisplayNameValue
                 $$InstalledVersion = $$VersionValue
                 
-                Write-CMTraceLog -Message "[Detection] Found matching registry key: '$$($$Key.PSPath)' - DisplayName: $$DisplayName, Installed Version: $$InstalledVersion" -Type "INFO"
+                # Convert PSPath to cleaner registry path format (HKLM:/HKCU:)
+                $$RegKeyPath = $$Key.PSPath -replace 'Microsoft\\.PowerShell\\.Core\\\\Registry::', '' -replace 'HKEY_LOCAL_MACHINE\\\\', 'HKLM:\\' -replace 'HKEY_CURRENT_USER\\\\', 'HKCU:\\'
+                
+                Write-CMTraceLog -Message "[Detection] Found matching registry key: '$$RegKeyPath' (DisplayName: $$DisplayName, Installed Version: $$InstalledVersion)" -Type "INFO"
                 
                 if ($$InstalledVersion) {
                     if (Compare-Version -InstalledVersion $$InstalledVersion -ExpectedVersion $$ExpectedVersion -ExactMatch $$ExactMatch) {
@@ -390,7 +393,10 @@ foreach ($$RegPath in $$RegPaths) {
                         Write-CMTraceLog -Message "[Detection] Version check FAILED: Installed version $$InstalledVersion $$(if ($$ExactMatch) { 'does not exactly match' } else { 'is less than' }) expected version $$ExpectedVersion" -Type "INFO"
                     }
                 } else {
-                    Write-CMTraceLog -Message "[Detection] DisplayName '$$DisplayName' found in registry key '$$($$Key.PSPath)' but no DisplayVersion value is present" -Type "WARNING"
+                    # Convert PSPath to cleaner registry path format (HKLM:/HKCU:)
+                    $$RegKeyPath = $$Key.PSPath -replace 'Microsoft\\.PowerShell\\.Core\\\\Registry::', '' -replace 'HKEY_LOCAL_MACHINE\\\\', 'HKLM:\\' -replace 'HKEY_CURRENT_USER\\\\', 'HKCU:\\'
+                    
+                    Write-CMTraceLog -Message "[Detection] DisplayName '$$DisplayName' found in registry key '$$RegKeyPath' but no DisplayVersion value is present" -Type "WARNING"
                 }
             }
         }
