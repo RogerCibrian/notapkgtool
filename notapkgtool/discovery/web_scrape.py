@@ -194,8 +194,6 @@ class WebScrapeStrategy:
     def get_version_info(
         self,
         app_config: dict[str, Any],
-        verbose: bool = False,
-        debug: bool = False,
     ) -> VersionInfo:
         """Scrape download page for version and URL without downloading
         (version-first path).
@@ -208,10 +206,6 @@ class WebScrapeStrategy:
             app_config: App configuration containing source.page_url,
                 source.link_selector or source.link_pattern, and
                 source.version_pattern.
-            verbose: If True, print verbose logging messages.
-                Defaults to False.
-            debug: If True, print debug logging messages.
-                Defaults to False.
 
         Returns:
             Version info with version string, download URL, and

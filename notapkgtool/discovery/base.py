@@ -99,7 +99,7 @@ class DiscoveryStrategy(Protocol):
 
         Args:
             app_config: The app configuration from the recipe
-                (`config["apps"][0]`).
+                (`config["app"]`).
             output_dir: Directory to download the installer to.
 
         Returns:
@@ -124,7 +124,7 @@ class DiscoveryStrategy(Protocol):
 
         Args:
             app_config: The app configuration from the recipe
-                (`config["apps"][0]`).
+                (`config["app"]`).
 
         Returns:
             List of error messages. Empty list if configuration is valid.

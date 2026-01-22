@@ -142,8 +142,6 @@ class UrlDownloadStrategy:
         app_config: dict[str, Any],
         output_dir: Path,
         cache: dict[str, Any] | None = None,
-        verbose: bool = False,
-        debug: bool = False,
     ) -> tuple[DiscoveredVersion, Path, str, dict]:
         """Download from static URL and extract version from the file.
 
@@ -154,10 +152,6 @@ class UrlDownloadStrategy:
             cache: Cached state with etag, last_modified,
                 file_path, and sha256 for conditional requests. If provided
                 and file is unchanged (HTTP 304), the cached file is returned.
-            verbose: If True, print verbose logging messages.
-                Default is False.
-            debug: If True, print debug logging messages.
-                Default is False.
 
         Returns:
             A tuple (version_info, file_path, sha256, headers), where
@@ -197,8 +191,6 @@ class UrlDownloadStrategy:
                 output_dir,
                 etag=etag,
                 last_modified=last_modified,
-                verbose=verbose,
-                debug=debug,
             )
         except NotModifiedError:
             # File unchanged (HTTP 304), use cached version
@@ -231,9 +223,7 @@ class UrlDownloadStrategy:
                     "DISCOVERY", "Auto-detected MSI file, extracting version"
                 )
                 try:
-                    discovered = version_from_msi_product_version(
-                        cached_file, verbose=verbose, debug=debug
-                    )
+                    discovered = version_from_msi_product_version(cached_file)
                 except Exception as err:
                     raise NetworkError(
                         f"Failed to extract MSI ProductVersion from cached "
@@ -266,9 +256,7 @@ class UrlDownloadStrategy:
         if file_path.suffix.lower() == ".msi":
             logger.verbose("DISCOVERY", "Auto-detected MSI file, extracting version")
             try:
-                discovered = version_from_msi_product_version(
-                    file_path, verbose=verbose, debug=debug
-                )
+                discovered = version_from_msi_product_version(file_path)
             except Exception as err:
                 raise NetworkError(
                     f"Failed to extract MSI ProductVersion from {file_path}: {err}"

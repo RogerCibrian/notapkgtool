@@ -114,8 +114,6 @@ def discover_recipe(
     output_dir: Path,
     state_file: Path | None = Path("state/versions.json"),
     stateless: bool = False,
-    verbose: bool = False,
-    debug: bool = False,
 ) -> DiscoverResult:
     """Discover the latest version by loading config and downloading installer.
 
@@ -153,9 +151,6 @@ def discover_recipe(
             to disable.
         stateless: If True, disable state tracking (no caching,
             always download). Default is False.
-        verbose: If True, print verbose progress output.
-            Default is False.
-        debug: If True, print debug output. Default is False.
 
     Returns:
         DiscoverResult dataclass with the following fields:
@@ -173,7 +168,7 @@ def discover_recipe(
             - status (str): Always "success" for successful discovery operations.
 
     Raises:
-        ConfigError: On missing or invalid configuration fields (no apps defined,
+        ConfigError: On missing or invalid configuration fields (no app defined,
             missing 'source.strategy' field, unknown discovery strategy name),
             YAML parse errors (from config loader), or if recipe file doesn't exist.
         NetworkError: On download failures or version extraction errors.
@@ -200,14 +195,13 @@ def discover_recipe(
             ```
 
     Note:
-        Only the first app in a recipe is currently processed. The discovery
-        strategy must be registered before calling this function. Version-first
-        strategies (web_scrape, api_github, api_json) can skip downloads
-        entirely when version unchanged (fast path optimization). File-first
-        strategy (url_download) uses ETag conditional requests. Downloaded files
-        are written atomically (.part then renamed). Progress output goes to
-        stdout via the download module. Strategy type detected via duck typing
-        (hasattr for get_version_info).
+        The discovery strategy must be registered before calling this function.
+        Version-first strategies (web_scrape, api_github, api_json) can skip
+        downloads entirely when version unchanged (fast path optimization).
+        File-first strategy (url_download) uses ETag conditional requests.
+        Downloaded files are written atomically (.part then renamed). Progress
+        output goes to stdout via the download module. Strategy type detected
+        via duck typing (hasattr for get_version_info).
 
     """
     logger = get_global_logger()
@@ -231,15 +225,14 @@ def discover_recipe(
 
     # 1. Load and merge configuration
     logger.step(1, 4, "Loading configuration...")
-    config = load_effective_config(recipe_path, verbose=verbose, debug=debug)
+    config = load_effective_config(recipe_path)
 
-    # 2. Extract the first app (for now we only process one app per recipe)
+    # 2. Extract the app configuration
     logger.step(2, 4, "Discovering version...")
-    apps = config.get("apps", [])
-    if not apps:
-        raise ConfigError(f"No apps defined in recipe: {recipe_path}")
+    app = config.get("app")
+    if not app:
+        raise ConfigError(f"No app defined in recipe: {recipe_path}")
 
-    app = apps[0]
     app_name = app.get("name", "Unknown")
     app_id = app.get("id", "unknown-id")
 
@@ -279,7 +272,7 @@ def discover_recipe(
     if hasattr(strategy, "get_version_info"):
         # VERSION-FIRST PATH (web_scrape, api_github, api_json)
         # Get version without downloading
-        version_info = strategy.get_version_info(app, verbose=verbose, debug=debug)
+        version_info = strategy.get_version_info(app)
         download_url = version_info.download_url  # Save for state file
 
         logger.verbose("DISCOVERY", f"Version discovered: {version_info.version}")
@@ -311,8 +304,6 @@ def discover_recipe(
                 file_path, sha256, headers = download_file(
                     version_info.download_url,
                     output_dir,
-                    verbose=verbose,
-                    debug=debug,
                 )
                 discovered_version = DiscoveredVersion(
                     version_info.version, version_info.source
@@ -331,8 +322,6 @@ def discover_recipe(
             file_path, sha256, headers = download_file(
                 version_info.download_url,
                 output_dir,
-                verbose=verbose,
-                debug=debug,
             )
             discovered_version = DiscoveredVersion(
                 version_info.version, version_info.source
@@ -342,7 +331,7 @@ def discover_recipe(
         # Must download to extract version
         logger.step(4, 4, "Downloading installer...")
         discovered_version, file_path, sha256, headers = strategy.discover_version(
-            app, output_dir, cache=cache, verbose=verbose, debug=debug
+            app, output_dir, cache=cache
         )
         download_url = str(app.get("source", {}).get("url", ""))  # Use source.url
 

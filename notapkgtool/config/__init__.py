@@ -32,8 +32,8 @@ Example:
         from notapkgtool.config import load_effective_config
 
         config = load_effective_config(Path("recipes/Google/chrome.yaml"))
-        first_app = config.get("apps", [])[0]
-        print(first_app["name"])  # "Google Chrome"
+        app = config.get("app")
+        print(app["name"])  # "Google Chrome"
         ```
 """
 

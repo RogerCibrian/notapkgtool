@@ -250,11 +250,14 @@ def compare_any(
     b: str,
     *,
     source: SourceHint = "string",
-    verbose: bool = False,
 ) -> int:
     """Compare two versions with a source hint.
     Returns -1 if a < b, 0 if equal, 1 if a > b.
     """
+    from notapkgtool.logging import get_global_logger
+
+    logger = get_global_logger()
+
     if source in ("msi", "exe"):
         try:
             aa = _clip_for_source(_ints_from_text(a), source)
@@ -271,13 +274,13 @@ def compare_any(
         kb = version_key_any(b, source="string")
         result = (ka > kb) - (ka < kb)
 
-    if verbose:
-        if result < 0:
-            print(f"[compare_any] {a!r} is older than {b!r} (source={source})")
-        elif result > 0:
-            print(f"[compare_any] {a!r} is newer than {b!r} (source={source})")
-        else:
-            print(f"[compare_any] {a!r} is the same as {b!r} (source={source})")
+    # Log comparison result if verbose mode is enabled
+    if result < 0:
+        logger.verbose("VERSION", f"{a!r} is older than {b!r} (source={source})")
+    elif result > 0:
+        logger.verbose("VERSION", f"{a!r} is newer than {b!r} (source={source})")
+    else:
+        logger.verbose("VERSION", f"{a!r} is the same as {b!r} (source={source})")
     return result
 
 
@@ -286,34 +289,21 @@ def is_newer_any(
     current: str | None,
     *,
     source: SourceHint = "string",
-    verbose: bool = False,
 ) -> bool:
     """Decide if 'remote' should be considered newer than 'current'.
     Returns True iff remote > current under the given source semantics.
     """
+    from notapkgtool.logging import get_global_logger
+
+    logger = get_global_logger()
+
     if current is None:
-        if verbose:
-            print(
-                f"[is_newer_any] No current version. Treat {remote!r} "
-                f"as newer (source={source})"
-            )
+        logger.verbose(
+            "VERSION",
+            f"No current version. Treat {remote!r} as newer (source={source})",
+        )
         return True
 
-    cmpv = compare_any(remote, current, source=source, verbose=verbose)
-    if verbose:
-        if cmpv > 0:
-            print(
-                f"[is_newer_any] Remote {remote!r} is newer than "
-                f"current {current!r} (source={source})"
-            )
-        elif cmpv == 0:
-            print(
-                f"[is_newer_any] Remote {remote!r} is the same as "
-                f"current {current!r} (source={source})"
-            )
-        else:
-            print(
-                f"[is_newer_any] Remote {remote!r} is older than "
-                f"current {current!r} (source={source})"
-            )
+    cmpv = compare_any(remote, current, source=source)
+    # Note: compare_any() already logs the comparison result, so we don't need to log again here
     return cmpv > 0

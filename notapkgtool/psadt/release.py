@@ -64,14 +64,13 @@ PSADT_REPO = "PSAppDeployToolkit/PSAppDeployToolkit"
 PSADT_GITHUB_API = f"https://api.github.com/repos/{PSADT_REPO}/releases/latest"
 
 
-def fetch_latest_psadt_version(verbose: bool = False) -> str:
+def fetch_latest_psadt_version() -> str:
     """Fetch the latest PSADT release version from GitHub.
 
     Queries the GitHub API for the latest release and extracts the version
     number from the tag name (e.g., "4.1.7" from tag "4.1.7").
 
     Args:
-        verbose: If True, print verbose output about the API request.
             Defaults to False.
 
     Returns:
@@ -163,9 +162,7 @@ def is_psadt_cached(version: str, cache_dir: Path) -> bool:
     return psadt_dir.exists() and manifest.exists()
 
 
-def get_psadt_release(
-    release_spec: str, cache_dir: Path, verbose: bool = False, debug: bool = False
-) -> Path:
+def get_psadt_release(release_spec: str, cache_dir: Path) -> Path:
     """Download and extract a PSADT release to the cache directory.
 
     Resolves "latest" to the current latest version from GitHub, then
@@ -175,8 +172,6 @@ def get_psadt_release(
         release_spec: Version specifier - either "latest" or specific version
             (e.g., "4.1.7").
         cache_dir: Base cache directory for PSADT releases.
-        verbose: Show verbose progress output. Defaults to False.
-        debug: Show debug output. Defaults to False.
 
     Returns:
         Path to the cached PSADT directory (cache_dir/{version}).
@@ -213,7 +208,7 @@ def get_psadt_release(
     # Resolve "latest" to actual version
     if release_spec == "latest":
         logger.verbose("PSADT", "Resolving 'latest' to current version...")
-        version = fetch_latest_psadt_version(verbose=verbose)
+        version = fetch_latest_psadt_version()
     else:
         version = release_spec
 

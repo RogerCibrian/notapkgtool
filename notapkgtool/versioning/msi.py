@@ -107,7 +107,7 @@ class MSIMetadata:
 
 
 def version_from_msi_product_version(
-    file_path: str | Path, verbose: bool = False, debug: bool = False
+    file_path: str | Path,
 ) -> DiscoveredVersion:
     """Extract ProductVersion from an MSI file.
 
@@ -118,10 +118,6 @@ def version_from_msi_product_version(
 
     Args:
         file_path: Path to the MSI file.
-        verbose: If True, print verbose logging messages.
-            Default is False.
-        debug: If True, print debug logging messages.
-            Default is False.
 
     Returns:
         Discovered version with source information.
@@ -273,9 +269,7 @@ if ($record) {{
     )
 
 
-def extract_msi_metadata(
-    file_path: str | Path, verbose: bool = False, debug: bool = False
-) -> MSIMetadata:
+def extract_msi_metadata(file_path: str | Path) -> MSIMetadata:
     """Extract ProductName and ProductVersion from MSI file.
 
     Uses cross-platform backends to read the MSI Property table. On Windows,
@@ -287,10 +281,6 @@ def extract_msi_metadata(
 
     Args:
         file_path: Path to the MSI file.
-        verbose: If True, print verbose logging messages.
-            Default is False.
-        debug: If True, print debug logging messages.
-            Default is False.
 
     Returns:
         MSIMetadata with product information.

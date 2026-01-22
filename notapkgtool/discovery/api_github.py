@@ -171,8 +171,6 @@ class ApiGithubStrategy:
     def get_version_info(
         self,
         app_config: dict[str, Any],
-        verbose: bool = False,
-        debug: bool = False,
     ) -> VersionInfo:
         """Fetch latest release from GitHub API without downloading
         (version-first path).
@@ -184,10 +182,6 @@ class ApiGithubStrategy:
         Args:
             app_config: App configuration containing source.repo and
                 optional fields.
-            verbose: If True, print verbose logging messages.
-                Default is False.
-            debug: If True, print debug logging messages.
-                Default is False.
 
         Returns:
             Version info with version string, download URL, and

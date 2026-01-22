@@ -65,7 +65,7 @@ Example:
         from notapkgtool.config import load_effective_config
 
         cfg = load_effective_config(Path("recipes/Google/chrome.yaml"))
-        print(cfg["apps"][0]["name"])  # Output: Google Chrome
+        print(cfg["app"]["name"])  # Output: Google Chrome
         ```
 
     Access merged defaults:
@@ -190,7 +190,7 @@ def _detect_vendor(recipe_path: Path, recipe_obj: dict[str, Any]) -> str | None:
 
     Priority:
       1) Folder name under 'recipes/' (e.g., recipes/Google/chrome.yaml -> Google)
-      2) recipe.apps[0].psadt.app_vars.AppVendor (if present)
+      2) recipe.app.psadt.app_vars.AppVendor (if present)
       3) None if not found
     """
     # Try directory name one level up from the recipe file
@@ -199,9 +199,9 @@ def _detect_vendor(recipe_path: Path, recipe_obj: dict[str, Any]) -> str | None:
     # Try reading from the recipe content
     vendor_from_recipe: str | None = None
     try:
-        apps = recipe_obj.get("apps", [])
-        if apps and isinstance(apps[0], dict):
-            psadt = apps[0].get("psadt", {})
+        app = recipe_obj.get("app")
+        if app and isinstance(app, dict):
+            psadt = app.get("psadt", {})
             app_vars = psadt.get("app_vars", {})
             v = app_vars.get("AppVendor")
             if isinstance(v, str) and v.strip():
@@ -281,18 +281,20 @@ def _inject_dynamic_values(cfg: dict[str, Any]) -> None:
 # -------------------------------
 
 
-def _print_yaml_content(data: dict[str, Any], debug: bool, indent: int = 0) -> None:
+def _print_yaml_content(data: dict[str, Any], indent: int = 0) -> None:
     """Print YAML content in a readable format for debug mode."""
-    if not debug:
-        return
-
     import yaml
 
-    # Convert to YAML string and print with indentation
+    from notapkgtool.logging import get_global_logger
+
+    logger = get_global_logger()
+
+    # Convert to YAML string and log with indentation
+    # The logger.debug() call will only print if debug mode is enabled
     yaml_str = yaml.dump(data, default_flow_style=False, sort_keys=False)
     for line in yaml_str.split("\n"):
         if line.strip():  # Skip empty lines
-            print(" " * indent + line)
+            logger.debug("CONFIG", " " * indent + line)
 
 
 # -------------------------------
@@ -304,8 +306,6 @@ def load_effective_config(
     recipe_path: Path,
     *,
     vendor: str | None = None,
-    verbose: bool = False,
-    debug: bool = False,
 ) -> dict[str, Any]:
     """Load and merge the effective configuration for a recipe.
 
@@ -344,7 +344,7 @@ def load_effective_config(
 
     # 2) Find defaults root
     defaults_root = _find_defaults_root(recipe_dir)
-    if defaults_root and verbose:
+    if defaults_root:
         logger.verbose("CONFIG", f"Found defaults root: {defaults_root}")
 
     merged: dict[str, Any] = {}
@@ -363,9 +363,8 @@ def load_effective_config(
             )
             org_defaults = _load_yaml_file(org_defaults_path)
             if isinstance(org_defaults, dict):
-                if debug:
-                    logger.debug("CONFIG", "--- Content from org.yaml ---")
-                    _print_yaml_content(org_defaults, debug)
+                logger.debug("CONFIG", "--- Content from org.yaml ---")
+                _print_yaml_content(org_defaults)
                 merged = _deep_merge_dicts(merged, org_defaults)
                 layers_merged += 1
 
@@ -373,7 +372,7 @@ def load_effective_config(
         if vendor_name is None:
             vendor_name = _detect_vendor(recipe_path, recipe_obj)
 
-        if vendor_name and verbose:
+        if vendor_name:
             logger.verbose("CONFIG", f"Detected vendor: {vendor_name}")
 
         # 5) Load vendor defaults if present
@@ -385,40 +384,33 @@ def load_effective_config(
                 )
                 vendor_defaults = _load_yaml_file(candidate)
                 if isinstance(vendor_defaults, dict):
-                    if debug:
-                        logger.debug(
-                            "CONFIG", f"--- Content from {vendor_name}.yaml ---"
-                        )
-                        _print_yaml_content(vendor_defaults, debug)
+                    logger.debug("CONFIG", f"--- Content from {vendor_name}.yaml ---")
+                    _print_yaml_content(vendor_defaults)
                     merged = _deep_merge_dicts(merged, vendor_defaults)
                     layers_merged += 1
 
-    # Show recipe content if verbose
-    if verbose:
-        logger.verbose("CONFIG", f"Loading: {recipe_path.name}")
-    if debug:
-        logger.debug("CONFIG", f"--- Content from {recipe_path.name} ---")
-        _print_yaml_content(recipe_obj, debug)
+    # Show recipe content
+    logger.verbose("CONFIG", f"Loading: {recipe_path.name}")
+    logger.debug("CONFIG", f"--- Content from {recipe_path.name} ---")
+    _print_yaml_content(recipe_obj)
 
     # 6) Merge recipe on top
     merged = _deep_merge_dicts(merged, recipe_obj)
     layers_merged += 1
 
-    if verbose:
-        logger.verbose("CONFIG", f"Deep merging {layers_merged} layer(s)")
-        # Show final config structure
-        top_level_keys = list(merged.keys())
-        logger.verbose(
-            "CONFIG",
-            (
-                f"Final config has {len(top_level_keys)} top-level keys: "
-                f"{', '.join(top_level_keys)}"
-            ),
-        )
+    logger.verbose("CONFIG", f"Deep merging {layers_merged} layer(s)")
+    # Show final config structure
+    top_level_keys = list(merged.keys())
+    logger.verbose(
+        "CONFIG",
+        (
+            f"Final config has {len(top_level_keys)} top-level keys: "
+            f"{', '.join(top_level_keys)}"
+        ),
+    )
     # Show the complete merged configuration in debug mode
-    if debug:
-        logger.debug("CONFIG", "--- Final Merged Configuration ---")
-        _print_yaml_content(merged, debug)
+    logger.debug("CONFIG", "--- Final Merged Configuration ---")
+    _print_yaml_content(merged)
 
     # 7) Resolve relative paths (branding paths relative to defaults_root)
     _resolve_known_paths(merged, recipe_dir, defaults_root)
