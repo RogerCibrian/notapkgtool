@@ -51,22 +51,20 @@ def sample_recipe_data() -> dict[str, Any]:
     return {
         "apiVersion": "napt/v1",
         "project": "Test Project",
-        "apps": [
-            {
-                "name": "Test App",
-                "id": "test-app",
-                "source": {
-                    "strategy": "url_download",
-                    "url": "https://example.com/installer.msi",
+        "app": {
+            "name": "Test App",
+            "id": "test-app",
+            "source": {
+                "strategy": "url_download",
+                "url": "https://example.com/installer.msi",
+            },
+            "psadt": {
+                "app_vars": {
+                    "AppName": "Test App",
+                    "AppVersion": "${discovered_version}",
                 },
-                "psadt": {
-                    "app_vars": {
-                        "AppName": "Test App",
-                        "AppVersion": "${discovered_version}",
-                    },
-                },
-            }
-        ],
+            },
+        },
     }
 
 
@@ -254,6 +252,6 @@ def real_psadt_template(real_psadt_cache_dir: Path) -> Path:
         from notapkgtool.psadt import get_psadt_release
 
         # Download real PSADT (this is expensive, runs once per session)
-        get_psadt_release(version, real_psadt_cache_dir, verbose=False)
+        get_psadt_release(version, real_psadt_cache_dir)
 
     return version_dir

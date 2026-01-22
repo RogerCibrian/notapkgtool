@@ -80,16 +80,14 @@ class TestBuildAdtSessionVars:
                     }
                 }
             },
-            "apps": [
-                {
-                    "psadt": {
-                        "app_vars": {
-                            "AppName": "Test App",
-                            "AppScriptAuthor": "RecipeOverride",
-                        }
+            "app": {
+                "psadt": {
+                    "app_vars": {
+                        "AppName": "Test App",
+                        "AppScriptAuthor": "RecipeOverride",
                     }
                 }
-            ],
+            },
         }
 
         result = _build_adtsession_vars(config, "1.0.0", "4.1.7")
@@ -103,7 +101,7 @@ class TestBuildAdtSessionVars:
         """Test ${discovered_version} placeholder replacement."""
         config = {
             "defaults": {"psadt": {"app_vars": {}}},
-            "apps": [{"psadt": {"app_vars": {"AppVersion": "${discovered_version}"}}}],
+            "app": {"psadt": {"app_vars": {"AppVersion": "${discovered_version}"}}},
         }
 
         result = _build_adtsession_vars(config, "2.3.4", "4.1.7")
@@ -116,7 +114,7 @@ class TestBuildAdtSessionVars:
 
         config = {
             "defaults": {"psadt": {"app_vars": {}}},
-            "apps": [{"psadt": {"app_vars": {}}}],
+            "app": {"psadt": {"app_vars": {}}},
         }
 
         result = _build_adtsession_vars(config, "1.0.0", "4.1.7")
