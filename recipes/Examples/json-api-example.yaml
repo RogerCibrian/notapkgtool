@@ -1,11 +1,11 @@
 apiVersion: napt/v1
 project: "napt - Example Apps"
 
-apps:
-  - name: "Fictional App via JSON API"
-    id: "napt-json-api-example"
+app:
+  name: "Fictional App via JSON API"
+  id: "napt-json-api-example"
 
-    source:
+  source:
       strategy: api_json
       api_url: "https://api.vendor.com/latest"
       version_path: "version"
@@ -15,7 +15,7 @@ apps:
         # Optional authentication (uncomment if needed)
         # Authorization: "Bearer ${API_TOKEN}"
 
-    psadt:
+  psadt:
       app_vars:
         AppName: "Fictional App"
         AppVersion: "${discovered_version}"
@@ -32,11 +32,11 @@ apps:
 apiVersion: napt/v1
 project: "napt - Example Apps"
 
-apps:
-  - name: "Nested JSON API Example"
-    id: "napt-nested-json-example"
+app:
+  name: "Nested JSON API Example"
+  id: "napt-nested-json-example"
 
-    source:
+  source:
       strategy: api_json
       api_url: "https://api.vendor.com/releases"
       version_path: "release.stable.version"
@@ -45,9 +45,9 @@ apps:
       headers:
         Accept: "application/json"
 
-    detection:
-      display_name: "Nested API App"
-    psadt:
+  detection:
+    display_name: "Nested API App"
+  psadt:
       app_vars:
         AppName: "Nested API App"
         AppVersion: "${discovered_version}"
@@ -61,11 +61,11 @@ apps:
 apiVersion: napt/v1
 project: "napt - Example Apps"
 
-apps:
-  - name: "POST API Example"
-    id: "napt-post-api-example"
+app:
+  name: "POST API Example"
+  id: "napt-post-api-example"
 
-    source:
+  source:
       strategy: api_json
       api_url: "https://api.vendor.com/query"
       version_path: "result.version"
@@ -79,9 +79,9 @@ apps:
         arch: "x64"
         channel: "stable"
 
-    detection:
-      display_name: "POST API App"
-    psadt:
+  detection:
+    display_name: "POST API App"
+  psadt:
       app_vars:
         AppName: "POST API App"
         AppVersion: "${discovered_version}"
