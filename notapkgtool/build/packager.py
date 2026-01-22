@@ -90,12 +90,11 @@ def _verify_build_structure(build_dir: Path) -> None:
         )
 
 
-def _get_intunewin_tool(cache_dir: Path, verbose: bool = False) -> Path:
+def _get_intunewin_tool(cache_dir: Path) -> Path:
     """Download and cache IntuneWinAppUtil.exe.
 
     Args:
         cache_dir: Directory to cache the tool.
-        verbose: Show verbose output. Default is False.
 
     Returns:
         Path to the IntuneWinAppUtil.exe tool.
@@ -135,7 +134,6 @@ def _execute_packaging(
     source_dir: Path,
     setup_file: str,
     output_dir: Path,
-    verbose: bool = False,
 ) -> Path:
     """Execute IntuneWinAppUtil.exe to create .intunewin package.
 
@@ -144,7 +142,6 @@ def _execute_packaging(
         source_dir: Source directory (build directory).
         setup_file: Name of the setup file (e.g., "Invoke-AppDeployToolkit.exe").
         output_dir: Output directory for .intunewin file.
-        verbose: Show verbose output. Default is False.
 
     Returns:
         Path to the created .intunewin file.
@@ -181,7 +178,7 @@ def _execute_packaging(
             timeout=300,
         )
 
-        if verbose and result.stdout:
+        if result.stdout:
             for line in result.stdout.strip().split("\n"):
                 logger.verbose("PACKAGE", f"  {line}")
 
@@ -214,8 +211,6 @@ def create_intunewin(
     build_dir: Path,
     output_dir: Path | None = None,
     clean_source: bool = False,
-    verbose: bool = False,
-    debug: bool = False,
 ) -> PackageResult:
     """Create a .intunewin package from a PSADT build directory.
 
@@ -228,8 +223,6 @@ def create_intunewin(
             Default: packages/{app_id}/
         clean_source: If True, remove the build directory
             after packaging. Default is False.
-        verbose: Show verbose output. Default is False.
-        debug: Show debug output. Default is False.
 
     Returns:
         PackageResult dataclass with the following fields:
@@ -301,7 +294,7 @@ def create_intunewin(
     # Get IntuneWinAppUtil tool
     logger.step(2, 4, "Getting IntuneWinAppUtil tool...")
     tool_cache = Path("cache/tools")
-    tool_path = _get_intunewin_tool(tool_cache, verbose=verbose)
+    tool_path = _get_intunewin_tool(tool_cache)
 
     # Create .intunewin package
     logger.step(3, 4, "Creating .intunewin package...")
@@ -310,7 +303,6 @@ def create_intunewin(
         build_dir,
         "Invoke-AppDeployToolkit.exe",
         output_dir,
-        verbose=verbose,
     )
 
     # Optionally clean source

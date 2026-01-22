@@ -38,7 +38,7 @@ class TestFindInstallerFile:
         installer = downloads_dir / "chrome.msi"
         installer.write_text("fake msi")
 
-        config = {"apps": [{"source": {"url": "https://example.com/chrome.msi"}}]}
+        config = {"app": {"source": {"url": "https://example.com/chrome.msi"}}}
 
         result = _find_installer_file(downloads_dir, config)
 
@@ -51,7 +51,7 @@ class TestFindInstallerFile:
         installer = downloads_dir / "app.msi"
         installer.write_text("fake msi")
 
-        config = {"apps": [{"source": {}}]}
+        config = {"app": {"source": {}}}
 
         result = _find_installer_file(downloads_dir, config)
 
@@ -64,7 +64,7 @@ class TestFindInstallerFile:
         installer = downloads_dir / "setup.exe"
         installer.write_text("fake exe")
 
-        config = {"apps": [{"source": {}}]}
+        config = {"app": {"source": {}}}
 
         result = _find_installer_file(downloads_dir, config)
 
@@ -84,7 +84,7 @@ class TestFindInstallerFile:
         new = downloads_dir / "new.msi"
         new.write_text("new")
 
-        config = {"apps": [{"source": {}}]}
+        config = {"app": {"source": {}}}
 
         result = _find_installer_file(downloads_dir, config)
 
@@ -95,7 +95,7 @@ class TestFindInstallerFile:
         downloads_dir = tmp_path / "downloads"
         downloads_dir.mkdir()
 
-        config = {"apps": [{"source": {}}]}
+        config = {"app": {"source": {}}}
 
         from notapkgtool.exceptions import PackagingError
 

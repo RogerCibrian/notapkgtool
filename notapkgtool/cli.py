@@ -107,7 +107,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
     """
     # Configure global logger
-    logger = get_logger(verbose=args.verbose, debug=False)
+    logger = get_logger(verbose=args.verbose, debug=args.debug)
     set_global_logger(logger)
 
     recipe_path = Path(args.recipe).resolve()
@@ -116,7 +116,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
     print()
 
     # Validate the recipe
-    result = validate_recipe(recipe_path, verbose=args.verbose)
+    result = validate_recipe(recipe_path)
 
     # Display results
     print("=" * 70)
@@ -196,8 +196,6 @@ def cmd_discover(args: argparse.Namespace) -> int:
             output_dir,
             state_file=args.state_file if not args.stateless else None,
             stateless=args.stateless,
-            verbose=args.verbose,
-            debug=args.debug,
         )
     except (ConfigError, NetworkError, PackagingError) as err:
         print(f"Error: {err}")
@@ -286,8 +284,6 @@ def cmd_build(args: argparse.Namespace) -> int:
             recipe_path,
             downloads_dir=downloads_dir,
             output_dir=output_dir,
-            verbose=args.verbose,
-            debug=args.debug,
         )
     except (ConfigError, NetworkError, PackagingError) as err:
         print(f"Error: {err}")
@@ -365,8 +361,6 @@ def cmd_package(args: argparse.Namespace) -> int:
             build_dir,
             output_dir=output_dir,
             clean_source=args.clean_source,
-            verbose=args.verbose,
-            debug=args.debug,
         )
     except (ConfigError, NetworkError, PackagingError) as err:
         print(f"Error: {err}")
@@ -449,6 +443,12 @@ def main() -> None:
         "--verbose",
         action="store_true",
         help="Show validation progress and details",
+    )
+    parser_validate.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="Show detailed debugging output (implies --verbose)",
     )
     parser_validate.set_defaults(func=cmd_validate)
 

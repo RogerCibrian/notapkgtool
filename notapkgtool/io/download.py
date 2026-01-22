@@ -202,8 +202,6 @@ def download_file(
     timeout: int = 60,
     etag: str | None = None,
     last_modified: str | None = None,
-    verbose: bool = False,
-    debug: bool = False,
 ) -> tuple[Path, str, dict]:
     """Download a URL to destination_folder with robustness and reproducibility.
 
@@ -221,8 +219,6 @@ def download_file(
         etag: Previous ETag to use for If-None-Match (conditional GET).
         last_modified: Previous Last-Modified to use for If-Modified-Since
             (conditional GET).
-        verbose: Print verbose progress.
-        debug: Print debug information.
 
     Returns:
         A tuple (file_path, sha256_hex, headers_dict), where file_path is
@@ -252,11 +248,10 @@ def download_file(
         )
 
     logger.verbose("HTTP", f"GET {url}")
-    if verbose:
-        logger.verbose(
-            "HTTP",
-            "Request headers: Accept-Encoding: identity, User-Agent: napt/0.1.0",
-        )
+    logger.verbose(
+        "HTTP",
+        "Request headers: Accept-Encoding: identity, User-Agent: napt/0.1.0",
+    )
 
     with make_session() as session:
         # Stream response so we can hash while writing.
@@ -265,7 +260,7 @@ def download_file(
         )
 
         # Log redirects
-        if verbose and len(resp.history) > 0:
+        if len(resp.history) > 0:
             for hist in resp.history:
                 logger.verbose(
                     "HTTP",
@@ -296,13 +291,12 @@ def download_file(
         target = destination_folder / filename
 
         # Log response details
-        if verbose:
-            content_length = resp.headers.get("Content-Length", "unknown")
-            if content_length != "unknown":
-                size_mb = int(content_length) / (1024 * 1024)
-                logger.verbose(
-                    "HTTP", f"Content-Length: {content_length} ({size_mb:.1f} MB)"
-                )
+        content_length = resp.headers.get("Content-Length", "unknown")
+        if content_length != "unknown":
+            size_mb = int(content_length) / (1024 * 1024)
+            logger.verbose(
+                "HTTP", f"Content-Length: {content_length} ({size_mb:.1f} MB)"
+            )
             etag_value = resp.headers.get("ETag", "not provided")
             logger.verbose("HTTP", f"ETag: {etag_value}")
             cd_header = resp.headers.get("Content-Disposition", "not provided")
@@ -365,13 +359,11 @@ def download_file(
             )
 
         elapsed = time.time() - started_at
-        if not verbose:
-            # For non-verbose mode, just show simple completion message
-            print(f"\ndownload complete: {target} ({digest}) in {elapsed:.1f}s")
-        else:
-            # For verbose mode, show detailed file info
-            logger.verbose("FILE", f"Download complete: {target}")
-            logger.verbose("FILE", f"Time elapsed: {elapsed:.1f}s")
+        # Always show completion message
+        logger.step(0, 0, f"Download complete: {target} ({digest}) in {elapsed:.1f}s")
+        # Show detailed info in verbose mode
+        logger.verbose("FILE", f"Download complete: {target}")
+        logger.verbose("FILE", f"Time elapsed: {elapsed:.1f}s")
 
         # Hand back headers the caller may want to persist (ETag, Last-Modified).
         return target, digest, dict(resp.headers)

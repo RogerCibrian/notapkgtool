@@ -21,9 +21,9 @@ useful for quick feedback during recipe development and in CI/CD pipelines.
 Validation Checks:
 
 - YAML syntax is valid
-- Required top-level fields present (apiVersion, apps)
+- Required top-level fields present (apiVersion, app)
 - apiVersion is supported
-- Each app has required fields (name, id, source)
+- App has required fields (name, id, source)
 - Discovery strategy exists and is registered
 - Strategy-specific configuration is valid
 
@@ -51,12 +51,13 @@ import yaml
 
 from notapkgtool.discovery import get_strategy
 from notapkgtool.exceptions import ConfigError
+from notapkgtool.logging import get_global_logger
 from notapkgtool.results import ValidationResult
 
 __all__ = ["validate_recipe"]
 
 
-def validate_recipe(recipe_path: Path, verbose: bool = False) -> ValidationResult:
+def validate_recipe(recipe_path: Path) -> ValidationResult:
     """Validate a recipe file without downloading anything.
 
     This function checks:
@@ -64,7 +65,7 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> ValidationResul
     1. YAML file can be parsed
     2. Required top-level fields are present
     3. apiVersion is supported
-    4. Each app has required fields
+    4. App has required fields
     5. Discovery strategies exist
     6. Strategy-specific configuration is valid
 
@@ -77,8 +78,6 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> ValidationResul
 
     Args:
         recipe_path: Path to the recipe YAML file to validate.
-        verbose: If True, print validation progress.
-            Default is False.
 
     Returns:
         ValidationResult dataclass with the following fields:
@@ -91,7 +90,7 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> ValidationResul
             - warnings (list[str]): List of warning messages found during validation.
                 Warnings indicate potential issues but do not prevent validation from
                 passing (e.g., unsupported apiVersion, deprecated configuration).
-            - app_count (int): Number of apps defined in the recipe. Zero if recipe
+            - app_count (int): Always 1 for valid recipes (single app format). Zero if recipe
                 structure is invalid.
             - recipe_path (str): String path to the validated recipe file, useful for
                 error reporting and logging.
@@ -110,12 +109,13 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> ValidationResul
             ```
 
     """
+    logger = get_global_logger()
+
     errors = []
     warnings = []
     app_count = 0
 
-    if verbose:
-        print(f"Validating recipe: {recipe_path}")
+    logger.verbose("VALIDATION", f"Validating recipe: {recipe_path}")
 
     # Check file exists
     if not recipe_path.exists():
@@ -151,8 +151,7 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> ValidationResul
             recipe_path=str(recipe_path),
         )
 
-    if verbose:
-        print("  [OK] YAML syntax is valid")
+    logger.verbose("VALIDATION", "YAML syntax is valid")
 
     # Validate recipe is a dict
     if not isinstance(recipe, dict):
@@ -176,12 +175,13 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> ValidationResul
             warnings.append(
                 f"apiVersion '{api_version}' may not be supported (expected: napt/v1)"
             )
-        if verbose and not errors:
-            print(f"  [OK] apiVersion: {api_version}")
+        if not errors:
+            logger.verbose("VALIDATION", f"apiVersion: {api_version}")
 
-    # Check apps list
-    if "apps" not in recipe:
-        errors.append("Missing required field: apps")
+    # Check app field
+    app = recipe.get("app")
+    if not app:
+        errors.append("Field 'app' is required")
         return ValidationResult(
             status="invalid",
             errors=errors,
@@ -190,9 +190,8 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> ValidationResul
             recipe_path=str(recipe_path),
         )
 
-    apps = recipe["apps"]
-    if not isinstance(apps, list):
-        errors.append("Field 'apps' must be a list")
+    if not isinstance(app, dict):
+        errors.append("Field 'app' must be a dictionary")
         return ValidationResult(
             status="invalid",
             errors=errors,
@@ -201,93 +200,73 @@ def validate_recipe(recipe_path: Path, verbose: bool = False) -> ValidationResul
             recipe_path=str(recipe_path),
         )
 
-    if len(apps) == 0:
-        errors.append("Field 'apps' must contain at least one app")
-        return ValidationResult(
-            status="invalid",
-            errors=errors,
-            warnings=warnings,
-            app_count=0,
-            recipe_path=str(recipe_path),
-        )
+    app_prefix = "app"
 
-    app_count = len(apps)
-    if verbose:
-        print(f"  [OK] Found {app_count} app(s)")
+    logger.verbose("VALIDATION", f"Found app: {app.get('name', 'unnamed')}")
 
-    # Validate each app
-    for idx, app in enumerate(apps):
-        app_prefix = f"apps[{idx}]"
+    # Check required fields
+    for field in ["name", "id", "source"]:
+        if field not in app:
+            errors.append(f"{app_prefix}: Missing required field: {field}")
 
-        if not isinstance(app, dict):
-            errors.append(f"{app_prefix}: App must be a dictionary")
-            continue
+    # Validate name
+    if "name" in app and not isinstance(app["name"], str):
+        errors.append(f"{app_prefix}: Field 'name' must be a string")
 
-        # Check required fields
-        for field in ["name", "id", "source"]:
-            if field not in app:
-                errors.append(f"{app_prefix}: Missing required field: {field}")
+    # Validate id
+    if "id" in app:
+        if not isinstance(app["id"], str):
+            errors.append(f"{app_prefix}: Field 'id' must be a string")
+        elif not app["id"]:
+            errors.append(f"{app_prefix}: Field 'id' cannot be empty")
 
-        # Validate name
-        if "name" in app and not isinstance(app["name"], str):
-            errors.append(f"{app_prefix}: Field 'name' must be a string")
-
-        # Validate id
-        if "id" in app:
-            if not isinstance(app["id"], str):
-                errors.append(f"{app_prefix}: Field 'id' must be a string")
-            elif not app["id"]:
-                errors.append(f"{app_prefix}: Field 'id' cannot be empty")
-
-        # Validate source
-        if "source" not in app:
-            continue  # Already reported missing field
-
+    # Validate source
+    if "source" not in app:
+        # Already reported missing field, but continue to check other things
+        pass
+    else:
         source = app["source"]
         if not isinstance(source, dict):
             errors.append(f"{app_prefix}.source: Must be a dictionary")
-            continue
+        else:
+            # Check strategy field
+            if "strategy" not in source:
+                errors.append(f"{app_prefix}.source: Missing required field: strategy")
+            else:
+                strategy_name = source["strategy"]
+                if not isinstance(strategy_name, str):
+                    errors.append(f"{app_prefix}.source.strategy: Must be a string")
+                else:
+                    logger.verbose(
+                        "VALIDATION",
+                        f"App '{app.get('name', 'unnamed')}' uses strategy: {strategy_name}",
+                    )
 
-        # Check strategy field
-        if "strategy" not in source:
-            errors.append(f"{app_prefix}.source: Missing required field: strategy")
-            continue
-
-        strategy_name = source["strategy"]
-        if not isinstance(strategy_name, str):
-            errors.append(f"{app_prefix}.source.strategy: Must be a string")
-            continue
-
-        if verbose:
-            print(
-                f"  [OK] App '{app.get('name', 'unnamed')}' "
-                f"uses strategy: {strategy_name}"
-            )
-
-        # Check if strategy exists
-        try:
-            strategy = get_strategy(strategy_name)
-        except ConfigError as err:
-            errors.append(f"{app_prefix}.source.strategy: {err}")
-            continue
-
-        # Validate strategy-specific configuration
-        if hasattr(strategy, "validate_config"):
-            try:
-                config_errors = strategy.validate_config(app)
-                for error in config_errors:
-                    errors.append(f"{app_prefix}: {error}")
-            except Exception as err:
-                errors.append(f"{app_prefix}: Strategy validation failed: {err}")
+                    # Check if strategy exists
+                    try:
+                        strategy = get_strategy(strategy_name)
+                    except ConfigError as err:
+                        errors.append(f"{app_prefix}.source.strategy: {err}")
+                    else:
+                        # Validate strategy-specific configuration
+                        if hasattr(strategy, "validate_config"):
+                            try:
+                                config_errors = strategy.validate_config(app)
+                                for error in config_errors:
+                                    errors.append(f"{app_prefix}: {error}")
+                            except Exception as err:
+                                errors.append(
+                                    f"{app_prefix}: Strategy validation failed: {err}"
+                                )
 
     # Determine final status
     status = "valid" if len(errors) == 0 else "invalid"
+    app_count = 1 if status == "valid" else 0
 
-    if verbose:
-        if status == "valid":
-            print("  [OK] Recipe is valid!")
-        else:
-            print(f"  [ERROR] Recipe has {len(errors)} error(s)")
+    if status == "valid":
+        logger.verbose("VALIDATION", "Recipe is valid!")
+    else:
+        logger.verbose("VALIDATION", f"Recipe has {len(errors)} error(s)")
 
     return ValidationResult(
         status=status,

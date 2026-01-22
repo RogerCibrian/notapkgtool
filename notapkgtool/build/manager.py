@@ -85,7 +85,7 @@ def _get_installer_version(
     from notapkgtool.logging import get_global_logger
 
     logger = get_global_logger()
-    app = config["apps"][0]
+    app = config["app"]
     app_id = app.get("id", "unknown")
 
     # Priority 1: Auto-detect MSI files and extract version
@@ -151,7 +151,7 @@ def _find_installer_file(
     from notapkgtool.logging import get_global_logger
 
     logger = get_global_logger()
-    app = config["apps"][0]
+    app = config["app"]
     app_id = app.get("id", "")
     source = app.get("source", {})
     url = source.get("url", "")
@@ -400,8 +400,6 @@ def _generate_detection_script(
     version: str,
     app_id: str,
     build_dir: Path,
-    verbose: bool = False,
-    debug: bool = False,
 ) -> Path:
     """Generate detection script for Intune Win32 app.
 
@@ -415,8 +413,6 @@ def _generate_detection_script(
         version: Extracted version string.
         app_id: Application ID.
         build_dir: Build directory (packagefiles subdirectory).
-        verbose: Show verbose output. Default is False.
-        debug: Show debug output. Default is False.
 
     Returns:
         Path to the generated detection script.
@@ -429,7 +425,7 @@ def _generate_detection_script(
     from notapkgtool.logging import get_global_logger
 
     logger = get_global_logger()
-    app = config["apps"][0]
+    app = config["app"]
 
     # Get detection configuration (merged defaults + app-specific)
     defaults_detection = config.get("defaults", {}).get("detection", {})
@@ -452,9 +448,7 @@ def _generate_detection_script(
     if installer_ext == ".msi":
         # MSI: Use ProductName (required, no fallback - authoritative source)
         try:
-            msi_metadata = extract_msi_metadata(
-                installer_file, verbose=verbose, debug=debug
-            )
+            msi_metadata = extract_msi_metadata(installer_file)
             if not msi_metadata.product_name:
                 raise ConfigError(
                     "MSI ProductName property not found. Cannot generate detection "
@@ -526,8 +520,6 @@ def build_package(
     recipe_path: Path,
     downloads_dir: Path | None = None,
     output_dir: Path | None = None,
-    verbose: bool = False,
-    debug: bool = False,
 ) -> BuildResult:
     """Build a PSADT package from a recipe and downloaded installer.
 
@@ -550,8 +542,6 @@ def build_package(
             installer. Default: Path("downloads")
         output_dir: Base directory for build output.
             Default: From config or Path("builds")
-        verbose: Show verbose progress output. Default is False.
-        debug: Show debug output. Default is False.
 
     Returns:
         BuildResult dataclass with the following fields:
@@ -603,9 +593,9 @@ def build_package(
     logger = get_global_logger()
     # Load configuration
     logger.step(1, 6, "Loading configuration...")
-    config = load_effective_config(recipe_path, verbose=verbose, debug=debug)
+    config = load_effective_config(recipe_path)
 
-    app = config["apps"][0]
+    app = config["app"]
     app_id = app.get("id", "unknown-app")
     app_name = app.get("name", "Unknown App")
 
@@ -635,9 +625,7 @@ def build_package(
     release_spec = psadt_config.get("release", "latest")
     cache_dir = Path(psadt_config.get("cache_dir", "cache/psadt"))
 
-    psadt_cache_dir = get_psadt_release(
-        release_spec, cache_dir, verbose=verbose, debug=debug
-    )
+    psadt_cache_dir = get_psadt_release(release_spec, cache_dir)
     psadt_version = psadt_cache_dir.name  # Directory name is the version
 
     logger.verbose("BUILD", f"Using PSADT {psadt_version}")
@@ -654,7 +642,7 @@ def build_package(
 
     template_path = psadt_cache_dir / "Invoke-AppDeployToolkit.ps1"
     invoke_script = generate_invoke_script(
-        template_path, config, version, psadt_version, verbose=verbose, debug=debug
+        template_path, config, version, psadt_version
     )
 
     # Write generated script
@@ -674,7 +662,7 @@ def build_package(
     detection_script_path = None
     try:
         detection_script_path = _generate_detection_script(
-            installer_file, config, version, app_id, build_dir, verbose, debug
+            installer_file, config, version, app_id, build_dir
         )
         logger.verbose("BUILD", "[OK] Detection script generated")
     except Exception as err:

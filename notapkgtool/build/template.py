@@ -105,11 +105,11 @@ def _build_adtsession_vars(
 
     Note:
         Organization defaults come from config['defaults']['psadt']['app_vars'].
-        Recipe overrides come from config['apps'][0]['psadt']['app_vars'].
+        Recipe overrides come from config['app']['psadt']['app_vars'].
         Special handling for ${discovered_version} placeholder.
         Auto-generates AppScriptDate if not set.
     """
-    app = config["apps"][0]
+    app = config["app"]
 
     # Get base variables from org defaults
     org_defaults = config.get("defaults", {}).get("psadt", {}).get("app_vars", {})
@@ -228,8 +228,6 @@ def generate_invoke_script(
     config: dict[str, Any],
     version: str,
     psadt_version: str,
-    verbose: bool = False,
-    debug: bool = False,
 ) -> str:
     """Generate Invoke-AppDeployToolkit.ps1 from PSADT template and config.
 
@@ -242,8 +240,6 @@ def generate_invoke_script(
         config: Merged configuration (org + vendor + recipe).
         version: Application version (from filesystem).
         psadt_version: PSADT version being used.
-        verbose: Show verbose output. Default is False.
-        debug: Show debug output. Default is False.
 
     Returns:
         Generated PowerShell script text.
@@ -279,17 +275,16 @@ def generate_invoke_script(
     logger.verbose("BUILD", "Building $adtSession variables...")
     session_vars = _build_adtsession_vars(config, version, psadt_version)
 
-    if debug:
-        logger.debug("BUILD", "--- $adtSession Variables ---")
-        for key, value in session_vars.items():
-            logger.debug("BUILD", f"  {key} = {value}")
+    logger.debug("BUILD", "--- $adtSession Variables ---")
+    for key, value in session_vars.items():
+        logger.debug("BUILD", f"  {key} = {value}")
 
     # Replace $adtSession block
     script = _replace_session_block(template, session_vars)
     logger.verbose("BUILD", "[OK] Replaced $adtSession hashtable")
 
     # Insert recipe code
-    app = config["apps"][0]
+    app = config["app"]
     psadt_config = app.get("psadt", {})
     install_code = psadt_config.get("install")
     uninstall_code = psadt_config.get("uninstall")

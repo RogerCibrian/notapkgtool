@@ -27,8 +27,8 @@ class TestConfigLoading:
         config = load_effective_config(recipe_path)
 
         assert config["apiVersion"] == "napt/v1"
-        assert len(config["apps"]) == 1
-        assert config["apps"][0]["name"] == "Test App"
+        assert "app" in config
+        assert config["app"]["name"] == "Test App"
 
     def test_load_recipe_with_org_defaults(
         self, tmp_test_dir, create_yaml_file, sample_recipe_data, sample_org_defaults
@@ -46,12 +46,12 @@ class TestConfigLoading:
 
         # Create recipe
         recipe_path = recipes_dir / "test.yaml"
-        recipe_path.write_text("apiVersion: napt/v1\napps:\n  - name: Test\n")
+        recipe_path.write_text("apiVersion: napt/v1\napp:\n  name: Test\n")
 
         config = load_effective_config(recipe_path)
 
         # Should have both recipe and defaults
-        assert "apps" in config
+        assert "app" in config
         assert "defaults" in config
         assert config["defaults"]["comparator"] == "semver"
 
@@ -96,8 +96,8 @@ defaults:
   psadt:
     app_vars:
       AppName: "MyApp"
-apps:
-  - name: Test
+app:
+  name: Test
 """
         )
 
@@ -130,8 +130,8 @@ defaults:
 apiVersion: napt/v1
 defaults:
   processes: [process3]
-apps:
-  - name: Test
+app:
+  name: Test
 """
         )
 
@@ -162,8 +162,8 @@ defaults:
 apiVersion: napt/v1
 defaults:
   comparator: lexicographic
-apps:
-  - name: Test
+app:
+  name: Test
 """
         )
 
@@ -212,8 +212,8 @@ defaults:
         recipe_path.write_text(
             """
 apiVersion: napt/v1
-apps:
-  - name: Chrome
+app:
+  name: Chrome
 """
         )
 

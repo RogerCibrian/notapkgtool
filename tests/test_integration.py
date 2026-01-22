@@ -47,16 +47,14 @@ class TestEndToEndWorkflow:
         # Create recipe
         recipe_data = {
             "apiVersion": "napt/v1",
-            "apps": [
-                {
-                    "name": "Test App",
-                    "id": "test-app",
-                    "source": {
-                        "strategy": "url_download",
-                        "url": "https://example.com/installer.msi",
-                    },
-                }
-            ],
+            "app": {
+                "name": "Test App",
+                "id": "test-app",
+                "source": {
+                    "strategy": "url_download",
+                    "url": "https://example.com/installer.msi",
+                },
+            },
         }
         recipe_path = recipes_dir / "testapp.yaml"
         with recipe_path.open("w") as f:
@@ -101,17 +99,14 @@ class TestConfigAndDiscoveryIntegration:
         """Test that loaded config provides correct params to discovery."""
         recipe_data = {
             "apiVersion": "napt/v1",
-            "apps": [
-                {
-                    "name": "App",
-                    "id": "app-id",
-                    "source": {
-                        "strategy": "url_download",
-                        "url": "https://test.com/app.msi",
-                        "version": {"type": "msi"},
-                    },
-                }
-            ],
+            "app": {
+                "name": "App",
+                "id": "app-id",
+                "source": {
+                    "strategy": "url_download",
+                    "url": "https://test.com/app.msi",
+                },
+            },
         }
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
 
@@ -142,16 +137,13 @@ class TestErrorPropagation:
         """Test that download errors propagate with context."""
         recipe_data = {
             "apiVersion": "napt/v1",
-            "apps": [
-                {
-                    "name": "App",
-                    "source": {
-                        "strategy": "url_download",
-                        "url": "https://test.com/app.msi",
-                        "version": {"type": "msi"},
-                    },
-                }
-            ],
+            "app": {
+                "name": "App",
+                "source": {
+                    "strategy": "url_download",
+                    "url": "https://test.com/app.msi",
+                },
+            },
         }
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
 
@@ -167,16 +159,13 @@ class TestErrorPropagation:
         """Test that version extraction errors propagate with context."""
         recipe_data = {
             "apiVersion": "napt/v1",
-            "apps": [
-                {
-                    "name": "App",
-                    "source": {
-                        "strategy": "url_download",
-                        "url": "https://test.com/app.msi",
-                        "version": {"type": "msi"},
-                    },
-                }
-            ],
+            "app": {
+                "name": "App",
+                "source": {
+                    "strategy": "url_download",
+                    "url": "https://test.com/app.msi",
+                },
+            },
         }
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
 

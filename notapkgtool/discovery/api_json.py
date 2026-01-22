@@ -198,8 +198,6 @@ class ApiJsonStrategy:
     def get_version_info(
         self,
         app_config: dict[str, Any],
-        verbose: bool = False,
-        debug: bool = False,
     ) -> VersionInfo:
         """Query JSON API for version and download URL without downloading
         (version-first path).
@@ -211,10 +209,6 @@ class ApiJsonStrategy:
         Args:
             app_config: App configuration containing source.api_url,
                 source.version_path, and source.download_url_path.
-            verbose: If True, print verbose logging messages.
-                Default is False.
-            debug: If True, print debug logging messages.
-                Default is False.
 
         Returns:
             Version info with version string, download URL, and
@@ -329,10 +323,7 @@ class ApiJsonStrategy:
                 f"Invalid JSON response from API. Response: {response.text[:200]}"
             ) from err
 
-        if debug:
-            logger.verbose(
-                "DISCOVERY", f"JSON response: {json.dumps(json_data, indent=2)}"
-            )
+        logger.debug("DISCOVERY", f"JSON response: {json.dumps(json_data, indent=2)}")
 
         # Extract version using JSONPath
         logger.verbose("DISCOVERY", f"Extracting version from path: {version_path}")

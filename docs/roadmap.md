@@ -25,7 +25,6 @@ This roadmap is a living document showing potential future directions for NAPT. 
 |---------|--------|----------|------------|-------|
 | Microsoft Intune Upload | 🔬 Investigating | User-Facing | High | Very High |
 | Deployment Wave Management | 🔬 Investigating | User-Facing | Very High | High |
-| Detection Script Generation | 💡 Idea | User-Facing | High | High |
 | Pre/Post Install/Uninstall Script Support | 💡 Idea | User-Facing | Low | Medium |
 | Enhanced CLI Help Menu | 💡 Idea | User-Facing | Low | Medium |
 | PowerShell Validation | 💡 Idea | Code Quality | High | High |
@@ -38,8 +37,8 @@ This roadmap is a living document showing potential future directions for NAPT. 
 
 - 📋 **Ready**: 0
 - 🔬 **Investigating**: 2
-- 💡 **Ideas**: 8
-- **Total**: 10 features
+- 💡 **Ideas**: 7
+- **Total**: 9 features
 
 ---
 
@@ -101,23 +100,6 @@ This roadmap is a living document showing potential future directions for NAPT. 
 > - **Technical Enhancements**: Internal improvements and infrastructure enhancements that improve performance, add backend capabilities, or optimize the tool's operation.
 
 ### User-Facing Features
-
-#### Detection Script Generation
-**Status**: 💡 Idea  
-**Complexity**: High (3-5 days)  
-**Value**: High
-
-**Description**: Automatically generate detection scripts for Intune that check if an application is already installed.
-
-**Benefits**:
-
-- Reduces manual work for Intune app creation
-- Ensures consistent detection logic across all apps
-- Leverages information we already have (ProductCode, version, paths)
-- Supports both MSI and EXE installers with appropriate detection methods
-- Prevents re-installation of already-installed apps
-- Enables version-based detection for upgrades
-- Useful for organizations creating multiple Win32 apps in Intune
 
 #### Pre/Post Install/Uninstall Script Support
 **Status**: 💡 Idea  
@@ -242,6 +224,26 @@ This roadmap is a living document showing potential future directions for NAPT. 
 ---
 
 ## Recently Completed
+
+#### Detection Script Generation ✅
+**Status**: ✅ Completed  
+**Complexity**: High (3-5 days)  
+**Value**: High
+
+**Description**: Automatic PowerShell detection script generation for Intune Win32 app deployments during build process. Scripts check Windows uninstall registry keys, support exact or minimum version matching, and include CMTrace-formatted logging.
+
+**Implementation Details**:
+
+- Extracts app name from MSI ProductName (for MSI installers) or uses `detection.display_name` (for non-MSI installers)
+- Generates scripts that check Windows uninstall registry keys for installed software
+- Supports exact match or minimum version (installed >= expected) detection modes
+- Includes CMTrace-formatted logging with log rotation
+- Scripts saved as `{AppName}_{Version}-Detection.ps1` sibling to `packagefiles/` directory
+- Configurable via `detection` section in defaults or recipe
+
+**Related**: Implemented in `notapkgtool/detection.py` and integrated into build process in `notapkgtool/build/manager.py`. See [User Guide - Detection Scripts](user-guide.md#detection-scripts) and [Recipe Reference - Detection Configuration](recipe-reference.md#detection-configuration).
+
+---
 
 **v0.2.0** - PSADT building, packaging, and new discovery strategies  
 **v0.1.0** - Core validation, discovery, and configuration system

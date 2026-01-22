@@ -63,7 +63,7 @@ def describe_compare(
     show_key("remote", remote, source)
     if current is not None:
         show_key("current", current, source)
-    _ = vc.is_newer_any(remote, current, source=source, verbose=True)
+    _ = vc.is_newer_any(remote, current, source=source)
 
 
 def demo_msi_section() -> None:

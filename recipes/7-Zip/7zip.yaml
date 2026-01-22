@@ -1,18 +1,18 @@
 apiVersion: napt/v1
 project: "napt - Windows Apps"
 
-apps:
-  - name: "7-Zip"
-    id: "napt-7zip"
+app:
+  name: "7-Zip"
+  id: "napt-7zip"
 
-    source:
+  source:
       strategy: web_scrape
       page_url: "https://www.7-zip.org/download.html"
       link_selector: 'a[href$="-x64.msi"]'
       version_pattern: "7z(\\d{2})(\\d{2})-x64"
       version_format: "{0}.{1}"
 
-    psadt:
+  psadt:
       app_vars:
         AppName: "7-Zip"
         AppVersion: "${discovered_version}"

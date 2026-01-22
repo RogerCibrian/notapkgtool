@@ -252,14 +252,14 @@ A recipe file defines how to discover, download, and package an application. Rec
 
 ```yaml
 apiVersion: v1  # Recipe format version
-apps:
-  - name: "Application Name"  # Display name
-    id: "napt-app-id"  # Unique identifier
-    source:  # Discovery configuration
-      strategy: api_github  # One of: api_github, api_json, url_download, web_scrape
-      # ... strategy-specific fields
-    psadt:  # PSADT configuration
-      install: |  # Installation script
+app:
+  name: "Application Name"  # Display name
+  id: "napt-app-id"  # Unique identifier
+  source:  # Discovery configuration
+    strategy: api_github  # One of: api_github, api_json, url_download, web_scrape
+    # ... strategy-specific fields
+  psadt:  # PSADT configuration
+    install: |  # Installation script
         # PowerShell code here
       uninstall: |  # Uninstallation script
         # PowerShell code here
@@ -372,10 +372,10 @@ defaults:
 
 ```yaml
 # recipes/Google/chrome.yaml
-apps:
-  - name: "Google Chrome"
-    # AppVendor will be "Google LLC" (from vendor defaults)
-    # release will be "latest" (from org defaults)
+app:
+  name: "Google Chrome"
+  # AppVendor will be "Google LLC" (from vendor defaults)
+  # release will be "latest" (from org defaults)
 ```
 
 > **Note:** For configuration loading implementation, see [Config Module](api/config.md) in Developer Reference.

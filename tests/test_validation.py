@@ -19,14 +19,12 @@ class TestValidateRecipe:
         recipe.write_text(
             """
 apiVersion: napt/v1
-apps:
-  - name: "Test App"
-    id: "test-app"
-    source:
-      strategy: url_download
-      url: "https://example.com/app.msi"
-      version:
-        type: msi
+app:
+  name: "Test App"
+  id: "test-app"
+  source:
+    strategy: url_download
+    url: "https://example.com/app.msi"
 """
         )
 
@@ -43,13 +41,13 @@ apps:
         recipe.write_text(
             """
 apiVersion: napt/v1
-apps:
-  - name: "Git"
-    id: "git"
-    source:
-      strategy: api_github
-      repo: "git/git"
-      asset_pattern: ".*\\\\.exe$"
+app:
+  name: "Git"
+  id: "git"
+  source:
+    strategy: api_github
+    repo: "git/git"
+    asset_pattern: ".*\\\\.exe$"
 """
         )
 
@@ -65,14 +63,14 @@ apps:
         recipe.write_text(
             """
 apiVersion: napt/v1
-apps:
-  - name: "Test App"
-    id: "test-app"
-    source:
-      strategy: web_scrape
-      page_url: "https://example.com/download.html"
-      link_selector: 'a[href$=".msi"]'
-      version_pattern: "app-v([0-9.]+)\\\\.msi"
+app:
+  name: "Test App"
+  id: "test-app"
+  source:
+    strategy: web_scrape
+    page_url: "https://example.com/download.html"
+    link_selector: 'a[href$=".msi"]'
+    version_pattern: "app-v([0-9.]+)\\\\.msi"
 """
         )
 
@@ -88,14 +86,14 @@ apps:
         recipe.write_text(
             """
 apiVersion: napt/v1
-apps:
-  - name: "Test App"
-    id: "test-app"
-    source:
-      strategy: api_json
-      api_url: "https://api.example.com/latest"
-      version_path: "version"
-      download_url_path: "download_url"
+app:
+  name: "Test App"
+  id: "test-app"
+  source:
+    strategy: api_json
+    api_url: "https://api.example.com/latest"
+    version_path: "version"
+    download_url_path: "download_url"
 """
         )
 
@@ -121,9 +119,9 @@ apps:
         recipe.write_text(
             """
 apiVersion: napt/v1
-apps:
-  - name: "Test"
-    invalid yaml: [unclosed bracket
+app:
+  name: "Test"
+  invalid yaml: [unclosed bracket
 """
         )
 
@@ -158,14 +156,14 @@ apps:
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text(
             """
-apps:
-  - name: "Test"
-    id: "test"
-    source:
-      strategy: url_download
-      url: "https://example.com/app.msi"
-      version:
-        type: msi
+app:
+  name: "Test"
+  id: "test"
+  source:
+    strategy: url_download
+    url: "https://example.com/app.msi"
+    version:
+      type: msi
 """
         )
 
@@ -180,14 +178,14 @@ apps:
         recipe.write_text(
             """
 apiVersion: napt/v99
-apps:
-  - name: "Test"
-    id: "test"
-    source:
-      strategy: url_download
-      url: "https://example.com/app.msi"
-      version:
-        type: msi
+app:
+  name: "Test"
+  id: "test"
+  source:
+    strategy: url_download
+    url: "https://example.com/app.msi"
+    version:
+      type: msi
 """
         )
 
@@ -196,8 +194,8 @@ apps:
         assert len(result.warnings) >= 1
         assert any("napt/v99" in warn for warn in result.warnings)
 
-    def test_missing_apps(self, tmp_path):
-        """Test that missing apps field is detected."""
+    def test_missing_app(self, tmp_path):
+        """Test that missing app field is detected."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text(
             """
@@ -208,37 +206,22 @@ apiVersion: napt/v1
         result = validate_recipe(recipe)
 
         assert result.status == "invalid"
-        assert any("apps" in err for err in result.errors)
+        assert any("app" in err for err in result.errors)
 
-    def test_apps_not_list(self, tmp_path):
-        """Test that apps must be a list."""
+    def test_app_not_dict(self, tmp_path):
+        """Test that app must be a dictionary."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text(
             """
 apiVersion: napt/v1
-apps: "not a list"
+app: "not a dict"
 """
         )
 
         result = validate_recipe(recipe)
 
         assert result.status == "invalid"
-        assert any("list" in err for err in result.errors)
-
-    def test_empty_apps_list(self, tmp_path):
-        """Test that empty apps list is detected."""
-        recipe = tmp_path / "recipe.yaml"
-        recipe.write_text(
-            """
-apiVersion: napt/v1
-apps: []
-"""
-        )
-
-        result = validate_recipe(recipe)
-
-        assert result.status == "invalid"
-        assert any("at least one app" in err for err in result.errors)
+        assert any("dictionary" in err for err in result.errors)
 
     def test_missing_app_name(self, tmp_path):
         """Test that missing app name is detected."""
@@ -246,13 +229,11 @@ apps: []
         recipe.write_text(
             """
 apiVersion: napt/v1
-apps:
-  - id: "test"
-    source:
-      strategy: url_download
-      url: "https://example.com/app.msi"
-      version:
-        type: msi
+app:
+  id: "test"
+  source:
+    strategy: url_download
+    url: "https://example.com/app.msi"
 """
         )
 
@@ -267,13 +248,13 @@ apps:
         recipe.write_text(
             """
 apiVersion: napt/v1
-apps:
-  - name: "Test"
-    source:
-      strategy: url_download
-      url: "https://example.com/app.msi"
-      version:
-        type: msi
+app:
+  name: "Test"
+  source:
+    strategy: url_download
+    url: "https://example.com/app.msi"
+    version:
+      type: msi
 """
         )
 
@@ -288,9 +269,9 @@ apps:
         recipe.write_text(
             """
 apiVersion: napt/v1
-apps:
-  - name: "Test"
-    id: "test"
+app:
+  name: "Test"
+  id: "test"
 """
         )
 
@@ -305,11 +286,11 @@ apps:
         recipe.write_text(
             """
 apiVersion: napt/v1
-apps:
-  - name: "Test"
-    id: "test"
-    source:
-      url: "https://example.com/app.msi"
+app:
+  name: "Test"
+  id: "test"
+  source:
+    url: "https://example.com/app.msi"
 """
         )
 
@@ -324,12 +305,12 @@ apps:
         recipe.write_text(
             """
 apiVersion: napt/v1
-apps:
-  - name: "Test"
-    id: "test"
-    source:
-      strategy: nonexistent_strategy
-      url: "https://example.com/app.msi"
+app:
+  name: "Test"
+  id: "test"
+  source:
+    strategy: nonexistent_strategy
+    url: "https://example.com/app.msi"
 """
         )
 
@@ -344,13 +325,13 @@ apps:
         recipe.write_text(
             """
 apiVersion: napt/v1
-apps:
-  - name: "Test"
-    id: "test"
-    source:
-      strategy: url_download
-      version:
-        type: msi
+app:
+  name: "Test"
+  id: "test"
+  source:
+    strategy: url_download
+    version:
+      type: msi
 """
         )
 
@@ -365,12 +346,12 @@ apps:
         recipe.write_text(
             """
 apiVersion: napt/v1
-apps:
-  - name: "Test"
-    id: "test"
-    source:
-      strategy: api_github
-      asset_pattern: ".*\\\\.exe$"
+app:
+  name: "Test"
+  id: "test"
+  source:
+    strategy: api_github
+    asset_pattern: ".*\\\\.exe$"
 """
         )
 
@@ -385,13 +366,13 @@ apps:
         recipe.write_text(
             """
 apiVersion: napt/v1
-apps:
-  - name: "Test"
-    id: "test"
-    source:
-      strategy: api_github
-      repo: "invalid-repo-format"
-      asset_pattern: ".*\\\\.exe$"
+app:
+  name: "Test"
+  id: "test"
+  source:
+    strategy: api_github
+    repo: "invalid-repo-format"
+    asset_pattern: ".*\\\\.exe$"
 """
         )
 
@@ -406,12 +387,12 @@ apps:
         recipe.write_text(
             """
 apiVersion: napt/v1
-apps:
-  - name: "Test"
-    id: "test"
-    source:
-      strategy: web_scrape
-      page_url: "https://example.com/download.html"
+app:
+  name: "Test"
+  id: "test"
+  source:
+    strategy: web_scrape
+    page_url: "https://example.com/download.html"
 """
         )
 
@@ -428,14 +409,14 @@ apps:
         recipe.write_text(
             """
 apiVersion: napt/v1
-apps:
-  - name: "Test"
-    id: "test"
-    source:
-      strategy: web_scrape
-      page_url: "https://example.com/download.html"
-      link_selector: 'a[href$=".msi"]'
-      version_pattern: "[unclosed bracket"
+app:
+  name: "Test"
+  id: "test"
+  source:
+    strategy: web_scrape
+    page_url: "https://example.com/download.html"
+    link_selector: 'a[href$=".msi"]'
+    version_pattern: "[unclosed bracket"
 """
         )
 
@@ -450,12 +431,12 @@ apps:
         recipe.write_text(
             """
 apiVersion: napt/v1
-apps:
-  - name: "Test"
-    id: "test"
-    source:
-      strategy: api_json
-      api_url: "https://api.example.com/latest"
+app:
+  name: "Test"
+  id: "test"
+  source:
+    strategy: api_json
+    api_url: "https://api.example.com/latest"
 """
         )
 
@@ -465,84 +446,30 @@ apps:
         # Should be missing version_path and download_url_path
         assert len(result.errors) >= 2
 
-    def test_multiple_apps_all_valid(self, tmp_path):
-        """Test validation with multiple valid apps."""
-        recipe = tmp_path / "recipe.yaml"
-        recipe.write_text(
-            """
-apiVersion: napt/v1
-apps:
-  - name: "App1"
-    id: "app1"
-    source:
-      strategy: url_download
-      url: "https://example.com/app1.msi"
-      version:
-        type: msi
-  - name: "App2"
-    id: "app2"
-    source:
-      strategy: api_github
-      repo: "owner/repo"
-      asset_pattern: ".*\\\\.exe$"
-"""
-        )
-
-        result = validate_recipe(recipe)
-
-        assert result.status == "valid"
-        assert result.app_count == 2
-        assert len(result.errors) == 0
-
-    def test_multiple_apps_one_invalid(self, tmp_path):
-        """Test that validation catches errors in any app."""
-        recipe = tmp_path / "recipe.yaml"
-        recipe.write_text(
-            """
-apiVersion: napt/v1
-apps:
-  - name: "Valid App"
-    id: "app1"
-    source:
-      strategy: url_download
-      url: "https://example.com/app.msi"
-      version:
-        type: msi
-  - name: "Invalid App"
-    id: "app2"
-    source:
-      strategy: url_download
-      # Missing url
-      version:
-        type: msi
-"""
-        )
-
-        result = validate_recipe(recipe)
-
-        assert result.status == "invalid"
-        assert result.app_count == 2
-        assert len(result.errors) >= 1
-        assert any("apps[1]" in err for err in result.errors)
-
     def test_verbose_mode(self, tmp_path, capsys):
         """Test that verbose mode prints progress."""
+        from notapkgtool.logging import get_logger, set_global_logger
+
+        # Set up verbose logger
+        logger = get_logger(verbose=True, debug=False)
+        set_global_logger(logger)
+
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text(
             """
 apiVersion: napt/v1
-apps:
-  - name: "Test"
-    id: "test"
-    source:
-      strategy: url_download
-      url: "https://example.com/app.msi"
-      version:
-        type: msi
+app:
+  name: "Test"
+  id: "test"
+  source:
+    strategy: url_download
+    url: "https://example.com/app.msi"
+    version:
+      type: msi
 """
         )
 
-        result = validate_recipe(recipe, verbose=True)
+        result = validate_recipe(recipe)
         captured = capsys.readouterr()
 
         assert result.status == "valid"
@@ -556,14 +483,14 @@ apps:
         recipe.write_text(
             """
 apiVersion: napt/v1
-apps:
-  - name: "Test"
-    id: "test"
-    source:
-      strategy: url_download
-      url: "https://example.com/app.msi"
-      version:
-        type: msi
+app:
+  name: "Test"
+  id: "test"
+  source:
+    strategy: url_download
+    url: "https://example.com/app.msi"
+    version:
+      type: msi
 """
         )
 

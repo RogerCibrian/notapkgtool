@@ -8,9 +8,9 @@ Complete documentation of all recipe fields, options, and configuration patterns
 
 ```yaml
 apiVersion: v1  # Required: Recipe format version (currently v1)
-apps:  # Required: List of applications to package
-  - name: "Application Name"
-    # ... app configuration
+app:  # Required: Application configuration
+  name: "Application Name"
+  # ... app configuration
 ```
 
 ### apiVersion
@@ -21,25 +21,25 @@ apps:  # Required: List of applications to package
 
 Specifies the recipe format version. Currently only `v1` is supported.
 
-### apps
+### app
 
-**Type:** `array`  
+**Type:** `object`  
 **Required:** Yes
 
-List of applications to package. Each item in the array defines one application with its own discovery, download, and packaging configuration.
+Application configuration defining discovery, download, and packaging settings for a single application.
 
 ## App Configuration
 
-Each item in the `apps` array defines one application:
+The `app` object defines the application:
 
 ```yaml
-apps:
-  - name: "Application Name"  # Required: Display name for the application
-    id: "napt-app-id"  # Required: Unique identifier (used for build directories, package names)
-    source:  # Required: Discovery configuration
-      # ... strategy-specific configuration
-    psadt:  # Required: PSAppDeployToolkit configuration
-      # ... PSADT settings
+app:
+  name: "Application Name"  # Required: Display name for the application
+  id: "napt-app-id"  # Required: Unique identifier (used for build directories, package names)
+  source:  # Required: Discovery configuration
+    # ... strategy-specific configuration
+  psadt:  # Required: PSAppDeployToolkit configuration
+    # ... PSADT settings
 ```
 
 ### name
@@ -422,7 +422,7 @@ The `detection` section (in `defaults` or per-app) configures detection script g
 
 - **Organization defaults:** `defaults/org.yaml` → `defaults.detection`
 - **Vendor defaults:** `defaults/vendors/<Vendor>.yaml` → `defaults.detection`
-- **Recipe (per-app):** `apps[].detection` (overrides defaults)
+- **Recipe (per-app):** `app.detection` (overrides defaults)
 
 **Configuration:**
 
@@ -434,10 +434,10 @@ defaults:
     log_rotation_mb: 3          # Maximum log file size in MB before rotation
 
 # Or per-app override:
-apps:
-  - name: "My App"
-    detection:
-      display_name: "My Application"  # Required for non-MSI installers, ignored for MSI
+app:
+  name: "My App"
+  detection:
+    display_name: "My Application"  # Required for non-MSI installers, ignored for MSI
       exact_match: true         # Override default for this app
 ```
 
@@ -555,10 +555,10 @@ export GITHUB_TOKEN="your_token_here"
 ```yaml
 apiVersion: v1
 
-apps:
-  - name: "Example Application"
-    id: "napt-example"
-    source:
+app:
+  name: "Example Application"
+  id: "napt-example"
+  source:
       strategy: api_github
       repo: "owner/repo"
       asset_pattern: ".*-x64\\.exe$"

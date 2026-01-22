@@ -1,15 +1,15 @@
 apiVersion: napt/v1
 project: "napt - Windows Apps"
 
-apps:
-  - name: "Google Chrome"
-    id: "napt-chrome"
+app:
+  name: "Google Chrome"
+  id: "napt-chrome"
 
-    source:
+  source:
       strategy: url_download
       url: "https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi"
 
-    psadt:
+  psadt:
       app_vars:
         AppName: "Google Chrome"
         AppVersion: "${discovered_version}"
