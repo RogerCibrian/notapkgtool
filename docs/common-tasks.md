@@ -15,14 +15,14 @@ Use this when the application is hosted on GitHub with releases.
 ```yaml
 # recipes/Git/git.yaml
 apiVersion: v1  # Recipe format version (currently v1)
-apps:  # List of applications to package
-  - name: "Git for Windows"  # Display name for the application
-    id: "napt-git"  # Unique identifier (used for build directories and package names)
-    source:  # Discovery configuration - how to find and download the installer
-      strategy: api_github  # Discovery strategy: api_github, api_json, url_download, or web_scrape
-      repo: "git-for-windows/git"  # GitHub repository (owner/repo format)
-      asset_pattern: "Git-.*-64-bit\\.exe$"  # Regex pattern to match installer filename in release assets
-      version_pattern: "v?([0-9.]+)"  # Regex pattern to extract version from Git tag
+app:  # Application configuration
+  name: "Git for Windows"  # Display name for the application
+  id: "napt-git"  # Unique identifier (used for build directories and package names)
+  source:  # Discovery configuration - how to find and download the installer
+    strategy: api_github  # Discovery strategy: api_github, api_json, url_download, or web_scrape
+    repo: "git-for-windows/git"  # GitHub repository (owner/repo format)
+    asset_pattern: "Git-.*-64-bit\\.exe$"  # Regex pattern to match installer filename in release assets
+    version_pattern: "v?([0-9.]+)"  # Regex pattern to extract version from Git tag
     psadt:  # PSAppDeployToolkit configuration
       install: |  # PowerShell script executed during installation
         Start-ADTProcess -Path "$dirFiles\Git-*.exe" -Parameters "/VERYSILENT /NORESTART"
@@ -59,10 +59,10 @@ Use this when the vendor has a download page listing installers (no API availabl
 ```yaml
 # recipes/7-Zip/7zip.yaml
 apiVersion: v1  # Recipe format version
-apps:
-  - name: "7-Zip"  # Display name
-    id: "napt-7zip"  # Unique identifier
-    source:
+app:
+  name: "7-Zip"  # Display name
+  id: "napt-7zip"  # Unique identifier
+  source:
       strategy: web_scrape  # Scrape vendor download page for installer link
       page_url: "https://www.7-zip.org/download.html"  # URL of vendor download page
       link_selector: 'a[href$="-x64.msi"]'  # CSS selector to find download link
@@ -100,10 +100,10 @@ Use this when the vendor provides a JSON API with version and download URL.
 ```yaml
 # recipes/Vendor/app.yaml
 apiVersion: v1  # Recipe format version
-apps:
-  - name: "Application Name"  # Display name
-    id: "napt-app"  # Unique identifier
-    source:
+app:
+  name: "Application Name"  # Display name
+  id: "napt-app"  # Unique identifier
+  source:
       strategy: api_json  # Query JSON API for version and download URL
       api_url: "https://api.vendor.com/latest"  # JSON API endpoint URL
       version_path: "version"  # JSONPath to version field (e.g., "version" or "data.version")
@@ -152,10 +152,10 @@ Use this when the vendor has a stable download URL (like Chrome enterprise MSI).
 ```yaml
 # recipes/Google/chrome.yaml
 apiVersion: v1  # Recipe format version
-apps:
-  - name: "Google Chrome"  # Display name
-    id: "napt-chrome"  # Unique identifier
-    source:
+app:
+  name: "Google Chrome"  # Display name
+  id: "napt-chrome"  # Unique identifier
+  source:
       strategy: url_download  # Direct download from fixed URL
       url: "https://dl.google.com/chrome/install/googlechromestandaloneenterprise64.msi"  # Stable download URL
       version:  # Version extraction configuration

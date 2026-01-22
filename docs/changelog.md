@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BREAKING: Simplified Version Types** - Version type names shortened for clarity:
     - `msi_product_version_from_file` → `msi`
     - Removed nested `version.type` for `web_scrape` (simplified to `source.link_selector` and `source.version_pattern`)
+- **BREAKING: Recipe Format Change** - Changed recipe format from `apps:` array to `app:` single object. Recipes now define a single application per file instead of an array. This simplifies the schema and matches actual usage (only one app was ever processed per recipe).
 - **Documentation Rendering** - Fixed module docstrings to follow Google-style format with proper indentation for mkdocstrings
 
 ### Fixed
