@@ -1647,6 +1647,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li>Removed nested <code>version.type</code> for <code>web_scrape</code> (simplified to <code>source.link_selector</code> and <code>source.version_pattern</code>)</li>
 </ul>
 </li>
+<li><strong>BREAKING: Recipe Format Change</strong> - Changed recipe format from <code>apps:</code> array to <code>app:</code> single object. Recipes now define a single application per file instead of an array. This simplifies the schema and matches actual usage (only one app was ever processed per recipe).</li>
 <li><strong>Documentation Rendering</strong> - Fixed module docstrings to follow Google-style format with proper indentation for mkdocstrings</li>
 </ul>
 <h3 id="fixed">Fixed</h3>

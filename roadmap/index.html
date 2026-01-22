@@ -1378,17 +1378,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#detection-script-generation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Detection Script Generation
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#prepost-installuninstall-script-support" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1528,6 +1517,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Recently Completed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#detection-script-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detection Script Generation ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1704,17 +1710,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#detection-script-generation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Detection Script Generation
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#prepost-installuninstall-script-support" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1855,6 +1850,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Recently Completed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#detection-script-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detection Script Generation ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
     </ul>
@@ -1922,13 +1934,6 @@
 <td>High</td>
 </tr>
 <tr>
-<td>Detection Script Generation</td>
-<td>💡 Idea</td>
-<td>User-Facing</td>
-<td>High</td>
-<td>High</td>
-</tr>
-<tr>
 <td>Pre/Post Install/Uninstall Script Support</td>
 <td>💡 Idea</td>
 <td>User-Facing</td>
@@ -1983,8 +1988,8 @@
 <ul>
 <li>📋 <strong>Ready</strong>: 0</li>
 <li>🔬 <strong>Investigating</strong>: 2</li>
-<li>💡 <strong>Ideas</strong>: 8</li>
-<li><strong>Total</strong>: 10 features</li>
+<li>💡 <strong>Ideas</strong>: 7</li>
+<li><strong>Total</strong>: 9 features</li>
 </ul>
 <hr />
 <h2 id="active-work">Active Work</h2>
@@ -2039,21 +2044,6 @@
 </ul>
 </blockquote>
 <h3 id="user-facing-features">User-Facing Features</h3>
-<h4 id="detection-script-generation">Detection Script Generation</h4>
-<p><strong>Status</strong>: 💡 Idea<br />
-<strong>Complexity</strong>: High (3-5 days)<br />
-<strong>Value</strong>: High</p>
-<p><strong>Description</strong>: Automatically generate detection scripts for Intune that check if an application is already installed.</p>
-<p><strong>Benefits</strong>:</p>
-<ul>
-<li>Reduces manual work for Intune app creation</li>
-<li>Ensures consistent detection logic across all apps</li>
-<li>Leverages information we already have (ProductCode, version, paths)</li>
-<li>Supports both MSI and EXE installers with appropriate detection methods</li>
-<li>Prevents re-installation of already-installed apps</li>
-<li>Enables version-based detection for upgrades</li>
-<li>Useful for organizations creating multiple Win32 apps in Intune</li>
-</ul>
 <h4 id="prepost-installuninstall-script-support">Pre/Post Install/Uninstall Script Support</h4>
 <p><strong>Status</strong>: 💡 Idea<br />
 <strong>Complexity</strong>: Low (few hours to 1 day)<br />
@@ -2153,6 +2143,22 @@
 <h2 id="declined-wont-implement">Declined / Won't Implement</h2>
 <hr />
 <h2 id="recently-completed">Recently Completed</h2>
+<h4 id="detection-script-generation">Detection Script Generation ✅</h4>
+<p><strong>Status</strong>: ✅ Completed<br />
+<strong>Complexity</strong>: High (3-5 days)<br />
+<strong>Value</strong>: High</p>
+<p><strong>Description</strong>: Automatic PowerShell detection script generation for Intune Win32 app deployments during build process. Scripts check Windows uninstall registry keys, support exact or minimum version matching, and include CMTrace-formatted logging.</p>
+<p><strong>Implementation Details</strong>:</p>
+<ul>
+<li>Extracts app name from MSI ProductName (for MSI installers) or uses <code>detection.display_name</code> (for non-MSI installers)</li>
+<li>Generates scripts that check Windows uninstall registry keys for installed software</li>
+<li>Supports exact match or minimum version (installed &gt;= expected) detection modes</li>
+<li>Includes CMTrace-formatted logging with log rotation</li>
+<li>Scripts saved as <code>{AppName}_{Version}-Detection.ps1</code> sibling to <code>packagefiles/</code> directory</li>
+<li>Configurable via <code>detection</code> section in defaults or recipe</li>
+</ul>
+<p><strong>Related</strong>: Implemented in <code>notapkgtool/detection.py</code> and integrated into build process in <code>notapkgtool/build/manager.py</code>. See <a href="../user-guide/#detection-scripts">User Guide - Detection Scripts</a> and <a href="../recipe-reference/#detection-configuration">Recipe Reference - Detection Configuration</a>.</p>
+<hr />
 <p><strong>v0.2.0</strong> - PSADT building, packaging, and new discovery strategies<br />
 <strong>v0.1.0</strong> - Core validation, discovery, and configuration system</p>
 <p>See <a href="../changelog/">CHANGELOG.md</a> for detailed release history.</p>
