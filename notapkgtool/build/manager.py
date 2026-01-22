@@ -595,7 +595,7 @@ def build_package(
     logger.step(1, 6, "Loading configuration...")
     config = load_effective_config(recipe_path)
 
-    app = config["apps"][0]
+    app = config["app"]
     app_id = app.get("id", "unknown-app")
     app_name = app.get("name", "Unknown App")
 
