@@ -55,7 +55,7 @@ The build process creates a complete PSADT package from the recipe and downloade
     - Replaces files in `Assets/` directory (AppIcon.png, Banner.Classic.png, etc.)
     - Uses pattern matching to find source files in brand pack directory
 10. **Generate Detection Script** - Creates PowerShell detection script for Intune Win32 app deployment:
-    - Extracts app name from MSI ProductName (for MSI installers) or uses detection.display_name (for non-MSI installers)
+    - Extracts app name from MSI ProductName (for MSI installers) or uses win32.installed_check.display_name (for non-MSI installers)
     - Generates script that checks Windows uninstall registry keys
     - Saves as `{AppName}_{Version}-Detection.ps1` sibling to `packagefiles/` directory
     - Script uses CMTrace-formatted logging
@@ -78,14 +78,14 @@ Detection scripts check Windows uninstall registry keys for installed software:
     - `HKCU:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall` (user-level, 32-bit on 64-bit OS)
 
 - **Detection Logic:**
-    - Matches by `DisplayName` (from MSI ProductName for MSI installers, or detection.display_name for non-MSI installers)
+    - Matches by `DisplayName` (from MSI ProductName for MSI installers, or win32.installed_check.display_name for non-MSI installers)
     - Compares installed version to expected version
     - Supports exact match or minimum version (installed >= expected)
     - Returns exit code 0 if installed and meets requirements, 1 otherwise
 
 - **App Name Determination:**
     - **MSI installers:** Uses MSI `ProductName` property (authoritative source for registry DisplayName)
-    - **Non-MSI installers:** Requires `detection.display_name` in recipe configuration
+    - **Non-MSI installers:** Requires `win32.installed_check.display_name` in recipe configuration
 
 - **Logging:**
     - Uses CMTrace format for Intune diagnostics

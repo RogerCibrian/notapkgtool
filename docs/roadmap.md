@@ -234,14 +234,14 @@ This roadmap is a living document showing potential future directions for NAPT. 
 
 **Implementation Details**:
 
-- Extracts app name from MSI ProductName (for MSI installers) or uses `detection.display_name` (for non-MSI installers)
+- Extracts app name from MSI ProductName (for MSI installers) or uses `win32.installed_check.display_name` (for non-MSI installers)
 - Generates scripts that check Windows uninstall registry keys for installed software
 - Supports exact match or minimum version (installed >= expected) detection modes
 - Includes CMTrace-formatted logging with log rotation
 - Scripts saved as `{AppName}_{Version}-Detection.ps1` sibling to `packagefiles/` directory
-- Configurable via `detection` section in defaults or recipe
+- Configurable via `win32.installed_check` section in defaults or recipe
 
-**Related**: Implemented in `notapkgtool/detection.py` and integrated into build process in `notapkgtool/build/manager.py`. See [User Guide - Detection Scripts](user-guide.md#detection-scripts) and [Recipe Reference - Detection Configuration](recipe-reference.md#detection-configuration).
+**Related**: Implemented in `notapkgtool/detection.py` and integrated into build process in `notapkgtool/build/manager.py`. See [User Guide - Detection Scripts](user-guide.md#detection-scripts) and [Recipe Reference - Win32 Configuration](recipe-reference.md#win32-configuration).
 
 ---
 
