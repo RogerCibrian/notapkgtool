@@ -109,7 +109,7 @@ builds/napt-chrome/142.0.7444.163/
 
 **Configuration:**
 
-Detection script behavior can be configured via the `detection` section in defaults or recipe. See [Recipe Reference - Detection Configuration](recipe-reference.md#detection-configuration) for complete options.
+Detection script behavior can be configured via the `win32.installed_check` section in defaults or recipe. See [Recipe Reference - Win32 Configuration](recipe-reference.md#win32-configuration) for complete options.
 
 ### Package Process (`napt package`)
 
