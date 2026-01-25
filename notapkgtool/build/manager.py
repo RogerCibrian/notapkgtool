@@ -439,7 +439,7 @@ def _generate_detection_script(
     app_installed_check = app.get("win32", {}).get("installed_check", {})
     # Merge: app overrides defaults (shallow merge at top level)
     installed_check_config = {**defaults_installed_check, **app_installed_check}
-    
+
     # Merge nested detection config separately
     defaults_detection_nested = defaults_installed_check.get("detection", {})
     app_detection_nested = app_installed_check.get("detection", {})
@@ -505,6 +505,7 @@ def _generate_detection_script(
         log_rotation_mb=installed_check_config.get("log_rotation_mb", 3),
         exact_match=detection_nested_config.get("exact_match", False),
         app_id=app_id,
+        is_msi_installer=(installer_ext == ".msi"),
     )
 
     # Sanitize AppName for filename
@@ -621,6 +622,7 @@ def _generate_requirements_script(
         log_level=installed_check_config.get("log_level", "INFO"),
         log_rotation_mb=installed_check_config.get("log_rotation_mb", 3),
         app_id=app_id,
+        is_msi_installer=(installer_ext == ".msi"),
     )
 
     # Sanitize AppName for filename
@@ -703,7 +705,9 @@ def _write_build_manifest(
         manifest_path.write_text(manifest_json, encoding="utf-8")
         logger.verbose("BUILD", f"Build manifest written to: {manifest_path}")
     except OSError as err:
-        raise OSError(f"Failed to write build manifest to {manifest_path}: {err}") from err
+        raise OSError(
+            f"Failed to write build manifest to {manifest_path}: {err}"
+        ) from err
 
     return manifest_path
 
@@ -862,7 +866,9 @@ def build_package(
     # Get build_types configuration
     defaults_win32 = config.get("defaults", {}).get("win32", {})
     app_win32 = app.get("win32", {})
-    build_types = app_win32.get("build_types", defaults_win32.get("build_types", "both"))
+    build_types = app_win32.get(
+        "build_types", defaults_win32.get("build_types", "both")
+    )
 
     # Get fail_on_error from win32.installed_check config
     defaults_ic = defaults_win32.get("installed_check", {})

@@ -87,6 +87,11 @@ Detection scripts check Windows uninstall registry keys for installed software:
     - **MSI installers:** Uses MSI `ProductName` property (authoritative source for registry DisplayName)
     - **Non-MSI installers:** Requires `win32.installed_check.display_name` in recipe configuration
 
+- **Installer Type Filtering:**
+    - Scripts automatically detect whether the installer is MSI or non-MSI based on file extension
+    - **MSI installers (strict):** Only matches registry entries that are MSI-based (checks `WindowsInstaller` registry value = 1). This prevents false matches when both MSI and EXE versions of software are installed.
+    - **Non-MSI installers (permissive):** Matches ANY registry entry (MSI or non-MSI). This handles EXE installers that run embedded MSIs internally.
+
 - **Logging:**
     - Uses CMTrace format for Intune diagnostics
     - Logs to `C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\NAPTDetections.log` (system context)

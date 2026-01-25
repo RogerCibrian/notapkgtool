@@ -544,6 +544,10 @@ If `true`, the detection script requires an exact version match. If `false`, the
 - **App Name Detection:**
     - **MSI installers:** Uses MSI `ProductName` property (authoritative source for registry `DisplayName`). The `display_name` field is ignored for MSI installers.
     - **Non-MSI installers:** Requires `win32.installed_check.display_name` in recipe configuration. This value is matched against the registry `DisplayName`.
+- **Installer Type Filtering:**
+    - Scripts automatically detect installer type from file extension during build.
+    - **MSI installers (strict):** Only matches registry entries with `WindowsInstaller` = 1. Prevents false matches when both MSI and EXE versions exist.
+    - **Non-MSI installers (permissive):** Matches ANY registry entry. Handles EXE installers that run embedded MSIs internally.
 - **Registry Checking:** Checks Windows uninstall registry keys (HKLM/HKCU, native and Wow6432Node paths).
 - **Version Comparison:** Uses `DisplayVersion` registry value, compares based on script type and settings.
 - **Script Location:** Generated scripts are saved as siblings to the `packagefiles/` directory (not included in `.intunewin` package - must be uploaded separately to Intune).

@@ -69,6 +69,25 @@ class TestRequirementsConfig:
         assert config.log_rotation_mb == 10
         assert config.app_id == "custom-app"
 
+    def test_default_is_msi_installer(self):
+        """Test default value of is_msi_installer is False."""
+        config = RequirementsConfig(
+            app_name="Test App",
+            version="1.0.0",
+        )
+
+        assert config.is_msi_installer is False
+
+    def test_is_msi_installer_true(self):
+        """Test is_msi_installer can be set to True."""
+        config = RequirementsConfig(
+            app_name="Test App",
+            version="1.0.0",
+            is_msi_installer=True,
+        )
+
+        assert config.is_msi_installer is True
+
 
 class TestGenerateRequirementsScript:
     """Tests for requirements script generation."""
@@ -247,6 +266,129 @@ class TestGenerateRequirementsScript:
         content = output_path.read_text(encoding="utf-8-sig")
 
         # Check for registry paths
-        assert "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall" in content
-        assert "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall" in content
+        assert (
+            "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall" in content
+        )
+        assert (
+            "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall" in content
+        )
         assert "WOW6432Node" in content
+
+    def test_script_contains_msi_installer_parameter(self, tmp_path: Path):
+        """Test that script contains IsMSIInstaller parameter."""
+        config = RequirementsConfig(
+            app_name="Test App",
+            version="1.0.0",
+            is_msi_installer=True,
+        )
+        output_path = tmp_path / "Test-App_1.0.0-Requirements.ps1"
+
+        generate_requirements_script(config, output_path)
+
+        content = output_path.read_text(encoding="utf-8-sig")
+
+        # Check for IsMSIInstaller parameter
+        assert "$IsMSIInstaller" in content
+        assert "$True" in content  # MSI installer mode
+
+    def test_script_contains_test_msi_installation_function(self, tmp_path: Path):
+        """Test that script contains Test-IsMSIInstallation function."""
+        config = RequirementsConfig(
+            app_name="Test App",
+            version="1.0.0",
+        )
+        output_path = tmp_path / "Test-App_1.0.0-Requirements.ps1"
+
+        generate_requirements_script(config, output_path)
+
+        content = output_path.read_text(encoding="utf-8-sig")
+
+        # Check for Test-IsMSIInstallation function
+        assert "function Test-IsMSIInstallation" in content
+        # Check for WindowsInstaller check (authoritative MSI indicator)
+        assert "WindowsInstaller" in content
+
+    def test_script_non_msi_installer(self, tmp_path: Path):
+        """Test that script has $False for non-MSI installer."""
+        config = RequirementsConfig(
+            app_name="Test App",
+            version="1.0.0",
+            is_msi_installer=False,
+        )
+        output_path = tmp_path / "Test-App_1.0.0-Requirements.ps1"
+
+        generate_requirements_script(config, output_path)
+
+        content = output_path.read_text(encoding="utf-8-sig")
+
+        # Check that IsMSIInstaller is False
+        assert "[bool]$IsMSIInstaller = $False" in content
+
+    def test_script_msi_strict_non_msi_permissive(self, tmp_path: Path):
+        """Test that MSI matching is strict but non-MSI is permissive.
+
+        MSI installers: only match MSI registry entries (strict)
+        Non-MSI installers: match any entry (permissive, EXEs may use embedded MSIs)
+        """
+        config = RequirementsConfig(
+            app_name="Test App",
+            version="1.0.0",
+        )
+        output_path = tmp_path / "Test-App_1.0.0-Requirements.ps1"
+
+        generate_requirements_script(config, output_path)
+
+        content = output_path.read_text(encoding="utf-8-sig")
+
+        # Check for MSI strict check (skips non-MSI entries when building from MSI)
+        assert "expected MSI - skipping" in content
+        # Check that non-MSI is permissive (accepts any entry)
+        assert "Non-MSI installers accept ANY registry entry" in content
+
+    def test_script_logs_installer_type(self, tmp_path: Path):
+        """Test that script logs installer type during initialization."""
+        config = RequirementsConfig(
+            app_name="Test App",
+            version="1.0.0",
+            is_msi_installer=True,
+        )
+        output_path = tmp_path / "Test-App_1.0.0-Requirements.ps1"
+
+        generate_requirements_script(config, output_path)
+
+        content = output_path.read_text(encoding="utf-8-sig")
+
+        # Check for installer type in initialization logging
+        assert "Installer Type:" in content
+
+    def test_script_component_ends_with_requirements(self, tmp_path: Path):
+        """Test that CMTrace component name ends with -Requirements (not -Req)."""
+        config = RequirementsConfig(
+            app_name="Test App",
+            version="1.0.0",
+        )
+        output_path = tmp_path / "Test-App_1.0.0-Requirements.ps1"
+
+        generate_requirements_script(config, output_path)
+
+        content = output_path.read_text(encoding="utf-8-sig")
+
+        # Component is built at runtime from $SanitizedAppName-$TargetVersion-Requirements
+        assert "ComponentName" in content and '-Requirements"' in content
+
+    def test_script_result_not_met_logs_as_warning(self, tmp_path: Path):
+        """Test that Requirements NOT MET results are logged as WARNING for visibility."""
+        config = RequirementsConfig(
+            app_name="Test App",
+            version="1.0.0",
+        )
+        output_path = tmp_path / "Test-App_1.0.0-Requirements.ps1"
+
+        generate_requirements_script(config, output_path)
+
+        content = output_path.read_text(encoding="utf-8-sig")
+
+        assert "[Result] Requirements NOT MET:" in content
+        idx = content.find("[Result] Requirements NOT MET:")
+        excerpt = content[idx : idx + 300]
+        assert "WARNING" in excerpt

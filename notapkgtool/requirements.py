@@ -29,6 +29,15 @@ Requirements Logic:
     - If installed version < target version: outputs "Required" and exits 0
     - Otherwise: outputs nothing and exits 0
 
+Installer Type Filtering:
+    Scripts filter registry entries based on installer type to prevent false
+    matches when both MSI and EXE versions of software exist:
+
+    - MSI installers (strict): Only matches registry entries with
+        WindowsInstaller=1. Prevents false matches with EXE versions.
+    - Non-MSI installers (permissive): Matches ANY registry entry. Handles
+        EXE installers that run embedded MSIs internally.
+
 Logging:
     - Primary (System): C:\\ProgramData\\Microsoft\\IntuneManagementExtension\\Logs\\NAPTRequirements.log
     - Primary (User): C:\\ProgramData\\Microsoft\\IntuneManagementExtension\\Logs\\NAPTRequirementsUser.log
@@ -85,6 +94,10 @@ class RequirementsConfig:
         log_rotation_mb: Maximum log file size in MB before rotation.
         app_id: Application ID (used for fallback if app_name sanitization
             results in empty string).
+        is_msi_installer: If True, only match MSI-based registry entries.
+            If False, only match non-MSI entries. This prevents false matches
+            when both MSI and EXE versions of software exist with the same
+            DisplayName.
 
     """
 
@@ -94,6 +107,7 @@ class RequirementsConfig:
     log_level: LogLevel = "INFO"
     log_rotation_mb: int = 3
     app_id: str = ""
+    is_msi_installer: bool = False
 
 
 # PowerShell requirements script template
@@ -105,7 +119,8 @@ _REQUIREMENTS_SCRIPT_TEMPLATE = """# Requirements script for ${app_name} ${versi
 
 param(
     [string]$$AppName = "${app_name}",
-    [string]$$TargetVersion = "${version}"
+    [string]$$TargetVersion = "${version}",
+    [bool]$$IsMSIInstaller = ${is_msi_installer}
 )
 
 # CMTrace log format function
@@ -226,6 +241,18 @@ function Initialize-LogFile {
     }
 }
 
+# Check if registry entry is MSI-based installation
+function Test-IsMSIInstallation {
+    param(
+        [Microsoft.Win32.RegistryKey]$$RegKey
+    )
+    
+    # Check WindowsInstaller DWORD value - set automatically by Windows Installer
+    # for all MSI installations. This is the authoritative indicator.
+    $$WindowsInstaller = (Get-ItemProperty -Path $$RegKey.PSPath -Name "WindowsInstaller" -ErrorAction SilentlyContinue).WindowsInstaller
+    return ($$WindowsInstaller -eq 1)
+}
+
 # Version comparison function - returns true if Installed < Target
 function Compare-VersionLessThan {
     param(
@@ -259,10 +286,10 @@ Initialize-LogFile
 
 # Build component identifier from app name and version (sanitized for valid identifier)
 $$SanitizedAppName = $$AppName -replace '[^a-zA-Z0-9]', '-' -replace '-+', '-' -replace '^-|-$$', ''
-$$script:ComponentName = "$$SanitizedAppName-$$TargetVersion-Req"
+$$script:ComponentName = "$$SanitizedAppName-$$TargetVersion-Requirements"
 
 Write-CMTraceLog -Message "[Initialization] Requirements script running as user: $$($$script:CurrentIdentity.Name)" -Type "INFO"
-Write-CMTraceLog -Message "[Initialization] Checking for older version of: $$AppName (Target: $$TargetVersion)" -Type "INFO"
+Write-CMTraceLog -Message "[Initialization] Starting requirements check for: $$AppName (Target: $$TargetVersion, Installer Type: $$(if ($$IsMSIInstaller) { 'MSI' } else { 'Non-MSI' }))" -Type "INFO"
 
 # Detect if PowerShell is running as 64-bit process
 $$Is64BitProcess = [Environment]::Is64BitProcess
@@ -304,21 +331,33 @@ foreach ($$RegPath in $$RegPaths) {
             $$VersionValue = (Get-ItemProperty -Path $$Key.PSPath -Name "DisplayVersion" -ErrorAction SilentlyContinue).DisplayVersion
             
             if ($$DisplayNameValue -eq $$AppName) {
-                $$DisplayName = $$DisplayNameValue
-                $$InstalledVersion = $$VersionValue
-                
                 # Convert PSPath to cleaner registry path format
                 $$RegKeyPath = $$Key.PSPath -replace 'Microsoft\\.PowerShell\\.Core\\\\Registry::', '' -replace 'HKEY_LOCAL_MACHINE\\\\', 'HKLM:\\' -replace 'HKEY_CURRENT_USER\\\\', 'HKCU:\\'
                 
-                Write-CMTraceLog -Message "[Requirements] Found matching registry key: '$$RegKeyPath' (DisplayName: $$DisplayName, Installed Version: $$InstalledVersion)" -Type "INFO"
+                # Check if installer type matches (MSI vs non-MSI)
+                # MSI installers: strict matching - only accept MSI registry entries
+                # Non-MSI installers: permissive - accept any entry (EXEs may use embedded MSIs)
+                $$IsMSIEntry = Test-IsMSIInstallation -RegKey $$Key
+                if ($$IsMSIInstaller -and -not $$IsMSIEntry) {
+                    # Building from MSI, but registry entry is not MSI - skip
+                    Write-CMTraceLog -Message "[Requirements] Found matching DisplayName but installer type mismatch: '$$RegKeyPath' is non-MSI, expected MSI - skipping" -Type "INFO"
+                    continue
+                }
+                # Note: Non-MSI installers accept ANY registry entry (MSI or non-MSI)
+                # because EXE installers often wrap embedded MSIs that set WindowsInstaller=1
+                
+                $$DisplayName = $$DisplayNameValue
+                $$InstalledVersion = $$VersionValue
+                
+                Write-CMTraceLog -Message "[Requirements] Found matching registry key: '$$RegKeyPath' (DisplayName: $$DisplayName, DisplayVersion: $$InstalledVersion, Installer Type: $$(if ($$IsMSIEntry) { 'MSI' } else { 'Non-MSI' }))" -Type "INFO"
                 
                 if ($$InstalledVersion) {
                     if (Compare-VersionLessThan -InstalledVersion $$InstalledVersion -TargetVersion $$TargetVersion) {
-                        Write-CMTraceLog -Message "[Requirements] Version check: Installed version $$InstalledVersion is LESS THAN target version $$TargetVersion - Update is REQUIRED" -Type "INFO"
+                        Write-CMTraceLog -Message "[Requirements] Version check PASSED: Installed version $$InstalledVersion is LESS THAN target version $$TargetVersion" -Type "INFO"
                         $$FoundOlderVersion = $$true
                         break
                     } else {
-                        Write-CMTraceLog -Message "[Requirements] Version check: Installed version $$InstalledVersion is NOT less than target version $$TargetVersion - Update is NOT required" -Type "INFO"
+                        Write-CMTraceLog -Message "[Requirements] Version check FAILED: Installed version $$InstalledVersion is NOT less than target version $$TargetVersion" -Type "INFO"
                     }
                 } else {
                     Write-CMTraceLog -Message "[Requirements] DisplayName '$$DisplayName' found but no DisplayVersion value is present" -Type "WARNING"
@@ -340,9 +379,9 @@ if ($$FoundOlderVersion) {
     exit 0
 } else {
     if ($$DisplayName) {
-        Write-CMTraceLog -Message "[Result] Requirements NOT MET: $$AppName is installed but version ($$InstalledVersion) is not older than target ($$TargetVersion) - no output" -Type "INFO"
+        Write-CMTraceLog -Message "[Result] Requirements NOT MET: $$AppName is installed but version ($$InstalledVersion) is not older than target ($$TargetVersion)" -Type "WARNING"
     } else {
-        Write-CMTraceLog -Message "[Result] Requirements NOT MET: $$AppName not found in registry - no output" -Type "INFO"
+        Write-CMTraceLog -Message "[Result] Requirements NOT MET: $$AppName not found in registry" -Type "WARNING"
     }
     # Output nothing - requirement not met
     exit 0
@@ -393,7 +432,9 @@ def generate_requirements_script(config: RequirementsConfig, output_path: Path) 
 
     logger = get_global_logger()
 
-    logger.verbose("REQUIREMENTS", f"Generating requirements script: {output_path.name}")
+    logger.verbose(
+        "REQUIREMENTS", f"Generating requirements script: {output_path.name}"
+    )
 
     # Generate script content from template
     # Use safe_substitute() so PowerShell variables ($$Variable) are preserved
@@ -402,6 +443,7 @@ def generate_requirements_script(config: RequirementsConfig, output_path: Path) 
         app_name=config.app_name,
         version=config.version,
         log_rotation_mb=config.log_rotation_mb,
+        is_msi_installer="$True" if config.is_msi_installer else "$False",
     )
 
     # Ensure output directory exists

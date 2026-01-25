@@ -30,6 +30,15 @@ Detection Logic:
     - Provides verbose logging with detailed detection results, registry paths,
         installed vs expected versions, and match type information
 
+Installer Type Filtering:
+    Scripts filter registry entries based on installer type to prevent false
+    matches when both MSI and EXE versions of software exist:
+
+    - MSI installers (strict): Only matches registry entries with
+        WindowsInstaller=1. Prevents false matches with EXE versions.
+    - Non-MSI installers (permissive): Matches ANY registry entry. Handles
+        EXE installers that run embedded MSIs internally.
+
 Logging:
     - Primary (System): C:\\ProgramData\\Microsoft\\IntuneManagementExtension\\Logs\\NAPTDetections.log
     - Primary (User): C:\\ProgramData\\Microsoft\\IntuneManagementExtension\\Logs\\NAPTDetectionsUser.log
@@ -93,6 +102,10 @@ class DetectionConfig:
             version comparison (remote >= expected).
         app_id: Application ID (used for fallback if app_name sanitization
             results in empty string).
+        is_msi_installer: If True, only match MSI-based registry entries.
+            If False, only match non-MSI entries. This prevents false matches
+            when both MSI and EXE versions of software exist with the same
+            DisplayName.
 
     """
 
@@ -103,6 +116,7 @@ class DetectionConfig:
     log_rotation_mb: int = 3
     exact_match: bool = False
     app_id: str = ""
+    is_msi_installer: bool = False
 
 
 def sanitize_filename(name: str, app_id: str = "") -> str:
@@ -166,7 +180,8 @@ _DETECTION_SCRIPT_TEMPLATE = """# Detection script for ${app_name} ${version}
 param(
     [string]$AppName = "${app_name}",
     [string]$ExpectedVersion = "${version}",
-    [bool]$ExactMatch = ${exact_match}
+    [bool]$ExactMatch = ${exact_match},
+    [bool]$IsMSIInstaller = ${is_msi_installer}
 )
 
 # CMTrace log format function
@@ -287,6 +302,18 @@ function Initialize-LogFile {
     }
 }
 
+# Check if registry entry is MSI-based installation
+function Test-IsMSIInstallation {
+    param(
+        [Microsoft.Win32.RegistryKey]$$RegKey
+    )
+    
+    # Check WindowsInstaller DWORD value - set automatically by Windows Installer
+    # for all MSI installations. This is the authoritative indicator.
+    $$WindowsInstaller = (Get-ItemProperty -Path $$RegKey.PSPath -Name "WindowsInstaller" -ErrorAction SilentlyContinue).WindowsInstaller
+    return ($$WindowsInstaller -eq 1)
+}
+
 # Version comparison function
 function Compare-Version {
     param(
@@ -325,10 +352,10 @@ Initialize-LogFile
 
 # Build component identifier from app name and version (sanitized for valid identifier)
 $$SanitizedAppName = $$AppName -replace '[^a-zA-Z0-9]', '-' -replace '-+', '-' -replace '^-|-$', ''
-$$script:ComponentName = "$$SanitizedAppName-$$ExpectedVersion"
+$$script:ComponentName = "$$SanitizedAppName-$$ExpectedVersion-Detection"
 
 Write-CMTraceLog -Message "[Initialization] Detection script running as user: $$($$script:CurrentIdentity.Name)" -Type "INFO"
-Write-CMTraceLog -Message "[Initialization] Starting detection for: $$AppName (Expected: $$ExpectedVersion, Mode: $$(if ($$ExactMatch) { 'Exact Match' } else { 'Minimum Version' }))" -Type "INFO"
+Write-CMTraceLog -Message "[Initialization] Starting detection check for: $$AppName (Expected: $$ExpectedVersion, Mode: $$(if ($$ExactMatch) { 'Exact Match' } else { 'Minimum Version' }), Installer Type: $$(if ($$IsMSIInstaller) { 'MSI' } else { 'Non-MSI' }))" -Type "INFO"
 
 # Detect if PowerShell is running as 64-bit process
 $$Is64BitProcess = [Environment]::Is64BitProcess
@@ -376,13 +403,25 @@ foreach ($$RegPath in $$RegPaths) {
             $$VersionValue = (Get-ItemProperty -Path $$Key.PSPath -Name "DisplayVersion" -ErrorAction SilentlyContinue).DisplayVersion
             
             if ($$DisplayNameValue -eq $$AppName) {
-                $$DisplayName = $$DisplayNameValue
-                $$InstalledVersion = $$VersionValue
-                
                 # Convert PSPath to cleaner registry path format (HKLM:/HKCU:)
                 $$RegKeyPath = $$Key.PSPath -replace 'Microsoft\\.PowerShell\\.Core\\\\Registry::', '' -replace 'HKEY_LOCAL_MACHINE\\\\', 'HKLM:\\' -replace 'HKEY_CURRENT_USER\\\\', 'HKCU:\\'
                 
-                Write-CMTraceLog -Message "[Detection] Found matching registry key: '$$RegKeyPath' (DisplayName: $$DisplayName, Installed Version: $$InstalledVersion)" -Type "INFO"
+                # Check if installer type matches (MSI vs non-MSI)
+                # MSI installers: strict matching - only accept MSI registry entries
+                # Non-MSI installers: permissive - accept any entry (EXEs may use embedded MSIs)
+                $$IsMSIEntry = Test-IsMSIInstallation -RegKey $$Key
+                if ($$IsMSIInstaller -and -not $$IsMSIEntry) {
+                    # Building from MSI, but registry entry is not MSI - skip
+                    Write-CMTraceLog -Message "[Detection] Found matching DisplayName but installer type mismatch: '$$RegKeyPath' is non-MSI, expected MSI - skipping" -Type "INFO"
+                    continue
+                }
+                # Note: Non-MSI installers accept ANY registry entry (MSI or non-MSI)
+                # because EXE installers often wrap embedded MSIs that set WindowsInstaller=1
+                
+                $$DisplayName = $$DisplayNameValue
+                $$InstalledVersion = $$VersionValue
+                
+                Write-CMTraceLog -Message "[Detection] Found matching registry key: '$$RegKeyPath' (DisplayName: $$DisplayName, DisplayVersion: $$InstalledVersion, Installer Type: $$(if ($$IsMSIEntry) { 'MSI' } else { 'Non-MSI' }))" -Type "INFO"
                 
                 if ($$InstalledVersion) {
                     if (Compare-Version -InstalledVersion $$InstalledVersion -ExpectedVersion $$ExpectedVersion -ExactMatch $$ExactMatch) {
@@ -393,9 +432,6 @@ foreach ($$RegPath in $$RegPaths) {
                         Write-CMTraceLog -Message "[Detection] Version check FAILED: Installed version $$InstalledVersion $$(if ($$ExactMatch) { 'does not exactly match' } else { 'is less than' }) expected version $$ExpectedVersion" -Type "INFO"
                     }
                 } else {
-                    # Convert PSPath to cleaner registry path format (HKLM:/HKCU:)
-                    $$RegKeyPath = $$Key.PSPath -replace 'Microsoft\\.PowerShell\\.Core\\\\Registry::', '' -replace 'HKEY_LOCAL_MACHINE\\\\', 'HKLM:\\' -replace 'HKEY_CURRENT_USER\\\\', 'HKCU:\\'
-                    
                     Write-CMTraceLog -Message "[Detection] DisplayName '$$DisplayName' found in registry key '$$RegKeyPath' but no DisplayVersion value is present" -Type "WARNING"
                 }
             }
@@ -413,7 +449,7 @@ if ($$Found) {
     Write-Output "Installed"
     exit 0
 } else {
-    Write-CMTraceLog -Message "[Result] Detection FAILED: $$AppName not found in registry paths or installed version does not meet requirements (Expected: $$ExpectedVersion, Mode: $$(if ($$ExactMatch) { 'Exact Match' } else { 'Minimum Version' }))" -Type "INFO"
+    Write-CMTraceLog -Message "[Result] Detection FAILED: $$AppName not found in registry paths or installed version does not meet requirements (Expected: $$ExpectedVersion, Mode: $$(if ($$ExactMatch) { 'Exact Match' } else { 'Minimum Version' }))" -Type "WARNING"
     exit 1
 }
 """
@@ -473,6 +509,7 @@ def generate_detection_script(config: DetectionConfig, output_path: Path) -> Pat
         version=config.version,
         exact_match="$True" if config.exact_match else "$False",
         log_rotation_mb=config.log_rotation_mb,
+        is_msi_installer="$True" if config.is_msi_installer else "$False",
     )
 
     # Ensure output directory exists
