@@ -893,6 +893,34 @@
   
   
     <li class="md-nav__item">
+      <a href="api/requirements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    requirements
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="api/exceptions/" class="md-nav__link">
         
   
@@ -1016,10 +1044,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_9" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_10" >
         
           
-          <label class="md-nav__link" for="__nav_4_9" id="__nav_4_9_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_10" id="__nav_4_10_label" tabindex="0">
             
   
   
@@ -1037,8 +1065,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_9">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1609,7 +1637,7 @@
 <p><strong>Create PSADT deployment</strong> - Copy template, manually edit <code>Invoke-AppDeployToolkit.ps1</code> with variables, configure install/uninstall logic. Error-prone and repetitive.</p>
 </li>
 <li>
-<p><strong>Create detection script</strong> - Write PowerShell detection logic, test thoroughly, maintain version checks. Must update for each new version.</p>
+<p><strong>Create detection and requirements scripts</strong> - Write PowerShell detection and requirements logic, test thoroughly, maintain version checks. Must update for each new version.</p>
 </li>
 <li>
 <p><strong>Package as .intunewin</strong> - Run IntuneWinAppUtil.exe manually, manage paths, handle errors. Tedious and error-prone.</p>
@@ -1626,7 +1654,7 @@
 <ul>
 <li>✅ <strong>Automatic version tracking</strong> - Automatic discovery from MSI, EXE, URLs, or APIs with caching to skip unnecessary downloads</li>
 <li>✅ <strong>YAML-based recipes</strong> - Define app packaging once with layered configuration (Organization → Vendor → Recipe)</li>
-<li>✅ <strong>Automated PSADT packaging</strong> - Generate Intune-ready packages with detection scripts, no manual template editing</li>
+<li>✅ <strong>Automated PSADT packaging</strong> - Generate Intune-ready packages with detection and requirements scripts, no manual template editing</li>
 <li>✅ <strong>Cross-platform workflow</strong> - Run on Windows, Linux, and macOS (packaging requires Windows)</li>
 <li>🚧 <strong>Direct Intune upload</strong> - Automatic deployment (planned)</li>
 </ul>

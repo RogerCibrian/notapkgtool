@@ -732,6 +732,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../api/requirements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    requirements
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/exceptions/" class="md-nav__link">
         
   
@@ -855,10 +883,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_9" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_10" >
         
           
-          <label class="md-nav__link" for="__nav_4_9" id="__nav_4_9_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_10" id="__nav_4_10_label" tabindex="0">
             
   
   
@@ -876,8 +904,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_9">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2147,17 +2175,16 @@
 <p><strong>Status</strong>: ✅ Completed<br />
 <strong>Complexity</strong>: High (3-5 days)<br />
 <strong>Value</strong>: High</p>
-<p><strong>Description</strong>: Automatic PowerShell detection script generation for Intune Win32 app deployments during build process. Scripts check Windows uninstall registry keys, support exact or minimum version matching, and include CMTrace-formatted logging.</p>
+<p><strong>Description</strong>: Automatic PowerShell detection and requirements script generation for Intune Win32 app deployments during build process. Detection scripts check if the app is installed at the required version (App entry); requirements scripts check if an older version is installed (Update entry). Both use the same registry checks, installer-type filtering, and CMTrace logging.</p>
 <p><strong>Implementation Details</strong>:</p>
 <ul>
-<li>Extracts app name from MSI ProductName (for MSI installers) or uses <code>detection.display_name</code> (for non-MSI installers)</li>
-<li>Generates scripts that check Windows uninstall registry keys for installed software</li>
-<li>Supports exact match or minimum version (installed &gt;= expected) detection modes</li>
-<li>Includes CMTrace-formatted logging with log rotation</li>
-<li>Scripts saved as <code>{AppName}_{Version}-Detection.ps1</code> sibling to <code>packagefiles/</code> directory</li>
-<li>Configurable via <code>detection</code> section in defaults or recipe</li>
+<li>Extracts app name from MSI ProductName (for MSI installers) or uses <code>win32.installed_check.display_name</code> (for non-MSI installers)</li>
+<li>Always generates detection script <code>{AppName}_{Version}-Detection.ps1</code>; generates requirements script <code>{AppName}_{Version}-Requirements.ps1</code> when <code>win32.build_types</code> is both or update_only</li>
+<li>Supports exact match or minimum version (installed &gt;= expected); installer-type filtering (MSI strict, non-MSI permissive)</li>
+<li>Includes CMTrace-formatted logging with log rotation (NAPTDetections.log, NAPTRequirements.log)</li>
+<li>Configurable via <code>win32.installed_check</code> section in defaults or recipe</li>
 </ul>
-<p><strong>Related</strong>: Implemented in <code>notapkgtool/detection.py</code> and integrated into build process in <code>notapkgtool/build/manager.py</code>. See <a href="../user-guide/#detection-scripts">User Guide - Detection Scripts</a> and <a href="../recipe-reference/#detection-configuration">Recipe Reference - Detection Configuration</a>.</p>
+<p><strong>Related</strong>: Implemented in <code>notapkgtool/detection.py</code>, <code>notapkgtool/requirements.py</code>, and integrated into build process in <code>notapkgtool/build/manager.py</code>. See <a href="../user-guide/#detection-and-requirements-scripts">User Guide - Detection and Requirements Scripts</a> and <a href="../recipe-reference/#win32-configuration">Recipe Reference - Win32 Configuration</a>.</p>
 <hr />
 <p><strong>v0.2.0</strong> - PSADT building, packaging, and new discovery strategies<br />
 <strong>v0.1.0</strong> - Core validation, discovery, and configuration system</p>

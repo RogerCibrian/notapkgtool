@@ -579,10 +579,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#detection-scripts" class="md-nav__link">
+  <a href="#detection-and-requirements-scripts" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Detection Scripts
+        Detection and Requirements Scripts
       
     </span>
   </a>
@@ -1268,6 +1268,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../api/requirements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    requirements
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/exceptions/" class="md-nav__link">
         
   
@@ -1391,10 +1419,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_9" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_10" >
         
           
-          <label class="md-nav__link" for="__nav_4_9" id="__nav_4_9_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_10" id="__nav_4_10_label" tabindex="0">
             
   
   
@@ -1412,8 +1440,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_9">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1865,10 +1893,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#detection-scripts" class="md-nav__link">
+  <a href="#detection-and-requirements-scripts" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Detection Scripts
+        Detection and Requirements Scripts
       
     </span>
   </a>
@@ -2392,23 +2420,25 @@
 <li>Uses pattern matching to find source files in brand pack directory</li>
 </ul>
 </li>
-<li><strong>Generate Detection Script</strong> - Creates PowerShell detection script for Intune Win32 app deployment:<ul>
-<li>Extracts app name from MSI ProductName (for MSI installers) or uses detection.display_name (for non-MSI installers)</li>
-<li>Generates script that checks Windows uninstall registry keys</li>
-<li>Saves as <code>{AppName}_{Version}-Detection.ps1</code> sibling to <code>packagefiles/</code> directory</li>
-<li>Script uses CMTrace-formatted logging</li>
-<li>Configurable via <code>detection</code> section in defaults or recipe</li>
+<li><strong>Generate Detection and Requirements Scripts</strong> - Creates PowerShell scripts for Intune Win32 app deployment:<ul>
+<li><strong>Detection script</strong> (always): Used by the App entry (and by the Update entry) to detect if the app is installed at the expected version. Saves as <code>{AppName}_{Version}-Detection.ps1</code>.</li>
+<li><strong>Requirements script</strong> (when <code>build_types</code> is <code>both</code> or <code>update_only</code>): Used by the Update app entry to determine if an older version is installed (outputs "Required" when update is needed). Saves as <code>{AppName}_{Version}-Requirements.ps1</code>.</li>
+<li>App name comes from MSI ProductName (MSI installers) or <code>win32.installed_check.display_name</code> (non-MSI). Both scripts use the same registry locations, installer-type filtering, and CMTrace logging. Configurable via <code>win32.installed_check</code> in defaults or recipe.</li>
 </ul>
 </li>
 </ol>
-<p><strong>Output</strong>: Complete PSADT package in <code>builds/{app_id}/{version}/</code> with detection script ready for deployment</p>
-<h4 id="detection-scripts">Detection Scripts</h4>
-<p>NAPT automatically generates PowerShell detection scripts during the build process (step 10). These scripts are used by Microsoft Intune to determine if an application is installed and whether it meets version requirements.</p>
-<p><strong>How Detection Scripts Work:</strong></p>
-<p>Detection scripts check Windows uninstall registry keys for installed software:</p>
+<p><strong>Output</strong>: Complete PSADT package in <code>builds/{app_id}/{version}/</code> with detection script always present, and requirements script when <code>build_types</code> is <code>both</code> or <code>update_only</code>.</p>
+<h4 id="detection-and-requirements-scripts">Detection and Requirements Scripts</h4>
+<p>NAPT generates PowerShell scripts used by Intune Win32 app entries to check installation state:</p>
+<ul>
+<li><strong>Detection script</strong> (always generated): Used by the <strong>App</strong> entry and by the <strong>Update</strong> entry when using the two-app model to determine if the app is installed at the expected version. Filename: <code>{AppName}_{Version}-Detection.ps1</code>.</li>
+<li><strong>Requirements script</strong> (when <code>build_types</code> is <code>both</code> or <code>update_only</code>): Used by the <strong>Update</strong> entry to determine if an older version is installed so Intune can offer the update. Filename: <code>{AppName}_{Version}-Requirements.ps1</code>.</li>
+</ul>
+<p>Both scripts share the same logic for registry lookup, app name resolution, and installer-type filtering; they differ only in how they interpret the version comparison (see below).</p>
+<p><strong>How the scripts work:</strong></p>
 <ul>
 <li>
-<p><strong>Registry Locations Checked:</strong></p>
+<p><strong>Registry locations checked:</strong></p>
 <ul>
 <li><code>HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall</code> (machine-level, 64-bit)</li>
 <li><code>HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall</code> (user-level)</li>
@@ -2417,42 +2447,41 @@
 </ul>
 </li>
 <li>
-<p><strong>Detection Logic:</strong></p>
+<p><strong>App name determination:</strong></p>
 <ul>
-<li>Matches by <code>DisplayName</code> (from MSI ProductName for MSI installers, or detection.display_name for non-MSI installers)</li>
-<li>Compares installed version to expected version</li>
-<li>Supports exact match or minimum version (installed &gt;= expected)</li>
-<li>Returns exit code 0 if installed and meets requirements, 1 otherwise</li>
+<li><strong>MSI installers:</strong> Uses MSI <code>ProductName</code> property (authoritative source for registry DisplayName).</li>
+<li><strong>Non-MSI installers:</strong> Requires <code>win32.installed_check.display_name</code> in recipe configuration. Scripts match registry <code>DisplayName</code> to this value.</li>
 </ul>
 </li>
 <li>
-<p><strong>App Name Determination:</strong></p>
+<p><strong>Installer type filtering:</strong></p>
 <ul>
-<li><strong>MSI installers:</strong> Uses MSI <code>ProductName</code> property (authoritative source for registry DisplayName)</li>
-<li><strong>Non-MSI installers:</strong> Requires <code>detection.display_name</code> in recipe configuration</li>
+<li><strong>MSI installers (strict):</strong> Only match registry entries that are MSI-based (checks <code>WindowsInstaller</code> = 1). Prevents false matches when both MSI and EXE versions exist.</li>
+<li><strong>Non-MSI installers (permissive):</strong> Match any registry entry (MSI or non-MSI) to handle EXE installers that run embedded MSIs internally.</li>
 </ul>
 </li>
 <li>
 <p><strong>Logging:</strong></p>
 <ul>
-<li>Uses CMTrace format for Intune diagnostics</li>
-<li>Logs to <code>C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\NAPTDetections.log</code> (system context)</li>
-<li>Logs to <code>C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\NAPTDetectionsUser.log</code> (user context)</li>
-<li>Automatic log rotation (default: 3MB max size)</li>
-<li>Fallback locations if primary locations unavailable</li>
+<li>CMTrace format for Intune diagnostics. <strong>Primary locations</strong> (system/user): <code>C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\</code> — detection uses <code>NAPTDetections.log</code> / <code>NAPTDetectionsUser.log</code>, requirements use <code>NAPTRequirements.log</code> / <code>NAPTRequirementsUser.log</code>. The script tries the primary first: it creates the primary parent directory if it does not exist, then verifies write access. If that fails (e.g. insufficient permissions), it tries <strong>fallback locations</strong> — system <code>C:\ProgramData\NAPT\</code>, user <code>%LOCALAPPDATA%\NAPT\</code> (same log file names) — creating the fallback parent directory if needed. If both primary and fallback fail, a warning is written to stderr and the script continues without a log file. Log rotation: 2-file rotation (default 3MB max size).</li>
 </ul>
 </li>
 </ul>
-<p><strong>Detection Script Files:</strong></p>
-<p>Detection scripts are saved as siblings to the <code>packagefiles/</code> directory:</p>
+<p><strong>Detection vs requirements (version check and output):</strong></p>
+<ul>
+<li><strong>Detection:</strong> Compares installed version to expected version. Supports exact match or minimum version (installed &gt;= expected). Exit 0 if installed and meets requirement, exit 1 otherwise.</li>
+<li><strong>Requirements:</strong> Always exits 0 so Intune can evaluate stdout. If an older version is installed, the script writes "Required" to stdout so the Update entry is applicable; otherwise it writes nothing to stdout. Configure the requirement rule in Intune with output type String, operator Equals, value "Required".</li>
+</ul>
+<p><strong>Script files:</strong></p>
+<p>Scripts are saved as siblings to <code>packagefiles/</code>. Detection is always present; requirements only when <code>build_types</code> is <code>both</code> or <code>update_only</code>:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>builds/napt-chrome/142.0.7444.163/
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  ├── packagefiles/              # PSADT package (packaged into .intunewin)
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  │   └── ...
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  └── Google-Chrome-142.0.7444.163-Detection.ps1  # Detection script (upload separately)
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  ├── Google-Chrome-142.0.7444.163-Detection.ps1    # Always built
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  └── Google-Chrome-142.0.7444.163-Requirements.ps1 # When build_types is both or update_only
 </span></code></pre></div>
-<p><strong>Important:</strong> Detection scripts are NOT included in the <code>.intunewin</code> package. They must be uploaded separately to Intune when configuring the Win32 app. The script filename follows the pattern: <code>{AppName}_{Version}-Detection.ps1</code>.</p>
-<p><strong>Configuration:</strong></p>
-<p>Detection script behavior can be configured via the <code>detection</code> section in defaults or recipe. See <a href="../recipe-reference/#detection-configuration">Recipe Reference - Detection Configuration</a> for complete options.</p>
+<p><strong>Important:</strong> These scripts are NOT included in the <code>.intunewin</code> package. Upload them separately in Intune when configuring the Win32 App and Update entries.</p>
+<p><strong>Configuration:</strong> Via <code>win32.installed_check</code> in defaults or recipe. Use <code>win32.build_types</code> to control whether the requirements script is generated. See <a href="../recipe-reference/#win32-configuration">Recipe Reference - Win32 Configuration</a> for options.</p>
 <h3 id="package-process-napt-package">Package Process (<code>napt package</code>)</h3>
 <p>The package process creates a <code>.intunewin</code> file from the built PSADT directory:</p>
 <ol>
@@ -2492,14 +2521,15 @@
 </span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>          │   ├── SupportFiles/            # Empty (for additional files)
 </span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>          │   ├── Invoke-AppDeployToolkit.ps1  # Generated script
 </span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>          │   └── Invoke-AppDeployToolkit.exe  # From template
-</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>          └── Google-Chrome-142.0.7444.163-Detection.ps1  # Detection script (upload separately to Intune)
-</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>
-</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>packages/
-</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>  └── napt-chrome/
-</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>      └── Invoke-AppDeployToolkit.intunewin
-</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>
-</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>state/
-</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>  └── versions.json                        # Version tracking
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>          ├── Google-Chrome-142.0.7444.163-Detection.ps1    # App (upload separately)
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>          └── Google-Chrome-142.0.7444.163-Requirements.ps1 # Update (upload separately)
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>packages/
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>  └── napt-chrome/
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>      └── Invoke-AppDeployToolkit.intunewin
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>state/
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>  └── versions.json                        # Version tracking
 </span></code></pre></div>
 <h2 id="commands-reference">Commands Reference</h2>
 <blockquote>
