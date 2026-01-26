@@ -424,11 +424,11 @@ The `win32` section configures Win32-specific build settings including the two-a
 **Required:** No  
 **Default:** `"both"`
 
-Specifies which Intune app entries to create during build:
+Specifies which Intune app entries to create during build. The **detection script** is always generated (used by the App entry and by the Update entry when applicable). This setting controls **requirements script** generation only:
 
-- `"both"` (default): Create both App and Update entries
-- `"app_only"`: Create only the App entry
-- `"update_only"`: Create only the Update entry
+- `"both"` (default): Generate detection and requirements scripts (App + Update entries in build manifest)
+- `"app_only"`: Generate only the detection script (App entry only)
+- `"update_only"`: Generate detection and requirements scripts (Update entry only)
 
 **Configuration Location:**
 
@@ -524,7 +524,7 @@ If `true`, script generation failures will abort the build. If `false`, build co
 
 Maximum log file size in megabytes before rotation. Scripts use a 2-file rotation scheme (`.log` and `.log.old`).
 
-**Note:** Detection scripts log to `NAPTDetections.log` and requirements scripts log to `NAPTRequirements.log` in `C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\` (system context) or with `User` suffix (user context), with automatic fallback to alternate locations if primary locations are unavailable.
+**Note:** Scripts try the Intune folder first: `C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\` (files: `NAPTDetections.log` / `NAPTDetectionsUser.log` or `NAPTRequirements.log` / `NAPTRequirementsUser.log`), creating the parent directory if it does not exist and verifying write access. If that fails (e.g. permissions), they fall back to `C:\ProgramData\NAPT\` (system) or `%LOCALAPPDATA%\NAPT\` (user), creating that parent if needed. If both primary and fallback fail, a warning is written to stderr and the script runs without a log file. Requirements scripts always exit 0 and indicate applicability via stdout ("Required" or nothing); configure the requirement rule in Intune with output type String, operator Equals, value "Required".
 
 #### detection.exact_match
 
@@ -549,10 +549,10 @@ If `true`, the detection script requires an exact version match. If `false`, the
     - **MSI installers (strict):** Only matches registry entries with `WindowsInstaller` = 1. Prevents false matches when both MSI and EXE versions exist.
     - **Non-MSI installers (permissive):** Matches ANY registry entry. Handles EXE installers that run embedded MSIs internally.
 - **Registry Checking:** Checks Windows uninstall registry keys (HKLM/HKCU, native and Wow6432Node paths).
-- **Version Comparison:** Uses `DisplayVersion` registry value, compares based on script type and settings.
+- **Version Comparison:** Uses `DisplayVersion` registry value. Detection: exit 0 if installed meets requirement, 1 otherwise. Requirements: always exit 0; output "Required" to stdout if an older version is installed, nothing otherwise.
 - **Script Location:** Generated scripts are saved as siblings to the `packagefiles/` directory (not included in `.intunewin` package - must be uploaded separately to Intune).
 
-See [Detection Scripts](user-guide.md#detection-scripts) in the User Guide for detailed information about how detection scripts work and how to use them in Intune.
+See [Detection and Requirements Scripts](user-guide.md#detection-and-requirements-scripts) in the User Guide for how the scripts work and how to use them in Intune.
 
 ## Intune Configuration
 

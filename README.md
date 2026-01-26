@@ -20,7 +20,7 @@ Packaging applications for Microsoft Intune with PSAppDeployToolkit (PSADT) typi
 
 2. **Create PSADT deployment** - Copy template, manually edit `Invoke-AppDeployToolkit.ps1` with variables, configure install/uninstall logic. Error-prone and repetitive.
 
-3. **Create detection script** - Write PowerShell detection logic, test thoroughly, maintain version checks. Must update for each new version.
+3. **Create detection and requirements scripts** - Write PowerShell detection and requirements logic, test thoroughly, maintain version checks. Must update for each new version.
 
 4. **Package as .intunewin** - Run IntuneWinAppUtil.exe manually, manage paths, handle errors. Tedious and error-prone.
 
@@ -32,9 +32,9 @@ This manual workflow is repetitive, difficult to automate in CI/CD pipelines, la
 
 ### Key Features
 
-- ✅ **Automatic version tracking** - Automatic discovery from MSI, EXE, URLs, or APIs with smart caching to skip unnecessary downloads
+- ✅ **Automatic version tracking** - Automatic discovery from MSI, EXE, URLs, or APIs with caching to skip unnecessary downloads
 - ✅ **YAML-based recipes** - Define app packaging once with layered configuration (Organization → Vendor → Recipe)
-- ✅ **Automated PSADT packaging** - Generate Intune-ready packages with detection scripts, no manual template editing
+- ✅ **Automated PSADT packaging** - Generate Intune-ready packages with detection and requirements scripts, no manual template editing
 - ✅ **Cross-platform workflow** - Run on Windows, Linux, and macOS (packaging requires Windows)
 - 🚧 **Direct Intune upload** - Automatic deployment (planned)
 
@@ -50,7 +50,7 @@ See the [Cross-Platform Support](https://rogercibrian.github.io/notapkgtool/user
 
 ## Getting Started
 
-Check out the [Quick Start Guide](https://rogercibrian.github.io/notapkgtool/quick-start/) for installation instructions and your first steps with NAPT.
+Most users interact with NAPT via CLI - see the [Quick Start Guide](https://rogercibrian.github.io/notapkgtool/quick-start/) for installation instructions and your first steps with NAPT.
 
 ## Creating Recipes
 
@@ -80,4 +80,3 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](https:
 - Draws inspiration from [AutoPkg](https://github.com/autopkg/autopkg) for macOS application packaging automation
 - Uses [PSAppDeployToolkit](https://psappdeploytoolkit.com/) (PSADT) for Windows application packaging
 - Uses [IntuneWinAppUtil](https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool) for creating .intunewin packages
-

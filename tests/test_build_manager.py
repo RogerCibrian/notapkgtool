@@ -309,11 +309,13 @@ class TestWriteBuildManifest:
         assert "requirements_script_path" not in manifest
 
     def test_manifest_build_types_update_only(self, tmp_path):
-        """Test manifest for update_only build type."""
+        """Test manifest for update_only build type (detection always generated)."""
         version_dir = tmp_path / "builds" / "test-app" / "1.0.0"
         build_dir = version_dir / "packagefiles"
         build_dir.mkdir(parents=True)
 
+        detection_path = version_dir / "Test-App_1.0.0-Detection.ps1"
+        detection_path.write_text("# detection")
         requirements_path = version_dir / "Test-App_1.0.0-Requirements.ps1"
         requirements_path.write_text("# requirements")
 
@@ -323,14 +325,14 @@ class TestWriteBuildManifest:
             app_name="Test App",
             version="1.0.0",
             build_types="update_only",
-            detection_script_path=None,  # No detection script for update_only
+            detection_script_path=detection_path,  # Detection always generated
             requirements_script_path=requirements_path,
         )
 
         manifest = json.loads(result.read_text(encoding="utf-8"))
 
         assert manifest["win32_build_types"] == "update_only"
-        assert "detection_script_path" not in manifest
+        assert manifest["detection_script_path"] == "Test-App_1.0.0-Detection.ps1"
         assert manifest["requirements_script_path"] == "Test-App_1.0.0-Requirements.ps1"
 
     def test_manifest_script_paths_are_relative(self, tmp_path):

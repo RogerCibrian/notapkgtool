@@ -730,8 +730,8 @@ def build_package(
     7. Generates Invoke-AppDeployToolkit.ps1 from template
     8. Copies installer to Files/
     9. Applies custom branding
-    10. Generates detection script (for App entry, based on build_types)
-    11. Generates requirements script (for Update entry, based on build_types)
+    10. Generates detection script (always; used by App entry and by Update entry)
+    11. Generates requirements script (when build_types is "both" or "update_only")
 
     Args:
         recipe_path: Path to the recipe YAML file.
@@ -754,7 +754,7 @@ def build_package(
             - build_types (str): The build_types setting used ("both", "app_only", or
                 "update_only").
             - detection_script_path (Path | None): Path to the generated detection script,
-                or None if skipped (build_types="update_only") or failed (non-fatal).
+                or None if generation failed (non-fatal). Always generated when successful.
             - requirements_script_path (Path | None): Path to the generated requirements
                 script, or None if skipped (build_types="app_only") or failed (non-fatal).
 
@@ -789,10 +789,10 @@ def build_package(
         (not included in .intunewin package - must be uploaded separately to Intune).
         Script generation can be configured as non-fatal via
         win32.installed_check.fail_on_error setting in recipe configuration.
-        The build_types setting controls which scripts are generated:
-        "both" (default) generates both detection and requirements scripts,
-        "app_only" generates only detection script, "update_only" generates
-        only requirements script.
+        Detection script is always generated. The build_types setting
+        controls requirements script only: "both" (default) generates
+        detection and requirements, "app_only" generates only detection,
+        "update_only" generates detection and requirements.
     """
     from notapkgtool.logging import get_global_logger
 
@@ -878,27 +878,24 @@ def build_package(
     detection_script_path = None
     requirements_script_path = None
 
-    # Generate detection script (for "both" or "app_only")
-    if build_types in ("both", "app_only"):
-        logger.step(7, 8, "Generating detection script...")
-        try:
-            detection_script_path = _generate_detection_script(
-                installer_file, config, version, app_id, build_dir
+    # Generate detection script (always; needed for App and Update entries)
+    logger.step(7, 8, "Generating detection script...")
+    try:
+        detection_script_path = _generate_detection_script(
+            installer_file, config, version, app_id, build_dir
+        )
+        logger.verbose("BUILD", "[OK] Detection script generated")
+    except Exception as err:
+        if fail_on_error:
+            raise PackagingError(
+                f"Detection script generation failed (fail_on_error=true): {err}"
+            ) from err
+        else:
+            logger.warning(
+                "BUILD",
+                f"Detection script generation failed (non-fatal): {err}",
             )
-            logger.verbose("BUILD", "[OK] Detection script generated")
-        except Exception as err:
-            if fail_on_error:
-                raise PackagingError(
-                    f"Detection script generation failed (fail_on_error=true): {err}"
-                ) from err
-            else:
-                logger.warning(
-                    "BUILD",
-                    f"Detection script generation failed (non-fatal): {err}",
-                )
-                logger.verbose("BUILD", "Continuing build without detection script...")
-    else:
-        logger.step(7, 8, "Skipping detection script (build_types=update_only)...")
+            logger.verbose("BUILD", "Continuing build without detection script...")
 
     # Generate requirements script (for "both" or "update_only")
     if build_types in ("both", "update_only"):

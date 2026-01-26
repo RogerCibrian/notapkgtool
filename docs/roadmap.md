@@ -230,18 +230,17 @@ This roadmap is a living document showing potential future directions for NAPT. 
 **Complexity**: High (3-5 days)  
 **Value**: High
 
-**Description**: Automatic PowerShell detection script generation for Intune Win32 app deployments during build process. Scripts check Windows uninstall registry keys, support exact or minimum version matching, and include CMTrace-formatted logging.
+**Description**: Automatic PowerShell detection and requirements script generation for Intune Win32 app deployments during build process. Detection scripts check if the app is installed at the required version (App entry); requirements scripts check if an older version is installed (Update entry). Both use the same registry checks, installer-type filtering, and CMTrace logging.
 
 **Implementation Details**:
 
 - Extracts app name from MSI ProductName (for MSI installers) or uses `win32.installed_check.display_name` (for non-MSI installers)
-- Generates scripts that check Windows uninstall registry keys for installed software
-- Supports exact match or minimum version (installed >= expected) detection modes
-- Includes CMTrace-formatted logging with log rotation
-- Scripts saved as `{AppName}_{Version}-Detection.ps1` sibling to `packagefiles/` directory
+- Always generates detection script `{AppName}_{Version}-Detection.ps1`; generates requirements script `{AppName}_{Version}-Requirements.ps1` when `win32.build_types` is both or update_only
+- Supports exact match or minimum version (installed >= expected); installer-type filtering (MSI strict, non-MSI permissive)
+- Includes CMTrace-formatted logging with log rotation (NAPTDetections.log, NAPTRequirements.log)
 - Configurable via `win32.installed_check` section in defaults or recipe
 
-**Related**: Implemented in `notapkgtool/detection.py` and integrated into build process in `notapkgtool/build/manager.py`. See [User Guide - Detection Scripts](user-guide.md#detection-scripts) and [Recipe Reference - Win32 Configuration](recipe-reference.md#win32-configuration).
+**Related**: Implemented in `notapkgtool/detection.py`, `notapkgtool/requirements.py`, and integrated into build process in `notapkgtool/build/manager.py`. See [User Guide - Detection and Requirements Scripts](user-guide.md#detection-and-requirements-scripts) and [Recipe Reference - Win32 Configuration](recipe-reference.md#win32-configuration).
 
 ---
 
