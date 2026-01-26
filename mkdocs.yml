@@ -84,6 +84,7 @@ nav:
     - cli: api/cli.md
     - core: api/core.md
     - detection: api/detection.md
+    - requirements: api/requirements.md
     - exceptions: api/exceptions.md
     - logging: api/logging.md
     - results: api/results.md

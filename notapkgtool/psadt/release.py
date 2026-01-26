@@ -70,9 +70,6 @@ def fetch_latest_psadt_version() -> str:
     Queries the GitHub API for the latest release and extracts the version
     number from the tag name (e.g., "4.1.7" from tag "4.1.7").
 
-    Args:
-            Defaults to False.
-
     Returns:
         Version number (e.g., "4.1.7").
 

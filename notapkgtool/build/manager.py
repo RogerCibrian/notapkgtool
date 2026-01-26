@@ -41,6 +41,7 @@ Example:
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import shutil
 from typing import Any
@@ -53,6 +54,10 @@ from notapkgtool.detection import (
 )
 from notapkgtool.exceptions import ConfigError, PackagingError
 from notapkgtool.psadt import get_psadt_release
+from notapkgtool.requirements import (
+    RequirementsConfig,
+    generate_requirements_script,
+)
 from notapkgtool.results import BuildResult
 from notapkgtool.versioning.msi import (
     extract_msi_metadata,
@@ -403,9 +408,9 @@ def _generate_detection_script(
 ) -> Path:
     """Generate detection script for Intune Win32 app.
 
-    Extracts metadata from installer (MSI ProductName for MSIs, detection.display_name
-    for non-MSI installers), generates PowerShell detection script, and saves it as a
-    sibling to the packagefiles directory.
+    Extracts metadata from installer (MSI ProductName for MSIs,
+    win32.installed_check.display_name for non-MSI installers), generates PowerShell
+    detection script, and saves it as a sibling to the packagefiles directory.
 
     Args:
         installer_file: Path to the installer file.
@@ -419,30 +424,38 @@ def _generate_detection_script(
 
     Raises:
         PackagingError: If detection script generation fails.
-        ConfigError: If required configuration is missing (detection.display_name
-            required for non-MSI installers).
+        ConfigError: If required configuration is missing
+            (win32.installed_check.display_name required for non-MSI installers).
     """
     from notapkgtool.logging import get_global_logger
 
     logger = get_global_logger()
     app = config["app"]
 
-    # Get detection configuration (merged defaults + app-specific)
-    defaults_detection = config.get("defaults", {}).get("detection", {})
-    app_detection = app.get("detection", {})
-    detection_config_dict = {**defaults_detection, **app_detection}
+    # Get installed_check configuration (merged defaults + app-specific)
+    defaults_installed_check = (
+        config.get("defaults", {}).get("win32", {}).get("installed_check", {})
+    )
+    app_installed_check = app.get("win32", {}).get("installed_check", {})
+    # Merge: app overrides defaults (shallow merge at top level)
+    installed_check_config = {**defaults_installed_check, **app_installed_check}
+
+    # Merge nested detection config separately
+    defaults_detection_nested = defaults_installed_check.get("detection", {})
+    app_detection_nested = app_installed_check.get("detection", {})
+    detection_nested_config = {**defaults_detection_nested, **app_detection_nested}
 
     # Determine AppName for detection
     app_name_for_detection = None
     installer_ext = installer_file.suffix.lower()
 
     # Check if display_name is set for MSI installers (not allowed)
-    if installer_ext == ".msi" and detection_config_dict.get("display_name"):
+    if installer_ext == ".msi" and installed_check_config.get("display_name"):
         logger.warning(
             "DETECTION",
-            "detection.display_name is set but will be ignored for MSI installers. "
-            "MSI ProductName is used as the authoritative source for registry "
-            "DisplayName.",
+            "win32.installed_check.display_name is set but will be ignored for MSI "
+            "installers. MSI ProductName is used as the authoritative source for "
+            "registry DisplayName.",
         )
 
     if installer_ext == ".msi":
@@ -469,29 +482,30 @@ def _generate_detection_script(
                 f"Failed to extract MSI ProductName. Cannot generate detection script. "
                 f"Error: {err}"
             ) from err
-    elif detection_config_dict.get("display_name"):
+    elif installed_check_config.get("display_name"):
         # Non-MSI: Use explicit display_name (required)
-        app_name_for_detection = detection_config_dict["display_name"]
+        app_name_for_detection = installed_check_config["display_name"]
         logger.verbose(
             "DETECTION",
-            f"Using detection.display_name: {app_name_for_detection}",
+            f"Using win32.installed_check.display_name: {app_name_for_detection}",
         )
     else:
         # Non-MSI: display_name required
         raise ConfigError(
-            "detection.display_name is required for non-MSI installers. "
-            "Set detection.display_name in recipe configuration."
+            "win32.installed_check.display_name is required for non-MSI installers. "
+            "Set app.win32.installed_check.display_name in recipe configuration."
         )
 
     # Create DetectionConfig from merged configuration
     detection_config_obj = DetectionConfig(
         app_name=app_name_for_detection,
         version=version,
-        log_format=detection_config_dict.get("log_format", "cmtrace"),
-        log_level=detection_config_dict.get("log_level", "INFO"),
-        log_rotation_mb=detection_config_dict.get("log_rotation_mb", 10),
-        exact_match=detection_config_dict.get("exact_match", True),
+        log_format=installed_check_config.get("log_format", "cmtrace"),
+        log_level=installed_check_config.get("log_level", "INFO"),
+        log_rotation_mb=installed_check_config.get("log_rotation_mb", 3),
+        exact_match=detection_nested_config.get("exact_match", False),
         app_id=app_id,
+        is_msi_installer=(installer_ext == ".msi"),
     )
 
     # Sanitize AppName for filename
@@ -516,6 +530,188 @@ def _generate_detection_script(
     return detection_script_path
 
 
+def _generate_requirements_script(
+    installer_file: Path,
+    config: dict[str, Any],
+    version: str,
+    app_id: str,
+    build_dir: Path,
+) -> Path:
+    """Generate requirements script for Intune Win32 app (Update entry).
+
+    Extracts metadata from installer (MSI ProductName for MSIs,
+    win32.installed_check.display_name for non-MSI installers), generates
+    PowerShell requirements script, and saves it as a sibling to the
+    packagefiles directory.
+
+    The requirements script determines if an older version is installed,
+    making the Update entry applicable only to devices that need updating.
+
+    Args:
+        installer_file: Path to the installer file.
+        config: Recipe configuration.
+        version: Extracted version string (target version).
+        app_id: Application ID.
+        build_dir: Build directory (packagefiles subdirectory).
+
+    Returns:
+        Path to the generated requirements script.
+
+    Raises:
+        PackagingError: If requirements script generation fails.
+        ConfigError: If required configuration is missing
+            (win32.installed_check.display_name required for non-MSI installers).
+    """
+    from notapkgtool.logging import get_global_logger
+
+    logger = get_global_logger()
+    app = config["app"]
+
+    # Get installed_check configuration (merged defaults + app-specific)
+    defaults_installed_check = (
+        config.get("defaults", {}).get("win32", {}).get("installed_check", {})
+    )
+    app_installed_check = app.get("win32", {}).get("installed_check", {})
+    installed_check_config = {**defaults_installed_check, **app_installed_check}
+
+    # Determine AppName for requirements
+    app_name_for_requirements = None
+    installer_ext = installer_file.suffix.lower()
+
+    if installer_ext == ".msi":
+        # MSI: Use ProductName (required, no fallback - authoritative source)
+        try:
+            msi_metadata = extract_msi_metadata(installer_file)
+            if not msi_metadata.product_name:
+                raise ConfigError(
+                    "MSI ProductName property not found. Cannot generate requirements "
+                    "script. Ensure the MSI file is valid and contains ProductName "
+                    "property."
+                )
+            app_name_for_requirements = msi_metadata.product_name
+            logger.verbose(
+                "REQUIREMENTS",
+                f"Using MSI ProductName for requirements: {app_name_for_requirements}",
+            )
+        except ConfigError:
+            raise
+        except Exception as err:
+            raise ConfigError(
+                f"Failed to extract MSI ProductName. Cannot generate requirements "
+                f"script. Error: {err}"
+            ) from err
+    elif installed_check_config.get("display_name"):
+        # Non-MSI: Use explicit display_name (required)
+        app_name_for_requirements = installed_check_config["display_name"]
+        logger.verbose(
+            "REQUIREMENTS",
+            f"Using win32.installed_check.display_name: {app_name_for_requirements}",
+        )
+    else:
+        # Non-MSI: display_name required
+        raise ConfigError(
+            "win32.installed_check.display_name is required for non-MSI installers. "
+            "Set app.win32.installed_check.display_name in recipe configuration."
+        )
+
+    # Create RequirementsConfig from merged configuration
+    requirements_config_obj = RequirementsConfig(
+        app_name=app_name_for_requirements,
+        version=version,
+        log_format=installed_check_config.get("log_format", "cmtrace"),
+        log_level=installed_check_config.get("log_level", "INFO"),
+        log_rotation_mb=installed_check_config.get("log_rotation_mb", 3),
+        app_id=app_id,
+        is_msi_installer=(installer_ext == ".msi"),
+    )
+
+    # Sanitize AppName for filename
+    sanitized_app_name = sanitize_filename(app_name_for_requirements, app_id)
+    sanitized_version = version.replace(" ", "-")
+
+    # Build requirements script filename: {AppName}_{Version}-Requirements.ps1
+    requirements_filename = f"{sanitized_app_name}_{sanitized_version}-Requirements.ps1"
+
+    # Save as sibling to packagefiles/ (build_dir.parent is the version directory)
+    requirements_script_path = build_dir.parent / requirements_filename
+
+    logger.verbose(
+        "REQUIREMENTS", f"Generating requirements script: {requirements_filename}"
+    )
+    logger.verbose("REQUIREMENTS", f"AppName: {app_name_for_requirements}")
+    logger.verbose("REQUIREMENTS", f"Version: {version}")
+
+    # Generate the script
+    generate_requirements_script(requirements_config_obj, requirements_script_path)
+
+    return requirements_script_path
+
+
+def _write_build_manifest(
+    build_dir: Path,
+    app_id: str,
+    app_name: str,
+    version: str,
+    build_types: str,
+    detection_script_path: Path | None,
+    requirements_script_path: Path | None,
+) -> Path:
+    """Write build manifest JSON to the build output directory.
+
+    The manifest provides metadata about what was built, enabling downstream
+    tools (like napt upload) to understand the build output without needing
+    to re-derive paths or configuration.
+
+    Args:
+        build_dir: Build directory (packagefiles subdirectory).
+        app_id: Application ID.
+        app_name: Application display name.
+        version: Application version.
+        build_types: The build_types setting used ("both", "app_only", "update_only").
+        detection_script_path: Path to detection script, or None if not generated.
+        requirements_script_path: Path to requirements script, or None if not generated.
+
+    Returns:
+        Path to the generated manifest file.
+
+    Raises:
+        OSError: If the manifest file cannot be written.
+
+    """
+    from notapkgtool.logging import get_global_logger
+
+    logger = get_global_logger()
+
+    # Build manifest content
+    manifest = {
+        "app_id": app_id,
+        "app_name": app_name,
+        "version": version,
+        "win32_build_types": build_types,
+    }
+
+    # Add script paths (relative to version directory for portability)
+    version_dir = build_dir.parent
+    if detection_script_path:
+        manifest["detection_script_path"] = detection_script_path.name
+    if requirements_script_path:
+        manifest["requirements_script_path"] = requirements_script_path.name
+
+    # Write manifest to version directory (sibling to packagefiles/)
+    manifest_path = version_dir / "build-manifest.json"
+
+    try:
+        manifest_json = json.dumps(manifest, indent=2)
+        manifest_path.write_text(manifest_json, encoding="utf-8")
+        logger.verbose("BUILD", f"Build manifest written to: {manifest_path}")
+    except OSError as err:
+        raise OSError(
+            f"Failed to write build manifest to {manifest_path}: {err}"
+        ) from err
+
+    return manifest_path
+
+
 def build_package(
     recipe_path: Path,
     downloads_dir: Path | None = None,
@@ -534,7 +730,8 @@ def build_package(
     7. Generates Invoke-AppDeployToolkit.ps1 from template
     8. Copies installer to Files/
     9. Applies custom branding
-    10. Generates detection script for Intune Win32 app deployment
+    10. Generates detection script (always; used by App entry and by Update entry)
+    11. Generates requirements script (when build_types is "both" or "update_only")
 
     Args:
         recipe_path: Path to the recipe YAML file.
@@ -554,13 +751,17 @@ def build_package(
                 {output_dir}/{app_id}/{version}/.
             - psadt_version (str): PSADT version used for the build (e.g., "4.1.7").
             - status (str): Build status, typically "success" for completed builds.
+            - build_types (str): The build_types setting used ("both", "app_only", or
+                "update_only").
             - detection_script_path (Path | None): Path to the generated detection script,
-                or None if detection script generation was skipped or failed (non-fatal).
+                or None if generation failed (non-fatal). Always generated when successful.
+            - requirements_script_path (Path | None): Path to the generated requirements
+                script, or None if skipped (build_types="app_only") or failed (non-fatal).
 
     Raises:
         FileNotFoundError: If recipe or installer doesn't exist.
-        PackagingError: If build process fails or detection script generation fails
-            (when fail_on_error=true in detection config).
+        PackagingError: If build process fails or script generation fails
+            (when fail_on_error=true in win32.installed_check config).
         ConfigError: If required configuration is missing.
 
     Example:
@@ -568,6 +769,7 @@ def build_package(
             ```python
             result = build_package(Path("recipes/Google/chrome.yaml"))
             print(result.build_dir)  # builds/napt-chrome/141.0.7390.123
+            print(result.build_types)  # "both"
             ```
 
         Custom output directory:
@@ -583,16 +785,20 @@ def build_package(
         Version extracted from installer file, not state cache. Overwrites
         existing build directory if it exists. PSADT files are copied pristine
         from cache. Invoke-AppDeployToolkit.ps1 is generated (not copied).
-        Detection script is generated as a sibling to the packagefiles directory
+        Scripts are generated as siblings to the packagefiles directory
         (not included in .intunewin package - must be uploaded separately to Intune).
-        Detection script generation can be configured as non-fatal via
-        detection.fail_on_error setting in recipe configuration.
+        Script generation can be configured as non-fatal via
+        win32.installed_check.fail_on_error setting in recipe configuration.
+        Detection script is always generated. The build_types setting
+        controls requirements script only: "both" (default) generates
+        detection and requirements, "app_only" generates only detection,
+        "update_only" generates detection and requirements.
     """
     from notapkgtool.logging import get_global_logger
 
     logger = get_global_logger()
     # Load configuration
-    logger.step(1, 6, "Loading configuration...")
+    logger.step(1, 8, "Loading configuration...")
     config = load_effective_config(recipe_path)
 
     app = config["app"]
@@ -609,18 +815,18 @@ def build_package(
         )
 
     # Find installer file
-    logger.step(2, 6, "Finding installer...")
+    logger.step(2, 8, "Finding installer...")
     state_file = Path("state/versions.json")  # Default state file location
     installer_file = _find_installer_file(downloads_dir, config, state_file)
 
     # Extract version from installer or state (filesystem + state are truth)
-    logger.step(3, 6, "Determining version...")
+    logger.step(3, 8, "Determining version...")
     version = _get_installer_version(installer_file, config, state_file)
 
     logger.verbose("BUILD", f"Building {app_name} v{version}")
 
     # Get PSADT release
-    logger.step(4, 6, "Getting PSADT release...")
+    logger.step(4, 8, "Getting PSADT release...")
     psadt_config = config.get("defaults", {}).get("psadt", {})
     release_spec = psadt_config.get("release", "latest")
     cache_dir = Path(psadt_config.get("cache_dir", "cache/psadt"))
@@ -631,7 +837,7 @@ def build_package(
     logger.verbose("BUILD", f"Using PSADT {psadt_version}")
 
     # Create build directory
-    logger.step(5, 6, "Creating build structure...")
+    logger.step(5, 8, "Creating build structure...")
     build_dir = _create_build_directory(output_dir, app_id, version)
 
     # Copy PSADT files (pristine)
@@ -654,23 +860,32 @@ def build_package(
     _copy_installer(installer_file, build_dir)
 
     # Apply branding
-    logger.step(6, 7, "Applying branding...")
+    logger.step(6, 8, "Applying branding...")
     _apply_branding(config, build_dir)
 
-    # Generate detection script
-    logger.step(7, 7, "Generating detection script...")
+    # Get build_types configuration
+    defaults_win32 = config.get("defaults", {}).get("win32", {})
+    app_win32 = app.get("win32", {})
+    build_types = app_win32.get(
+        "build_types", defaults_win32.get("build_types", "both")
+    )
+
+    # Get fail_on_error from win32.installed_check config
+    defaults_ic = defaults_win32.get("installed_check", {})
+    app_ic = app_win32.get("installed_check", {})
+    fail_on_error = app_ic.get("fail_on_error", defaults_ic.get("fail_on_error", True))
+
     detection_script_path = None
+    requirements_script_path = None
+
+    # Generate detection script (always; needed for App and Update entries)
+    logger.step(7, 8, "Generating detection script...")
     try:
         detection_script_path = _generate_detection_script(
             installer_file, config, version, app_id, build_dir
         )
         logger.verbose("BUILD", "[OK] Detection script generated")
     except Exception as err:
-        detection_config = config.get("defaults", {}).get("detection", {}) or app.get(
-            "detection", {}
-        )
-        fail_on_error = detection_config.get("fail_on_error", True)
-
         if fail_on_error:
             raise PackagingError(
                 f"Detection script generation failed (fail_on_error=true): {err}"
@@ -682,6 +897,41 @@ def build_package(
             )
             logger.verbose("BUILD", "Continuing build without detection script...")
 
+    # Generate requirements script (for "both" or "update_only")
+    if build_types in ("both", "update_only"):
+        logger.step(8, 8, "Generating requirements script...")
+        try:
+            requirements_script_path = _generate_requirements_script(
+                installer_file, config, version, app_id, build_dir
+            )
+            logger.verbose("BUILD", "[OK] Requirements script generated")
+        except Exception as err:
+            if fail_on_error:
+                raise PackagingError(
+                    f"Requirements script generation failed (fail_on_error=true): {err}"
+                ) from err
+            else:
+                logger.warning(
+                    "BUILD",
+                    f"Requirements script generation failed (non-fatal): {err}",
+                )
+                logger.verbose(
+                    "BUILD", "Continuing build without requirements script..."
+                )
+    else:
+        logger.step(8, 8, "Skipping requirements script (build_types=app_only)...")
+
+    # Write build manifest
+    _write_build_manifest(
+        build_dir=build_dir,
+        app_id=app_id,
+        app_name=app_name,
+        version=version,
+        build_types=build_types,
+        detection_script_path=detection_script_path,
+        requirements_script_path=requirements_script_path,
+    )
+
     logger.verbose("BUILD", f"[OK] Build complete: {build_dir}")
 
     return BuildResult(
@@ -691,5 +941,7 @@ def build_package(
         build_dir=build_dir,
         psadt_version=psadt_version,
         status="success",
+        build_types=build_types,
         detection_script_path=detection_script_path,
+        requirements_script_path=requirements_script_path,
     )

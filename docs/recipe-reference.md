@@ -414,55 +414,119 @@ uninstall: |
   Uninstall-ADTApplication -Name "Application Name"
 ```
 
-## Detection Configuration
+## Win32 Configuration
 
-The `detection` section (in `defaults` or per-app) configures detection script generation for Intune Win32 app deployments. Detection scripts are automatically generated during the build process and check Windows uninstall registry keys to determine if an application is installed.
+The `win32` section configures Win32-specific build settings including the two-app model (App + Update) and installed-state checking (detection and requirements scripts).
+
+### build_types
+
+**Type:** `string`  
+**Required:** No  
+**Default:** `"both"`
+
+Specifies which Intune app entries to create during build. The **detection script** is always generated (used by the App entry and by the Update entry when applicable). This setting controls **requirements script** generation only:
+
+- `"both"` (default): Generate detection and requirements scripts (App + Update entries in build manifest)
+- `"app_only"`: Generate only the detection script (App entry only)
+- `"update_only"`: Generate detection and requirements scripts (Update entry only)
 
 **Configuration Location:**
 
-- **Organization defaults:** `defaults/org.yaml` → `defaults.detection`
-- **Vendor defaults:** `defaults/vendors/<Vendor>.yaml` → `defaults.detection`
-- **Recipe (per-app):** `app.detection` (overrides defaults)
+- **Organization defaults:** `defaults/org.yaml` → `defaults.win32.build_types`
+- **Recipe (per-app):** `app.win32.build_types` (overrides defaults)
+
+**Example:**
+```yaml
+# Organization defaults
+defaults:
+  win32:
+    build_types: "both"
+
+# Per-app override
+app:
+  name: "My App"
+  win32:
+    build_types: "app_only"  # Only create App entry for this app
+```
+
+### installed_check
+
+The `installed_check` section configures detection and requirements script generation for Intune Win32 app deployments. These scripts check Windows uninstall registry keys to determine application installation state.
+
+**Configuration Location:**
+
+- **Organization defaults:** `defaults/org.yaml` → `defaults.win32.installed_check`
+- **Vendor defaults:** `defaults/vendors/<Vendor>.yaml` → `defaults.win32.installed_check`
+- **Recipe (per-app):** `app.win32.installed_check` (overrides defaults)
 
 **Configuration:**
 
 ```yaml
 defaults:
-  detection:
-    exact_match: false          # If true, version must match exactly. If false, installed >= required passes.
-    fail_on_error: true         # If true, detection script generation failures abort the build.
-    log_rotation_mb: 3          # Maximum log file size in MB before rotation
+  win32:
+    installed_check:
+      fail_on_error: true       # If true, script generation failures abort the build.
+      log_rotation_mb: 3        # Maximum log file size in MB before rotation
+      detection:
+        exact_match: false      # If true, version must match exactly.
 
-# Or per-app override:
+# Per-app override:
 app:
   name: "My App"
-  detection:
-    display_name: "My Application"  # Required for non-MSI installers, ignored for MSI
-      exact_match: true         # Override default for this app
+  win32:
+    installed_check:
+      display_name: "My Application"  # Required for non-MSI installers
+      detection:
+        exact_match: true       # Override default for this app
 ```
 
-### display_name
+#### display_name
 
 **Type:** `string`  
 **Required:** Yes for non-MSI installers, ignored for MSI installers
 
-Application name used in detection script to match registry `DisplayName`. This value is used both in the detection script logic and in the generated script filename.
+Application name used in scripts to match registry `DisplayName`. This value is used both in script logic and generated filenames.
 
 **Behavior:**
-- **MSI installers:** This field is ignored (a warning is logged if set). MSI `ProductName` is used as the authoritative source since it directly corresponds to the registry `DisplayName`.
-- **Non-MSI installers (EXE, etc.):** Required. Must be set in recipe configuration. The detection script checks Windows uninstall registry keys for this exact `DisplayName` value.
 
-**Note:** The value is sanitized for use in Windows filenames (spaces become hyphens, invalid characters removed). The detection script filename follows the pattern: `{DisplayName}_{Version}-Detection.ps1`.
+- **MSI installers:** This field is ignored (a warning is logged if set). MSI `ProductName` is used as the authoritative source since it directly corresponds to the registry `DisplayName`.
+- **Non-MSI installers (EXE, etc.):** Required. Must be set in recipe configuration. Scripts check Windows uninstall registry keys for this exact `DisplayName` value.
+
+**Note:** The value is sanitized for use in Windows filenames (spaces become hyphens, invalid characters removed). Script filenames follow the pattern: `{DisplayName}_{Version}-Detection.ps1` and `{DisplayName}_{Version}-Requirements.ps1`.
 
 **Example:**
 ```yaml
-apps:
-  - name: "My App"
-    detection:
+app:
+  name: "My App"
+  win32:
+    installed_check:
       display_name: "My Application"  # Matches registry DisplayName for EXE installers
 ```
 
-### exact_match
+#### fail_on_error
+
+**Type:** `boolean`  
+**Required:** No  
+**Default:** `true`
+
+If `true`, script generation failures will abort the build. If `false`, build continues even if script generation fails (useful for development/testing).
+
+**Behavior:**
+
+- `fail_on_error: true` (default): Build fails if scripts cannot be generated
+- `fail_on_error: false`: Build continues, script paths will be `None` in BuildResult
+
+#### log_rotation_mb
+
+**Type:** `integer`  
+**Required:** No  
+**Default:** `3`
+
+Maximum log file size in megabytes before rotation. Scripts use a 2-file rotation scheme (`.log` and `.log.old`).
+
+**Note:** Scripts try the Intune folder first: `C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\` (files: `NAPTDetections.log` / `NAPTDetectionsUser.log` or `NAPTRequirements.log` / `NAPTRequirementsUser.log`), creating the parent directory if it does not exist and verifying write access. If that fails (e.g. permissions), they fall back to `C:\ProgramData\NAPT\` (system) or `%LOCALAPPDATA%\NAPT\` (user), creating that parent if needed. If both primary and fallback fail, a warning is written to stderr and the script runs without a log file. Requirements scripts always exit 0 and indicate applicability via stdout ("Required" or nothing); configure the requirement rule in Intune with output type String, operator Equals, value "Required".
+
+#### detection.exact_match
 
 **Type:** `boolean`  
 **Required:** No  
@@ -471,41 +535,52 @@ apps:
 If `true`, the detection script requires an exact version match. If `false`, the detection script passes if the installed version is greater than or equal to the required version (minimum version check).
 
 **Behavior:**
+
 - `exact_match: false` (default): Allows users to have newer versions installed without triggering reinstall
 - `exact_match: true`: Requires exact version match (useful for compliance scenarios)
 
-### fail_on_error
-
-**Type:** `boolean`  
-**Required:** No  
-**Default:** `true`
-
-If `true`, detection script generation failures will abort the build. If `false`, build continues even if detection script generation fails (useful for development/testing).
-
-**Behavior:**
-- `fail_on_error: true` (default): Build fails if detection script cannot be generated
-- `fail_on_error: false`: Build continues, detection script path will be `None` in BuildResult
-
-### log_rotation_mb
-
-**Type:** `integer`  
-**Required:** No  
-**Default:** `3`
-
-Maximum log file size in megabytes before rotation. Detection scripts use a 2-file rotation scheme (`.log` and `.log.old`).
-
-**Note:** Detection scripts log to `C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\NAPTDetections.log` (system context) or `NAPTDetectionsUser.log` (user context) with automatic fallback to alternate locations if primary locations are unavailable.
-
-**How Detection Scripts Work:**
+**How Scripts Work:**
 
 - **App Name Detection:**
     - **MSI installers:** Uses MSI `ProductName` property (authoritative source for registry `DisplayName`). The `display_name` field is ignored for MSI installers.
-    - **Non-MSI installers:** Requires `detection.display_name` in recipe configuration. This value is matched against the registry `DisplayName`.
+    - **Non-MSI installers:** Requires `win32.installed_check.display_name` in recipe configuration. This value is matched against the registry `DisplayName`.
+- **Installer Type Filtering:**
+    - Scripts automatically detect installer type from file extension during build.
+    - **MSI installers (strict):** Only matches registry entries with `WindowsInstaller` = 1. Prevents false matches when both MSI and EXE versions exist.
+    - **Non-MSI installers (permissive):** Matches ANY registry entry. Handles EXE installers that run embedded MSIs internally.
 - **Registry Checking:** Checks Windows uninstall registry keys (HKLM/HKCU, native and Wow6432Node paths).
-- **Version Comparison:** Uses `DisplayVersion` registry value, compares based on `exact_match` setting.
-- **Script Location:** Generated scripts are saved as `{DisplayName}_{Version}-Detection.ps1` sibling to the `packagefiles/` directory (not included in `.intunewin` package - must be uploaded separately to Intune).
+- **Version Comparison:** Uses `DisplayVersion` registry value. Detection: exit 0 if installed meets requirement, 1 otherwise. Requirements: always exit 0; output "Required" to stdout if an older version is installed, nothing otherwise.
+- **Script Location:** Generated scripts are saved as siblings to the `packagefiles/` directory (not included in `.intunewin` package - must be uploaded separately to Intune).
 
-See [Detection Scripts](user-guide.md#detection-scripts) in the User Guide for detailed information about how detection scripts work and how to use them in Intune.
+See [Detection and Requirements Scripts](user-guide.md#detection-and-requirements-scripts) in the User Guide for how the scripts work and how to use them in Intune.
+
+## Intune Configuration
+
+The `intune` section configures Intune-specific settings for app publishing.
+
+### update_name_prefix
+
+**Type:** `string`  
+**Required:** No  
+**Default:** `"[Update] "`
+
+Prefix added to the app name for the Update app entry in Intune. The Update app display name is: `update_name_prefix + app.name`.
+
+**Configuration Location:**
+
+- **Organization defaults:** `defaults/org.yaml` → `defaults.intune.update_name_prefix`
+- **Recipe (per-app):** `app.intune.update_name_prefix` (overrides defaults)
+
+**Example:**
+```yaml
+defaults:
+  intune:
+    update_name_prefix: "[Update] "
+
+# Results in:
+# - App entry: "Google Chrome"
+# - Update entry: "[Update] Google Chrome"
+```
 
 ## Environment Variable Substitution
 

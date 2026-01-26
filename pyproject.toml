@@ -84,6 +84,7 @@ force-sort-within-sections = true
 # -----------------------------
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "--basetemp=.pytest-tmp"
 markers = [
     "unit: Fast unit tests with mocked data",
     "integration: Integration tests with real external dependencies",

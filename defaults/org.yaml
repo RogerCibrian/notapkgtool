@@ -70,18 +70,35 @@ defaults:
     # Supported placeholders: {app_id}, {version}, {vendor}
     naming: "{app_id}/{version}"
 
-  detection:
-    # If true, version must match exactly. If false, installed >= required passes.
-    # Default: false (allows users to have newer versions without triggering reinstall)
-    exact_match: false
+  win32:
+    # Build types: which Intune app entries to create
+    # - both: create both App and Update entries (default)
+    # - app_only: create only the App entry
+    # - update_only: create only the Update entry
+    build_types: "both"
 
-    # If true, detection script generation failures abort the build.
-    # Default: true (detection scripts are required for Intune deployment)
-    fail_on_error: true
+    # Installed-state check configuration (shared by detection and requirements scripts)
+    installed_check:
+      # display_name: Required for non-MSI installers. MSI uses ProductName automatically.
+      # Set in recipe's app.win32.installed_check.display_name for non-MSI installers.
 
-    # Maximum log file size in MB before rotation 
-    log_rotation_mb: 3
+      # If true, script generation failures abort the build.
+      # Default: true (scripts are required for Intune deployment)
+      fail_on_error: true
+
+      # Maximum log file size in MB before rotation
+      log_rotation_mb: 3
+
+      # Detection-specific settings
+      detection:
+        # If true, version must match exactly. If false, installed >= required passes.
+        # Default: false (allows users to have newer versions without triggering reinstall)
+        exact_match: false
+
+  intune:
+    # Prefix for Update app display name in Intune
+    # Update app name = update_name_prefix + app.name
+    update_name_prefix: "[Update] "
 
   # Future configuration sections (not yet implemented):
-  # - package: Intune package metadata and requirements
-  # - assignments: Deployment waves and ring management
+  # - intune.assignments: Deployment waves and ring management

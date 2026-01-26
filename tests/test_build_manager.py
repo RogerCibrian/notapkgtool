@@ -14,6 +14,8 @@ For integration tests with real PSADT, see test_integration_build.py.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from notapkgtool.build.manager import (
@@ -22,6 +24,7 @@ from notapkgtool.build.manager import (
     _copy_psadt_pristine,
     _create_build_directory,
     _find_installer_file,
+    _write_build_manifest,
 )
 
 # All tests in this file are unit tests (fast, mocked)
@@ -241,3 +244,139 @@ class TestApplyBranding:
 
         # Should not raise - just skip missing files
         _apply_branding(config, build_dir)
+
+
+class TestWriteBuildManifest:
+    """Tests for build manifest generation."""
+
+    def test_manifest_contains_required_fields(self, tmp_path):
+        """Test that manifest contains all required fields."""
+        # Create build structure
+        version_dir = tmp_path / "builds" / "test-app" / "1.0.0"
+        build_dir = version_dir / "packagefiles"
+        build_dir.mkdir(parents=True)
+
+        detection_path = version_dir / "Test-App_1.0.0-Detection.ps1"
+        requirements_path = version_dir / "Test-App_1.0.0-Requirements.ps1"
+        detection_path.write_text("# detection")
+        requirements_path.write_text("# requirements")
+
+        result = _write_build_manifest(
+            build_dir=build_dir,
+            app_id="test-app",
+            app_name="Test App",
+            version="1.0.0",
+            build_types="both",
+            detection_script_path=detection_path,
+            requirements_script_path=requirements_path,
+        )
+
+        assert result.exists()
+        assert result.name == "build-manifest.json"
+
+        manifest = json.loads(result.read_text(encoding="utf-8"))
+
+        assert manifest["app_id"] == "test-app"
+        assert manifest["app_name"] == "Test App"
+        assert manifest["version"] == "1.0.0"
+        assert manifest["win32_build_types"] == "both"
+        assert manifest["detection_script_path"] == "Test-App_1.0.0-Detection.ps1"
+        assert manifest["requirements_script_path"] == "Test-App_1.0.0-Requirements.ps1"
+
+    def test_manifest_build_types_app_only(self, tmp_path):
+        """Test manifest for app_only build type."""
+        version_dir = tmp_path / "builds" / "test-app" / "1.0.0"
+        build_dir = version_dir / "packagefiles"
+        build_dir.mkdir(parents=True)
+
+        detection_path = version_dir / "Test-App_1.0.0-Detection.ps1"
+        detection_path.write_text("# detection")
+
+        result = _write_build_manifest(
+            build_dir=build_dir,
+            app_id="test-app",
+            app_name="Test App",
+            version="1.0.0",
+            build_types="app_only",
+            detection_script_path=detection_path,
+            requirements_script_path=None,  # No requirements script for app_only
+        )
+
+        manifest = json.loads(result.read_text(encoding="utf-8"))
+
+        assert manifest["win32_build_types"] == "app_only"
+        assert manifest["detection_script_path"] == "Test-App_1.0.0-Detection.ps1"
+        assert "requirements_script_path" not in manifest
+
+    def test_manifest_build_types_update_only(self, tmp_path):
+        """Test manifest for update_only build type (detection always generated)."""
+        version_dir = tmp_path / "builds" / "test-app" / "1.0.0"
+        build_dir = version_dir / "packagefiles"
+        build_dir.mkdir(parents=True)
+
+        detection_path = version_dir / "Test-App_1.0.0-Detection.ps1"
+        detection_path.write_text("# detection")
+        requirements_path = version_dir / "Test-App_1.0.0-Requirements.ps1"
+        requirements_path.write_text("# requirements")
+
+        result = _write_build_manifest(
+            build_dir=build_dir,
+            app_id="test-app",
+            app_name="Test App",
+            version="1.0.0",
+            build_types="update_only",
+            detection_script_path=detection_path,  # Detection always generated
+            requirements_script_path=requirements_path,
+        )
+
+        manifest = json.loads(result.read_text(encoding="utf-8"))
+
+        assert manifest["win32_build_types"] == "update_only"
+        assert manifest["detection_script_path"] == "Test-App_1.0.0-Detection.ps1"
+        assert manifest["requirements_script_path"] == "Test-App_1.0.0-Requirements.ps1"
+
+    def test_manifest_script_paths_are_relative(self, tmp_path):
+        """Test that script paths in manifest are relative (filename only)."""
+        version_dir = tmp_path / "builds" / "test-app" / "1.0.0"
+        build_dir = version_dir / "packagefiles"
+        build_dir.mkdir(parents=True)
+
+        detection_path = version_dir / "Google-Chrome_131.0.0-Detection.ps1"
+        detection_path.write_text("# detection")
+
+        result = _write_build_manifest(
+            build_dir=build_dir,
+            app_id="napt-chrome",
+            app_name="Google Chrome",
+            version="131.0.0",
+            build_types="app_only",
+            detection_script_path=detection_path,
+            requirements_script_path=None,
+        )
+
+        manifest = json.loads(result.read_text(encoding="utf-8"))
+
+        # Path should be filename only (relative), not absolute path
+        assert manifest["detection_script_path"] == "Google-Chrome_131.0.0-Detection.ps1"
+        assert "/" not in manifest["detection_script_path"]
+        assert "\\" not in manifest["detection_script_path"]
+
+    def test_manifest_location_sibling_to_packagefiles(self, tmp_path):
+        """Test that manifest is saved as sibling to packagefiles/."""
+        version_dir = tmp_path / "builds" / "test-app" / "1.0.0"
+        build_dir = version_dir / "packagefiles"
+        build_dir.mkdir(parents=True)
+
+        result = _write_build_manifest(
+            build_dir=build_dir,
+            app_id="test-app",
+            app_name="Test App",
+            version="1.0.0",
+            build_types="both",
+            detection_script_path=None,
+            requirements_script_path=None,
+        )
+
+        # Manifest should be in version_dir, not in packagefiles/
+        assert result.parent == version_dir
+        assert result.parent.name == "1.0.0"

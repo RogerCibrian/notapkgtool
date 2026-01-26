@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Detection script generation for Intune Win32 apps.
+"""Requirements script generation for Intune Win32 apps.
 
-This module generates PowerShell detection scripts for Intune Win32 app
-deployments. Scripts check Windows uninstall registry keys for installed
-software and version information using CMTrace-formatted logging.
+This module generates PowerShell requirements scripts for Intune Win32 app
+deployments. Requirements scripts determine if the Update entry should be
+applicable to a device based on whether an older version is installed.
 
-Detection Logic:
+Requirements Logic:
     - Checks HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall (always)
     - Checks HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall (always)
     - Checks HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall
@@ -26,9 +26,8 @@ Detection Logic:
     - Checks HKCU:\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall
         (only on 64-bit OS with 64-bit PowerShell process)
     - Matches by DisplayName (using AppName from recipe or MSI ProductName)
-    - Compares version (exact or minimum version match based on config)
-    - Provides verbose logging with detailed detection results, registry paths,
-        installed vs expected versions, and match type information
+    - If installed version < target version: outputs "Required" and exits 0
+    - Otherwise: outputs nothing and exits 0
 
 Installer Type Filtering:
     Scripts filter registry entries based on installer type to prevent false
@@ -40,39 +39,35 @@ Installer Type Filtering:
         EXE installers that run embedded MSIs internally.
 
 Logging:
-    - Primary (System): C:\\ProgramData\\Microsoft\\IntuneManagementExtension\\Logs\\NAPTDetections.log
-    - Primary (User): C:\\ProgramData\\Microsoft\\IntuneManagementExtension\\Logs\\NAPTDetectionsUser.log
-    - Fallback (System): C:\\ProgramData\\NAPT\\NAPTDetections.log
-    - Fallback (User): %LOCALAPPDATA%\\NAPT\\NAPTDetectionsUser.log
+    - Primary (System): C:\\ProgramData\\Microsoft\\IntuneManagementExtension\\Logs\\NAPTRequirements.log
+    - Primary (User): C:\\ProgramData\\Microsoft\\IntuneManagementExtension\\Logs\\NAPTRequirementsUser.log
+    - Fallback (System): C:\\ProgramData\\NAPT\\NAPTRequirements.log
+    - Fallback (User): %LOCALAPPDATA%\\NAPT\\NAPTRequirementsUser.log
     - Log rotation: 2-file rotation (.log and .log.old), configurable max size
         (default: 3MB)
     - Format: CMTrace format for compatibility with Intune diagnostics
-    - Features: Write permission testing with automatic fallback to alternate
-        locations, verbose component-based logging with dynamic component names
-        based on app name and version, detailed detection workflow logging
 
 Example:
-    Generate detection script:
+    Generate requirements script:
         ```python
         from pathlib import Path
-        from notapkgtool.detection import DetectionConfig, generate_detection_script
+        from notapkgtool.requirements import RequirementsConfig, generate_requirements_script
 
-        config = DetectionConfig(
+        config = RequirementsConfig(
             app_name="Google Chrome",
             version="131.0.6778.86",
-            log_format="cmtrace",
-            log_level="INFO",
         )
-        script_path = generate_detection_script(
+        script_path = generate_requirements_script(
             config=config,
-            output_path=Path("builds/chrome/131.0.6778.86/Google-Chrome-131.0.6778.86-Detection.ps1"),
+            output_path=Path("builds/chrome/131.0.6778.86/Google-Chrome-131.0.6778.86-Requirements.ps1"),
         )
         ```
 
 Note:
-    Detection scripts are saved as siblings to the packagefiles directory
+    Requirements scripts are saved as siblings to the packagefiles directory
     to prevent them from being included in the .intunewin package. They
-    should be uploaded separately to Intune alongside the package.
+    should be uploaded separately to Intune as a custom requirement rule
+    with output type String, operator Equals, value "Required".
 
 """
 
@@ -80,7 +75,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-import re
 import string
 from typing import Literal
 
@@ -89,17 +83,15 @@ LogLevel = Literal["INFO", "WARNING", "ERROR", "DEBUG"]
 
 
 @dataclass(frozen=True)
-class DetectionConfig:
-    """Configuration for detection script generation.
+class RequirementsConfig:
+    """Configuration for requirements script generation.
 
     Attributes:
         app_name: Application name to search for in registry DisplayName.
-        version: Expected version string to match.
+        version: Target version string (requirement met if installed < this).
         log_format: Log format (currently only "cmtrace" supported).
         log_level: Minimum log level (INFO, WARNING, ERROR, DEBUG).
         log_rotation_mb: Maximum log file size in MB before rotation.
-        exact_match: If True, version must match exactly. If False, minimum
-            version comparison (remote >= expected).
         app_id: Application ID (used for fallback if app_name sanitization
             results in empty string).
         is_msi_installer: If True, only match MSI-based registry entries.
@@ -114,74 +106,21 @@ class DetectionConfig:
     log_format: LogFormat = "cmtrace"
     log_level: LogLevel = "INFO"
     log_rotation_mb: int = 3
-    exact_match: bool = False
     app_id: str = ""
     is_msi_installer: bool = False
 
 
-def sanitize_filename(name: str, app_id: str = "") -> str:
-    """Sanitize string for use in Windows filename.
-
-    Rules:
-        - Replace spaces with hyphens
-        - Remove invalid Windows filename characters (< > : " | ? * \\ /)
-        - Normalize multiple consecutive hyphens to single hyphen
-        - Remove leading/trailing hyphens and dots
-        - If result is empty, fallback to app_id (or "app" if app_id is empty)
-
-    Args:
-        name: String to sanitize (e.g., "Google Chrome").
-        app_id: Fallback identifier if name becomes empty after sanitization.
-
-    Returns:
-        Sanitized filename-safe string (e.g., "Google-Chrome").
-
-    Example:
-        Basic sanitization:
-            ```python
-            sanitize_filename("Google Chrome")  # Returns: "Google-Chrome"
-            sanitize_filename("My App v2.0")    # Returns: "My-App-v2.0"
-            sanitize_filename("Test<>App")      # Returns: "TestApp"
-            ```
-
-        Fallback behavior:
-            ```python
-            sanitize_filename("  ", "my-app")   # Returns: "my-app"
-            sanitize_filename("", "test")       # Returns: "test"
-            ```
-
-    """
-    # Replace spaces with hyphens
-    sanitized = name.replace(" ", "-")
-
-    # Remove invalid Windows filename characters: < > : " | ? * \ /
-    invalid_chars = '<>:"|?*\\/'
-    for char in invalid_chars:
-        sanitized = sanitized.replace(char, "")
-
-    # Normalize multiple consecutive hyphens to single hyphen
-    sanitized = re.sub(r"-+", "-", sanitized)
-
-    # Remove leading/trailing hyphens and dots
-    sanitized = sanitized.strip(".-")
-
-    # Fallback to app_id if empty
-    if not sanitized:
-        sanitized = app_id if app_id else "app"
-
-    return sanitized
-
-
-# PowerShell detection script template
-_DETECTION_SCRIPT_TEMPLATE = """# Detection script for ${app_name} ${version}
+# PowerShell requirements script template
+_REQUIREMENTS_SCRIPT_TEMPLATE = """# Requirements script for ${app_name} ${version}
 # Generated by NAPT (Not a Package Tool)
-# This script checks Windows uninstall registry keys for software installation.
+# This script checks if an older version is installed (for Update entry applicability).
+# Outputs "Required" if installed version < target version, nothing otherwise.
+# Always exits with code 0 so Intune can evaluate STDOUT.
 
 param(
-    [string]$AppName = "${app_name}",
-    [string]$ExpectedVersion = "${version}",
-    [bool]$ExactMatch = ${exact_match},
-    [bool]$IsMSIInstaller = ${is_msi_installer}
+    [string]$$AppName = "${app_name}",
+    [string]$$TargetVersion = "${version}",
+    [bool]$$IsMSIInstaller = ${is_msi_installer}
 )
 
 # CMTrace log format function
@@ -219,7 +158,7 @@ function Write-CMTraceLog {
     
     # Get context (user identity name) and script file path
     $$ContextName = if ($$script:CurrentIdentity) { $$script:CurrentIdentity.Name } else { "UNKNOWN" }
-    $$ScriptFile = if ($$MyInvocation.ScriptName) { $$MyInvocation.ScriptName } else { "detection.ps1" }
+    $$ScriptFile = if ($$MyInvocation.ScriptName) { $$MyInvocation.ScriptName } else { "requirements.ps1" }
     
     $$Line = "<![LOG[$$Message]LOG]!><time=""$$TimeWithOffset"" date=""$$DateFormatted"" component=""$$Component"" context=""$$ContextName"" type=""$$TypeNumber"" thread=""$$PID"" file=""$$ScriptFile"">"
     
@@ -238,15 +177,15 @@ function Initialize-LogFile {
     if ($$IsSystemContext) {
         # System context - try Intune log folder first
         $$PrimaryLogDir = "C:\\ProgramData\\Microsoft\\IntuneManagementExtension\\Logs"
-        $$PrimaryLogFile = Join-Path $$PrimaryLogDir "NAPTDetections.log"
+        $$PrimaryLogFile = Join-Path $$PrimaryLogDir "NAPTRequirements.log"
         $$FallbackLogDir = "C:\\ProgramData\\NAPT"
-        $$FallbackLogFile = Join-Path $$FallbackLogDir "NAPTDetections.log"
+        $$FallbackLogFile = Join-Path $$FallbackLogDir "NAPTRequirements.log"
     } else {
         # User context
         $$PrimaryLogDir = "C:\\ProgramData\\Microsoft\\IntuneManagementExtension\\Logs"
-        $$PrimaryLogFile = Join-Path $$PrimaryLogDir "NAPTDetectionsUser.log"
+        $$PrimaryLogFile = Join-Path $$PrimaryLogDir "NAPTRequirementsUser.log"
         $$FallbackLogDir = $$env:LOCALAPPDATA
-        $$FallbackLogFile = Join-Path $$FallbackLogDir "NAPT\\NAPTDetectionsUser.log"
+        $$FallbackLogFile = Join-Path $$FallbackLogDir "NAPT\\NAPTRequirementsUser.log"
     }
     
     # Try primary location first
@@ -297,7 +236,7 @@ function Initialize-LogFile {
         $$script:LogFilePath = $$FallbackLogFile
     } catch {
         # All log locations failed - log warning to stderr and continue
-        Write-Warning "NAPT Detection: Failed to initialize logging (primary and fallback locations unavailable). Detection will continue but no log file will be created."
+        Write-Warning "NAPT Requirements: Failed to initialize logging (primary and fallback locations unavailable). Script will continue but no log file will be created."
         $$script:LogFilePath = $$null
     }
 }
@@ -314,48 +253,43 @@ function Test-IsMSIInstallation {
     return ($$WindowsInstaller -eq 1)
 }
 
-# Version comparison function
-function Compare-Version {
+# Version comparison function - returns true if Installed < Target
+function Compare-VersionLessThan {
     param(
         [string]$$InstalledVersion,
-        [string]$$ExpectedVersion,
-        [bool]$$ExactMatch
+        [string]$$TargetVersion
     )
     
-    if ($$ExactMatch) {
-        return $$InstalledVersion -eq $$ExpectedVersion
-    }
-    
-    # Minimum version comparison (installed >= expected)
+    # Parse version parts
     $$InstalledParts = $$InstalledVersion -split '[.\\-]' | ForEach-Object { [int]$$_ }
-    $$ExpectedParts = $$ExpectedVersion -split '[.\\-]' | ForEach-Object { [int]$$_ }
+    $$TargetParts = $$TargetVersion -split '[.\\-]' | ForEach-Object { [int]$$_ }
     
-    $$MaxLength = [Math]::Max($$InstalledParts.Count, $$ExpectedParts.Count)
+    $$MaxLength = [Math]::Max($$InstalledParts.Count, $$TargetParts.Count)
     
     for ($$i = 0; $$i -lt $$MaxLength; $$i++) {
         $$InstalledPart = if ($$i -lt $$InstalledParts.Count) { $$InstalledParts[$$i] } else { 0 }
-        $$ExpectedPart = if ($$i -lt $$ExpectedParts.Count) { $$ExpectedParts[$$i] } else { 0 }
+        $$TargetPart = if ($$i -lt $$TargetParts.Count) { $$TargetParts[$$i] } else { 0 }
         
-        if ($$InstalledPart -gt $$ExpectedPart) {
+        if ($$InstalledPart -lt $$TargetPart) {
             return $$true
         }
-        if ($$InstalledPart -lt $$ExpectedPart) {
+        if ($$InstalledPart -gt $$TargetPart) {
             return $$false
         }
     }
     
-    return $$true  # Versions are equal
+    return $$false  # Versions are equal, so not less than
 }
 
-# Main detection logic
+# Main requirements logic
 Initialize-LogFile
 
 # Build component identifier from app name and version (sanitized for valid identifier)
-$$SanitizedAppName = $$AppName -replace '[^a-zA-Z0-9]', '-' -replace '-+', '-' -replace '^-|-$', ''
-$$script:ComponentName = "$$SanitizedAppName-$$ExpectedVersion-Detection"
+$$SanitizedAppName = $$AppName -replace '[^a-zA-Z0-9]', '-' -replace '-+', '-' -replace '^-|-$$', ''
+$$script:ComponentName = "$$SanitizedAppName-$$TargetVersion-Requirements"
 
-Write-CMTraceLog -Message "[Initialization] Detection script running as user: $$($$script:CurrentIdentity.Name)" -Type "INFO"
-Write-CMTraceLog -Message "[Initialization] Starting detection check for: $$AppName (Expected: $$ExpectedVersion, Mode: $$(if ($$ExactMatch) { 'Exact Match' } else { 'Minimum Version' }), Installer Type: $$(if ($$IsMSIInstaller) { 'MSI' } else { 'Non-MSI' }))" -Type "INFO"
+Write-CMTraceLog -Message "[Initialization] Requirements script running as user: $$($$script:CurrentIdentity.Name)" -Type "INFO"
+Write-CMTraceLog -Message "[Initialization] Starting requirements check for: $$AppName (Target: $$TargetVersion, Installer Type: $$(if ($$IsMSIInstaller) { 'MSI' } else { 'Non-MSI' }))" -Type "INFO"
 
 # Detect if PowerShell is running as 64-bit process
 $$Is64BitProcess = [Environment]::Is64BitProcess
@@ -370,19 +304,13 @@ Write-CMTraceLog -Message "[Initialization] PowerShell Process: $$(if ($$Is64Bit
 # Build registry paths based on process and OS architecture
 $$RegPaths = @(
     # Machine-level native path (always check)
-    # HKLM contains per-machine installations (requires admin/system context)
     "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
 )
 
 # User-level native path (always check)
-# HKCU contains per-user installations (visible in user context)
 $$RegPaths += "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
 
 # Wow6432Node paths (only for 64-bit process on 64-bit OS)
-# On 64-bit Windows, 32-bit processes are redirected to Wow6432Node by the registry.
-# A 64-bit process must explicitly check Wow6432Node to see 32-bit app entries.
-# A 32-bit process cannot access the native 64-bit SOFTWARE key, so checking
-# Wow6432Node would be redundant.
 if ($$Is64BitOS -and $$Is64BitProcess) {
     $$RegPaths += "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
     $$RegPaths += "HKCU:\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
@@ -390,7 +318,7 @@ if ($$Is64BitOS -and $$Is64BitProcess) {
 
 Write-CMTraceLog -Message "[Initialization] Registry paths to check: $$($$RegPaths -join ', ')" -Type "INFO"
 
-$$Found = $$false
+$$FoundOlderVersion = $$false
 $$InstalledVersion = $$null
 $$DisplayName = $$null
 
@@ -403,7 +331,7 @@ foreach ($$RegPath in $$RegPaths) {
             $$VersionValue = (Get-ItemProperty -Path $$Key.PSPath -Name "DisplayVersion" -ErrorAction SilentlyContinue).DisplayVersion
             
             if ($$DisplayNameValue -eq $$AppName) {
-                # Convert PSPath to cleaner registry path format (HKLM:/HKCU:)
+                # Convert PSPath to cleaner registry path format
                 $$RegKeyPath = $$Key.PSPath -replace 'Microsoft\\.PowerShell\\.Core\\\\Registry::', '' -replace 'HKEY_LOCAL_MACHINE\\\\', 'HKLM:\\' -replace 'HKEY_CURRENT_USER\\\\', 'HKCU:\\'
                 
                 # Check if installer type matches (MSI vs non-MSI)
@@ -412,7 +340,7 @@ foreach ($$RegPath in $$RegPaths) {
                 $$IsMSIEntry = Test-IsMSIInstallation -RegKey $$Key
                 if ($$IsMSIInstaller -and -not $$IsMSIEntry) {
                     # Building from MSI, but registry entry is not MSI - skip
-                    Write-CMTraceLog -Message "[Detection] Found matching DisplayName but installer type mismatch: '$$RegKeyPath' is non-MSI, expected MSI - skipping" -Type "INFO"
+                    Write-CMTraceLog -Message "[Requirements] Found matching DisplayName but installer type mismatch: '$$RegKeyPath' is non-MSI, expected MSI - skipping" -Type "INFO"
                     continue
                 }
                 # Note: Non-MSI installers accept ANY registry entry (MSI or non-MSI)
@@ -421,55 +349,60 @@ foreach ($$RegPath in $$RegPaths) {
                 $$DisplayName = $$DisplayNameValue
                 $$InstalledVersion = $$VersionValue
                 
-                Write-CMTraceLog -Message "[Detection] Found matching registry key: '$$RegKeyPath' (DisplayName: $$DisplayName, DisplayVersion: $$InstalledVersion, Installer Type: $$(if ($$IsMSIEntry) { 'MSI' } else { 'Non-MSI' }))" -Type "INFO"
+                Write-CMTraceLog -Message "[Requirements] Found matching registry key: '$$RegKeyPath' (DisplayName: $$DisplayName, DisplayVersion: $$InstalledVersion, Installer Type: $$(if ($$IsMSIEntry) { 'MSI' } else { 'Non-MSI' }))" -Type "INFO"
                 
                 if ($$InstalledVersion) {
-                    if (Compare-Version -InstalledVersion $$InstalledVersion -ExpectedVersion $$ExpectedVersion -ExactMatch $$ExactMatch) {
-                        Write-CMTraceLog -Message "[Detection] Version check PASSED: Installed version $$InstalledVersion $$(if ($$ExactMatch) { 'exactly matches' } else { 'meets or exceeds' }) expected version $$ExpectedVersion" -Type "INFO"
-                        $$Found = $$true
+                    if (Compare-VersionLessThan -InstalledVersion $$InstalledVersion -TargetVersion $$TargetVersion) {
+                        Write-CMTraceLog -Message "[Requirements] Version check PASSED: Installed version $$InstalledVersion is LESS THAN target version $$TargetVersion" -Type "INFO"
+                        $$FoundOlderVersion = $$true
                         break
                     } else {
-                        Write-CMTraceLog -Message "[Detection] Version check FAILED: Installed version $$InstalledVersion $$(if ($$ExactMatch) { 'does not exactly match' } else { 'is less than' }) expected version $$ExpectedVersion" -Type "INFO"
+                        Write-CMTraceLog -Message "[Requirements] Version check FAILED: Installed version $$InstalledVersion is NOT less than target version $$TargetVersion" -Type "INFO"
                     }
                 } else {
-                    Write-CMTraceLog -Message "[Detection] DisplayName '$$DisplayName' found in registry key '$$RegKeyPath' but no DisplayVersion value is present" -Type "WARNING"
+                    Write-CMTraceLog -Message "[Requirements] DisplayName '$$DisplayName' found but no DisplayVersion value is present" -Type "WARNING"
                 }
             }
         }
-        if ($$Found) {
+        if ($$FoundOlderVersion) {
             break
         }
     } catch {
-        Write-CMTraceLog -Message "[Detection] Error checking registry path $$RegPath : $$($$_.Exception.Message)" -Type "ERROR"
+        Write-CMTraceLog -Message "[Requirements] Error checking registry path $$RegPath : $$($$_.Exception.Message)" -Type "ERROR"
     }
 }
 
-if ($$Found) {
-    Write-CMTraceLog -Message "[Result] Detection SUCCESS: $$AppName (version $$InstalledVersion) is installed and meets version requirements (Expected: $$ExpectedVersion, Mode: $$(if ($$ExactMatch) { 'Exact Match' } else { 'Minimum Version' }))" -Type "INFO"
-    Write-Output "Installed"
+# Always exit 0 - Intune evaluates STDOUT
+if ($$FoundOlderVersion) {
+    Write-CMTraceLog -Message "[Result] Requirements MET: $$AppName (version $$InstalledVersion) is installed and is older than target version $$TargetVersion - outputting 'Required'" -Type "INFO"
+    Write-Output "Required"
     exit 0
 } else {
-    Write-CMTraceLog -Message "[Result] Detection FAILED: $$AppName not found in registry paths or installed version does not meet requirements (Expected: $$ExpectedVersion, Mode: $$(if ($$ExactMatch) { 'Exact Match' } else { 'Minimum Version' }))" -Type "WARNING"
-    exit 1
+    if ($$DisplayName) {
+        Write-CMTraceLog -Message "[Result] Requirements NOT MET: $$AppName is installed but version ($$InstalledVersion) is not older than target ($$TargetVersion)" -Type "WARNING"
+    } else {
+        Write-CMTraceLog -Message "[Result] Requirements NOT MET: $$AppName not found in registry" -Type "WARNING"
+    }
+    # Output nothing - requirement not met
+    exit 0
 }
 """
 
 
-def generate_detection_script(config: DetectionConfig, output_path: Path) -> Path:
-    """Generate PowerShell detection script for Intune Win32 app.
+def generate_requirements_script(config: RequirementsConfig, output_path: Path) -> Path:
+    """Generate PowerShell requirements script for Intune Win32 app.
 
     Creates a PowerShell script that checks Windows uninstall registry keys
-    for software installation and version. The script uses CMTrace-formatted
-    logging with verbose output, includes log rotation logic, and performs
-    write permission testing with automatic fallback to alternate log locations
-    if primary locations are unavailable.
+    for software installation and determines if an older version is installed.
+    The script outputs "Required" if installed version < target version,
+    nothing otherwise. Always exits with code 0 so Intune can evaluate STDOUT.
 
     Args:
-        config: Detection configuration (app name, version, logging settings).
-        output_path: Path where the detection script will be saved.
+        config: Requirements configuration (app name, version, logging settings).
+        output_path: Path where the requirements script will be saved.
 
     Returns:
-        Path to the generated detection script.
+        Path to the generated requirements script.
 
     Raises:
         OSError: If the script file cannot be written.
@@ -478,15 +411,15 @@ def generate_detection_script(config: DetectionConfig, output_path: Path) -> Pat
         Generate script with default settings:
             ```python
             from pathlib import Path
-            from notapkgtool.detection import DetectionConfig, generate_detection_script
+            from notapkgtool.requirements import RequirementsConfig, generate_requirements_script
 
-            config = DetectionConfig(
+            config = RequirementsConfig(
                 app_name="Google Chrome",
                 version="131.0.6778.86",
             )
-            script_path = generate_detection_script(
+            script_path = generate_requirements_script(
                 config,
-                Path("detection.ps1")
+                Path("requirements.ps1")
             )
             ```
 
@@ -499,15 +432,16 @@ def generate_detection_script(config: DetectionConfig, output_path: Path) -> Pat
 
     logger = get_global_logger()
 
-    logger.verbose("DETECTION", f"Generating detection script: {output_path.name}")
+    logger.verbose(
+        "REQUIREMENTS", f"Generating requirements script: {output_path.name}"
+    )
 
     # Generate script content from template
     # Use safe_substitute() so PowerShell variables ($$Variable) are preserved
     # as $Variable without raising KeyError for missing placeholders
-    script_content = string.Template(_DETECTION_SCRIPT_TEMPLATE).safe_substitute(
+    script_content = string.Template(_REQUIREMENTS_SCRIPT_TEMPLATE).safe_substitute(
         app_name=config.app_name,
         version=config.version,
-        exact_match="$True" if config.exact_match else "$False",
         log_rotation_mb=config.log_rotation_mb,
         is_msi_installer="$True" if config.is_msi_installer else "$False",
     )
@@ -519,10 +453,10 @@ def generate_detection_script(config: DetectionConfig, output_path: Path) -> Pat
     try:
         script_bytes = script_content.encode("utf-8-sig")
         output_path.write_bytes(script_bytes)
-        logger.verbose("DETECTION", f"Detection script written to: {output_path}")
+        logger.verbose("REQUIREMENTS", f"Requirements script written to: {output_path}")
     except OSError as err:
         raise OSError(
-            f"Failed to write detection script to {output_path}: {err}"
+            f"Failed to write requirements script to {output_path}: {err}"
         ) from err
 
     return output_path

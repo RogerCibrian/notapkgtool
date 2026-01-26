@@ -54,62 +54,61 @@ The build process creates a complete PSADT package from the recipe and downloade
     - Reads `brand_pack` configuration from org/vendor defaults
     - Replaces files in `Assets/` directory (AppIcon.png, Banner.Classic.png, etc.)
     - Uses pattern matching to find source files in brand pack directory
-10. **Generate Detection Script** - Creates PowerShell detection script for Intune Win32 app deployment:
-    - Extracts app name from MSI ProductName (for MSI installers) or uses detection.display_name (for non-MSI installers)
-    - Generates script that checks Windows uninstall registry keys
-    - Saves as `{AppName}_{Version}-Detection.ps1` sibling to `packagefiles/` directory
-    - Script uses CMTrace-formatted logging
-    - Configurable via `detection` section in defaults or recipe
+10. **Generate Detection and Requirements Scripts** - Creates PowerShell scripts for Intune Win32 app deployment:
+    - **Detection script** (always): Used by the App entry (and by the Update entry) to detect if the app is installed at the expected version. Saves as `{AppName}_{Version}-Detection.ps1`.
+    - **Requirements script** (when `build_types` is `both` or `update_only`): Used by the Update app entry to determine if an older version is installed (outputs "Required" when update is needed). Saves as `{AppName}_{Version}-Requirements.ps1`.
+    - App name comes from MSI ProductName (MSI installers) or `win32.installed_check.display_name` (non-MSI). Both scripts use the same registry locations, installer-type filtering, and CMTrace logging. Configurable via `win32.installed_check` in defaults or recipe.
 
-**Output**: Complete PSADT package in `builds/{app_id}/{version}/` with detection script ready for deployment
+**Output**: Complete PSADT package in `builds/{app_id}/{version}/` with detection script always present, and requirements script when `build_types` is `both` or `update_only`.
 
-#### Detection Scripts
+#### Detection and Requirements Scripts
 
-NAPT automatically generates PowerShell detection scripts during the build process (step 10). These scripts are used by Microsoft Intune to determine if an application is installed and whether it meets version requirements.
+NAPT generates PowerShell scripts used by Intune Win32 app entries to check installation state:
 
-**How Detection Scripts Work:**
+- **Detection script** (always generated): Used by the **App** entry and by the **Update** entry when using the two-app model to determine if the app is installed at the expected version. Filename: `{AppName}_{Version}-Detection.ps1`.
+- **Requirements script** (when `build_types` is `both` or `update_only`): Used by the **Update** entry to determine if an older version is installed so Intune can offer the update. Filename: `{AppName}_{Version}-Requirements.ps1`.
 
-Detection scripts check Windows uninstall registry keys for installed software:
+Both scripts share the same logic for registry lookup, app name resolution, and installer-type filtering; they differ only in how they interpret the version comparison (see below).
 
-- **Registry Locations Checked:**
+**How the scripts work:**
+
+- **Registry locations checked:**
     - `HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall` (machine-level, 64-bit)
     - `HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall` (user-level)
     - `HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall` (machine-level, 32-bit on 64-bit OS)
     - `HKCU:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall` (user-level, 32-bit on 64-bit OS)
 
-- **Detection Logic:**
-    - Matches by `DisplayName` (from MSI ProductName for MSI installers, or detection.display_name for non-MSI installers)
-    - Compares installed version to expected version
-    - Supports exact match or minimum version (installed >= expected)
-    - Returns exit code 0 if installed and meets requirements, 1 otherwise
+- **App name determination:**
+    - **MSI installers:** Uses MSI `ProductName` property (authoritative source for registry DisplayName).
+    - **Non-MSI installers:** Requires `win32.installed_check.display_name` in recipe configuration. Scripts match registry `DisplayName` to this value.
 
-- **App Name Determination:**
-    - **MSI installers:** Uses MSI `ProductName` property (authoritative source for registry DisplayName)
-    - **Non-MSI installers:** Requires `detection.display_name` in recipe configuration
+- **Installer type filtering:**
+    - **MSI installers (strict):** Only match registry entries that are MSI-based (checks `WindowsInstaller` = 1). Prevents false matches when both MSI and EXE versions exist.
+    - **Non-MSI installers (permissive):** Match any registry entry (MSI or non-MSI) to handle EXE installers that run embedded MSIs internally.
 
 - **Logging:**
-    - Uses CMTrace format for Intune diagnostics
-    - Logs to `C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\NAPTDetections.log` (system context)
-    - Logs to `C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\NAPTDetectionsUser.log` (user context)
-    - Automatic log rotation (default: 3MB max size)
-    - Fallback locations if primary locations unavailable
+    - CMTrace format for Intune diagnostics. **Primary locations** (system/user): `C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\` — detection uses `NAPTDetections.log` / `NAPTDetectionsUser.log`, requirements use `NAPTRequirements.log` / `NAPTRequirementsUser.log`. The script tries the primary first: it creates the primary parent directory if it does not exist, then verifies write access. If that fails (e.g. insufficient permissions), it tries **fallback locations** — system `C:\ProgramData\NAPT\`, user `%LOCALAPPDATA%\NAPT\` (same log file names) — creating the fallback parent directory if needed. If both primary and fallback fail, a warning is written to stderr and the script continues without a log file. Log rotation: 2-file rotation (default 3MB max size).
 
-**Detection Script Files:**
+**Detection vs requirements (version check and output):**
 
-Detection scripts are saved as siblings to the `packagefiles/` directory:
+- **Detection:** Compares installed version to expected version. Supports exact match or minimum version (installed >= expected). Exit 0 if installed and meets requirement, exit 1 otherwise.
+- **Requirements:** Always exits 0 so Intune can evaluate stdout. If an older version is installed, the script writes "Required" to stdout so the Update entry is applicable; otherwise it writes nothing to stdout. Configure the requirement rule in Intune with output type String, operator Equals, value "Required".
+
+**Script files:**
+
+Scripts are saved as siblings to `packagefiles/`. Detection is always present; requirements only when `build_types` is `both` or `update_only`:
 
 ```
 builds/napt-chrome/142.0.7444.163/
   ├── packagefiles/              # PSADT package (packaged into .intunewin)
   │   └── ...
-  └── Google-Chrome-142.0.7444.163-Detection.ps1  # Detection script (upload separately)
+  ├── Google-Chrome-142.0.7444.163-Detection.ps1    # Always built
+  └── Google-Chrome-142.0.7444.163-Requirements.ps1 # When build_types is both or update_only
 ```
 
-**Important:** Detection scripts are NOT included in the `.intunewin` package. They must be uploaded separately to Intune when configuring the Win32 app. The script filename follows the pattern: `{AppName}_{Version}-Detection.ps1`.
+**Important:** These scripts are NOT included in the `.intunewin` package. Upload them separately in Intune when configuring the Win32 App and Update entries.
 
-**Configuration:**
-
-Detection script behavior can be configured via the `detection` section in defaults or recipe. See [Recipe Reference - Detection Configuration](recipe-reference.md#detection-configuration) for complete options.
+**Configuration:** Via `win32.installed_check` in defaults or recipe. Use `win32.build_types` to control whether the requirements script is generated. See [Recipe Reference - Win32 Configuration](recipe-reference.md#win32-configuration) for options.
 
 ### Package Process (`napt package`)
 
@@ -151,7 +150,8 @@ builds/
           │   ├── SupportFiles/            # Empty (for additional files)
           │   ├── Invoke-AppDeployToolkit.ps1  # Generated script
           │   └── Invoke-AppDeployToolkit.exe  # From template
-          └── Google-Chrome-142.0.7444.163-Detection.ps1  # Detection script (upload separately to Intune)
+          ├── Google-Chrome-142.0.7444.163-Detection.ps1    # App (upload separately)
+          └── Google-Chrome-142.0.7444.163-Requirements.ps1 # Update (upload separately)
 
 packages/
   └── napt-chrome/

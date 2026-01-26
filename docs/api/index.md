@@ -12,6 +12,7 @@ notapkgtool/
 ├── cli.py                   # Command-line interface
 ├── core.py                  # Main public API functions (orchestration)
 ├── detection.py             # Detection script generation for Intune Win32 apps
+├── requirements.py          # Requirements script generation for Intune Update entries
 ├── exceptions.py            # Exception hierarchy
 ├── logging.py               # Logging configuration
 ├── results.py               # Public API return types (dataclasses)
