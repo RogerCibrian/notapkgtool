@@ -1516,6 +1516,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#minify-scripts-at-intune-upload" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minify Scripts at Intune Upload
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1848,6 +1859,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#minify-scripts-at-intune-upload" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minify Scripts at Intune Upload
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2010,14 +2032,21 @@
 <td>Low</td>
 <td>Low</td>
 </tr>
+<tr>
+<td>Minify Scripts at Intune Upload</td>
+<td>💡 Idea</td>
+<td>Technical</td>
+<td>Medium</td>
+<td>Medium</td>
+</tr>
 </tbody>
 </table>
 <p><strong>Summary:</strong></p>
 <ul>
 <li>📋 <strong>Ready</strong>: 0</li>
 <li>🔬 <strong>Investigating</strong>: 2</li>
-<li>💡 <strong>Ideas</strong>: 7</li>
-<li><strong>Total</strong>: 9 features</li>
+<li>💡 <strong>Ideas</strong>: 8</li>
+<li><strong>Total</strong>: 10 features</li>
 </ul>
 <hr />
 <h2 id="active-work">Active Work</h2>
@@ -2167,6 +2196,23 @@
 <li>Auto-detect when tool updates are available</li>
 </ul>
 <p><strong>Related</strong>: TODO in <code>notapkgtool/build/packager.py:47</code></p>
+<h4 id="minify-scripts-at-intune-upload">Minify Scripts at Intune Upload</h4>
+<p><strong>Status</strong>: 💡 Idea<br />
+<strong>Complexity</strong>: Medium (1-3 days)<br />
+<strong>Value</strong>: Medium</p>
+<p><strong>Description</strong>: Minify detection and requirements scripts in memory when preparing them for Intune upload, so the payload sent to Intune is smaller while on-disk build output stays readable. Conservative approach: strip comment-only lines, blank lines, and trailing whitespace (no AST). Optional: PowerShell-invoked AST-based minifier for greater reduction.</p>
+<p><strong>Benefits</strong>:</p>
+<ul>
+<li>Reduces per-app script size in the Intune policy payload</li>
+<li>Helps organizations approaching the Intune 4 MB policy limit</li>
+<li>On-disk scripts remain readable and easy to debug</li>
+<li>No change to build output or script behavior; minification only in the upload path</li>
+</ul>
+<p><strong>Dependencies</strong>:</p>
+<ul>
+<li>Requires Intune upload implementation (or a separate “prepare for upload” step that emits minified content)</li>
+</ul>
+<p><strong>Related</strong>: Intune default policy limit is 4 MB total; NAPT detection + requirements scripts are ~40 KB per app (~70–100 apps depending on code signing)</p>
 <hr />
 <h2 id="declined-wont-implement">Declined / Won't Implement</h2>
 <hr />

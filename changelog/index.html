@@ -1659,9 +1659,11 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong>Detection Script Generation</strong> - Automatic PowerShell detection script generation for Intune Win32 app deployments during build process. Scripts check Windows uninstall registry keys, support exact or minimum version matching, and include CMTrace-formatted logging</li>
 <li><strong>Requirements Script Generation</strong> - Automatic PowerShell requirements script generation for Intune Update app entries. Scripts check if an older version is installed and output "Required" when applicable</li>
 <li><strong>Installer Type Filtering</strong> - Detection and requirements scripts now filter registry entries based on installer type. MSI builds strictly match MSI registry entries only; EXE builds permissively match any entry to handle EXE installers that run embedded MSIs internally</li>
+<li><strong>Architecture-Aware Detection</strong> - Detection and requirements scripts now use explicit registry views based on target architecture, preventing false positives when x86 and x64 versions coexist. MSI architecture is auto-detected from Template property; non-MSI installers require <code>win32.installed_check.architecture</code> configuration (x86, x64, arm64, or any)</li>
 </ul>
 <h3 id="changed">Changed</h3>
 <ul>
+<li><strong>BREAKING: Non-MSI Architecture Required</strong> - <code>win32.installed_check.architecture</code> is now required for non-MSI installers (EXE, etc.). Allowed values: <code>x86</code>, <code>x64</code>, <code>arm64</code>, <code>any</code></li>
 <li><strong>Discovery Performance Optimization</strong> - Version-first strategies (web_scrape, api_github, api_json) now check versions before downloading, enabling ~100-300ms update checks when unchanged instead of full downloads</li>
 <li>State file now saves actual download URLs for all strategies</li>
 <li><strong>url_download Strategy Simplification</strong> - Removed <code>version.type</code> configuration requirement. MSI files are now auto-detected by file extension (<code>.msi</code>) for version extraction</li>
