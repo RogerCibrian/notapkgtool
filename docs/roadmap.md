@@ -32,13 +32,14 @@ This roadmap is a living document showing potential future directions for NAPT. 
 | EXE Version Extraction | 💡 Idea | Technical | High | Medium |
 | Parallel Package Building | 💡 Idea | Technical | Medium | Medium |
 | IntuneWinAppUtil Version Tracking | 💡 Idea | Technical | Low | Low |
+| Minify Scripts at Intune Upload | 💡 Idea | Technical | Medium | Medium |
 
 **Summary:**
 
 - 📋 **Ready**: 0
 - 🔬 **Investigating**: 2
-- 💡 **Ideas**: 7
-- **Total**: 9 features
+- 💡 **Ideas**: 8
+- **Total**: 10 features
 
 ---
 
@@ -216,6 +217,26 @@ This roadmap is a living document showing potential future directions for NAPT. 
 - Auto-detect when tool updates are available
 
 **Related**: TODO in `notapkgtool/build/packager.py:47`
+
+#### Minify Scripts at Intune Upload
+**Status**: 💡 Idea  
+**Complexity**: Medium (1-3 days)  
+**Value**: Medium
+
+**Description**: Minify detection and requirements scripts in memory when preparing them for Intune upload, so the payload sent to Intune is smaller while on-disk build output stays readable. Conservative approach: strip comment-only lines, blank lines, and trailing whitespace (no AST). Optional: PowerShell-invoked AST-based minifier for greater reduction.
+
+**Benefits**:
+
+- Reduces per-app script size in the Intune policy payload
+- Helps organizations approaching the Intune 4 MB policy limit
+- On-disk scripts remain readable and easy to debug
+- No change to build output or script behavior; minification only in the upload path
+
+**Dependencies**:
+
+- Requires Intune upload implementation (or a separate “prepare for upload” step that emits minified content)
+
+**Related**: Intune default policy limit is 4 MB total; NAPT detection + requirements scripts are ~40 KB per app (~70–100 apps depending on code signing)
 
 ---
 
