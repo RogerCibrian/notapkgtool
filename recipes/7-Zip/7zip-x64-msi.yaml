@@ -2,8 +2,8 @@ apiVersion: napt/v1
 project: "napt - Windows Apps"
 
 app:
-  name: "7-Zip"
-  id: "napt-7zip"
+  name: "7-Zip (x64) MSI"
+  id: "napt-7zip-x64-msi"
 
   source:
       strategy: web_scrape

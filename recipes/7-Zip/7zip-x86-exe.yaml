@@ -1,0 +1,32 @@
+apiVersion: napt/v1
+project: "napt - Windows Apps"
+
+app:
+  name: "7-Zip (x86) EXE"
+  id: "napt-7zip-x86-exe"
+
+  source:
+      strategy: web_scrape
+      page_url: "https://www.7-zip.org/download.html"
+      link_selector: 'a[href$=".exe"]:not([href$="-x64.exe"]):not([href$="-arm64.exe"])'
+      version_pattern: "7z(\\d{2})(\\d{2})"
+      version_format: "{0}.{1}"
+
+  win32:
+      installed_check:
+          display_name: "7-Zip ${discovered_version}"
+          architecture: "x86"
+
+  psadt:
+      app_vars:
+        AppName: "7-Zip"
+        AppVersion: "${discovered_version}"
+        AppArch: "x86"
+        AppVendor: "Igor Pavlov"
+      install: |
+        # Install 7-Zip EXE with system-wide deployment
+        # Note: Filename uses compact version (e.g., 7z2501.exe for v25.01)
+        Start-ADTExecutable -Path "$dirFiles\7z*.exe" -Parameters "/S"
+      uninstall: |
+        # Uninstall 7-Zip automatically (handles registry lookup)
+        Uninstall-ADTApplication -Name "7-Zip"

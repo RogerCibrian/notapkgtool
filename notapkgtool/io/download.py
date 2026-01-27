@@ -360,7 +360,7 @@ def download_file(
 
         elapsed = time.time() - started_at
         # Always show completion message
-        logger.step(0, 0, f"Download complete: {target} ({digest}) in {elapsed:.1f}s")
+        logger.step(1, 1, f"Download complete: {target} ({digest}) in {elapsed:.1f}s")
         # Show detailed info in verbose mode
         logger.verbose("FILE", f"Download complete: {target}")
         logger.verbose("FILE", f"Time elapsed: {elapsed:.1f}s")

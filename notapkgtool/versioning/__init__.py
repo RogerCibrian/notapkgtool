@@ -83,6 +83,14 @@ Example:
         print(f"{metadata.product_name} {metadata.product_version}")
         # e.g., "Google Chrome 131.0.6778.86"
 
+    MSI architecture extraction:
+
+        from pathlib import Path
+        from notapkgtool.versioning.msi import extract_msi_architecture
+
+        arch = extract_msi_architecture(Path("installer.msi"))
+        print(f"Architecture: {arch}")  # e.g., "x64"
+
 Note:
     - Version comparison is format-agnostic: no network or file I/O
     - MSI extraction works cross-platform with appropriate backends
@@ -97,4 +105,9 @@ from .keys import (
     is_newer_any,
     version_key_any,
 )
-from .msi import MSIMetadata, extract_msi_metadata
+from .msi import (
+    MSIMetadata,
+    architecture_from_template,
+    extract_msi_architecture,
+    extract_msi_metadata,
+)

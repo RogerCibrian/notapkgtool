@@ -82,6 +82,10 @@ LogFormat = Literal["cmtrace"]
 LogLevel = Literal["INFO", "WARNING", "ERROR", "DEBUG"]
 
 
+# Type alias for architecture values
+ArchitectureMode = Literal["x86", "x64", "arm64", "any"]
+
+
 @dataclass(frozen=True)
 class RequirementsConfig:
     """Configuration for requirements script generation.
@@ -98,6 +102,11 @@ class RequirementsConfig:
             If False, only match non-MSI entries. This prevents false matches
             when both MSI and EXE versions of software exist with the same
             DisplayName.
+        expected_architecture: Architecture filter for registry view selection.
+            - "x86": Check only 32-bit registry view
+            - "x64": Check only 64-bit registry view
+            - "arm64": Check only 64-bit registry view (ARM64 uses 64-bit registry)
+            - "any": Check both 32-bit and 64-bit views (permissive)
 
     """
 
@@ -108,6 +117,7 @@ class RequirementsConfig:
     log_rotation_mb: int = 3
     app_id: str = ""
     is_msi_installer: bool = False
+    expected_architecture: ArchitectureMode = "any"
 
 
 # PowerShell requirements script template
@@ -116,11 +126,13 @@ _REQUIREMENTS_SCRIPT_TEMPLATE = """# Requirements script for ${app_name} ${versi
 # This script checks if an older version is installed (for Update entry applicability).
 # Outputs "Required" if installed version < target version, nothing otherwise.
 # Always exits with code 0 so Intune can evaluate STDOUT.
+# Uses explicit registry views for deterministic architecture-aware detection.
 
 param(
     [string]$$AppName = "${app_name}",
     [string]$$TargetVersion = "${version}",
-    [bool]$$IsMSIInstaller = ${is_msi_installer}
+    [bool]$$IsMSIInstaller = ${is_msi_installer},
+    [string]$$ExpectedArchitecture = "${expected_architecture}"
 )
 
 # CMTrace log format function
@@ -249,8 +261,54 @@ function Test-IsMSIInstallation {
     
     # Check WindowsInstaller DWORD value - set automatically by Windows Installer
     # for all MSI installations. This is the authoritative indicator.
-    $$WindowsInstaller = (Get-ItemProperty -Path $$RegKey.PSPath -Name "WindowsInstaller" -ErrorAction SilentlyContinue).WindowsInstaller
-    return ($$WindowsInstaller -eq 1)
+    try {
+        $$WindowsInstaller = $$RegKey.GetValue("WindowsInstaller")
+        return ($$WindowsInstaller -eq 1)
+    } catch {
+        return $$false
+    }
+}
+
+# Get registry keys using explicit RegistryView for deterministic behavior
+# This works regardless of PowerShell process bitness
+function Get-UninstallKeys {
+    param(
+        [Microsoft.Win32.RegistryHive]$$Hive,
+        [Microsoft.Win32.RegistryView]$$View,
+        [string]$$ViewName
+    )
+    
+    $$Results = @()
+    $$UninstallPath = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
+    
+    try {
+        $$BaseKey = [Microsoft.Win32.RegistryKey]::OpenBaseKey($$Hive, $$View)
+        $$UninstallKey = $$BaseKey.OpenSubKey($$UninstallPath)
+        
+        if ($$UninstallKey) {
+            foreach ($$SubKeyName in $$UninstallKey.GetSubKeyNames()) {
+                try {
+                    $$SubKey = $$UninstallKey.OpenSubKey($$SubKeyName)
+                    if ($$SubKey) {
+                        $$Results += @{
+                            Key = $$SubKey
+                            Hive = $$Hive
+                            View = $$ViewName
+                            Path = "$$($$(if ($$Hive -eq [Microsoft.Win32.RegistryHive]::LocalMachine) { 'HKLM' } else { 'HKCU' })):\\$$UninstallPath\\$$SubKeyName"
+                        }
+                    }
+                } catch {
+                    # Skip keys we can't open
+                }
+            }
+        }
+        
+        # Note: Don't close BaseKey/UninstallKey here as SubKeys are still in use
+    } catch {
+        Write-CMTraceLog -Message "[Requirements] Error opening registry: $$Hive $$ViewName - $$($$_.Exception.Message)" -Type "WARNING"
+    }
+    
+    return $$Results
 }
 
 # Version comparison function - returns true if Installed < Target
@@ -289,86 +347,113 @@ $$SanitizedAppName = $$AppName -replace '[^a-zA-Z0-9]', '-' -replace '-+', '-' -
 $$script:ComponentName = "$$SanitizedAppName-$$TargetVersion-Requirements"
 
 Write-CMTraceLog -Message "[Initialization] Requirements script running as user: $$($$script:CurrentIdentity.Name)" -Type "INFO"
-Write-CMTraceLog -Message "[Initialization] Starting requirements check for: $$AppName (Target: $$TargetVersion, Installer Type: $$(if ($$IsMSIInstaller) { 'MSI' } else { 'Non-MSI' }))" -Type "INFO"
-
-# Detect if PowerShell is running as 64-bit process
-$$Is64BitProcess = [Environment]::Is64BitProcess
+Write-CMTraceLog -Message "[Initialization] Starting requirements check for: $$AppName (Target: $$TargetVersion, Installer Type: $$(if ($$IsMSIInstaller) { 'MSI' } else { 'Non-MSI' }), Architecture: $$ExpectedArchitecture)" -Type "INFO"
 
 # Detect OS architecture
-$$OSArchitecture = (Get-CimInstance -ClassName Win32_OperatingSystem).OSArchitecture
-$$Is64BitOS = $$OSArchitecture -eq "64-bit"
+$$Is64BitOS = [Environment]::Is64BitOperatingSystem
 
-Write-CMTraceLog -Message "[Initialization] OS Architecture: $$OSArchitecture" -Type "INFO"
-Write-CMTraceLog -Message "[Initialization] PowerShell Process: $$(if ($$Is64BitProcess) { '64-bit' } else { '32-bit' })" -Type "INFO"
+Write-CMTraceLog -Message "[Initialization] OS: $$(if ($$Is64BitOS) { '64-bit' } else { '32-bit' }), PowerShell: $$(if ([Environment]::Is64BitProcess) { '64-bit' } else { '32-bit' })" -Type "INFO"
+Write-CMTraceLog -Message "[Initialization] Using explicit RegistryView for deterministic detection (architecture: $$ExpectedArchitecture)" -Type "INFO"
 
-# Build registry paths based on process and OS architecture
-$$RegPaths = @(
-    # Machine-level native path (always check)
-    "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
-)
+# Build list of registry keys to check based on expected architecture
+# Uses OpenBaseKey with explicit RegistryView for deterministic behavior
+$$AllKeys = @()
 
-# User-level native path (always check)
-$$RegPaths += "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
+# Determine which registry views to check based on architecture
+$$CheckViews = @()
 
-# Wow6432Node paths (only for 64-bit process on 64-bit OS)
-if ($$Is64BitOS -and $$Is64BitProcess) {
-    $$RegPaths += "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
-    $$RegPaths += "HKCU:\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
+switch ($$ExpectedArchitecture.ToLower()) {
+    "x64" {
+        if (-not $$Is64BitOS) {
+            Write-CMTraceLog -Message "[Requirements] Expected x64 architecture but running on 32-bit OS - app cannot be installed" -Type "WARNING"
+        } else {
+            $$CheckViews += @{ View = [Microsoft.Win32.RegistryView]::Registry64; Name = "64-bit" }
+        }
+    }
+    "arm64" {
+        # ARM64 uses 64-bit registry view
+        if (-not $$Is64BitOS) {
+            Write-CMTraceLog -Message "[Requirements] Expected arm64 architecture but running on 32-bit OS - app cannot be installed" -Type "WARNING"
+        } else {
+            $$CheckViews += @{ View = [Microsoft.Win32.RegistryView]::Registry64; Name = "64-bit (ARM64)" }
+        }
+    }
+    "x86" {
+        $$CheckViews += @{ View = [Microsoft.Win32.RegistryView]::Registry32; Name = "32-bit" }
+    }
+    "any" {
+        # Check both views (permissive mode)
+        if ($$Is64BitOS) {
+            $$CheckViews += @{ View = [Microsoft.Win32.RegistryView]::Registry64; Name = "64-bit" }
+        }
+        $$CheckViews += @{ View = [Microsoft.Win32.RegistryView]::Registry32; Name = "32-bit" }
+    }
+    default {
+        Write-CMTraceLog -Message "[Requirements] Unknown architecture '$$ExpectedArchitecture', defaulting to 'any'" -Type "WARNING"
+        if ($$Is64BitOS) {
+            $$CheckViews += @{ View = [Microsoft.Win32.RegistryView]::Registry64; Name = "64-bit" }
+        }
+        $$CheckViews += @{ View = [Microsoft.Win32.RegistryView]::Registry32; Name = "32-bit" }
+    }
 }
 
-Write-CMTraceLog -Message "[Initialization] Registry paths to check: $$($$RegPaths -join ', ')" -Type "INFO"
+Write-CMTraceLog -Message "[Initialization] Registry views to check: $$($$CheckViews.Name -join ', ')" -Type "INFO"
+
+# Collect all registry keys from selected views
+foreach ($$ViewInfo in $$CheckViews) {
+    # HKLM (machine-level installations)
+    $$AllKeys += Get-UninstallKeys -Hive ([Microsoft.Win32.RegistryHive]::LocalMachine) -View $$ViewInfo.View -ViewName $$ViewInfo.Name
+    # HKCU (user-level installations)
+    $$AllKeys += Get-UninstallKeys -Hive ([Microsoft.Win32.RegistryHive]::CurrentUser) -View $$ViewInfo.View -ViewName $$ViewInfo.Name
+}
+
+Write-CMTraceLog -Message "[Initialization] Found $$($$AllKeys.Count) registry keys to check" -Type "INFO"
 
 $$FoundOlderVersion = $$false
 $$InstalledVersion = $$null
 $$DisplayName = $$null
 
-# Check all registry paths to find matching DisplayName and version
-foreach ($$RegPath in $$RegPaths) {
+# Check all registry keys to find matching DisplayName and version
+foreach ($$KeyInfo in $$AllKeys) {
     try {
-        $$Keys = Get-ChildItem -Path $$RegPath -ErrorAction SilentlyContinue
-        foreach ($$Key in $$Keys) {
-            $$DisplayNameValue = (Get-ItemProperty -Path $$Key.PSPath -Name "DisplayName" -ErrorAction SilentlyContinue).DisplayName
-            $$VersionValue = (Get-ItemProperty -Path $$Key.PSPath -Name "DisplayVersion" -ErrorAction SilentlyContinue).DisplayVersion
+        $$Key = $$KeyInfo.Key
+        $$DisplayNameValue = $$Key.GetValue("DisplayName")
+        $$VersionValue = $$Key.GetValue("DisplayVersion")
+        
+        if ($$DisplayNameValue -eq $$AppName) {
+            $$RegKeyPath = $$KeyInfo.Path
             
-            if ($$DisplayNameValue -eq $$AppName) {
-                # Convert PSPath to cleaner registry path format
-                $$RegKeyPath = $$Key.PSPath -replace 'Microsoft\\.PowerShell\\.Core\\\\Registry::', '' -replace 'HKEY_LOCAL_MACHINE\\\\', 'HKLM:\\' -replace 'HKEY_CURRENT_USER\\\\', 'HKCU:\\'
-                
-                # Check if installer type matches (MSI vs non-MSI)
-                # MSI installers: strict matching - only accept MSI registry entries
-                # Non-MSI installers: permissive - accept any entry (EXEs may use embedded MSIs)
-                $$IsMSIEntry = Test-IsMSIInstallation -RegKey $$Key
-                if ($$IsMSIInstaller -and -not $$IsMSIEntry) {
-                    # Building from MSI, but registry entry is not MSI - skip
-                    Write-CMTraceLog -Message "[Requirements] Found matching DisplayName but installer type mismatch: '$$RegKeyPath' is non-MSI, expected MSI - skipping" -Type "INFO"
-                    continue
-                }
-                # Note: Non-MSI installers accept ANY registry entry (MSI or non-MSI)
-                # because EXE installers often wrap embedded MSIs that set WindowsInstaller=1
-                
-                $$DisplayName = $$DisplayNameValue
-                $$InstalledVersion = $$VersionValue
-                
-                Write-CMTraceLog -Message "[Requirements] Found matching registry key: '$$RegKeyPath' (DisplayName: $$DisplayName, DisplayVersion: $$InstalledVersion, Installer Type: $$(if ($$IsMSIEntry) { 'MSI' } else { 'Non-MSI' }))" -Type "INFO"
-                
-                if ($$InstalledVersion) {
-                    if (Compare-VersionLessThan -InstalledVersion $$InstalledVersion -TargetVersion $$TargetVersion) {
-                        Write-CMTraceLog -Message "[Requirements] Version check PASSED: Installed version $$InstalledVersion is LESS THAN target version $$TargetVersion" -Type "INFO"
-                        $$FoundOlderVersion = $$true
-                        break
-                    } else {
-                        Write-CMTraceLog -Message "[Requirements] Version check FAILED: Installed version $$InstalledVersion is NOT less than target version $$TargetVersion" -Type "INFO"
-                    }
+            # Check if installer type matches (MSI vs non-MSI)
+            # MSI installers: strict matching - only accept MSI registry entries
+            # Non-MSI installers: permissive - accept any entry (EXEs may use embedded MSIs)
+            $$IsMSIEntry = Test-IsMSIInstallation -RegKey $$Key
+            if ($$IsMSIInstaller -and -not $$IsMSIEntry) {
+                # Building from MSI, but registry entry is not MSI - skip
+                Write-CMTraceLog -Message "[Requirements] Found matching DisplayName but installer type mismatch: '$$RegKeyPath' ($$($KeyInfo.View)) is non-MSI, expected MSI - skipping" -Type "INFO"
+                continue
+            }
+            # Note: Non-MSI installers accept ANY registry entry (MSI or non-MSI)
+            # because EXE installers often wrap embedded MSIs that set WindowsInstaller=1
+            
+            $$DisplayName = $$DisplayNameValue
+            $$InstalledVersion = $$VersionValue
+            
+            Write-CMTraceLog -Message "[Requirements] Found matching registry key: '$$RegKeyPath' (View: $$($KeyInfo.View), DisplayName: $$DisplayName, DisplayVersion: $$InstalledVersion, Installer Type: $$(if ($$IsMSIEntry) { 'MSI' } else { 'Non-MSI' }))" -Type "INFO"
+            
+            if ($$InstalledVersion) {
+                if (Compare-VersionLessThan -InstalledVersion $$InstalledVersion -TargetVersion $$TargetVersion) {
+                    Write-CMTraceLog -Message "[Requirements] Version check PASSED: Installed version $$InstalledVersion is LESS THAN target version $$TargetVersion" -Type "INFO"
+                    $$FoundOlderVersion = $$true
+                    break
                 } else {
-                    Write-CMTraceLog -Message "[Requirements] DisplayName '$$DisplayName' found but no DisplayVersion value is present" -Type "WARNING"
+                    Write-CMTraceLog -Message "[Requirements] Version check FAILED: Installed version $$InstalledVersion is NOT less than target version $$TargetVersion" -Type "INFO"
                 }
+            } else {
+                Write-CMTraceLog -Message "[Requirements] DisplayName '$$DisplayName' found but no DisplayVersion value is present" -Type "WARNING"
             }
         }
-        if ($$FoundOlderVersion) {
-            break
-        }
     } catch {
-        Write-CMTraceLog -Message "[Requirements] Error checking registry path $$RegPath : $$($$_.Exception.Message)" -Type "ERROR"
+        Write-CMTraceLog -Message "[Requirements] Error checking registry key: $$($$_.Exception.Message)" -Type "ERROR"
     }
 }
 
@@ -444,6 +529,7 @@ def generate_requirements_script(config: RequirementsConfig, output_path: Path) 
         version=config.version,
         log_rotation_mb=config.log_rotation_mb,
         is_msi_installer="$True" if config.is_msi_installer else "$False",
+        expected_architecture=config.expected_architecture,
     )
 
     # Ensure output directory exists
