@@ -549,8 +549,9 @@ if (-not $metadata['ProductVersion']) {{
 def architecture_from_template(template: str) -> Architecture:
     """Parse MSI Template property into NAPT architecture value.
 
-    The Template property format is: [platform];[language_id][,language_id]...
-    Examples: "x64;1033", "Intel;1033,1041", ";1033" (empty platform)
+    The Template property format is platform;language_id (semicolon, then
+    optional language codes). Examples: "x64;1033", "Intel;1033,1041",
+    ";1033" (empty platform defaults to Intel).
 
     Args:
         template: Raw Template property string from MSI Summary Information.

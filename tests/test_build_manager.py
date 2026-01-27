@@ -357,7 +357,9 @@ class TestWriteBuildManifest:
         manifest = json.loads(result.read_text(encoding="utf-8"))
 
         # Path should be filename only (relative), not absolute path
-        assert manifest["detection_script_path"] == "Google-Chrome_131.0.0-Detection.ps1"
+        assert (
+            manifest["detection_script_path"] == "Google-Chrome_131.0.0-Detection.ps1"
+        )
         assert "/" not in manifest["detection_script_path"]
         assert "\\" not in manifest["detection_script_path"]
 
