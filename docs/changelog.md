@@ -12,9 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Detection Script Generation** - Automatic PowerShell detection script generation for Intune Win32 app deployments during build process. Scripts check Windows uninstall registry keys, support exact or minimum version matching, and include CMTrace-formatted logging
 - **Requirements Script Generation** - Automatic PowerShell requirements script generation for Intune Update app entries. Scripts check if an older version is installed and output "Required" when applicable
 - **Installer Type Filtering** - Detection and requirements scripts now filter registry entries based on installer type. MSI builds strictly match MSI registry entries only; EXE builds permissively match any entry to handle EXE installers that run embedded MSIs internally
+- **Architecture-Aware Detection** - Detection and requirements scripts now use explicit registry views based on target architecture, preventing false positives when x86 and x64 versions coexist. MSI architecture is auto-detected from Template property; non-MSI installers require `win32.installed_check.architecture` configuration (x86, x64, arm64, or any)
 
 ### Changed
 
+- **BREAKING: Non-MSI Architecture Required** - `win32.installed_check.architecture` is now required for non-MSI installers (EXE, etc.). Allowed values: `x86`, `x64`, `arm64`, `any`
 - **Discovery Performance Optimization** - Version-first strategies (web_scrape, api_github, api_json) now check versions before downloading, enabling ~100-300ms update checks when unchanged instead of full downloads
 - State file now saves actual download URLs for all strategies
 - **url_download Strategy Simplification** - Removed `version.type` configuration requirement. MSI files are now auto-detected by file extension (`.msi`) for version extraction

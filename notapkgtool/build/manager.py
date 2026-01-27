@@ -60,6 +60,7 @@ from notapkgtool.requirements import (
 )
 from notapkgtool.results import BuildResult
 from notapkgtool.versioning.msi import (
+    extract_msi_architecture,
     extract_msi_metadata,
     version_from_msi_product_version,
 )
@@ -458,6 +459,18 @@ def _generate_detection_script(
             "registry DisplayName.",
         )
 
+    # Check if architecture is set for MSI installers (not allowed)
+    if installer_ext == ".msi" and installed_check_config.get("architecture"):
+        logger.warning(
+            "DETECTION",
+            "win32.installed_check.architecture is set but will be ignored for MSI "
+            "installers. MSI Template is used as the authoritative source for "
+            "architecture.",
+        )
+
+    # Determine architecture for detection
+    expected_architecture: str = "any"  # Default for "any" mode
+
     if installer_ext == ".msi":
         # MSI: Use ProductName (required, no fallback - authoritative source)
         try:
@@ -482,13 +495,49 @@ def _generate_detection_script(
                 f"Failed to extract MSI ProductName. Cannot generate detection script. "
                 f"Error: {err}"
             ) from err
+
+        # Auto-detect architecture from MSI Template
+        try:
+            expected_architecture = extract_msi_architecture(installer_file)
+            logger.verbose(
+                "DETECTION",
+                f"Auto-detected MSI architecture: {expected_architecture}",
+            )
+        except ConfigError:
+            # Re-raise ConfigError as-is (e.g., unsupported platform)
+            raise
+        except Exception as err:
+            # Wrap other exceptions (extraction failures) as ConfigError
+            raise ConfigError(
+                f"Failed to extract MSI architecture. Cannot generate detection script. "
+                f"Error: {err}"
+            ) from err
     elif installed_check_config.get("display_name"):
         # Non-MSI: Use explicit display_name (required)
+        # Support ${discovered_version} template variable
         app_name_for_detection = installed_check_config["display_name"]
+        if "${discovered_version}" in app_name_for_detection:
+            app_name_for_detection = app_name_for_detection.replace(
+                "${discovered_version}", version
+            )
         logger.verbose(
             "DETECTION",
             f"Using win32.installed_check.display_name: {app_name_for_detection}",
         )
+
+        # Non-MSI: architecture is required
+        if installed_check_config.get("architecture"):
+            expected_architecture = installed_check_config["architecture"]
+            logger.verbose(
+                "DETECTION",
+                f"Using win32.installed_check.architecture: {expected_architecture}",
+            )
+        else:
+            raise ConfigError(
+                "win32.installed_check.architecture is required for non-MSI installers. "
+                "Set app.win32.installed_check.architecture in recipe configuration. "
+                "Allowed values: x86, x64, arm64, any"
+            )
     else:
         # Non-MSI: display_name required
         raise ConfigError(
@@ -506,6 +555,7 @@ def _generate_detection_script(
         exact_match=detection_nested_config.get("exact_match", False),
         app_id=app_id,
         is_msi_installer=(installer_ext == ".msi"),
+        expected_architecture=expected_architecture,
     )
 
     # Sanitize AppName for filename
@@ -578,6 +628,9 @@ def _generate_requirements_script(
     app_name_for_requirements = None
     installer_ext = installer_file.suffix.lower()
 
+    # Determine architecture for requirements
+    expected_architecture: str = "any"  # Default for "any" mode
+
     if installer_ext == ".msi":
         # MSI: Use ProductName (required, no fallback - authoritative source)
         try:
@@ -600,13 +653,49 @@ def _generate_requirements_script(
                 f"Failed to extract MSI ProductName. Cannot generate requirements "
                 f"script. Error: {err}"
             ) from err
+
+        # Auto-detect architecture from MSI Template
+        try:
+            expected_architecture = extract_msi_architecture(installer_file)
+            logger.verbose(
+                "REQUIREMENTS",
+                f"Auto-detected MSI architecture: {expected_architecture}",
+            )
+        except ConfigError:
+            # Re-raise ConfigError as-is (e.g., unsupported platform)
+            raise
+        except Exception as err:
+            # Wrap other exceptions (extraction failures) as ConfigError
+            raise ConfigError(
+                f"Failed to extract MSI architecture. Cannot generate requirements "
+                f"script. Error: {err}"
+            ) from err
     elif installed_check_config.get("display_name"):
         # Non-MSI: Use explicit display_name (required)
+        # Support ${discovered_version} template variable
         app_name_for_requirements = installed_check_config["display_name"]
+        if "${discovered_version}" in app_name_for_requirements:
+            app_name_for_requirements = app_name_for_requirements.replace(
+                "${discovered_version}", version
+            )
         logger.verbose(
             "REQUIREMENTS",
             f"Using win32.installed_check.display_name: {app_name_for_requirements}",
         )
+
+        # Non-MSI: architecture is required
+        if installed_check_config.get("architecture"):
+            expected_architecture = installed_check_config["architecture"]
+            logger.verbose(
+                "REQUIREMENTS",
+                f"Using win32.installed_check.architecture: {expected_architecture}",
+            )
+        else:
+            raise ConfigError(
+                "win32.installed_check.architecture is required for non-MSI installers. "
+                "Set app.win32.installed_check.architecture in recipe configuration. "
+                "Allowed values: x86, x64, arm64, any"
+            )
     else:
         # Non-MSI: display_name required
         raise ConfigError(
@@ -623,6 +712,7 @@ def _generate_requirements_script(
         log_rotation_mb=installed_check_config.get("log_rotation_mb", 3),
         app_id=app_id,
         is_msi_installer=(installer_ext == ".msi"),
+        expected_architecture=expected_architecture,
     )
 
     # Sanitize AppName for filename
@@ -754,7 +844,7 @@ def build_package(
             - build_types (str): The build_types setting used ("both", "app_only", or
                 "update_only").
             - detection_script_path (Path | None): Path to the generated detection script,
-                or None if generation failed (non-fatal). Always generated when successful.
+                or None if generation failed (non-fatal).
             - requirements_script_path (Path | None): Path to the generated requirements
                 script, or None if skipped (build_types="app_only") or failed (non-fatal).
 

@@ -55,6 +55,7 @@ class TestDetectionConfig:
         assert config.exact_match is False
         assert config.app_id == ""
         assert config.is_msi_installer is False
+        assert config.expected_architecture == "any"
 
     def test_custom_values(self):
         """Test custom values for DetectionConfig."""
@@ -300,8 +301,8 @@ class TestGenerateDetectionScript:
         # Check for ExactMatch parameter with True value
         assert "[bool]$ExactMatch = $True" in content
 
-    def test_script_checks_all_registry_paths(self, tmp_path: Path):
-        """Test that script checks all registry paths (HKLM, HKCU, Wow6432Node)."""
+    def test_script_checks_registry_using_openbasekey(self, tmp_path: Path):
+        """Test that script uses OpenBaseKey for explicit registry view access."""
         config = DetectionConfig(
             app_name="Test App",
             version="1.0.0",
@@ -312,14 +313,15 @@ class TestGenerateDetectionScript:
 
         content = output_path.read_text(encoding="utf-8-sig")
 
-        # Check for registry paths
-        assert (
-            "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall" in content
-        )
-        assert (
-            "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall" in content
-        )
-        assert "WOW6432Node" in content
+        # Check for OpenBaseKey usage (new architecture-aware approach)
+        assert "OpenBaseKey" in content
+        assert "RegistryHive" in content
+        assert "RegistryView" in content
+        # Check that it accesses the Uninstall path
+        assert "Uninstall" in content
+        # Check for both HKLM and HKCU hives
+        assert "LocalMachine" in content
+        assert "CurrentUser" in content
 
     def test_script_component_ends_with_detection(self, tmp_path: Path):
         """Test that CMTrace component name ends with -Detection."""
@@ -353,3 +355,100 @@ class TestGenerateDetectionScript:
         # Excerpt must include -Type "WARNING" (message is long)
         excerpt = content[idx : idx + 350]
         assert "WARNING" in excerpt
+
+    def test_script_contains_expected_architecture_parameter(self, tmp_path: Path):
+        """Test that script contains ExpectedArchitecture parameter."""
+        config = DetectionConfig(
+            app_name="Test App",
+            version="1.0.0",
+            expected_architecture="x64",
+        )
+        output_path = tmp_path / "Test-App_1.0.0-Detection.ps1"
+
+        generate_detection_script(config, output_path)
+
+        content = output_path.read_text(encoding="utf-8-sig")
+
+        assert "$ExpectedArchitecture" in content
+        assert '"x64"' in content
+
+    def test_script_x64_uses_registry64_view(self, tmp_path: Path):
+        """Test that x64 architecture uses Registry64 view."""
+        config = DetectionConfig(
+            app_name="Test App",
+            version="1.0.0",
+            expected_architecture="x64",
+        )
+        output_path = tmp_path / "Test-App_1.0.0-Detection.ps1"
+
+        generate_detection_script(config, output_path)
+
+        content = output_path.read_text(encoding="utf-8-sig")
+
+        # Check for OpenBaseKey with RegistryView
+        assert "OpenBaseKey" in content
+        assert "RegistryView" in content
+        assert "Registry64" in content
+
+    def test_script_x86_uses_registry32_view(self, tmp_path: Path):
+        """Test that x86 architecture uses Registry32 view."""
+        config = DetectionConfig(
+            app_name="Test App",
+            version="1.0.0",
+            expected_architecture="x86",
+        )
+        output_path = tmp_path / "Test-App_1.0.0-Detection.ps1"
+
+        generate_detection_script(config, output_path)
+
+        content = output_path.read_text(encoding="utf-8-sig")
+
+        assert "Registry32" in content
+
+    def test_script_any_checks_both_views(self, tmp_path: Path):
+        """Test that 'any' architecture checks both registry views."""
+        config = DetectionConfig(
+            app_name="Test App",
+            version="1.0.0",
+            expected_architecture="any",
+        )
+        output_path = tmp_path / "Test-App_1.0.0-Detection.ps1"
+
+        generate_detection_script(config, output_path)
+
+        content = output_path.read_text(encoding="utf-8-sig")
+
+        # 'any' mode should check both views
+        assert "Registry64" in content
+        assert "Registry32" in content
+
+    def test_script_arm64_uses_registry64_view(self, tmp_path: Path):
+        """Test that arm64 architecture uses Registry64 view (ARM64 uses 64-bit registry)."""
+        config = DetectionConfig(
+            app_name="Test App",
+            version="1.0.0",
+            expected_architecture="arm64",
+        )
+        output_path = tmp_path / "Test-App_1.0.0-Detection.ps1"
+
+        generate_detection_script(config, output_path)
+
+        content = output_path.read_text(encoding="utf-8-sig")
+
+        assert "Registry64" in content
+        assert "ARM64" in content or "arm64" in content.lower()
+
+    def test_script_logs_architecture_in_initialization(self, tmp_path: Path):
+        """Test that script logs architecture during initialization."""
+        config = DetectionConfig(
+            app_name="Test App",
+            version="1.0.0",
+            expected_architecture="x64",
+        )
+        output_path = tmp_path / "Test-App_1.0.0-Detection.ps1"
+
+        generate_detection_script(config, output_path)
+
+        content = output_path.read_text(encoding="utf-8-sig")
+
+        assert "Architecture:" in content

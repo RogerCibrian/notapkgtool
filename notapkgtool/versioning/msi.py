@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""MSI ProductVersion extraction for NAPT.
+"""MSI metadata extraction for NAPT.
 
-This module extracts the ProductVersion property from Windows Installer (MSI)
-database files. It tries multiple backends in order of preference to maximize
-cross-platform compatibility.
+This module extracts metadata from Windows Installer (MSI) database files,
+including ProductVersion, ProductName, and architecture (from Template).
+It tries multiple backends in order of preference to maximize cross-platform
+compatibility.
 
 Backend Priority:
 
@@ -79,6 +80,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+from typing import Literal
 
 try:
     import msilib  # type: ignore  # Windows-only standard library module
@@ -87,9 +89,28 @@ except ImportError:
 
 from dataclasses import dataclass
 
-from notapkgtool.exceptions import PackagingError
+from notapkgtool.exceptions import ConfigError, PackagingError
 
 from .keys import DiscoveredVersion  # reuse the shared DTO
+
+# MSI Template platform mapping
+# See: https://learn.microsoft.com/en-us/windows/win32/msi/template-summary
+_TEMPLATE_TO_ARCH: dict[str, str] = {
+    "intel": "x86",  # Official 32-bit
+    "x64": "x64",  # Official 64-bit (AMD64/x86-64)
+    "amd64": "x64",  # Unofficial alias (defensive)
+    "arm64": "arm64",  # Official 64-bit ARM
+    # Note: Empty string defaults to Intel (x86) per MS docs
+}
+
+# Unsupported platforms that raise ConfigError
+_UNSUPPORTED_PLATFORMS: dict[str, str] = {
+    "intel64": "Itanium (Intel64) is not supported by Intune",
+    "arm": "Windows RT 32-bit ARM is not supported by Intune",
+}
+
+# Type alias for architecture values
+Architecture = Literal["x86", "x64", "arm64"]
 
 
 @dataclass(frozen=True)
@@ -523,3 +544,181 @@ if (-not $metadata['ProductVersion']) {{
         "On Windows, ensure PowerShell is available. "
         "On Linux/macOS, install 'msitools'."
     )
+
+
+def architecture_from_template(template: str) -> Architecture:
+    """Parse MSI Template property into NAPT architecture value.
+
+    The Template property format is: [platform];[language_id][,language_id]...
+    Examples: "x64;1033", "Intel;1033,1041", ";1033" (empty platform)
+
+    Args:
+        template: Raw Template property string from MSI Summary Information.
+
+    Returns:
+        Architecture value: "x86", "x64", or "arm64".
+
+    Raises:
+        ConfigError: If the platform is not supported by Intune (Itanium, ARM32).
+
+    Example:
+        Parse template strings:
+            ```python
+            arch = architecture_from_template("x64;1033")
+            # Returns: "x64"
+
+            arch = architecture_from_template("Intel;1033")
+            # Returns: "x86"
+
+            arch = architecture_from_template(";1033")
+            # Returns: "x86" (empty defaults to Intel)
+            ```
+
+    """
+    # Split on semicolon and take only the first token (platform)
+    # Discard remaining tokens (language codes like 1033)
+    platform = template.split(";")[0].strip().lower()
+
+    # Empty platform defaults to Intel (x86) per Microsoft docs
+    if not platform:
+        return "x86"
+
+    # Check for unsupported platforms first
+    if platform in _UNSUPPORTED_PLATFORMS:
+        raise ConfigError(
+            f"MSI platform '{platform}' is not supported. "
+            f"{_UNSUPPORTED_PLATFORMS[platform]}."
+        )
+
+    # Map to NAPT architecture
+    arch = _TEMPLATE_TO_ARCH.get(platform)
+    if arch is None:
+        raise ConfigError(
+            f"Unknown MSI platform '{platform}' in Template property. "
+            f"Expected one of: Intel, x64, AMD64, Arm64."
+        )
+
+    return arch  # type: ignore[return-value]
+
+
+def extract_msi_architecture(file_path: str | Path) -> Architecture:
+    """Extract architecture from MSI Summary Information Template property.
+
+    Uses cross-platform backends to read the MSI Summary Information stream.
+    On Windows, uses PowerShell COM API. On Linux/macOS, requires msitools.
+
+    Args:
+        file_path: Path to the MSI file.
+
+    Returns:
+        Architecture value: "x86", "x64", or "arm64".
+
+    Raises:
+        PackagingError: If the MSI file doesn't exist or extraction fails.
+        ConfigError: If the platform is not supported by Intune.
+        NotImplementedError: If no extraction backend is available.
+
+    Example:
+        Extract architecture from MSI:
+            ```python
+            from notapkgtool.versioning.msi import extract_msi_architecture
+
+            arch = extract_msi_architecture("chrome.msi")
+            print(f"Architecture: {arch}")
+            # Architecture: x64
+            ```
+
+    """
+    from notapkgtool.logging import get_global_logger
+
+    logger = get_global_logger()
+    p = Path(file_path)
+    if not p.exists():
+        raise PackagingError(f"MSI not found: {p}")
+
+    logger.verbose("MSI", f"Extracting architecture from: {p.name}")
+
+    template: str | None = None
+
+    # Try PowerShell with Windows Installer COM on Windows
+    # Summary Information Property ID 7 is Template
+    if sys.platform.startswith("win"):
+        logger.debug("MSI", "Trying backend: PowerShell COM (SummaryInformation)...")
+        try:
+            escaped_path = str(p).replace("'", "''")
+            ps_script = f"""
+$installer = New-Object -ComObject WindowsInstaller.Installer
+$db = $installer.OpenDatabase('{escaped_path}', 0)
+if ($null -eq $db) {{
+    Write-Error "Failed to open database: '{escaped_path}'"
+    exit 1
+}}
+$sumInfo = $db.SummaryInformation(0)
+$template = $sumInfo.Property(7)
+$db.Close()
+$template
+"""
+            result = subprocess.run(
+                ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_script],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            template = result.stdout.strip()
+            logger.verbose(
+                "MSI",
+                f"Success! Extracted Template: '{template}' (via PowerShell COM)",
+            )
+        except subprocess.CalledProcessError as err:
+            stderr_output = err.stderr if err.stderr else "No stderr"
+            logger.debug(
+                "MSI",
+                f"PowerShell COM failed: {err}. stderr: {stderr_output}. "
+                "Trying next backend...",
+            )
+        except subprocess.TimeoutExpired:
+            logger.debug("MSI", "PowerShell COM timed out, trying next backend...")
+        except Exception as err:
+            logger.debug("MSI", f"PowerShell COM failed: {err}, trying next backend...")
+
+    # Try msiinfo on Linux/macOS (or as fallback on Windows)
+    if template is None:
+        msiinfo = shutil.which("msiinfo")
+        if msiinfo:
+            logger.debug("MSI", "Trying backend: msiinfo suminfo...")
+            try:
+                # msiinfo suminfo <package> outputs summary information
+                result = subprocess.run(
+                    [msiinfo, "suminfo", str(p)],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                # Parse output for Template line
+                # Format: "Template: x64;1033"
+                for line in result.stdout.splitlines():
+                    if line.startswith("Template:"):
+                        template = line.split(":", 1)[1].strip()
+                        break
+
+                if template is not None:
+                    logger.verbose(
+                        "MSI",
+                        f"Success! Extracted Template: '{template}' (via msiinfo)",
+                    )
+            except subprocess.CalledProcessError as err:
+                logger.debug("MSI", f"msiinfo suminfo failed: {err}")
+            except Exception as err:
+                logger.debug("MSI", f"msiinfo failed: {err}")
+
+    if template is None:
+        logger.debug("MSI", "No backend could extract Template property")
+        raise NotImplementedError(
+            "MSI architecture extraction is not available on this host. "
+            "On Windows, ensure PowerShell is available. "
+            "On Linux/macOS, install 'msitools'."
+        )
+
+    # Parse the template into architecture
+    return architecture_from_template(template)

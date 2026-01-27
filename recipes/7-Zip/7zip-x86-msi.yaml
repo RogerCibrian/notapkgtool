@@ -1,0 +1,27 @@
+apiVersion: napt/v1
+project: "napt - Windows Apps"
+
+app:
+  name: "7-Zip (x86)"
+  id: "napt-7zip-x86"
+
+  source:
+      strategy: web_scrape
+      page_url: "https://www.7-zip.org/download.html"
+      link_selector: 'a[href$=".msi"]:not([href$="-x64.msi"])'
+      version_pattern: "7z(\\d{2})(\\d{2})"
+      version_format: "{0}.{1}"
+
+  psadt:
+      app_vars:
+        AppName: "7-Zip"
+        AppVersion: "${discovered_version}"
+        AppArch: "x86"
+        AppVendor: "Igor Pavlov"
+      install: |
+        # Install 7-Zip MSI with system-wide deployment
+        # Note: Filename uses compact version (e.g., 7z2501.msi for v25.01)
+        Start-ADTMsiProcess -Action Install -Path "$dirFiles\7z*.msi" -Parameters "ALLUSERS=1"
+      uninstall: |
+        # Uninstall 7-Zip automatically (handles MSI ProductCode lookup)
+        Uninstall-ADTApplication -Name "7-Zip"

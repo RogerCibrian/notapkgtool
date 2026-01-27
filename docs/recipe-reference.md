@@ -494,6 +494,10 @@ Application name used in scripts to match registry `DisplayName`. This value is 
 
 **Note:** The value is sanitized for use in Windows filenames (spaces become hyphens, invalid characters removed). Script filenames follow the pattern: `{DisplayName}_{Version}-Detection.ps1` and `{DisplayName}_{Version}-Requirements.ps1`.
 
+**Template Variable Support:**
+
+- `${discovered_version}`: Automatically substituted with the version discovered by NAPT. Use this when the registry DisplayName includes the version number (e.g., "7-Zip 25.01 (x64)").
+
 **Example:**
 ```yaml
 app:
@@ -501,6 +505,49 @@ app:
   win32:
     installed_check:
       display_name: "My Application"  # Matches registry DisplayName for EXE installers
+```
+
+**Example with version in DisplayName:**
+```yaml
+app:
+  name: "7-Zip (x64) EXE"
+  win32:
+    installed_check:
+      display_name: "7-Zip ${discovered_version} (x64)"  # Matches "7-Zip 25.01 (x64)" in registry
+```
+
+#### architecture
+
+**Type:** `string`  
+**Required:** Yes for non-MSI installers, ignored for MSI installers  
+**Allowed values:** `x86`, `x64`, `arm64`, `any`
+
+Specifies the expected architecture for detection/requirements scripts. This controls which registry views are checked.
+
+**Behavior:**
+
+- **MSI installers:** This field is ignored (a warning is logged if set). Architecture is auto-detected from the MSI Summary Information `Template` property.
+- **Non-MSI installers (EXE, etc.):** Required. Must be set in recipe configuration.
+
+**Allowed values:**
+
+| Value | Description |
+|-------|-------------|
+| `x86` | 32-bit x86; checks only 32-bit registry view |
+| `x64` | 64-bit x64/AMD64; checks only 64-bit registry view |
+| `arm64` | 64-bit ARM; checks only 64-bit registry view |
+| `any` | Checks all registry views (permissive, matches legacy behavior) |
+
+**Why this matters:** Without architecture filtering, an x86 installation could satisfy x64 detection if the DisplayName and version match, potentially blocking proper x64 deployment. The architecture-aware approach ensures detection scripts check the correct registry view for the target architecture.
+
+**Example:**
+```yaml
+app:
+  name: "My App"
+  win32:
+    installed_check:
+      display_name: "My Application"
+      architecture: "x64"  # Required for EXE installers
 ```
 
 #### fail_on_error
@@ -548,7 +595,12 @@ If `true`, the detection script requires an exact version match. If `false`, the
     - Scripts automatically detect installer type from file extension during build.
     - **MSI installers (strict):** Only matches registry entries with `WindowsInstaller` = 1. Prevents false matches when both MSI and EXE versions exist.
     - **Non-MSI installers (permissive):** Matches ANY registry entry. Handles EXE installers that run embedded MSIs internally.
-- **Registry Checking:** Checks Windows uninstall registry keys (HKLM/HKCU, native and Wow6432Node paths).
+- **Architecture-Aware Registry Checking:** Uses explicit registry views for deterministic detection:
+    - `x64`/`arm64`: Checks only 64-bit registry view (Registry64)
+    - `x86`: Checks only 32-bit registry view (Registry32)
+    - `any`: Checks both views (permissive mode)
+    - For MSI installers, architecture is auto-detected from the MSI Template property.
+    - For non-MSI installers, `architecture` must be specified in the recipe.
 - **Version Comparison:** Uses `DisplayVersion` registry value. Detection: exit 0 if installed meets requirement, 1 otherwise. Requirements: always exit 0; output "Required" to stdout if an older version is installed, nothing otherwise.
 - **Script Location:** Generated scripts are saved as siblings to the `packagefiles/` directory (not included in `.intunewin` package - must be uploaded separately to Intune).
 

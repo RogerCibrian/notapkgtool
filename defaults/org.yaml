@@ -82,6 +82,10 @@ defaults:
       # display_name: Required for non-MSI installers. MSI uses ProductName automatically.
       # Set in recipe's app.win32.installed_check.display_name for non-MSI installers.
 
+      # architecture: Required for non-MSI installers. MSI auto-detects from Template.
+      # Allowed values: x86, x64, arm64, any
+      # Set in recipe's app.win32.installed_check.architecture for non-MSI installers.
+
       # If true, script generation failures abort the build.
       # Default: true (scripts are required for Intune deployment)
       fail_on_error: true
