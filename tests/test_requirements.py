@@ -52,6 +52,7 @@ class TestRequirementsConfig:
         assert config.log_rotation_mb == 3
         assert config.app_id == ""
         assert config.expected_architecture == "any"
+        assert config.use_wildcard is False
 
     def test_custom_values(self):
         """Test custom values for RequirementsConfig."""
@@ -343,7 +344,7 @@ class TestGenerateRequirementsScript:
         content = output_path.read_text(encoding="utf-8-sig")
 
         # Check for MSI strict check (skips non-MSI entries when building from MSI)
-        assert "expected MSI - skipping" in content
+        assert "is non-MSI, expected MSI" in content
         # Check that non-MSI is permissive (accepts any entry)
         assert "Non-MSI installers accept ANY registry entry" in content
 
@@ -394,3 +395,53 @@ class TestGenerateRequirementsScript:
         idx = content.find("[Result] Requirements NOT MET:")
         excerpt = content[idx : idx + 300]
         assert "WARNING" in excerpt
+
+    def test_script_uses_eq_by_default(self, tmp_path: Path):
+        """Test that script uses -eq for DisplayName matching by default."""
+        config = RequirementsConfig(
+            app_name="Test App",
+            version="1.0.0",
+            use_wildcard=False,
+        )
+        output_path = tmp_path / "Test-App_1.0.0-Requirements.ps1"
+
+        generate_requirements_script(config, output_path)
+
+        content = output_path.read_text(encoding="utf-8-sig")
+
+        # Check for exact -eq matching
+        assert "$DisplayNameValue -eq $AppName" in content
+
+    def test_script_uses_like_with_wildcard(self, tmp_path: Path):
+        """Test that script uses -like when use_wildcard is True."""
+        config = RequirementsConfig(
+            app_name="7-Zip *",
+            version="25.01",
+            use_wildcard=True,
+        )
+        output_path = tmp_path / "7-Zip_25.01-Requirements.ps1"
+
+        generate_requirements_script(config, output_path)
+
+        content = output_path.read_text(encoding="utf-8-sig")
+
+        # Check for -like matching
+        assert "$DisplayNameValue -like $AppName" in content
+
+    def test_script_wildcard_with_question_mark(self, tmp_path: Path):
+        """Test that script uses -like when use_wildcard is True with ? wildcard."""
+        config = RequirementsConfig(
+            app_name="7-Zip ??.??",
+            version="24.09",
+            use_wildcard=True,
+        )
+        output_path = tmp_path / "7-Zip_24.09-Requirements.ps1"
+
+        generate_requirements_script(config, output_path)
+
+        content = output_path.read_text(encoding="utf-8-sig")
+
+        # Check for -like matching
+        assert "$DisplayNameValue -like $AppName" in content
+        # Check app name is in script
+        assert "7-Zip ??.??" in content

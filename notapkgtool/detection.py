@@ -115,6 +115,8 @@ class DetectionConfig:
             - "x64": Check only 64-bit registry view
             - "arm64": Check only 64-bit registry view (ARM64 uses 64-bit registry)
             - "any": Check both 32-bit and 64-bit views (permissive)
+        use_wildcard: If True, use PowerShell -like operator for DisplayName
+            matching (supports * and ? wildcards). If False, use exact -eq match.
 
     """
 
@@ -127,6 +129,7 @@ class DetectionConfig:
     app_id: str = ""
     is_msi_installer: bool = False
     expected_architecture: ArchitectureMode = "any"
+    use_wildcard: bool = False
 
 
 def sanitize_filename(name: str, app_id: str = "") -> str:
@@ -502,7 +505,7 @@ foreach ($$KeyInfo in $$AllKeys) {
         $$DisplayNameValue = $$Key.GetValue("DisplayName")
         $$VersionValue = $$Key.GetValue("DisplayVersion")
         
-        if ($$DisplayNameValue -eq $$AppName) {
+        if ($$DisplayNameValue ${display_name_operator} $$AppName) {
             $$RegKeyPath = $$KeyInfo.Path
             
             # Check if installer type matches (MSI vs non-MSI)
@@ -606,6 +609,7 @@ def generate_detection_script(config: DetectionConfig, output_path: Path) -> Pat
         log_rotation_mb=config.log_rotation_mb,
         is_msi_installer="$True" if config.is_msi_installer else "$False",
         expected_architecture=config.expected_architecture,
+        display_name_operator="-like" if config.use_wildcard else "-eq",
     )
 
     # Ensure output directory exists

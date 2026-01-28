@@ -498,6 +498,17 @@ Application name used in scripts to match registry `DisplayName`. This value is 
 
 - `${discovered_version}`: Automatically substituted with the version discovered by NAPT. Use this when the registry DisplayName includes the version number (e.g., "7-Zip 25.01 (x64)").
 
+**Wildcard Support:**
+
+When `display_name` contains wildcards (`*` or `?`), the generated scripts use PowerShell's `-like` operator instead of exact `-eq` matching:
+
+| Wildcard | Meaning | Example |
+|----------|---------|---------|
+| `*` | Matches zero or more characters | `"7-Zip *"` matches "7-Zip 24.09", "7-Zip 25.01 (x64)" |
+| `?` | Matches exactly one character | `"7-Zip ??.??"` matches "7-Zip 24.09" but not "7-Zip 24.9" |
+
+Use `*` for most cases - it's flexible and handles varying version formats. Use `?` only when you need precise control over character positions (rare).
+
 **Example:**
 ```yaml
 app:
@@ -514,6 +525,16 @@ app:
   win32:
     installed_check:
       display_name: "7-Zip ${discovered_version} (x64)"  # Matches "7-Zip 25.01 (x64)" in registry
+```
+
+**Example with wildcard (for MSI with override):**
+```yaml
+app:
+  name: "7-Zip (x64) MSI"
+  win32:
+    installed_check:
+      display_name: "7-Zip *"  # Matches any 7-Zip version
+      override_msi_display_name: true
 ```
 
 #### architecture
@@ -548,6 +569,44 @@ app:
     installed_check:
       display_name: "My Application"
       architecture: "x64"  # Required for EXE installers
+```
+
+#### override_msi_display_name
+
+**Type:** `boolean`  
+**Required:** No  
+**Default:** `false`  
+**Applies to:** MSI installers only
+
+When `true`, uses the `display_name` field instead of the MSI's ProductName for registry lookups.
+
+**When to Use:**
+
+Use this flag when the MSI's ProductName contains a version number that changes with each release. Common examples:
+- "7-Zip 25.01" - version embedded in ProductName
+- "Application Name v1.2.3" - version prefix in ProductName
+
+Without this flag, detection/requirements scripts would look for an exact match on the versioned ProductName, causing:
+- Detection to fail when checking for a different version than installed
+- Requirements to fail when installed version differs from target
+
+**Behavior:**
+
+- **MSI with `override_msi_display_name: false` (default):** Uses MSI ProductName (authoritative source)
+- **MSI with `override_msi_display_name: true`:** Uses `display_name` field (must be set)
+- **Non-MSI installers:** Flag is ignored (a warning is logged if set)
+
+**Note:** Architecture is still auto-detected from the MSI Template property even when using this override.
+
+**Example:**
+```yaml
+app:
+  name: "7-Zip (x64) MSI"
+  win32:
+    installed_check:
+      display_name: "7-Zip *"           # Matches any 7-Zip version
+      override_msi_display_name: true   # Use display_name instead of MSI ProductName
+      # architecture still auto-detected from MSI Template
 ```
 
 #### fail_on_error
@@ -589,8 +648,9 @@ If `true`, the detection script requires an exact version match. If `false`, the
 **How Scripts Work:**
 
 - **App Name Detection:**
-    - **MSI installers:** Uses MSI `ProductName` property (authoritative source for registry `DisplayName`). The `display_name` field is ignored for MSI installers.
+    - **MSI installers:** Uses MSI `ProductName` property (authoritative source for registry `DisplayName`). The `display_name` field is ignored unless `override_msi_display_name: true` is set.
     - **Non-MSI installers:** Requires `win32.installed_check.display_name` in recipe configuration. This value is matched against the registry `DisplayName`.
+    - **Wildcard matching:** When `display_name` contains `*` or `?`, scripts use PowerShell's `-like` operator for flexible matching instead of exact `-eq` comparison.
 - **Installer Type Filtering:**
     - Scripts automatically detect installer type from file extension during build.
     - **MSI installers (strict):** Only matches registry entries with `WindowsInstaller` = 1. Prevents false matches when both MSI and EXE versions exist.

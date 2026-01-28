@@ -449,15 +449,20 @@ def _generate_detection_script(
     # Determine AppName for detection
     app_name_for_detection = None
     installer_ext = installer_file.suffix.lower()
+    override_msi_display_name = installed_check_config.get(
+        "override_msi_display_name", False
+    )
 
-    # Check if display_name is set for MSI installers (not allowed)
+    # Check if display_name is set for MSI without override flag
     if installer_ext == ".msi" and installed_check_config.get("display_name"):
-        logger.warning(
-            "DETECTION",
-            "win32.installed_check.display_name is set but will be ignored for MSI "
-            "installers. MSI ProductName is used as the authoritative source for "
-            "registry DisplayName.",
-        )
+        if not override_msi_display_name:
+            logger.warning(
+                "DETECTION",
+                "win32.installed_check.display_name is set but will be ignored for "
+                "MSI installers. MSI ProductName is used as the authoritative source "
+                "for registry DisplayName. Set override_msi_display_name: true to use "
+                "display_name instead.",
+            )
 
     # Check if architecture is set for MSI installers (not allowed)
     if installer_ext == ".msi" and installed_check_config.get("architecture"):
@@ -468,35 +473,62 @@ def _generate_detection_script(
             "architecture.",
         )
 
+    # Check if override_msi_display_name is set for non-MSI installers
+    if installer_ext != ".msi" and override_msi_display_name:
+        logger.warning(
+            "DETECTION",
+            "win32.installed_check.override_msi_display_name is set but will be "
+            "ignored for non-MSI installers. This flag only applies to MSI installers.",
+        )
+
     # Determine architecture for detection
     expected_architecture: str = "any"  # Default for "any" mode
 
     if installer_ext == ".msi":
-        # MSI: Use ProductName (required, no fallback - authoritative source)
-        try:
-            msi_metadata = extract_msi_metadata(installer_file)
-            if not msi_metadata.product_name:
+        if override_msi_display_name:
+            # MSI with override: Use display_name instead of ProductName
+            if not installed_check_config.get("display_name"):
                 raise ConfigError(
-                    "MSI ProductName property not found. Cannot generate detection "
-                    "script. Ensure the MSI file is valid and contains ProductName "
-                    "property."
+                    "win32.installed_check.override_msi_display_name is true but "
+                    "display_name is not set. Set display_name when using "
+                    "override_msi_display_name."
                 )
-            app_name_for_detection = msi_metadata.product_name
+            app_name_for_detection = installed_check_config["display_name"]
+            # Support ${discovered_version} template variable
+            if "${discovered_version}" in app_name_for_detection:
+                app_name_for_detection = app_name_for_detection.replace(
+                    "${discovered_version}", version
+                )
             logger.verbose(
                 "DETECTION",
-                f"Using MSI ProductName for detection: {app_name_for_detection}",
+                f"Using display_name (override): {app_name_for_detection}",
             )
-        except ConfigError:
-            # Re-raise ConfigError as-is (e.g., ProductName not found)
-            raise
-        except Exception as err:
-            # Wrap other exceptions (extraction failures) as ConfigError
-            raise ConfigError(
-                f"Failed to extract MSI ProductName. Cannot generate detection script. "
-                f"Error: {err}"
-            ) from err
+        else:
+            # MSI: Use ProductName (required, no fallback - authoritative source)
+            try:
+                msi_metadata = extract_msi_metadata(installer_file)
+                if not msi_metadata.product_name:
+                    raise ConfigError(
+                        "MSI ProductName property not found. Cannot generate detection "
+                        "script. Ensure the MSI file is valid and contains ProductName "
+                        "property."
+                    )
+                app_name_for_detection = msi_metadata.product_name
+                logger.verbose(
+                    "DETECTION",
+                    f"Using MSI ProductName for detection: {app_name_for_detection}",
+                )
+            except ConfigError:
+                # Re-raise ConfigError as-is (e.g., ProductName not found)
+                raise
+            except Exception as err:
+                # Wrap other exceptions (extraction failures) as ConfigError
+                raise ConfigError(
+                    f"Failed to extract MSI ProductName. Cannot generate detection "
+                    f"script. Error: {err}"
+                ) from err
 
-        # Auto-detect architecture from MSI Template
+        # Auto-detect architecture from MSI Template (always, even with override)
         try:
             expected_architecture = extract_msi_architecture(installer_file)
             logger.verbose(
@@ -545,6 +577,9 @@ def _generate_detection_script(
             "Set app.win32.installed_check.display_name in recipe configuration."
         )
 
+    # Determine if wildcard matching is needed
+    use_wildcard = "*" in app_name_for_detection or "?" in app_name_for_detection
+
     # Create DetectionConfig from merged configuration
     detection_config_obj = DetectionConfig(
         app_name=app_name_for_detection,
@@ -556,6 +591,7 @@ def _generate_detection_script(
         app_id=app_id,
         is_msi_installer=(installer_ext == ".msi"),
         expected_architecture=expected_architecture,
+        use_wildcard=use_wildcard,
     )
 
     # Sanitize AppName for filename
@@ -627,34 +663,56 @@ def _generate_requirements_script(
     # Determine AppName for requirements
     app_name_for_requirements = None
     installer_ext = installer_file.suffix.lower()
+    override_msi_display_name = installed_check_config.get(
+        "override_msi_display_name", False
+    )
 
     # Determine architecture for requirements
     expected_architecture: str = "any"  # Default for "any" mode
 
     if installer_ext == ".msi":
-        # MSI: Use ProductName (required, no fallback - authoritative source)
-        try:
-            msi_metadata = extract_msi_metadata(installer_file)
-            if not msi_metadata.product_name:
+        if override_msi_display_name:
+            # MSI with override: Use display_name instead of ProductName
+            if not installed_check_config.get("display_name"):
                 raise ConfigError(
-                    "MSI ProductName property not found. Cannot generate requirements "
-                    "script. Ensure the MSI file is valid and contains ProductName "
-                    "property."
+                    "win32.installed_check.override_msi_display_name is true but "
+                    "display_name is not set. Set display_name when using "
+                    "override_msi_display_name."
                 )
-            app_name_for_requirements = msi_metadata.product_name
+            app_name_for_requirements = installed_check_config["display_name"]
+            # Support ${discovered_version} template variable
+            if "${discovered_version}" in app_name_for_requirements:
+                app_name_for_requirements = app_name_for_requirements.replace(
+                    "${discovered_version}", version
+                )
             logger.verbose(
                 "REQUIREMENTS",
-                f"Using MSI ProductName for requirements: {app_name_for_requirements}",
+                f"Using display_name (override): {app_name_for_requirements}",
             )
-        except ConfigError:
-            raise
-        except Exception as err:
-            raise ConfigError(
-                f"Failed to extract MSI ProductName. Cannot generate requirements "
-                f"script. Error: {err}"
-            ) from err
+        else:
+            # MSI: Use ProductName (required, no fallback - authoritative source)
+            try:
+                msi_metadata = extract_msi_metadata(installer_file)
+                if not msi_metadata.product_name:
+                    raise ConfigError(
+                        "MSI ProductName property not found. Cannot generate "
+                        "requirements script. Ensure the MSI file is valid and "
+                        "contains ProductName property."
+                    )
+                app_name_for_requirements = msi_metadata.product_name
+                logger.verbose(
+                    "REQUIREMENTS",
+                    f"Using MSI ProductName for requirements: {app_name_for_requirements}",
+                )
+            except ConfigError:
+                raise
+            except Exception as err:
+                raise ConfigError(
+                    f"Failed to extract MSI ProductName. Cannot generate requirements "
+                    f"script. Error: {err}"
+                ) from err
 
-        # Auto-detect architecture from MSI Template
+        # Auto-detect architecture from MSI Template (always, even with override)
         try:
             expected_architecture = extract_msi_architecture(installer_file)
             logger.verbose(
@@ -703,6 +761,9 @@ def _generate_requirements_script(
             "Set app.win32.installed_check.display_name in recipe configuration."
         )
 
+    # Determine if wildcard matching is needed
+    use_wildcard = "*" in app_name_for_requirements or "?" in app_name_for_requirements
+
     # Create RequirementsConfig from merged configuration
     requirements_config_obj = RequirementsConfig(
         app_name=app_name_for_requirements,
@@ -713,6 +774,7 @@ def _generate_requirements_script(
         app_id=app_id,
         is_msi_installer=(installer_ext == ".msi"),
         expected_architecture=expected_architecture,
+        use_wildcard=use_wildcard,
     )
 
     # Sanitize AppName for filename

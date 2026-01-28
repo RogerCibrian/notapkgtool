@@ -86,6 +86,11 @@ defaults:
       # Allowed values: x86, x64, arm64, any
       # Set in recipe's app.win32.installed_check.architecture for non-MSI installers.
 
+      # If true, use display_name instead of MSI ProductName for registry lookup.
+      # Useful when MSI ProductName contains version numbers that change (e.g., "7-Zip 25.01").
+      # Default: false (MSI ProductName is authoritative)
+      # override_msi_display_name: false
+
       # If true, script generation failures abort the build.
       # Default: true (scripts are required for Intune deployment)
       fail_on_error: true
