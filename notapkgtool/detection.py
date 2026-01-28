@@ -418,8 +418,8 @@ Write-CMTraceLog -Message "[Initialization] Starting detection check for: $$AppN
 # Detect OS architecture
 $$Is64BitOS = [Environment]::Is64BitOperatingSystem
 
-Write-CMTraceLog -Message "[Initialization] OS: $$(if ($$Is64BitOS) { '64-bit' } else { '32-bit' }), PowerShell: $$(if ([Environment]::Is64BitProcess) { '64-bit' } else { '32-bit' })" -Type "INFO"
-Write-CMTraceLog -Message "[Initialization] Using explicit RegistryView for deterministic detection (architecture: $$ExpectedArchitecture)" -Type "INFO"
+Write-CMTraceLog -Message "[Initialization] OS Architecture: $$(if ($$Is64BitOS) { '64-bit' } else { '32-bit' })" -Type "INFO"
+Write-CMTraceLog -Message "[Initialization] PowerShell Process: $$(if ([Environment]::Is64BitProcess) { '64-bit' } else { '32-bit' })" -Type "INFO"
 
 # Build list of registry keys to check based on expected architecture
 # Uses OpenBaseKey with explicit RegistryView for deterministic behavior
@@ -463,7 +463,23 @@ switch ($$ExpectedArchitecture.ToLower()) {
     }
 }
 
-Write-CMTraceLog -Message "[Initialization] Registry views to check: $$($$CheckViews.Name -join ', ')" -Type "INFO"
+# Build literal registry paths for logging (matches actual paths opened by OpenBaseKey per view)
+$$RegPathDescriptions = @()
+foreach ($$ViewInfo in $$CheckViews) {
+    if ($$ViewInfo.Name -like '64-bit*') {
+        $$RegPathDescriptions += "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
+        $$RegPathDescriptions += "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
+    } else {
+        if ($$Is64BitOS) {
+            $$RegPathDescriptions += "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
+            $$RegPathDescriptions += "HKCU:\\SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
+        } else {
+            $$RegPathDescriptions += "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
+            $$RegPathDescriptions += "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
+        }
+    }
+}
+Write-CMTraceLog -Message "[Initialization] Registry paths to check: $$($$RegPathDescriptions -join ', ')" -Type "INFO"
 
 # Collect all registry keys from selected views
 foreach ($$ViewInfo in $$CheckViews) {
@@ -495,7 +511,7 @@ foreach ($$KeyInfo in $$AllKeys) {
             $$IsMSIEntry = Test-IsMSIInstallation -RegKey $$Key
             if ($$IsMSIInstaller -and -not $$IsMSIEntry) {
                 # Building from MSI, but registry entry is not MSI - skip
-                Write-CMTraceLog -Message "[Detection] Found matching DisplayName but installer type mismatch: '$$RegKeyPath' ($$($KeyInfo.View)) is non-MSI, expected MSI - skipping" -Type "INFO"
+                Write-CMTraceLog -Message "[Detection] Found matching DisplayName but installer type mismatch: '$$RegKeyPath' is non-MSI, expected MSI" -Type "INFO"
                 continue
             }
             # Note: Non-MSI installers accept ANY registry entry (MSI or non-MSI)
@@ -504,7 +520,7 @@ foreach ($$KeyInfo in $$AllKeys) {
             $$DisplayName = $$DisplayNameValue
             $$InstalledVersion = $$VersionValue
             
-            Write-CMTraceLog -Message "[Detection] Found matching registry key: '$$RegKeyPath' (View: $$($KeyInfo.View), DisplayName: $$DisplayName, DisplayVersion: $$InstalledVersion, Installer Type: $$(if ($$IsMSIEntry) { 'MSI' } else { 'Non-MSI' }))" -Type "INFO"
+            Write-CMTraceLog -Message "[Detection] Found matching registry key: '$$RegKeyPath' (DisplayName: $$DisplayName, DisplayVersion: $$InstalledVersion, Installer Type: $$(if ($$IsMSIEntry) { 'MSI' } else { 'Non-MSI' }), View: $$($KeyInfo.View))" -Type "INFO"
             
             if ($$InstalledVersion) {
                 if (Compare-Version -InstalledVersion $$InstalledVersion -ExpectedVersion $$ExpectedVersion -ExactMatch $$ExactMatch) {
@@ -519,7 +535,7 @@ foreach ($$KeyInfo in $$AllKeys) {
             }
         }
     } catch {
-        Write-CMTraceLog -Message "[Detection] Error checking registry key: $$($$_.Exception.Message)" -Type "ERROR"
+        Write-CMTraceLog -Message "[Detection] Error checking registry path $$($KeyInfo.Path) : $$($$_.Exception.Message)" -Type "ERROR"
     }
 }
 
