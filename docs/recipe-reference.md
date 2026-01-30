@@ -533,7 +533,7 @@ app:
   name: "7-Zip (x64) MSI"
   win32:
     installed_check:
-      display_name: "7-Zip *"  # Matches any 7-Zip version
+      display_name: "7-Zip * (x64 edition)"  # Matches any 7-Zip x64 version
       override_msi_display_name: true
 ```
 
@@ -604,8 +604,8 @@ app:
   name: "7-Zip (x64) MSI"
   win32:
     installed_check:
-      display_name: "7-Zip *"           # Matches any 7-Zip version
-      override_msi_display_name: true   # Use display_name instead of MSI ProductName
+      display_name: "7-Zip * (x64 edition)"  # Matches any 7-Zip x64 version
+      override_msi_display_name: true        # Use display_name instead of MSI ProductName
       # architecture still auto-detected from MSI Template
 ```
 
