@@ -344,7 +344,7 @@ class TestGenerateRequirementsScript:
         content = output_path.read_text(encoding="utf-8-sig")
 
         # Check for MSI strict check (skips non-MSI entries when building from MSI)
-        assert "is non-MSI, expected MSI" in content
+        assert "Found: Non-MSI, Expected: MSI" in content
         # Check that non-MSI is permissive (accepts any entry)
         assert "Non-MSI installers accept ANY registry entry" in content
 
@@ -379,8 +379,8 @@ class TestGenerateRequirementsScript:
         # Component is built at runtime from $SanitizedAppName-$TargetVersion-Requirements
         assert "ComponentName" in content and '-Requirements"' in content
 
-    def test_script_result_not_met_logs_as_warning(self, tmp_path: Path):
-        """Test that Requirements NOT MET results are logged as WARNING for visibility."""
+    def test_script_result_update_not_required_logs_as_warning(self, tmp_path: Path):
+        """Test that Update Not Required results are logged as WARNING for visibility."""
         config = RequirementsConfig(
             app_name="Test App",
             version="1.0.0",
@@ -391,8 +391,8 @@ class TestGenerateRequirementsScript:
 
         content = output_path.read_text(encoding="utf-8-sig")
 
-        assert "[Result] Requirements NOT MET:" in content
-        idx = content.find("[Result] Requirements NOT MET:")
+        assert "[Result] Update Not Required:" in content
+        idx = content.find("[Result] Update Not Required:")
         excerpt = content[idx : idx + 300]
         assert "WARNING" in excerpt
 

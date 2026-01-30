@@ -448,7 +448,7 @@ foreach ($$KeyInfo in $$AllKeys) {
             $$IsMSIEntry = Test-IsMSIInstallation -RegKey $$Key
             if ($$IsMSIInstaller -and -not $$IsMSIEntry) {
                 # Building from MSI, but registry entry is not MSI - skip
-                Write-CMTraceLog -Message "[Requirements] Found matching DisplayName but installer type mismatch: '$$RegKeyPath' is non-MSI, expected MSI" -Type "INFO"
+                Write-CMTraceLog -Message "[Requirements] Type mismatch: $$DisplayNameValue (Found: Non-MSI, Expected: MSI, Path: $$RegKeyPath)" -Type "INFO"
                 continue
             }
             # Note: Non-MSI installers accept ANY registry entry (MSI or non-MSI)
@@ -456,19 +456,19 @@ foreach ($$KeyInfo in $$AllKeys) {
             
             $$DisplayName = $$DisplayNameValue
             $$InstalledVersion = $$VersionValue
-            
-            Write-CMTraceLog -Message "[Requirements] Found matching registry key: '$$RegKeyPath' (DisplayName: $$DisplayName, DisplayVersion: $$InstalledVersion, Installer Type: $$(if ($$IsMSIEntry) { 'MSI' } else { 'Non-MSI' }), View: $$($KeyInfo.View))" -Type "INFO"
-            
+
+            Write-CMTraceLog -Message "[Requirements] Match found: $$DisplayName (Found: $$(if ($$InstalledVersion) { $$InstalledVersion } else { 'None' }), Type: $$(if ($$IsMSIEntry) { 'MSI' } else { 'Non-MSI' }), Arch: $$($KeyInfo.View), Path: $$RegKeyPath)" -Type "INFO"
+
             if ($$InstalledVersion) {
                 if (Compare-VersionLessThan -InstalledVersion $$InstalledVersion -TargetVersion $$TargetVersion) {
-                    Write-CMTraceLog -Message "[Requirements] Version check PASSED: Installed version $$InstalledVersion is LESS THAN target version $$TargetVersion" -Type "INFO"
+                    Write-CMTraceLog -Message "[Requirements] Version check passed: $$InstalledVersion < $$TargetVersion" -Type "INFO"
                     $$FoundOlderVersion = $$true
                     break
                 } else {
-                    Write-CMTraceLog -Message "[Requirements] Version check FAILED: Installed version $$InstalledVersion is NOT less than target version $$TargetVersion" -Type "INFO"
+                    Write-CMTraceLog -Message "[Requirements] Version check not met: $$InstalledVersion >= $$TargetVersion" -Type "INFO"
                 }
             } else {
-                Write-CMTraceLog -Message "[Requirements] DisplayName '$$DisplayName' found but no DisplayVersion value is present" -Type "WARNING"
+                Write-CMTraceLog -Message "[Requirements] No version found: $$DisplayName (Path: $$RegKeyPath)" -Type "WARNING"
             }
         }
     } catch {
@@ -478,15 +478,12 @@ foreach ($$KeyInfo in $$AllKeys) {
 
 # Always exit 0 - Intune evaluates STDOUT
 if ($$FoundOlderVersion) {
-    Write-CMTraceLog -Message "[Result] Requirements MET: $$AppName (version $$InstalledVersion) is installed and is older than target version $$TargetVersion" -Type "INFO"
+    Write-CMTraceLog -Message "[Result] Update Required: $$AppName (Found: $$InstalledVersion, Expected: < $$TargetVersion, Type: $$(if ($$IsMSIInstaller) { 'MSI' } else { 'Non-MSI' }), Arch: $$ExpectedArchitecture)" -Type "INFO"
     Write-Output "Required"
     exit 0
 } else {
-    if ($$DisplayName) {
-        Write-CMTraceLog -Message "[Result] Requirements NOT MET: $$AppName is installed but version ($$InstalledVersion) is not older than target ($$TargetVersion)" -Type "WARNING"
-    } else {
-        Write-CMTraceLog -Message "[Result] Requirements NOT MET: $$AppName not found in registry" -Type "WARNING"
-    }
+    $$FoundVersion = if ($$InstalledVersion) { $$InstalledVersion } else { "None" }
+    Write-CMTraceLog -Message "[Result] Update Not Required: $$AppName (Found: $$FoundVersion, Expected: < $$TargetVersion, Type: $$(if ($$IsMSIInstaller) { 'MSI' } else { 'Non-MSI' }), Arch: $$ExpectedArchitecture)" -Type "WARNING"
     # Output nothing - requirement not met
     exit 0
 }

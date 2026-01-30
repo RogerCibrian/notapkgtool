@@ -514,7 +514,7 @@ foreach ($$KeyInfo in $$AllKeys) {
             $$IsMSIEntry = Test-IsMSIInstallation -RegKey $$Key
             if ($$IsMSIInstaller -and -not $$IsMSIEntry) {
                 # Building from MSI, but registry entry is not MSI - skip
-                Write-CMTraceLog -Message "[Detection] Found matching DisplayName but installer type mismatch: '$$RegKeyPath' is non-MSI, expected MSI" -Type "INFO"
+                Write-CMTraceLog -Message "[Detection] Type mismatch: $$DisplayNameValue (Found: Non-MSI, Expected: MSI, Path: $$RegKeyPath)" -Type "INFO"
                 continue
             }
             # Note: Non-MSI installers accept ANY registry entry (MSI or non-MSI)
@@ -522,19 +522,19 @@ foreach ($$KeyInfo in $$AllKeys) {
             
             $$DisplayName = $$DisplayNameValue
             $$InstalledVersion = $$VersionValue
-            
-            Write-CMTraceLog -Message "[Detection] Found matching registry key: '$$RegKeyPath' (DisplayName: $$DisplayName, DisplayVersion: $$InstalledVersion, Installer Type: $$(if ($$IsMSIEntry) { 'MSI' } else { 'Non-MSI' }), View: $$($KeyInfo.View))" -Type "INFO"
-            
+
+            Write-CMTraceLog -Message "[Detection] Match found: $$DisplayName (Found: $$(if ($$InstalledVersion) { $$InstalledVersion } else { 'None' }), Type: $$(if ($$IsMSIEntry) { 'MSI' } else { 'Non-MSI' }), Arch: $$($KeyInfo.View), Path: $$RegKeyPath)" -Type "INFO"
+
             if ($$InstalledVersion) {
                 if (Compare-Version -InstalledVersion $$InstalledVersion -ExpectedVersion $$ExpectedVersion -ExactMatch $$ExactMatch) {
-                    Write-CMTraceLog -Message "[Detection] Version check PASSED: Installed version $$InstalledVersion $$(if ($$ExactMatch) { 'exactly matches' } else { 'meets or exceeds' }) expected version $$ExpectedVersion" -Type "INFO"
+                    Write-CMTraceLog -Message "[Detection] Version check passed: $$InstalledVersion $$(if ($$ExactMatch) { '=' } else { '>=' }) $$ExpectedVersion" -Type "INFO"
                     $$Found = $$true
                     break
                 } else {
-                    Write-CMTraceLog -Message "[Detection] Version check FAILED: Installed version $$InstalledVersion $$(if ($$ExactMatch) { 'does not exactly match' } else { 'is less than' }) expected version $$ExpectedVersion" -Type "INFO"
+                    Write-CMTraceLog -Message "[Detection] Version check not met: $$InstalledVersion $$(if ($$ExactMatch) { '!=' } else { '<' }) $$ExpectedVersion" -Type "INFO"
                 }
             } else {
-                Write-CMTraceLog -Message "[Detection] DisplayName '$$DisplayName' found in registry key '$$RegKeyPath' but no DisplayVersion value is present" -Type "WARNING"
+                Write-CMTraceLog -Message "[Detection] No version found: $$DisplayName (Path: $$RegKeyPath)" -Type "WARNING"
             }
         }
     } catch {
@@ -543,11 +543,12 @@ foreach ($$KeyInfo in $$AllKeys) {
 }
 
 if ($$Found) {
-    Write-CMTraceLog -Message "[Result] Detection SUCCESS: $$AppName (version $$InstalledVersion) is installed and meets version requirements (Expected: $$ExpectedVersion, Mode: $$(if ($$ExactMatch) { 'Exact Match' } else { 'Minimum Version' }))" -Type "INFO"
+    Write-CMTraceLog -Message "[Result] Detected: $$AppName (Found: $$InstalledVersion, Expected: $$(if ($$ExactMatch) { '=' } else { '>=' }) $$ExpectedVersion, Type: $$(if ($$IsMSIInstaller) { 'MSI' } else { 'Non-MSI' }), Arch: $$ExpectedArchitecture, Mode: $$(if ($$ExactMatch) { 'Exact' } else { 'Minimum' }))" -Type "INFO"
     Write-Output "Installed"
     exit 0
 } else {
-    Write-CMTraceLog -Message "[Result] Detection FAILED: $$AppName not found in registry paths or installed version does not meet requirements (Expected: $$ExpectedVersion, Mode: $$(if ($$ExactMatch) { 'Exact Match' } else { 'Minimum Version' }))" -Type "WARNING"
+    $$FoundVersion = if ($$InstalledVersion) { $$InstalledVersion } else { "None" }
+    Write-CMTraceLog -Message "[Result] Not Detected: $$AppName (Found: $$FoundVersion, Expected: $$(if ($$ExactMatch) { '=' } else { '>=' }) $$ExpectedVersion, Type: $$(if ($$IsMSIInstaller) { 'MSI' } else { 'Non-MSI' }), Arch: $$ExpectedArchitecture, Mode: $$(if ($$ExactMatch) { 'Exact' } else { 'Minimum' }))" -Type "WARNING"
     exit 1
 }
 """

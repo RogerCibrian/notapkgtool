@@ -266,7 +266,7 @@ class TestGenerateDetectionScript:
         content = output_path.read_text(encoding="utf-8-sig")
 
         # Check for MSI strict check (skips non-MSI entries when building from MSI)
-        assert "is non-MSI, expected MSI" in content
+        assert "Found: Non-MSI, Expected: MSI" in content
         # Check that non-MSI is permissive (accepts any entry)
         assert "Non-MSI installers accept ANY registry entry" in content
 
@@ -339,8 +339,8 @@ class TestGenerateDetectionScript:
         # Component is built at runtime from $SanitizedAppName-$ExpectedVersion-Detection
         assert "ComponentName" in content and '-Detection"' in content
 
-    def test_script_result_failed_logs_as_warning(self, tmp_path: Path):
-        """Test that Detection FAILED result is logged as WARNING for visibility."""
+    def test_script_result_not_detected_logs_as_warning(self, tmp_path: Path):
+        """Test that Not Detected result is logged as WARNING for visibility."""
         config = DetectionConfig(
             app_name="Test App",
             version="1.0.0",
@@ -351,8 +351,8 @@ class TestGenerateDetectionScript:
 
         content = output_path.read_text(encoding="utf-8-sig")
 
-        assert "[Result] Detection FAILED:" in content
-        idx = content.find("[Result] Detection FAILED:")
+        assert "[Result] Not Detected:" in content
+        idx = content.find("[Result] Not Detected:")
         # Excerpt must include -Type "WARNING" (message is long)
         excerpt = content[idx : idx + 350]
         assert "WARNING" in excerpt
