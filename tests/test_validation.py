@@ -498,3 +498,391 @@ app:
 
         assert hasattr(result, "recipe_path")
         assert str(recipe) in result.recipe_path
+
+
+class TestWin32Validation:
+    """Tests for win32 configuration validation."""
+
+    def test_valid_win32_config(self, tmp_path):
+        """Test that valid win32 config passes validation."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(
+            """
+apiVersion: napt/v1
+app:
+  name: "Test App"
+  id: "test-app"
+  source:
+    strategy: url_download
+    url: "https://example.com/app.msi"
+  win32:
+    build_types: "both"
+    installed_check:
+      display_name: "Test App *"
+      architecture: "x64"
+      override_msi_display_name: false
+      fail_on_error: true
+      log_rotation_mb: 3
+      detection:
+        exact_match: false
+"""
+        )
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "valid"
+        assert len(result.errors) == 0
+        assert len(result.warnings) == 0
+
+    def test_win32_invalid_build_types_value(self, tmp_path):
+        """Test that invalid build_types value is detected."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(
+            """
+apiVersion: napt/v1
+app:
+  name: "Test App"
+  id: "test-app"
+  source:
+    strategy: url_download
+    url: "https://example.com/app.msi"
+  win32:
+    build_types: "invalid"
+"""
+        )
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("build_types" in err and "Invalid value" in err for err in result.errors)
+
+    def test_win32_invalid_build_types_type(self, tmp_path):
+        """Test that invalid build_types type is detected."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(
+            """
+apiVersion: napt/v1
+app:
+  name: "Test App"
+  id: "test-app"
+  source:
+    strategy: url_download
+    url: "https://example.com/app.msi"
+  win32:
+    build_types: 123
+"""
+        )
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("build_types" in err and "str" in err for err in result.errors)
+
+    def test_win32_unknown_field_warning(self, tmp_path):
+        """Test that unknown win32 field generates warning."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(
+            """
+apiVersion: napt/v1
+app:
+  name: "Test App"
+  id: "test-app"
+  source:
+    strategy: url_download
+    url: "https://example.com/app.msi"
+  win32:
+    buildtypes: "both"
+"""
+        )
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "valid"
+        assert any("Unknown field 'buildtypes'" in warn for warn in result.warnings)
+        assert any("build_types" in warn for warn in result.warnings)
+
+    def test_installed_check_invalid_architecture(self, tmp_path):
+        """Test that invalid architecture value is detected."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(
+            """
+apiVersion: napt/v1
+app:
+  name: "Test App"
+  id: "test-app"
+  source:
+    strategy: url_download
+    url: "https://example.com/app.msi"
+  win32:
+    installed_check:
+      display_name: "Test App"
+      architecture: "x128"
+"""
+        )
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("architecture" in err and "Invalid value" in err for err in result.errors)
+
+    def test_installed_check_unknown_field_with_suggestion(self, tmp_path):
+        """Test that unknown installed_check field suggests similar field."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(
+            """
+apiVersion: napt/v1
+app:
+  name: "Test App"
+  id: "test-app"
+  source:
+    strategy: url_download
+    url: "https://example.com/app.msi"
+  win32:
+    installed_check:
+      displayname: "Test App"
+"""
+        )
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "valid"
+        assert any(
+            "Unknown field 'displayname'" in warn and "display_name" in warn
+            for warn in result.warnings
+        )
+
+    def test_installed_check_invalid_bool_type(self, tmp_path):
+        """Test that invalid boolean type is detected."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(
+            """
+apiVersion: napt/v1
+app:
+  name: "Test App"
+  id: "test-app"
+  source:
+    strategy: url_download
+    url: "https://example.com/app.msi"
+  win32:
+    installed_check:
+      override_msi_display_name: "yes"
+"""
+        )
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any(
+            "override_msi_display_name" in err and "bool" in err for err in result.errors
+        )
+
+    def test_installed_check_invalid_int_type(self, tmp_path):
+        """Test that invalid integer type is detected."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(
+            """
+apiVersion: napt/v1
+app:
+  name: "Test App"
+  id: "test-app"
+  source:
+    strategy: url_download
+    url: "https://example.com/app.msi"
+  win32:
+    installed_check:
+      log_rotation_mb: "three"
+"""
+        )
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("log_rotation_mb" in err and "int" in err for err in result.errors)
+
+    def test_detection_invalid_exact_match_type(self, tmp_path):
+        """Test that invalid exact_match type is detected."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(
+            """
+apiVersion: napt/v1
+app:
+  name: "Test App"
+  id: "test-app"
+  source:
+    strategy: url_download
+    url: "https://example.com/app.msi"
+  win32:
+    installed_check:
+      detection:
+        exact_match: "true"
+"""
+        )
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("exact_match" in err and "bool" in err for err in result.errors)
+
+    def test_detection_unknown_field_warning(self, tmp_path):
+        """Test that unknown detection field generates warning."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(
+            """
+apiVersion: napt/v1
+app:
+  name: "Test App"
+  id: "test-app"
+  source:
+    strategy: url_download
+    url: "https://example.com/app.msi"
+  win32:
+    installed_check:
+      detection:
+        exactmatch: true
+"""
+        )
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "valid"
+        assert any(
+            "Unknown field 'exactmatch'" in warn and "exact_match" in warn
+            for warn in result.warnings
+        )
+
+    def test_win32_not_dict_error(self, tmp_path):
+        """Test that non-dict win32 is detected."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(
+            """
+apiVersion: napt/v1
+app:
+  name: "Test App"
+  id: "test-app"
+  source:
+    strategy: url_download
+    url: "https://example.com/app.msi"
+  win32: "not a dict"
+"""
+        )
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("win32" in err and "dictionary" in err for err in result.errors)
+
+    def test_installed_check_not_dict_error(self, tmp_path):
+        """Test that non-dict installed_check is detected."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(
+            """
+apiVersion: napt/v1
+app:
+  name: "Test App"
+  id: "test-app"
+  source:
+    strategy: url_download
+    url: "https://example.com/app.msi"
+  win32:
+    installed_check: "not a dict"
+"""
+        )
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("installed_check" in err and "dictionary" in err for err in result.errors)
+
+    def test_detection_not_dict_error(self, tmp_path):
+        """Test that non-dict detection is detected."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(
+            """
+apiVersion: napt/v1
+app:
+  name: "Test App"
+  id: "test-app"
+  source:
+    strategy: url_download
+    url: "https://example.com/app.msi"
+  win32:
+    installed_check:
+      detection: "not a dict"
+"""
+        )
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("detection" in err and "dictionary" in err for err in result.errors)
+
+    def test_installed_check_invalid_log_level(self, tmp_path):
+        """Test that invalid log_level value is detected."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(
+            """
+apiVersion: napt/v1
+app:
+  name: "Test App"
+  id: "test-app"
+  source:
+    strategy: url_download
+    url: "https://example.com/app.msi"
+  win32:
+    installed_check:
+      log_level: "VERBOSE"
+"""
+        )
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("log_level" in err and "Invalid value" in err for err in result.errors)
+
+    def test_multiple_unknown_fields_all_warned(self, tmp_path):
+        """Test that multiple unknown fields all generate warnings."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(
+            """
+apiVersion: napt/v1
+app:
+  name: "Test App"
+  id: "test-app"
+  source:
+    strategy: url_download
+    url: "https://example.com/app.msi"
+  win32:
+    buildtypes: "both"
+    unknownfield: "value"
+    installed_check:
+      displayname: "Test"
+      arch: "x64"
+"""
+        )
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "valid"
+        # Should have warnings for: buildtypes, unknownfield, displayname, arch
+        assert len(result.warnings) >= 4
+
+    def test_no_win32_section_is_valid(self, tmp_path):
+        """Test that missing win32 section is valid (optional)."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(
+            """
+apiVersion: napt/v1
+app:
+  name: "Test App"
+  id: "test-app"
+  source:
+    strategy: url_download
+    url: "https://example.com/app.msi"
+"""
+        )
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "valid"
+        assert len(result.errors) == 0
+        assert len(result.warnings) == 0

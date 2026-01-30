@@ -26,6 +26,7 @@ Validation Checks:
 - App has required fields (name, id, source)
 - Discovery strategy exists and is registered
 - Strategy-specific configuration is valid
+- Win32 configuration fields are valid (types, values, unknown field warnings)
 
 Example:
     Validate a recipe and handle results:
@@ -57,6 +58,218 @@ from notapkgtool.results import ValidationResult
 __all__ = ["validate_recipe"]
 
 
+# Schema definitions for win32 configuration validation
+# Each entry: field_name -> (expected_type, allowed_values or None, description)
+_WIN32_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
+    "build_types": (str, ["both", "app_only", "update_only"], "build type"),
+    "installed_check": (dict, None, "installed check configuration"),
+}
+
+_INSTALLED_CHECK_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
+    "display_name": (str, None, "display name for registry lookup"),
+    "architecture": (str, ["x86", "x64", "arm64", "any"], "architecture"),
+    "override_msi_display_name": (bool, None, "MSI display name override flag"),
+    "fail_on_error": (bool, None, "fail on error flag"),
+    "log_format": (str, ["cmtrace"], "log format"),
+    "log_level": (str, ["INFO", "WARNING", "ERROR", "DEBUG"], "log level"),
+    "log_rotation_mb": (int, None, "log rotation size in MB"),
+    "detection": (dict, None, "detection configuration"),
+}
+
+_DETECTION_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
+    "exact_match": (bool, None, "exact version match flag"),
+}
+
+
+def _find_similar_field(unknown: str, known_fields: set[str]) -> str | None:
+    """Find a similar field name for typo suggestions.
+
+    Uses simple heuristics: lowercase comparison, common typo patterns.
+
+    Args:
+        unknown: The unknown field name.
+        known_fields: Set of known valid field names.
+
+    Returns:
+        Similar field name if found, None otherwise.
+
+    """
+    unknown_lower = unknown.lower().replace("_", "").replace("-", "")
+
+    for known in known_fields:
+        known_lower = known.lower().replace("_", "").replace("-", "")
+        # Exact match after normalization (e.g., "displayname" -> "display_name")
+        if unknown_lower == known_lower:
+            return known
+        # Check if one is substring of other (e.g., "display" in "display_name")
+        if len(unknown_lower) > 3 and (
+            unknown_lower in known_lower or known_lower in unknown_lower
+        ):
+            return known
+
+    return None
+
+
+def _validate_field_type(
+    value: object,
+    expected_type: type,
+    field_path: str,
+    errors: list[str],
+) -> bool:
+    """Validate that a field has the expected type.
+
+    Args:
+        value: The value to check.
+        expected_type: Expected Python type.
+        field_path: Full path to field for error messages.
+        errors: List to append errors to.
+
+    Returns:
+        True if type is valid, False otherwise.
+
+    """
+    if not isinstance(value, expected_type):
+        type_name = expected_type.__name__
+        actual_type = type(value).__name__
+        errors.append(f"{field_path}: Must be {type_name}, got {actual_type}")
+        return False
+    return True
+
+
+def _validate_field_value(
+    value: object,
+    allowed_values: list[str],
+    field_path: str,
+    errors: list[str],
+) -> bool:
+    """Validate that a field value is in the allowed set.
+
+    Args:
+        value: The value to check.
+        allowed_values: List of allowed values.
+        field_path: Full path to field for error messages.
+        errors: List to append errors to.
+
+    Returns:
+        True if value is valid, False otherwise.
+
+    """
+    if value not in allowed_values:
+        allowed_str = ", ".join(f"'{v}'" for v in allowed_values)
+        errors.append(f"{field_path}: Invalid value '{value}'. Allowed: {allowed_str}")
+        return False
+    return True
+
+
+def _validate_section(
+    section: dict,
+    schema: dict[str, tuple[type, list[str] | None, str]],
+    section_path: str,
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    """Validate a configuration section against its schema.
+
+    Checks types, allowed values, and warns on unknown fields.
+
+    Args:
+        section: The configuration section to validate.
+        schema: Schema definition for this section.
+        section_path: Full path to section for error messages.
+        errors: List to append errors to.
+        warnings: List to append warnings to.
+
+    """
+    known_fields = set(schema.keys())
+    actual_fields = set(section.keys())
+
+    # Check for unknown fields
+    unknown_fields = actual_fields - known_fields
+    for unknown in unknown_fields:
+        similar = _find_similar_field(unknown, known_fields)
+        if similar:
+            warnings.append(
+                f"{section_path}: Unknown field '{unknown}'. Did you mean '{similar}'?"
+            )
+        else:
+            warnings.append(f"{section_path}: Unknown field '{unknown}'")
+
+    # Validate known fields
+    for field_name, (expected_type, allowed_values, _desc) in schema.items():
+        if field_name not in section:
+            continue
+
+        value = section[field_name]
+        field_path = f"{section_path}.{field_name}"
+
+        # Type check
+        if not _validate_field_type(value, expected_type, field_path, errors):
+            continue
+
+        # Value check (only for non-dict types with allowed values)
+        if allowed_values is not None and expected_type is not dict:
+            _validate_field_value(value, allowed_values, field_path, errors)
+
+
+def _validate_win32_config(
+    app: dict,
+    app_prefix: str,
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    """Validate the win32 configuration section.
+
+    Validates:
+    - win32.build_types
+    - win32.installed_check.*
+    - win32.installed_check.detection.*
+
+    Args:
+        app: The app configuration dictionary.
+        app_prefix: Prefix for error messages (e.g., "app").
+        errors: List to append errors to.
+        warnings: List to append warnings to.
+
+    """
+    win32 = app.get("win32")
+    if win32 is None:
+        return
+
+    win32_path = f"{app_prefix}.win32"
+
+    # Validate win32 is a dict
+    if not isinstance(win32, dict):
+        errors.append(f"{win32_path}: Must be a dictionary")
+        return
+
+    # Validate win32 section
+    _validate_section(win32, _WIN32_FIELDS, win32_path, errors, warnings)
+
+    # Validate installed_check subsection
+    installed_check = win32.get("installed_check")
+    if installed_check is not None:
+        ic_path = f"{win32_path}.installed_check"
+
+        if not isinstance(installed_check, dict):
+            errors.append(f"{ic_path}: Must be a dictionary")
+        else:
+            _validate_section(
+                installed_check, _INSTALLED_CHECK_FIELDS, ic_path, errors, warnings
+            )
+
+            # Validate detection subsection
+            detection = installed_check.get("detection")
+            if detection is not None:
+                det_path = f"{ic_path}.detection"
+
+                if not isinstance(detection, dict):
+                    errors.append(f"{det_path}: Must be a dictionary")
+                else:
+                    _validate_section(
+                        detection, _DETECTION_FIELDS, det_path, errors, warnings
+                    )
+
+
 def validate_recipe(recipe_path: Path) -> ValidationResult:
     """Validate a recipe file without downloading anything.
 
@@ -68,32 +281,16 @@ def validate_recipe(recipe_path: Path) -> ValidationResult:
     4. App has required fields
     5. Discovery strategies exist
     6. Strategy-specific configuration is valid
-
-    Does NOT:
-
-    - Make network calls
-    - Download files
-    - Verify URLs are accessible
-    - Check if versions can be extracted
+    7. Win32 configuration fields are valid (types, values, unknown field warnings)
 
     Args:
         recipe_path: Path to the recipe YAML file to validate.
 
     Returns:
-        ValidationResult dataclass with the following fields:
-
-            - status (str): Validation status, either "valid" (no errors) or "invalid"
-                (has errors). Warnings do not affect status.
-            - errors (list[str]): List of error messages found during validation. Empty
-                list if recipe is valid. Each error describes a specific validation
-                failure (e.g., missing required field, invalid strategy configuration).
-            - warnings (list[str]): List of warning messages found during validation.
-                Warnings indicate potential issues but do not prevent validation from
-                passing (e.g., unsupported apiVersion, deprecated configuration).
-            - app_count (int): Always 1 for valid recipes (single app format). Zero if recipe
-                structure is invalid.
-            - recipe_path (str): String path to the validated recipe file, useful for
-                error reporting and logging.
+        A ValidationResult with status ("valid" or "invalid"), errors (list of
+            validation failure messages), warnings (list of non-blocking issues),
+            app_count (1 for valid recipes, 0 otherwise), and recipe_path (string
+            path to the validated file).
 
     Example:
         Validate a recipe and check results:
@@ -258,6 +455,9 @@ def validate_recipe(recipe_path: Path) -> ValidationResult:
                                 errors.append(
                                     f"{app_prefix}: Strategy validation failed: {err}"
                                 )
+
+    # Validate win32 configuration
+    _validate_win32_config(app, app_prefix, errors, warnings)
 
     # Determine final status
     status = "valid" if len(errors) == 0 else "invalid"
