@@ -1046,6 +1046,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#override_msi_display_name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        override_msi_display_name
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#fail_on_error" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2409,6 +2420,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#override_msi_display_name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        override_msi_display_name
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#fail_on_error" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2922,6 +2944,30 @@
 <ul>
 <li><code>${discovered_version}</code>: Automatically substituted with the version discovered by NAPT. Use this when the registry DisplayName includes the version number (e.g., "7-Zip 25.01 (x64)").</li>
 </ul>
+<p><strong>Wildcard Support:</strong></p>
+<p>When <code>display_name</code> contains wildcards (<code>*</code> or <code>?</code>), the generated scripts use PowerShell's <code>-like</code> operator instead of exact <code>-eq</code> matching:</p>
+<table>
+<thead>
+<tr>
+<th>Wildcard</th>
+<th>Meaning</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>*</code></td>
+<td>Matches zero or more characters</td>
+<td><code>"7-Zip *"</code> matches "7-Zip 24.09", "7-Zip 25.01 (x64)"</td>
+</tr>
+<tr>
+<td><code>?</code></td>
+<td>Matches exactly one character</td>
+<td><code>"7-Zip ??.??"</code> matches "7-Zip 24.09" but not "7-Zip 24.9"</td>
+</tr>
+</tbody>
+</table>
+<p>Use <code>*</code> for most cases - it's flexible and handles varying version formats. Use <code>?</code> only when you need precise control over character positions (rare).</p>
 <p><strong>Example:</strong>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nt">app</span><span class="p">:</span>
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;My</span><span class="nv"> </span><span class="s">App&quot;</span>
@@ -2935,6 +2981,14 @@
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span><span class="nt">win32</span><span class="p">:</span>
 </span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="nt">installed_check</span><span class="p">:</span>
 </span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">      </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;7-Zip</span><span class="nv"> </span><span class="s">${discovered_version}</span><span class="nv"> </span><span class="s">(x64)&quot;</span><span class="w">  </span><span class="c1"># Matches &quot;7-Zip 25.01 (x64)&quot; in registry</span>
+</span></code></pre></div></p>
+<p><strong>Example with wildcard (for MSI with override):</strong>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nt">app</span><span class="p">:</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;7-Zip</span><span class="nv"> </span><span class="s">(x64)</span><span class="nv"> </span><span class="s">MSI&quot;</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span><span class="nt">win32</span><span class="p">:</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">    </span><span class="nt">installed_check</span><span class="p">:</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">      </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;7-Zip</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">(x64</span><span class="nv"> </span><span class="s">edition)&quot;</span><span class="w">  </span><span class="c1"># Matches any 7-Zip x64 version</span>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">      </span><span class="nt">override_msi_display_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 </span></code></pre></div></p>
 <h4 id="architecture">architecture</h4>
 <p><strong>Type:</strong> <code>string</code><br />
@@ -2975,12 +3029,41 @@
 </table>
 <p><strong>Why this matters:</strong> Without architecture filtering, an x86 installation could satisfy x64 detection if the DisplayName and version match, potentially blocking proper x64 deployment. The architecture-aware approach ensures detection scripts check the correct registry view for the target architecture.</p>
 <p><strong>Example:</strong>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nt">app</span><span class="p">:</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;My</span><span class="nv"> </span><span class="s">App&quot;</span>
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span><span class="nt">win32</span><span class="p">:</span>
-</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">    </span><span class="nt">installed_check</span><span class="p">:</span>
-</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">      </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;My</span><span class="nv"> </span><span class="s">Application&quot;</span>
-</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">      </span><span class="nt">architecture</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;x64&quot;</span><span class="w">  </span><span class="c1"># Required for EXE installers</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nt">app</span><span class="p">:</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;My</span><span class="nv"> </span><span class="s">App&quot;</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span><span class="nt">win32</span><span class="p">:</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">    </span><span class="nt">installed_check</span><span class="p">:</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">      </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;My</span><span class="nv"> </span><span class="s">Application&quot;</span>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">      </span><span class="nt">architecture</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;x64&quot;</span><span class="w">  </span><span class="c1"># Required for EXE installers</span>
+</span></code></pre></div></p>
+<h4 id="override_msi_display_name">override_msi_display_name</h4>
+<p><strong>Type:</strong> <code>boolean</code><br />
+<strong>Required:</strong> No<br />
+<strong>Default:</strong> <code>false</code><br />
+<strong>Applies to:</strong> MSI installers only</p>
+<p>When <code>true</code>, uses the <code>display_name</code> field instead of the MSI's ProductName for registry lookups.</p>
+<p><strong>When to Use:</strong></p>
+<p>Use this flag when the MSI's ProductName contains a version number that changes with each release. Common examples:
+- "7-Zip 25.01" - version embedded in ProductName
+- "Application Name v1.2.3" - version prefix in ProductName</p>
+<p>Without this flag, detection/requirements scripts would look for an exact match on the versioned ProductName, causing:
+- Detection to fail when checking for a different version than installed
+- Requirements to fail when installed version differs from target</p>
+<p><strong>Behavior:</strong></p>
+<ul>
+<li><strong>MSI with <code>override_msi_display_name: false</code> (default):</strong> Uses MSI ProductName (authoritative source)</li>
+<li><strong>MSI with <code>override_msi_display_name: true</code>:</strong> Uses <code>display_name</code> field (must be set)</li>
+<li><strong>Non-MSI installers:</strong> Flag is ignored (a warning is logged if set)</li>
+</ul>
+<p><strong>Note:</strong> Architecture is still auto-detected from the MSI Template property even when using this override.</p>
+<p><strong>Example:</strong>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nt">app</span><span class="p">:</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;7-Zip</span><span class="nv"> </span><span class="s">(x64)</span><span class="nv"> </span><span class="s">MSI&quot;</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span><span class="nt">win32</span><span class="p">:</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">    </span><span class="nt">installed_check</span><span class="p">:</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">      </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;7-Zip</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">(x64</span><span class="nv"> </span><span class="s">edition)&quot;</span><span class="w">  </span><span class="c1"># Matches any 7-Zip x64 version</span>
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">      </span><span class="nt">override_msi_display_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">        </span><span class="c1"># Use display_name instead of MSI ProductName</span>
+</span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="w">      </span><span class="c1"># architecture still auto-detected from MSI Template</span>
 </span></code></pre></div></p>
 <h4 id="fail_on_error">fail_on_error</h4>
 <p><strong>Type:</strong> <code>boolean</code><br />
@@ -3011,8 +3094,9 @@
 <p><strong>How Scripts Work:</strong></p>
 <ul>
 <li><strong>App Name Detection:</strong><ul>
-<li><strong>MSI installers:</strong> Uses MSI <code>ProductName</code> property (authoritative source for registry <code>DisplayName</code>). The <code>display_name</code> field is ignored for MSI installers.</li>
+<li><strong>MSI installers:</strong> Uses MSI <code>ProductName</code> property (authoritative source for registry <code>DisplayName</code>). The <code>display_name</code> field is ignored unless <code>override_msi_display_name: true</code> is set.</li>
 <li><strong>Non-MSI installers:</strong> Requires <code>win32.installed_check.display_name</code> in recipe configuration. This value is matched against the registry <code>DisplayName</code>.</li>
+<li><strong>Wildcard matching:</strong> When <code>display_name</code> contains <code>*</code> or <code>?</code>, scripts use PowerShell's <code>-like</code> operator for flexible matching instead of exact <code>-eq</code> comparison.</li>
 </ul>
 </li>
 <li><strong>Installer Type Filtering:</strong><ul>
@@ -3046,13 +3130,13 @@
 <li><strong>Recipe (per-app):</strong> <code>app.intune.update_name_prefix</code> (overrides defaults)</li>
 </ul>
 <p><strong>Example:</strong>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nt">defaults</span><span class="p">:</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">intune</span><span class="p">:</span>
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">    </span><span class="nt">update_name_prefix</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;[Update]</span><span class="nv"> </span><span class="s">&quot;</span>
-</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>
-</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="c1"># Results in:</span>
-</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="c1"># - App entry: &quot;Google Chrome&quot;</span>
-</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="c1"># - Update entry: &quot;[Update] Google Chrome&quot;</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nt">defaults</span><span class="p">:</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span><span class="nt">intune</span><span class="p">:</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">    </span><span class="nt">update_name_prefix</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;[Update]</span><span class="nv"> </span><span class="s">&quot;</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="c1"># Results in:</span>
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="c1"># - App entry: &quot;Google Chrome&quot;</span>
+</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="c1"># - Update entry: &quot;[Update] Google Chrome&quot;</span>
 </span></code></pre></div></p>
 <h2 id="environment-variable-substitution">Environment Variable Substitution</h2>
 <p>NAPT supports environment variable substitution throughout recipe files using <code>${VARIABLE_NAME}</code> syntax.</p>
@@ -3063,47 +3147,47 @@
 <li><strong>Special variable:</strong> <code>${discovered_version}</code> is automatically substituted with the discovered version</li>
 </ul>
 <h3 id="syntax">Syntax</h3>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nt">source</span><span class="p">:</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${GITHUB_TOKEN}&quot;</span><span class="w">  </span><span class="c1"># Environment variable</span>
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span><span class="nt">headers</span><span class="p">:</span>
-</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">    </span><span class="nt">Authorization</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Bearer</span><span class="nv"> </span><span class="s">${API_TOKEN}&quot;</span><span class="w">  </span><span class="c1"># Environment variable</span>
-</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>
-</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="nt">psadt</span><span class="p">:</span>
-</span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
-</span><span id="__span-17-8"><a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="w">    </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${discovered_version}&quot;</span><span class="w">  </span><span class="c1"># NAPT auto-substitution</span>
-</span><span id="__span-17-9"><a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a><span class="w">    </span><span class="nt">AppVendor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${ORG_NAME}&quot;</span><span class="w">  </span><span class="c1"># Environment variable</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="nt">source</span><span class="p">:</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${GITHUB_TOKEN}&quot;</span><span class="w">  </span><span class="c1"># Environment variable</span>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">  </span><span class="nt">headers</span><span class="p">:</span>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">    </span><span class="nt">Authorization</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Bearer</span><span class="nv"> </span><span class="s">${API_TOKEN}&quot;</span><span class="w">  </span><span class="c1"># Environment variable</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="nt">psadt</span><span class="p">:</span>
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
+</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="w">    </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${discovered_version}&quot;</span><span class="w">  </span><span class="c1"># NAPT auto-substitution</span>
+</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="w">    </span><span class="nt">AppVendor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${ORG_NAME}&quot;</span><span class="w">  </span><span class="c1"># Environment variable</span>
 </span></code></pre></div>
 <h3 id="setting-environment-variables">Setting Environment Variables</h3>
 <p><strong>Windows (PowerShell):</strong>
-<div class="language-powershell highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nv">$env:GITHUB_TOKEN</span><span class="p">=</span><span class="s2">&quot;your_token_here&quot;</span>
+<div class="language-powershell highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="nv">$env:GITHUB_TOKEN</span><span class="p">=</span><span class="s2">&quot;your_token_here&quot;</span>
 </span></code></pre></div></p>
 <p><strong>Windows (Command Prompt):</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>set GITHUB_TOKEN=your_token_here
+<div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>set GITHUB_TOKEN=your_token_here
 </span></code></pre></div></p>
 <p><strong>Linux/macOS:</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GITHUB_TOKEN</span><span class="o">=</span><span class="s2">&quot;your_token_here&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GITHUB_TOKEN</span><span class="o">=</span><span class="s2">&quot;your_token_here&quot;</span>
 </span></code></pre></div></p>
 <p><strong>Note:</strong> For CI/CD, set environment variables in your pipeline configuration (GitHub Actions, Azure DevOps, etc.).</p>
 <h2 id="complete-example">Complete Example</h2>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>
-</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="nt">app</span><span class="p">:</span>
-</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Example</span><span class="nv"> </span><span class="s">Application&quot;</span>
-</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="w">  </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;napt-example&quot;</span>
-</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="w">  </span><span class="nt">source</span><span class="p">:</span>
-</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a><span class="w">      </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
-</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a><span class="w">      </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;owner/repo&quot;</span>
-</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a><span class="w">      </span><span class="nt">asset_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;.*-x64\\.exe$&quot;</span>
-</span><span id="__span-21-10"><a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a><span class="w">      </span><span class="nt">version_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;v?([0-9.]+)&quot;</span>
-</span><span id="__span-21-11"><a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a><span class="w">  </span><span class="w w-Error">  </span><span class="nt">psadt</span><span class="p">:</span>
-</span><span id="__span-21-12"><a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a><span class="w">      </span><span class="nt">app_vars</span><span class="p">:</span>
-</span><span id="__span-21-13"><a id="__codelineno-21-13" name="__codelineno-21-13" href="#__codelineno-21-13"></a><span class="w">        </span><span class="nt">AppName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Example</span><span class="nv"> </span><span class="s">Application&quot;</span>
-</span><span id="__span-21-14"><a id="__codelineno-21-14" name="__codelineno-21-14" href="#__codelineno-21-14"></a><span class="w">        </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${discovered_version}&quot;</span>
-</span><span id="__span-21-15"><a id="__codelineno-21-15" name="__codelineno-21-15" href="#__codelineno-21-15"></a><span class="w">        </span><span class="nt">AppArch</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;x64&quot;</span>
-</span><span id="__span-21-16"><a id="__codelineno-21-16" name="__codelineno-21-16" href="#__codelineno-21-16"></a><span class="w">      </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-21-17"><a id="__codelineno-21-17" name="__codelineno-21-17" href="#__codelineno-21-17"></a><span class="w">        </span><span class="no">Start-ADTProcess -Path &quot;$dirFiles\*.exe&quot; -Parameters &quot;/S&quot;</span>
-</span><span id="__span-21-18"><a id="__codelineno-21-18" name="__codelineno-21-18" href="#__codelineno-21-18"></a><span class="w">      </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-21-19"><a id="__codelineno-21-19" name="__codelineno-21-19" href="#__codelineno-21-19"></a><span class="w">        </span><span class="no">Uninstall-ADTApplication -Name &quot;Example Application&quot;</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="nt">app</span><span class="p">:</span>
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Example</span><span class="nv"> </span><span class="s">Application&quot;</span>
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="w">  </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;napt-example&quot;</span>
+</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a><span class="w">  </span><span class="nt">source</span><span class="p">:</span>
+</span><span id="__span-23-7"><a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a><span class="w">      </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
+</span><span id="__span-23-8"><a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a><span class="w">      </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;owner/repo&quot;</span>
+</span><span id="__span-23-9"><a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a><span class="w">      </span><span class="nt">asset_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;.*-x64\\.exe$&quot;</span>
+</span><span id="__span-23-10"><a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a><span class="w">      </span><span class="nt">version_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;v?([0-9.]+)&quot;</span>
+</span><span id="__span-23-11"><a id="__codelineno-23-11" name="__codelineno-23-11" href="#__codelineno-23-11"></a><span class="w">  </span><span class="w w-Error">  </span><span class="nt">psadt</span><span class="p">:</span>
+</span><span id="__span-23-12"><a id="__codelineno-23-12" name="__codelineno-23-12" href="#__codelineno-23-12"></a><span class="w">      </span><span class="nt">app_vars</span><span class="p">:</span>
+</span><span id="__span-23-13"><a id="__codelineno-23-13" name="__codelineno-23-13" href="#__codelineno-23-13"></a><span class="w">        </span><span class="nt">AppName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Example</span><span class="nv"> </span><span class="s">Application&quot;</span>
+</span><span id="__span-23-14"><a id="__codelineno-23-14" name="__codelineno-23-14" href="#__codelineno-23-14"></a><span class="w">        </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${discovered_version}&quot;</span>
+</span><span id="__span-23-15"><a id="__codelineno-23-15" name="__codelineno-23-15" href="#__codelineno-23-15"></a><span class="w">        </span><span class="nt">AppArch</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;x64&quot;</span>
+</span><span id="__span-23-16"><a id="__codelineno-23-16" name="__codelineno-23-16" href="#__codelineno-23-16"></a><span class="w">      </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-23-17"><a id="__codelineno-23-17" name="__codelineno-23-17" href="#__codelineno-23-17"></a><span class="w">        </span><span class="no">Start-ADTProcess -Path &quot;$dirFiles\*.exe&quot; -Parameters &quot;/S&quot;</span>
+</span><span id="__span-23-18"><a id="__codelineno-23-18" name="__codelineno-23-18" href="#__codelineno-23-18"></a><span class="w">      </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-23-19"><a id="__codelineno-23-19" name="__codelineno-23-19" href="#__codelineno-23-19"></a><span class="w">        </span><span class="no">Uninstall-ADTApplication -Name &quot;Example Application&quot;</span>
 </span></code></pre></div>
 <h2 id="see-also">See Also</h2>
 <ul>
