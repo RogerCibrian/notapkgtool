@@ -554,7 +554,9 @@ app:
         result = validate_recipe(recipe)
 
         assert result.status == "invalid"
-        assert any("build_types" in err and "Invalid value" in err for err in result.errors)
+        assert any(
+            "build_types" in err and "Invalid value" in err for err in result.errors
+        )
 
     def test_win32_invalid_build_types_type(self, tmp_path):
         """Test that invalid build_types type is detected."""
@@ -623,7 +625,9 @@ app:
         result = validate_recipe(recipe)
 
         assert result.status == "invalid"
-        assert any("architecture" in err and "Invalid value" in err for err in result.errors)
+        assert any(
+            "architecture" in err and "Invalid value" in err for err in result.errors
+        )
 
     def test_installed_check_unknown_field_with_suggestion(self, tmp_path):
         """Test that unknown installed_check field suggests similar field."""
@@ -673,7 +677,8 @@ app:
 
         assert result.status == "invalid"
         assert any(
-            "override_msi_display_name" in err and "bool" in err for err in result.errors
+            "override_msi_display_name" in err and "bool" in err
+            for err in result.errors
         )
 
     def test_installed_check_invalid_int_type(self, tmp_path):
@@ -791,7 +796,9 @@ app:
         result = validate_recipe(recipe)
 
         assert result.status == "invalid"
-        assert any("installed_check" in err and "dictionary" in err for err in result.errors)
+        assert any(
+            "installed_check" in err and "dictionary" in err for err in result.errors
+        )
 
     def test_detection_not_dict_error(self, tmp_path):
         """Test that non-dict detection is detected."""
@@ -837,7 +844,9 @@ app:
         result = validate_recipe(recipe)
 
         assert result.status == "invalid"
-        assert any("log_level" in err and "Invalid value" in err for err in result.errors)
+        assert any(
+            "log_level" in err and "Invalid value" in err for err in result.errors
+        )
 
     def test_multiple_unknown_fields_all_warned(self, tmp_path):
         """Test that multiple unknown fields all generate warnings."""
