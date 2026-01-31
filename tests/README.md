@@ -1,6 +1,6 @@
 # NAPT Test Suite
 
-Comprehensive test coverage for the NAPT project with **189 tests** covering all functionality including discovery, state tracking, PSADT building, and packaging.
+Comprehensive test coverage for the NAPT project with **270 tests** covering all functionality including discovery, state tracking, PSADT building, packaging, and detection/requirements script generation.
 
 ## Test Strategy: Hybrid Approach 🔺
 
@@ -32,11 +32,6 @@ NAPT uses a **Testing Pyramid** approach with three layers:
    - Validate against actual external dependencies
    - Marked with `@pytest.mark.integration`
 
-3. **E2E Tests** (Few) - Complete workflows
-   - Full CLI command execution
-   - End-to-end scenarios
-   - Marked with `@pytest.mark.slow`
-
 ## Test Structure
 
 ```
@@ -46,28 +41,26 @@ tests/
 ├── Unit Tests (Fast, Mocked)
 ├── test_config.py                 # Configuration loading (11 tests)
 ├── test_core.py                   # Core orchestration (8 tests)
-├── test_discovery.py              # Discovery strategies (18 tests)
+├── test_detection.py              # Detection script generation (31 tests)
+├── test_discovery.py              # Discovery strategies (16 tests)
 ├── test_download.py               # HTTP downloads (11 tests)
+├── test_requirements.py           # Requirements script generation (25 tests)
 ├── test_state.py                  # State tracking (17 tests)
-├── test_validation.py             # Recipe validation (27 tests)
-├── test_versioning.py             # Version comparison (21 tests)
+├── test_validation.py             # Recipe validation (41 tests)
+├── test_versioning.py             # Version comparison (32 tests)
 ├── test_psadt_release.py          # PSADT GitHub integration (13 tests)
-├── test_build_manager.py          # Build orchestration (13 tests)
+├── test_build_manager.py          # Build orchestration (18 tests)
 ├── test_build_template.py         # Script generation (20 tests)
 ├── test_packager.py               # .intunewin creation (8 tests)
 │
 ├── Integration Tests (Real Data)
-├── test_integration_build.py      # Build with real PSADT Template_v4
-├── test_integration_packaging.py  # Packaging with real IntuneWinAppUtil.exe
+├── test_integration_build.py      # Build with real PSADT Template_v4 (10 tests)
+├── test_integration_packaging.py  # Packaging with real IntuneWinAppUtil.exe (5 tests)
 ├── test_integration.py            # End-to-end workflows (4 tests)
 │
-├── Fixtures & Helpers
-├── fixtures/
-│   └── test.yaml                 # Test fixture data
-└── scripts/
-    ├── smoke_test_chrome.py      # Manual smoke test
-    ├── showcase_version_check.py # Version comparison demo
-    └── manual_test_api_json.py  # HTTP JSON API testing
+├── Fixtures
+└── fixtures/
+    └── test.yaml                 # Test fixture data
 ```
 
 ## Running Tests
@@ -89,7 +82,7 @@ pytest tests/ -m "not integration"
 # Even faster - quiet mode
 pytest tests/ -m "not integration" -q
 
-# Shows: ~170 passed in 0.50s (unit tests only)
+# Shows: ~255 passed in ~1.5s (unit tests only)
 ```
 
 ### Run All Tests (Unit + Integration)
@@ -186,7 +179,7 @@ pytest tests/ --cov=notapkgtool --cov-report=term-missing
 - ✅ Configuration validation and error handling
 - ✅ Missing/invalid configuration detection
 
-**18 tests covering discovery strategies**
+**16 tests covering discovery strategies**
 
 Note: Version-first strategy integration tests moved to test_core.py (TestVersionFirstFastPath)
 
@@ -228,13 +221,13 @@ Note: Version-first strategy integration tests moved to test_core.py (TestVersio
 - ✅ Missing file handling
 - ✅ Invalid YAML syntax detection
 - ✅ Empty file handling
-- ✅ Missing required fields (apiVersion, apps, source, strategy)
+- ✅ Missing required fields (apiVersion, app, source, strategy)
 - ✅ Strategy-specific validation (url_download, api_github, web_scrape, api_json)
-- ✅ Multiple apps validation
+- ✅ Win32 configuration validation (types, values, unknown fields)
+- ✅ Typo detection with "did you mean" suggestions
 - ✅ Verbose mode output
-- ✅ ConfigError exception handling
 
-**27 tests covering recipe validation**
+**41 tests covering recipe validation**
 
 ### Versioning Tests (`test_versioning.py`)
 - ✅ Basic semantic version comparison
@@ -249,8 +242,28 @@ Note: Version-first strategy integration tests moved to test_core.py (TestVersio
 - ✅ DiscoveredVersion dataclass
 - ✅ Edge cases (empty strings, long versions, mixed formats)
 - ✅ Real-world Chrome versions
+- ✅ Architecture detection from MSI Template property
 
-**21 tests covering version comparison**
+**32 tests covering version comparison**
+
+### Detection Script Tests (`test_detection.py`)
+- ✅ Script generation for MSI and EXE installers
+- ✅ Architecture-aware registry view selection
+- ✅ Display name handling (exact, wildcard, MSI override)
+- ✅ Version comparison modes (exact match, minimum version)
+- ✅ CMTrace-formatted logging output
+- ✅ Error handling and edge cases
+
+**31 tests covering detection script generation**
+
+### Requirements Script Tests (`test_requirements.py`)
+- ✅ Script generation for update app entries
+- ✅ Architecture-specific registry queries
+- ✅ Older version detection logic
+- ✅ Output format validation ("Required" vs empty)
+- ✅ Error handling
+
+**25 tests covering requirements script generation**
 
 ### PSADT Tests (`test_psadt_release.py`)
 - ✅ Fetch latest version from GitHub API
@@ -267,9 +280,10 @@ Note: Version-first strategy integration tests moved to test_core.py (TestVersio
 - ✅ PSADT file copying
 - ✅ Installer copying to Files/
 - ✅ Branding application
+- ✅ Detection and requirements script generation
 - ✅ Error handling (missing files, invalid structure)
 
-**13 tests covering build orchestration**
+**18 tests covering build orchestration**
 
 ### Build Template Tests (`test_build_template.py`)
 - ✅ PowerShell value formatting (strings, bools, arrays, etc.)
@@ -294,17 +308,19 @@ Note: Version-first strategy integration tests moved to test_core.py (TestVersio
 
 ## Total Coverage
 
-**189 tests** covering all functionality:
+**270 tests** covering all functionality:
 - Configuration system (11 tests) ✅
 - Core orchestration (8 tests) ✅
-- Discovery strategies (18 tests) ✅
+- Detection script generation (31 tests) ✅
+- Discovery strategies (16 tests) ✅
 - HTTP downloads (11 tests) ✅
+- Requirements script generation (25 tests) ✅
 - State tracking (17 tests) ✅
-- Recipe validation (27 tests) ✅
-- Version comparison (21 tests) ✅
-- Integration workflows (4 tests) ✅
+- Recipe validation (41 tests) ✅
+- Version comparison (32 tests) ✅
+- Integration workflows (19 tests) ✅
 - PSADT release management (13 tests) ✅
-- Build orchestration (13 tests) ✅
+- Build orchestration (18 tests) ✅
 - Script generation (20 tests) ✅
 - Package creation (8 tests) ✅
 - Error handling (comprehensive) ✅
@@ -319,6 +335,9 @@ Note: Version-first strategy integration tests moved to test_core.py (TestVersio
 - `sample_org_defaults` - Organization defaults
 - `create_yaml_file` - Factory for creating temporary YAML files
 - `mock_download_response` - Mock HTTP download response data
+- `fake_psadt_template` - Fake PSADT template structure for unit tests
+- `fake_brand_pack` - Fake branding package for unit tests
+- `real_psadt_cache_dir` - Session-scoped cache for real PSADT downloads (integration)
 
 ## Mocking Strategy
 
@@ -348,7 +367,7 @@ When adding tests:
 
 ## Test Philosophy
 
-- **Fast**: All 189 tests run in < 1 second
+- **Fast**: All 270 tests run in ~5 seconds
 - **Isolated**: No test depends on another
 - **Deterministic**: Same input → same output
 - **Comprehensive**: Cover happy paths and error cases
@@ -360,13 +379,14 @@ When adding tests:
 
 ```bash
 $ pytest tests/ -q
-........................................................................ [ 38%]
-........................................................................ [ 76%]
-.............................................                            [100%]
-189 passed in 0.50s
+........................................................................ [ 26%]
+........................................................................ [ 53%]
+........................................................................ [ 80%]
+......................................................                   [100%]
+270 passed in 5.44s
 ```
 
-**Average:** ~2.6ms per test
+**Average:** ~20ms per test
 
 ## Key Testing Patterns
 
@@ -412,14 +432,17 @@ def test_example(sample_org_defaults):
 |--------|-------|----------|-----------------|
 | `config/` | 11 | Full | YAML loading, 3-layer merging, path resolution |
 | `core.py` | 8 | Full | Recipe orchestration, version-first optimization, error handling |
-| `discovery/` | 18 | Full | Version-first strategies, get_version_info(), ETag caching |
+| `discovery/` | 16 | Full | Version-first strategies, get_version_info(), ETag caching |
 | `io/download.py` | 11 | Full | HTTP downloads, conditional requests, atomic writes |
 | `state/` | 17 | Full | Schema v2, filesystem-first, cache operations |
-| `validation.py` | 27 | Full | Recipe validation, all strategies, error detection |
-| `versioning/` | 21 | Full | Semver, numeric, lexicographic comparison |
+| `validation.py` | 41 | Full | Recipe validation, win32 config, typo detection |
+| `versioning/` | 32 | Full | Semver, numeric, lexicographic, architecture detection |
 | `psadt/` | 13 | Full | GitHub API, download, extraction, caching |
-| `build/` | 41 | Full | Orchestration, template generation, packaging |
-| **Total** | **189** | **Full** | **All implemented features** |
+| `build/` | 46 | Full | Orchestration, template generation, packaging |
+| `build/detection.py` | 31 | Full | Detection script generation, registry views |
+| `build/requirements.py` | 25 | Full | Requirements script generation |
+| Integration | 19 | Full | End-to-end workflows with real dependencies |
+| **Total** | **270** | **Full** | **All implemented features** |
 
 ## Key Test Features
 
@@ -430,8 +453,8 @@ All HTTP requests are mocked using `requests-mock`. Tests run completely offline
 - ✅ PSADT downloads mocked
 
 ### Fast Execution
-- ✅ **189 tests in ~0.5 seconds**
-- ✅ Average: 2.6ms per test
+- ✅ **270 tests in ~5 seconds**
+- ✅ Average: ~20ms per test
 - ✅ All tests run in parallel safely (isolated)
 
 ### Cross-Platform
