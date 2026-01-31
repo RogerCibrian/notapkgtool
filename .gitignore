@@ -197,6 +197,4 @@ state/*.json
 .DS_Store
 
 # IDE files
-.cursor/
-.cursor_context
-.claude/
+.claude_context
