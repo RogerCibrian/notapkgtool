@@ -9,10 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Win32 Configuration Validation** - Recipe validation now checks `win32` configuration fields for correct types and values, with typo detection suggesting similar field names (e.g., "Did you mean 'display_name'?")
 - **Detection Script Generation** - Automatic PowerShell detection script generation for Intune Win32 app deployments during build process. Scripts check Windows uninstall registry keys, support exact or minimum version matching, and include CMTrace-formatted logging
 - **Requirements Script Generation** - Automatic PowerShell requirements script generation for Intune Update app entries. Scripts check if an older version is installed and output "Required" when applicable
 - **Installer Type Filtering** - Detection and requirements scripts now filter registry entries based on installer type. MSI builds strictly match MSI registry entries only; EXE builds permissively match any entry to handle EXE installers that run embedded MSIs internally
 - **Architecture-Aware Detection** - Detection and requirements scripts now use explicit registry views based on target architecture, preventing false positives when x86 and x64 versions coexist. MSI architecture is auto-detected from Template property; non-MSI installers require `win32.installed_check.architecture` configuration (x86, x64, arm64, or any)
+- **MSI Display Name Override** - New `override_msi_display_name` flag allows using custom `display_name` instead of MSI ProductName for registry lookups, solving edge cases where ProductName contains version numbers (e.g., "7-Zip 25.01"). Supports wildcards (`*`, `?`) for flexible matching
 
 ### Changed
 

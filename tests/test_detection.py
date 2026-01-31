@@ -1,18 +1,5 @@
-# Copyright 2025 Roger Cibrian
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-"""Tests for notapkgtool.detection module.
+"""
+Tests for notapkgtool.detection module.
 
 Tests detection script generation including:
 - Script content validation (log paths, output)
@@ -56,6 +43,7 @@ class TestDetectionConfig:
         assert config.app_id == ""
         assert config.is_msi_installer is False
         assert config.expected_architecture == "any"
+        assert config.use_wildcard is False
 
     def test_custom_values(self):
         """Test custom values for DetectionConfig."""
@@ -265,7 +253,7 @@ class TestGenerateDetectionScript:
         content = output_path.read_text(encoding="utf-8-sig")
 
         # Check for MSI strict check (skips non-MSI entries when building from MSI)
-        assert "expected MSI - skipping" in content
+        assert "Found: Non-MSI, Expected: MSI" in content
         # Check that non-MSI is permissive (accepts any entry)
         assert "Non-MSI installers accept ANY registry entry" in content
 
@@ -338,8 +326,8 @@ class TestGenerateDetectionScript:
         # Component is built at runtime from $SanitizedAppName-$ExpectedVersion-Detection
         assert "ComponentName" in content and '-Detection"' in content
 
-    def test_script_result_failed_logs_as_warning(self, tmp_path: Path):
-        """Test that Detection FAILED result is logged as WARNING for visibility."""
+    def test_script_result_not_detected_logs_as_warning(self, tmp_path: Path):
+        """Test that Not Detected result is logged as WARNING for visibility."""
         config = DetectionConfig(
             app_name="Test App",
             version="1.0.0",
@@ -350,8 +338,8 @@ class TestGenerateDetectionScript:
 
         content = output_path.read_text(encoding="utf-8-sig")
 
-        assert "[Result] Detection FAILED:" in content
-        idx = content.find("[Result] Detection FAILED:")
+        assert "[Result] Not Detected:" in content
+        idx = content.find("[Result] Not Detected:")
         # Excerpt must include -Type "WARNING" (message is long)
         excerpt = content[idx : idx + 350]
         assert "WARNING" in excerpt
@@ -452,3 +440,53 @@ class TestGenerateDetectionScript:
         content = output_path.read_text(encoding="utf-8-sig")
 
         assert "Architecture:" in content
+
+    def test_script_uses_eq_by_default(self, tmp_path: Path):
+        """Test that script uses -eq for DisplayName matching by default."""
+        config = DetectionConfig(
+            app_name="Test App",
+            version="1.0.0",
+            use_wildcard=False,
+        )
+        output_path = tmp_path / "Test-App_1.0.0-Detection.ps1"
+
+        generate_detection_script(config, output_path)
+
+        content = output_path.read_text(encoding="utf-8-sig")
+
+        # Check for exact -eq matching
+        assert "$DisplayNameValue -eq $AppName" in content
+
+    def test_script_uses_like_with_wildcard(self, tmp_path: Path):
+        """Test that script uses -like when use_wildcard is True."""
+        config = DetectionConfig(
+            app_name="7-Zip *",
+            version="25.01",
+            use_wildcard=True,
+        )
+        output_path = tmp_path / "7-Zip_25.01-Detection.ps1"
+
+        generate_detection_script(config, output_path)
+
+        content = output_path.read_text(encoding="utf-8-sig")
+
+        # Check for -like matching
+        assert "$DisplayNameValue -like $AppName" in content
+
+    def test_script_wildcard_with_question_mark(self, tmp_path: Path):
+        """Test that script uses -like when use_wildcard is True with ? wildcard."""
+        config = DetectionConfig(
+            app_name="7-Zip ??.??",
+            version="24.09",
+            use_wildcard=True,
+        )
+        output_path = tmp_path / "7-Zip_24.09-Detection.ps1"
+
+        generate_detection_script(config, output_path)
+
+        content = output_path.read_text(encoding="utf-8-sig")
+
+        # Check for -like matching
+        assert "$DisplayNameValue -like $AppName" in content
+        # Check app name is in script
+        assert "7-Zip ??.??" in content

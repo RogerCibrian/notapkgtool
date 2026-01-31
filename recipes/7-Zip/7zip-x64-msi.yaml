@@ -12,6 +12,11 @@ app:
       version_pattern: "7z(\\d{2})(\\d{2})-x64"
       version_format: "{0}.{1}"
 
+  win32:
+      installed_check:
+          display_name: "7-Zip * (x64 edition)"
+          override_msi_display_name: true
+
   psadt:
       app_vars:
         AppName: "7-Zip"
