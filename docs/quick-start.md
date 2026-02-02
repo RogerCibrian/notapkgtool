@@ -31,7 +31,7 @@ napt --version
 
 #### Option 2: Poetry (For Development)
 
-Best for developers who want reproducible builds and dependency management.
+Best for development and contributing to NAPT.
 
 **Prerequisites:** Poetry must be installed. See [Poetry Installation Guide](https://python-poetry.org/docs/#installation)
 
@@ -44,7 +44,7 @@ cd notapkgtool
 poetry install
 
 # Activate virtual environment
-poetry shell
+.venv\Scripts\Activate.ps1  # On Linux/macOS: source .venv/bin/activate
 
 # Verify installation
 napt --version
@@ -52,11 +52,21 @@ napt --version
 
 ### Platform Requirements
 
-**Discovery and building:** Work on Windows, Linux, and macOS.
+NAPT runs on Windows, Linux, and macOS with the following requirements:
 
-**Packaging (.intunewin creation):** Requires Windows (uses IntuneWinAppUtil.exe).
+#### Windows
 
-**Linux/macOS:** Install msitools for MSI version extraction:
+- No additional dependencies required
+- All features supported (discovery, building, packaging)
+- Uses native PowerShell COM API for MSI extraction
+
+#### Linux/macOS
+
+- **Required:** msitools for MSI version extraction
+- **Limitation:** Cannot create .intunewin packages (requires Windows)
+- Supports discovery and building features
+
+Install msitools:
 
 ```bash
 # Debian/Ubuntu
@@ -69,24 +79,26 @@ sudo dnf install msitools
 brew install msitools
 ```
 
-**Windows:** No additional requirements (uses native PowerShell COM API).
-
-See the [Cross-Platform Support](user-guide.md#cross-platform-support) section for CI/CD workflows and detailed examples.
+See the [Cross-Platform Support](user-guide.md#cross-platform-support) section for platform-specific workflows.
 
 ## Basic Usage
 
-> **💡 Tip:** Use `napt <command> --help` (or `-h`) to see detailed help and examples for any command. For example: `napt discover --help`
+### Command-Line Options
+
+All NAPT commands support these helpful flags:
+
+- `--help` or `-h` - Show detailed help and examples for any command
+- `--verbose` - Show progress details and additional information
+- `--debug` - Show full diagnostics including configuration dumps
+
+Example: `napt discover --help` or `napt build --verbose`
 
 ### Validate a Recipe
 
 Quick validation checks syntax and configuration without downloading anything:
 
 ```bash
-# Basic validation
 napt validate recipes/Google/chrome.yaml
-
-# With verbose output
-napt validate recipes/Google/chrome.yaml --verbose
 ```
 
 ### Discover Latest Version
@@ -101,14 +113,8 @@ napt discover recipes/Google/chrome.yaml
 # Specify custom output directory
 napt discover recipes/Google/chrome.yaml --output-dir ./cache
 
-# Show verbose output with progress details
-napt discover recipes/Google/chrome.yaml --verbose
-
 # Disable state tracking (always download, no caching)
 napt discover recipes/Google/chrome.yaml --stateless
-
-# Show debug output with full configuration dumps
-napt discover recipes/Google/chrome.yaml --debug
 ```
 
 ### Build PSADT Package
@@ -121,9 +127,6 @@ napt build recipes/Google/chrome.yaml
 
 # Specify custom downloads and output directories
 napt build recipes/Google/chrome.yaml --downloads-dir ./downloads --output-dir ./builds
-
-# Show verbose output
-napt build recipes/Google/chrome.yaml --verbose
 ```
 
 ### Create .intunewin Package
@@ -132,13 +135,11 @@ Package the PSADT build for Microsoft Intune:
 
 ```bash
 # Create .intunewin from build directory
-napt package builds/napt-chrome/141.0.7390.123/
+napt package builds/napt-chrome/144.0.7559.110/packagefiles/
 
 # Specify output directory and clean source after packaging
-napt package builds/napt-chrome/141.0.7390.123/ --output-dir ./packages --clean-source
+napt package builds/napt-chrome/144.0.7559.110/packagefiles/ --output-dir ./packages --clean-source
 ```
-
-> **💡 Tip:** Use `--verbose` to see progress details or `--debug` for full diagnostics including configuration dumps and backend selection
 
 ## Example Workflows
 
@@ -146,19 +147,16 @@ napt package builds/napt-chrome/141.0.7390.123/ --output-dir ./packages --clean-
 
 Here's a complete workflow from recipe validation to Intune package:
 
-```bash
-# 1. Validate recipe
-napt validate recipes/Google/chrome.yaml
-```
+#### 1. Validate recipe
 
-**Expected output:**
-```
-Validating recipe: recipes/Google/chrome.yaml
+```console
+$ napt validate recipes/Google/chrome.yaml
+Validating recipe: /path/to/recipes/Google/chrome.yaml
 
 ======================================================================
 VALIDATION RESULTS
 ======================================================================
-Recipe:      recipes/Google/chrome.yaml
+Recipe:      /path/to/recipes/Google/chrome.yaml
 Status:      VALID
 App Count:   1
 
@@ -167,76 +165,84 @@ App Count:   1
 [SUCCESS] Recipe is valid!
 ```
 
-```bash
-# 2. Discover and download latest version
-napt discover recipes/Google/chrome.yaml
-```
+#### 2. Discover and download latest version
 
-**Expected output:**
-```
-Discovering version for recipe: recipes/Google/chrome.yaml
-Output directory: downloads
+```console
+$ napt discover recipes/Google/chrome.yaml
+Discovering version for recipe: /path/to/recipes/Google/chrome.yaml
+Output directory: /path/to/downloads
 
+[1/4] Loading configuration...
+[2/4] Discovering version...
+[3/4] Discovering version...
+[4/4] Downloading installer...
+download progress: 0%
+...
+download progress: 100%
+[1/1] Download complete: /path/to/downloads/googlechromestandaloneenterprise64.msi (abc123...) in 25.5s
 ======================================================================
 DISCOVERY RESULTS
 ======================================================================
 App Name:        Google Chrome
 App ID:          napt-chrome
 Strategy:        url_download
-Version:         142.0.7444.163
+Version:         144.0.7559.110
 Version Source:  msi
-File Path:       downloads/googlechromestandaloneenterprise64.msi
+File Path:       /path/to/downloads/googlechromestandaloneenterprise64.msi
 SHA-256:         abc123...
-Status:          downloaded
-
+Status:          success
 ======================================================================
 
 [SUCCESS] Version discovered successfully!
 ```
 
-```bash
-# 3. Build PSADT package
-napt build recipes/Google/chrome.yaml
-```
+#### 3. Build PSADT package
 
-**Expected output:**
-```
-Building PSADT package for recipe: recipes/Google/chrome.yaml
-Downloads directory: downloads
+```console
+$ napt build recipes/Google/chrome.yaml
+Building PSADT package for recipe: /path/to/recipes/Google/chrome.yaml
+Downloads directory: /path/to/downloads
 
+[1/8] Loading configuration...
+[2/8] Finding installer...
+[3/8] Determining version...
+[4/8] Getting PSADT release...
+[5/8] Creating build structure...
+[6/8] Applying branding...
+[7/8] Generating detection script...
+[8/8] Generating requirements script...
 ======================================================================
 BUILD RESULTS
 ======================================================================
 App Name:        Google Chrome
 App ID:          napt-chrome
-Version:         142.0.7444.163
-PSADT Version:   4.1.7
-Build Directory: builds/napt-chrome/142.0.7444.163
-Status:          built
-
+Version:         144.0.7559.110
+PSADT Version:   4.1.8
+Build Directory: builds/napt-chrome/144.0.7559.110/packagefiles
+Status:          success
 ======================================================================
 
 [SUCCESS] PSADT package built successfully!
 ```
 
-```bash
-# 4. Create .intunewin package
-napt package builds/napt-chrome/142.0.7444.163/
-```
+#### 4. Create .intunewin package
 
-**Expected output:**
-```
-Creating .intunewin package from: builds/napt-chrome/142.0.7444.163
+```console
+$ napt package builds/napt-chrome/144.0.7559.110/packagefiles/
+Creating .intunewin package from: /path/to/builds/napt-chrome/144.0.7559.110/packagefiles
 
+[1/4] Verifying build structure...
+[2/4] Getting IntuneWinAppUtil tool...
+[3/4] Creating .intunewin package...
+[4/4] Cleaning up...
 ======================================================================
 PACKAGE RESULTS
 ======================================================================
 App ID:          napt-chrome
-Version:         142.0.7444.163
-Package Path:    packages/napt-chrome/Invoke-AppDeployToolkit.intunewin
-Build Directory: builds/napt-chrome/142.0.7444.163
-Status:          packaged
-
+Version:         144.0.7559.110
+Package Path:    /path/to/packages/napt-chrome/Invoke-AppDeployToolkit.intunewin
+Build Directory: /path/to/builds/napt-chrome/144.0.7559.110/packagefiles
+Status:          success
 ======================================================================
 
 [SUCCESS] .intunewin package created successfully!
@@ -256,7 +262,7 @@ napt discover recipes/Google/chrome.yaml --verbose
 If the version hasn't changed since the last run and the file exists, you'll see:
 ```
 [1/4] Checking cached version...
-[2/4] Version unchanged (142.0.7444.163)
+[2/4] Version unchanged (144.0.7559.110)
 [3/4] File exists, skipping download
 [4/4] Using cached file: downloads/googlechromestandaloneenterprise64.msi
 ```
@@ -275,7 +281,7 @@ napt discover recipes/Google/chrome.yaml --stateless
 napt build recipes/Google/chrome.yaml --output-dir ./my-builds
 
 # Package and clean up source
-napt package builds/napt-chrome/142.0.7444.163/ --clean-source
+napt package builds/napt-chrome/144.0.7559.110/packagefiles/ --clean-source
 ```
 
 ## Common Tasks

@@ -46,11 +46,11 @@ This manual workflow is repetitive, difficult to automate in CI/CD pipelines, la
 | PSADT Package Building | ✅ | ✅ |
 | Intune Packaging | ✅ | ⚫ Windows Only |
 
-See the [Cross-Platform Support](https://rogercibrian.github.io/notapkgtool/user-guide/#cross-platform-support) section for detailed workflows.
+See the [Cross-Platform Support](https://rogercibrian.github.io/notapkgtool/user-guide/#cross-platform-support) section for platform-specific workflows.
 
 ## Getting Started
 
-Most users interact with NAPT via CLI - see the [Quick Start Guide](https://rogercibrian.github.io/notapkgtool/quick-start/) for installation instructions and your first steps with NAPT.
+See the [Quick Start Guide](https://rogercibrian.github.io/notapkgtool/quick-start/) for installation and setup.
 
 ## Creating Recipes
 
@@ -59,7 +59,8 @@ Recipes are YAML configuration files that define how to discover, download, and 
 **Example recipes:**
 
 - **[chrome.yaml](https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Google/chrome.yaml)** - url_download strategy with MSI version extraction
-- **[7zip.yaml](https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/7-Zip/7zip.yaml)** - web_scrape strategy for vendor download pages
+- **[git.yaml](https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Git/git.yaml)** - api_github strategy for GitHub Releases
+- **[7zip-x64-msi.yaml](https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/7-Zip/7zip-x64-msi.yaml)** - web_scrape strategy for vendor download pages
 
 NAPT supports multiple discovery strategies (url_download, web_scrape, api_github, api_json) - see the [Discovery Strategies](https://rogercibrian.github.io/notapkgtool/user-guide/#discovery-strategies) guide for detailed configuration and more examples.
 

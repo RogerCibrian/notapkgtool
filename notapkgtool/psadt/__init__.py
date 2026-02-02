@@ -18,16 +18,19 @@ This module handles PSAppDeployToolkit (PSADT) release management, caching,
 and integration with NAPT's build system.
 
 Example:
-    from pathlib import Path
-    from notapkgtool.psadt import get_psadt_release, fetch_latest_psadt_version
+    Basic usage:
+        ```python
+        from pathlib import Path
+        from notapkgtool.psadt import get_psadt_release, fetch_latest_psadt_version
 
-    # Get latest version
-    latest = fetch_latest_psadt_version()
-    print(f"Latest PSADT: {latest}")
+        # Get latest version
+        latest = fetch_latest_psadt_version()
+        print(f"Latest PSADT: {latest}")
 
-    # Download and cache
-    psadt_path = get_psadt_release("latest", Path("cache/psadt"))
-    print(f"PSADT cached at: {psadt_path}")
+        # Download and cache
+        psadt_path = get_psadt_release("latest", Path("cache/psadt"))
+        print(f"PSADT cached at: {psadt_path}")
+        ```
 
 """
 

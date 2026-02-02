@@ -32,7 +32,7 @@ State tracking is enabled by default and can be disabled with --stateless flag.
 
 Example:
     Basic usage:
-
+        ```python
         from pathlib import Path
         from notapkgtool.state import load_state, save_state
 
@@ -49,6 +49,7 @@ Example:
         }
 
         save_state(state, Path("state/versions.json"))
+        ```
 
 """
 

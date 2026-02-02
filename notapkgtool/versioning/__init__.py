@@ -20,12 +20,11 @@ comparison strategies and handles various versioning schemes including
 semantic versioning, numeric versions, and prerelease tags.
 
 Modules:
-
-keys : module
-    Core version comparison logic with semver-like parsing and robust fallbacks.
-msi : module
-    MSI ProductVersion extraction and metadata extraction using msilib, _msi,
-    PowerShell, or msitools.
+    keys
+        Core version comparison logic with semver-like parsing and robust fallbacks.
+    msi
+        MSI ProductVersion extraction and metadata extraction using msilib, _msi,
+        PowerShell, or msitools.
 
 Version Comparison Strategies:
 
@@ -67,29 +66,32 @@ Example:
         ```
 
     MSI version extraction:
-
+        ```python
         from pathlib import Path
         from notapkgtool.versioning.msi import version_from_msi_product_version
 
         discovered = version_from_msi_product_version(Path("installer.msi"))
         print(discovered.version)  # e.g., "1.2.3"
+        ```
 
     MSI metadata extraction:
-
+        ```python
         from pathlib import Path
         from notapkgtool.versioning.msi import extract_msi_metadata
 
         metadata = extract_msi_metadata(Path("installer.msi"))
         print(f"{metadata.product_name} {metadata.product_version}")
         # e.g., "Google Chrome 131.0.6778.86"
+        ```
 
     MSI architecture extraction:
-
+        ```python
         from pathlib import Path
         from notapkgtool.versioning.msi import extract_msi_architecture
 
         arch = extract_msi_architecture(Path("installer.msi"))
         print(f"Architecture: {arch}")  # e.g., "x64"
+        ```
 
 Note:
     - Version comparison is format-agnostic: no network or file I/O

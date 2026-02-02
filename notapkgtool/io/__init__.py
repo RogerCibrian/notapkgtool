@@ -19,21 +19,21 @@ features like conditional requests, retry logic, atomic writes, and
 integrity verification.
 
 Modules:
-
-download : module
-    HTTP(S) file download with retries, conditional requests, and checksums.
-upload : module
-    File upload adapters for Intune and storage providers (planned).
+    download - HTTP(S) file download with retries, conditional requests, and checksums.
+    upload - File upload adapters for Intune and storage providers (planned).
 
 Example:
-    from pathlib import Path
-    from notapkgtool.io import download_file
+    Basic usage:
+        ```python
+        from pathlib import Path
+        from notapkgtool.io import download_file
 
-    file_path, sha256, headers = download_file(
-        url="https://example.com/installer.msi",
-        destination_folder=Path("./downloads"),
-    )
-    print(f"Downloaded to {file_path} with hash {sha256}")
+        file_path, sha256, headers = download_file(
+            url="https://example.com/installer.msi",
+            destination_folder=Path("./downloads"),
+        )
+        print(f"Downloaded to {file_path} with hash {sha256}")
+        ```
 
 """
 
