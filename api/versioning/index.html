@@ -1741,7 +1741,7 @@ It only parses and compares version strings consistently across sources
 
 
 
-        <p>Container for a discovered version string.</p>
+        <p>Represents a version string discovered from a source.</p>
 
 
 <p><span class="doc-section-title">Attributes:</span></p>
@@ -1801,7 +1801,7 @@ It only parses and compares version strings consistently across sources
 <span class="normal"><a href="#__codelineno-0-43">43</a></span>
 <span class="normal"><a href="#__codelineno-0-44">44</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33"></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34"></a><span class="k">class</span><span class="w"> </span><span class="nc">DiscoveredVersion</span><span class="p">:</span>
-</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Container for a discovered version string.</span>
+</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Represents a version string discovered from a source.</span>
 </span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36"></a>
 </span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37"></a><span class="sd">    Attributes:</span>
 </span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38"></a><span class="sd">        version: Raw version string (e.g., &quot;140.0.7339.128&quot;).</span>
@@ -1854,7 +1854,7 @@ It only parses and compares version strings consistently across sources
 
 
 
-        <p>Container for version information discovered without downloading.</p>
+        <p>Represents version metadata obtained without downloading the installer.</p>
 <p>Used by version-first strategies (web_scrape, api_github, api_json)
 that can determine version and download URL without fetching the installer.</p>
 
@@ -1932,7 +1932,7 @@ that can determine version and download URL without fetching the installer.</p>
 <span class="normal"><a href="#__codelineno-0-62">62</a></span>
 <span class="normal"><a href="#__codelineno-0-63">63</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-47"><a id="__codelineno-0-47" name="__codelineno-0-47"></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </span><span id="__span-0-48"><a id="__codelineno-0-48" name="__codelineno-0-48"></a><span class="k">class</span><span class="w"> </span><span class="nc">VersionInfo</span><span class="p">:</span>
-</span><span id="__span-0-49"><a id="__codelineno-0-49" name="__codelineno-0-49"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Container for version information discovered without downloading.</span>
+</span><span id="__span-0-49"><a id="__codelineno-0-49" name="__codelineno-0-49"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Represents version metadata obtained without downloading the installer.</span>
 </span><span id="__span-0-50"><a id="__codelineno-0-50" name="__codelineno-0-50"></a>
 </span><span id="__span-0-51"><a id="__codelineno-0-51" name="__codelineno-0-51"></a><span class="sd">    Used by version-first strategies (web_scrape, api_github, api_json)</span>
 </span><span id="__span-0-52"><a id="__codelineno-0-52" name="__codelineno-0-52"></a><span class="sd">    that can determine version and download URL without fetching the installer.</span>
@@ -2325,7 +2325,7 @@ uses COM (WindowsInstaller.Installer). Errors are chained for debugging
 
 
 
-        <p>MSI Property table metadata.</p>
+        <p>Represents metadata extracted from an MSI Property table.</p>
 
 
 <p><span class="doc-section-title">Attributes:</span></p>
@@ -2385,7 +2385,7 @@ uses COM (WindowsInstaller.Installer). Errors are chained for debugging
 <span class="normal"><a href="#__codelineno-0-126">126</a></span>
 <span class="normal"><a href="#__codelineno-0-127">127</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-116"><a id="__codelineno-0-116" name="__codelineno-0-116"></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </span><span id="__span-0-117"><a id="__codelineno-0-117" name="__codelineno-0-117"></a><span class="k">class</span><span class="w"> </span><span class="nc">MSIMetadata</span><span class="p">:</span>
-</span><span id="__span-0-118"><a id="__codelineno-0-118" name="__codelineno-0-118"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;MSI Property table metadata.</span>
+</span><span id="__span-0-118"><a id="__codelineno-0-118" name="__codelineno-0-118"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Represents metadata extracted from an MSI Property table.</span>
 </span><span id="__span-0-119"><a id="__codelineno-0-119" name="__codelineno-0-119"></a>
 </span><span id="__span-0-120"><a id="__codelineno-0-120" name="__codelineno-0-120"></a><span class="sd">    Attributes:</span>
 </span><span id="__span-0-121"><a id="__codelineno-0-121" name="__codelineno-0-121"></a><span class="sd">        product_name: ProductName from MSI (display name).</span>

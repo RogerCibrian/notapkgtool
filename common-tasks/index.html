@@ -1781,20 +1781,27 @@
 <li>Create the recipe file:</li>
 </ol>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># recipes/Git/git.yaml</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span><span class="w">  </span><span class="c1"># Recipe format version (currently v1)</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">app</span><span class="p">:</span><span class="w">  </span><span class="c1"># Application configuration</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Git</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">Windows&quot;</span><span class="w">  </span><span class="c1"># Display name for the application</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;napt-git&quot;</span><span class="w">  </span><span class="c1"># Unique identifier (used for build directories and package names)</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="nt">source</span><span class="p">:</span><span class="w">  </span><span class="c1"># Discovery configuration - how to find and download the installer</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span><span class="w">  </span><span class="c1"># Discovery strategy: api_github, api_json, url_download, or web_scrape</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;git-for-windows/git&quot;</span><span class="w">  </span><span class="c1"># GitHub repository (owner/repo format)</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nt">asset_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Git-.*-64-bit\\.exe$&quot;</span><span class="w">  </span><span class="c1"># Regex pattern to match installer filename in release assets</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="nt">version_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;v?([0-9.]+)&quot;</span><span class="w">  </span><span class="c1"># Regex pattern to extract version from Git tag</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="nt">psadt</span><span class="p">:</span><span class="w">  </span><span class="c1"># PSAppDeployToolkit configuration</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">      </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># PowerShell script executed during installation</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">        </span><span class="no">Start-ADTProcess -Path &quot;$dirFiles\Git-*.exe&quot; -Parameters &quot;/VERYSILENT /NORESTART&quot;</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">      </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># PowerShell script executed during uninstallation</span>
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">        </span><span class="no">Uninstall-ADTApplication -Name &quot;Git&quot;</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span><span class="w">  </span><span class="c1"># Recipe format version</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nt">app</span><span class="p">:</span><span class="w">  </span><span class="c1"># Application configuration</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Git</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">Windows&quot;</span><span class="w">  </span><span class="c1"># Display name for the application</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;napt-git&quot;</span><span class="w">  </span><span class="c1"># Unique identifier (used for build directories and package names)</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="nt">source</span><span class="p">:</span><span class="w">  </span><span class="c1"># Discovery configuration - how to find and download the installer</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">      </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span><span class="w">  </span><span class="c1"># Discovery strategy: api_github, api_json, url_download, or web_scrape</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">      </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;git-for-windows/git&quot;</span><span class="w">  </span><span class="c1"># GitHub repository (owner/repo format)</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">      </span><span class="nt">asset_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Git-.*-64-bit\\.exe$&quot;</span><span class="w">  </span><span class="c1"># Regex pattern to match installer filename in release assets</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">      </span><span class="nt">version_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;v?([0-9.]+)\\.windows&quot;</span><span class="w">  </span><span class="c1"># Regex pattern to extract version from Git tag</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">  </span><span class="nt">psadt</span><span class="p">:</span><span class="w">  </span><span class="c1"># PSAppDeployToolkit configuration</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">      </span><span class="nt">app_vars</span><span class="p">:</span><span class="w">  </span><span class="c1"># PSADT variables (AppName, AppVersion, AppArch)</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">        </span><span class="nt">AppName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Git</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">Windows&quot;</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">        </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${discovered_version}&quot;</span><span class="w">  </span><span class="c1"># Auto-populated from discovery</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">        </span><span class="nt">AppArch</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;x64&quot;</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">      </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># PowerShell script executed during installation</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">        </span><span class="no">Start-ADTProcess -Path &quot;$dirFiles\Git-${discovered_version}-64-bit.exe&quot; -Parameters &quot;/VERYSILENT /NORESTART&quot;</span>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">      </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># PowerShell script executed during uninstallation</span>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="w">        </span><span class="no">Uninstall-ADTApplication -Name &quot;Git&quot;</span>
 </span></code></pre></div>
 <ol>
 <li>Validate the recipe:</li>
@@ -1818,21 +1825,33 @@
 <li>Create the recipe file:</li>
 </ol>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># recipes/7-Zip/7zip.yaml</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span><span class="w">  </span><span class="c1"># Recipe format version</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nt">app</span><span class="p">:</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;7-Zip&quot;</span><span class="w">  </span><span class="c1"># Display name</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;napt-7zip&quot;</span><span class="w">  </span><span class="c1"># Unique identifier</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nt">source</span><span class="p">:</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">      </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">web_scrape</span><span class="w">  </span><span class="c1"># Scrape vendor download page for installer link</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">      </span><span class="nt">page_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://www.7-zip.org/download.html&quot;</span><span class="w">  </span><span class="c1"># URL of vendor download page</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">      </span><span class="nt">link_selector</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;a[href$=&quot;-x64.msi&quot;]&#39;</span><span class="w">  </span><span class="c1"># CSS selector to find download link</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">      </span><span class="nt">version_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;7z(\\d{2})(\\d{2})-x64&quot;</span><span class="w">  </span><span class="c1"># Regex to extract version from URL (captures year and month)</span>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">      </span><span class="nt">version_format</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{0}.{1}&quot;</span><span class="w">  </span><span class="c1"># Format captured groups as &quot;25.01&quot; (year.month)</span>
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">  </span><span class="w w-Error">  </span><span class="nt">psadt</span><span class="p">:</span>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">      </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># MSI installation script</span>
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">        </span><span class="no">Start-ADTMsiProcess -Action Install -Path &quot;$dirFiles\7z*-x64.msi&quot; -Parameters &quot;ALLUSERS=1&quot;</span>
-</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">      </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># MSI uninstallation script</span>
-</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">        </span><span class="no">Uninstall-ADTApplication -Name &quot;7-Zip&quot;</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span><span class="w">  </span><span class="c1"># Recipe format version</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nt">app</span><span class="p">:</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;7-Zip&quot;</span><span class="w">  </span><span class="c1"># Display name</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;napt-7zip&quot;</span><span class="w">  </span><span class="c1"># Unique identifier</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span><span class="nt">source</span><span class="p">:</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">      </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">web_scrape</span><span class="w">  </span><span class="c1"># Scrape vendor download page for installer link</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">      </span><span class="nt">page_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://www.7-zip.org/download.html&quot;</span><span class="w">  </span><span class="c1"># URL of vendor download page</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">      </span><span class="nt">link_selector</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;a[href$=&quot;-x64.msi&quot;]&#39;</span><span class="w">  </span><span class="c1"># CSS selector to find download link</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">      </span><span class="nt">version_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;7z(\\d{2})(\\d{2})-x64&quot;</span><span class="w">  </span><span class="c1"># Regex to extract version from URL (captures year and month)</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">      </span><span class="nt">version_format</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{0}.{1}&quot;</span><span class="w">  </span><span class="c1"># Format captured groups as &quot;25.01&quot; (year.month)</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">  </span><span class="nt">win32</span><span class="p">:</span><span class="w">  </span><span class="c1"># Windows-specific configuration for detection and validation</span>
+</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">      </span><span class="nt">installed_check</span><span class="p">:</span>
+</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">          </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;7-Zip</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">(x64</span><span class="nv"> </span><span class="s">edition)&quot;</span><span class="w">  </span><span class="c1"># Pattern for detecting installed app (wildcards supported)</span>
+</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="w">          </span><span class="nt">override_msi_display_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">  </span><span class="c1"># Override MSI DisplayName that includes version</span>
+</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>
+</span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="w">  </span><span class="nt">psadt</span><span class="p">:</span>
+</span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="w">      </span><span class="nt">app_vars</span><span class="p">:</span><span class="w">  </span><span class="c1"># PSADT variables</span>
+</span><span id="__span-3-22"><a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a><span class="w">        </span><span class="nt">AppName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;7-Zip&quot;</span>
+</span><span id="__span-3-23"><a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a><span class="w">        </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${discovered_version}&quot;</span>
+</span><span id="__span-3-24"><a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a><span class="w">        </span><span class="nt">AppArch</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;x64&quot;</span>
+</span><span id="__span-3-25"><a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a><span class="w">      </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># MSI installation script</span>
+</span><span id="__span-3-26"><a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a><span class="w">        </span><span class="no">Start-ADTMsiProcess -Action Install -Path &quot;$dirFiles\7z*-x64.msi&quot; -Parameters &quot;ALLUSERS=1&quot;</span>
+</span><span id="__span-3-27"><a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a><span class="w">      </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># MSI uninstallation script</span>
+</span><span id="__span-3-28"><a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a><span class="w">        </span><span class="no">Uninstall-ADTApplication -Name &quot;7-Zip&quot;</span>
 </span></code></pre></div>
 <ol>
 <li>Validate and test:</li>
@@ -1846,6 +1865,9 @@
 <li><code>link_selector</code>: CSS selector to find the download link</li>
 <li><code>version_pattern</code>: Regex to extract version from URL</li>
 <li><code>version_format</code>: Format string to transform version (optional)</li>
+<li><code>win32.installed_check</code>: Configure when vendor includes version in DisplayName (e.g., "7-Zip 25.01")</li>
+<li><code>display_name</code>: Pattern with wildcards to match the installed app name</li>
+<li><code>override_msi_display_name</code>: Set to <code>true</code> to override MSI's versioned DisplayName</li>
 </ul>
 <h2 id="create-a-recipe-for-a-json-api-endpoint">Create a Recipe for a JSON API Endpoint</h2>
 <p>Use this when the vendor provides a JSON API with version and download URL.</p>
@@ -1854,37 +1876,44 @@
 <li>Create the recipe file:</li>
 </ol>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># recipes/Vendor/app.yaml</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span><span class="w">  </span><span class="c1"># Recipe format version</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nt">app</span><span class="p">:</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Application</span><span class="nv"> </span><span class="s">Name&quot;</span><span class="w">  </span><span class="c1"># Display name</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;napt-app&quot;</span><span class="w">  </span><span class="c1"># Unique identifier</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span><span class="nt">source</span><span class="p">:</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">      </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_json</span><span class="w">  </span><span class="c1"># Query JSON API for version and download URL</span>
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">      </span><span class="nt">api_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://api.vendor.com/latest&quot;</span><span class="w">  </span><span class="c1"># JSON API endpoint URL</span>
-</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">      </span><span class="nt">version_path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;version&quot;</span><span class="w">  </span><span class="c1"># JSONPath to version field (e.g., &quot;version&quot; or &quot;data.version&quot;)</span>
-</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">      </span><span class="nt">download_url_path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;download_url&quot;</span><span class="w">  </span><span class="c1"># JSONPath to download URL field</span>
-</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">      </span><span class="nt">headers</span><span class="p">:</span><span class="w">  </span><span class="c1"># Optional HTTP headers (e.g., for authentication)</span>
-</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">        </span><span class="nt">Authorization</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Bearer</span><span class="nv"> </span><span class="s">${API_TOKEN}&quot;</span><span class="w">  </span><span class="c1"># Environment variable substitution supported</span>
-</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">  </span><span class="w w-Error">  </span><span class="nt">psadt</span><span class="p">:</span>
-</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">      </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># Installation script</span>
-</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">        </span><span class="no">Start-ADTProcess -Path &quot;$dirFiles\app-installer.exe&quot; -Parameters &quot;/S&quot;</span>
-</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">      </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># Uninstallation script</span>
-</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">        </span><span class="no">Uninstall-ADTApplication -Name &quot;Application Name&quot;</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span><span class="w">  </span><span class="c1"># Recipe format version</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nt">app</span><span class="p">:</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Application</span><span class="nv"> </span><span class="s">Name&quot;</span><span class="w">  </span><span class="c1"># Display name</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;napt-app&quot;</span><span class="w">  </span><span class="c1"># Unique identifier</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">  </span><span class="nt">source</span><span class="p">:</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">      </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_json</span><span class="w">  </span><span class="c1"># Query JSON API for version and download URL</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">      </span><span class="nt">api_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://api.vendor.com/latest&quot;</span><span class="w">  </span><span class="c1"># JSON API endpoint URL</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">      </span><span class="nt">version_path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;version&quot;</span><span class="w">  </span><span class="c1"># JSONPath to version field (e.g., &quot;version&quot; or &quot;data.version&quot;)</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">      </span><span class="nt">download_url_path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;download_url&quot;</span><span class="w">  </span><span class="c1"># JSONPath to download URL field</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">      </span><span class="nt">headers</span><span class="p">:</span><span class="w">  </span><span class="c1"># Optional HTTP headers (e.g., for authentication)</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">        </span><span class="nt">Authorization</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Bearer</span><span class="nv"> </span><span class="s">${API_TOKEN}&quot;</span><span class="w">  </span><span class="c1"># Environment variable substitution supported</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">  </span><span class="nt">psadt</span><span class="p">:</span>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">      </span><span class="nt">app_vars</span><span class="p">:</span><span class="w">  </span><span class="c1"># PSADT variables</span>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">        </span><span class="nt">AppName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Application</span><span class="nv"> </span><span class="s">Name&quot;</span>
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="w">        </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${discovered_version}&quot;</span>
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="w">        </span><span class="nt">AppArch</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;x64&quot;</span>
+</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="w">      </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># Installation script</span>
+</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="w">        </span><span class="no">Start-ADTProcess -Path &quot;$dirFiles\app-installer.exe&quot; -Parameters &quot;/S&quot;</span>
+</span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="w">      </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># Uninstallation script</span>
+</span><span id="__span-5-24"><a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="w">        </span><span class="no">Uninstall-ADTApplication -Name &quot;Application Name&quot;</span>
 </span></code></pre></div>
 <ol>
 <li>Set environment variable (if needed):</li>
 </ol>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Windows PowerShell</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nv">$env</span>:API_TOKEN<span class="o">=</span><span class="s2">&quot;your-token-here&quot;</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Linux/macOS</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="nb">export</span><span class="w"> </span><span class="nv">API_TOKEN</span><span class="o">=</span><span class="s2">&quot;your-token-here&quot;</span>
+<p><div class="language-powershell highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c"># Set environment variable on Windows:</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nv">$env:API_TOKEN</span><span class="p">=</span><span class="s2">&quot;your-token-here&quot;</span>
 </span></code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Set environment variable on Linux/macOS:</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">API_TOKEN</span><span class="o">=</span><span class="s2">&quot;your-token-here&quot;</span>
+</span></code></pre></div></p>
 <ol>
 <li>Validate and test:</li>
 </ol>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>napt<span class="w"> </span>validate<span class="w"> </span>recipes/Vendor/app.yaml
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Vendor/app.yaml<span class="w"> </span>--verbose
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>napt<span class="w"> </span>validate<span class="w"> </span>recipes/Vendor/app.yaml
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Vendor/app.yaml<span class="w"> </span>--verbose
 </span></code></pre></div>
 <p><strong>What to customize:</strong></p>
 <ul>
@@ -1899,33 +1928,40 @@
 <ol>
 <li>Create the recipe file:</li>
 </ol>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># recipes/Google/chrome.yaml</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span><span class="w">  </span><span class="c1"># Recipe format version</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nt">app</span><span class="p">:</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Google</span><span class="nv"> </span><span class="s">Chrome&quot;</span><span class="w">  </span><span class="c1"># Display name</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;napt-chrome&quot;</span><span class="w">  </span><span class="c1"># Unique identifier</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">  </span><span class="nt">source</span><span class="p">:</span>
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">      </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">url_download</span><span class="w">  </span><span class="c1"># Direct download from fixed URL</span>
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">      </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://dl.google.com/chrome/install/googlechromestandaloneenterprise64.msi&quot;</span><span class="w">  </span><span class="c1"># Stable download URL</span>
-</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">      </span><span class="nt">version</span><span class="p">:</span><span class="w">  </span><span class="c1"># Version extraction configuration</span>
-</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">        </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">msi</span><span class="w">  </span><span class="c1"># Extract version from MSI ProductVersion property</span>
-</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">  </span><span class="w w-Error">  </span><span class="nt">psadt</span><span class="p">:</span>
-</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="w">      </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># MSI installation script</span>
-</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="w">        </span><span class="no">Start-ADTMsiProcess -Action Install -Path &quot;$dirFiles\googlechromestandaloneenterprise64.msi&quot; -Parameters &quot;ALLUSERS=1&quot;</span>
-</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="w">      </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># MSI uninstallation script</span>
-</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="w">        </span><span class="no">Uninstall-ADTApplication -Name &quot;Google Chrome&quot;</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># recipes/Google/chrome.yaml</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span><span class="w">  </span><span class="c1"># Recipe format version</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="nt">app</span><span class="p">:</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Google</span><span class="nv"> </span><span class="s">Chrome&quot;</span><span class="w">  </span><span class="c1"># Display name</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">  </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;napt-chrome&quot;</span><span class="w">  </span><span class="c1"># Unique identifier</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">  </span><span class="nt">source</span><span class="p">:</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">      </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">url_download</span><span class="w">  </span><span class="c1"># Direct download from fixed URL</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">      </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi&quot;</span><span class="w">  </span><span class="c1"># Stable download URL</span>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">  </span><span class="nt">psadt</span><span class="p">:</span>
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="w">      </span><span class="nt">app_vars</span><span class="p">:</span><span class="w">  </span><span class="c1"># PSADT variables</span>
+</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">        </span><span class="nt">AppName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Google</span><span class="nv"> </span><span class="s">Chrome&quot;</span>
+</span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="w">        </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${discovered_version}&quot;</span>
+</span><span id="__span-9-16"><a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="w">        </span><span class="nt">AppArch</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;x64&quot;</span>
+</span><span id="__span-9-17"><a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="w">      </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># MSI installation script</span>
+</span><span id="__span-9-18"><a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a><span class="w">        </span><span class="no">Start-ADTMsiProcess -Action Install -Path &quot;$dirFiles\googlechromestandaloneenterprise64.msi&quot; -Parameters &quot;ALLUSERS=1&quot;</span>
+</span><span id="__span-9-19"><a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a><span class="w">      </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># MSI uninstallation script</span>
+</span><span id="__span-9-20"><a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a><span class="w">        </span><span class="no">Uninstall-ADTApplication -Name &quot;Google Chrome&quot;</span>
 </span></code></pre></div>
 <ol>
 <li>Validate and test:</li>
 </ol>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>napt<span class="w"> </span>validate<span class="w"> </span>recipes/Google/chrome.yaml
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span>--verbose
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>napt<span class="w"> </span>validate<span class="w"> </span>recipes/Google/chrome.yaml
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span>--verbose
 </span></code></pre></div>
 <p><strong>What to customize:</strong></p>
 <ul>
 <li><code>url</code>: Direct download URL (must be stable, not version-specific)</li>
+<li><code>app_vars</code>: Application name, architecture, and other PSADT variables</li>
+<li><code>install</code>/<code>uninstall</code>: PowerShell deployment scripts</li>
 </ul>
-<p>Note: MSI files (<code>.msi</code> extension) are automatically detected and versions are extracted from the MSI ProductVersion property.</p>
+<p><strong>Note:</strong> MSI files (<code>.msi</code> extension) are automatically detected and versions are extracted from the MSI ProductVersion property. No additional version configuration needed.</p>
 <h2 id="troubleshoot-discovery-failures">Troubleshoot Discovery Failures</h2>
 <p>Common issues and solutions when <code>napt discover</code> fails.</p>
 <h3 id="issue-strategy-not-found">Issue: "Strategy not found"</h3>
@@ -1948,7 +1984,7 @@
 <ol>
 <li>Use <code>--debug</code> to see what NAPT is trying to parse:</li>
 </ol>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/App/app.yaml<span class="w"> </span>--debug
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/App/app.yaml<span class="w"> </span>--debug
 </span></code></pre></div>
 <ol>
 <li>
@@ -1967,14 +2003,17 @@
 <ol>
 <li>Create a GitHub personal access token</li>
 <li>Add to recipe:
-   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">source</span><span class="p">:</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;owner/repo&quot;</span>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${GITHUB_TOKEN}&quot;</span>
+   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nt">source</span><span class="p">:</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;owner/repo&quot;</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${GITHUB_TOKEN}&quot;</span>
 </span></code></pre></div></li>
 <li>Set environment variable:
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nv">$env</span>:GITHUB_TOKEN<span class="o">=</span><span class="s2">&quot;ghp_your_token_here&quot;</span><span class="w">  </span><span class="c1"># Windows</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GITHUB_TOKEN</span><span class="o">=</span><span class="s2">&quot;ghp_your_token_here&quot;</span><span class="w">  </span><span class="c1"># Linux/macOS</span>
+   <div class="language-powershell highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c"># Set environment variable on Windows:</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="nv">$env:GITHUB_TOKEN</span><span class="p">=</span><span class="s2">&quot;ghp_your_token_here&quot;</span>
+</span></code></pre></div>
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Set environment variable on Linux/macOS:</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GITHUB_TOKEN</span><span class="o">=</span><span class="s2">&quot;ghp_your_token_here&quot;</span>
 </span></code></pre></div></li>
 </ol>
 <h3 id="issue-download-failed-or-network-error">Issue: "Download failed" or "Network error"</h3>
@@ -1997,51 +2036,52 @@
 <h3 id="issue-state-file-corrupted">Issue: "State file corrupted"</h3>
 <p><strong>Problem:</strong> <code>state/versions.json</code> has invalid JSON or is corrupted.</p>
 <p><strong>Solution:</strong></p>
+<p>NAPT automatically handles corruption:</p>
 <ol>
 <li>
-<p>NAPT automatically creates a backup: <code>state/versions.json.backup</code></p>
+<p>Creates backup of corrupted file: <code>state/versions.json.backup</code></p>
 </li>
 <li>
-<p>Delete corrupted state file: <code>rm state/versions.json</code></p>
+<p>Creates a fresh state file automatically</p>
 </li>
 <li>
-<p>Run discovery again to recreate state file</p>
-</li>
-<li>
-<p>Or use <code>--stateless</code> to bypass state tracking temporarily</p>
+<p>Reports the issue with an error message</p>
 </li>
 </ol>
+<p>The state file is already fixed - just run your command again. Alternatively, use <code>--stateless</code> to bypass state tracking temporarily:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/app.yaml<span class="w"> </span>--stateless
+</span></code></pre></div>
 <h2 id="update-existing-recipes">Update Existing Recipes</h2>
 <p>When a recipe needs changes (new version format, different download URL, etc.).</p>
 <ol>
 <li>
 <p><strong>Edit the recipe file:</strong>
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Edit the YAML file</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>code<span class="w"> </span>recipes/Vendor/app.yaml
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># Edit the YAML file</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>code<span class="w"> </span>recipes/Vendor/app.yaml
 </span></code></pre></div></p>
 </li>
 <li>
 <p><strong>Validate changes:</strong>
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>napt<span class="w"> </span>validate<span class="w"> </span>recipes/Vendor/app.yaml
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>napt<span class="w"> </span>validate<span class="w"> </span>recipes/Vendor/app.yaml
 </span></code></pre></div></p>
 </li>
 <li>
 <p><strong>Test discovery:</strong>
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Vendor/app.yaml<span class="w"> </span>--verbose
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Vendor/app.yaml<span class="w"> </span>--verbose
 </span></code></pre></div></p>
 </li>
 <li>
 <p><strong>If version format changed, clear state:</strong>
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># Delete state entry for this app</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="c1"># Or delete entire state file to start fresh</span>
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>rm<span class="w"> </span>state/versions.json
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Delete state entry for this app</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="c1"># Or delete entire state file to start fresh</span>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>rm<span class="w"> </span>state/versions.json
 </span></code></pre></div></p>
 </li>
 <li>
 <p><strong>Test full workflow:</strong>
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Vendor/app.yaml
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Vendor/app.yaml
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>napt<span class="w"> </span>package<span class="w"> </span>builds/napt-app/*/
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Vendor/app.yaml
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Vendor/app.yaml
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>napt<span class="w"> </span>package<span class="w"> </span>builds/napt-app/*/
 </span></code></pre></div></p>
 </li>
 </ol>
@@ -2051,38 +2091,38 @@
 <ol>
 <li>
 <p><strong>Set token in environment:</strong>
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1"># Windows PowerShell</span>
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="nv">$env</span>:API_TOKEN<span class="o">=</span><span class="s2">&quot;your-token-here&quot;</span>
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>
-</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="c1"># Linux/macOS</span>
-</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="nb">export</span><span class="w"> </span><span class="nv">API_TOKEN</span><span class="o">=</span><span class="s2">&quot;your-token-here&quot;</span>
+   <div class="language-powershell highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c"># Set environment variable on Windows:</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="nv">$env:API_TOKEN</span><span class="p">=</span><span class="s2">&quot;your-token-here&quot;</span>
+</span></code></pre></div>
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1"># Set environment variable on Linux/macOS:</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">API_TOKEN</span><span class="o">=</span><span class="s2">&quot;your-token-here&quot;</span>
 </span></code></pre></div></p>
 </li>
 <li>
 <p><strong>Reference in recipe:</strong>
-   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="nt">source</span><span class="p">:</span>
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_json</span>
-</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">  </span><span class="nt">api_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://api.vendor.com/latest&quot;</span>
-</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">  </span><span class="nt">headers</span><span class="p">:</span>
-</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">    </span><span class="nt">Authorization</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Bearer</span><span class="nv"> </span><span class="s">${API_TOKEN}&quot;</span>
+   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="nt">source</span><span class="p">:</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_json</span>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="w">  </span><span class="nt">api_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://api.vendor.com/latest&quot;</span>
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="w">  </span><span class="nt">headers</span><span class="p">:</span>
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="w">    </span><span class="nt">Authorization</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Bearer</span><span class="nv"> </span><span class="s">${API_TOKEN}&quot;</span>
 </span></code></pre></div></p>
 </li>
 <li>
 <p><strong>In CI/CD, use secrets:</strong>
-   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># GitHub Actions</span>
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Discover version</span>
-</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">  </span><span class="nt">env</span><span class="p">:</span>
-</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">    </span><span class="nt">API_TOKEN</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${{ secrets.API_TOKEN }}</span>
-</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="w">  </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt discover recipes/Vendor/app.yaml</span>
+   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># GitHub Actions</span>
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Discover version</span>
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="w">  </span><span class="nt">env</span><span class="p">:</span>
+</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="w">    </span><span class="nt">API_TOKEN</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${{ secrets.API_TOKEN }}</span>
+</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="w">  </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt discover recipes/Vendor/app.yaml</span>
 </span></code></pre></div></p>
 </li>
 </ol>
 <h3 id="recipe-level-tokens-less-secure">Recipe-Level Tokens (Less Secure)</h3>
 <p>If you must store tokens in recipes (not recommended for production):</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="nt">source</span><span class="p">:</span>
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
-</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">  </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;owner/repo&quot;</span>
-</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;ghp_your_token_here&quot;</span><span class="w">  </span><span class="c1"># Not recommended - use env vars instead</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="nt">source</span><span class="p">:</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="w">  </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;owner/repo&quot;</span>
+</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;ghp_your_token_here&quot;</span><span class="w">  </span><span class="c1"># Not recommended - use env vars instead</span>
 </span></code></pre></div>
 <p><strong>Security best practice:</strong> Always use environment variables or CI/CD secrets, never commit tokens to version control.</p>
 <h2 id="test-recipes-before-production">Test Recipes Before Production</h2>
@@ -2090,40 +2130,40 @@
 <ol>
 <li>
 <p><strong>Syntax validation:</strong>
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>napt<span class="w"> </span>validate<span class="w"> </span>recipes/Vendor/app.yaml
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>napt<span class="w"> </span>validate<span class="w"> </span>recipes/Vendor/app.yaml
 </span></code></pre></div></p>
 </li>
 <li>
 <p><strong>Test discovery:</strong>
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Vendor/app.yaml<span class="w"> </span>--verbose
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Vendor/app.yaml<span class="w"> </span>--verbose
 </span></code></pre></div></p>
 </li>
 <li>
 <p><strong>Verify downloaded file:</strong>
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># Check file exists and has content</span>
-</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>ls<span class="w"> </span>-lh<span class="w"> </span>downloads/
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="c1"># Check file exists and has content</span>
+</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>ls<span class="w"> </span>-lh<span class="w"> </span>downloads/
 </span></code></pre></div></p>
 </li>
 <li>
 <p><strong>Test build:</strong>
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Vendor/app.yaml<span class="w"> </span>--verbose
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Vendor/app.yaml<span class="w"> </span>--verbose
 </span></code></pre></div></p>
 </li>
 <li>
 <p><strong>Verify build structure:</strong>
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="c1"># Check PSADT files are present</span>
-</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>ls<span class="w"> </span>builds/napt-app/*/Invoke-AppDeployToolkit.ps1
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="c1"># Check PSADT files are present</span>
+</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>ls<span class="w"> </span>builds/napt-app/*/Invoke-AppDeployToolkit.ps1
 </span></code></pre></div></p>
 </li>
 <li>
 <p><strong>Test packaging:</strong>
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>napt<span class="w"> </span>package<span class="w"> </span>builds/napt-app/*/<span class="w"> </span>--verbose
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a>napt<span class="w"> </span>package<span class="w"> </span>builds/napt-app/*/<span class="w"> </span>--verbose
 </span></code></pre></div></p>
 </li>
 <li>
 <p><strong>Verify .intunewin file:</strong>
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="c1"># Check file was created</span>
-</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>ls<span class="w"> </span>-lh<span class="w"> </span>packages/napt-app/*.intunewin
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="c1"># Check file was created</span>
+</span><span id="__span-32-2"><a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a>ls<span class="w"> </span>-lh<span class="w"> </span>packages/napt-app/*.intunewin
 </span></code></pre></div></p>
 </li>
 </ol>

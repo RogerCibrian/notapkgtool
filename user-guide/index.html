@@ -984,10 +984,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#error-handling" class="md-nav__link">
+  <a href="#scripting" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Error Handling
+        Scripting
       
     </span>
   </a>
@@ -2298,10 +2298,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#error-handling" class="md-nav__link">
+  <a href="#scripting" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Error Handling
+        Scripting
       
     </span>
   </a>
@@ -2420,12 +2420,7 @@
 <li>Uses pattern matching to find source files in brand pack directory</li>
 </ul>
 </li>
-<li><strong>Generate Detection and Requirements Scripts</strong> - Creates PowerShell scripts for Intune Win32 app deployment:<ul>
-<li><strong>Detection script</strong> (always): Used by the App entry (and by the Update entry) to detect if the app is installed at the expected version. Saves as <code>{AppName}_{Version}-Detection.ps1</code>.</li>
-<li><strong>Requirements script</strong> (when <code>build_types</code> is <code>both</code> or <code>update_only</code>): Used by the Update app entry to determine if an older version is installed (outputs "Required" when update is needed). Saves as <code>{AppName}_{Version}-Requirements.ps1</code>.</li>
-<li>App name comes from MSI ProductName (MSI installers) or <code>win32.installed_check.display_name</code> (non-MSI). Both scripts use the same registry locations, installer-type filtering, and CMTrace logging. Configurable via <code>win32.installed_check</code> in defaults or recipe.</li>
-</ul>
-</li>
+<li><strong>Generate Detection and Requirements Scripts</strong> - Creates PowerShell scripts for Intune Win32 app deployment (detection always generated; requirements only when <code>build_types</code> is <code>both</code> or <code>update_only</code>). See <a href="#detection-and-requirements-scripts">Detection and Requirements Scripts</a> below for details.</li>
 </ol>
 <p><strong>Output</strong>: Complete PSADT package in <code>builds/{app_id}/{version}/</code> with detection script always present, and requirements script when <code>build_types</code> is <code>both</code> or <code>update_only</code>.</p>
 <h4 id="detection-and-requirements-scripts">Detection and Requirements Scripts</h4>
@@ -2438,18 +2433,31 @@
 <p><strong>How the scripts work:</strong></p>
 <ul>
 <li>
-<p><strong>Registry locations checked:</strong></p>
+<p><strong>Registry locations checked (architecture-aware):</strong></p>
 <ul>
-<li><code>HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall</code> (machine-level, 64-bit)</li>
+<li>Scripts use explicit <code>RegistryView</code> (Registry64 or Registry32) for deterministic behavior regardless of PowerShell process bitness</li>
+<li><strong>For x64/arm64 architecture</strong> (or 64-bit view when architecture is "any"):<ul>
+<li><code>HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall</code> (machine-level)</li>
 <li><code>HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall</code> (user-level)</li>
-<li><code>HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall</code> (machine-level, 32-bit on 64-bit OS)</li>
-<li><code>HKCU:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall</code> (user-level, 32-bit on 64-bit OS)</li>
+</ul>
+</li>
+<li><strong>For x86 architecture</strong> (or 32-bit view when architecture is "any" on 64-bit OS):<ul>
+<li><code>HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall</code> (machine-level)</li>
+<li><code>HKCU:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall</code> (user-level)</li>
+</ul>
+</li>
+<li><strong>For x86 architecture on 32-bit OS</strong>:<ul>
+<li><code>HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall</code> (machine-level)</li>
+<li><code>HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall</code> (user-level)</li>
+</ul>
+</li>
+<li><strong>When architecture is "any"</strong> (default): Checks both 64-bit and 32-bit views (all applicable paths above)</li>
 </ul>
 </li>
 <li>
 <p><strong>App name determination:</strong></p>
 <ul>
-<li><strong>MSI installers:</strong> Uses MSI <code>ProductName</code> property (authoritative source for registry DisplayName).</li>
+<li><strong>MSI installers:</strong> Uses MSI <code>ProductName</code> property (authoritative source for registry DisplayName). For MSIs where the vendor includes version in the ProductName (e.g., "7-Zip 25.01"), use <code>win32.installed_check.override_msi_display_name: true</code> to specify a custom <code>display_name</code> pattern instead. See <a href="../recipe-reference/#override_msi_display_name">Recipe Reference - Win32 Configuration</a> for details.</li>
 <li><strong>Non-MSI installers:</strong> Requires <code>win32.installed_check.display_name</code> in recipe configuration. Scripts match registry <code>DisplayName</code> to this value.</li>
 </ul>
 </li>
@@ -2461,27 +2469,70 @@
 </ul>
 </li>
 <li>
+<p><strong>Architecture filtering:</strong></p>
+<ul>
+<li>Controls which registry views are checked based on the <code>AppArch</code> value from <code>psadt.app_vars</code> in the recipe</li>
+<li><strong>MSI installers:</strong> AppArch is automatically extracted from MSI package metadata during discovery (no manual configuration needed)</li>
+<li><strong>Non-MSI installers:</strong> AppArch must be explicitly specified in <code>psadt.app_vars</code> (e.g., <code>AppArch: "x64"</code>)</li>
+<li><strong>Architecture values:</strong><ul>
+<li><code>x64</code> / <code>arm64</code>: Checks only 64-bit registry view (ARM64 uses 64-bit registry)</li>
+<li><code>x86</code>: Checks only 32-bit registry view</li>
+<li><code>any</code> (default if not specified): Checks both 64-bit and 32-bit views for maximum compatibility</li>
+</ul>
+</li>
+<li>Uses explicit <code>RegistryView</code> API for deterministic behavior regardless of PowerShell process bitness</li>
+<li>Prevents false matches when both 32-bit and 64-bit versions of the same software are installed</li>
+</ul>
+</li>
+<li>
 <p><strong>Logging:</strong></p>
 <ul>
-<li>CMTrace format for Intune diagnostics. <strong>Primary locations</strong> (system/user): <code>C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\</code> — detection uses <code>NAPTDetections.log</code> / <code>NAPTDetectionsUser.log</code>, requirements use <code>NAPTRequirements.log</code> / <code>NAPTRequirementsUser.log</code>. The script tries the primary first: it creates the primary parent directory if it does not exist, then verifies write access. If that fails (e.g. insufficient permissions), it tries <strong>fallback locations</strong> — system <code>C:\ProgramData\NAPT\</code>, user <code>%LOCALAPPDATA%\NAPT\</code> (same log file names) — creating the fallback parent directory if needed. If both primary and fallback fail, a warning is written to stderr and the script continues without a log file. Log rotation: 2-file rotation (default 3MB max size).</li>
+<li><strong>Format:</strong> CMTrace format for compatibility with Intune diagnostics tools</li>
+<li><strong>Primary locations:</strong><ul>
+<li>System context: <code>C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\</code></li>
+<li>User context: <code>C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\</code></li>
+<li>Detection: <code>NAPTDetections.log</code> (system) / <code>NAPTDetectionsUser.log</code> (user)</li>
+<li>Requirements: <code>NAPTRequirements.log</code> (system) / <code>NAPTRequirementsUser.log</code> (user)</li>
+</ul>
+</li>
+<li><strong>Fallback locations</strong> (used if primary location fails):<ul>
+<li>System context: <code>C:\ProgramData\NAPT\</code></li>
+<li>User context: <code>%LOCALAPPDATA%\NAPT\</code></li>
+<li>Same log file names as primary locations</li>
+</ul>
+</li>
+<li><strong>Fallback behavior:</strong> Script tries primary first (creates directory if needed, verifies write access). If that fails (insufficient permissions), tries fallback. If both fail, script continues with a warning to stderr but no log file</li>
+<li><strong>Log rotation:</strong> 2-file rotation (.log and .log.old), default 3MB max size per file</li>
 </ul>
 </li>
 </ul>
-<p><strong>Detection vs requirements (version check and output):</strong></p>
+<p><strong>Detection vs Requirements scripts:</strong></p>
 <ul>
-<li><strong>Detection:</strong> Compares installed version to expected version. Supports exact match or minimum version (installed &gt;= expected). Exit 0 if installed and meets requirement, exit 1 otherwise.</li>
-<li><strong>Requirements:</strong> Always exits 0 so Intune can evaluate stdout. If an older version is installed, the script writes "Required" to stdout so the Update entry is applicable; otherwise it writes nothing to stdout. Configure the requirement rule in Intune with output type String, operator Equals, value "Required".</li>
+<li><strong>Detection script</strong> - Checks if the application is installed at the expected version:<ul>
+<li>Version check: Compares installed version to expected version</li>
+<li>Match modes: Exact match (installed = expected) or minimum version (installed &gt;= expected)</li>
+<li>Exit codes: Exit 0 if installed and meets requirement, exit 1 otherwise</li>
+<li>Used by: Both App and Update entries in Intune</li>
 </ul>
-<p><strong>Script files:</strong></p>
-<p>Scripts are saved as siblings to <code>packagefiles/</code>. Detection is always present; requirements only when <code>build_types</code> is <code>both</code> or <code>update_only</code>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>builds/napt-chrome/142.0.7444.163/
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  ├── packagefiles/              # PSADT package (packaged into .intunewin)
+</li>
+<li><strong>Requirements script</strong> - Determines if an installed application needs to be updated:<ul>
+<li>Version check: Determines if installed version &lt; target version</li>
+<li>Output: Writes "Required" to stdout if update needed, nothing otherwise</li>
+<li>Exit codes: Always exits 0 (allows Intune to evaluate stdout)</li>
+<li>Intune configuration: Requirement rule with output type String, operator Equals, value "Required"</li>
+<li>Used by: Update entry only (to determine if update is applicable)</li>
+</ul>
+</li>
+</ul>
+<p><strong>Output location and packaging:</strong></p>
+<p>Scripts are saved as siblings to the <code>packagefiles/</code> directory and are NOT included in the <code>.intunewin</code> package:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>builds/napt-chrome/144.0.7559.110/
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  ├── packagefiles/                                 # PSADT package (packaged into .intunewin)
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  │   └── ...
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  ├── Google-Chrome-142.0.7444.163-Detection.ps1    # Always built
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  └── Google-Chrome-142.0.7444.163-Requirements.ps1 # When build_types is both or update_only
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  ├── Google-Chrome-144.0.7559.110-Detection.ps1    # Detection script
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  └── Google-Chrome-144.0.7559.110-Requirements.ps1 # Requirements script (if generated)
 </span></code></pre></div>
-<p><strong>Important:</strong> These scripts are NOT included in the <code>.intunewin</code> package. Upload them separately in Intune when configuring the Win32 App and Update entries.</p>
-<p><strong>Configuration:</strong> Via <code>win32.installed_check</code> in defaults or recipe. Use <code>win32.build_types</code> to control whether the requirements script is generated. See <a href="../recipe-reference/#win32-configuration">Recipe Reference - Win32 Configuration</a> for options.</p>
+<p><strong>Configuration:</strong> See <a href="../recipe-reference/#win32-configuration">Recipe Reference - Win32 Configuration</a> for <code>win32.installed_check</code> and <code>win32.build_types</code> options.</p>
 <h3 id="package-process-napt-package">Package Process (<code>napt package</code>)</h3>
 <p>The package process creates a <code>.intunewin</code> file from the built PSADT directory:</p>
 <ol>
@@ -2616,18 +2667,18 @@
 </tbody>
 </table>
 <blockquote>
-<p><strong>Note:</strong> For complete configuration examples and field documentation for each strategy, see <a href="../recipe-reference/">Recipe Reference</a>. For implementation details, see <a href="../api/discovery/">Discovery Module</a> in Developer Reference.</p>
+<p><strong>Note:</strong> For complete configuration examples and field documentation for each strategy, see <a href="../recipe-reference/">Recipe Reference</a>.</p>
 </blockquote>
 <h3 id="decision-guide">Decision Guide</h3>
 <p>Use this flowchart to choose the right strategy:</p>
 <pre class="mermaid"><code>flowchart TD
     Start{JSON API for&lt;br/&gt;version/download?}
     Start --&gt;|Yes| JSON[api_json&lt;br/&gt;Fast version checks]
-    Start --&gt;|No| GitHub{App on&lt;br/&gt;GitHub?}
+    Start --&gt;|No| GitHub{Published via&lt;br/&gt;GitHub releases?}
     GitHub --&gt;|Yes| GHRelease[api_github&lt;br/&gt;Reliable API, fast checks]
-    GitHub --&gt;|No| DirectURL{Have direct&lt;br/&gt;download URL?}
+    GitHub --&gt;|No| DirectURL{Fixed/stable&lt;br/&gt;download URL?}
     DirectURL --&gt;|Yes| Static[url_download&lt;br/&gt;Must download to check]
-    DirectURL --&gt;|No| Scrape[web_scrape&lt;br/&gt;Scrape page for link]</code></pre>
+    DirectURL --&gt;|No| Scrape[web_scrape&lt;br/&gt;Scrape vendor page for link]</code></pre>
 <p><strong>Performance Note</strong>: Version-first strategies (everything except url_download) can skip downloads entirely when versions haven't changed, making them ideal for scheduled CI/CD checks.</p>
 <h2 id="recipe-basics">Recipe Basics</h2>
 <p>A recipe file defines how to discover, download, and package an application. Recipes are YAML files that specify:</p>
@@ -2636,22 +2687,29 @@
 <li><strong>PSADT configuration</strong> - PowerShell deployment scripts and variables</li>
 </ul>
 <h3 id="basic-structure">Basic Structure</h3>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span><span class="w">  </span><span class="c1"># Recipe format version</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">app</span><span class="p">:</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Application</span><span class="nv"> </span><span class="s">Name&quot;</span><span class="w">  </span><span class="c1"># Display name</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;napt-app-id&quot;</span><span class="w">  </span><span class="c1"># Unique identifier</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="nt">source</span><span class="p">:</span><span class="w">  </span><span class="c1"># Discovery configuration</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span><span class="w">  </span><span class="c1"># One of: api_github, api_json, url_download, web_scrape</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="c1"># ... strategy-specific fields</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span><span class="nt">psadt</span><span class="p">:</span><span class="w">  </span><span class="c1"># PSADT configuration</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">    </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># Installation script</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">        </span><span class="no"># PowerShell code here</span>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">      </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># Uninstallation script</span>
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">        </span><span class="no"># PowerShell code here</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span><span class="w">  </span><span class="c1"># Recipe format version</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nt">app</span><span class="p">:</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Application</span><span class="nv"> </span><span class="s">Name&quot;</span><span class="w">  </span><span class="c1"># Display name</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;napt-app-id&quot;</span><span class="w">  </span><span class="c1"># Unique identifier</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span><span class="nt">source</span><span class="p">:</span><span class="w">  </span><span class="c1"># Discovery configuration</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">      </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span><span class="w">  </span><span class="c1"># One of: api_github, api_json, url_download, web_scrape</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">      </span><span class="c1"># ... strategy-specific fields</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">  </span><span class="nt">psadt</span><span class="p">:</span><span class="w">  </span><span class="c1"># PSADT configuration</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">      </span><span class="nt">app_vars</span><span class="p">:</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">        </span><span class="nt">AppName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Application</span><span class="nv"> </span><span class="s">Name&quot;</span>
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">        </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${discovered_version}&quot;</span>
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">        </span><span class="nt">AppArch</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;x64&quot;</span>
+</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="w">      </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># Installation script</span>
+</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="w">        </span><span class="no"># PowerShell code here</span>
+</span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="w">      </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># Uninstallation script</span>
+</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="w">        </span><span class="no"># PowerShell code here</span>
 </span></code></pre></div>
 <h3 id="quick-reference">Quick Reference</h3>
 <ul>
-<li><strong>Top-level fields:</strong> <code>apiVersion</code> (required), <code>apps</code> (required)</li>
+<li><strong>Top-level fields:</strong> <code>apiVersion</code> (required), <code>app</code> (required)</li>
 <li><strong>App fields:</strong> <code>name</code> (required), <code>id</code> (required), <code>source</code> (required), <code>psadt</code> (required)</li>
 <li><strong>Discovery strategies:</strong> See <a href="#discovery-strategies">Discovery Strategies</a> section above for strategy selection and examples</li>
 <li><strong>PSADT scripts:</strong> Use <code>${discovered_version}</code> for auto-substituted version, <code>$dirFiles</code> for installer path</li>
@@ -2690,9 +2748,6 @@
     UpdateState --&gt; Ready([✓ Ready for napt build])</code></pre>
 <p><strong>Performance:</strong> Version-first strategies (api_github, api_json, web_scrape) check versions before downloading (~100-300ms) and skip downloads entirely if unchanged. File-first strategy (url_download) uses HTTP conditional requests (~500ms) with ETag caching.</p>
 <p><strong>Note:</strong> State is updated after every discovery run, even when skipping downloads. This updates the <code>last_updated</code> timestamp and confirms the cached version is still current.</p>
-<blockquote>
-<p><strong>Note:</strong> For state tracking implementation, see <a href="../api/state/">State Module</a> in Developer Reference.</p>
-</blockquote>
 <h3 id="default-behavior-stateful">Default Behavior (Stateful)</h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># State tracking enabled by default</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
@@ -2740,9 +2795,6 @@
 </span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="c1"># AppVendor will be &quot;Google LLC&quot; (from vendor defaults)</span>
 </span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">  </span><span class="c1"># release will be &quot;latest&quot; (from org defaults)</span>
 </span></code></pre></div>
-<blockquote>
-<p><strong>Note:</strong> For configuration loading implementation, see <a href="../api/config/">Config Module</a> in Developer Reference.</p>
-</blockquote>
 <h2 id="cross-platform-support">Cross-Platform Support</h2>
 <p><strong>NAPT is a Windows tool</strong> for Microsoft Intune packaging. Develop on any platform, package on Windows.</p>
 <h3 id="platform-compatibility-matrix">Platform Compatibility Matrix</h3>
@@ -2783,7 +2835,7 @@
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Run everything on Windows</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>napt<span class="w"> </span>package<span class="w"> </span>builds/napt-chrome/142.0.7444.163/
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>napt<span class="w"> </span>package<span class="w"> </span>builds/napt-chrome/144.0.7559.110/
 </span></code></pre></div>
 <h4 id="workflow-2-mixed-platform-development">Workflow 2: Mixed Platform Development</h4>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># On Linux/macOS: Discovery and build</span>
@@ -2792,25 +2844,20 @@
 </span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>
 </span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="c1"># Transfer build directory to Windows (e.g., via shared storage)</span>
 </span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="c1"># On Windows: Package</span>
-</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>napt<span class="w"> </span>package<span class="w"> </span>builds/napt-chrome/142.0.7444.163/
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>napt<span class="w"> </span>package<span class="w"> </span>builds/napt-chrome/144.0.7559.110/
 </span></code></pre></div>
-<blockquote>
-<p><strong>Note:</strong> For MSI extraction backend details and implementation information, see <a href="../api/versioning/">Versioning Module</a> in Developer Reference.</p>
-</blockquote>
-<p>NAPT can be used as a Python library for automation and integration. For library usage, see <a href="../api/core/">Developer Reference</a>.</p>
 <h2 id="best-practices">Best Practices</h2>
 <h3 id="recipe-organization">Recipe Organization</h3>
 <p>Organize recipes by vendor: <code>recipes/&lt;Vendor&gt;/&lt;app&gt;.yaml</code>. NAPT automatically detects vendor from directory structure and loads <code>defaults/vendors/&lt;Vendor&gt;.yaml</code> if it exists.</p>
 <h3 id="state-management">State Management</h3>
 <p><strong>Production:</strong> Keep state tracking enabled (default), use version control for state files, run on schedule to detect updates, use <code>--verbose</code> in CI/CD.</p>
 <p><strong>Development:</strong> Use <code>--stateless</code> for testing, <code>--debug</code> for troubleshooting, delete state file to force re-discovery.</p>
-<h3 id="error-handling">Error Handling</h3>
-<p>All commands return exit codes: <code>0</code> = Success, <code>1</code> = Error. Use in scripts:</p>
+<h3 id="scripting">Scripting</h3>
+<p>All commands return standard exit codes (<code>0</code> = success, <code>1</code> = error), making them easy to use in automation scripts:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="k">if</span><span class="w"> </span>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="p">;</span><span class="w"> </span><span class="k">then</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">    </span>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="k">fi</span>
 </span></code></pre></div>
-<p>When using NAPT as a Python library, catch exceptions directly. See <a href="../api/exceptions/">Developer Reference</a> for details.</p>
 <h2 id="troubleshooting">Troubleshooting</h2>
 <h3 id="common-issues">Common Issues</h3>
 <p><strong>Problem</strong>: MSI extraction fails on Linux/macOS</p>

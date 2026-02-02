@@ -1685,15 +1685,16 @@
 </tr>
 </tbody>
 </table>
-<p>See the <a href="user-guide/#cross-platform-support">Cross-Platform Support</a> section for detailed workflows.</p>
+<p>See the <a href="user-guide/#cross-platform-support">Cross-Platform Support</a> section for platform-specific workflows.</p>
 <h2 id="getting-started">Getting Started</h2>
-<p>Most users interact with NAPT via CLI - see the <a href="quick-start/">Quick Start Guide</a> for installation instructions and your first steps with NAPT.</p>
+<p>See the <a href="quick-start/">Quick Start Guide</a> for installation and setup.</p>
 <h2 id="creating-recipes">Creating Recipes</h2>
 <p>Recipes are YAML configuration files that define how to discover, download, and package applications.</p>
 <p><strong>Example recipes:</strong></p>
 <ul>
 <li><strong><a href="https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Google/chrome.yaml">chrome.yaml</a></strong> - url_download strategy with MSI version extraction</li>
-<li><strong><a href="https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/7-Zip/7zip.yaml">7zip.yaml</a></strong> - web_scrape strategy for vendor download pages</li>
+<li><strong><a href="https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Git/git.yaml">git.yaml</a></strong> - api_github strategy for GitHub Releases</li>
+<li><strong><a href="https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/7-Zip/7zip-x64-msi.yaml">7zip-x64-msi.yaml</a></strong> - web_scrape strategy for vendor download pages</li>
 </ul>
 <p>NAPT supports multiple discovery strategies (url_download, web_scrape, api_github, api_json) - see the <a href="user-guide/#discovery-strategies">Discovery Strategies</a> guide for detailed configuration and more examples.</p>
 <h2 id="contributing">Contributing</h2>

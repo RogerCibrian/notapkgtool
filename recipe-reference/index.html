@@ -1068,6 +1068,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#log_format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        log_format
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#log_level" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        log_level
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#log_rotation_mb" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2442,6 +2464,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#log_format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        log_format
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#log_level" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        log_level
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#log_rotation_mb" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2599,16 +2643,17 @@
 <p><strong>💡 Tip:</strong> For practical examples and workflows, see <a href="../common-tasks/">Common Tasks</a>. For strategy selection guidance, see <a href="../user-guide/#discovery-strategies">Discovery Strategies</a> in the User Guide.</p>
 </blockquote>
 <h2 id="top-level-fields">Top-Level Fields</h2>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span><span class="w">  </span><span class="c1"># Required: Recipe format version (currently v1)</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">app</span><span class="p">:</span><span class="w">  </span><span class="c1"># Required: Application configuration</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Application</span><span class="nv"> </span><span class="s">Name&quot;</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="c1"># ... app configuration</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span><span class="w">  </span><span class="c1"># Required: Recipe format version (currently napt/v1)</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">app</span><span class="p">:</span><span class="w">  </span><span class="c1"># Required: Application configuration</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Application</span><span class="nv"> </span><span class="s">Name&quot;</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="c1"># ... app configuration</span>
 </span></code></pre></div>
 <h3 id="apiversion">apiVersion</h3>
-<p><strong>Type:</strong> <code>string</code><br />
-<strong>Required:</strong> Yes<br />
-<strong>Values:</strong> <code>v1</code> (currently only version)</p>
-<p>Specifies the recipe format version. Currently only <code>v1</code> is supported.</p>
+<p><strong>Type:</strong> <code>string</code>
+<strong>Required:</strong> Yes
+<strong>Values:</strong> <code>napt/v1</code> (currently only version)</p>
+<p>Specifies the recipe format version. Currently only <code>napt/v1</code> is supported.</p>
 <h3 id="app">app</h3>
 <p><strong>Type:</strong> <code>object</code><br />
 <strong>Required:</strong> Yes</p>
@@ -3075,6 +3120,18 @@
 <li><code>fail_on_error: true</code> (default): Build fails if scripts cannot be generated</li>
 <li><code>fail_on_error: false</code>: Build continues, script paths will be <code>None</code> in BuildResult</li>
 </ul>
+<h4 id="log_format">log_format</h4>
+<p><strong>Type:</strong> <code>string</code>
+<strong>Required:</strong> No
+<strong>Default:</strong> <code>"cmtrace"</code>
+<strong>Allowed values:</strong> <code>"cmtrace"</code></p>
+<p>Log format for detection and requirements scripts. Currently only CMTrace format is supported (compatible with Configuration Manager Trace Log Tool).</p>
+<h4 id="log_level">log_level</h4>
+<p><strong>Type:</strong> <code>string</code>
+<strong>Required:</strong> No
+<strong>Default:</strong> <code>"INFO"</code>
+<strong>Allowed values:</strong> <code>"INFO"</code>, <code>"WARNING"</code>, <code>"ERROR"</code>, <code>"DEBUG"</code></p>
+<p>Minimum log level for detection and requirements scripts. Controls verbosity of log output.</p>
 <h4 id="log_rotation_mb">log_rotation_mb</h4>
 <p><strong>Type:</strong> <code>integer</code><br />
 <strong>Required:</strong> No<br />
@@ -3169,25 +3226,27 @@
 </span></code></pre></div></p>
 <p><strong>Note:</strong> For CI/CD, set environment variables in your pipeline configuration (GitHub Actions, Azure DevOps, etc.).</p>
 <h2 id="complete-example">Complete Example</h2>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span>
 </span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>
 </span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="nt">app</span><span class="p">:</span>
 </span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Example</span><span class="nv"> </span><span class="s">Application&quot;</span>
 </span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="w">  </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;napt-example&quot;</span>
-</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a><span class="w">  </span><span class="nt">source</span><span class="p">:</span>
-</span><span id="__span-23-7"><a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a><span class="w">      </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
-</span><span id="__span-23-8"><a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a><span class="w">      </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;owner/repo&quot;</span>
-</span><span id="__span-23-9"><a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a><span class="w">      </span><span class="nt">asset_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;.*-x64\\.exe$&quot;</span>
-</span><span id="__span-23-10"><a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a><span class="w">      </span><span class="nt">version_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;v?([0-9.]+)&quot;</span>
-</span><span id="__span-23-11"><a id="__codelineno-23-11" name="__codelineno-23-11" href="#__codelineno-23-11"></a><span class="w">  </span><span class="w w-Error">  </span><span class="nt">psadt</span><span class="p">:</span>
-</span><span id="__span-23-12"><a id="__codelineno-23-12" name="__codelineno-23-12" href="#__codelineno-23-12"></a><span class="w">      </span><span class="nt">app_vars</span><span class="p">:</span>
-</span><span id="__span-23-13"><a id="__codelineno-23-13" name="__codelineno-23-13" href="#__codelineno-23-13"></a><span class="w">        </span><span class="nt">AppName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Example</span><span class="nv"> </span><span class="s">Application&quot;</span>
-</span><span id="__span-23-14"><a id="__codelineno-23-14" name="__codelineno-23-14" href="#__codelineno-23-14"></a><span class="w">        </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${discovered_version}&quot;</span>
-</span><span id="__span-23-15"><a id="__codelineno-23-15" name="__codelineno-23-15" href="#__codelineno-23-15"></a><span class="w">        </span><span class="nt">AppArch</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;x64&quot;</span>
-</span><span id="__span-23-16"><a id="__codelineno-23-16" name="__codelineno-23-16" href="#__codelineno-23-16"></a><span class="w">      </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-23-17"><a id="__codelineno-23-17" name="__codelineno-23-17" href="#__codelineno-23-17"></a><span class="w">        </span><span class="no">Start-ADTProcess -Path &quot;$dirFiles\*.exe&quot; -Parameters &quot;/S&quot;</span>
-</span><span id="__span-23-18"><a id="__codelineno-23-18" name="__codelineno-23-18" href="#__codelineno-23-18"></a><span class="w">      </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-23-19"><a id="__codelineno-23-19" name="__codelineno-23-19" href="#__codelineno-23-19"></a><span class="w">        </span><span class="no">Uninstall-ADTApplication -Name &quot;Example Application&quot;</span>
+</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>
+</span><span id="__span-23-7"><a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a><span class="w">  </span><span class="nt">source</span><span class="p">:</span>
+</span><span id="__span-23-8"><a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a><span class="w">      </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
+</span><span id="__span-23-9"><a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a><span class="w">      </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;owner/repo&quot;</span>
+</span><span id="__span-23-10"><a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a><span class="w">      </span><span class="nt">asset_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;.*-x64\\.exe$&quot;</span>
+</span><span id="__span-23-11"><a id="__codelineno-23-11" name="__codelineno-23-11" href="#__codelineno-23-11"></a><span class="w">      </span><span class="nt">version_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;v?([0-9.]+)&quot;</span>
+</span><span id="__span-23-12"><a id="__codelineno-23-12" name="__codelineno-23-12" href="#__codelineno-23-12"></a>
+</span><span id="__span-23-13"><a id="__codelineno-23-13" name="__codelineno-23-13" href="#__codelineno-23-13"></a><span class="w">  </span><span class="nt">psadt</span><span class="p">:</span>
+</span><span id="__span-23-14"><a id="__codelineno-23-14" name="__codelineno-23-14" href="#__codelineno-23-14"></a><span class="w">      </span><span class="nt">app_vars</span><span class="p">:</span>
+</span><span id="__span-23-15"><a id="__codelineno-23-15" name="__codelineno-23-15" href="#__codelineno-23-15"></a><span class="w">        </span><span class="nt">AppName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Example</span><span class="nv"> </span><span class="s">Application&quot;</span>
+</span><span id="__span-23-16"><a id="__codelineno-23-16" name="__codelineno-23-16" href="#__codelineno-23-16"></a><span class="w">        </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${discovered_version}&quot;</span>
+</span><span id="__span-23-17"><a id="__codelineno-23-17" name="__codelineno-23-17" href="#__codelineno-23-17"></a><span class="w">        </span><span class="nt">AppArch</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;x64&quot;</span>
+</span><span id="__span-23-18"><a id="__codelineno-23-18" name="__codelineno-23-18" href="#__codelineno-23-18"></a><span class="w">      </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-23-19"><a id="__codelineno-23-19" name="__codelineno-23-19" href="#__codelineno-23-19"></a><span class="w">        </span><span class="no">Start-ADTProcess -Path &quot;$dirFiles\*.exe&quot; -Parameters &quot;/S&quot;</span>
+</span><span id="__span-23-20"><a id="__codelineno-23-20" name="__codelineno-23-20" href="#__codelineno-23-20"></a><span class="w">      </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-23-21"><a id="__codelineno-23-21" name="__codelineno-23-21" href="#__codelineno-23-21"></a><span class="w">        </span><span class="no">Uninstall-ADTApplication -Name &quot;Example Application&quot;</span>
 </span></code></pre></div>
 <h2 id="see-also">See Also</h2>
 <ul>
