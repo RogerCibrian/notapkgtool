@@ -80,6 +80,13 @@ Returns:
         key2 is the second thing.
 ```
 
+**Dataclass Returns:** Describe contents only (type already shown by mkdocstrings):
+```python
+Returns:
+    Discovery results and metadata including version, file path, and SHA-256 hash.
+```
+Don't repeat the class name (DiscoverResult) - mkdocstrings extracts it from the return annotation and auto-links to the dataclass definition where all fields are documented.
+
 **Module docstrings:** Required for all modules. First line is summary, then blank line, then details.
 
 **Test docstrings:** Use `"""Tests that <condition>."""` format. Keep brief.
