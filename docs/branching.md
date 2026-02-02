@@ -39,7 +39,7 @@ git push origin feature/your-feature-name
 
 1. Push your branch to GitHub
 2. Create a Pull Request on GitHub
-3. Fill out the description using the [PR template](#pull-request-description-template)
+3. Fill out the description using the [PR template](#pull-request-process)
 4. Request review from maintainers
 5. Address any feedback
 
@@ -153,7 +153,7 @@ git commit -m "WIP"                   # Too vague
 
 ## Pull Request Process
 
-When creating a PR, the [PR template](/.github/PULL_REQUEST_TEMPLATE.md) auto-populates with sections for Description, Motivation, Changes, Testing, and Checklist.
+When creating a PR, the [PR template](https://github.com/RogerCibrian/notapkgtool/blob/main/.github/PULL_REQUEST_TEMPLATE.md) auto-populates with sections for Description, Motivation, Changes, Testing, and Checklist.
 
 ## Merge Strategy
 

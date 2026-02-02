@@ -153,19 +153,7 @@ def discover_recipe(
             always download). Default is False.
 
     Returns:
-        DiscoverResult dataclass with the following fields:
-
-            - app_name (str): Application display name from recipe configuration.
-            - app_id (str): Unique application identifier from recipe configuration.
-            - strategy (str): Discovery strategy used (e.g., "web_scrape", "api_github",
-                "api_json", "url_download").
-            - version (str): Extracted version string (e.g., "141.0.7390.123").
-            - version_source (str): How version was determined (e.g., "regex_in_url",
-                "msi", "api_tag", "api_json").
-            - file_path (Path): Path to the downloaded installer file in output_dir.
-            - sha256 (str): SHA-256 hash of the downloaded file for integrity
-                verification.
-            - status (str): Always "success" for successful discovery operations.
+        Discovery results and metadata including version, file path, and SHA-256 hash.
 
     Raises:
         ConfigError: On missing or invalid configuration fields (no app defined,

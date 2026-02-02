@@ -32,7 +32,7 @@ from typing import Literal
 
 @dataclass(frozen=True)
 class DiscoveredVersion:
-    """Container for a discovered version string.
+    """Represents a version string discovered from a source.
 
     Attributes:
         version: Raw version string (e.g., "140.0.7339.128").
@@ -46,7 +46,7 @@ class DiscoveredVersion:
 
 @dataclass(frozen=True)
 class VersionInfo:
-    """Container for version information discovered without downloading.
+    """Represents version metadata obtained without downloading the installer.
 
     Used by version-first strategies (web_scrape, api_github, api_json)
     that can determine version and download URL without fetching the installer.

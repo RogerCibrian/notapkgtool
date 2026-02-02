@@ -19,26 +19,27 @@ version comparison strategies, hash-based change detection, and deployment
 wave/ring management.
 
 Modules:
-
-updates : module
-    Update policies for deciding when to stage new application versions.
+    updates: Update policies for deciding when to stage new application versions.
 
 Example:
-    from notapkgtool.policy import UpdatePolicy, should_stage
+    Basic usage:
+        ```python
+        from notapkgtool.policy import UpdatePolicy, should_stage
 
-    policy = UpdatePolicy(
-        strategy="version_then_hash",
-        comparator="semver",
-    )
+        policy = UpdatePolicy(
+            strategy="version_then_hash",
+            comparator="semver",
+        )
 
-    stage_it = should_stage(
-        remote_version="1.2.0",
-        remote_hash="abc123...",
-        current_version="1.1.9",
-        current_hash="def456...",
-        policy=policy,
-    )
-    print(f"Should stage: {stage_it}")  # True
+        stage_it = should_stage(
+            remote_version="1.2.0",
+            remote_hash="abc123...",
+            current_version="1.1.9",
+            current_hash="def456...",
+            policy=policy,
+        )
+        print(f"Should stage: {stage_it}")  # True
+        ```
 
 """
 

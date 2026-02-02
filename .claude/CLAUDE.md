@@ -80,6 +80,13 @@ Returns:
         key2 is the second thing.
 ```
 
+**Dataclass Returns:** Describe contents only (type already shown by mkdocstrings):
+```python
+Returns:
+    Discovery results and metadata including version, file path, and SHA-256 hash.
+```
+Don't repeat the class name (DiscoverResult) - mkdocstrings extracts it from the return annotation and auto-links to the dataclass definition where all fields are documented.
+
 **Module docstrings:** Required for all modules. First line is summary, then blank line, then details.
 
 **Test docstrings:** Use `"""Tests that <condition>."""` format. Keep brief.
@@ -160,6 +167,66 @@ Update docs when code changes affect user-facing behavior.
 **Formatting:** Use sentence case for headings. One sentence per line in source. Wrap at 80 chars for prose.
 
 **Validate:** Run `mkdocs serve` before committing doc changes.
+
+---
+
+## Recipe Schema Changes
+
+When adding new recipe fields or modifying the YAML schema:
+
+### 1. Update Validation
+
+Add field to schema in `notapkgtool/validation.py`:
+
+```python
+_INSTALLED_CHECK_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
+    "new_field": (str, ["value1", "value2"], "field description"),
+    # type, allowed_values (or None), description
+}
+```
+
+### 2. Document in recipe-reference.md
+
+Add field documentation following the standard format:
+
+```markdown
+#### field_name
+
+**Type:** `string`
+**Required:** No
+**Default:** `"default_value"`
+**Allowed values:** `"value1"`, `"value2"`
+
+Description of what the field does and when to use it.
+```
+
+**Field documentation order:** Type → Required → Default (if applicable) → Allowed values (if applicable) → Description → Examples (if helpful)
+
+### 3. Update Defaults (if needed)
+
+If the field has organization-level defaults, add to `defaults/org.yaml`:
+
+```yaml
+defaults:
+  section:
+    new_field: "default_value"  # Comment explaining purpose
+```
+
+### 4. Verify Implementation
+
+Check these files to ensure the field is actually used:
+- Search codebase: `grep -r "new_field" notapkgtool/`
+- Verify it's read from config in relevant modules
+- Check if field exists in defaults but isn't used (planned feature)
+
+### 5. Update Examples
+
+Add field to example recipes in `docs/common-tasks.md` if it's commonly used, or note it as optional in relevant strategy examples.
+
+**Important:** All documented fields should either:
+- Be validated in `validation.py` AND used in the code
+- Be clearly marked as planned/future functionality
+- Be removed if no longer needed
 
 ---
 

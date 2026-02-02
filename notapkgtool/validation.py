@@ -273,24 +273,14 @@ def _validate_win32_config(
 def validate_recipe(recipe_path: Path) -> ValidationResult:
     """Validate a recipe file without downloading anything.
 
-    This function checks:
-
-    1. YAML file can be parsed
-    2. Required top-level fields are present
-    3. apiVersion is supported
-    4. App has required fields
-    5. Discovery strategies exist
-    6. Strategy-specific configuration is valid
-    7. Win32 configuration fields are valid (types, values, unknown field warnings)
+    Validates recipe syntax, required fields, and configuration without
+    making network calls.
 
     Args:
         recipe_path: Path to the recipe YAML file to validate.
 
     Returns:
-        A ValidationResult with status ("valid" or "invalid"), errors (list of
-            validation failure messages), warnings (list of non-blocking issues),
-            app_count (1 for valid recipes, 0 otherwise), and recipe_path (string
-            path to the validated file).
+        Validation status, errors, warnings, and app count.
 
     Example:
         Validate a recipe and check results:

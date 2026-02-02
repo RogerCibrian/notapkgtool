@@ -125,12 +125,16 @@ class LoadContext:
 
 
 def _load_yaml_file(p: Path) -> Any:
-    """Load a YAML file and return the parsed Python object.
+    """Loads a YAML file and returns the parsed Python object.
+
+    Args:
+        p: Path to the YAML file to load.
+
+    Returns:
+        The parsed Python object from the YAML file.
 
     Raises:
-        ConfigError: When file does not exist, invalid YAML (parse error),
-            or empty files.
-
+        ConfigError: When file does not exist, invalid YAML (parse error), or empty files.
     """
     if not p.exists():
         raise ConfigError(f"file not found: {p}")
@@ -150,14 +154,22 @@ def _load_yaml_file(p: Path) -> Any:
 
 
 def _deep_merge_dicts(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
-    """Deep-merge two dicts with "overlay wins".
+    """Deep-merges two dicts with "overlay wins" semantics.
 
-    Rules:
-      - dict + dict -> deep merge
-      - list + list -> overlay REPLACES base (not concatenated)
-      - everything else -> overlay overwrites base
+    Merge behavior:
+
+    - dict + dict -> deep merge
+    - list + list -> overlay REPLACES base (not concatenated)
+    - everything else -> overlay overwrites base
 
     This function does not mutate inputs; returns a new dict.
+
+    Args:
+        base: The base dictionary.
+        overlay: The overlay dictionary that takes precedence.
+
+    Returns:
+        A new dictionary with the merged contents.
     """
     result: dict[str, Any] = dict(base)
     for k, v in overlay.items():
@@ -175,8 +187,13 @@ def _deep_merge_dicts(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str
 
 
 def _find_defaults_root(start_dir: Path) -> Path | None:
-    """Walk upward from 'start_dir' looking for a 'defaults/org.yaml'.
-    Returns the directory containing 'defaults' or None if not found.
+    """Walks upward from start_dir looking for a defaults/org.yaml file.
+
+    Args:
+        start_dir: The directory to start searching from.
+
+    Returns:
+        The directory containing defaults/ if found, None otherwise.
     """
     for parent in [start_dir] + list(start_dir.parents):
         candidate = parent / "defaults" / "org.yaml"
@@ -186,12 +203,20 @@ def _find_defaults_root(start_dir: Path) -> Path | None:
 
 
 def _detect_vendor(recipe_path: Path, recipe_obj: dict[str, Any]) -> str | None:
-    """Determine the vendor name for this recipe.
+    """Determines the vendor name for this recipe.
 
-    Priority:
-      1) Folder name under 'recipes/' (e.g., recipes/Google/chrome.yaml -> Google)
-      2) recipe.app.psadt.app_vars.AppVendor (if present)
-      3) None if not found
+    Uses the following priority order:
+
+    1. Folder name under recipes/ (e.g., recipes/Google/chrome.yaml -> Google)
+    2. recipe.app.psadt.app_vars.AppVendor (if present)
+    3. None if not found
+
+    Args:
+        recipe_path: Path to the recipe file.
+        recipe_obj: The parsed recipe dictionary.
+
+    Returns:
+        The vendor name if detected, None otherwise.
     """
     # Try directory name one level up from the recipe file
     parent_name = recipe_path.parent.name or None
@@ -221,15 +246,18 @@ def _detect_vendor(recipe_path: Path, recipe_obj: dict[str, Any]) -> str | None:
 def _resolve_known_paths(
     cfg: dict[str, Any], recipe_dir: Path, defaults_root: Path | None = None
 ) -> None:
-    """Resolve relative path fields inside the merged config.
+    """Resolves relative path fields inside the merged config.
 
     We keep this explicit and conservative to avoid unexpected rewrites.
-    Currently handled:
-      - cfg["defaults"]["psadt"]["brand_pack"]["path"]
+    Currently handles cfg["defaults"]["psadt"]["brand_pack"]["path"].
 
     Brand pack paths are resolved relative to defaults_root (if available),
-    otherwise relative to recipe_dir as fallback.
-    Modifies cfg in place.
+    otherwise relative to recipe_dir as fallback. Modifies cfg in place.
+
+    Args:
+        cfg: The merged configuration dictionary.
+        recipe_dir: Directory containing the recipe file.
+        defaults_root: Root directory containing defaults/, if found.
     """
     try:
         brand_pack = cfg["defaults"]["psadt"]["brand_pack"]
@@ -254,10 +282,13 @@ def _resolve_known_paths(
 
 
 def _inject_dynamic_values(cfg: dict[str, Any]) -> None:
-    """Inject dynamic fields that should be set at load/build time.
+    """Injects dynamic fields that should be set at load/build time.
 
-    Currently:
-      - defaults.psadt.app_vars.AppScriptDate = today's date (YYYY-MM-DD)
+    Currently injects defaults.psadt.app_vars.AppScriptDate with today's date
+    in YYYY-MM-DD format.
+
+    Args:
+        cfg: The configuration dictionary to inject values into.
     """
     today_str = date.today().strftime("%Y-%m-%d")
     try:
@@ -307,27 +338,31 @@ def load_effective_config(
     *,
     vendor: str | None = None,
 ) -> dict[str, Any]:
-    """Load and merge the effective configuration for a recipe.
+    """Loads and merges the effective configuration for a recipe.
 
-    Steps:
-        1. Read recipe YAML
-        2. Find defaults root by scanning upwards for 'defaults/org.yaml'
-        3. Load org defaults (required if defaults root exists)
-        4. Determine vendor (param 'vendor' > folder name > recipe contents)
-        5. Load vendor defaults if present
-        6. Merge: org -> vendor -> recipe (dicts deep-merge, lists replace)
-        7. Resolve known relative paths (relative to the recipe directory)
-        8. Inject dynamic fields (AppScriptDate = today if absent)
+    Performs the following operations:
+
+    1. Read recipe YAML
+    2. Find defaults root by scanning upwards for defaults/org.yaml
+    3. Load org defaults (required if defaults root exists)
+    4. Determine vendor (param vendor > folder name > recipe contents)
+    5. Load vendor defaults if present
+    6. Merge: org -> vendor -> recipe (dicts deep-merge, lists replace)
+    7. Resolve known relative paths (relative to the recipe directory)
+    8. Inject dynamic fields (AppScriptDate = today if absent)
+
+    Args:
+        recipe_path: Path to the recipe YAML file.
+        vendor: Optional vendor name override. If not provided, vendor is detected
+            from the folder name or recipe contents.
 
     Returns:
-        A merged configuration dict ready for downstream processors.
-        If no defaults were found in the tree, the recipe is returned
-        as-is (with path resolution + injection).
+        A merged configuration dict ready for downstream processors. If no defaults
+            were found in the tree, the recipe is returned as-is (with path
+            resolution and injection).
 
     Raises:
-        ConfigError: On YAML parse errors, empty files, invalid structure,
-            or if the recipe file is missing.
-
+        ConfigError: On YAML parse errors, empty files, invalid structure, or if the recipe file is missing.
     """
     from notapkgtool.logging import get_global_logger
 

@@ -243,7 +243,8 @@ def _create_build_directory(base_dir: Path, app_id: str, version: str) -> Path:
         version: Application version.
 
     Returns:
-        Path to the packagefiles subdirectory (build_dir/packagefiles/).
+        Path to the packagefiles subdirectory where PSADT files will be copied
+            (build_dir/packagefiles/).
 
     Raises:
         OSError: If directory creation fails.
@@ -893,22 +894,8 @@ def build_package(
             Default: From config or Path("builds")
 
     Returns:
-        BuildResult dataclass with the following fields:
-
-            - app_id (str): Unique application identifier from recipe configuration.
-            - app_name (str): Application display name from recipe configuration.
-            - version (str): Application version extracted from installer file (filesystem
-                is source of truth).
-            - build_dir (Path): Path to the created build directory, following the pattern
-                {output_dir}/{app_id}/{version}/.
-            - psadt_version (str): PSADT version used for the build (e.g., "4.1.7").
-            - status (str): Build status, typically "success" for completed builds.
-            - build_types (str): The build_types setting used ("both", "app_only", or
-                "update_only").
-            - detection_script_path (Path | None): Path to the generated detection script,
-                or None if generation failed (non-fatal).
-            - requirements_script_path (Path | None): Path to the generated requirements
-                script, or None if skipped (build_types="app_only") or failed (non-fatal).
+        Build result containing app metadata, build paths, PSADT version, and
+            generated script paths.
 
     Raises:
         FileNotFoundError: If recipe or installer doesn't exist.
@@ -934,16 +921,17 @@ def build_package(
 
     Note:
         Requires installer to be downloaded first (run 'napt discover').
-        Version extracted from installer file, not state cache. Overwrites
-        existing build directory if it exists. PSADT files are copied pristine
-        from cache. Invoke-AppDeployToolkit.ps1 is generated (not copied).
+        Version extracted from installer file, not state cache.
+        Overwrites existing build directory if it exists.
+        PSADT files are copied pristine from cache.
+        Invoke-AppDeployToolkit.ps1 is generated (not copied).
         Scripts are generated as siblings to the packagefiles directory
         (not included in .intunewin package - must be uploaded separately to Intune).
         Script generation can be configured as non-fatal via
         win32.installed_check.fail_on_error setting in recipe configuration.
-        Detection script is always generated. The build_types setting
-        controls requirements script only: "both" (default) generates
-        detection and requirements, "app_only" generates only detection,
+        Detection script is always generated.
+        The build_types setting controls requirements script only: "both" (default)
+        generates detection and requirements, "app_only" generates only detection,
         "update_only" generates detection and requirements.
     """
     from notapkgtool.logging import get_global_logger

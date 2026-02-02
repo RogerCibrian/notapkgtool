@@ -19,7 +19,7 @@ based on version, hash, and org policy.
 
 Example:
     Check if a new version should be staged:
-
+        ```python
         from notapkgtool.policy.updates import should_stage, UpdatePolicy
 
         decision = should_stage(
@@ -33,6 +33,7 @@ Example:
                 comparator="semver"
             ),
         )
+        ```
 
 """
 
@@ -49,6 +50,16 @@ Comparator = Literal["semver", "lexicographic"]
 
 @dataclass(frozen=True)
 class UpdatePolicy:
+    """Update policy configuration for determining when to stage new versions.
+
+    Attributes:
+        strategy: Strategy for version comparison (default: "version_then_hash").
+        allow_same_version_hash_change: Allow staging when version is same but
+            hash differs (default: True).
+        comparator: Version comparison method - "semver" or "lexicographic"
+            (default: "semver").
+    """
+
     strategy: Strategy = "version_then_hash"
     allow_same_version_hash_change: bool = True
     comparator: Comparator = "semver"

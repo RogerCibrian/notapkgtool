@@ -1,5 +1,4 @@
 apiVersion: napt/v1
-project: "napt - Example Apps"
 
 app:
   name: "Fictional App via JSON API"
@@ -30,7 +29,6 @@ app:
 ---
 # Example 2: Nested JSON structure
 apiVersion: napt/v1
-project: "napt - Example Apps"
 
 app:
   name: "Nested JSON API Example"
@@ -59,7 +57,6 @@ app:
 ---
 # Example 3: POST request with body
 apiVersion: napt/v1
-project: "napt - Example Apps"
 
 app:
   name: "POST API Example"

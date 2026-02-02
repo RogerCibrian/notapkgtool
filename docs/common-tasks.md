@@ -14,18 +14,25 @@ Use this when the application is hosted on GitHub with releases.
 
 ```yaml
 # recipes/Git/git.yaml
-apiVersion: v1  # Recipe format version (currently v1)
+apiVersion: napt/v1  # Recipe format version
+
 app:  # Application configuration
   name: "Git for Windows"  # Display name for the application
   id: "napt-git"  # Unique identifier (used for build directories and package names)
+
   source:  # Discovery configuration - how to find and download the installer
-    strategy: api_github  # Discovery strategy: api_github, api_json, url_download, or web_scrape
-    repo: "git-for-windows/git"  # GitHub repository (owner/repo format)
-    asset_pattern: "Git-.*-64-bit\\.exe$"  # Regex pattern to match installer filename in release assets
-    version_pattern: "v?([0-9.]+)"  # Regex pattern to extract version from Git tag
-    psadt:  # PSAppDeployToolkit configuration
+      strategy: api_github  # Discovery strategy: api_github, api_json, url_download, or web_scrape
+      repo: "git-for-windows/git"  # GitHub repository (owner/repo format)
+      asset_pattern: "Git-.*-64-bit\\.exe$"  # Regex pattern to match installer filename in release assets
+      version_pattern: "v?([0-9.]+)\\.windows"  # Regex pattern to extract version from Git tag
+
+  psadt:  # PSAppDeployToolkit configuration
+      app_vars:  # PSADT variables (AppName, AppVersion, AppArch)
+        AppName: "Git for Windows"
+        AppVersion: "${discovered_version}"  # Auto-populated from discovery
+        AppArch: "x64"
       install: |  # PowerShell script executed during installation
-        Start-ADTProcess -Path "$dirFiles\Git-*.exe" -Parameters "/VERYSILENT /NORESTART"
+        Start-ADTProcess -Path "$dirFiles\Git-${discovered_version}-64-bit.exe" -Parameters "/VERYSILENT /NORESTART"
       uninstall: |  # PowerShell script executed during uninstallation
         Uninstall-ADTApplication -Name "Git"
 ```
@@ -58,17 +65,29 @@ Use this when the vendor has a download page listing installers (no API availabl
 
 ```yaml
 # recipes/7-Zip/7zip.yaml
-apiVersion: v1  # Recipe format version
+apiVersion: napt/v1  # Recipe format version
+
 app:
   name: "7-Zip"  # Display name
   id: "napt-7zip"  # Unique identifier
+
   source:
       strategy: web_scrape  # Scrape vendor download page for installer link
       page_url: "https://www.7-zip.org/download.html"  # URL of vendor download page
       link_selector: 'a[href$="-x64.msi"]'  # CSS selector to find download link
       version_pattern: "7z(\\d{2})(\\d{2})-x64"  # Regex to extract version from URL (captures year and month)
       version_format: "{0}.{1}"  # Format captured groups as "25.01" (year.month)
-    psadt:
+
+  win32:  # Windows-specific configuration for detection and validation
+      installed_check:
+          display_name: "7-Zip * (x64 edition)"  # Pattern for detecting installed app (wildcards supported)
+          override_msi_display_name: true  # Override MSI DisplayName that includes version
+
+  psadt:
+      app_vars:  # PSADT variables
+        AppName: "7-Zip"
+        AppVersion: "${discovered_version}"
+        AppArch: "x64"
       install: |  # MSI installation script
         Start-ADTMsiProcess -Action Install -Path "$dirFiles\7z*-x64.msi" -Parameters "ALLUSERS=1"
       uninstall: |  # MSI uninstallation script
@@ -88,6 +107,9 @@ napt discover recipes/7-Zip/7zip.yaml --verbose
 - `link_selector`: CSS selector to find the download link
 - `version_pattern`: Regex to extract version from URL
 - `version_format`: Format string to transform version (optional)
+- `win32.installed_check`: Configure when vendor includes version in DisplayName (e.g., "7-Zip 25.01")
+  - `display_name`: Pattern with wildcards to match the installed app name
+  - `override_msi_display_name`: Set to `true` to override MSI's versioned DisplayName
 
 ## Create a Recipe for a JSON API Endpoint
 
@@ -99,10 +121,12 @@ Use this when the vendor provides a JSON API with version and download URL.
 
 ```yaml
 # recipes/Vendor/app.yaml
-apiVersion: v1  # Recipe format version
+apiVersion: napt/v1  # Recipe format version
+
 app:
   name: "Application Name"  # Display name
   id: "napt-app"  # Unique identifier
+
   source:
       strategy: api_json  # Query JSON API for version and download URL
       api_url: "https://api.vendor.com/latest"  # JSON API endpoint URL
@@ -110,7 +134,12 @@ app:
       download_url_path: "download_url"  # JSONPath to download URL field
       headers:  # Optional HTTP headers (e.g., for authentication)
         Authorization: "Bearer ${API_TOKEN}"  # Environment variable substitution supported
-    psadt:
+
+  psadt:
+      app_vars:  # PSADT variables
+        AppName: "Application Name"
+        AppVersion: "${discovered_version}"
+        AppArch: "x64"
       install: |  # Installation script
         Start-ADTProcess -Path "$dirFiles\app-installer.exe" -Parameters "/S"
       uninstall: |  # Uninstallation script
@@ -119,11 +148,12 @@ app:
 
 2. Set environment variable (if needed):
 
-```bash
-# Windows PowerShell
+```powershell
+# Set environment variable on Windows:
 $env:API_TOKEN="your-token-here"
-
-# Linux/macOS
+```
+```bash
+# Set environment variable on Linux/macOS:
 export API_TOKEN="your-token-here"
 ```
 
@@ -151,16 +181,21 @@ Use this when the vendor has a stable download URL (like Chrome enterprise MSI).
 
 ```yaml
 # recipes/Google/chrome.yaml
-apiVersion: v1  # Recipe format version
+apiVersion: napt/v1  # Recipe format version
+
 app:
   name: "Google Chrome"  # Display name
   id: "napt-chrome"  # Unique identifier
+
   source:
       strategy: url_download  # Direct download from fixed URL
-      url: "https://dl.google.com/chrome/install/googlechromestandaloneenterprise64.msi"  # Stable download URL
-      version:  # Version extraction configuration
-        type: msi  # Extract version from MSI ProductVersion property
-    psadt:
+      url: "https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi"  # Stable download URL
+
+  psadt:
+      app_vars:  # PSADT variables
+        AppName: "Google Chrome"
+        AppVersion: "${discovered_version}"
+        AppArch: "x64"
       install: |  # MSI installation script
         Start-ADTMsiProcess -Action Install -Path "$dirFiles\googlechromestandaloneenterprise64.msi" -Parameters "ALLUSERS=1"
       uninstall: |  # MSI uninstallation script
@@ -177,8 +212,10 @@ napt discover recipes/Google/chrome.yaml --verbose
 **What to customize:**
 
 - `url`: Direct download URL (must be stable, not version-specific)
+- `app_vars`: Application name, architecture, and other PSADT variables
+- `install`/`uninstall`: PowerShell deployment scripts
 
-Note: MSI files (`.msi` extension) are automatically detected and versions are extracted from the MSI ProductVersion property.
+**Note:** MSI files (`.msi` extension) are automatically detected and versions are extracted from the MSI ProductVersion property. No additional version configuration needed.
 
 ## Troubleshoot Discovery Failures
 
@@ -229,9 +266,13 @@ Common issues and solutions when `napt discover` fails.
      token: "${GITHUB_TOKEN}"
    ```
 3. Set environment variable:
+   ```powershell
+   # Set environment variable on Windows:
+   $env:GITHUB_TOKEN="ghp_your_token_here"
+   ```
    ```bash
-   $env:GITHUB_TOKEN="ghp_your_token_here"  # Windows
-   export GITHUB_TOKEN="ghp_your_token_here"  # Linux/macOS
+   # Set environment variable on Linux/macOS:
+   export GITHUB_TOKEN="ghp_your_token_here"
    ```
 
 ### Issue: "Download failed" or "Network error"
@@ -254,13 +295,19 @@ Common issues and solutions when `napt discover` fails.
 
 **Solution:**
 
-1. NAPT automatically creates a backup: `state/versions.json.backup`
+NAPT automatically handles corruption:
 
-2. Delete corrupted state file: `rm state/versions.json`
+1. Creates backup of corrupted file: `state/versions.json.backup`
 
-3. Run discovery again to recreate state file
+2. Creates a fresh state file automatically
 
-4. Or use `--stateless` to bypass state tracking temporarily
+3. Reports the issue with an error message
+
+The state file is already fixed - just run your command again. Alternatively, use `--stateless` to bypass state tracking temporarily:
+
+```bash
+napt discover recipes/app.yaml --stateless
+```
 
 ## Update Existing Recipes
 
@@ -303,11 +350,12 @@ Many APIs require authentication. Here's how to handle tokens securely.
 ### Environment Variables (Recommended)
 
 1. **Set token in environment:**
-   ```bash
-   # Windows PowerShell
+   ```powershell
+   # Set environment variable on Windows:
    $env:API_TOKEN="your-token-here"
-   
-   # Linux/macOS
+   ```
+   ```bash
+   # Set environment variable on Linux/macOS:
    export API_TOKEN="your-token-here"
    ```
 

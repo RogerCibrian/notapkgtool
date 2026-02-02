@@ -225,16 +225,7 @@ def create_intunewin(
             after packaging. Default is False.
 
     Returns:
-        PackageResult dataclass with the following fields:
-
-            - build_dir (Path): Path to the PSADT build directory that was packaged.
-                This directory may have been removed if clean_source=True.
-            - package_path (Path): Path to the created .intunewin file, located at
-                {output_dir}/{app_id}/Invoke-AppDeployToolkit.intunewin (named by IntuneWinAppUtil.exe).
-            - app_id (str): Unique application identifier extracted from build directory
-                structure.
-            - version (str): Application version extracted from build directory structure.
-            - status (str): Packaging status, typically "success" for completed packaging.
+        Package metadata including .intunewin path, app ID, and version.
 
     Raises:
         ConfigError: If build directory structure is invalid.

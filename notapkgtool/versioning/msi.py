@@ -115,7 +115,7 @@ Architecture = Literal["x86", "x64", "arm64"]
 
 @dataclass(frozen=True)
 class MSIMetadata:
-    """MSI Property table metadata.
+    """Represents metadata extracted from an MSI Property table.
 
     Attributes:
         product_name: ProductName from MSI (display name).

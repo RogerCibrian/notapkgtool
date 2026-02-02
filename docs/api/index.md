@@ -73,7 +73,6 @@ Result (dataclass)
 
 ## Quick Start
 
-- **Using NAPT as a library:** Start with [`core.py`](core.md) - `discover_recipe()`, `build_package()`, `create_intunewin()`
 - **Extending the CLI:** See [`cli.py`](cli.md) for command registration patterns
 - **Adding discovery strategies:** Implement `DiscoveryStrategy` protocol from [`discovery/base.py`](discovery.md)
 

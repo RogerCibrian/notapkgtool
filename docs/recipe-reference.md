@@ -7,7 +7,8 @@ Complete documentation of all recipe fields, options, and configuration patterns
 ## Top-Level Fields
 
 ```yaml
-apiVersion: v1  # Required: Recipe format version (currently v1)
+apiVersion: napt/v1  # Required: Recipe format version (currently napt/v1)
+
 app:  # Required: Application configuration
   name: "Application Name"
   # ... app configuration
@@ -15,11 +16,11 @@ app:  # Required: Application configuration
 
 ### apiVersion
 
-**Type:** `string`  
-**Required:** Yes  
-**Values:** `v1` (currently only version)
+**Type:** `string`
+**Required:** Yes
+**Values:** `napt/v1` (currently only version)
 
-Specifies the recipe format version. Currently only `v1` is supported.
+Specifies the recipe format version. Currently only `napt/v1` is supported.
 
 ### app
 
@@ -622,6 +623,24 @@ If `true`, script generation failures will abort the build. If `false`, build co
 - `fail_on_error: true` (default): Build fails if scripts cannot be generated
 - `fail_on_error: false`: Build continues, script paths will be `None` in BuildResult
 
+#### log_format
+
+**Type:** `string`
+**Required:** No
+**Default:** `"cmtrace"`
+**Allowed values:** `"cmtrace"`
+
+Log format for detection and requirements scripts. Currently only CMTrace format is supported (compatible with Configuration Manager Trace Log Tool).
+
+#### log_level
+
+**Type:** `string`
+**Required:** No
+**Default:** `"INFO"`
+**Allowed values:** `"INFO"`, `"WARNING"`, `"ERROR"`, `"DEBUG"`
+
+Minimum log level for detection and requirements scripts. Controls verbosity of log output.
+
 #### log_rotation_mb
 
 **Type:** `integer`  
@@ -740,17 +759,19 @@ export GITHUB_TOKEN="your_token_here"
 ## Complete Example
 
 ```yaml
-apiVersion: v1
+apiVersion: napt/v1
 
 app:
   name: "Example Application"
   id: "napt-example"
+
   source:
       strategy: api_github
       repo: "owner/repo"
       asset_pattern: ".*-x64\\.exe$"
       version_pattern: "v?([0-9.]+)"
-    psadt:
+
+  psadt:
       app_vars:
         AppName: "Example Application"
         AppVersion: "${discovered_version}"

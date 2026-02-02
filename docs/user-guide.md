@@ -54,10 +54,7 @@ The build process creates a complete PSADT package from the recipe and downloade
     - Reads `brand_pack` configuration from org/vendor defaults
     - Replaces files in `Assets/` directory (AppIcon.png, Banner.Classic.png, etc.)
     - Uses pattern matching to find source files in brand pack directory
-10. **Generate Detection and Requirements Scripts** - Creates PowerShell scripts for Intune Win32 app deployment:
-    - **Detection script** (always): Used by the App entry (and by the Update entry) to detect if the app is installed at the expected version. Saves as `{AppName}_{Version}-Detection.ps1`.
-    - **Requirements script** (when `build_types` is `both` or `update_only`): Used by the Update app entry to determine if an older version is installed (outputs "Required" when update is needed). Saves as `{AppName}_{Version}-Requirements.ps1`.
-    - App name comes from MSI ProductName (MSI installers) or `win32.installed_check.display_name` (non-MSI). Both scripts use the same registry locations, installer-type filtering, and CMTrace logging. Configurable via `win32.installed_check` in defaults or recipe.
+10. **Generate Detection and Requirements Scripts** - Creates PowerShell scripts for Intune Win32 app deployment (detection always generated; requirements only when `build_types` is `both` or `update_only`). See [Detection and Requirements Scripts](#detection-and-requirements-scripts) below for details.
 
 **Output**: Complete PSADT package in `builds/{app_id}/{version}/` with detection script always present, and requirements script when `build_types` is `both` or `update_only`.
 
@@ -72,43 +69,79 @@ Both scripts share the same logic for registry lookup, app name resolution, and 
 
 **How the scripts work:**
 
-- **Registry locations checked:**
-    - `HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall` (machine-level, 64-bit)
-    - `HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall` (user-level)
-    - `HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall` (machine-level, 32-bit on 64-bit OS)
-    - `HKCU:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall` (user-level, 32-bit on 64-bit OS)
+- **Registry locations checked (architecture-aware):**
+    - Scripts use explicit `RegistryView` (Registry64 or Registry32) for deterministic behavior regardless of PowerShell process bitness
+    - **For x64/arm64 architecture** (or 64-bit view when architecture is "any"):
+        - `HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall` (machine-level)
+        - `HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall` (user-level)
+    - **For x86 architecture** (or 32-bit view when architecture is "any" on 64-bit OS):
+        - `HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall` (machine-level)
+        - `HKCU:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall` (user-level)
+    - **For x86 architecture on 32-bit OS**:
+        - `HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall` (machine-level)
+        - `HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall` (user-level)
+    - **When architecture is "any"** (default): Checks both 64-bit and 32-bit views (all applicable paths above)
 
 - **App name determination:**
-    - **MSI installers:** Uses MSI `ProductName` property (authoritative source for registry DisplayName).
+    - **MSI installers:** Uses MSI `ProductName` property (authoritative source for registry DisplayName). For MSIs where the vendor includes version in the ProductName (e.g., "7-Zip 25.01"), use `win32.installed_check.override_msi_display_name: true` to specify a custom `display_name` pattern instead. See [Recipe Reference - Win32 Configuration](recipe-reference.md#override_msi_display_name) for details.
     - **Non-MSI installers:** Requires `win32.installed_check.display_name` in recipe configuration. Scripts match registry `DisplayName` to this value.
 
 - **Installer type filtering:**
     - **MSI installers (strict):** Only match registry entries that are MSI-based (checks `WindowsInstaller` = 1). Prevents false matches when both MSI and EXE versions exist.
     - **Non-MSI installers (permissive):** Match any registry entry (MSI or non-MSI) to handle EXE installers that run embedded MSIs internally.
 
+- **Architecture filtering:**
+    - Controls which registry views are checked based on the `AppArch` value from `psadt.app_vars` in the recipe
+    - **MSI installers:** AppArch is automatically extracted from MSI package metadata during discovery (no manual configuration needed)
+    - **Non-MSI installers:** AppArch must be explicitly specified in `psadt.app_vars` (e.g., `AppArch: "x64"`)
+    - **Architecture values:**
+        - `x64` / `arm64`: Checks only 64-bit registry view (ARM64 uses 64-bit registry)
+        - `x86`: Checks only 32-bit registry view
+        - `any` (default if not specified): Checks both 64-bit and 32-bit views for maximum compatibility
+    - Uses explicit `RegistryView` API for deterministic behavior regardless of PowerShell process bitness
+    - Prevents false matches when both 32-bit and 64-bit versions of the same software are installed
+
 - **Logging:**
-    - CMTrace format for Intune diagnostics. **Primary locations** (system/user): `C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\` — detection uses `NAPTDetections.log` / `NAPTDetectionsUser.log`, requirements use `NAPTRequirements.log` / `NAPTRequirementsUser.log`. The script tries the primary first: it creates the primary parent directory if it does not exist, then verifies write access. If that fails (e.g. insufficient permissions), it tries **fallback locations** — system `C:\ProgramData\NAPT\`, user `%LOCALAPPDATA%\NAPT\` (same log file names) — creating the fallback parent directory if needed. If both primary and fallback fail, a warning is written to stderr and the script continues without a log file. Log rotation: 2-file rotation (default 3MB max size).
+    - **Format:** CMTrace format for compatibility with Intune diagnostics tools
+    - **Primary locations:**
+        - System context: `C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\`
+        - User context: `C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\`
+        - Detection: `NAPTDetections.log` (system) / `NAPTDetectionsUser.log` (user)
+        - Requirements: `NAPTRequirements.log` (system) / `NAPTRequirementsUser.log` (user)
+    - **Fallback locations** (used if primary location fails):
+        - System context: `C:\ProgramData\NAPT\`
+        - User context: `%LOCALAPPDATA%\NAPT\`
+        - Same log file names as primary locations
+    - **Fallback behavior:** Script tries primary first (creates directory if needed, verifies write access). If that fails (insufficient permissions), tries fallback. If both fail, script continues with a warning to stderr but no log file
+    - **Log rotation:** 2-file rotation (.log and .log.old), default 3MB max size per file
 
-**Detection vs requirements (version check and output):**
+**Detection vs Requirements scripts:**
 
-- **Detection:** Compares installed version to expected version. Supports exact match or minimum version (installed >= expected). Exit 0 if installed and meets requirement, exit 1 otherwise.
-- **Requirements:** Always exits 0 so Intune can evaluate stdout. If an older version is installed, the script writes "Required" to stdout so the Update entry is applicable; otherwise it writes nothing to stdout. Configure the requirement rule in Intune with output type String, operator Equals, value "Required".
+- **Detection script** - Checks if the application is installed at the expected version:
+    - Version check: Compares installed version to expected version
+    - Match modes: Exact match (installed = expected) or minimum version (installed >= expected)
+    - Exit codes: Exit 0 if installed and meets requirement, exit 1 otherwise
+    - Used by: Both App and Update entries in Intune
+- **Requirements script** - Determines if an installed application needs to be updated:
+    - Version check: Determines if installed version < target version
+    - Output: Writes "Required" to stdout if update needed, nothing otherwise
+    - Exit codes: Always exits 0 (allows Intune to evaluate stdout)
+    - Intune configuration: Requirement rule with output type String, operator Equals, value "Required"
+    - Used by: Update entry only (to determine if update is applicable)
 
-**Script files:**
+**Output location and packaging:**
 
-Scripts are saved as siblings to `packagefiles/`. Detection is always present; requirements only when `build_types` is `both` or `update_only`:
+Scripts are saved as siblings to the `packagefiles/` directory and are NOT included in the `.intunewin` package:
 
 ```
-builds/napt-chrome/142.0.7444.163/
-  ├── packagefiles/              # PSADT package (packaged into .intunewin)
+builds/napt-chrome/144.0.7559.110/
+  ├── packagefiles/                                 # PSADT package (packaged into .intunewin)
   │   └── ...
-  ├── Google-Chrome-142.0.7444.163-Detection.ps1    # Always built
-  └── Google-Chrome-142.0.7444.163-Requirements.ps1 # When build_types is both or update_only
+  ├── Google-Chrome-144.0.7559.110-Detection.ps1    # Detection script
+  └── Google-Chrome-144.0.7559.110-Requirements.ps1 # Requirements script (if generated)
 ```
 
-**Important:** These scripts are NOT included in the `.intunewin` package. Upload them separately in Intune when configuring the Win32 App and Update entries.
-
-**Configuration:** Via `win32.installed_check` in defaults or recipe. Use `win32.build_types` to control whether the requirements script is generated. See [Recipe Reference - Win32 Configuration](recipe-reference.md#win32-configuration) for options.
+**Configuration:** See [Recipe Reference - Win32 Configuration](recipe-reference.md#win32-configuration) for `win32.installed_check` and `win32.build_types` options.
 
 ### Package Process (`napt package`)
 
@@ -222,7 +255,7 @@ Discovery strategies are the core mechanism for obtaining application installers
 | **url_download** | File metadata | Fixed URLs, MSI installers | Medium (HTTP conditional ~500ms) |
 | **web_scrape** | Download page | Vendors without APIs | Fast (page scrape + regex) |
 
-> **Note:** For complete configuration examples and field documentation for each strategy, see [Recipe Reference](recipe-reference.md). For implementation details, see [Discovery Module](api/discovery.md) in Developer Reference.
+> **Note:** For complete configuration examples and field documentation for each strategy, see [Recipe Reference](recipe-reference.md).
 
 ### Decision Guide
 
@@ -232,11 +265,11 @@ Use this flowchart to choose the right strategy:
 flowchart TD
     Start{JSON API for<br/>version/download?}
     Start -->|Yes| JSON[api_json<br/>Fast version checks]
-    Start -->|No| GitHub{App on<br/>GitHub?}
+    Start -->|No| GitHub{Published via<br/>GitHub releases?}
     GitHub -->|Yes| GHRelease[api_github<br/>Reliable API, fast checks]
-    GitHub -->|No| DirectURL{Have direct<br/>download URL?}
+    GitHub -->|No| DirectURL{Fixed/stable<br/>download URL?}
     DirectURL -->|Yes| Static[url_download<br/>Must download to check]
-    DirectURL -->|No| Scrape[web_scrape<br/>Scrape page for link]
+    DirectURL -->|No| Scrape[web_scrape<br/>Scrape vendor page for link]
 ```
 
 **Performance Note**: Version-first strategies (everything except url_download) can skip downloads entirely when versions haven't changed, making them ideal for scheduled CI/CD checks.
@@ -251,15 +284,22 @@ A recipe file defines how to discover, download, and package an application. Rec
 ### Basic Structure
 
 ```yaml
-apiVersion: v1  # Recipe format version
+apiVersion: napt/v1  # Recipe format version
+
 app:
   name: "Application Name"  # Display name
   id: "napt-app-id"  # Unique identifier
+
   source:  # Discovery configuration
-    strategy: api_github  # One of: api_github, api_json, url_download, web_scrape
-    # ... strategy-specific fields
+      strategy: api_github  # One of: api_github, api_json, url_download, web_scrape
+      # ... strategy-specific fields
+
   psadt:  # PSADT configuration
-    install: |  # Installation script
+      app_vars:
+        AppName: "Application Name"
+        AppVersion: "${discovered_version}"
+        AppArch: "x64"
+      install: |  # Installation script
         # PowerShell code here
       uninstall: |  # Uninstallation script
         # PowerShell code here
@@ -267,7 +307,7 @@ app:
 
 ### Quick Reference
 
-- **Top-level fields:** `apiVersion` (required), `apps` (required)
+- **Top-level fields:** `apiVersion` (required), `app` (required)
 - **App fields:** `name` (required), `id` (required), `source` (required), `psadt` (required)
 - **Discovery strategies:** See [Discovery Strategies](#discovery-strategies) section above for strategy selection and examples
 - **PSADT scripts:** Use `${discovered_version}` for auto-substituted version, `$dirFiles` for installer path
@@ -317,8 +357,6 @@ flowchart TD
 **Performance:** Version-first strategies (api_github, api_json, web_scrape) check versions before downloading (~100-300ms) and skip downloads entirely if unchanged. File-first strategy (url_download) uses HTTP conditional requests (~500ms) with ETag caching.
 
 **Note:** State is updated after every discovery run, even when skipping downloads. This updates the `last_updated` timestamp and confirms the cached version is still current.
-
-> **Note:** For state tracking implementation, see [State Module](api/state.md) in Developer Reference.
 
 ### Default Behavior (Stateful)
 
@@ -378,8 +416,6 @@ app:
   # release will be "latest" (from org defaults)
 ```
 
-> **Note:** For configuration loading implementation, see [Config Module](api/config.md) in Developer Reference.
-
 ## Cross-Platform Support
 
 **NAPT is a Windows tool** for Microsoft Intune packaging. Develop on any platform, package on Windows.
@@ -403,7 +439,7 @@ The `napt package` command uses Microsoft's [IntuneWinAppUtil.exe](https://githu
 # Run everything on Windows
 napt discover recipes/Google/chrome.yaml
 napt build recipes/Google/chrome.yaml
-napt package builds/napt-chrome/142.0.7444.163/
+napt package builds/napt-chrome/144.0.7559.110/
 ```
 
 #### Workflow 2: Mixed Platform Development
@@ -414,12 +450,8 @@ napt build recipes/Google/chrome.yaml
 
 # Transfer build directory to Windows (e.g., via shared storage)
 # On Windows: Package
-napt package builds/napt-chrome/142.0.7444.163/
+napt package builds/napt-chrome/144.0.7559.110/
 ```
-
-> **Note:** For MSI extraction backend details and implementation information, see [Versioning Module](api/versioning.md) in Developer Reference.
-
-NAPT can be used as a Python library for automation and integration. For library usage, see [Developer Reference](api/core.md).
 
 ## Best Practices
 
@@ -433,17 +465,15 @@ Organize recipes by vendor: `recipes/<Vendor>/<app>.yaml`. NAPT automatically de
 
 **Development:** Use `--stateless` for testing, `--debug` for troubleshooting, delete state file to force re-discovery.
 
-### Error Handling
+### Scripting
 
-All commands return exit codes: `0` = Success, `1` = Error. Use in scripts:
+All commands return standard exit codes (`0` = success, `1` = error), making them easy to use in automation scripts:
 
 ```bash
 if napt discover recipes/Google/chrome.yaml; then
     napt build recipes/Google/chrome.yaml
 fi
 ```
-
-When using NAPT as a Python library, catch exceptions directly. See [Developer Reference](api/exceptions.md) for details.
 
 ## Troubleshooting
 

@@ -1,5 +1,4 @@
 apiVersion: napt/v1
-project: "napt - Windows Apps"
 
 app:
   name: "Google Chrome"

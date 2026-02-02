@@ -20,28 +20,22 @@ for reliability, reproducibility, and efficiency in automated packaging workflow
 Key Features:
 
 - **Retry Logic with Exponential Backoff** - Automatically retries on
-    transient failures (429, 500, 502, 503, 504) with exponential backoff.
-    Configurable via urllib3.util.Retry.
+  transient failures (429, 500, 502, 503, 504) with exponential backoff.
+  Configurable via urllib3.util.Retry.
 - **Conditional Requests (HTTP 304 Not Modified)** - Supports ETag and
-    Last-Modified headers to avoid re-downloading unchanged files.
+  Last-Modified headers to avoid re-downloading unchanged files.
 - **Atomic Writes** - Downloads to temporary .part files with atomic rename
-    on success to prevent partial files.
+  on success to prevent partial files.
 - **Integrity Verification** - SHA-256 hashing during download with
-    optional checksum validation. Corrupted files are automatically removed.
+  optional checksum validation. Corrupted files are automatically removed.
 - **Smart Filename Detection** - Respects Content-Disposition headers,
-    falls back to URL path, handles edge cases.
+  falls back to URL path, handles edge cases.
 - **Stable ETags** - Forces Accept-Encoding: identity to avoid
-    representation-specific ETags and prevent false cache misses.
+  representation-specific ETags and prevent false cache misses.
 
-Exception Classes:
-
-- NotModifiedError: Raised when conditional request returns HTTP 304
-    (not an error condition).
-
-Constants:
-
-- DEFAULT_CHUNK (int): Stream chunk size (1 MiB). Balance memory vs.
-    progress granularity.
+NotModifiedError is raised when a conditional request returns HTTP 304
+(not an error condition). The module defines DEFAULT_CHUNK (1 MiB) as the
+stream chunk size, balancing memory usage vs. progress granularity.
 
 Example:
     Basic download:
@@ -83,23 +77,21 @@ Example:
             print(f"Checksum mismatch: {e}")
         ```
 
-Design Decisions:
-
-- **Why identity encoding?** CDNs like Cloudflare compute
-    representation-specific ETags. Requesting gzip vs identity yields
-    different ETags for the same content, causing unnecessary re-downloads.
-    We pin to identity for stability.
-- **Why atomic writes?** Prevents partial files from appearing in the
-    destination. Critical for automation where another process might start
-    using a file before download completes.
-- **Why stream hashing?** Computing SHA-256 while streaming avoids a second
-    file read, improving I/O efficiency especially for large installers.
-
 Note:
-    - Progress output goes to stdout (can be captured/redirected)
-    - User-Agent identifies NAPT to help with debugging/support
-    - All HTTP errors are chained for better debugging
-    - Timeouts are per-request, not total download time
+    Progress output goes to stdout (can be captured/redirected). User-Agent
+    identifies NAPT to help with debugging/support. All HTTP errors are
+    chained for better debugging. Timeouts are per-request, not total
+    download time.
+
+    Identity encoding stabilizes ETags: CDNs like Cloudflare compute
+    representation-specific ETags, so requesting gzip vs identity yields
+    different ETags for the same content, causing unnecessary re-downloads.
+
+    Atomic writes prevent partial files from appearing in the destination,
+    which is critical for automation where another process might start using
+    a file before download completes. Stream hashing computes SHA-256 while
+    streaming to avoid a second file read, improving I/O efficiency for
+    large installers.
 
 """
 
@@ -128,10 +120,10 @@ class NotModifiedError(Exception):
 
 
 def _filename_from_cd(content_disposition: str) -> str | None:
-    """Extract a filename from a Content-Disposition header if present.
+    """Extracts a filename from a Content-Disposition header if present.
 
-    Example header:
-      'attachment; filename="setup.msi"'
+    Parses headers like 'attachment; filename="setup.msi"' and returns the
+    filename value.
     """
     if not content_disposition:
         return None
@@ -160,17 +152,15 @@ def _sha256_iter(chunks: Iterable[bytes]) -> str:
 def make_session() -> requests.Session:
     """Create a requests.Session with sane retry/backoff defaults.
 
-    - Retries on common transient status codes.
-    - Applies exponential backoff.
-    - Sets a helpful User-Agent to avoid being blocked.
+    Retries on common transient status codes, applies exponential backoff,
+    and sets a helpful User-Agent to avoid being blocked.
 
-    Notes on Accept-Encoding:
-
-    - We force 'Accept-Encoding: identity' to request the raw (uncompressed) bytes.
-    - Many CDNs compute representation-specific ETags (e.g., gzip vs identity).
-      That can cause conditional requests (If-None-Match) to miss and trigger
-      unnecessary re-downloads. Pinning identity stabilizes ETags for binary
-      installers (MSI/EXE/MSIX/ZIP), which are already compressed.
+    Note:
+        Forces Accept-Encoding: identity to request raw (uncompressed) bytes.
+        Many CDNs compute representation-specific ETags (e.g., gzip vs identity),
+        which can cause conditional requests to miss and trigger unnecessary
+        re-downloads. Pinning identity stabilizes ETags for binary installers
+        (MSI/EXE/MSIX/ZIP), which are already compressed.
     """
     s = requests.Session()
     retries = Retry(
@@ -213,7 +203,7 @@ def download_file(
         url: Source URL.
         destination_folder: Folder to save into (created if missing).
         expected_sha256: Optional known SHA-256 (hex). If set and mismatched,
-            raises ValueError.
+            raises NetworkError.
         validate_content_type: If True, rejects responses with text/html content-type.
         timeout: Per-request timeout (seconds).
         etag: Previous ETag to use for If-None-Match (conditional GET).
@@ -221,9 +211,7 @@ def download_file(
             (conditional GET).
 
     Returns:
-        A tuple (file_path, sha256_hex, headers_dict), where file_path is
-            the Path to the downloaded file, sha256_hex is the SHA-256 hash
-            of the file, and headers_dict contains HTTP response headers.
+        Tuple of file path, SHA-256 hash, and HTTP response headers.
 
     Raises:
         NotModifiedError: On HTTP 304 (conditional request satisfied).
