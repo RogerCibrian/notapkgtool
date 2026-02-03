@@ -1997,23 +1997,29 @@
 </ul>
 <h3 id="choose-your-installation-method">Choose Your Installation Method</h3>
 <h4 id="option-1-pip-for-using-napt">Option 1: pip (For Using NAPT)</h4>
-<p>Best for users who just want to use the tool without extra tooling.</p>
-<div class="language-powershell highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c"># Clone repository</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">://</span><span class="n">github</span><span class="p">.</span><span class="n">com</span><span class="p">/</span><span class="n">RogerCibrian</span><span class="p">/</span><span class="n">notapkgtool</span><span class="p">.</span><span class="n">git</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">cd </span><span class="n">notapkgtool</span>
+<p>Best for users who want to use the tool.</p>
+<blockquote>
+<p>💡 <strong>Tip:</strong> Install from a tagged release for stability. The main branch may contain breaking changes between releases.</p>
+</blockquote>
+<div class="language-powershell highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c"># Create a project directory</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">mkdir</span> <span class="n">napt-workspace</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">cd </span><span class="n">napt-workspace</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c"># Create and activate virtual environment (recommended)</span>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">python</span> <span class="n">-m</span> <span class="n">venv</span> <span class="p">.</span><span class="n">venv</span>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">.</span><span class="n">venv</span><span class="p">\</span><span class="n">Scripts</span><span class="p">\</span><span class="n">Activate</span><span class="p">.</span><span class="n">ps1</span>  <span class="c"># On Linux/macOS: source .venv/bin/activate</span>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="c"># Install</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">pip</span> <span class="n">install</span> <span class="n">-e</span> <span class="p">.</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="c"># Install from a specific release</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">pip</span> <span class="n">install</span> <span class="n">git</span><span class="p">+</span><span class="n">https</span><span class="p">://</span><span class="n">github</span><span class="p">.</span><span class="n">com</span><span class="p">/</span><span class="n">RogerCibrian</span><span class="p">/</span><span class="n">notapkgtool</span><span class="p">.</span><span class="n">git</span><span class="nv">@0</span><span class="p">.</span><span class="n">3</span><span class="p">.</span><span class="n">0</span>
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
 </span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="c"># Verify installation</span>
 </span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="n">napt</span> <span class="p">-</span><span class="n">-version</span>
 </span></code></pre></div>
 <h4 id="option-2-poetry-for-development">Option 2: Poetry (For Development)</h4>
-<p>Best for development and contributing to NAPT.</p>
+<p>Best for contributing to NAPT.</p>
+<blockquote>
+<p>ℹ️ <strong>Note:</strong> Clones the main branch so you're working with the latest code.</p>
+</blockquote>
 <p><strong>Prerequisites:</strong> Poetry must be installed. See <a href="https://python-poetry.org/docs/#installation">Poetry Installation Guide</a></p>
 <div class="language-powershell highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c"># Clone repository</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">://</span><span class="n">github</span><span class="p">.</span><span class="n">com</span><span class="p">/</span><span class="n">RogerCibrian</span><span class="p">/</span><span class="n">notapkgtool</span><span class="p">.</span><span class="n">git</span>
