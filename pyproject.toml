@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "notapkgtool"
-version = "0.2.0"
+version = "0.3.0"
 description = "NAPT - Not a Pkg Tool for Windows/Intune packaging with PSADT"
 authors = ["Roger Cibrian"]
 license = "Apache-2.0"
