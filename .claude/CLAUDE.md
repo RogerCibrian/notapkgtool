@@ -240,12 +240,62 @@ See `docs/branching.md` for full workflow. PR template at `.github/PULL_REQUEST_
 
 **PRs:** Title in conventional commit format. Use `gh pr create` to create PRs from CLI.
 
-**Releases:** [Semver 2.0.0](https://semver.org/spec/v2.0.0.html), no "v" prefix.
+### Release Workflow
 
+[Semver 2.0.0](https://semver.org/spec/v2.0.0.html), no "v" prefix.
+
+**Pre-release checklist:**
+- [ ] Version updated in `pyproject.toml`
+- [ ] Version updated in `notapkgtool/__init__.py`
+- [ ] `docs/changelog.md` updated following [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/)
+- [ ] `docs/changelog.md` has `[Unreleased]` section ready for next version
+- [ ] All tests passing
+- [ ] PR merged to main
+- [ ] Git tag created and pushed
+
+**Release steps:**
 1. Create PR `chore/prepare-release-X.Y.Z` updating versions and changelog
 2. Squash and merge
 3. Tag: `git tag -a X.Y.Z -m "Release X.Y.Z"` then `git push origin X.Y.Z`
-4. Release: `gh release create X.Y.Z --title "NAPT X.Y.Z" --notes-file RELEASE_NOTES.md`
+4. Create release: `gh release create X.Y.Z --title "NAPT X.Y.Z" --body "..."`
+
+### Release Notes Template
+
+**Title:** `NAPT {version}` (e.g., "NAPT 0.3.0")
+
+**Required sections (in order):**
+1. **Hero statement** - One sentence describing the release theme
+2. **⚠️ Breaking Changes** - With migration notes (omit if none)
+3. **✨ What's New** - Features from changelog, grouped by category
+4. **🐛 Bug Fixes** - Important fixes (omit if none)
+5. **🔗 Links** - Quick start, full changelog, documentation
+
+**Optional sections:**
+- **🚀 Quick Start** - Code examples for major new capabilities
+- **📦 What You Can Do Now** - Workflow checklist (for major releases)
+
+**Emoji categories for features:**
+- 🔨 Build & Packaging
+- 🔍 Discovery
+- 📋 Recipes/Configuration
+
+**Writing style:**
+- Use active voice and present tense
+- Be concise - summarize changelog, don't copy verbatim
+- Include code examples for major features
+- Highlight breaking changes clearly with migration instructions
+
+**What NOT to include:**
+- Internal refactorings (unless user-facing)
+- Trivial fixes (unless security/critical)
+- Work-in-progress features
+- Overly technical implementation details
+
+**Links to include:**
+- [Quick Start Guide](https://rogercibrian.github.io/notapkgtool/quick-start/)
+- [Full Changelog](https://rogercibrian.github.io/notapkgtool/changelog/)
+- [Documentation](https://rogercibrian.github.io/notapkgtool/)
+- [Sample Recipes](https://github.com/RogerCibrian/notapkgtool/tree/main/recipes)
 
 ---
 
