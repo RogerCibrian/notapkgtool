@@ -44,7 +44,7 @@ For full CLI documentation:
 For more details, see the individual module docstrings.
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __author__ = "Roger Cibrian"
 __license__ = "Apache-2.0"
 __description__ = "Not a Pkg Tool - Windows/Intune packaging with PSADT"
