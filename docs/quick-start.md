@@ -11,19 +11,21 @@
 
 #### Option 1: pip (For Using NAPT)
 
-Best for users who just want to use the tool without extra tooling.
+Best for users who want to use the tool.
+
+> 💡 **Tip:** Install from a tagged release for stability. The main branch may contain breaking changes between releases.
 
 ```powershell
-# Clone repository
-git clone https://github.com/RogerCibrian/notapkgtool.git
-cd notapkgtool
+# Create a project directory
+mkdir napt-workspace
+cd napt-workspace
 
 # Create and activate virtual environment (recommended)
 python -m venv .venv
 .venv\Scripts\Activate.ps1  # On Linux/macOS: source .venv/bin/activate
 
-# Install
-pip install -e .
+# Install from a specific release
+pip install git+https://github.com/RogerCibrian/notapkgtool.git@0.3.0
 
 # Verify installation
 napt --version
@@ -31,7 +33,9 @@ napt --version
 
 #### Option 2: Poetry (For Development)
 
-Best for development and contributing to NAPT.
+Best for contributing to NAPT.
+
+> ℹ️ **Note:** Clones the main branch so you're working with the latest code.
 
 **Prerequisites:** Poetry must be installed. See [Poetry Installation Guide](https://python-poetry.org/docs/#installation)
 
