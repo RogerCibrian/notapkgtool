@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-02-02
+
 ### Added
 
 - **Win32 Configuration Validation** - Recipe validation now checks `win32` configuration fields for correct types and values, with typo detection suggesting similar field names (e.g., "Did you mean 'display_name'?")
@@ -78,7 +80,8 @@ Initial internal release.
 - **Robust Downloads** - Retry logic, atomic writes, SHA-256 verification, and conditional requests
 
 
-[Unreleased]: https://github.com/RogerCibrian/notapkgtool/compare/0.2.0...HEAD
+[Unreleased]: https://github.com/RogerCibrian/notapkgtool/compare/0.3.0...HEAD
+[0.3.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.2.0...0.3.0
 [0.2.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.1.0...0.2.0
 [0.1.0]: https://github.com/RogerCibrian/notapkgtool/releases/tag/0.1.0
 
