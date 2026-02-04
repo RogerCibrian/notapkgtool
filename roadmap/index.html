@@ -2146,8 +2146,8 @@
 </ul>
 <p><strong>Related</strong>: TODO in <code>napt/build/packager.py</code> - discovered during testing</p>
 <h4 id="recipe-linting-best-practices">Recipe Linting &amp; Best Practices</h4>
-<p><strong>Status</strong>: 💡 Idea<br />
-<strong>Complexity</strong>: High (3-5 days)<br />
+<p><strong>Status</strong>: 💡 Idea
+<strong>Complexity</strong>: High (3-5 days)
 <strong>Value</strong>: Medium</p>
 <p><strong>Description</strong>: Advanced recipe validation beyond syntax checking, including PSADT function validation, deprecation warnings, anti-pattern detection, and style guide enforcement.</p>
 <p><strong>Benefits</strong>:</p>
@@ -2158,6 +2158,7 @@
 <li>Validates PSADT function names exist in v4</li>
 <li>Warns on deprecated patterns or old v3 functions</li>
 <li>Suggests improvements (e.g., use Uninstall-ADTApplication)</li>
+<li>Warns about unknown fields at app level (e.g., deprecated <code>detection</code> vs <code>win32.installed_check</code>)</li>
 </ul>
 <h3 id="technical-enhancements">Technical Enhancements</h3>
 <h4 id="exe-version-extraction">EXE Version Extraction</h4>

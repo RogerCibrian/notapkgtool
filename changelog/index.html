@@ -1287,6 +1287,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#031-2026-02-03" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.3.1 - 2026-02-03
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.3.1 - 2026-02-03">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#030-2026-02-02" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1310,7 +1338,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed" class="md-nav__link">
+  <a href="#changed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1360,7 +1388,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_1" class="md-nav__link">
+  <a href="#changed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1524,6 +1552,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#031-2026-02-03" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.3.1 - 2026-02-03
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.3.1 - 2026-02-03">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#030-2026-02-02" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1547,7 +1603,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed" class="md-nav__link">
+  <a href="#changed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1597,7 +1653,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_1" class="md-nav__link">
+  <a href="#changed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1675,7 +1731,13 @@
 <p>All notable changes to NAPT (Not a Pkg Tool) will be documented in this file.</p>
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
-<h2 id="unreleased"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.3.0...HEAD">Unreleased</a></h2>
+<h2 id="unreleased"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.3.1...HEAD">Unreleased</a></h2>
+<h2 id="031-2026-02-03"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.3.0...0.3.1">0.3.1</a> - 2026-02-03</h2>
+<h3 id="changed">Changed</h3>
+<ul>
+<li><strong>PyPI Package Name</strong> - Package renamed from <code>notapkgtool</code> to <code>napt</code> for simpler installation (<code>pip install napt</code>)</li>
+<li><strong>Automated PyPI Publishing</strong> - Releases now automatically publish to PyPI via GitHub Actions using Trusted Publisher (OIDC)</li>
+</ul>
 <h2 id="030-2026-02-02"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.2.0...0.3.0">0.3.0</a> - 2026-02-02</h2>
 <h3 id="added">Added</h3>
 <ul>
@@ -1686,7 +1748,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong>Architecture-Aware Detection</strong> - Detection and requirements scripts now use explicit registry views based on target architecture, preventing false positives when x86 and x64 versions coexist. MSI architecture is auto-detected from Template property; non-MSI installers require <code>win32.installed_check.architecture</code> configuration (x86, x64, arm64, or any)</li>
 <li><strong>MSI Display Name Override</strong> - New <code>override_msi_display_name</code> flag allows using custom <code>display_name</code> instead of MSI ProductName for registry lookups, solving edge cases where ProductName contains version numbers (e.g., "7-Zip 25.01"). Supports wildcards (<code>*</code>, <code>?</code>) for flexible matching</li>
 </ul>
-<h3 id="changed">Changed</h3>
+<h3 id="changed_1">Changed</h3>
 <ul>
 <li><strong>BREAKING: Non-MSI Architecture Required</strong> - <code>win32.installed_check.architecture</code> is now required for non-MSI installers (EXE, etc.). Allowed values: <code>x86</code>, <code>x64</code>, <code>arm64</code>, <code>any</code></li>
 <li><strong>Discovery Performance Optimization</strong> - Version-first strategies (web_scrape, api_github, api_json) now check versions before downloading, enabling ~100-300ms update checks when unchanged instead of full downloads</li>
@@ -1723,7 +1785,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong>Roadmap Management</strong> (<code>docs/roadmap.md</code>) - Structured feature tracking with status categories and workspace automation</li>
 <li><strong>MkDocs Documentation Site</strong> - User guide and auto-generated API reference</li>
 </ul>
-<h3 id="changed_1">Changed</h3>
+<h3 id="changed_2">Changed</h3>
 <ul>
 <li><strong>State File Schema v2</strong> - Convention-based file paths, improved metadata tracking, per-app isolation (Breaking: old state files need regeneration)</li>
 <li><strong>CLI Commands</strong> - Renamed <code>check</code> to <code>validate</code> for clarity</li>
