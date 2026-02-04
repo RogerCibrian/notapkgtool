@@ -1129,7 +1129,7 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#notapkgtool.psadt.release" class="md-nav__link">
+  <a href="#napt.psadt.release" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;release
@@ -1141,7 +1141,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.psadt.release.fetch_latest_psadt_version" class="md-nav__link">
+  <a href="#napt.psadt.release.fetch_latest_psadt_version" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;fetch_latest_psadt_version
@@ -1152,7 +1152,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.psadt.release.is_psadt_cached" class="md-nav__link">
+  <a href="#napt.psadt.release.is_psadt_cached" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;is_psadt_cached
@@ -1163,7 +1163,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.psadt.release.get_psadt_release" class="md-nav__link">
+  <a href="#napt.psadt.release.get_psadt_release" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;get_psadt_release
@@ -1426,7 +1426,7 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#notapkgtool.psadt.release" class="md-nav__link">
+  <a href="#napt.psadt.release" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;release
@@ -1438,7 +1438,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.psadt.release.fetch_latest_psadt_version" class="md-nav__link">
+  <a href="#napt.psadt.release.fetch_latest_psadt_version" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;fetch_latest_psadt_version
@@ -1449,7 +1449,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.psadt.release.is_psadt_cached" class="md-nav__link">
+  <a href="#napt.psadt.release.is_psadt_cached" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;is_psadt_cached
@@ -1460,7 +1460,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.psadt.release.get_psadt_release" class="md-nav__link">
+  <a href="#napt.psadt.release.get_psadt_release" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;get_psadt_release
@@ -1502,8 +1502,8 @@
 
 
 
-<h2 id="notapkgtool.psadt.release" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-module"></code>            <span class="doc doc-object-name doc-module-name">notapkgtool.psadt.release</span>
+<h2 id="napt.psadt.release" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-module"></code>            <span class="doc doc-object-name doc-module-name">napt.psadt.release</span>
 
 
 </h2>
@@ -1527,7 +1527,7 @@ GitHub release discovery infrastructure for consistency.</p>
   <summary>Example</summary>
   <p>Get and cache PSADT releases:
     <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.psadt</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_psadt_release</span><span class="p">,</span> <span class="n">is_psadt_cached</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">napt.psadt</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_psadt_release</span><span class="p">,</span> <span class="n">is_psadt_cached</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Get latest PSADT</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">psadt_dir</span> <span class="o">=</span> <span class="n">get_psadt_release</span><span class="p">(</span><span class="s2">&quot;latest&quot;</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;cache/psadt&quot;</span><span class="p">))</span>
@@ -1573,7 +1573,7 @@ GitHub release discovery infrastructure for consistency.</p>
 <div class="doc doc-object doc-function">
 
 
-<h3 id="notapkgtool.psadt.release.fetch_latest_psadt_version" class="doc doc-heading">
+<h3 id="napt.psadt.release.fetch_latest_psadt_version" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">fetch_latest_psadt_version</span>
 
 
@@ -1653,7 +1653,7 @@ extracted.</p>
 </details>
 
             <details class="mkdocstrings-source">
-              <summary>Source code in <code>notapkgtool/psadt/release.py</code></summary>
+              <summary>Source code in <code>napt/psadt/release.py</code></summary>
               <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-67"> 67</a></span>
 <span class="normal"><a href="#__codelineno-0-68"> 68</a></span>
 <span class="normal"><a href="#__codelineno-0-69"> 69</a></span>
@@ -1739,7 +1739,7 @@ extracted.</p>
 </span><span id="__span-0-90"><a id="__codelineno-0-90" name="__codelineno-0-90"></a><span class="sd">        - For higher rate limits, set GITHUB_TOKEN environment variable</span>
 </span><span id="__span-0-91"><a id="__codelineno-0-91" name="__codelineno-0-91"></a>
 </span><span id="__span-0-92"><a id="__codelineno-0-92" name="__codelineno-0-92"></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="__span-0-93"><a id="__codelineno-0-93" name="__codelineno-0-93"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_global_logger</span>
+</span><span id="__span-0-93"><a id="__codelineno-0-93" name="__codelineno-0-93"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">napt.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_global_logger</span>
 </span><span id="__span-0-94"><a id="__codelineno-0-94" name="__codelineno-0-94"></a>
 </span><span id="__span-0-95"><a id="__codelineno-0-95" name="__codelineno-0-95"></a>    <span class="n">logger</span> <span class="o">=</span> <span class="n">get_global_logger</span><span class="p">()</span>
 </span><span id="__span-0-96"><a id="__codelineno-0-96" name="__codelineno-0-96"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">&quot;PSADT&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Querying GitHub API: </span><span class="si">{</span><span class="n">PSADT_GITHUB_API</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -1782,7 +1782,7 @@ extracted.</p>
 <div class="doc doc-object doc-function">
 
 
-<h3 id="notapkgtool.psadt.release.is_psadt_cached" class="doc doc-heading">
+<h3 id="napt.psadt.release.is_psadt_cached" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">is_psadt_cached</span>
 
 
@@ -1885,7 +1885,7 @@ extracted.</p>
 </details>
 
             <details class="mkdocstrings-source">
-              <summary>Source code in <code>notapkgtool/psadt/release.py</code></summary>
+              <summary>Source code in <code>napt/psadt/release.py</code></summary>
               <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-129">129</a></span>
 <span class="normal"><a href="#__codelineno-0-130">130</a></span>
 <span class="normal"><a href="#__codelineno-0-131">131</a></span>
@@ -1956,7 +1956,7 @@ extracted.</p>
 <div class="doc doc-object doc-function">
 
 
-<h3 id="notapkgtool.psadt.release.get_psadt_release" class="doc doc-heading">
+<h3 id="napt.psadt.release.get_psadt_release" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">get_psadt_release</span>
 
 
@@ -2053,7 +2053,7 @@ downloads the release .zip file and extracts it to the cache.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="            NetworkError (notapkgtool.exceptions.NetworkError)" href="../exceptions/#notapkgtool.exceptions.NetworkError">NetworkError</a></code>
+                  <code><a class="autorefs autorefs-internal" title="            NetworkError (napt.exceptions.NetworkError)" href="../exceptions/#napt.exceptions.NetworkError">NetworkError</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2063,7 +2063,7 @@ downloads the release .zip file and extracts it to the cache.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="            PackagingError (notapkgtool.exceptions.PackagingError)" href="../exceptions/#notapkgtool.exceptions.PackagingError">PackagingError</a></code>
+                  <code><a class="autorefs autorefs-internal" title="            PackagingError (napt.exceptions.PackagingError)" href="../exceptions/#napt.exceptions.PackagingError">PackagingError</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2073,7 +2073,7 @@ downloads the release .zip file and extracts it to the cache.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="            ConfigError (notapkgtool.exceptions.ConfigError)" href="../exceptions/#notapkgtool.exceptions.ConfigError">ConfigError</a></code>
+                  <code><a class="autorefs autorefs-internal" title="            ConfigError (napt.exceptions.ConfigError)" href="../exceptions/#napt.exceptions.ConfigError">ConfigError</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2109,7 +2109,7 @@ downloads the release .zip file and extracts it to the cache.</p>
 </details>
 
             <details class="mkdocstrings-source">
-              <summary>Source code in <code>notapkgtool/psadt/release.py</code></summary>
+              <summary>Source code in <code>napt/psadt/release.py</code></summary>
               <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-162">162</a></span>
 <span class="normal"><a href="#__codelineno-0-163">163</a></span>
 <span class="normal"><a href="#__codelineno-0-164">164</a></span>
@@ -2297,7 +2297,7 @@ downloads the release .zip file and extracts it to the cache.</p>
 </span><span id="__span-0-199"><a id="__codelineno-0-199" name="__codelineno-0-199"></a><span class="sd">        - Extracts entire archive to version directory</span>
 </span><span id="__span-0-200"><a id="__codelineno-0-200" name="__codelineno-0-200"></a>
 </span><span id="__span-0-201"><a id="__codelineno-0-201" name="__codelineno-0-201"></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="__span-0-202"><a id="__codelineno-0-202" name="__codelineno-0-202"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_global_logger</span>
+</span><span id="__span-0-202"><a id="__codelineno-0-202" name="__codelineno-0-202"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">napt.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_global_logger</span>
 </span><span id="__span-0-203"><a id="__codelineno-0-203" name="__codelineno-0-203"></a>
 </span><span id="__span-0-204"><a id="__codelineno-0-204" name="__codelineno-0-204"></a>    <span class="n">logger</span> <span class="o">=</span> <span class="n">get_global_logger</span><span class="p">()</span>
 </span><span id="__span-0-205"><a id="__codelineno-0-205" name="__codelineno-0-205"></a>    <span class="c1"># Resolve &quot;latest&quot; to actual version</span>

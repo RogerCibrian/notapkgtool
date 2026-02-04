@@ -825,7 +825,7 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#notapkgtool.exceptions" class="md-nav__link">
+  <a href="#napt.exceptions" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;exceptions
@@ -837,7 +837,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.exceptions.NAPTError" class="md-nav__link">
+  <a href="#napt.exceptions.NAPTError" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;NAPTError
@@ -848,7 +848,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.exceptions.ConfigError" class="md-nav__link">
+  <a href="#napt.exceptions.ConfigError" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ConfigError
@@ -859,7 +859,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.exceptions.NetworkError" class="md-nav__link">
+  <a href="#napt.exceptions.NetworkError" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;NetworkError
@@ -870,7 +870,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.exceptions.PackagingError" class="md-nav__link">
+  <a href="#napt.exceptions.PackagingError" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;PackagingError
@@ -1435,7 +1435,7 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#notapkgtool.exceptions" class="md-nav__link">
+  <a href="#napt.exceptions" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;exceptions
@@ -1447,7 +1447,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.exceptions.NAPTError" class="md-nav__link">
+  <a href="#napt.exceptions.NAPTError" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;NAPTError
@@ -1458,7 +1458,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.exceptions.ConfigError" class="md-nav__link">
+  <a href="#napt.exceptions.ConfigError" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;ConfigError
@@ -1469,7 +1469,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.exceptions.NetworkError" class="md-nav__link">
+  <a href="#napt.exceptions.NetworkError" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;NetworkError
@@ -1480,7 +1480,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.exceptions.PackagingError" class="md-nav__link">
+  <a href="#napt.exceptions.PackagingError" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;PackagingError
@@ -1522,8 +1522,8 @@
 
 
 
-<h2 id="notapkgtool.exceptions" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-module"></code>            <span class="doc doc-object-name doc-module-name">notapkgtool.exceptions</span>
+<h2 id="napt.exceptions" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-module"></code>            <span class="doc doc-object-name doc-module-name">napt.exceptions</span>
 
 
 </h2>
@@ -1540,8 +1540,8 @@ if needed.</p>
 <details class="example" open>
   <summary>Example</summary>
   <p>Catching specific error types:
-    <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">discover_recipe</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConfigError</span><span class="p">,</span> <span class="n">NetworkError</span>
+    <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">napt.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">discover_recipe</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">napt.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConfigError</span><span class="p">,</span> <span class="n">NetworkError</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">try</span><span class="p">:</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">discover_recipe</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;recipe.yaml&quot;</span><span class="p">),</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./downloads&quot;</span><span class="p">))</span>
@@ -1551,7 +1551,7 @@ if needed.</p>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Network error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span></code></pre></div></p>
 <p>Catching all NAPT errors:
-    <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">NAPTError</span>
+    <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">napt.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">NAPTError</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">try</span><span class="p">:</span>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">discover_recipe</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;recipe.yaml&quot;</span><span class="p">),</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./downloads&quot;</span><span class="p">))</span>
@@ -1582,7 +1582,7 @@ if needed.</p>
 
 
 
-<h3 id="notapkgtool.exceptions.NAPTError" class="doc doc-heading">
+<h3 id="napt.exceptions.NAPTError" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">NAPTError</span>
 
 
@@ -1607,7 +1607,7 @@ to catch all NAPT errors with a single except clause if needed.</p>
 
 
               <details class="mkdocstrings-source">
-                <summary>Source code in <code>notapkgtool/exceptions.py</code></summary>
+                <summary>Source code in <code>napt/exceptions.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-57">57</a></span>
 <span class="normal"><a href="#__codelineno-0-58">58</a></span>
 <span class="normal"><a href="#__codelineno-0-59">59</a></span>
@@ -1634,7 +1634,7 @@ to catch all NAPT errors with a single except clause if needed.</p>
 
 
 
-<h3 id="notapkgtool.exceptions.ConfigError" class="doc doc-heading">
+<h3 id="napt.exceptions.ConfigError" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">ConfigError</span>
 
 
@@ -1643,7 +1643,7 @@ to catch all NAPT errors with a single except clause if needed.</p>
 
     <div class="doc doc-contents ">
             <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="            NAPTError (notapkgtool.exceptions.NAPTError)" href="#notapkgtool.exceptions.NAPTError">NAPTError</a></code></p>
+              Bases: <code><a class="autorefs autorefs-internal" title="            NAPTError (napt.exceptions.NAPTError)" href="#napt.exceptions.NAPTError">NAPTError</a></code></p>
 
 
 
@@ -1664,7 +1664,7 @@ to catch all NAPT errors with a single except clause if needed.</p>
 <details class="example" open>
   <summary>Example</summary>
   <p>Catching configuration errors:
-    <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConfigError</span>
+    <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">napt.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConfigError</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">try</span><span class="p">:</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">config</span> <span class="o">=</span> <span class="n">load_effective_config</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;invalid.yaml&quot;</span><span class="p">))</span>
@@ -1680,7 +1680,7 @@ to catch all NAPT errors with a single except clause if needed.</p>
 
 
               <details class="mkdocstrings-source">
-                <summary>Source code in <code>notapkgtool/exceptions.py</code></summary>
+                <summary>Source code in <code>napt/exceptions.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-67">67</a></span>
 <span class="normal"><a href="#__codelineno-0-68">68</a></span>
 <span class="normal"><a href="#__codelineno-0-69">69</a></span>
@@ -1724,7 +1724,7 @@ to catch all NAPT errors with a single except clause if needed.</p>
 </span><span id="__span-0-81"><a id="__codelineno-0-81" name="__codelineno-0-81"></a><span class="sd">    Example:</span>
 </span><span id="__span-0-82"><a id="__codelineno-0-82" name="__codelineno-0-82"></a><span class="sd">        Catching configuration errors:</span>
 </span><span id="__span-0-83"><a id="__codelineno-0-83" name="__codelineno-0-83"></a><span class="sd">            ```python</span>
-</span><span id="__span-0-84"><a id="__codelineno-0-84" name="__codelineno-0-84"></a><span class="sd">            from notapkgtool.exceptions import ConfigError</span>
+</span><span id="__span-0-84"><a id="__codelineno-0-84" name="__codelineno-0-84"></a><span class="sd">            from napt.exceptions import ConfigError</span>
 </span><span id="__span-0-85"><a id="__codelineno-0-85" name="__codelineno-0-85"></a>
 </span><span id="__span-0-86"><a id="__codelineno-0-86" name="__codelineno-0-86"></a><span class="sd">            try:</span>
 </span><span id="__span-0-87"><a id="__codelineno-0-87" name="__codelineno-0-87"></a><span class="sd">                config = load_effective_config(Path(&quot;invalid.yaml&quot;))</span>
@@ -1745,7 +1745,7 @@ to catch all NAPT errors with a single except clause if needed.</p>
 
 
 
-<h3 id="notapkgtool.exceptions.NetworkError" class="doc doc-heading">
+<h3 id="napt.exceptions.NetworkError" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">NetworkError</span>
 
 
@@ -1754,7 +1754,7 @@ to catch all NAPT errors with a single except clause if needed.</p>
 
     <div class="doc doc-contents ">
             <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="            NAPTError (notapkgtool.exceptions.NAPTError)" href="#notapkgtool.exceptions.NAPTError">NAPTError</a></code></p>
+              Bases: <code><a class="autorefs autorefs-internal" title="            NAPTError (napt.exceptions.NAPTError)" href="#napt.exceptions.NAPTError">NAPTError</a></code></p>
 
 
 
@@ -1773,7 +1773,7 @@ to catch all NAPT errors with a single except clause if needed.</p>
 <details class="example" open>
   <summary>Example</summary>
   <p>Catching network errors:
-    <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">NetworkError</span>
+    <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">napt.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">NetworkError</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">try</span><span class="p">:</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">discover_recipe</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;recipe.yaml&quot;</span><span class="p">),</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./downloads&quot;</span><span class="p">))</span>
@@ -1789,7 +1789,7 @@ to catch all NAPT errors with a single except clause if needed.</p>
 
 
               <details class="mkdocstrings-source">
-                <summary>Source code in <code>notapkgtool/exceptions.py</code></summary>
+                <summary>Source code in <code>napt/exceptions.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-96"> 96</a></span>
 <span class="normal"><a href="#__codelineno-0-97"> 97</a></span>
 <span class="normal"><a href="#__codelineno-0-98"> 98</a></span>
@@ -1829,7 +1829,7 @@ to catch all NAPT errors with a single except clause if needed.</p>
 </span><span id="__span-0-108"><a id="__codelineno-0-108" name="__codelineno-0-108"></a><span class="sd">    Example:</span>
 </span><span id="__span-0-109"><a id="__codelineno-0-109" name="__codelineno-0-109"></a><span class="sd">        Catching network errors:</span>
 </span><span id="__span-0-110"><a id="__codelineno-0-110" name="__codelineno-0-110"></a><span class="sd">            ```python</span>
-</span><span id="__span-0-111"><a id="__codelineno-0-111" name="__codelineno-0-111"></a><span class="sd">            from notapkgtool.exceptions import NetworkError</span>
+</span><span id="__span-0-111"><a id="__codelineno-0-111" name="__codelineno-0-111"></a><span class="sd">            from napt.exceptions import NetworkError</span>
 </span><span id="__span-0-112"><a id="__codelineno-0-112" name="__codelineno-0-112"></a>
 </span><span id="__span-0-113"><a id="__codelineno-0-113" name="__codelineno-0-113"></a><span class="sd">            try:</span>
 </span><span id="__span-0-114"><a id="__codelineno-0-114" name="__codelineno-0-114"></a><span class="sd">                result = discover_recipe(Path(&quot;recipe.yaml&quot;), Path(&quot;./downloads&quot;))</span>
@@ -1850,7 +1850,7 @@ to catch all NAPT errors with a single except clause if needed.</p>
 
 
 
-<h3 id="notapkgtool.exceptions.PackagingError" class="doc doc-heading">
+<h3 id="napt.exceptions.PackagingError" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">PackagingError</span>
 
 
@@ -1859,7 +1859,7 @@ to catch all NAPT errors with a single except clause if needed.</p>
 
     <div class="doc doc-contents ">
             <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="            NAPTError (notapkgtool.exceptions.NAPTError)" href="#notapkgtool.exceptions.NAPTError">NAPTError</a></code></p>
+              Bases: <code><a class="autorefs autorefs-internal" title="            NAPTError (napt.exceptions.NAPTError)" href="#napt.exceptions.NAPTError">NAPTError</a></code></p>
 
 
 
@@ -1880,7 +1880,7 @@ to catch all NAPT errors with a single except clause if needed.</p>
 <details class="example" open>
   <summary>Example</summary>
   <p>Catching packaging errors:
-    <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">PackagingError</span>
+    <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">napt.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">PackagingError</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">try</span><span class="p">:</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">build_package</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;recipe.yaml&quot;</span><span class="p">),</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./builds&quot;</span><span class="p">))</span>
@@ -1896,7 +1896,7 @@ to catch all NAPT errors with a single except clause if needed.</p>
 
 
               <details class="mkdocstrings-source">
-                <summary>Source code in <code>notapkgtool/exceptions.py</code></summary>
+                <summary>Source code in <code>napt/exceptions.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-123">123</a></span>
 <span class="normal"><a href="#__codelineno-0-124">124</a></span>
 <span class="normal"><a href="#__codelineno-0-125">125</a></span>
@@ -1940,7 +1940,7 @@ to catch all NAPT errors with a single except clause if needed.</p>
 </span><span id="__span-0-137"><a id="__codelineno-0-137" name="__codelineno-0-137"></a><span class="sd">    Example:</span>
 </span><span id="__span-0-138"><a id="__codelineno-0-138" name="__codelineno-0-138"></a><span class="sd">        Catching packaging errors:</span>
 </span><span id="__span-0-139"><a id="__codelineno-0-139" name="__codelineno-0-139"></a><span class="sd">            ```python</span>
-</span><span id="__span-0-140"><a id="__codelineno-0-140" name="__codelineno-0-140"></a><span class="sd">            from notapkgtool.exceptions import PackagingError</span>
+</span><span id="__span-0-140"><a id="__codelineno-0-140" name="__codelineno-0-140"></a><span class="sd">            from napt.exceptions import PackagingError</span>
 </span><span id="__span-0-141"><a id="__codelineno-0-141" name="__codelineno-0-141"></a>
 </span><span id="__span-0-142"><a id="__codelineno-0-142" name="__codelineno-0-142"></a><span class="sd">            try:</span>
 </span><span id="__span-0-143"><a id="__codelineno-0-143" name="__codelineno-0-143"></a><span class="sd">                build_package(Path(&quot;recipe.yaml&quot;), Path(&quot;./builds&quot;))</span>

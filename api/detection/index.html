@@ -769,7 +769,7 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#notapkgtool.detection" class="md-nav__link">
+  <a href="#napt.detection" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;detection
@@ -781,7 +781,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.detection.DetectionConfig" class="md-nav__link">
+  <a href="#napt.detection.DetectionConfig" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;DetectionConfig
@@ -792,7 +792,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.detection.sanitize_filename" class="md-nav__link">
+  <a href="#napt.detection.sanitize_filename" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;sanitize_filename
@@ -803,7 +803,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.detection.generate_detection_script" class="md-nav__link">
+  <a href="#napt.detection.generate_detection_script" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;generate_detection_script
@@ -1424,7 +1424,7 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#notapkgtool.detection" class="md-nav__link">
+  <a href="#napt.detection" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-module"></code>&nbsp;detection
@@ -1436,7 +1436,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.detection.DetectionConfig" class="md-nav__link">
+  <a href="#napt.detection.DetectionConfig" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;DetectionConfig
@@ -1447,7 +1447,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.detection.sanitize_filename" class="md-nav__link">
+  <a href="#napt.detection.sanitize_filename" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;sanitize_filename
@@ -1458,7 +1458,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#notapkgtool.detection.generate_detection_script" class="md-nav__link">
+  <a href="#napt.detection.generate_detection_script" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;generate_detection_script
@@ -1500,8 +1500,8 @@
 
 
 
-<h2 id="notapkgtool.detection" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-module"></code>            <span class="doc doc-object-name doc-module-name">notapkgtool.detection</span>
+<h2 id="napt.detection" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-module"></code>            <span class="doc doc-object-name doc-module-name">napt.detection</span>
 
 
 </h2>
@@ -1562,7 +1562,7 @@ matches when both MSI and EXE versions of software exist:</p>
   <summary>Example</summary>
   <p>Generate detection script:
     <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.detection</span><span class="w"> </span><span class="kn">import</span> <span class="n">DetectionConfig</span><span class="p">,</span> <span class="n">generate_detection_script</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">napt.detection</span><span class="w"> </span><span class="kn">import</span> <span class="n">DetectionConfig</span><span class="p">,</span> <span class="n">generate_detection_script</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">config</span> <span class="o">=</span> <span class="n">DetectionConfig</span><span class="p">(</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;Google Chrome&quot;</span><span class="p">,</span>
@@ -1606,7 +1606,7 @@ should be uploaded separately to Intune alongside the package.</p>
 
 
 
-<h3 id="notapkgtool.detection.DetectionConfig" class="doc doc-heading">
+<h3 id="napt.detection.DetectionConfig" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">DetectionConfig</span>
 
 
@@ -1635,7 +1635,7 @@ should be uploaded separately to Intune alongside the package.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code><span title="notapkgtool.detection.DetectionConfig.app_name">app_name</span></code></td>
+            <td><code><span title="napt.detection.DetectionConfig.app_name">app_name</span></code></td>
             <td>
                   <code><span title="str">str</span></code>
             </td>
@@ -1646,7 +1646,7 @@ should be uploaded separately to Intune alongside the package.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="notapkgtool.detection.DetectionConfig.version">version</span></code></td>
+            <td><code><span title="napt.detection.DetectionConfig.version">version</span></code></td>
             <td>
                   <code><span title="str">str</span></code>
             </td>
@@ -1657,9 +1657,9 @@ should be uploaded separately to Intune alongside the package.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="notapkgtool.detection.DetectionConfig.log_format">log_format</span></code></td>
+            <td><code><span title="napt.detection.DetectionConfig.log_format">log_format</span></code></td>
             <td>
-                  <code><span title="notapkgtool.detection.LogFormat">LogFormat</span></code>
+                  <code><span title="napt.detection.LogFormat">LogFormat</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -1668,9 +1668,9 @@ should be uploaded separately to Intune alongside the package.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="notapkgtool.detection.DetectionConfig.log_level">log_level</span></code></td>
+            <td><code><span title="napt.detection.DetectionConfig.log_level">log_level</span></code></td>
             <td>
-                  <code><span title="notapkgtool.detection.LogLevel">LogLevel</span></code>
+                  <code><span title="napt.detection.LogLevel">LogLevel</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -1679,7 +1679,7 @@ should be uploaded separately to Intune alongside the package.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="notapkgtool.detection.DetectionConfig.log_rotation_mb">log_rotation_mb</span></code></td>
+            <td><code><span title="napt.detection.DetectionConfig.log_rotation_mb">log_rotation_mb</span></code></td>
             <td>
                   <code><span title="int">int</span></code>
             </td>
@@ -1690,7 +1690,7 @@ should be uploaded separately to Intune alongside the package.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="notapkgtool.detection.DetectionConfig.exact_match">exact_match</span></code></td>
+            <td><code><span title="napt.detection.DetectionConfig.exact_match">exact_match</span></code></td>
             <td>
                   <code><span title="bool">bool</span></code>
             </td>
@@ -1702,7 +1702,7 @@ version comparison (remote &gt;= expected).</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="notapkgtool.detection.DetectionConfig.app_id">app_id</span></code></td>
+            <td><code><span title="napt.detection.DetectionConfig.app_id">app_id</span></code></td>
             <td>
                   <code><span title="str">str</span></code>
             </td>
@@ -1714,7 +1714,7 @@ results in empty string).</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="notapkgtool.detection.DetectionConfig.is_msi_installer">is_msi_installer</span></code></td>
+            <td><code><span title="napt.detection.DetectionConfig.is_msi_installer">is_msi_installer</span></code></td>
             <td>
                   <code><span title="bool">bool</span></code>
             </td>
@@ -1728,9 +1728,9 @@ DisplayName.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="notapkgtool.detection.DetectionConfig.expected_architecture">expected_architecture</span></code></td>
+            <td><code><span title="napt.detection.DetectionConfig.expected_architecture">expected_architecture</span></code></td>
             <td>
-                  <code><span title="notapkgtool.detection.ArchitectureMode">ArchitectureMode</span></code>
+                  <code><span title="napt.detection.ArchitectureMode">ArchitectureMode</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -1743,7 +1743,7 @@ DisplayName.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="notapkgtool.detection.DetectionConfig.use_wildcard">use_wildcard</span></code></td>
+            <td><code><span title="napt.detection.DetectionConfig.use_wildcard">use_wildcard</span></code></td>
             <td>
                   <code><span title="bool">bool</span></code>
             </td>
@@ -1765,7 +1765,7 @@ matching (supports * and ? wildcards). If False, use exact -eq match.</p>
 
 
               <details class="mkdocstrings-source">
-                <summary>Source code in <code>notapkgtool/detection.py</code></summary>
+                <summary>Source code in <code>napt/detection.py</code></summary>
                 <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-95"> 95</a></span>
 <span class="normal"><a href="#__codelineno-0-96"> 96</a></span>
 <span class="normal"><a href="#__codelineno-0-97"> 97</a></span>
@@ -1869,7 +1869,7 @@ matching (supports * and ? wildcards). If False, use exact -eq match.</p>
 <div class="doc doc-object doc-function">
 
 
-<h3 id="notapkgtool.detection.sanitize_filename" class="doc doc-heading">
+<h3 id="napt.detection.sanitize_filename" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">sanitize_filename</span>
 
 
@@ -1977,7 +1977,7 @@ matching (supports * and ? wildcards). If False, use exact -eq match.</p>
 </details>
 
             <details class="mkdocstrings-source">
-              <summary>Source code in <code>notapkgtool/detection.py</code></summary>
+              <summary>Source code in <code>napt/detection.py</code></summary>
               <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-135">135</a></span>
 <span class="normal"><a href="#__codelineno-0-136">136</a></span>
 <span class="normal"><a href="#__codelineno-0-137">137</a></span>
@@ -2088,7 +2088,7 @@ matching (supports * and ? wildcards). If False, use exact -eq match.</p>
 <div class="doc doc-object doc-function">
 
 
-<h3 id="notapkgtool.detection.generate_detection_script" class="doc doc-heading">
+<h3 id="napt.detection.generate_detection_script" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">generate_detection_script</span>
 
 
@@ -2127,7 +2127,7 @@ if primary locations are unavailable.</p>
 
   
       dataclass
-   (notapkgtool.detection.DetectionConfig)" href="#notapkgtool.detection.DetectionConfig">DetectionConfig</a></code>
+   (napt.detection.DetectionConfig)" href="#napt.detection.DetectionConfig">DetectionConfig</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2208,7 +2208,7 @@ if primary locations are unavailable.</p>
   <summary>Example</summary>
   <p>Generate script with default settings:
     <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.detection</span><span class="w"> </span><span class="kn">import</span> <span class="n">DetectionConfig</span><span class="p">,</span> <span class="n">generate_detection_script</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">napt.detection</span><span class="w"> </span><span class="kn">import</span> <span class="n">DetectionConfig</span><span class="p">,</span> <span class="n">generate_detection_script</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">config</span> <span class="o">=</span> <span class="n">DetectionConfig</span><span class="p">(</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">app_name</span><span class="o">=</span><span class="s2">&quot;Google Chrome&quot;</span><span class="p">,</span>
@@ -2228,7 +2228,7 @@ execution on Windows systems.</p>
 </details>
 
             <details class="mkdocstrings-source">
-              <summary>Source code in <code>notapkgtool/detection.py</code></summary>
+              <summary>Source code in <code>napt/detection.py</code></summary>
               <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-558">558</a></span>
 <span class="normal"><a href="#__codelineno-0-559">559</a></span>
 <span class="normal"><a href="#__codelineno-0-560">560</a></span>
@@ -2324,7 +2324,7 @@ execution on Windows systems.</p>
 </span><span id="__span-0-578"><a id="__codelineno-0-578" name="__codelineno-0-578"></a><span class="sd">        Generate script with default settings:</span>
 </span><span id="__span-0-579"><a id="__codelineno-0-579" name="__codelineno-0-579"></a><span class="sd">            ```python</span>
 </span><span id="__span-0-580"><a id="__codelineno-0-580" name="__codelineno-0-580"></a><span class="sd">            from pathlib import Path</span>
-</span><span id="__span-0-581"><a id="__codelineno-0-581" name="__codelineno-0-581"></a><span class="sd">            from notapkgtool.detection import DetectionConfig, generate_detection_script</span>
+</span><span id="__span-0-581"><a id="__codelineno-0-581" name="__codelineno-0-581"></a><span class="sd">            from napt.detection import DetectionConfig, generate_detection_script</span>
 </span><span id="__span-0-582"><a id="__codelineno-0-582" name="__codelineno-0-582"></a>
 </span><span id="__span-0-583"><a id="__codelineno-0-583" name="__codelineno-0-583"></a><span class="sd">            config = DetectionConfig(</span>
 </span><span id="__span-0-584"><a id="__codelineno-0-584" name="__codelineno-0-584"></a><span class="sd">                app_name=&quot;Google Chrome&quot;,</span>
@@ -2341,7 +2341,7 @@ execution on Windows systems.</p>
 </span><span id="__span-0-595"><a id="__codelineno-0-595" name="__codelineno-0-595"></a><span class="sd">        execution on Windows systems.</span>
 </span><span id="__span-0-596"><a id="__codelineno-0-596" name="__codelineno-0-596"></a>
 </span><span id="__span-0-597"><a id="__codelineno-0-597" name="__codelineno-0-597"></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="__span-0-598"><a id="__codelineno-0-598" name="__codelineno-0-598"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">notapkgtool.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_global_logger</span>
+</span><span id="__span-0-598"><a id="__codelineno-0-598" name="__codelineno-0-598"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">napt.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_global_logger</span>
 </span><span id="__span-0-599"><a id="__codelineno-0-599" name="__codelineno-0-599"></a>
 </span><span id="__span-0-600"><a id="__codelineno-0-600" name="__codelineno-0-600"></a>    <span class="n">logger</span> <span class="o">=</span> <span class="n">get_global_logger</span><span class="p">()</span>
 </span><span id="__span-0-601"><a id="__codelineno-0-601" name="__codelineno-0-601"></a>
