@@ -1,6 +1,6 @@
 [project]
 name = "napt"
-version = "0.3.0"
+version = "0.3.1"
 description = "Automates the entire workflow for packaging Windows applications and deploying them to Microsoft Intune"
 readme = "README.md"
 license = "Apache-2.0"
