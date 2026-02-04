@@ -157,8 +157,8 @@ This roadmap is a living document showing potential future directions for NAPT. 
 **Related**: TODO in `napt/build/packager.py` - discovered during testing
 
 #### Recipe Linting & Best Practices
-**Status**: 💡 Idea  
-**Complexity**: High (3-5 days)  
+**Status**: 💡 Idea
+**Complexity**: High (3-5 days)
 **Value**: Medium
 
 **Description**: Advanced recipe validation beyond syntax checking, including PSADT function validation, deprecation warnings, anti-pattern detection, and style guide enforcement.
@@ -171,6 +171,7 @@ This roadmap is a living document showing potential future directions for NAPT. 
 - Validates PSADT function names exist in v4
 - Warns on deprecated patterns or old v3 functions
 - Suggests improvements (e.g., use Uninstall-ADTApplication)
+- Warns about unknown fields at app level (e.g., deprecated `detection` vs `win32.installed_check`)
 
 ### Technical Enhancements
 
