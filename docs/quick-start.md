@@ -13,8 +13,6 @@
 
 Best for users who want to use the tool.
 
-> 💡 **Tip:** Install from a tagged release for stability. The main branch may contain breaking changes between releases.
-
 ```powershell
 # Create a project directory
 mkdir napt-workspace
@@ -24,8 +22,8 @@ cd napt-workspace
 python -m venv .venv
 .venv\Scripts\Activate.ps1  # On Linux/macOS: source .venv/bin/activate
 
-# Install from a specific release
-pip install git+https://github.com/RogerCibrian/notapkgtool.git@0.3.0
+# Install from PyPI
+pip install napt
 
 # Verify installation
 napt --version

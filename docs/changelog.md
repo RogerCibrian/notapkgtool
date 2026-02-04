@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-02-03
+
+### Changed
+
+- **PyPI Package Name** - Package renamed from `notapkgtool` to `napt` for simpler installation (`pip install napt`)
+- **Automated PyPI Publishing** - Releases now automatically publish to PyPI via GitHub Actions using Trusted Publisher (OIDC)
+
 ## [0.3.0] - 2026-02-02
 
 ### Added
@@ -80,7 +87,8 @@ Initial internal release.
 - **Robust Downloads** - Retry logic, atomic writes, SHA-256 verification, and conditional requests
 
 
-[Unreleased]: https://github.com/RogerCibrian/notapkgtool/compare/0.3.0...HEAD
+[Unreleased]: https://github.com/RogerCibrian/notapkgtool/compare/0.3.1...HEAD
+[0.3.1]: https://github.com/RogerCibrian/notapkgtool/compare/0.3.0...0.3.1
 [0.3.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.2.0...0.3.0
 [0.2.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.1.0...0.2.0
 [0.1.0]: https://github.com/RogerCibrian/notapkgtool/releases/tag/0.1.0
