@@ -14,9 +14,9 @@ from unittest.mock import patch
 import pytest
 import requests_mock
 
-from notapkgtool.core import discover_recipe
-from notapkgtool.exceptions import NetworkError
-from notapkgtool.versioning import DiscoveredVersion
+from napt.core import discover_recipe
+from napt.exceptions import NetworkError
+from napt.versioning import DiscoveredVersion
 
 
 class TestEndToEndWorkflow:
@@ -72,7 +72,7 @@ class TestEndToEndWorkflow:
             )
 
             with patch(
-                "notapkgtool.discovery.url_download.version_from_msi_product_version"
+                "napt.discovery.url_download.version_from_msi_product_version"
             ) as mock_extract:
                 mock_extract.return_value = DiscoveredVersion(
                     version="1.2.3", source="msi"
@@ -118,7 +118,7 @@ class TestConfigAndDiscoveryIntegration:
             )
 
             with patch(
-                "notapkgtool.discovery.url_download.version_from_msi_product_version"
+                "napt.discovery.url_download.version_from_msi_product_version"
             ) as mock_extract:
                 mock_extract.return_value = DiscoveredVersion(
                     version="1.0.0", source="msi"
@@ -150,7 +150,7 @@ class TestErrorPropagation:
         with requests_mock.Mocker() as m:
             m.get("https://test.com/app.msi", status_code=404)
 
-            from notapkgtool.exceptions import NetworkError
+            from napt.exceptions import NetworkError
 
             with pytest.raises(NetworkError, match="download failed"):
                 discover_recipe(recipe_path, tmp_test_dir)
@@ -177,7 +177,7 @@ class TestErrorPropagation:
             )
 
             with patch(
-                "notapkgtool.discovery.url_download.version_from_msi_product_version"
+                "napt.discovery.url_download.version_from_msi_product_version"
             ) as mock_extract:
                 mock_extract.side_effect = NetworkError("Invalid MSI")
 

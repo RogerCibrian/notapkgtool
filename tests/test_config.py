@@ -1,5 +1,5 @@
 """
-Tests for notapkgtool.config.loader module.
+Tests for napt.config.loader module.
 
 Tests configuration loading and merging including:
 - YAML file loading
@@ -13,8 +13,8 @@ from __future__ import annotations
 
 import pytest
 
-from notapkgtool.config.loader import load_effective_config
-from notapkgtool.exceptions import ConfigError
+from napt.config.loader import load_effective_config
+from napt.exceptions import ConfigError
 
 
 class TestConfigLoading:
@@ -59,7 +59,7 @@ class TestConfigLoading:
         """Test that missing recipe file raises FileNotFoundError."""
         nonexistent = tmp_test_dir / "nonexistent.yaml"
 
-        from notapkgtool.exceptions import ConfigError
+        from napt.exceptions import ConfigError
 
         with pytest.raises(ConfigError):
             load_effective_config(nonexistent)

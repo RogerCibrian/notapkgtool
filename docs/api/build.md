@@ -1,8 +1,8 @@
 # build
 
-::: notapkgtool.build.manager
+::: napt.build.manager
 
-::: notapkgtool.build.template
+::: napt.build.template
 
-::: notapkgtool.build.packager
+::: napt.build.packager
 

@@ -18,8 +18,8 @@
 
 **Run Python tools directly:**
 ```powershell
-.venv\Scripts\python.exe -m ruff check --fix notapkgtool/ tests/
-.venv\Scripts\python.exe -m black notapkgtool/ tests/
+.venv\Scripts\python.exe -m ruff check --fix napt/ tests/
+.venv\Scripts\python.exe -m black napt/ tests/
 .venv\Scripts\python.exe -m pytest tests/
 ```
 
@@ -32,9 +32,9 @@
 Use **ruff** + **black**. Fix all errors before committing. Never ignore errors. Configuration is in `pyproject.toml`.
 
 ```powershell
-.venv\Scripts\python.exe -m ruff check --fix notapkgtool/ tests/
-.venv\Scripts\python.exe -m black notapkgtool/ tests/
-.venv\Scripts\python.exe -m ruff check notapkgtool/ tests/
+.venv\Scripts\python.exe -m ruff check --fix napt/ tests/
+.venv\Scripts\python.exe -m black napt/ tests/
+.venv\Scripts\python.exe -m ruff check napt/ tests/
 ```
 
 **Line length:** 88 chars max. Break with parentheses or multiple lines.
@@ -100,7 +100,7 @@ Don't repeat the class name (DiscoverResult) - mkdocstrings extracts it from the
 
 ## License Header
 
-All `notapkgtool/**/*.py` files require before docstring:
+All `napt/**/*.py` files require before docstring:
 
 ```python
 # Copyright 2025 Roger Cibrian
@@ -136,13 +136,13 @@ All `notapkgtool/**/*.py` files require before docstring:
 
 **Always chain:** `raise ConfigError(...) from err`
 
-**Creating new types:** Only if existing types don't fit. Define in `notapkgtool/exceptions.py`. Include clear docstring explaining when to use.
+**Creating new types:** Only if existing types don't fit. Define in `napt/exceptions.py`. Include clear docstring explaining when to use.
 
 ---
 
 ## results.py Scope
 
-`notapkgtool/results.py` is for **public API return types only** (`DiscoverResult`, `BuildResult`, `PackageResult`, `ValidationResult`).
+`napt/results.py` is for **public API return types only** (`DiscoverResult`, `BuildResult`, `PackageResult`, `ValidationResult`).
 
 Domain types and internal types stay co-located with their logic.
 
@@ -176,7 +176,7 @@ When adding new recipe fields or modifying the YAML schema:
 
 ### 1. Update Validation
 
-Add field to schema in `notapkgtool/validation.py`:
+Add field to schema in `napt/validation.py`:
 
 ```python
 _INSTALLED_CHECK_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
@@ -215,7 +215,7 @@ defaults:
 ### 4. Verify Implementation
 
 Check these files to ensure the field is actually used:
-- Search codebase: `grep -r "new_field" notapkgtool/`
+- Search codebase: `grep -r "new_field" napt/`
 - Verify it's read from config in relevant modules
 - Check if field exists in defaults but isn't used (planned feature)
 
@@ -246,7 +246,7 @@ See `docs/branching.md` for full workflow. PR template at `.github/PULL_REQUEST_
 
 **Pre-release checklist:**
 - [ ] Version updated in `pyproject.toml`
-- [ ] Version updated in `notapkgtool/__init__.py`
+- [ ] Version updated in `napt/__init__.py`
 - [ ] `docs/changelog.md` updated following [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/)
 - [ ] `docs/changelog.md` has `[Unreleased]` section ready for next version
 - [ ] All tests passing

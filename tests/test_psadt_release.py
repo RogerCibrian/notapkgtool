@@ -1,5 +1,5 @@
 """
-Tests for notapkgtool.psadt.release module.
+Tests for napt.psadt.release module.
 
 Tests PSADT release management including:
 - Fetching latest version from GitHub
@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 import pytest
 
-from notapkgtool.psadt import (
+from napt.psadt import (
     fetch_latest_psadt_version,
     get_psadt_release,
     is_psadt_cached,
@@ -52,7 +52,7 @@ class TestFetchLatestPSADTVersion:
             status_code=404,
         )
 
-        from notapkgtool.exceptions import NetworkError
+        from napt.exceptions import NetworkError
 
         with pytest.raises(NetworkError, match="Failed to fetch latest PSADT release"):
             fetch_latest_psadt_version()
@@ -64,7 +64,7 @@ class TestFetchLatestPSADTVersion:
             json={},
         )
 
-        from notapkgtool.exceptions import NetworkError
+        from napt.exceptions import NetworkError
 
         with pytest.raises(NetworkError, match="missing 'tag_name'"):
             fetch_latest_psadt_version()
@@ -76,7 +76,7 @@ class TestFetchLatestPSADTVersion:
             json={"tag_name": "invalid-tag"},
         )
 
-        from notapkgtool.exceptions import NetworkError
+        from napt.exceptions import NetworkError
 
         with pytest.raises(NetworkError, match="Could not extract version from tag"):
             fetch_latest_psadt_version()
@@ -132,7 +132,7 @@ class TestGetPSADTRelease:
 
         assert result == version_dir
 
-    @patch("notapkgtool.psadt.release.fetch_latest_psadt_version")
+    @patch("napt.psadt.release.fetch_latest_psadt_version")
     def test_get_release_resolves_latest(self, mock_fetch, tmp_path):
         """Test that 'latest' is resolved to actual version."""
         cache_dir = tmp_path / "cache"
@@ -196,7 +196,7 @@ class TestGetPSADTRelease:
             json={"tag_name": "4.1.7", "assets": []},
         )
 
-        from notapkgtool.exceptions import NetworkError
+        from napt.exceptions import NetworkError
 
         with pytest.raises(NetworkError, match="No .zip asset found"):
             get_psadt_release("4.1.7", cache_dir)
@@ -210,7 +210,7 @@ class TestGetPSADTRelease:
             status_code=404,
         )
 
-        from notapkgtool.exceptions import NetworkError
+        from napt.exceptions import NetworkError
 
         with pytest.raises(NetworkError, match="Failed to fetch PSADT release"):
             get_psadt_release("9.9.9", cache_dir)

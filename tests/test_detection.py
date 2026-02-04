@@ -1,5 +1,5 @@
 """
-Tests for notapkgtool.detection module.
+Tests for napt.detection module.
 
 Tests detection script generation including:
 - Script content validation (log paths, output)
@@ -12,16 +12,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
-from notapkgtool.detection import (
+from napt.detection import (
     DetectionConfig,
     generate_detection_script,
     sanitize_filename,
 )
 
 # All tests in this file are unit tests (fast, mocked)
-pytestmark = pytest.mark.unit
 
 
 class TestDetectionConfig:

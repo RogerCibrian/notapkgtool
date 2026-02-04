@@ -1,4 +1,4 @@
 # policy
 
-::: notapkgtool.policy.updates
+::: napt.policy.updates
 

@@ -1,5 +1,5 @@
 """
-Tests for notapkgtool.core module.
+Tests for napt.core module.
 
 Tests core orchestration including:
 - Recipe validation workflow
@@ -13,9 +13,9 @@ from unittest.mock import patch
 
 import pytest
 
-from notapkgtool.core import discover_recipe
-from notapkgtool.exceptions import ConfigError
-from notapkgtool.versioning import DiscoveredVersion
+from napt.core import discover_recipe
+from napt.exceptions import ConfigError
+from napt.versioning import DiscoveredVersion
 
 
 class TestDiscoverRecipe:
@@ -38,7 +38,7 @@ class TestDiscoverRecipe:
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
 
         # Mock the discovery strategy (url_download - file-first)
-        with patch("notapkgtool.core.get_strategy") as mock_get_strategy:
+        with patch("napt.core.get_strategy") as mock_get_strategy:
             mock_strategy = mock_get_strategy.return_value
             # Ensure it doesn't have get_version_info (file-first strategy)
             del mock_strategy.get_version_info
@@ -158,11 +158,11 @@ class TestVersionFirstFastPath:
         with requests_mock.Mocker() as m:
             m.get("https://example.com/download.html", text=html_content)
 
-            with patch("notapkgtool.core.load_state") as mock_load_state:
+            with patch("napt.core.load_state") as mock_load_state:
                 mock_load_state.return_value = state
 
-                with patch("notapkgtool.core.save_state"):
-                    with patch("notapkgtool.core.download_file") as mock_download:
+                with patch("napt.core.save_state"):
+                    with patch("napt.core.download_file") as mock_download:
                         result = discover_recipe(
                             recipe_path, tmp_test_dir, state_file=Path("state.json")
                         )
@@ -218,11 +218,11 @@ class TestVersionFirstFastPath:
         with requests_mock.Mocker() as m:
             m.get("https://example.com/download.html", text=html_content)
 
-            with patch("notapkgtool.core.load_state") as mock_load_state:
+            with patch("napt.core.load_state") as mock_load_state:
                 mock_load_state.return_value = state
 
-                with patch("notapkgtool.core.save_state"):
-                    with patch("notapkgtool.core.download_file") as mock_download:
+                with patch("napt.core.save_state"):
+                    with patch("napt.core.download_file") as mock_download:
                         mock_download.return_value = (
                             fake_file,
                             "new_hash" * 8,
@@ -291,10 +291,10 @@ class TestVersionFirstFastPath:
                 headers={"Content-Length": str(len(fake_content))},
             )
 
-            with patch("notapkgtool.core.load_state") as mock_load_state:
+            with patch("napt.core.load_state") as mock_load_state:
                 mock_load_state.return_value = state
 
-                with patch("notapkgtool.core.save_state"):
+                with patch("napt.core.save_state"):
                     result = discover_recipe(
                         recipe_path, tmp_test_dir, state_file=Path("state.json")
                     )

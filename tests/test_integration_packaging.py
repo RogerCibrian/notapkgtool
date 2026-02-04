@@ -16,11 +16,10 @@ from pathlib import Path
 
 import pytest
 
-from notapkgtool.build.packager import _get_intunewin_tool, _verify_build_structure
+from napt.build.packager import _get_intunewin_tool, _verify_build_structure
 
 
 @pytest.mark.integration
-@pytest.mark.network
 class TestIntuneWinToolDownload:
     """Test downloading real IntuneWinAppUtil.exe from Microsoft."""
 
@@ -51,13 +50,12 @@ class TestIntuneWinToolDownload:
 
 
 @pytest.mark.integration
-@pytest.mark.network
 class TestBuildStructureValidation:
     """Test build directory validation with real PSADT structure."""
 
     def test_verify_valid_real_build(self, real_psadt_template: Path, tmp_path: Path):
         """Test validation passes for real PSADT build."""
-        from notapkgtool.build.manager import _copy_psadt_pristine
+        from napt.build.manager import _copy_psadt_pristine
 
         build_dir = tmp_path / "build"
         build_dir.mkdir()
@@ -72,7 +70,7 @@ class TestBuildStructureValidation:
         self, real_psadt_template: Path, tmp_path: Path
     ):
         """Test validation fails when Invoke-AppDeployToolkit.exe missing."""
-        from notapkgtool.build.manager import _copy_psadt_pristine
+        from napt.build.manager import _copy_psadt_pristine
 
         build_dir = tmp_path / "build"
         build_dir.mkdir()
@@ -82,7 +80,7 @@ class TestBuildStructureValidation:
         # Remove the exe
         (build_dir / "Invoke-AppDeployToolkit.exe").unlink()
 
-        from notapkgtool.exceptions import ConfigError
+        from napt.exceptions import ConfigError
 
         with pytest.raises(ConfigError, match="Missing.*Invoke-AppDeployToolkit.exe"):
             _verify_build_structure(build_dir)
@@ -93,7 +91,7 @@ class TestBuildStructureValidation:
         """Test validation fails when PSAppDeployToolkit directory missing."""
         import shutil
 
-        from notapkgtool.build.manager import _copy_psadt_pristine
+        from napt.build.manager import _copy_psadt_pristine
 
         build_dir = tmp_path / "build"
         build_dir.mkdir()
@@ -103,7 +101,7 @@ class TestBuildStructureValidation:
         # Remove PSAppDeployToolkit module
         shutil.rmtree(build_dir / "PSAppDeployToolkit")
 
-        from notapkgtool.exceptions import ConfigError
+        from napt.exceptions import ConfigError
 
         with pytest.raises(ConfigError, match="Missing.*PSAppDeployToolkit"):
             _verify_build_structure(build_dir)

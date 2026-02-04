@@ -1,5 +1,5 @@
 """
-Tests for notapkgtool.build.template module.
+Tests for napt.build.template module.
 
 Tests Invoke-AppDeployToolkit.ps1 generation including:
 - PowerShell value formatting
@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import pytest
 
-from notapkgtool.build.template import (
+from napt.build.template import (
     _build_adtsession_vars,
     _format_powershell_value,
     _insert_recipe_code,
@@ -149,7 +149,7 @@ $adtSession = @{
         template = "# No session block here"
         vars_dict = {}
 
-        from notapkgtool.exceptions import PackagingError
+        from napt.exceptions import PackagingError
 
         with pytest.raises(PackagingError, match="Could not find \\$adtSession"):
             _replace_session_block(template, vars_dict)

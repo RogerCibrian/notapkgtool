@@ -1,4 +1,4 @@
 # detection
 
-::: notapkgtool.detection
+::: napt.detection
 

@@ -7,7 +7,7 @@ and configuration without making network calls or downloading files.
 
 from __future__ import annotations
 
-from notapkgtool.validation import validate_recipe
+from napt.validation import validate_recipe
 
 
 class TestValidateRecipe:
@@ -448,7 +448,7 @@ app:
 
     def test_verbose_mode(self, tmp_path, capsys):
         """Test that verbose mode prints progress."""
-        from notapkgtool.logging import get_logger, set_global_logger
+        from napt.logging import get_logger, set_global_logger
 
         # Set up verbose logger
         logger = get_logger(verbose=True, debug=False)

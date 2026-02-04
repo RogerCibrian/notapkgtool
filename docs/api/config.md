@@ -1,4 +1,4 @@
 # config
 
-::: notapkgtool.config
+::: napt.config
 

@@ -276,7 +276,7 @@ git push origin hotfix/fix-security-vulnerability
 - Commit early and often with clear messages
 - Keep branches short-lived (merge within 1 week)
 - Run tests before pushing (`pytest tests/`)
-- Format code before committing (`black notapkgtool/`)
+- Format code before committing (`black napt/`)
 - Update branch with `main` if it's behind
 - Delete branches after merging
 

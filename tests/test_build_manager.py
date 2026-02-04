@@ -1,5 +1,5 @@
 """
-Tests for notapkgtool.build.manager module.
+Tests for napt.build.manager module.
 
 Tests build orchestration including:
 - Finding installer files
@@ -18,7 +18,7 @@ import json
 
 import pytest
 
-from notapkgtool.build.manager import (
+from napt.build.manager import (
     _apply_branding,
     _copy_installer,
     _copy_psadt_pristine,
@@ -28,7 +28,6 @@ from notapkgtool.build.manager import (
 )
 
 # All tests in this file are unit tests (fast, mocked)
-pytestmark = pytest.mark.unit
 
 
 class TestFindInstallerFile:
@@ -100,7 +99,7 @@ class TestFindInstallerFile:
 
         config = {"app": {"source": {}}}
 
-        from notapkgtool.exceptions import PackagingError
+        from napt.exceptions import PackagingError
 
         with pytest.raises(PackagingError, match="Cannot locate installer file"):
             _find_installer_file(downloads_dir, config)
@@ -165,7 +164,7 @@ class TestCopyPSADTPristine:
         build_dir = tmp_path / "build"
         build_dir.mkdir()
 
-        from notapkgtool.exceptions import PackagingError
+        from napt.exceptions import PackagingError
 
         with pytest.raises(PackagingError, match="PSADT.*not found"):
             _copy_psadt_pristine(cache_dir, build_dir)

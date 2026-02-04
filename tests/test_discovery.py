@@ -1,5 +1,5 @@
 """
-Tests for notapkgtool.discovery module.
+Tests for napt.discovery module.
 
 Tests discovery strategies including:
 - Strategy registry
@@ -15,12 +15,12 @@ from unittest.mock import patch
 import pytest
 import requests_mock
 
-from notapkgtool.discovery.api_github import ApiGithubStrategy
-from notapkgtool.discovery.api_json import ApiJsonStrategy
-from notapkgtool.discovery.base import get_strategy, register_strategy
-from notapkgtool.discovery.url_download import UrlDownloadStrategy
-from notapkgtool.exceptions import ConfigError, NetworkError
-from notapkgtool.versioning import DiscoveredVersion
+from napt.discovery.api_github import ApiGithubStrategy
+from napt.discovery.api_json import ApiJsonStrategy
+from napt.discovery.base import get_strategy, register_strategy
+from napt.discovery.url_download import UrlDownloadStrategy
+from napt.exceptions import ConfigError, NetworkError
+from napt.versioning import DiscoveredVersion
 
 
 class TestStrategyRegistry:
@@ -83,7 +83,7 @@ class TestUrlDownloadStrategy:
             )
 
             with patch(
-                "notapkgtool.discovery.url_download.version_from_msi_product_version"
+                "napt.discovery.url_download.version_from_msi_product_version"
             ) as mock_extract:
                 mock_extract.return_value = DiscoveredVersion(
                     version="1.2.3", source="msi"
@@ -122,7 +122,7 @@ class TestUrlDownloadStrategy:
         with requests_mock.Mocker() as m:
             m.get("https://example.com/installer.msi", status_code=404)
 
-            from notapkgtool.exceptions import NetworkError
+            from napt.exceptions import NetworkError
 
             with pytest.raises(NetworkError, match="download failed"):
                 strategy.discover_version(app_config, tmp_test_dir)
@@ -147,7 +147,7 @@ class TestUrlDownloadStrategy:
             )
 
             with patch(
-                "notapkgtool.discovery.url_download.version_from_msi_product_version"
+                "napt.discovery.url_download.version_from_msi_product_version"
             ) as mock_extract:
                 mock_extract.side_effect = NetworkError("Invalid MSI")
 
@@ -198,7 +198,7 @@ class TestCacheAndETagSupport:
             m.get("https://example.com/installer.msi", status_code=304)
 
             with patch(
-                "notapkgtool.discovery.url_download.version_from_msi_product_version"
+                "napt.discovery.url_download.version_from_msi_product_version"
             ) as mock_extract:
                 mock_extract.return_value = DiscoveredVersion(
                     version="1.0.0", source="msi"
@@ -248,7 +248,7 @@ class TestCacheAndETagSupport:
             )
 
             with patch(
-                "notapkgtool.discovery.url_download.version_from_msi_product_version"
+                "napt.discovery.url_download.version_from_msi_product_version"
             ) as mock_extract:
                 mock_extract.return_value = DiscoveredVersion(
                     version="2.0.0", source="msi"
@@ -285,7 +285,7 @@ class TestCacheAndETagSupport:
             )
 
             with patch(
-                "notapkgtool.discovery.url_download.version_from_msi_product_version"
+                "napt.discovery.url_download.version_from_msi_product_version"
             ) as mock_extract:
                 mock_extract.return_value = DiscoveredVersion(
                     version="1.0.0", source="msi"
@@ -322,7 +322,7 @@ class TestCacheAndETagSupport:
             # Mock 304 response
             m.get("https://example.com/installer.msi", status_code=304)
 
-            from notapkgtool.exceptions import NetworkError
+            from napt.exceptions import NetworkError
 
             with pytest.raises(NetworkError, match="Cached file.*not found"):
                 strategy.discover_version(app_config, tmp_test_dir, cache=cache)
@@ -333,8 +333,8 @@ class TestVersionFirstStrategies:
 
     def test_web_scrape_with_css_selector(self):
         """Test web_scrape.get_version_info() with CSS selector."""
-        from notapkgtool.discovery.web_scrape import WebScrapeStrategy
-        from notapkgtool.versioning.keys import VersionInfo
+        from napt.discovery.web_scrape import WebScrapeStrategy
+        from napt.versioning.keys import VersionInfo
 
         strategy = WebScrapeStrategy()
         app_config = {
@@ -370,8 +370,8 @@ class TestVersionFirstStrategies:
 
     def test_web_scrape_with_regex_pattern(self):
         """Test web_scrape.get_version_info() with regex fallback."""
-        from notapkgtool.discovery.web_scrape import WebScrapeStrategy
-        from notapkgtool.versioning.keys import VersionInfo
+        from napt.discovery.web_scrape import WebScrapeStrategy
+        from napt.versioning.keys import VersionInfo
 
         strategy = WebScrapeStrategy()
         app_config = {
@@ -400,7 +400,7 @@ class TestVersionFirstStrategies:
     def test_api_github_get_version_info(self):
         """Test api_github.get_version_info() returns VersionInfo without
         downloading."""
-        from notapkgtool.versioning.keys import VersionInfo
+        from napt.versioning.keys import VersionInfo
 
         strategy = ApiGithubStrategy()
         app_config = {
@@ -437,7 +437,7 @@ class TestVersionFirstStrategies:
 
     def test_api_json_get_version_info(self):
         """Test api_json.get_version_info() returns VersionInfo without downloading."""
-        from notapkgtool.versioning.keys import VersionInfo
+        from napt.versioning.keys import VersionInfo
 
         strategy = ApiJsonStrategy()
         app_config = {

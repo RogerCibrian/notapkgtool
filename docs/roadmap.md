@@ -154,7 +154,7 @@ This roadmap is a living document showing potential future directions for NAPT. 
 - Better developer experience
 - Reduces debugging time during deployment
 
-**Related**: TODO in `notapkgtool/build/packager.py` - discovered during testing
+**Related**: TODO in `napt/build/packager.py` - discovered during testing
 
 #### Recipe Linting & Best Practices
 **Status**: 💡 Idea  
@@ -186,7 +186,7 @@ This roadmap is a living document showing potential future directions for NAPT. 
 - Enables version discovery for applications distributed as EXE
 - Useful for vendors who don't provide version in URL or API
 
-**Related**: Mentioned in `notapkgtool/discovery/url_download.py` docstring
+**Related**: Mentioned in `napt/discovery/url_download.py` docstring
 
 #### Parallel Package Building
 **Status**: 💡 Idea  
@@ -216,7 +216,7 @@ This roadmap is a living document showing potential future directions for NAPT. 
 - Better for air-gapped environments
 - Auto-detect when tool updates are available
 
-**Related**: TODO in `notapkgtool/build/packager.py:47`
+**Related**: TODO in `napt/build/packager.py:47`
 
 #### Minify Scripts at Intune Upload
 **Status**: 💡 Idea  
@@ -261,7 +261,7 @@ This roadmap is a living document showing potential future directions for NAPT. 
 - Includes CMTrace-formatted logging with log rotation (NAPTDetections.log, NAPTRequirements.log)
 - Configurable via `win32.installed_check` section in defaults or recipe
 
-**Related**: Implemented in `notapkgtool/detection.py`, `notapkgtool/requirements.py`, and integrated into build process in `notapkgtool/build/manager.py`. See [User Guide - Detection and Requirements Scripts](user-guide.md#detection-and-requirements-scripts) and [Recipe Reference - Win32 Configuration](recipe-reference.md#win32-configuration).
+**Related**: Implemented in `napt/detection.py`, `napt/requirements.py`, and integrated into build process in `napt/build/manager.py`. See [User Guide - Detection and Requirements Scripts](user-guide.md#detection-and-requirements-scripts) and [Recipe Reference - Win32 Configuration](recipe-reference.md#win32-configuration).
 
 ---
 

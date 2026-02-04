@@ -1,6 +1,6 @@
 # io
 
-::: notapkgtool.io.download
+::: napt.io.download
 
-::: notapkgtool.io.upload
+::: napt.io.upload
 

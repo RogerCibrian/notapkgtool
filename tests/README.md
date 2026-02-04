@@ -122,10 +122,10 @@ pytest tests/test_versioning.py -v
 ### Run with Coverage
 ```bash
 # Unit tests with coverage
-pytest tests/ -m "not integration" --cov=notapkgtool --cov-report=html
+pytest tests/ -m "not integration" --cov=napt --cov-report=html
 
 # All tests with coverage
-pytest tests/ --cov=notapkgtool --cov-report=html
+pytest tests/ --cov=napt --cov-report=html
 
 # Opens htmlcov/index.html for detailed report
 ```
@@ -139,7 +139,7 @@ pytest tests/ -m "not integration" -v
 pytest tests/ -v
 
 # Pre-release - all tests with coverage
-pytest tests/ --cov=notapkgtool --cov-report=term-missing
+pytest tests/ --cov=napt --cov-report=term-missing
 ```
 
 ## Test Coverage
@@ -403,7 +403,7 @@ def test_example(requests_mock):
 ```python
 from unittest.mock import patch
 
-@patch("notapkgtool.module.some_function")
+@patch("napt.module.some_function")
 def test_example(mock_func, tmp_path):
     mock_func.return_value = "mocked"
     # Your test code
@@ -480,10 +480,10 @@ Every module tests:
 pytest tests/
 
 # Format code
-black notapkgtool/ tests/
+black napt/ tests/
 
 # Fix linting
-ruff check --fix notapkgtool/ tests/
+ruff check --fix napt/ tests/
 ```
 
 ### Writing New Tests
