@@ -1,4 +1,4 @@
 # logging
 
-::: notapkgtool.logging
+::: napt.logging
 

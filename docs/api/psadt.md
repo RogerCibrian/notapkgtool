@@ -1,4 +1,4 @@
 # psadt
 
-::: notapkgtool.psadt.release
+::: napt.psadt.release
 

@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from notapkgtool.build.manager import (
+from napt.build.manager import (
     _apply_branding,
     _copy_installer,
     _copy_psadt_pristine,
@@ -25,7 +25,6 @@ from notapkgtool.build.manager import (
 
 
 @pytest.mark.integration
-@pytest.mark.network
 class TestRealPSADTStructure:
     """Validate real PSADT Template_v4 structure."""
 
@@ -63,7 +62,6 @@ class TestRealPSADTStructure:
 
 
 @pytest.mark.integration
-@pytest.mark.network
 class TestCopyPSADTWithRealTemplate:
     """Test copying real PSADT template to build directory."""
 
@@ -119,7 +117,6 @@ class TestCopyPSADTWithRealTemplate:
 
 
 @pytest.mark.integration
-@pytest.mark.network
 class TestBrandingWithRealTemplate:
     """Test branding application on real PSADT v4 structure."""
 
@@ -167,7 +164,6 @@ class TestBrandingWithRealTemplate:
 
 
 @pytest.mark.integration
-@pytest.mark.network
 class TestInstallerCopyWithRealTemplate:
     """Test installer copying into real template structure."""
 

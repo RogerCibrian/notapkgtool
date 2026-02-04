@@ -1,4 +1,4 @@
 # cli
 
-::: notapkgtool.cli
+::: napt.cli
 

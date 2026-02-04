@@ -1,3 +1,3 @@
 # requirements
 
-::: notapkgtool.requirements
+::: napt.requirements

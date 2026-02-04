@@ -1,6 +1,6 @@
 # versioning
 
-::: notapkgtool.versioning.keys
+::: napt.versioning.keys
 
-::: notapkgtool.versioning.msi
+::: napt.versioning.msi
 

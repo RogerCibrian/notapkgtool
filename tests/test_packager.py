@@ -1,5 +1,5 @@
 """
-Tests for notapkgtool.build.packager module.
+Tests for napt.build.packager module.
 
 Tests .intunewin package creation including:
 - Build structure validation
@@ -17,14 +17,13 @@ from unittest.mock import patch
 
 import pytest
 
-from notapkgtool.build.packager import (
+from napt.build.packager import (
     _verify_build_structure,
     create_intunewin,
 )
-from notapkgtool.exceptions import ConfigError, PackagingError
+from napt.exceptions import ConfigError, PackagingError
 
 # All tests in this file are unit tests (fast, mocked)
-pytestmark = pytest.mark.unit
 
 
 class TestVerifyBuildStructure:
@@ -81,8 +80,8 @@ class TestVerifyBuildStructure:
 class TestCreateIntunewin:
     """Tests for .intunewin package creation."""
 
-    @patch("notapkgtool.build.packager._get_intunewin_tool")
-    @patch("notapkgtool.build.packager._execute_packaging")
+    @patch("napt.build.packager._get_intunewin_tool")
+    @patch("napt.build.packager._execute_packaging")
     def test_create_intunewin_success(self, mock_execute, mock_get_tool, tmp_path):
         """Test successful .intunewin creation."""
         # Create valid build structure
@@ -122,8 +121,8 @@ class TestCreateIntunewin:
         with pytest.raises(PackagingError):
             create_intunewin(build_dir)
 
-    @patch("notapkgtool.build.packager._get_intunewin_tool")
-    @patch("notapkgtool.build.packager._execute_packaging")
+    @patch("napt.build.packager._get_intunewin_tool")
+    @patch("napt.build.packager._execute_packaging")
     def test_create_intunewin_with_clean_source(
         self, mock_execute, mock_get_tool, tmp_path
     ):

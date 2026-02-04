@@ -7,7 +7,7 @@ Overview of NAPT's codebase structure, architecture, and key concepts for develo
 NAPT's codebase structure matches the module organization. Here's the file structure:
 
 ```
-notapkgtool/
+napt/
 ├── __init__.py              # Package initialization and public API exports
 ├── cli.py                   # Command-line interface
 ├── core.py                  # Main public API functions (orchestration)

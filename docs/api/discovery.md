@@ -1,12 +1,12 @@
 # discovery
 
-::: notapkgtool.discovery.base
+::: napt.discovery.base
 
-::: notapkgtool.discovery.url_download
+::: napt.discovery.url_download
 
-::: notapkgtool.discovery.web_scrape
+::: napt.discovery.web_scrape
 
-::: notapkgtool.discovery.api_github
+::: napt.discovery.api_github
 
-::: notapkgtool.discovery.api_json
+::: napt.discovery.api_json
 

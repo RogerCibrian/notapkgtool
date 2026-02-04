@@ -1,5 +1,5 @@
 """
-Tests for notapkgtool.versioning module.
+Tests for napt.versioning module.
 
 Tests version comparison and extraction including:
 - Semantic versioning comparison
@@ -14,8 +14,8 @@ from __future__ import annotations
 
 import pytest
 
-from notapkgtool.exceptions import ConfigError
-from notapkgtool.versioning import (
+from napt.exceptions import ConfigError
+from napt.versioning import (
     DiscoveredVersion,
     architecture_from_template,
     compare_any,

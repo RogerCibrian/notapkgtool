@@ -1,5 +1,5 @@
 """
-Tests for notapkgtool.requirements module.
+Tests for napt.requirements module.
 
 Tests requirements script generation including:
 - Script content validation (log paths, Required output)
@@ -11,15 +11,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
-from notapkgtool.requirements import (
+from napt.requirements import (
     RequirementsConfig,
     generate_requirements_script,
 )
 
 # All tests in this file are unit tests (fast, mocked)
-pytestmark = pytest.mark.unit
 
 
 class TestRequirementsConfig:

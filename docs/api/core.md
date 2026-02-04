@@ -1,4 +1,4 @@
 # core
 
-::: notapkgtool.core
+::: napt.core
 

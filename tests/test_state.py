@@ -1,5 +1,5 @@
 """
-Tests for notapkgtool.state module.
+Tests for napt.state module.
 
 Tests state management including:
 - Loading and saving state files
@@ -13,9 +13,9 @@ import json
 
 import pytest
 
-from notapkgtool.exceptions import PackagingError
-from notapkgtool.state import StateTracker, load_state, save_state
-from notapkgtool.state.tracker import create_default_state
+from napt.exceptions import PackagingError
+from napt.state import StateTracker, load_state, save_state
+from napt.state.tracker import create_default_state
 
 
 class TestStateFileOperations:

@@ -1,5 +1,5 @@
 """
-Tests for notapkgtool.io.download module.
+Tests for napt.io.download module.
 
 Tests download functionality including:
 - Basic downloads
@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 import requests_mock
 
-from notapkgtool.io.download import NotModifiedError, download_file
+from napt.io.download import NotModifiedError, download_file
 
 
 def _sha256(data: bytes) -> str:
@@ -83,7 +83,7 @@ def test_checksum_mismatch_raises_and_cleans_file(tmp_test_dir: Path) -> None:
     with requests_mock.Mocker() as m:
         m.get(url, content=b"wrong", headers={"Content-Length": "5"})
 
-        from notapkgtool.exceptions import NetworkError
+        from napt.exceptions import NetworkError
 
         with pytest.raises(NetworkError, match="sha256 mismatch"):
             download_file(url, tmp_test_dir, expected_sha256="00" * 32)
@@ -115,7 +115,7 @@ def test_rejects_html_when_validate_content_type(tmp_test_dir: Path) -> None:
     with requests_mock.Mocker() as m:
         m.get(url, text="<html>oops</html>", headers={"Content-Type": "text/html"})
 
-        from notapkgtool.exceptions import ConfigError
+        from napt.exceptions import ConfigError
 
         with pytest.raises(ConfigError, match="expected binary"):
             download_file(url, tmp_test_dir, validate_content_type=True)
