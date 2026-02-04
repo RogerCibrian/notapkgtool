@@ -238,7 +238,7 @@ See `docs/branching.md` for full workflow. PR template at `.github/PULL_REQUEST_
 
 **Branches:** `type/description-in-lowercase`
 
-**PRs:** Title in conventional commit format. Use `gh pr create` to create PRs from CLI.
+**PRs:** Title in conventional commit format. Use `gh pr create` to create PRs from CLI. PR descriptions should describe what changed and why, not include setup instructions or how-to guides.
 
 ### Release Workflow
 
