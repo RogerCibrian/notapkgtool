@@ -1,9 +1,8 @@
-"""
-Tests for napt.config.loader module.
+"""Tests for napt.config.loader module.
 
 Tests configuration loading and merging including:
 - YAML file loading
-- Three-layer merging (org -> vendor -> recipe)
+- Four-layer merging (code defaults -> org -> vendor -> recipe)
 - Path resolution
 - Dynamic value injection
 - Error handling
@@ -13,6 +12,7 @@ from __future__ import annotations
 
 import pytest
 
+from napt.config.defaults import DEFAULT_CONFIG, ORG_YAML_TEMPLATE
 from napt.config.loader import load_effective_config
 from napt.exceptions import ConfigError
 
@@ -268,3 +268,117 @@ class TestErrorHandling:
 
         with pytest.raises(ConfigError):
             load_effective_config(recipe_path)
+
+
+class TestCodeDefaults:
+    """Tests for code-based default configuration."""
+
+    def test_code_defaults_applied_without_org_yaml(self, tmp_test_dir):
+        """Tests that code defaults are applied when no org.yaml exists."""
+        # Create recipe without any defaults directory
+        recipe_path = tmp_test_dir / "recipe.yaml"
+        recipe_path.write_text(
+            """
+apiVersion: napt/v1
+app:
+  name: Test App
+  id: test-app
+"""
+        )
+
+        config = load_effective_config(recipe_path)
+
+        # Should have code defaults applied
+        assert "defaults" in config
+        assert config["defaults"]["comparator"] == "semver"
+        assert config["defaults"]["psadt"]["release"] == "latest"
+        assert config["defaults"]["build"]["output_dir"] == "builds"
+
+    def test_org_yaml_overrides_code_defaults(self, tmp_test_dir):
+        """Tests that org.yaml values override code defaults."""
+        # Create directory structure with org.yaml
+        defaults_dir = tmp_test_dir / "defaults"
+        defaults_dir.mkdir()
+
+        org_path = defaults_dir / "org.yaml"
+        org_path.write_text(
+            """
+apiVersion: napt/v1
+defaults:
+  comparator: lexicographic
+  psadt:
+    release: "4.0.0"
+"""
+        )
+
+        recipe_path = tmp_test_dir / "recipe.yaml"
+        recipe_path.write_text(
+            """
+apiVersion: napt/v1
+app:
+  name: Test App
+"""
+        )
+
+        config = load_effective_config(recipe_path)
+
+        # org.yaml values should override code defaults
+        assert config["defaults"]["comparator"] == "lexicographic"
+        assert config["defaults"]["psadt"]["release"] == "4.0.0"
+        # But code defaults should still provide unspecified values
+        assert config["defaults"]["build"]["output_dir"] == "builds"
+
+    def test_code_defaults_structure_matches_expected(self):
+        """Tests that code defaults have expected structure."""
+        # Verify the structure matches what we expect
+        assert "defaults" in DEFAULT_CONFIG
+        defaults = DEFAULT_CONFIG["defaults"]
+
+        # Check top-level keys exist
+        assert "comparator" in defaults
+        assert "updates" in defaults
+        assert "psadt" in defaults
+        assert "build" in defaults
+        assert "win32" in defaults
+        assert "intune" in defaults
+
+        # Check nested structures
+        assert "release" in defaults["psadt"]
+        assert "app_vars" in defaults["psadt"]
+        assert "output_dir" in defaults["build"]
+        assert "build_types" in defaults["win32"]
+
+    def test_org_yaml_template_covers_all_sections(self):
+        """Tests that ORG_YAML_TEMPLATE mentions all DEFAULT_CONFIG sections.
+
+        This test catches drift between the code defaults and the template
+        shown to users via `napt init`. If a new section is added to
+        DEFAULT_CONFIG but not to the template, this test will fail.
+        """
+        defaults = DEFAULT_CONFIG["defaults"]
+
+        # All top-level sections under defaults should be mentioned in template
+        # (either as actual keys or as comments)
+        for section in defaults.keys():
+            assert section in ORG_YAML_TEMPLATE, (
+                f"Section '{section}' exists in DEFAULT_CONFIG but is not "
+                f"mentioned in ORG_YAML_TEMPLATE. Update the template in "
+                f"napt/config/defaults.py to include this section."
+            )
+
+        # Also check key nested sections are mentioned
+        nested_checks = [
+            ("psadt", "release"),
+            ("psadt", "brand_pack"),
+            ("psadt", "app_vars"),
+            ("build", "output_dir"),
+            ("win32", "build_types"),
+            ("win32", "installed_check"),
+            ("intune", "update_name_prefix"),
+        ]
+
+        for parent, key in nested_checks:
+            assert key in ORG_YAML_TEMPLATE, (
+                f"Key '{parent}.{key}' exists in DEFAULT_CONFIG but is not "
+                f"mentioned in ORG_YAML_TEMPLATE. Update the template."
+            )

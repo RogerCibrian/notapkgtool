@@ -204,13 +204,28 @@ Description of what the field does and when to use it.
 
 ### 3. Update Defaults (if needed)
 
-If the field has organization-level defaults, add to `defaults/org.yaml`:
+If the field has organization-level defaults, update **both** files in `napt/config/defaults.py`:
 
-```yaml
-defaults:
-  section:
-    new_field: "default_value"  # Comment explaining purpose
+1. Add to `DEFAULT_CONFIG` dict (the authoritative code defaults):
+```python
+DEFAULT_CONFIG = {
+    "defaults": {
+        "section": {
+            "new_field": "default_value",
+        },
+    },
+}
 ```
+
+2. Add to `ORG_YAML_TEMPLATE` (the commented template for `napt init`):
+```python
+ORG_YAML_TEMPLATE = """
+  # section:
+  #   new_field: "default_value"  # Comment explaining purpose
+"""
+```
+
+A test (`test_org_yaml_template_covers_all_sections`) validates that all sections in `DEFAULT_CONFIG` are mentioned in `ORG_YAML_TEMPLATE`.
 
 ### 4. Verify Implementation
 

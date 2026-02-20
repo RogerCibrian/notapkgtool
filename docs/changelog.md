@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Code-Based Defaults** - NAPT now ships with complete built-in defaults, making `pip install napt` work out of the box without requiring any configuration files. Organization defaults (`defaults/org.yaml`) and vendor defaults are now optional overrides rather than requirements
+- **`napt init` Command** - New command to scaffold NAPT project structure. Creates `recipes/`, `defaults/vendors/`, and a commented `defaults/org.yaml` template. Safely skips existing files; use `--force` to overwrite with automatic backup
+
+### Changed
+
+- **Four-Layer Configuration** - Configuration system now has four layers: code defaults (baseline) -> org.yaml (optional) -> vendor.yaml (optional) -> recipe (required). Old configs continue to work; new fields automatically get code defaults
+
 ## [0.3.1] - 2026-02-03
 
 ### Changed

@@ -198,6 +198,14 @@ state/
 
 > **💡 Tip:** All commands support `--help` (or `-h`) to show detailed usage, options, and examples. Try `napt discover --help` to see what's available.
 
+### napt init
+
+Initializes a new NAPT project with the recommended directory structure. Creates `recipes/`, `defaults/org.yaml`, and `defaults/vendors/`. Existing files are preserved by default; use `--force` to backup and overwrite.
+
+```bash
+napt init [DIRECTORY] [OPTIONS]
+```
+
 ### napt validate
 
 Validates recipe syntax and configuration without making network calls. Checks YAML syntax, required fields, and strategy configuration. Does not verify URLs are accessible or files can be downloaded.
@@ -379,15 +387,39 @@ napt discover recipes/Google/chrome.yaml --stateless
 
 ## Configuration Layers
 
-NAPT uses a sophisticated 3-layer configuration system that promotes DRY (Don't Repeat Yourself) principles:
+NAPT uses a layered configuration system that promotes DRY (Don't Repeat Yourself) principles.
+All defaults live in code; configuration files are optional overrides.
 
-### The Three Layers
+### How Configuration Works
 
-1. **Organization defaults** (`defaults/org.yaml`) - Base configuration for all apps. Required if a defaults directory is found. Contains PSADT settings, update policies, and deployment waves.
+```
+Code defaults (always complete)     <- baseline, ships with napt
+    |
+./defaults/org.yaml                 <- organization overrides (optional)
+    |
+./defaults/vendors/<Vendor>.yaml    <- vendor overrides (optional)
+    |
+recipe.yaml                         <- recipe-specific overrides
+```
 
-2. **Vendor defaults** (`defaults/vendors/<Vendor>.yaml`) - Vendor-specific overrides. Optional; only loaded if vendor is detected (e.g., Google-specific settings).
+**Key principles:**
 
-3. **Recipe configuration** (`recipes/<Vendor>/<app>.yaml`) - App-specific settings. Always required; defines the specific app with final overrides. Any field defined in higher layers can be overridden.
+- Code provides complete, working defaults for all settings
+- Config files only override what you need to change
+- Missing fields always fall back to code defaults
+- Old configs never break when NAPT adds new features
+
+### The Three Override Layers
+
+1. **Organization defaults** (`defaults/org.yaml`) - Base overrides for all apps.
+Optional; only needed if you want to customize settings organization-wide.
+Contains PSADT settings, update policies, and build configuration.
+
+2. **Vendor defaults** (`defaults/vendors/<Vendor>.yaml`) - Vendor-specific overrides.
+Optional; only loaded if vendor is detected (e.g., Google-specific settings).
+
+3. **Recipe configuration** (`recipes/<Vendor>/<app>.yaml`) - App-specific settings.
+Always required; defines the specific app with final overrides.
 
 ### Example
 

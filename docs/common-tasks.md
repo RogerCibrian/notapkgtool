@@ -4,6 +4,100 @@ Step-by-step guides for common NAPT workflows. Each task includes complete, work
 
 > **💡 Tip:** Need help with a specific command? Use `napt <command> --help` to see all options and examples. For instance, `napt discover --help` shows discovery command details.
 
+## Initialize a New NAPT Project
+
+Set up the recommended directory structure for a new NAPT project.
+
+### Quick Setup
+
+```bash
+# Create and enter project directory
+mkdir my-intune-packages
+cd my-intune-packages
+
+# Initialize NAPT project structure
+napt init
+```
+
+**Output:**
+
+```console
+$ napt init
+Initializing NAPT project in: /path/to/my-intune-packages
+
+[1/2] Creating directory structure...
+      Created: recipes/
+      Created: defaults/vendors/
+
+[2/2] Creating configuration files...
+      Created: defaults/org.yaml
+
+Done! Project initialized.
+```
+
+### What Gets Created
+
+```
+my-intune-packages/
+├── defaults/
+│   ├── org.yaml              # Organization-wide defaults (commented template)
+│   └── vendors/              # Vendor-specific overrides (empty)
+└── recipes/                  # Your recipe files go here
+```
+
+### Handling Existing Files
+
+NAPT safely skips existing files by default:
+
+```console
+$ napt init
+Initializing NAPT project in: /path/to/existing-project
+
+[1/2] Creating directory structure...
+      Skipped: recipes/ (already exists)
+      Skipped: defaults/vendors/ (already exists)
+
+[2/2] Creating configuration files...
+      Skipped: defaults/org.yaml (already exists)
+
+Done! Project initialized.
+```
+
+To overwrite existing files (with automatic backup):
+
+```bash
+napt init --force
+```
+
+This backs up existing files before replacing them:
+
+```console
+$ napt init --force
+[2/2] Creating configuration files...
+      Backed up: defaults/org.yaml -> defaults/org.yaml.backup
+      Created: defaults/org.yaml
+```
+
+### Next Steps After Init
+
+1. **Edit organization defaults** (optional):
+   ```bash
+   # Uncomment and customize settings in defaults/org.yaml
+   code defaults/org.yaml
+   ```
+
+2. **Create your first recipe**:
+   ```bash
+   mkdir recipes/Google
+   code recipes/Google/chrome.yaml
+   ```
+
+3. **Validate and test**:
+   ```bash
+   napt validate recipes/Google/chrome.yaml
+   napt discover recipes/Google/chrome.yaml --verbose
+   ```
+
 ## Create a Recipe for a GitHub Release App
 
 Use this when the application is hosted on GitHub with releases.

@@ -19,6 +19,7 @@ commands for recipe validation, package building, and deployment management.
 
 Commands:
 
+    init: Initialize a new NAPT project
     validate: Validate recipe syntax and configuration
     discover: Discover latest version and download installer
     build: Build PSADT package from recipe
@@ -77,6 +78,7 @@ from pathlib import Path
 import sys
 
 from napt.build import build_package, create_intunewin
+from napt.config.defaults import ORG_YAML_TEMPLATE
 from napt.core import discover_recipe
 from napt.exceptions import (
     ConfigError,
@@ -397,6 +399,128 @@ def cmd_package(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_init(args: argparse.Namespace) -> int:
+    """Handler for 'napt init' command.
+
+    Initializes a new NAPT project by creating the directory structure and
+    default configuration files. This command creates the recipes/ directory,
+    defaults/ directory with org.yaml template, and defaults/vendors/ directory.
+
+    Args:
+        args: Parsed command-line arguments containing
+            directory path, force flag, and debug flags.
+
+    Returns:
+        Exit code (0 for success, 1 for failure).
+
+    Note:
+        By default, existing files are skipped (not overwritten).
+        Use --force to backup existing files and create fresh ones.
+
+    """
+    # Configure global logger
+    logger = get_logger(verbose=args.verbose, debug=args.debug)
+    set_global_logger(logger)
+
+    target_dir = Path(args.directory).resolve()
+
+    print(f"Initializing NAPT project in: {target_dir}")
+    print()
+
+    # Track what we create/skip
+    created: list[str] = []
+    skipped: list[str] = []
+    backed_up: list[str] = []
+
+    # Step 1: Create directory structure
+    logger.step(1, 2, "Creating directory structure...")
+
+    # Create recipes/ directory
+    recipes_dir = target_dir / "recipes"
+    if not recipes_dir.exists():
+        recipes_dir.mkdir(parents=True)
+        created.append("recipes/")
+        logger.verbose("INIT", "Created: recipes/")
+    else:
+        skipped.append("recipes/")
+        logger.verbose("INIT", "Skipped: recipes/ (already exists)")
+
+    # Create defaults/vendors/ directory
+    vendors_dir = target_dir / "defaults" / "vendors"
+    if not vendors_dir.exists():
+        vendors_dir.mkdir(parents=True)
+        created.append("defaults/vendors/")
+        logger.verbose("INIT", "Created: defaults/vendors/")
+    else:
+        skipped.append("defaults/vendors/")
+        logger.verbose("INIT", "Skipped: defaults/vendors/ (already exists)")
+
+    # Step 2: Create configuration files
+    logger.step(2, 2, "Creating configuration files...")
+
+    # Create defaults/org.yaml
+    org_yaml_path = target_dir / "defaults" / "org.yaml"
+    if org_yaml_path.exists():
+        if args.force:
+            # Backup existing file
+            backup_path = org_yaml_path.with_suffix(".yaml.backup")
+            org_yaml_path.rename(backup_path)
+            backed_up.append(f"defaults/org.yaml -> {backup_path.name}")
+            logger.verbose(
+                "INIT", f"Backed up: defaults/org.yaml -> {backup_path.name}"
+            )
+
+            # Write new file
+            org_yaml_path.write_text(ORG_YAML_TEMPLATE, encoding="utf-8")
+            created.append("defaults/org.yaml")
+            logger.verbose("INIT", "Created: defaults/org.yaml")
+        else:
+            skipped.append("defaults/org.yaml")
+            logger.verbose("INIT", "Skipped: defaults/org.yaml (already exists)")
+    else:
+        # Ensure parent directory exists
+        org_yaml_path.parent.mkdir(parents=True, exist_ok=True)
+        org_yaml_path.write_text(ORG_YAML_TEMPLATE, encoding="utf-8")
+        created.append("defaults/org.yaml")
+        logger.verbose("INIT", "Created: defaults/org.yaml")
+
+    # Display results
+    print()
+    print("=" * 70)
+    print("INITIALIZATION RESULTS")
+    print("=" * 70)
+    print(f"Project Root:    {target_dir}")
+    print()
+
+    if created:
+        print(f"Created ({len(created)}):")
+        for item in created:
+            print(f"  [OK] {item}")
+        print()
+
+    if backed_up:
+        print(f"Backed Up ({len(backed_up)}):")
+        for item in backed_up:
+            print(f"  [OK] {item}")
+        print()
+
+    if skipped:
+        print(f"Skipped ({len(skipped)}):")
+        for item in skipped:
+            print(f"  [SKIP] {item}")
+        print()
+
+    print("=" * 70)
+    print()
+
+    if skipped and not args.force:
+        print("Note: Existing files were preserved. Use --force to overwrite.")
+        print()
+
+    print("[SUCCESS] Project initialized!")
+    return 0
+
+
 def main() -> None:
     """Main entry point for the napt CLI.
 
@@ -589,6 +713,49 @@ def main() -> None:
         help="Show detailed debugging output (implies --verbose)",
     )
     parser_package.set_defaults(func=cmd_package)
+
+    # 'init' command
+    parser_init = subparsers.add_parser(
+        "init",
+        help="Initialize a new NAPT project",
+        description=(
+            "Create a new NAPT project structure with default configuration.\n\n"
+            "Creates:\n"
+            "  - recipes/              Directory for recipe YAML files\n"
+            "  - defaults/org.yaml     Organization defaults template\n"
+            "  - defaults/vendors/     Directory for vendor-specific defaults\n\n"
+            "Examples:\n"
+            "  napt init\n"
+            "  napt init ./my-project\n"
+            "  napt init --force\n\n"
+            "See docs for more examples and workflows."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser_init.add_argument(
+        "directory",
+        nargs="?",
+        default=".",
+        help="Directory to initialize (default: current directory)",
+    )
+    parser_init.add_argument(
+        "--force",
+        action="store_true",
+        help="Backup and overwrite existing configuration files",
+    )
+    parser_init.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Show detailed initialization steps",
+    )
+    parser_init.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="Show detailed debugging output (implies --verbose)",
+    )
+    parser_init.set_defaults(func=cmd_init)
 
     # Parse and dispatch
     args = parser.parse_args()

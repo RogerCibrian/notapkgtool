@@ -95,6 +95,27 @@ All NAPT commands support these helpful flags:
 
 Example: `napt discover --help` or `napt build --verbose`
 
+### Initialize a New Project
+
+Set up the recommended directory structure for a new NAPT project:
+
+```bash
+# Initialize in current directory
+napt init
+
+# Initialize in a specific directory
+napt init /path/to/project
+
+# Overwrite existing files (backs up originals)
+napt init --force
+```
+
+This creates:
+
+- `recipes/` - Directory for your recipe files
+- `defaults/org.yaml` - Organization-wide configuration (commented template)
+- `defaults/vendors/` - Directory for vendor-specific defaults
+
 ### Validate a Recipe
 
 Quick validation checks syntax and configuration without downloading anything:

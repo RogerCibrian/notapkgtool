@@ -29,6 +29,8 @@ This roadmap is a living document showing potential future directions for NAPT. 
 | Enhanced CLI Help Menu | 💡 Idea | User-Facing | Low | Medium |
 | PowerShell Validation | 💡 Idea | Code Quality | High | High |
 | Recipe Linting & Best Practices | 💡 Idea | Code Quality | High | Medium |
+| Unrecognized Config Field Warnings | 💡 Idea | Code Quality | Low | Medium |
+| Typed Config with Dataclasses | 💡 Idea | Code Quality | Medium | Medium |
 | EXE Version Extraction | 💡 Idea | Technical | High | Medium |
 | Parallel Package Building | 💡 Idea | Technical | Medium | Medium |
 | IntuneWinAppUtil Version Tracking | 💡 Idea | Technical | Low | Low |
@@ -38,8 +40,8 @@ This roadmap is a living document showing potential future directions for NAPT. 
 
 - 📋 **Ready**: 0
 - 🔬 **Investigating**: 2
-- 💡 **Ideas**: 8
-- **Total**: 10 features
+- 💡 **Ideas**: 10
+- **Total**: 12 features
 
 ---
 
@@ -172,6 +174,43 @@ This roadmap is a living document showing potential future directions for NAPT. 
 - Warns on deprecated patterns or old v3 functions
 - Suggests improvements (e.g., use Uninstall-ADTApplication)
 - Warns about unknown fields at app level (e.g., deprecated `detection` vs `win32.installed_check`)
+
+#### Unrecognized Config Field Warnings
+**Status**: 💡 Idea
+**Complexity**: Low (few hours to 1 day)
+**Value**: Medium
+
+**Description**: Warn users when config files (org.yaml, vendor files, recipes) contain unrecognized fields.
+Helps catch typos, deprecated fields, and fields from newer NAPT versions.
+
+**Benefits**:
+
+- Catches typos early (e.g., `pstdt` instead of `psadt`)
+- Alerts users to deprecated fields they should migrate
+- Identifies fields from newer NAPT versions when running older versions
+- Helps maintain clean, intentional configuration
+- Warning (not error) allows forward compatibility while informing users
+
+#### Typed Config with Dataclasses
+**Status**: 💡 Idea
+**Complexity**: Medium (1-3 days)
+**Value**: Medium
+
+**Description**: Convert the dict-based default configuration to typed dataclasses once the schema and naming are finalized.
+Provides IDE autocomplete, type checking, and catches config key typos at development time.
+
+**Benefits**:
+
+- IDE autocomplete when accessing config values
+- Type checking with mypy catches errors early
+- Typos in config keys caught by IDE instead of runtime
+- Self-documenting structure with type hints
+- Better refactoring support
+
+**Prerequisites**:
+
+- Schema should be stable (post-1.0 or when churn slows)
+- Current dict approach works well for rapid iteration
 
 ### Technical Enhancements
 
