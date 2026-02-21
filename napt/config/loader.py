@@ -29,12 +29,12 @@ Configuration Layers:
        - Optional; only loaded if file exists
        - Customizes settings for your organization
 
-    3. **Vendor defaults** (defaults/vendors/<Vendor>.yaml)
+    3. **Vendor defaults** (defaults/vendors/{Vendor}.yaml)
        - Vendor-specific overrides (e.g., Google-specific settings)
        - Optional; only loaded if vendor is detected
        - Overrides organization defaults
 
-    4. **Recipe configuration** (recipes/<Vendor>/<app>.yaml)
+    4. **Recipe configuration** (recipes/{Vendor}/{app}.yaml)
        - App-specific configuration
        - Always required; defines the app itself
        - Overrides all other layers

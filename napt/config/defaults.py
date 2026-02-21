@@ -21,7 +21,7 @@ defaults are always applied first, then overridden by organization defaults
 The configuration hierarchy is:
     1. Code defaults (this module) - always present
     2. Organization defaults (defaults/org.yaml) - optional overrides
-    3. Vendor defaults (defaults/vendors/<Vendor>.yaml) - optional overrides
+    3. Vendor defaults (defaults/vendors/{Vendor}.yaml) - optional overrides
     4. Recipe configuration - required, app-specific settings
 
 This design ensures that NAPT works out of the box without requiring any
@@ -37,17 +37,6 @@ from typing import Any
 # without requiring a defaults/org.yaml file.
 DEFAULT_CONFIG: dict[str, Any] = {
     "defaults": {
-        # Version comparison method: "semver" or "lexicographic"
-        "comparator": "semver",
-        # Update detection settings
-        "updates": {
-            "strategy": "version_then_hash",
-            "allow_same_version_hash_change": True,
-            "comparator": "semver",
-            "use_conditional_requests": True,
-            "verify_signature": False,
-            "enforce_vendor_cn": None,
-        },
         # PSADT (PowerShell App Deployment Toolkit) settings
         "psadt": {
             "release": "latest",
@@ -72,7 +61,6 @@ DEFAULT_CONFIG: dict[str, Any] = {
         # Build output settings
         "build": {
             "output_dir": "builds",
-            "naming": "{app_id}/{version}",
         },
         # Windows/Intune settings
         "win32": {
@@ -84,10 +72,6 @@ DEFAULT_CONFIG: dict[str, Any] = {
                     "exact_match": False,
                 },
             },
-        },
-        # Intune-specific settings
-        "intune": {
-            "update_name_prefix": "[Update] ",
         },
     },
 }
@@ -111,15 +95,6 @@ ORG_YAML_TEMPLATE = """\
 apiVersion: napt/v1
 
 defaults:
-  # Version comparison: "semver" (recommended) or "lexicographic"
-  # comparator: semver
-
-  # Update detection settings
-  # updates:
-  #   strategy: "version_then_hash"  # version_only, version_then_hash, hash_only
-  #   allow_same_version_hash_change: true
-  #   use_conditional_requests: true
-
   # PSADT settings
   # psadt:
   #   # PSADT release: "latest" or specific version (e.g., "4.1.7")
@@ -141,7 +116,6 @@ defaults:
   # Build output settings
   # build:
   #   output_dir: "builds"
-  #   naming: "{app_id}/{version}"
 
   # Windows/Intune detection settings
   # win32:
@@ -149,8 +123,4 @@ defaults:
   #   installed_check:
   #     detection:
   #       exact_match: false  # true = version must match exactly
-
-  # Intune settings
-  # intune:
-  #   update_name_prefix: "[Update] "
 """

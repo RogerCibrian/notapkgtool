@@ -64,7 +64,7 @@ Exit Codes:
 Note:
     The CLI uses argparse for command parsing (stdlib, zero dependencies).
     Commands are registered with subparsers for clean organization.
-    Each command has its own handler function (cmd_<command>).
+    Each command has its own handler function (`cmd_<command>`).
     Verbose mode shows full tracebacks on errors for debugging.
     Debug mode implies verbose mode and shows detailed configuration dumps.
 

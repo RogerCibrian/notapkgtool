@@ -335,12 +335,9 @@ app:
         defaults = DEFAULT_CONFIG["defaults"]
 
         # Check top-level keys exist
-        assert "comparator" in defaults
-        assert "updates" in defaults
         assert "psadt" in defaults
         assert "build" in defaults
         assert "win32" in defaults
-        assert "intune" in defaults
 
         # Check nested structures
         assert "release" in defaults["psadt"]
@@ -374,7 +371,6 @@ app:
             ("build", "output_dir"),
             ("win32", "build_types"),
             ("win32", "installed_check"),
-            ("intune", "update_name_prefix"),
         ]
 
         for parent, key in nested_checks:
