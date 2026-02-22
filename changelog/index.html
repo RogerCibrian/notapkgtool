@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
     
     
       
@@ -1284,6 +1284,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Unreleased">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1299,7 +1327,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#changed" class="md-nav__link">
+  <a href="#changed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1327,7 +1355,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added" class="md-nav__link">
+  <a href="#added_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1338,7 +1366,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_1" class="md-nav__link">
+  <a href="#changed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1377,7 +1405,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added_1" class="md-nav__link">
+  <a href="#added_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1388,7 +1416,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_2" class="md-nav__link">
+  <a href="#changed_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1427,7 +1455,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added_2" class="md-nav__link">
+  <a href="#added_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1549,6 +1577,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Unreleased">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1564,7 +1620,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#changed" class="md-nav__link">
+  <a href="#changed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1592,7 +1648,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added" class="md-nav__link">
+  <a href="#added_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1603,7 +1659,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_1" class="md-nav__link">
+  <a href="#changed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1642,7 +1698,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added_1" class="md-nav__link">
+  <a href="#added_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1653,7 +1709,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_2" class="md-nav__link">
+  <a href="#changed_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1692,7 +1748,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added_2" class="md-nav__link">
+  <a href="#added_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1732,14 +1788,23 @@
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 <h2 id="unreleased"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.3.1...HEAD">Unreleased</a></h2>
-<h2 id="031-2026-02-03"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.3.0...0.3.1">0.3.1</a> - 2026-02-03</h2>
+<h3 id="added">Added</h3>
+<ul>
+<li><strong>Code-Based Defaults</strong> - NAPT now ships with complete built-in defaults, making <code>pip install napt</code> work out of the box without requiring any configuration files. Organization defaults (<code>defaults/org.yaml</code>) and vendor defaults are now optional overrides rather than requirements</li>
+<li><strong><code>napt init</code> Command</strong> - New command to scaffold NAPT project structure. Creates <code>recipes/</code>, <code>defaults/vendors/</code>, and a commented <code>defaults/org.yaml</code> template. Safely skips existing files; use <code>--force</code> to overwrite with automatic backup</li>
+</ul>
 <h3 id="changed">Changed</h3>
+<ul>
+<li><strong>Four-Layer Configuration</strong> - Configuration system now has four layers: code defaults (baseline) -&gt; org.yaml (optional) -&gt; vendor.yaml (optional) -&gt; recipe (required). Old configs continue to work; new fields automatically get code defaults</li>
+</ul>
+<h2 id="031-2026-02-03"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.3.0...0.3.1">0.3.1</a> - 2026-02-03</h2>
+<h3 id="changed_1">Changed</h3>
 <ul>
 <li><strong>PyPI Package Name</strong> - Package renamed from <code>notapkgtool</code> to <code>napt</code> for simpler installation (<code>pip install napt</code>)</li>
 <li><strong>Automated PyPI Publishing</strong> - Releases now automatically publish to PyPI via GitHub Actions using Trusted Publisher (OIDC)</li>
 </ul>
 <h2 id="030-2026-02-02"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.2.0...0.3.0">0.3.0</a> - 2026-02-02</h2>
-<h3 id="added">Added</h3>
+<h3 id="added_1">Added</h3>
 <ul>
 <li><strong>Win32 Configuration Validation</strong> - Recipe validation now checks <code>win32</code> configuration fields for correct types and values, with typo detection suggesting similar field names (e.g., "Did you mean 'display_name'?")</li>
 <li><strong>Detection Script Generation</strong> - Automatic PowerShell detection script generation for Intune Win32 app deployments during build process. Scripts check Windows uninstall registry keys, support exact or minimum version matching, and include CMTrace-formatted logging</li>
@@ -1748,7 +1813,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong>Architecture-Aware Detection</strong> - Detection and requirements scripts now use explicit registry views based on target architecture, preventing false positives when x86 and x64 versions coexist. MSI architecture is auto-detected from Template property; non-MSI installers require <code>win32.installed_check.architecture</code> configuration (x86, x64, arm64, or any)</li>
 <li><strong>MSI Display Name Override</strong> - New <code>override_msi_display_name</code> flag allows using custom <code>display_name</code> instead of MSI ProductName for registry lookups, solving edge cases where ProductName contains version numbers (e.g., "7-Zip 25.01"). Supports wildcards (<code>*</code>, <code>?</code>) for flexible matching</li>
 </ul>
-<h3 id="changed_1">Changed</h3>
+<h3 id="changed_2">Changed</h3>
 <ul>
 <li><strong>BREAKING: Non-MSI Architecture Required</strong> - <code>win32.installed_check.architecture</code> is now required for non-MSI installers (EXE, etc.). Allowed values: <code>x86</code>, <code>x64</code>, <code>arm64</code>, <code>any</code></li>
 <li><strong>Discovery Performance Optimization</strong> - Version-first strategies (web_scrape, api_github, api_json) now check versions before downloading, enabling ~100-300ms update checks when unchanged instead of full downloads</li>
@@ -1775,7 +1840,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li>Fixed docstring formatting issues across multiple modules (missing blank lines, incorrect Args sections)</li>
 </ul>
 <h2 id="020-2025-11-07"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.1.0...0.2.0">0.2.0</a> - 2025-11-07</h2>
-<h3 id="added_1">Added</h3>
+<h3 id="added_2">Added</h3>
 <ul>
 <li><strong>PSADT Package Generation</strong> with <code>napt build</code> command - Creates complete PSADT v4 deployment packages with custom branding support</li>
 <li><strong>.intunewin Package Creation</strong> with <code>napt package</code> command - Generates Intune-ready packages using Microsoft's IntuneWinAppUtil.exe</li>
@@ -1785,7 +1850,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong>Roadmap Management</strong> (<code>docs/roadmap.md</code>) - Structured feature tracking with status categories and workspace automation</li>
 <li><strong>MkDocs Documentation Site</strong> - User guide and auto-generated API reference</li>
 </ul>
-<h3 id="changed_2">Changed</h3>
+<h3 id="changed_3">Changed</h3>
 <ul>
 <li><strong>State File Schema v2</strong> - Convention-based file paths, improved metadata tracking, per-app isolation (Breaking: old state files need regeneration)</li>
 <li><strong>CLI Commands</strong> - Renamed <code>check</code> to <code>validate</code> for clarity</li>
@@ -1801,7 +1866,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h2 id="010-2025-10-23"><a href="https://github.com/RogerCibrian/notapkgtool/releases/tag/0.1.0">0.1.0</a> - 2025-10-23</h2>
 <p>Initial internal release.</p>
-<h3 id="added_2">Added</h3>
+<h3 id="added_3">Added</h3>
 <ul>
 <li><strong>Recipe Validation</strong> with <code>napt check</code> command - Validates recipe syntax and configuration without network calls</li>
 <li><strong>HTTP Static Discovery</strong> - Downloads installers from static URLs with ETag caching for efficiency</li>

@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
     
     
       
@@ -1783,8 +1783,8 @@ re-downloads. Pinning identity stabilizes ETags for binary installers
     <div class="doc doc-contents ">
 
         <p>Download a URL to destination_folder with robustness and reproducibility.</p>
-<p>Follows redirects and retries transient failures. Writes to <filename>.part
-then renames to <filename> on success (atomic). Sends conditional headers
+<p>Follows redirects and retries transient failures. Writes to <code>filename.part</code>
+then renames to <code>filename</code> on success (atomic). Sends conditional headers
 if etag/last_modified provided. Validates checksum if expected_sha256 is set.</p>
 
 
@@ -2168,8 +2168,8 @@ raises NetworkError.</p>
 </span><span id="__span-0-195"><a id="__codelineno-0-195" name="__codelineno-0-195"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]:</span>
 </span><span id="__span-0-196"><a id="__codelineno-0-196" name="__codelineno-0-196"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Download a URL to destination_folder with robustness and reproducibility.</span>
 </span><span id="__span-0-197"><a id="__codelineno-0-197" name="__codelineno-0-197"></a>
-</span><span id="__span-0-198"><a id="__codelineno-0-198" name="__codelineno-0-198"></a><span class="sd">    Follows redirects and retries transient failures. Writes to &lt;filename&gt;.part</span>
-</span><span id="__span-0-199"><a id="__codelineno-0-199" name="__codelineno-0-199"></a><span class="sd">    then renames to &lt;filename&gt; on success (atomic). Sends conditional headers</span>
+</span><span id="__span-0-198"><a id="__codelineno-0-198" name="__codelineno-0-198"></a><span class="sd">    Follows redirects and retries transient failures. Writes to `filename.part`</span>
+</span><span id="__span-0-199"><a id="__codelineno-0-199" name="__codelineno-0-199"></a><span class="sd">    then renames to `filename` on success (atomic). Sends conditional headers</span>
 </span><span id="__span-0-200"><a id="__codelineno-0-200" name="__codelineno-0-200"></a><span class="sd">    if etag/last_modified provided. Validates checksum if expected_sha256 is set.</span>
 </span><span id="__span-0-201"><a id="__codelineno-0-201" name="__codelineno-0-201"></a>
 </span><span id="__span-0-202"><a id="__codelineno-0-202" name="__codelineno-0-202"></a><span class="sd">    Args:</span>
