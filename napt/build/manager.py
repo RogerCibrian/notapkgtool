@@ -352,14 +352,14 @@ def _apply_branding(config: dict[str, Any], build_dir: Path) -> None:
     from napt.logging import get_global_logger
 
     logger = get_global_logger()
-    brand_pack = config.get("defaults", {}).get("psadt", {}).get("brand_pack")
+    brand_pack = config["defaults"]["psadt"]["brand_pack"]
 
-    if not brand_pack:
+    if not brand_pack["path"]:
         logger.verbose("BUILD", "No brand pack configured, using PSADT defaults")
         return
 
-    brand_path = Path(brand_pack.get("path", ""))
-    mappings = brand_pack.get("mappings", [])
+    brand_path = Path(brand_pack["path"])
+    mappings = brand_pack["mappings"]
 
     if not brand_path.exists():
         logger.verbose(
@@ -585,10 +585,10 @@ def _generate_detection_script(
     detection_config_obj = DetectionConfig(
         app_name=app_name_for_detection,
         version=version,
-        log_format=installed_check_config.get("log_format", "cmtrace"),
-        log_level=installed_check_config.get("log_level", "INFO"),
-        log_rotation_mb=installed_check_config.get("log_rotation_mb", 3),
-        exact_match=detection_nested_config.get("exact_match", False),
+        log_format=installed_check_config["log_format"],
+        log_level=installed_check_config["log_level"],
+        log_rotation_mb=installed_check_config["log_rotation_mb"],
+        exact_match=detection_nested_config["exact_match"],
         app_id=app_id,
         is_msi_installer=(installer_ext == ".msi"),
         expected_architecture=expected_architecture,
@@ -769,9 +769,9 @@ def _generate_requirements_script(
     requirements_config_obj = RequirementsConfig(
         app_name=app_name_for_requirements,
         version=version,
-        log_format=installed_check_config.get("log_format", "cmtrace"),
-        log_level=installed_check_config.get("log_level", "INFO"),
-        log_rotation_mb=installed_check_config.get("log_rotation_mb", 3),
+        log_format=installed_check_config["log_format"],
+        log_level=installed_check_config["log_level"],
+        log_rotation_mb=installed_check_config["log_rotation_mb"],
         app_id=app_id,
         is_msi_installer=(installer_ext == ".msi"),
         expected_architecture=expected_architecture,
@@ -950,9 +950,7 @@ def build_package(
         downloads_dir = Path("downloads")
 
     if output_dir is None:
-        output_dir = Path(
-            config.get("defaults", {}).get("build", {}).get("output_dir", "builds")
-        )
+        output_dir = Path(config["defaults"]["build"]["output_dir"])
 
     # Find installer file
     logger.step(2, 8, "Finding installer...")
@@ -967,9 +965,9 @@ def build_package(
 
     # Get PSADT release
     logger.step(4, 8, "Getting PSADT release...")
-    psadt_config = config.get("defaults", {}).get("psadt", {})
-    release_spec = psadt_config.get("release", "latest")
-    cache_dir = Path(psadt_config.get("cache_dir", "cache/psadt"))
+    psadt_config = config["defaults"]["psadt"]
+    release_spec = psadt_config["release"]
+    cache_dir = Path(psadt_config["cache_dir"])
 
     psadt_cache_dir = get_psadt_release(release_spec, cache_dir)
     psadt_version = psadt_cache_dir.name  # Directory name is the version
@@ -1006,14 +1004,12 @@ def build_package(
     # Get build_types configuration
     defaults_win32 = config.get("defaults", {}).get("win32", {})
     app_win32 = app.get("win32", {})
-    build_types = app_win32.get(
-        "build_types", defaults_win32.get("build_types", "both")
-    )
+    build_types = app_win32.get("build_types", defaults_win32["build_types"])
 
     # Get fail_on_error from win32.installed_check config
     defaults_ic = defaults_win32.get("installed_check", {})
     app_ic = app_win32.get("installed_check", {})
-    fail_on_error = app_ic.get("fail_on_error", defaults_ic.get("fail_on_error", True))
+    fail_on_error = app_ic.get("fail_on_error", defaults_ic["fail_on_error"])
 
     detection_script_path = None
     requirements_script_path = None

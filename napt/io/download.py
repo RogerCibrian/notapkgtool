@@ -195,8 +195,8 @@ def download_file(
 ) -> tuple[Path, str, dict]:
     """Download a URL to destination_folder with robustness and reproducibility.
 
-    Follows redirects and retries transient failures. Writes to <filename>.part
-    then renames to <filename> on success (atomic). Sends conditional headers
+    Follows redirects and retries transient failures. Writes to `filename.part`
+    then renames to `filename` on success (atomic). Sends conditional headers
     if etag/last_modified provided. Validates checksum if expected_sha256 is set.
 
     Args:

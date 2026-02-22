@@ -14,26 +14,30 @@
 
 """Configuration loading and merging for NAPT.
 
-This module implements a sophisticated three-layer configuration system that
-allows organization-wide defaults to be overridden by vendor-specific settings
-and finally by recipe-specific configuration. This design promotes DRY
-(Don't Repeat Yourself) principles and makes recipes easier to maintain.
+This module implements a four-layer configuration system that allows NAPT to
+work out of the box while supporting full customization. Each layer overrides
+the previous, promoting DRY (Don't Repeat Yourself) principles.
 
 Configuration Layers:
-    1. **Organization defaults** (defaults/org.yaml)
-       - Base configuration for all apps
-       - Defines PSADT settings, update policies, deployment waves, etc.
-       - Required if a defaults directory is found
+    1. **Code defaults** (napt/config/defaults.py)
+       - Built-in defaults that ship with NAPT
+       - Always present; ensures NAPT works without any config files
+       - Provides sensible defaults for all settings
 
-    2. **Vendor defaults** (defaults/vendors/<Vendor>.yaml)
+    2. **Organization defaults** (defaults/org.yaml)
+       - Organization-wide overrides
+       - Optional; only loaded if file exists
+       - Customizes settings for your organization
+
+    3. **Vendor defaults** (defaults/vendors/{Vendor}.yaml)
        - Vendor-specific overrides (e.g., Google-specific settings)
        - Optional; only loaded if vendor is detected
        - Overrides organization defaults
 
-    3. **Recipe configuration** (recipes/<Vendor>/<app>.yaml)
+    4. **Recipe configuration** (recipes/{Vendor}/{app}.yaml)
        - App-specific configuration
        - Always required; defines the app itself
-       - Overrides vendor and organization defaults
+       - Overrides all other layers
 
 Merge Behavior:
     The loader performs deep merging with "last wins" semantics:
@@ -83,7 +87,9 @@ Example:
         ```
 
 Note:
+    - Code defaults are always applied first (NAPT works without config files)
     - The loader walks upward from the recipe to find defaults/org.yaml
+    - Organization and vendor defaults are optional overrides
     - Vendor is detected from directory name (recipes/Google/) or recipe content
     - Paths are resolved relative to the recipe, not the working directory
     - Dynamic fields are best-effort (warnings on failure, not errors)
@@ -92,6 +98,7 @@ Note:
 
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -99,6 +106,7 @@ from typing import Any
 
 import yaml
 
+from napt.config.defaults import DEFAULT_CONFIG
 from napt.exceptions import ConfigError
 
 # -------------------------------
@@ -382,8 +390,9 @@ def load_effective_config(
     if defaults_root:
         logger.verbose("CONFIG", f"Found defaults root: {defaults_root}")
 
-    merged: dict[str, Any] = {}
-    layers_merged = 0
+    # Start with code defaults (always present baseline)
+    merged = copy.deepcopy(DEFAULT_CONFIG)
+    layers_merged = 1  # Code defaults count as first layer
 
     org_defaults_path: Path | None = None
     vendor_name: str | None = vendor
