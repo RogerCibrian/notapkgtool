@@ -112,7 +112,7 @@ def _build_adtsession_vars(
     app = config["app"]
 
     # Get base variables from org defaults
-    org_defaults = config.get("defaults", {}).get("psadt", {}).get("app_vars", {})
+    org_defaults = config["defaults"]["psadt"]["app_vars"]
 
     # Get recipe overrides
     recipe_overrides = app.get("psadt", {}).get("app_vars", {})

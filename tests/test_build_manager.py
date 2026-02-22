@@ -215,7 +215,7 @@ class TestApplyBranding:
         build_dir = tmp_path / "build"
         build_dir.mkdir()
 
-        config = {"defaults": {}}
+        config = {"defaults": {"psadt": {"brand_pack": {"path": "", "mappings": []}}}}
 
         # Should not raise
         _apply_branding(config, build_dir)

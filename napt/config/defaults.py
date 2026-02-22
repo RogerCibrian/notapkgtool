@@ -43,7 +43,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "cache_dir": "cache/psadt",
             # Brand pack is not set by default - users must configure their own
             "brand_pack": {
-                "path": None,
+                "path": "",
                 "mappings": [],
             },
             # Default app variables injected into PSADT scripts
@@ -67,6 +67,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "build_types": "both",
             "installed_check": {
                 "fail_on_error": True,
+                "log_format": "cmtrace",
+                "log_level": "INFO",
                 "log_rotation_mb": 3,
                 "detection": {
                     "exact_match": False,
@@ -121,6 +123,9 @@ defaults:
   # win32:
   #   build_types: "both"  # both, app_only, update_only
   #   installed_check:
+  #     log_format: "cmtrace"  # cmtrace or legacy
+  #     log_level: "INFO"      # DEBUG, INFO, WARNING, ERROR
+  #     log_rotation_mb: 3
   #     detection:
   #       exact_match: false  # true = version must match exactly
 """
