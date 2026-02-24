@@ -681,11 +681,17 @@ If `true`, the detection script requires an exact version match. If `false`, the
     - For MSI installers, architecture is auto-detected from the MSI Template property.
     - For non-MSI installers, `architecture` must be specified in the recipe.
 - **Version Comparison:** Uses `DisplayVersion` registry value. Detection: exit 0 if installed meets requirement, 1 otherwise. Requirements: always exit 0; output "Required" to stdout if an older version is installed, nothing otherwise.
-- **Script Location:** Generated scripts are saved as siblings to the `packagefiles/` directory (not included in `.intunewin` package - must be uploaded separately to Intune).
+- **Script Location:** Generated scripts are saved as siblings to the `packagefiles/` directory (not included in `.intunewin` package). `napt upload` reads them directly from the build output and embeds them as inline PowerShell rules in the Intune app record.
 
 See [Detection and Requirements Scripts](user-guide.md#detection-and-requirements-scripts) in the User Guide for how the scripts work and how to use them in Intune.
 
 ## Intune Configuration
+
+<!-- TODO: Audit which intune: fields are required vs optional for napt upload.
+     Current implementation treats publisher, description, privacy_url, and
+     info_url as all optional (falling back to vendor dir name or empty string).
+     Verify whether Intune Graph API enforces any of these. Update validation
+     and this doc once confirmed. -->
 
 The `intune` section configures Intune-specific settings for app publishing.
 

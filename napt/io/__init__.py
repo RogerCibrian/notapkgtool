@@ -14,13 +14,11 @@
 
 """Input/Output operations for NAPT.
 
-This module provides robust file download and upload capabilities with
-features like conditional requests, retry logic, atomic writes, and
-integrity verification.
+This module provides robust file download capabilities with features like
+conditional requests, retry logic, atomic writes, and integrity verification.
 
 Modules:
     download - HTTP(S) file download with retries, conditional requests, and checksums.
-    upload - File upload adapters for Intune and storage providers (planned).
 
 Example:
     Basic usage:

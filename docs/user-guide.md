@@ -145,21 +145,61 @@ builds/napt-chrome/144.0.7559.110/
 
 ### Package Process (`napt package`)
 
-The package process creates a `.intunewin` file from the built PSADT directory:
+The package process creates a `.intunewin` file from the most recent build for
+the recipe's app:
 
-1. **Verify Structure** - Validates build directory has required PSADT structure:
+1. **Resolve Build Directory** - Scans `builds/{app_id}/` for the most recently
+   modified version directory that contains a `packagefiles/` folder
+2. **Verify Structure** - Validates the build directory has the required PSADT structure:
     - `PSAppDeployToolkit/` directory
     - `Files/` directory
     - `Invoke-AppDeployToolkit.ps1` script
     - `Invoke-AppDeployToolkit.exe` launcher
-2. **Get IntuneWinAppUtil** - Downloads/caches `IntuneWinAppUtil.exe` from Microsoft's GitHub repository if not already cached
-3. **Create Package** - Runs `IntuneWinAppUtil.exe` to create `.intunewin` file:
+3. **Get IntuneWinAppUtil** - Downloads/caches `IntuneWinAppUtil.exe` from Microsoft's GitHub repository if not already cached
+4. **Create Package** - Runs `IntuneWinAppUtil.exe` to create `.intunewin` file:
     - Input: Build directory (entire PSADT structure)
     - Output: `Invoke-AppDeployToolkit.intunewin` file (named by IntuneWinAppUtil.exe based on setup file)
     - Package contains all files from build directory in compressed format
-4. **Optional Cleanup** - If `--clean-source` flag is used, removes the build directory after successful packaging
+5. **Optional Cleanup** - If `--clean-source` flag is used, removes the build directory after successful packaging
 
 **Output**: `.intunewin` package file in `packages/{app_id}/` directory, ready for Intune upload
+
+### Upload Process (`napt upload`)
+
+The upload process publishes a packaged app to Microsoft Intune via the
+Graph API. Run `napt package` before uploading.
+
+1. **Locate Package** - Infers path as `packages/{app_id}/Invoke-AppDeployToolkit.intunewin`
+2. **Authenticate** - Tries three credential methods in order (see [Authentication](#authentication) below)
+3. **Parse Package Metadata** - Reads encryption metadata from `Detection.xml` inside the `.intunewin` ZIP
+4. **Create App Record** - POSTs to Graph API to create a new Win32 LOB app in Intune.
+   App metadata (display name, install commands, detection/requirements scripts, architecture)
+   is assembled from the recipe config and build output
+5. **Upload Encrypted Payload** - Extracts the encrypted payload from the `.intunewin` ZIP
+   and uploads it to Azure Blob Storage in 6 MiB chunks
+6. **Commit** - Finalizes the upload by committing the content version with encryption metadata
+
+**Output**: Intune app ID, app name, version, and package path
+
+#### Authentication
+
+`napt upload` uses `azure-identity` with no required configuration.
+Three methods are tried in order:
+
+| Method | When it's used |
+|--------|---------------|
+| `EnvironmentCredential` | `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, and `AZURE_TENANT_ID` are set — use for CI/CD |
+| `ManagedIdentityCredential` | Running on an Azure VM, Container Instance, or pipeline agent with managed identity assigned |
+| `AzureCliCredential` | After running `az login` — recommended for developers |
+
+**Developer setup (one time):**
+```bash
+az login
+```
+
+**CI/CD setup:** Set `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, and `AZURE_TENANT_ID`
+as environment secrets. The app registration must have the `DeviceManagementApps.ReadWrite.All`
+Microsoft Graph API permission.
 
 ### Directory Structure
 
@@ -183,8 +223,8 @@ builds/
           │   ├── SupportFiles/            # Empty (for additional files)
           │   ├── Invoke-AppDeployToolkit.ps1  # Generated script
           │   └── Invoke-AppDeployToolkit.exe  # From template
-          ├── Google-Chrome-142.0.7444.163-Detection.ps1    # App (upload separately)
-          └── Google-Chrome-142.0.7444.163-Requirements.ps1 # Update (upload separately)
+          ├── Google-Chrome-142.0.7444.163-Detection.ps1    # App detection (used by napt upload)
+          └── Google-Chrome-142.0.7444.163-Requirements.ps1 # Update requirements (used by napt upload)
 
 packages/
   └── napt-chrome/
@@ -232,10 +272,20 @@ napt build recipes/Google/chrome.yaml [OPTIONS]
 
 ### napt package
 
-Creates a .intunewin package from a built PSADT directory for Intune deployment.
+Creates a `.intunewin` package for a recipe's most recent build. The build
+directory is inferred automatically from the recipe's app ID.
 
 ```bash
-napt package BUILD_DIR [OPTIONS]
+napt package recipes/Google/chrome.yaml [OPTIONS]
+```
+
+### napt upload
+
+Uploads the `.intunewin` package to Microsoft Intune via the Graph API.
+Authentication is automatic — no configuration required.
+
+```bash
+napt upload recipes/Google/chrome.yaml [OPTIONS]
 ```
 
 ### Output Modes

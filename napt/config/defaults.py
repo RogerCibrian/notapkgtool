@@ -26,6 +26,11 @@ The configuration hierarchy is:
 
 This design ensures that NAPT works out of the box without requiring any
 configuration files, while still allowing full customization when needed.
+
+Note:
+    Authentication for 'napt upload' requires no config file. Use 'az login'
+    for developer machines, or set AZURE_CLIENT_ID + AZURE_CLIENT_SECRET +
+    AZURE_TENANT_ID for CI/CD pipelines.
 """
 
 from __future__ import annotations

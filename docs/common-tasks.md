@@ -434,7 +434,8 @@ When a recipe needs changes (new version format, different download URL, etc.).
    ```bash
    napt discover recipes/Vendor/app.yaml
    napt build recipes/Vendor/app.yaml
-   napt package builds/napt-app/*/
+   napt package recipes/Vendor/app.yaml
+   napt upload recipes/Vendor/app.yaml
    ```
 
 ## Handle Authentication Tokens
@@ -517,7 +518,7 @@ Validate and test recipes thoroughly before using in production.
 
 6. **Test packaging:**
    ```bash
-   napt package builds/napt-app/*/ --verbose
+   napt package recipes/Vendor/app.yaml --verbose
    ```
 
 7. **Verify .intunewin file:**
@@ -525,6 +526,106 @@ Validate and test recipes thoroughly before using in production.
    # Check file was created
    ls -lh packages/napt-app/*.intunewin
    ```
+
+## Deploy to Intune
+
+Upload a packaged app to Microsoft Intune. Requires `napt package` to have run first.
+
+### Developer Setup (one time)
+
+```bash
+az login
+```
+
+NAPT uses your existing Azure CLI session. No additional configuration required.
+
+### Upload an App
+
+```bash
+napt upload recipes/Google/chrome.yaml
+```
+
+**Example output:**
+
+```console
+$ napt upload recipes/Google/chrome.yaml
+Uploading 'Google Chrome' (napt-chrome) to Intune...
+
+[1/6] Locating .intunewin package...
+[2/6] Authenticating with Azure...
+[3/6] Parsing package metadata...
+[4/6] Creating Intune app record for 'Google Chrome' 144.0.7559.110...
+[5/6] Uploading to Azure Blob Storage...
+upload progress: 100%
+[6/6] Committing content version...
+
+======================================================================
+UPLOAD RESULTS
+======================================================================
+App ID:        napt-chrome
+App Name:      Google Chrome
+Version:       144.0.7559.110
+Intune App ID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+Package:       packages/napt-chrome/Invoke-AppDeployToolkit.intunewin
+Status:        success
+======================================================================
+
+[SUCCESS] App uploaded to Intune successfully!
+```
+
+### Full Pipeline Example
+
+```bash
+# 1. Check for new version (skips download if unchanged)
+napt discover recipes/Google/chrome.yaml
+
+# 2. Build PSADT package
+napt build recipes/Google/chrome.yaml
+
+# 3. Create .intunewin package
+napt package recipes/Google/chrome.yaml
+
+# 4. Upload to Intune
+napt upload recipes/Google/chrome.yaml
+```
+
+### CI/CD Setup
+
+Set these environment variables in your CI/CD pipeline:
+
+```yaml
+# GitHub Actions example
+- name: Upload to Intune
+  env:
+    AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+    AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+    AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  run: napt upload recipes/Google/chrome.yaml
+```
+
+The app registration must have the `DeviceManagementApps.ReadWrite.All`
+Microsoft Graph API permission.
+
+### Override Publisher and Description
+
+By default, the publisher is inferred from the vendor directory name
+(e.g., `recipes/Google/` → `"Google"`). Override per-recipe with the
+`intune:` section:
+
+```yaml
+apiVersion: napt/v1
+
+app:
+  name: "Google Chrome"
+  id: "napt-chrome"
+  # ... rest of recipe
+
+intune:
+  publisher: "Google LLC"
+  description: "Google Chrome browser for enterprise deployment."
+  privacy_url: "https://policies.google.com/privacy"
+  info_url: "https://chromeenterprise.google"
+```
 
 ## What's Next?
 

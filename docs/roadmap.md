@@ -23,7 +23,7 @@ This roadmap is a living document showing potential future directions for NAPT. 
 
 | Feature | Status | Category | Complexity | Value |
 |---------|--------|----------|------------|-------|
-| Microsoft Intune Upload | 🔬 Investigating | User-Facing | High | Very High |
+| Microsoft Intune Upload | ✅ Completed | User-Facing | High | Very High |
 | Deployment Wave Management | 🔬 Investigating | User-Facing | Very High | High |
 | Pre/Post Install/Uninstall Script Support | 💡 Idea | User-Facing | Low | Medium |
 | Enhanced CLI Help Menu | 💡 Idea | User-Facing | Low | Medium |
@@ -38,8 +38,9 @@ This roadmap is a living document showing potential future directions for NAPT. 
 
 **Summary:**
 
+- ✅ **Completed**: 1
 - 📋 **Ready**: 0
-- 🔬 **Investigating**: 2
+- 🔬 **Investigating**: 1
 - 💡 **Ideas**: 10
 - **Total**: 12 features
 
@@ -47,30 +48,20 @@ This roadmap is a living document showing potential future directions for NAPT. 
 
 ## Active Work
 
-### Investigating 🔬
+### Completed ✅
 
 #### Microsoft Intune Upload
-**Complexity**: High (3-5 days)  
+**Complexity**: High
 **Value**: Very High
 
-**Description**: Direct upload of .intunewin packages to Microsoft Intune via Graph API. Requires research into authentication strategies (OAuth, service principal, managed identity), Graph API endpoints and permissions, Win32 app metadata requirements, error handling, and rate limiting.
+**Description**: `napt upload <recipe>` uploads `.intunewin` packages directly to
+Microsoft Intune via the Graph API. Authentication is automatic via
+`azure-identity` (`EnvironmentCredential` → `ManagedIdentityCredential` →
+`AzureCliCredential`). Detection and requirements scripts are embedded inline
+from build output. No auth configuration required — run `az login` for dev,
+set `AZURE_*` env vars for CI/CD.
 
-**Benefits**:
-
-- Streamlines deployment workflow by eliminating manual upload steps
-- Enables automation of Intune app publishing
-- Reduces time from package creation to deployment
-- Useful for organizations managing multiple apps and frequent updates
-
-**Dependencies**:
-
-- Requires Azure AD app registration
-- May need different authentication approaches for different deployment scenarios
-
-**Related**:
-
-- [Microsoft Graph API - Win32 Apps](https://learn.microsoft.com/en-us/graph/api/resources/intune-apps-win32lobapp)
-- [Intune App Upload Process](https://learn.microsoft.com/en-us/mem/intune/apps/apps-win32-app-management)
+### Investigating 🔬
 
 #### Deployment Wave Management
 **Complexity**: Very High (5-10 days)  

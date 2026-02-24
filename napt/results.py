@@ -125,6 +125,27 @@ class PackageResult:
 
 
 @dataclass(frozen=True)
+class UploadResult:
+    """Result from uploading a .intunewin package to Microsoft Intune.
+
+    Attributes:
+        app_id: Unique application identifier (from recipe).
+        app_name: Application display name.
+        version: Application version uploaded.
+        intune_app_id: Graph API object ID of the newly created Intune Win32 app.
+        package_path: Path to the uploaded .intunewin file.
+        status: Always "success" for successful uploads.
+    """
+
+    app_id: str
+    app_name: str
+    version: str
+    intune_app_id: str
+    package_path: Path
+    status: str
+
+
+@dataclass(frozen=True)
 class ValidationResult:
     """Result from validating a recipe.
 

@@ -23,7 +23,8 @@ Commands:
     validate: Validate recipe syntax and configuration
     discover: Discover latest version and download installer
     build: Build PSADT package from recipe
-    package: Create .intunewin package for Intune
+    package: Create .intunewin package for Intune (recipe-based)
+    upload: Upload .intunewin package to Microsoft Intune
 
 Example:
     Validate recipe syntax:
@@ -43,7 +44,12 @@ Example:
 
     Create .intunewin package:
         ```bash
-        $ napt package builds/napt-chrome/142.0.7444.60/
+        $ napt package recipes/Google/chrome.yaml
+        ```
+
+    Upload to Intune:
+        ```bash
+        $ napt upload recipes/Google/chrome.yaml
         ```
 
     Enable verbose output:
@@ -78,15 +84,18 @@ from pathlib import Path
 import sys
 
 from napt.build import build_package, create_intunewin
+from napt.config import load_effective_config
 from napt.config.defaults import ORG_YAML_TEMPLATE
 from napt.core import discover_recipe
 from napt.exceptions import (
+    AuthError,
     ConfigError,
     NAPTError,
     NetworkError,
     PackagingError,
 )
 from napt.logging import get_logger, set_global_logger
+from napt.upload import upload_package
 from napt.validation import validate_recipe
 
 
@@ -320,37 +329,90 @@ def cmd_build(args: argparse.Namespace) -> int:
     return 0
 
 
+def _resolve_build_dir_from_recipe(recipe_path: Path) -> Path:
+    """Infer the PSADT build directory by scanning the builds output directory.
+
+    Loads the effective config from the recipe, derives the build output
+    directory, and picks the most recently modified version directory that
+    contains a packagefiles/ subdirectory.
+
+    Args:
+        recipe_path: Path to the recipe YAML file.
+
+    Returns:
+        Path to the packagefiles/ directory of the most recent build.
+
+    Raises:
+        ConfigError: If the recipe cannot be loaded, no builds exist for the
+            app, or no version directory contains a packagefiles/ folder.
+
+    """
+    config = load_effective_config(recipe_path)
+    app_id = config["app"]["id"]
+    build_output_dir = Path(config["defaults"]["build"]["output_dir"])
+    app_build_dir = build_output_dir / app_id
+
+    if not app_build_dir.exists():
+        raise ConfigError(
+            f"No builds found for '{app_id}' in {build_output_dir}. "
+            "Run 'napt build' first."
+        )
+
+    # Find version directories that contain a packagefiles/ subdirectory,
+    # sorted by modification time (most recent first).
+    version_dirs = sorted(
+        (d for d in app_build_dir.iterdir() if d.is_dir() and (d / "packagefiles").is_dir()),
+        key=lambda d: d.stat().st_mtime,
+        reverse=True,
+    )
+
+    if not version_dirs:
+        raise ConfigError(
+            f"No completed builds found for '{app_id}' in {app_build_dir}. "
+            "Run 'napt build' first."
+        )
+
+    return version_dirs[0] / "packagefiles"
+
+
 def cmd_package(args: argparse.Namespace) -> int:
     """Handler for 'napt package' command.
 
-    Creates a .intunewin package from a built PSADT directory. This command
-    verifies the build directory has valid PSADT structure, downloads/caches
-    IntuneWinAppUtil.exe if needed, runs IntuneWinAppUtil.exe to create
-    .intunewin package, and optionally cleans the source build directory
-    after packaging.
+    Creates a .intunewin package from the most recent PSADT build for the
+    given recipe. This command infers the build directory from the recipe's
+    app ID, downloads/caches IntuneWinAppUtil.exe if needed, runs
+    IntuneWinAppUtil.exe to create the .intunewin package, and optionally
+    cleans the source build directory after packaging.
 
     Args:
-        args: Parsed command-line arguments containing
-            build directory path, output directory, clean flag, and debug flags.
+        args: Parsed command-line arguments containing recipe path, output
+            directory, clean flag, and debug flags.
 
     Returns:
         Exit code (0 for success, 1 for failure).
 
     Note:
-        Creates .intunewin file in output directory. Downloads IntuneWinAppUtil.exe
-        if not cached. Optionally removes build directory if --clean-source.
-        Prints progress and results to stdout.
+        Infers the build directory by scanning the builds output directory for
+        the most recently modified version directory. Run 'napt build' before
+        running 'napt package'. Downloads IntuneWinAppUtil.exe if not cached.
+        Optionally removes the build directory if --clean-source.
 
     """
     # Configure global logger
     logger = get_logger(verbose=args.verbose, debug=args.debug)
     set_global_logger(logger)
 
-    build_dir = Path(args.build_dir).resolve()
+    recipe_path = Path(args.recipe).resolve()
     output_dir = Path(args.output_dir) if args.output_dir else None
 
-    if not build_dir.exists():
-        print(f"Error: Build directory not found: {build_dir}")
+    if not recipe_path.exists():
+        print(f"Error: Recipe file not found: {recipe_path}")
+        return 1
+
+    try:
+        build_dir = _resolve_build_dir_from_recipe(recipe_path)
+    except ConfigError as err:
+        print(f"Error: {err}")
         return 1
 
     print(f"Creating .intunewin package from: {build_dir}")
@@ -395,6 +457,89 @@ def cmd_package(args: argparse.Namespace) -> int:
     print("=" * 70)
     print()
     print("[SUCCESS] .intunewin package created successfully!")
+
+    return 0
+
+
+def cmd_upload(args: argparse.Namespace) -> int:
+    """Handler for 'napt upload' command.
+
+    Uploads the .intunewin package for a recipe to Microsoft Intune via the
+    Graph API. Infers the package path from the recipe's app ID. Authentication
+    is automatic: tries EnvironmentCredential (AZURE_CLIENT_ID +
+    AZURE_CLIENT_SECRET + AZURE_TENANT_ID), ManagedIdentityCredential, and
+    AzureCliCredential (az login) in that order.
+
+    Args:
+        args: Parsed command-line arguments containing recipe path and
+            debug flags.
+
+    Returns:
+        Exit code (0 for success, 1 for failure).
+
+    Note:
+        Run 'napt package' before this command to create the .intunewin file.
+        Run 'az login' once on developer machines to authenticate.
+        Set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID for CI/CD.
+
+    """
+    # Configure global logger
+    logger = get_logger(verbose=args.verbose, debug=args.debug)
+    set_global_logger(logger)
+
+    recipe_path = Path(args.recipe).resolve()
+
+    if not recipe_path.exists():
+        print(f"Error: Recipe file not found: {recipe_path}")
+        return 1
+
+    print(f"Uploading package for recipe: {recipe_path}")
+    print()
+
+    try:
+        result = upload_package(recipe_path)
+    except ConfigError as err:
+        print(f"Error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+    except AuthError as err:
+        print(f"Authentication error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+    except (NetworkError, PackagingError) as err:
+        print(f"Error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+    except NAPTError as err:
+        print(f"Error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+
+    # Display results
+    print("=" * 70)
+    print("UPLOAD RESULTS")
+    print("=" * 70)
+    print(f"App ID:          {result.app_id}")
+    print(f"App Name:        {result.app_name}")
+    print(f"Version:         {result.version}")
+    print(f"Intune App ID:   {result.intune_app_id}")
+    print(f"Package:         {result.package_path}")
+    print(f"Status:          {result.status}")
+    print("=" * 70)
+    print()
+    print("[SUCCESS] Package uploaded to Intune successfully!")
 
     return 0
 
@@ -674,21 +819,21 @@ def main() -> None:
     # 'package' command
     parser_package = subparsers.add_parser(
         "package",
-        help="Create .intunewin package from PSADT build directory",
+        help="Create .intunewin package from the most recent PSADT build",
         description=(
-            "Package a built PSADT directory into a .intunewin file "
-            "for Intune deployment.\n\n"
+            "Package the most recent PSADT build for a recipe into a "
+            ".intunewin file for Intune deployment.\n\n"
             "Examples:\n"
-            "  napt package builds/napt-chrome/142.0.7444.60/\n"
-            "  napt package builds/napt-chrome/142.0.7444.60/ --clean-source\n"
-            "  napt package builds/napt-chrome/142.0.7444.60/ --verbose\n\n"
+            "  napt package recipes/Google/chrome.yaml\n"
+            "  napt package recipes/Google/chrome.yaml --clean-source\n"
+            "  napt package recipes/Google/chrome.yaml --verbose\n\n"
             "See docs for more examples and workflows."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser_package.add_argument(
-        "build_dir",
-        help="Path to the built PSADT package directory",
+        "recipe",
+        help="Path to the recipe YAML file",
     )
     parser_package.add_argument(
         "--output-dir",
@@ -756,6 +901,49 @@ def main() -> None:
         help="Show detailed debugging output (implies --verbose)",
     )
     parser_init.set_defaults(func=cmd_init)
+
+    # 'upload' command
+    parser_upload = subparsers.add_parser(
+        "upload",
+        help="Upload .intunewin package to Microsoft Intune",
+        description=(
+            "Upload the most recent .intunewin package for a recipe to "
+            "Microsoft Intune via the Graph API.\n\n"
+            "Authentication is automatic — tried in this order:\n"
+            "  1. AZURE_CLIENT_ID + AZURE_CLIENT_SECRET + AZURE_TENANT_ID env vars\n"
+            "  2. Managed identity (Azure VMs, GitHub Actions OIDC)\n"
+            "  3. Existing 'az login' session (recommended for devs)\n"
+            "  4. Device code flow (browser login fallback — requires org.yaml auth config)\n\n"
+            "Examples:\n"
+            "  napt upload recipes/Google/chrome.yaml\n"
+            "  napt upload recipes/Google/chrome.yaml --tenant-id <id>\n"
+            "  napt upload recipes/Google/chrome.yaml --verbose\n\n"
+            "See docs for auth setup and full configuration guide."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser_upload.add_argument(
+        "recipe",
+        help="Path to the recipe YAML file",
+    )
+    parser_upload.add_argument(
+        "--tenant-id",
+        default=None,
+        help="Azure AD tenant ID (overrides defaults/org.yaml)",
+    )
+    parser_upload.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Show progress and high-level status updates",
+    )
+    parser_upload.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="Show detailed debugging output (implies --verbose)",
+    )
+    parser_upload.set_defaults(func=cmd_upload)
 
     # Parse and dispatch
     args = parser.parse_args()

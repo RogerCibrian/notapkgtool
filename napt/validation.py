@@ -80,6 +80,16 @@ _DETECTION_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
     "exact_match": (bool, None, "exact version match flag"),
 }
 
+# Schema for the optional top-level intune: section (upload overrides)
+_INTUNE_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
+    "description": (str, None, "app description for Intune portal"),
+    "publisher": (str, None, "publisher name override"),
+    "category": (str, None, "Intune app category"),
+    "privacy_url": (str, None, "privacy information URL"),
+    "info_url": (str, None, "information URL"),
+    "logo_path": (str, None, "path to app icon file"),
+}
+
 
 def _find_similar_field(unknown: str, known_fields: set[str]) -> str | None:
     """Find a similar field name for typo suggestions.
@@ -209,6 +219,35 @@ def _validate_section(
         # Value check (only for non-dict types with allowed values)
         if allowed_values is not None and expected_type is not dict:
             _validate_field_value(value, allowed_values, field_path, errors)
+
+
+def _validate_intune_config(
+    recipe: dict,
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    """Validate the optional top-level intune: section.
+
+    Validates field types and warns on unknown fields. The entire section
+    is optional — its absence produces no errors or warnings.
+
+    Args:
+        recipe: The full recipe dictionary.
+        errors: List to append errors to.
+        warnings: List to append warnings to.
+
+    """
+    intune = recipe.get("intune")
+    if intune is None:
+        return
+
+    intune_path = "intune"
+
+    if not isinstance(intune, dict):
+        errors.append(f"{intune_path}: Must be a dictionary")
+        return
+
+    _validate_section(intune, _INTUNE_FIELDS, intune_path, errors, warnings)
 
 
 def _validate_win32_config(
@@ -448,6 +487,9 @@ def validate_recipe(recipe_path: Path) -> ValidationResult:
 
     # Validate win32 configuration
     _validate_win32_config(app, app_prefix, errors, warnings)
+
+    # Validate optional top-level intune: section
+    _validate_intune_config(recipe, errors, warnings)
 
     # Determine final status
     status = "valid" if len(errors) == 0 else "invalid"
