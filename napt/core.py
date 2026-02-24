@@ -272,7 +272,7 @@ def discover_recipe(
 
             if file_path.exists():
                 # Fast path: version unchanged, file exists, skip download!
-                logger.verbose(
+                logger.info(
                     "CACHE",
                     f"Version {version_info.version} unchanged, using cached file",
                 )
@@ -284,8 +284,8 @@ def discover_recipe(
                 headers = {}  # No download occurred, no headers
             else:
                 # File was deleted, re-download
-                logger.verbose(
-                    "WARNING",
+                logger.warning(
+                    "CACHE",
                     f"Cached file {file_path} not found, re-downloading",
                 )
                 logger.step(4, 4, "Downloading installer...")
@@ -299,7 +299,7 @@ def discover_recipe(
         else:
             # Version changed or no cache, download new version
             if cache:
-                logger.verbose(
+                logger.info(
                     "DISCOVERY",
                     (
                         f"Version changed: {cache.get('known_version')} -> "

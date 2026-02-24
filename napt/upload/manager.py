@@ -327,7 +327,7 @@ def upload_package(recipe_path: Path) -> UploadResult:
     logger.step(4, 6, f"Creating Intune app record for '{app_name}' {version}...")
     app_metadata = _build_app_metadata(config, recipe_path, version, package_dir)
     intune_app_id = create_win32_app(access_token, app_metadata)
-    logger.verbose("UPLOAD", f"Created Intune app: {intune_app_id}")
+    logger.info("UPLOAD", f"Created Intune app: {intune_app_id}")
 
     cv_id = create_content_version(access_token, intune_app_id)
     logger.verbose("UPLOAD", f"Content version: {cv_id}")

@@ -961,7 +961,7 @@ def build_package(
     logger.step(3, 8, "Determining version...")
     version = _get_installer_version(installer_file, config, state_file)
 
-    logger.verbose("BUILD", f"Building {app_name} v{version}")
+    logger.info("BUILD", f"Building {app_name} v{version}")
 
     # Get PSADT release
     logger.step(4, 8, "Getting PSADT release...")
@@ -972,7 +972,7 @@ def build_package(
     psadt_cache_dir = get_psadt_release(release_spec, cache_dir)
     psadt_version = psadt_cache_dir.name  # Directory name is the version
 
-    logger.verbose("BUILD", f"Using PSADT {psadt_version}")
+    logger.info("BUILD", f"Using PSADT {psadt_version}")
 
     # Create build directory
     logger.step(5, 8, "Creating build structure...")
