@@ -90,102 +90,85 @@ _ARCH_MAP: dict[str, str] = {
 }
 
 
-def _resolve_build_version_dir(config: dict[str, Any], app_id: str) -> tuple[Path, str]:
-    """Find the most recent completed build directory for an app.
+def _infer_package_dir(app_id: str) -> tuple[Path, str]:
+    """Find the versioned package directory for an app.
 
-    Scans the configured builds output directory for version subdirectories
-    that contain a packagefiles/ folder, sorted by modification time.
+    Scans packages/{app_id}/ for a single version subdirectory created by
+    'napt package'. The package directory is self-contained: it holds the
+    .intunewin file and the detection/requirements scripts copied during
+    packaging, so upload does not need to access the builds directory.
 
     Args:
-        config: Effective configuration dict from load_effective_config.
         app_id: Application identifier (from recipe app.id).
 
     Returns:
-        A tuple of (version_dir, version_str) where version_dir is the path
-            to the version directory (parent of packagefiles/) and version_str
-            is its name (the version string).
+        A tuple of (version_dir, version_str) where version_dir contains the
+            .intunewin file and detection scripts, and version_str is the
+            version name (directory name).
 
     Raises:
-        ConfigError: If no builds directory exists for the app, or no
-            completed build (with packagefiles/) is found.
+        ConfigError: If no package directory exists for the app, or the
+            .intunewin file is missing from the version directory.
 
     """
-    build_output_dir = Path(config["defaults"]["build"]["output_dir"])
-    app_build_dir = build_output_dir / app_id
+    app_package_dir = Path("packages") / app_id
 
-    if not app_build_dir.exists():
+    if not app_package_dir.exists():
         raise ConfigError(
-            f"No builds found for '{app_id}' in {build_output_dir}. "
-            "Run 'napt build' first."
+            f"No package found for '{app_id}' in packages/. "
+            "Run 'napt package' first."
         )
 
-    version_dirs = sorted(
-        (
-            d
-            for d in app_build_dir.iterdir()
-            if d.is_dir() and (d / "packagefiles").is_dir()
-        ),
-        key=lambda d: d.stat().st_mtime,
-        reverse=True,
-    )
+    version_dirs = [d for d in app_package_dir.iterdir() if d.is_dir()]
 
     if not version_dirs:
         raise ConfigError(
-            f"No completed builds found for '{app_id}' in {app_build_dir}. "
-            "Run 'napt build' first."
+            f"No packaged version found for '{app_id}' in {app_package_dir}. "
+            "Run 'napt package' first."
         )
 
-    version_dir = version_dirs[0]
-    return version_dir, version_dir.name
+    # Single-slot: there should be exactly one version dir, but take the most
+    # recently modified in case of an interrupted previous run.
+    version_dir = max(version_dirs, key=lambda d: d.stat().st_mtime)
+    package_path = version_dir / "Invoke-AppDeployToolkit.intunewin"
 
-
-def _infer_package_path(app_id: str) -> Path:
-    """Infer the .intunewin package path from the app ID.
-
-    Args:
-        app_id: Application identifier (from recipe app.id).
-
-    Returns:
-        Expected path to the .intunewin file.
-
-    Raises:
-        ConfigError: If the expected package file does not exist.
-
-    """
-    package_path = Path("packages") / app_id / "Invoke-AppDeployToolkit.intunewin"
     if not package_path.exists():
         raise ConfigError(
-            f"Package not found: {package_path}\n"
-            "Run 'napt package' to create the .intunewin file first."
+            f"Package file not found: {package_path}\n"
+            "Run 'napt package' to recreate the package."
         )
-    return package_path
+
+    return version_dir, version_dir.name
 
 
 def _build_app_metadata(
     config: dict[str, Any],
     recipe_path: Path,
     version: str,
-    build_version_dir: Path,
+    package_dir: Path,
 ) -> dict[str, Any]:
     """Build the Win32LobApp JSON payload for the Graph API.
 
     Assembles the app creation body from recipe config, optional intune:
     overrides, detection/requirements PS1 scripts, and PSADT invariants.
+    Scripts are read from the package directory (copied there by 'napt package'),
+    so this function does not access the builds directory.
 
     Args:
         config: Effective configuration dict from load_effective_config.
         recipe_path: Path to the recipe file (used to infer vendor/publisher).
-        version: Application version string (from build directory name).
-        build_version_dir: Path to the version directory containing the
-            generated PS1 scripts (e.g., builds/napt-chrome/141.0.7390.123/).
+        version: Application version string (from package directory name).
+        package_dir: Path to the versioned package directory containing the
+            .intunewin file and PS1 scripts
+            (e.g., packages/napt-chrome/144.0.7559.110/).
 
     Returns:
         Dict ready to POST to the Graph API mobileApps endpoint.
 
     Raises:
-        ConfigError: If the detection script is missing from the build
+        ConfigError: If the detection script is missing from the package
             directory, or the requirements script is missing when build_types
-            requires it.
+            requires it. Run 'napt package' to recreate the package.
 
     """
     logger = get_global_logger()
@@ -207,11 +190,11 @@ def _build_app_metadata(
     build_types: str = config["defaults"]["win32"]["build_types"]
 
     # Detection script (always required)
-    detection_scripts = sorted(build_version_dir.glob("*-Detection.ps1"))
+    detection_scripts = sorted(package_dir.glob("*-Detection.ps1"))
     if not detection_scripts:
         raise ConfigError(
-            f"Detection script not found in {build_version_dir}. "
-            "Run 'napt build' to regenerate the build."
+            f"Detection script not found in {package_dir}. "
+            "Run 'napt package' to recreate the package."
         )
     detection_content = base64.b64encode(detection_scripts[0].read_bytes()).decode()
     logger.verbose("UPLOAD", f"Detection script: {detection_scripts[0].name}")
@@ -228,12 +211,12 @@ def _build_app_metadata(
 
     # Requirements script (for build_types that include update detection)
     if build_types in ("both", "update_only"):
-        req_scripts = sorted(build_version_dir.glob("*-Requirements.ps1"))
+        req_scripts = sorted(package_dir.glob("*-Requirements.ps1"))
         if not req_scripts:
             raise ConfigError(
-                f"Requirements script not found in {build_version_dir} "
+                f"Requirements script not found in {package_dir} "
                 f"(build_types is '{build_types}'). "
-                "Run 'napt build' to regenerate the build."
+                "Run 'napt package' to recreate the package."
             )
         req_content = base64.b64encode(req_scripts[0].read_bytes()).decode()
         logger.verbose("UPLOAD", f"Requirements script: {req_scripts[0].name}")
@@ -281,8 +264,7 @@ def upload_package(recipe_path: Path) -> UploadResult:
     using the available Azure credential, parses encryption metadata from the
     package, and executes the full Graph API upload flow.
 
-    The package path is inferred as
-    packages/{app.id}/Invoke-AppDeployToolkit.intunewin.
+    The package directory is inferred as packages/{app.id}/{version}/.
     Run 'napt package' before calling this function.
 
     Authentication is automatic — no configuration required:
@@ -299,8 +281,9 @@ def upload_package(recipe_path: Path) -> UploadResult:
             package path.
 
     Raises:
-        ConfigError: If the package file is not found, builds directory is
-            missing, or detection/requirements scripts are absent.
+        ConfigError: If the package directory is not found, or detection/
+            requirements scripts are absent from the package directory.
+            Run 'napt package' to create or recreate the package.
         AuthError: If all Azure credential methods fail.
         NetworkError: If Graph API or Azure Blob Storage calls fail.
         PackagingError: If the .intunewin file is malformed.
@@ -325,25 +308,24 @@ def upload_package(recipe_path: Path) -> UploadResult:
 
     logger.verbose("UPLOAD", f"Starting upload for '{app_name}' ({app_id})")
 
-    # Step 1: Locate the .intunewin package
+    # Step 1: Locate the package directory
     logger.step(1, 6, "Locating .intunewin package...")
-    package_path = _infer_package_path(app_id)
+    package_dir, version = _infer_package_dir(app_id)
+    package_path = package_dir / "Invoke-AppDeployToolkit.intunewin"
     logger.verbose("UPLOAD", f"Package: {package_path}")
+    logger.verbose("UPLOAD", f"Version: {version}")
 
     # Step 2: Authenticate
     logger.step(2, 6, "Authenticating with Azure...")
     access_token = get_access_token()
 
-    # Step 3: Parse .intunewin metadata and resolve build version
+    # Step 3: Parse .intunewin metadata
     logger.step(3, 6, "Parsing package metadata...")
     intunewin_metadata = parse_intunewin(package_path)
-    build_version_dir, version = _resolve_build_version_dir(config, app_id)
-    logger.verbose("UPLOAD", f"Version: {version}")
-    logger.verbose("UPLOAD", f"Build dir: {build_version_dir}")
 
     # Step 4: Create Intune app record and content version
     logger.step(4, 6, f"Creating Intune app record for '{app_name}' {version}...")
-    app_metadata = _build_app_metadata(config, recipe_path, version, build_version_dir)
+    app_metadata = _build_app_metadata(config, recipe_path, version, package_dir)
     intune_app_id = create_win32_app(access_token, app_metadata)
     logger.verbose("UPLOAD", f"Created Intune app: {intune_app_id}")
 

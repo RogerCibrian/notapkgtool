@@ -252,26 +252,27 @@ Status:          success
 
 ```console
 $ napt package recipes/Google/chrome.yaml
-Creating .intunewin package from: /path/to/builds/napt-chrome/144.0.7559.110/packagefiles
+Creating .intunewin package from: /path/to/builds/napt-chrome/144.0.7559.110
 
-[1/4] Verifying build structure...
-[2/4] Getting IntuneWinAppUtil tool...
-[3/4] Creating .intunewin package...
-[4/4] Cleaning up...
+[1/5] Verifying build structure...
+[2/5] Getting IntuneWinAppUtil tool...
+[3/5] Creating .intunewin package...
+[4/5] Copying detection scripts...
+[5/5] Package complete
 ======================================================================
 PACKAGE RESULTS
 ======================================================================
 App ID:          napt-chrome
 Version:         144.0.7559.110
-Package Path:    /path/to/packages/napt-chrome/Invoke-AppDeployToolkit.intunewin
-Build Directory: /path/to/builds/napt-chrome/144.0.7559.110/packagefiles
+Package Path:    /path/to/packages/napt-chrome/144.0.7559.110/Invoke-AppDeployToolkit.intunewin
+Build Directory: /path/to/builds/napt-chrome/144.0.7559.110
 Status:          success
 ======================================================================
 
 [SUCCESS] .intunewin package created successfully!
 ```
 
-**Result:** Ready-to-upload .intunewin file in `packages/napt-chrome/`
+**Result:** Ready-to-upload .intunewin file in `packages/napt-chrome/144.0.7559.110/`
 
 ### Quick Check Workflow
 

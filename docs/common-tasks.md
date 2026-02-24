@@ -396,8 +396,8 @@ Validate and test recipes thoroughly before using in production.
 
 7. **Verify .intunewin file:**
    ```bash
-   # Check file was created
-   ls -lh packages/napt-app/*.intunewin
+   # Check versioned package directory was created
+   ls -lh packages/napt-app/
    ```
 
 ## Deploy to Intune
@@ -439,7 +439,7 @@ App ID:        napt-chrome
 App Name:      Google Chrome
 Version:       144.0.7559.110
 Intune App ID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-Package:       packages/napt-chrome/Invoke-AppDeployToolkit.intunewin
+Package:       packages/napt-chrome/144.0.7559.110/Invoke-AppDeployToolkit.intunewin
 Status:        success
 ======================================================================
 

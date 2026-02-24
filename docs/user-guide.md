@@ -145,11 +145,12 @@ builds/napt-chrome/144.0.7559.110/
 
 ### Package Process (`napt package`)
 
-The package process creates a `.intunewin` file from the most recent build for
-the recipe's app:
+The package process creates a `.intunewin` file from a PSADT build for the
+recipe's app:
 
 1. **Resolve Build Directory** - Scans `builds/{app_id}/` for the most recently
-   modified version directory that contains a `packagefiles/` folder
+   modified version directory that contains a `packagefiles/` folder.
+   Use `--version VERSION` to target a specific version instead
 2. **Verify Structure** - Validates the build directory has the required PSADT structure:
     - `PSAppDeployToolkit/` directory
     - `Files/` directory
@@ -157,24 +158,31 @@ the recipe's app:
     - `Invoke-AppDeployToolkit.exe` launcher
 3. **Get IntuneWinAppUtil** - Downloads/caches `IntuneWinAppUtil.exe` from Microsoft's GitHub repository if not already cached
 4. **Create Package** - Runs `IntuneWinAppUtil.exe` to create `.intunewin` file:
-    - Input: Build directory (entire PSADT structure)
-    - Output: `Invoke-AppDeployToolkit.intunewin` file (named by IntuneWinAppUtil.exe based on setup file)
-    - Package contains all files from build directory in compressed format
-5. **Optional Cleanup** - If `--clean-source` flag is used, removes the build directory after successful packaging
+    - Input: `packagefiles/` subdirectory of the build (PSADT structure)
+    - Output: `Invoke-AppDeployToolkit.intunewin` in `packages/{app_id}/{version}/`
+    - Previous version directory for this app is removed automatically
+5. **Copy Detection Scripts** - Copies `*-Detection.ps1` and `*-Requirements.ps1`
+   from the build version directory into `packages/{app_id}/{version}/` so that
+   `napt upload` is self-contained and does not need access to the builds directory
+6. **Optional Cleanup** - If `--clean-source` flag is used, removes the build
+   version directory after successful packaging
 
-**Output**: `.intunewin` package file in `packages/{app_id}/` directory, ready for Intune upload
+**Output**: `.intunewin` and detection scripts in `packages/{app_id}/{version}/`,
+ready for `napt upload`. Only one version is kept on disk per app at a time —
+packaging a new version removes the previous one automatically.
 
 ### Upload Process (`napt upload`)
 
 The upload process publishes a packaged app to Microsoft Intune via the
 Graph API. Run `napt package` before uploading.
 
-1. **Locate Package** - Infers path as `packages/{app_id}/Invoke-AppDeployToolkit.intunewin`
+1. **Locate Package** - Scans `packages/{app_id}/` for the versioned subdirectory
+   created by `napt package` and reads `Invoke-AppDeployToolkit.intunewin` from it
 2. **Authenticate** - Tries three credential methods in order (see [Authentication](#authentication) below)
 3. **Parse Package Metadata** - Reads encryption metadata from `Detection.xml` inside the `.intunewin` ZIP
 4. **Create App Record** - POSTs to Graph API to create a new Win32 LOB app in Intune.
    App metadata (display name, install commands, detection/requirements scripts, architecture)
-   is assembled from the recipe config and build output
+   is assembled from the recipe config and the scripts in the package directory
 5. **Upload Encrypted Payload** - Extracts the encrypted payload from the `.intunewin` ZIP
    and uploads it to Azure Blob Storage in 6 MiB chunks
 6. **Commit** - Finalizes the upload by committing the content version with encryption metadata
@@ -223,12 +231,15 @@ builds/
           │   ├── SupportFiles/            # Empty (for additional files)
           │   ├── Invoke-AppDeployToolkit.ps1  # Generated script
           │   └── Invoke-AppDeployToolkit.exe  # From template
-          ├── Google-Chrome-142.0.7444.163-Detection.ps1    # App detection (used by napt upload)
-          └── Google-Chrome-142.0.7444.163-Requirements.ps1 # Update requirements (used by napt upload)
+          ├── Google-Chrome-142.0.7444.163-Detection.ps1
+          └── Google-Chrome-142.0.7444.163-Requirements.ps1
 
 packages/
   └── napt-chrome/
-      └── Invoke-AppDeployToolkit.intunewin
+      └── 142.0.7444.163/                              # One version kept at a time
+          ├── Invoke-AppDeployToolkit.intunewin        # Encrypted package
+          ├── Google-Chrome-142.0.7444.163-Detection.ps1    # Copied by napt package
+          └── Google-Chrome-142.0.7444.163-Requirements.ps1 # Copied by napt package
 
 state/
   └── versions.json                        # Version tracking
@@ -272,11 +283,14 @@ napt build recipes/Google/chrome.yaml [OPTIONS]
 
 ### napt package
 
-Creates a `.intunewin` package for a recipe's most recent build. The build
-directory is inferred automatically from the recipe's app ID.
+Creates a `.intunewin` package for a recipe's build. The build directory is
+inferred automatically from the recipe's app ID. Without `--version`, packages
+the most recent build. Only one version is kept on disk per app — previous
+package directories are removed automatically.
 
 ```bash
 napt package recipes/Google/chrome.yaml [OPTIONS]
+napt package recipes/Google/chrome.yaml --version 130.0.6723.116
 ```
 
 ### napt upload

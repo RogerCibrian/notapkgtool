@@ -26,11 +26,44 @@ from napt.exceptions import ConfigError, PackagingError
 # All tests in this file are unit tests (fast, mocked)
 
 
+def _make_build_dir(
+    tmp_path: Path,
+    app_id: str = "test-app",
+    version: str = "1.0.0",
+    detection: bool = False,
+    requirements: bool = False,
+) -> Path:
+    """Create a valid build version dir with packagefiles/ subdir.
+
+    Args:
+        tmp_path: Pytest tmp_path fixture.
+        app_id: App identifier used in the directory path.
+        version: Version string used in the directory path.
+        detection: If True, create a Detection.ps1 script in the version dir.
+        requirements: If True, create a Requirements.ps1 script in the version dir.
+
+    Returns:
+        Path to the version directory (builds/{app_id}/{version}/).
+    """
+    version_dir = tmp_path / "builds" / app_id / version
+    packagefiles = version_dir / "packagefiles"
+    packagefiles.mkdir(parents=True)
+    (packagefiles / "PSAppDeployToolkit").mkdir()
+    (packagefiles / "Files").mkdir()
+    (packagefiles / "Invoke-AppDeployToolkit.ps1").write_text("script")
+    (packagefiles / "Invoke-AppDeployToolkit.exe").write_bytes(b"exe")
+    if detection:
+        (version_dir / f"{app_id}-Detection.ps1").write_text("detection script")
+    if requirements:
+        (version_dir / f"{app_id}-Requirements.ps1").write_text("requirements script")
+    return version_dir
+
+
 class TestVerifyBuildStructure:
     """Tests for build directory validation."""
 
     def test_verify_valid_structure(self, tmp_path):
-        """Test verification of valid PSADT build."""
+        """Tests that a valid PSADT directory passes validation."""
         build_dir = tmp_path / "build"
         build_dir.mkdir()
 
@@ -44,7 +77,7 @@ class TestVerifyBuildStructure:
         _verify_build_structure(build_dir)
 
     def test_verify_missing_psadt_raises(self, tmp_path):
-        """Test error when PSAppDeployToolkit directory missing."""
+        """Tests error when PSAppDeployToolkit directory is missing."""
         build_dir = tmp_path / "build"
         build_dir.mkdir()
         (build_dir / "Files").mkdir()
@@ -55,7 +88,7 @@ class TestVerifyBuildStructure:
             _verify_build_structure(build_dir)
 
     def test_verify_missing_files_raises(self, tmp_path):
-        """Test error when Files directory missing."""
+        """Tests error when Files directory is missing."""
         build_dir = tmp_path / "build"
         build_dir.mkdir()
         (build_dir / "PSAppDeployToolkit").mkdir()
@@ -66,7 +99,7 @@ class TestVerifyBuildStructure:
             _verify_build_structure(build_dir)
 
     def test_verify_missing_script_raises(self, tmp_path):
-        """Test error when Invoke-AppDeployToolkit.ps1 missing."""
+        """Tests error when Invoke-AppDeployToolkit.ps1 is missing."""
         build_dir = tmp_path / "build"
         build_dir.mkdir()
         (build_dir / "PSAppDeployToolkit").mkdir()
@@ -83,39 +116,140 @@ class TestCreateIntunewin:
     @patch("napt.build.packager._get_intunewin_tool")
     @patch("napt.build.packager._execute_packaging")
     def test_create_intunewin_success(self, mock_execute, mock_get_tool, tmp_path):
-        """Test successful .intunewin creation."""
-        # Create valid build structure
-        build_dir = tmp_path / "builds" / "test-app" / "1.0.0"
-        build_dir.mkdir(parents=True)
-        (build_dir / "PSAppDeployToolkit").mkdir()
-        (build_dir / "Files").mkdir()
-        (build_dir / "Invoke-AppDeployToolkit.ps1").write_text("script")
-        (build_dir / "Invoke-AppDeployToolkit.exe").write_bytes(b"exe")
+        """Tests successful .intunewin creation with versioned output path."""
+        build_dir = _make_build_dir(tmp_path)
+        packages_dir = tmp_path / "packages"
 
-        # Mock tool and packaging
         mock_get_tool.return_value = Path("tool/IntuneWinAppUtil.exe")
-        package_path = tmp_path / "packages" / "test-app" / "test-app-1.0.0.intunewin"
-        package_path.parent.mkdir(parents=True)
-        package_path.write_bytes(b"intunewin")
-        mock_execute.return_value = package_path
+        # Return a path within the versioned output dir
+        intunewin_path = (
+            packages_dir / "test-app" / "1.0.0" / "Invoke-AppDeployToolkit.intunewin"
+        )
+        mock_execute.return_value = intunewin_path
 
-        result = create_intunewin(build_dir)
+        result = create_intunewin(build_dir, output_dir=packages_dir)
 
         assert result.app_id == "test-app"
         assert result.version == "1.0.0"
         assert result.status == "success"
-        assert result.package_path == package_path
+        assert result.package_path == intunewin_path
+
+    @patch("napt.build.packager._get_intunewin_tool")
+    @patch("napt.build.packager._execute_packaging")
+    def test_execute_packaging_called_with_packagefiles_dir(
+        self, mock_execute, mock_get_tool, tmp_path
+    ):
+        """Tests that IntuneWinAppUtil is invoked on packagefiles/ not the version dir."""
+        build_dir = _make_build_dir(tmp_path)
+        packages_dir = tmp_path / "packages"
+
+        mock_get_tool.return_value = Path("tool/IntuneWinAppUtil.exe")
+        mock_execute.return_value = (
+            packages_dir / "test-app" / "1.0.0" / "Invoke-AppDeployToolkit.intunewin"
+        )
+
+        create_intunewin(build_dir, output_dir=packages_dir)
+
+        # Source dir passed to tool must be the packagefiles/ subdir
+        call_args = mock_execute.call_args
+        source_dir = call_args[0][1]
+        assert source_dir == build_dir.resolve() / "packagefiles"
+
+    @patch("napt.build.packager._get_intunewin_tool")
+    @patch("napt.build.packager._execute_packaging")
+    def test_create_intunewin_copies_detection_script(
+        self, mock_execute, mock_get_tool, tmp_path
+    ):
+        """Tests detection script is copied into the package output directory."""
+        build_dir = _make_build_dir(tmp_path, detection=True)
+        packages_dir = tmp_path / "packages"
+
+        mock_get_tool.return_value = Path("tool/IntuneWinAppUtil.exe")
+        mock_execute.return_value = (
+            packages_dir / "test-app" / "1.0.0" / "Invoke-AppDeployToolkit.intunewin"
+        )
+
+        create_intunewin(build_dir, output_dir=packages_dir)
+
+        version_output_dir = (packages_dir / "test-app" / "1.0.0").resolve()
+        assert (version_output_dir / "test-app-Detection.ps1").exists()
+
+    @patch("napt.build.packager._get_intunewin_tool")
+    @patch("napt.build.packager._execute_packaging")
+    def test_create_intunewin_copies_requirements_script(
+        self, mock_execute, mock_get_tool, tmp_path
+    ):
+        """Tests requirements script is copied into the package output directory."""
+        build_dir = _make_build_dir(tmp_path, detection=True, requirements=True)
+        packages_dir = tmp_path / "packages"
+
+        mock_get_tool.return_value = Path("tool/IntuneWinAppUtil.exe")
+        mock_execute.return_value = (
+            packages_dir / "test-app" / "1.0.0" / "Invoke-AppDeployToolkit.intunewin"
+        )
+
+        create_intunewin(build_dir, output_dir=packages_dir)
+
+        version_output_dir = (packages_dir / "test-app" / "1.0.0").resolve()
+        assert (version_output_dir / "test-app-Requirements.ps1").exists()
+
+    @patch("napt.build.packager._get_intunewin_tool")
+    @patch("napt.build.packager._execute_packaging")
+    def test_create_intunewin_removes_previous_version(
+        self, mock_execute, mock_get_tool, tmp_path
+    ):
+        """Tests previous version directory is removed when new version is packaged."""
+        build_dir = _make_build_dir(tmp_path, version="2.0.0")
+        packages_dir = tmp_path / "packages"
+
+        # Pre-existing old version dir
+        old_version_dir = packages_dir / "test-app" / "1.0.0"
+        old_version_dir.mkdir(parents=True)
+        (old_version_dir / "Invoke-AppDeployToolkit.intunewin").write_bytes(b"old")
+
+        mock_get_tool.return_value = Path("tool/IntuneWinAppUtil.exe")
+        mock_execute.return_value = (
+            packages_dir / "test-app" / "2.0.0" / "Invoke-AppDeployToolkit.intunewin"
+        )
+
+        create_intunewin(build_dir, output_dir=packages_dir)
+
+        assert not old_version_dir.exists()
+        assert (packages_dir / "test-app" / "2.0.0").resolve().exists()
+
+    @patch("napt.build.packager._get_intunewin_tool")
+    @patch("napt.build.packager._execute_packaging")
+    def test_create_intunewin_same_version_no_removal(
+        self, mock_execute, mock_get_tool, tmp_path
+    ):
+        """Tests that repackaging the same version does not remove the output dir."""
+        build_dir = _make_build_dir(tmp_path, version="1.0.0")
+        packages_dir = tmp_path / "packages"
+
+        # Same version already exists
+        existing_dir = packages_dir / "test-app" / "1.0.0"
+        existing_dir.mkdir(parents=True)
+
+        mock_get_tool.return_value = Path("tool/IntuneWinAppUtil.exe")
+        mock_execute.return_value = (
+            packages_dir / "test-app" / "1.0.0" / "Invoke-AppDeployToolkit.intunewin"
+        )
+
+        # Should not raise and should not remove the dir
+        create_intunewin(build_dir, output_dir=packages_dir)
+        assert existing_dir.resolve().exists()
 
     def test_create_intunewin_invalid_structure_raises(self, tmp_path):
-        """Test error when build directory is invalid."""
+        """Tests error when packagefiles directory has invalid PSADT structure."""
         build_dir = tmp_path / "builds" / "test-app" / "1.0.0"
-        build_dir.mkdir(parents=True)
+        (build_dir / "packagefiles").mkdir(parents=True)
+        # packagefiles/ is empty — missing required PSADT files
 
         with pytest.raises(ConfigError, match="Invalid PSADT build directory"):
             create_intunewin(build_dir)
 
     def test_create_intunewin_missing_directory_raises(self, tmp_path):
-        """Test error when build directory doesn't exist."""
+        """Tests error when build directory does not exist."""
         build_dir = tmp_path / "nonexistent" / "test-app" / "1.0.0"
 
         with pytest.raises(PackagingError):
@@ -126,24 +260,16 @@ class TestCreateIntunewin:
     def test_create_intunewin_with_clean_source(
         self, mock_execute, mock_get_tool, tmp_path
     ):
-        """Test --clean-source option removes build directory."""
-        # Create valid build structure
-        build_dir = tmp_path / "builds" / "test-app" / "1.0.0"
-        build_dir.mkdir(parents=True)
-        (build_dir / "PSAppDeployToolkit").mkdir()
-        (build_dir / "Files").mkdir()
-        (build_dir / "Invoke-AppDeployToolkit.ps1").write_text("script")
-        (build_dir / "Invoke-AppDeployToolkit.exe").write_bytes(b"exe")
+        """Tests --clean-source removes the build version directory after packaging."""
+        build_dir = _make_build_dir(tmp_path)
+        packages_dir = tmp_path / "packages"
 
-        # Mock packaging
         mock_get_tool.return_value = Path("tool/IntuneWinAppUtil.exe")
-        package_path = tmp_path / "packages" / "test-app" / "test-app-1.0.0.intunewin"
-        package_path.parent.mkdir(parents=True)
-        package_path.write_bytes(b"intunewin")
-        mock_execute.return_value = package_path
+        mock_execute.return_value = (
+            packages_dir / "test-app" / "1.0.0" / "Invoke-AppDeployToolkit.intunewin"
+        )
 
-        result = create_intunewin(build_dir, clean_source=True)
+        result = create_intunewin(build_dir, output_dir=packages_dir, clean_source=True)
 
-        # Build directory should be removed
         assert not build_dir.exists()
         assert result.status == "success"

@@ -10,12 +10,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **`napt upload <recipe>`** - New command uploads `.intunewin` packages directly to Microsoft Intune via the Graph API. Authentication is automatic: tries service principal env vars (`AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`), managed identity, and `az login` in that order. No auth configuration required for developers who run `az login` once
+- **`napt package --version VERSION`** - New flag to target a specific build
+    version instead of the most recent (e.g.,
+    `napt package recipes/Google/chrome.yaml --version 130.0.6723.116`)
 - **Code-Based Defaults** - NAPT now ships with complete built-in defaults, making `pip install napt` work out of the box without requiring any configuration files. Organization defaults (`defaults/org.yaml`) and vendor defaults are now optional overrides rather than requirements
 - **`napt init` Command** - New command to scaffold NAPT project structure. Creates `recipes/`, `defaults/vendors/`, and a commented `defaults/org.yaml` template. Safely skips existing files; use `--force` to overwrite with automatic backup
 
 ### Changed
 
 - **`napt package` now takes `<recipe>` instead of `<build_dir>`** - All commands now take a recipe path for consistent CLI usage. The build directory is inferred automatically from the recipe's app ID by scanning the builds output directory for the most recent completed build
+- **`napt package` outputs to versioned paths** - Package output is now
+    `packages/{app_id}/{version}/Invoke-AppDeployToolkit.intunewin`. Only one
+    version is kept per app — the previous version directory is removed
+    automatically when a new one is packaged (single-slot). Detection and
+    requirements scripts are copied alongside the `.intunewin` file so
+    `napt upload` is self-contained and does not need the builds directory
 - **Four-Layer Configuration** - Configuration system now has four layers: code defaults (baseline) -> org.yaml (optional) -> vendor.yaml (optional) -> recipe (required). Old configs continue to work; new fields automatically get code defaults
 
 ## [0.3.1] - 2026-02-03

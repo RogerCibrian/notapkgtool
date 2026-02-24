@@ -329,22 +329,27 @@ def cmd_build(args: argparse.Namespace) -> int:
     return 0
 
 
-def _resolve_build_dir_from_recipe(recipe_path: Path) -> Path:
-    """Infer the PSADT build directory by scanning the builds output directory.
+def _resolve_build_dir_from_recipe(
+    recipe_path: Path, version: str | None = None
+) -> Path:
+    """Infer the PSADT build version directory from a recipe.
 
     Loads the effective config from the recipe, derives the build output
-    directory, and picks the most recently modified version directory that
-    contains a packagefiles/ subdirectory.
+    directory, and returns the version directory to pass to create_intunewin.
 
     Args:
         recipe_path: Path to the recipe YAML file.
+        version: Specific version to target (e.g., "144.0.7559.110").
+            If None, picks the most recently modified version directory
+            that contains a packagefiles/ subdirectory.
 
     Returns:
-        Path to the packagefiles/ directory of the most recent build.
+        Path to the version directory (e.g., builds/napt-chrome/144.0.7559.110/).
 
     Raises:
-        ConfigError: If the recipe cannot be loaded, no builds exist for the
-            app, or no version directory contains a packagefiles/ folder.
+        ConfigError: If the recipe cannot be loaded, the specified version
+            does not exist, no builds exist for the app, or no version
+            directory contains a packagefiles/ folder.
 
     """
     config = load_effective_config(recipe_path)
@@ -358,10 +363,23 @@ def _resolve_build_dir_from_recipe(recipe_path: Path) -> Path:
             "Run 'napt build' first."
         )
 
+    if version is not None:
+        specific_dir = app_build_dir / version
+        if not specific_dir.is_dir() or not (specific_dir / "packagefiles").is_dir():
+            raise ConfigError(
+                f"Build version '{version}' not found for '{app_id}' "
+                f"in {app_build_dir}. Run 'napt build' first."
+            )
+        return specific_dir
+
     # Find version directories that contain a packagefiles/ subdirectory,
     # sorted by modification time (most recent first).
     version_dirs = sorted(
-        (d for d in app_build_dir.iterdir() if d.is_dir() and (d / "packagefiles").is_dir()),
+        (
+            d
+            for d in app_build_dir.iterdir()
+            if d.is_dir() and (d / "packagefiles").is_dir()
+        ),
         key=lambda d: d.stat().st_mtime,
         reverse=True,
     )
@@ -372,30 +390,29 @@ def _resolve_build_dir_from_recipe(recipe_path: Path) -> Path:
             "Run 'napt build' first."
         )
 
-    return version_dirs[0] / "packagefiles"
+    return version_dirs[0]
 
 
 def cmd_package(args: argparse.Namespace) -> int:
     """Handler for 'napt package' command.
 
-    Creates a .intunewin package from the most recent PSADT build for the
-    given recipe. This command infers the build directory from the recipe's
-    app ID, downloads/caches IntuneWinAppUtil.exe if needed, runs
-    IntuneWinAppUtil.exe to create the .intunewin package, and optionally
-    cleans the source build directory after packaging.
+    Creates a .intunewin package from a PSADT build for the given recipe.
+    Infers the build directory from the recipe's app ID, removes any
+    previously packaged version (single-slot), copies detection scripts
+    alongside the .intunewin file so 'napt upload' is self-contained, and
+    optionally cleans the source build directory after packaging.
 
     Args:
-        args: Parsed command-line arguments containing recipe path, output
-            directory, clean flag, and debug flags.
+        args: Parsed command-line arguments containing recipe path, version,
+            output directory, clean flag, and debug flags.
 
     Returns:
         Exit code (0 for success, 1 for failure).
 
     Note:
-        Infers the build directory by scanning the builds output directory for
-        the most recently modified version directory. Run 'napt build' before
-        running 'napt package'. Downloads IntuneWinAppUtil.exe if not cached.
-        Optionally removes the build directory if --clean-source.
+        Without --version, picks the most recently modified build. Run
+        'napt build' before 'napt package'. Downloads IntuneWinAppUtil.exe
+        if not cached. Optionally removes the build directory if --clean-source.
 
     """
     # Configure global logger
@@ -410,7 +427,7 @@ def cmd_package(args: argparse.Namespace) -> int:
         return 1
 
     try:
-        build_dir = _resolve_build_dir_from_recipe(recipe_path)
+        build_dir = _resolve_build_dir_from_recipe(recipe_path, version=args.version)
     except ConfigError as err:
         print(f"Error: {err}")
         return 1
@@ -819,12 +836,15 @@ def main() -> None:
     # 'package' command
     parser_package = subparsers.add_parser(
         "package",
-        help="Create .intunewin package from the most recent PSADT build",
+        help="Create .intunewin package from a PSADT build",
         description=(
-            "Package the most recent PSADT build for a recipe into a "
-            ".intunewin file for Intune deployment.\n\n"
+            "Package a PSADT build for a recipe into a .intunewin file for "
+            "Intune deployment. Without --version, packages the most recently "
+            "modified build. Only one packaged version is kept on disk per app "
+            "(previous version is removed automatically).\n\n"
             "Examples:\n"
             "  napt package recipes/Google/chrome.yaml\n"
+            "  napt package recipes/Google/chrome.yaml --version 130.0.6723.116\n"
             "  napt package recipes/Google/chrome.yaml --clean-source\n"
             "  napt package recipes/Google/chrome.yaml --verbose\n\n"
             "See docs for more examples and workflows."
@@ -836,9 +856,15 @@ def main() -> None:
         help="Path to the recipe YAML file",
     )
     parser_package.add_argument(
+        "--version",
+        default=None,
+        metavar="VERSION",
+        help="Specific build version to package (default: most recent build)",
+    )
+    parser_package.add_argument(
         "--output-dir",
         default=None,
-        help="Directory for .intunewin output (default: packages/{app_id}/)",
+        help="Parent directory for package output (default: packages/)",
     )
     parser_package.add_argument(
         "--clean-source",
