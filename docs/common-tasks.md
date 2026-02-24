@@ -311,133 +311,6 @@ napt discover recipes/Google/chrome.yaml --verbose
 
 **Note:** MSI files (`.msi` extension) are automatically detected and versions are extracted from the MSI ProductVersion property. No additional version configuration needed.
 
-## Troubleshoot Discovery Failures
-
-Common issues and solutions when `napt discover` fails.
-
-### Issue: "Strategy not found"
-
-**Problem:** Recipe uses a strategy that doesn't exist or isn't registered.
-
-**Solution:**
-
-1. Check strategy name spelling (must be: `api_github`, `api_json`, `url_download`, or `web_scrape`)
-
-2. Validate recipe: `napt validate recipes/App/app.yaml`
-
-3. Check for typos in strategy configuration
-
-### Issue: "Version extraction failed"
-
-**Problem:** NAPT can't extract version from the downloaded file or API response.
-
-**Solution:**
-
-1. Use `--debug` to see what NAPT is trying to parse:
-
-   ```bash
-   napt discover recipes/App/app.yaml --debug
-   ```
-
-2. For MSI files, verify the file is a valid MSI
-
-3. For `api_json`, check that `version_path` points to the correct JSON field
-
-4. For `web_scrape`, verify `version_pattern` regex matches the URL format
-
-### Issue: "GitHub API rate limit"
-
-**Problem:** Using `api_github` without authentication hits rate limits.
-
-**Solution:**
-
-1. Create a GitHub personal access token
-2. Add to recipe:
-   ```yaml
-   source:
-     strategy: api_github
-     repo: "owner/repo"
-     token: "${GITHUB_TOKEN}"
-   ```
-3. Set environment variable:
-   ```powershell
-   # Set environment variable on Windows:
-   $env:GITHUB_TOKEN="ghp_your_token_here"
-   ```
-   ```bash
-   # Set environment variable on Linux/macOS:
-   export GITHUB_TOKEN="ghp_your_token_here"
-   ```
-
-### Issue: "Download failed" or "Network error"
-
-**Problem:** Can't download the installer file.
-
-**Solution:**
-
-1. Check URL is accessible: `curl -I <url>` or open in browser
-
-2. Verify authentication if required (API tokens, headers)
-
-3. Check network connectivity and firewall rules
-
-4. Use `--verbose` to see HTTP request/response details
-
-### Issue: "State file corrupted"
-
-**Problem:** `state/versions.json` has invalid JSON or is corrupted.
-
-**Solution:**
-
-NAPT automatically handles corruption:
-
-1. Creates backup of corrupted file: `state/versions.json.backup`
-
-2. Creates a fresh state file automatically
-
-3. Reports the issue with an error message
-
-The state file is already fixed - just run your command again. Alternatively, use `--stateless` to bypass state tracking temporarily:
-
-```bash
-napt discover recipes/app.yaml --stateless
-```
-
-## Update Existing Recipes
-
-When a recipe needs changes (new version format, different download URL, etc.).
-
-1. **Edit the recipe file:**
-   ```bash
-   # Edit the YAML file
-   code recipes/Vendor/app.yaml
-   ```
-
-2. **Validate changes:**
-   ```bash
-   napt validate recipes/Vendor/app.yaml
-   ```
-
-3. **Test discovery:**
-   ```bash
-   napt discover recipes/Vendor/app.yaml --verbose
-   ```
-
-4. **If version format changed, clear state:**
-   ```bash
-   # Delete state entry for this app
-   # Or delete entire state file to start fresh
-   rm state/versions.json
-   ```
-
-5. **Test full workflow:**
-   ```bash
-   napt discover recipes/Vendor/app.yaml
-   napt build recipes/Vendor/app.yaml
-   napt package recipes/Vendor/app.yaml
-   napt upload recipes/Vendor/app.yaml
-   ```
-
 ## Handle Authentication Tokens
 
 Many APIs require authentication. Here's how to handle tokens securely.
@@ -627,9 +500,135 @@ intune:
   info_url: "https://chromeenterprise.google"
 ```
 
+## Update Existing Recipes
+
+When a recipe needs changes (new version format, different download URL, etc.).
+
+1. **Edit the recipe file:**
+   ```bash
+   # Edit the YAML file
+   code recipes/Vendor/app.yaml
+   ```
+
+2. **Validate changes:**
+   ```bash
+   napt validate recipes/Vendor/app.yaml
+   ```
+
+3. **Test discovery:**
+   ```bash
+   napt discover recipes/Vendor/app.yaml --verbose
+   ```
+
+4. **If version format changed, clear state:**
+   ```bash
+   # Delete state entry for this app
+   # Or delete entire state file to start fresh
+   rm state/versions.json
+   ```
+
+5. **Test full workflow:**
+   ```bash
+   napt discover recipes/Vendor/app.yaml
+   napt build recipes/Vendor/app.yaml
+   napt package recipes/Vendor/app.yaml
+   napt upload recipes/Vendor/app.yaml
+   ```
+
+## Troubleshoot Discovery Failures
+
+Common issues and solutions when `napt discover` fails.
+
+### Issue: "Strategy not found"
+
+**Problem:** Recipe uses a strategy that doesn't exist or isn't registered.
+
+**Solution:**
+
+1. Check strategy name spelling (must be: `api_github`, `api_json`, `url_download`, or `web_scrape`)
+
+2. Validate recipe: `napt validate recipes/App/app.yaml`
+
+3. Check for typos in strategy configuration
+
+### Issue: "Version extraction failed"
+
+**Problem:** NAPT can't extract version from the downloaded file or API response.
+
+**Solution:**
+
+1. Use `--debug` to see what NAPT is trying to parse:
+
+   ```bash
+   napt discover recipes/App/app.yaml --debug
+   ```
+
+2. For MSI files, verify the file is a valid MSI
+
+3. For `api_json`, check that `version_path` points to the correct JSON field
+
+4. For `web_scrape`, verify `version_pattern` regex matches the URL format
+
+### Issue: "GitHub API rate limit"
+
+**Problem:** Using `api_github` without authentication hits rate limits.
+
+**Solution:**
+
+1. Create a GitHub personal access token
+2. Add to recipe:
+   ```yaml
+   source:
+     strategy: api_github
+     repo: "owner/repo"
+     token: "${GITHUB_TOKEN}"
+   ```
+3. Set environment variable:
+   ```powershell
+   # Set environment variable on Windows:
+   $env:GITHUB_TOKEN="ghp_your_token_here"
+   ```
+   ```bash
+   # Set environment variable on Linux/macOS:
+   export GITHUB_TOKEN="ghp_your_token_here"
+   ```
+
+### Issue: "Download failed" or "Network error"
+
+**Problem:** Can't download the installer file.
+
+**Solution:**
+
+1. Check URL is accessible: `curl -I <url>` or open in browser
+
+2. Verify authentication if required (API tokens, headers)
+
+3. Check network connectivity and firewall rules
+
+4. Use `--verbose` to see HTTP request/response details
+
+### Issue: "State file corrupted"
+
+**Problem:** `state/versions.json` has invalid JSON or is corrupted.
+
+**Solution:**
+
+NAPT automatically handles corruption:
+
+1. Creates backup of corrupted file: `state/versions.json.backup`
+
+2. Creates a fresh state file automatically
+
+3. Reports the issue with an error message
+
+The state file is already fixed - just run your command again. Alternatively, use `--stateless` to bypass state tracking temporarily:
+
+```bash
+napt discover recipes/app.yaml --stateless
+```
+
 ## What's Next?
 
 - **[User Guide](user-guide.md)** - Deep dive into discovery strategies, state management, and configuration
 - **[Creating Recipes](user-guide.md#discovery-strategies)** - Detailed strategy configuration guides
 - **[Examples](https://github.com/RogerCibrian/notapkgtool/tree/main/recipes)** - Browse working recipe examples
-

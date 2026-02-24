@@ -157,11 +157,11 @@ napt build recipes/Google/chrome.yaml --downloads-dir ./downloads --output-dir .
 Package the PSADT build for Microsoft Intune:
 
 ```bash
-# Create .intunewin from build directory
-napt package builds/napt-chrome/144.0.7559.110/packagefiles/
+# Create .intunewin from recipe (infers most recent build automatically)
+napt package recipes/Google/chrome.yaml
 
 # Specify output directory and clean source after packaging
-napt package builds/napt-chrome/144.0.7559.110/packagefiles/ --output-dir ./packages --clean-source
+napt package recipes/Google/chrome.yaml --output-dir ./packages --clean-source
 ```
 
 ## Example Workflows
@@ -251,7 +251,7 @@ Status:          success
 #### 4. Create .intunewin package
 
 ```console
-$ napt package builds/napt-chrome/144.0.7559.110/packagefiles/
+$ napt package recipes/Google/chrome.yaml
 Creating .intunewin package from: /path/to/builds/napt-chrome/144.0.7559.110/packagefiles
 
 [1/4] Verifying build structure...
@@ -304,7 +304,7 @@ napt discover recipes/Google/chrome.yaml --stateless
 napt build recipes/Google/chrome.yaml --output-dir ./my-builds
 
 # Package and clean up source
-napt package builds/napt-chrome/144.0.7559.110/packagefiles/ --clean-source
+napt package recipes/Google/chrome.yaml --clean-source
 ```
 
 ## Common Tasks

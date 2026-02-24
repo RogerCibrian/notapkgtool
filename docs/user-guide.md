@@ -521,7 +521,7 @@ The `napt package` command uses Microsoft's [IntuneWinAppUtil.exe](https://githu
 # Run everything on Windows
 napt discover recipes/Google/chrome.yaml
 napt build recipes/Google/chrome.yaml
-napt package builds/napt-chrome/144.0.7559.110/
+napt package recipes/Google/chrome.yaml
 ```
 
 #### Workflow 2: Mixed Platform Development
@@ -532,7 +532,7 @@ napt build recipes/Google/chrome.yaml
 
 # Transfer build directory to Windows (e.g., via shared storage)
 # On Windows: Package
-napt package builds/napt-chrome/144.0.7559.110/
+napt package recipes/Google/chrome.yaml
 ```
 
 ## Best Practices
