@@ -73,7 +73,6 @@ class IntunewinMetadata:
         mac_key: Base64-encoded HMAC key for MAC verification.
         init_vector: Base64-encoded AES initialization vector.
         mac: Base64-encoded MAC value for integrity verification.
-        mac_algorithm: MAC algorithm (always "HMACSHA256").
         profile_identifier: Encryption profile version (always "ProfileVersion1").
         encrypted_file_size: Byte size of the encrypted payload file.
     """
@@ -86,7 +85,6 @@ class IntunewinMetadata:
     mac_key: str
     init_vector: str
     mac: str
-    mac_algorithm: str
     profile_identifier: str
     encrypted_file_size: int
 
@@ -232,9 +230,6 @@ def parse_intunewin(intunewin_path: Path) -> IntunewinMetadata:
         enc_info, "InitializationVector", ns, "EncryptionInfo/InitializationVector"
     )
     mac = _require_text(enc_info, "Mac", ns, "EncryptionInfo/Mac")
-    mac_algorithm = _require_text(
-        enc_info, "MacAlgorithm", ns, "EncryptionInfo/MacAlgorithm"
-    )
     profile_identifier = _require_text(
         enc_info, "ProfileIdentifier", ns, "EncryptionInfo/ProfileIdentifier"
     )
@@ -252,7 +247,6 @@ def parse_intunewin(intunewin_path: Path) -> IntunewinMetadata:
         mac_key=mac_key,
         init_vector=init_vector,
         mac=mac,
-        mac_algorithm=mac_algorithm,
         profile_identifier=profile_identifier,
         encrypted_file_size=encrypted_file_size,
     )
