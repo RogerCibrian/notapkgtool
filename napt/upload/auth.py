@@ -14,7 +14,7 @@
 
 """Azure credential acquisition for NAPT Intune upload.
 
-Provides a credential chain that tries three authentication methods in order.
+Provides a credential chain that tries authentication methods in order.
 No configuration is required — the right method is selected automatically
 based on the environment.
 
@@ -25,11 +25,14 @@ Authentication order:
     2. ManagedIdentityCredential -- Azure managed identity. Works automatically
         on Azure VMs, Azure Container Instances, and Azure-hosted pipeline
         agents with a managed identity assigned. No credentials to manage.
-    3. AzureCliCredential -- reuses the session from 'az login'. The
-        recommended approach for developers. Run 'az login' once and NAPT
-        will reuse that session for all subsequent uploads.
+    3. AzureCliCredential -- reuses the session from 'az login'. Requires
+        Azure CLI to be installed and authenticated.
+    4. DeviceCodeCredential -- interactive device code flow. Only attempted
+        when stdout is a TTY (interactive terminal). Prints a URL and code;
+        the user completes authentication in any browser. Skipped in CI/CD
+        and when output is redirected, to avoid hanging on an unattended prompt.
 
-If all three methods fail, an AuthError is raised with guidance on which
+If all available methods fail, an AuthError is raised with guidance on which
 environment variables to set or which command to run.
 
 Example:
@@ -45,10 +48,13 @@ Example:
 
 from __future__ import annotations
 
+import sys
+
 from azure.identity import (
     AzureCliCredential,
     ChainedTokenCredential,
     CredentialUnavailableError,
+    DeviceCodeCredential,
     EnvironmentCredential,
     ManagedIdentityCredential,
 )
@@ -59,42 +65,53 @@ __all__ = ["get_access_token", "get_credential", "GRAPH_SCOPES"]
 
 GRAPH_SCOPES = ["https://graph.microsoft.com/.default"]
 
-_TRIED = ["EnvironmentCredential", "ManagedIdentityCredential", "AzureCliCredential"]
-
-_AUTH_FAILURE_HINT = (
+_AUTH_FAILURE_HINT_NONINTERACTIVE = (
     "Authentication failed. Tried: EnvironmentCredential, "
     "ManagedIdentityCredential, AzureCliCredential.\n\n"
     "To fix this, use one of the following:\n"
-    "  Developers:  az login\n"
+    "  Developers:  az login  (then re-run)\n"
     "  CI/CD:       set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID\n"
     "  Azure VMs:   assign a managed identity to the resource\n"
+)
+
+_AUTH_FAILURE_HINT_INTERACTIVE = (
+    "Authentication failed. Tried: EnvironmentCredential, "
+    "ManagedIdentityCredential, AzureCliCredential, DeviceCodeCredential.\n\n"
+    "To fix this, use one of the following:\n"
+    "  Option 1:  re-run and complete the device code prompt in your browser\n"
+    "  Option 2:  az login  (then re-run)\n"
+    "  Option 3:  set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID\n"
 )
 
 
 def get_credential() -> ChainedTokenCredential:
     """Build a ChainedTokenCredential that tries auth methods in order.
 
-    Constructs a credential chain with three authentication methods.
-    No configuration is needed — the appropriate method is detected
-    automatically from the environment.
+    Constructs a credential chain. In interactive terminal sessions
+    (stdout is a TTY), DeviceCodeCredential is appended as a final
+    fallback so developers can authenticate without installing Azure CLI.
+    In non-interactive environments (CI/CD, redirected output),
+    DeviceCodeCredential is omitted to avoid hanging on an unattended prompt.
 
     Returns:
-        A ChainedTokenCredential that tries EnvironmentCredential,
-            ManagedIdentityCredential, and AzureCliCredential in that order.
+        A ChainedTokenCredential configured for the current environment.
 
     """
-    return ChainedTokenCredential(
+    credentials = [
         EnvironmentCredential(),
         ManagedIdentityCredential(),
         AzureCliCredential(),
-    )
+    ]
+    if sys.stdout.isatty():
+        credentials.append(DeviceCodeCredential())
+    return ChainedTokenCredential(*credentials)
 
 
 def get_access_token() -> str:
     """Acquire a Microsoft Graph API access token.
 
-    Tries EnvironmentCredential, ManagedIdentityCredential, and
-    AzureCliCredential in order until one succeeds.
+    Tries credential methods in order until one succeeds. In interactive
+    sessions, DeviceCodeCredential is included as a final fallback.
 
     Returns:
         Bearer token string for use in Authorization headers.
@@ -114,7 +131,13 @@ def get_access_token() -> str:
             ```
 
     """
+    interactive = sys.stdout.isatty()
+    hint = (
+        _AUTH_FAILURE_HINT_INTERACTIVE
+        if interactive
+        else _AUTH_FAILURE_HINT_NONINTERACTIVE
+    )
     try:
         return get_credential().get_token(*GRAPH_SCOPES).token
     except CredentialUnavailableError as err:
-        raise AuthError(f"{_AUTH_FAILURE_HINT}Details: {err}") from err
+        raise AuthError(f"{hint}Details: {err}") from err

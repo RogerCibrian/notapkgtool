@@ -48,7 +48,7 @@ napt/
 ├── upload/                  # Intune upload pipeline
 │   ├── manager.py              # Upload orchestration
 │   ├── graph.py                # Graph API and Azure Blob Storage calls
-│   ├── auth.py                 # Azure credential chain (CLI, env, managed identity)
+│   ├── auth.py                 # Azure credential chain (env, managed identity, CLI, device code)
 │   └── intunewin.py            # .intunewin package parser
 │
 └── versioning/              # Version extraction and comparison

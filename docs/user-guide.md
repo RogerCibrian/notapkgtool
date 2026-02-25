@@ -192,15 +192,33 @@ Graph API. Run `napt package` before uploading.
 #### Authentication
 
 `napt upload` uses `azure-identity` with no required configuration.
-Three methods are tried in order:
+Four methods are tried in order:
 
 | Method | When it's used |
 |--------|---------------|
 | `EnvironmentCredential` | `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, and `AZURE_TENANT_ID` are set — use for CI/CD |
 | `ManagedIdentityCredential` | Running on an Azure VM, Container Instance, or pipeline agent with managed identity assigned |
-| `AzureCliCredential` | After running `az login` — recommended for developers |
+| `AzureCliCredential` | After running `az login` |
+| `DeviceCodeCredential` | Interactive terminal sessions — prompts with a URL and code to authenticate in any browser. Skipped in CI/CD and when output is redirected. |
 
 **Developer setup (one time):**
+
+No configuration is required for interactive use.
+When none of the first three methods are available, NAPT automatically prompts
+with a device code in the terminal:
+
+```console
+To sign in, use a web browser to open the page https://microsoft.com/devicelogin
+and enter the code ABCD1234 to authenticate.
+```
+
+If you prefer `az login`, install Azure CLI first:
+
+- **macOS:** `brew install azure-cli`
+- **Windows:** `winget install Microsoft.AzureCLI`
+- **Linux:** See the [Azure CLI install guide](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-linux)
+
+Then authenticate:
 ```bash
 az login
 ```

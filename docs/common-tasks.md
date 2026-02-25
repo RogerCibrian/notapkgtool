@@ -406,11 +406,25 @@ Upload a packaged app to Microsoft Intune. Requires `napt package` to have run f
 
 ### Developer Setup (one time)
 
+No configuration is required for interactive use.
+When run in a terminal, NAPT automatically falls back to a device code prompt
+if no other credentials are available:
+
+```console
+To sign in, use a web browser to open the page https://microsoft.com/devicelogin
+and enter the code ABCD1234 to authenticate.
+```
+
+If you prefer `az login`, install Azure CLI first:
+
+- **macOS:** `brew install azure-cli`
+- **Windows:** `winget install Microsoft.AzureCLI`
+- **Linux:** See the [Azure CLI install guide](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-linux)
+
+Then authenticate:
 ```bash
 az login
 ```
-
-NAPT uses your existing Azure CLI session. No additional configuration required.
 
 ### Upload an App
 
