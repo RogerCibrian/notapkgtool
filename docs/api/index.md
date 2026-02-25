@@ -34,8 +34,7 @@ napt/
 │   └── web_scrape.py           # Web scraping strategy
 │
 ├── io/                      # File operations
-│   ├── download.py             # HTTP file downloads with ETag support
-│   └── upload.py               # File upload operations (planned)
+│   └── download.py             # HTTP file downloads with ETag support
 │
 ├── policy/                  # Update policy enforcement (planned)
 │   └── updates.py              # Update policy logic
@@ -45,6 +44,12 @@ napt/
 │
 ├── state/                   # Version tracking and caching
 │   └── tracker.py              # State file management
+│
+├── upload/                  # Intune upload pipeline
+│   ├── manager.py              # Upload orchestration
+│   ├── graph.py                # Graph API and Azure Blob Storage calls
+│   ├── auth.py                 # Azure credential chain (CLI, env, managed identity)
+│   └── intunewin.py            # .intunewin package parser
 │
 └── versioning/              # Version extraction and comparison
     ├── keys.py                 # Version key extraction (DiscoveredVersion)
@@ -67,6 +72,8 @@ Recipe YAML
 [build/manager.py] Build PSADT package
     ↓
 [build/packager.py] Create .intunewin
+    ↓
+[upload/manager.py] Upload to Microsoft Intune
     ↓
 Result (dataclass)
 ```
@@ -104,6 +111,7 @@ Result (dataclass)
 - [Core API](core.md) - Main orchestration functions
 - [Discovery API](discovery.md) - Discovery strategy implementations
 - [Build API](build.md) - Package building functions
+- [Upload API](upload.md) - Intune upload pipeline
 - [Config API](config.md) - Configuration loading
 - [Exceptions API](exceptions.md) - Exception hierarchy
 
