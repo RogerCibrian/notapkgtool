@@ -45,10 +45,10 @@ Example:
 
 from __future__ import annotations
 
-from azure.core.exceptions import CredentialUnavailableError
 from azure.identity import (
     AzureCliCredential,
     ChainedTokenCredential,
+    CredentialUnavailableError,
     EnvironmentCredential,
     ManagedIdentityCredential,
 )
