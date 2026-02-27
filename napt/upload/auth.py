@@ -51,6 +51,7 @@ from __future__ import annotations
 import os
 import sys
 
+from azure.core.exceptions import ClientAuthenticationError
 from azure.identity import (
     ChainedTokenCredential,
     CredentialUnavailableError,
@@ -149,7 +150,7 @@ def get_access_token() -> str:
     # Phase 1: service principal or managed identity
     try:
         return get_credential().get_token(*GRAPH_SCOPES).token
-    except CredentialUnavailableError:
+    except ClientAuthenticationError:
         pass
 
     # Phase 2: interactive device code (TTY only)
