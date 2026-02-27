@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **`napt upload <recipe>`** - New command uploads `.intunewin` packages directly to Microsoft Intune via the Graph API. Authentication is automatic: tries service principal env vars (`AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`), managed identity, and `az login` in that order. No auth configuration required for developers who run `az login` once
+- **`napt upload <recipe>`** - New command uploads `.intunewin` packages directly to Microsoft Intune via the Graph API. Authentication tries service principal (`AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`), then managed identity, then device code (requires `AZURE_CLIENT_ID` + `AZURE_TENANT_ID` set and a TTY)
 - **`napt package --version VERSION`** - New flag to target a specific build
     version instead of the most recent (e.g.,
     `napt package recipes/Google/chrome.yaml --version 130.0.6723.116`)

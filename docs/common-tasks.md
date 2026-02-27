@@ -404,26 +404,45 @@ Validate and test recipes thoroughly before using in production.
 
 Upload a packaged app to Microsoft Intune. Requires `napt package` to have run first.
 
+### App Registration Setup (one time per organization)
+
+1. Go to [entra.microsoft.com](https://entra.microsoft.com) →
+   **App registrations** → **New registration**
+2. Name it (e.g. "NAPT"), leave redirect URI blank, click **Register**
+3. Note the **Application (client) ID** and **Directory (tenant) ID**
+4. Go to **API permissions** → **Add a permission** →
+   **Microsoft Graph** → **Application permissions**
+5. Search for and add `DeviceManagementApps.ReadWrite.All`
+6. Repeat for **Delegated permissions** → add `DeviceManagementApps.ReadWrite.All`
+7. Click **Grant admin consent**
+
 ### Developer Setup (one time)
 
-No configuration is required for interactive use.
-When run in a terminal, NAPT automatically falls back to a device code prompt
-if no other credentials are available:
+Set two environment variables using the IDs from app registration setup:
+
+```bash
+export AZURE_CLIENT_ID="<Application (client) ID>"
+export AZURE_TENANT_ID="<Directory (tenant) ID>"
+```
+
+On first run, NAPT prompts for authentication in the browser:
 
 ```console
 To sign in, use a web browser to open the page https://microsoft.com/devicelogin
 and enter the code ABCD1234 to authenticate.
 ```
 
-If you prefer `az login`, install Azure CLI first:
+After consenting once, subsequent runs authenticate silently.
 
-- **macOS:** `brew install azure-cli`
-- **Windows:** `winget install Microsoft.AzureCLI`
-- **Linux:** See the [Azure CLI install guide](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-linux)
+### CI/CD Setup (one time)
 
-Then authenticate:
+Create a client secret: **Certificates & secrets** → **New client secret**.
+Add all three as pipeline secrets:
+
 ```bash
-az login
+AZURE_CLIENT_ID="<Application (client) ID>"
+AZURE_CLIENT_SECRET="<client secret value>"
+AZURE_TENANT_ID="<Directory (tenant) ID>"
 ```
 
 ### Upload an App

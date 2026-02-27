@@ -14,9 +14,11 @@
 
 """Azure credential acquisition for NAPT Intune upload.
 
-Provides a credential chain that tries authentication methods in order.
-No configuration is required — the right method is selected automatically
-based on the environment.
+Requires a NAPT app registration in Microsoft Entra ID with the
+`DeviceManagementApps.ReadWrite.All` Microsoft Graph API permission.
+See the authentication documentation for setup instructions.
+
+Authentication is selected automatically based on environment variables:
 
 Authentication order:
     1. EnvironmentCredential -- service principal via environment variables.
@@ -25,15 +27,13 @@ Authentication order:
     2. ManagedIdentityCredential -- Azure managed identity. Works automatically
         on Azure VMs, Azure Container Instances, and Azure-hosted pipeline
         agents with a managed identity assigned. No credentials to manage.
-    3. AzureCliCredential -- reuses the session from 'az login'. Requires
-        Azure CLI to be installed and authenticated.
-    4. DeviceCodeCredential -- interactive device code flow. Only attempted
-        when stdout is a TTY (interactive terminal). Prints a URL and code;
-        the user completes authentication in any browser. Skipped in CI/CD
-        and when output is redirected, to avoid hanging on an unattended prompt.
+    3. DeviceCodeCredential -- interactive device code flow (TTY only).
+        Requires AZURE_CLIENT_ID and AZURE_TENANT_ID to be set (no secret
+        needed). Prints a URL and code; the user completes authentication in
+        any browser. Skipped in CI/CD and when output is redirected.
 
 If all available methods fail, an AuthError is raised with guidance on which
-environment variables to set or which command to run.
+environment variables to set.
 
 Example:
     Acquiring a token for Graph API:
@@ -48,10 +48,10 @@ Example:
 
 from __future__ import annotations
 
+import os
 import sys
 
 from azure.identity import (
-    AzureCliCredential,
     ChainedTokenCredential,
     CredentialUnavailableError,
     DeviceCodeCredential,
@@ -65,61 +65,76 @@ __all__ = ["get_access_token", "get_credential", "GRAPH_SCOPES"]
 
 GRAPH_SCOPES = ["https://graph.microsoft.com/.default"]
 
+_DEVICE_CODE_SCOPES = ["https://graph.microsoft.com/DeviceManagementApps.ReadWrite.All"]
+
 _AUTH_FAILURE_HINT_NONINTERACTIVE = (
     "Authentication failed. Tried: EnvironmentCredential, "
-    "ManagedIdentityCredential, AzureCliCredential.\n\n"
+    "ManagedIdentityCredential.\n\n"
     "To fix this, use one of the following:\n"
-    "  Developers:  az login  (then re-run)\n"
-    "  CI/CD:       set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID\n"
-    "  Azure VMs:   assign a managed identity to the resource\n"
+    "  CI/CD:      set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID\n"
+    "  Azure VMs:  assign a managed identity to the resource\n"
 )
 
-_AUTH_FAILURE_HINT_INTERACTIVE = (
-    "Authentication failed. Tried: EnvironmentCredential, "
-    "ManagedIdentityCredential, AzureCliCredential, DeviceCodeCredential.\n\n"
-    "To fix this, use one of the following:\n"
+_AUTH_FAILURE_HINT_INTERACTIVE_NO_CLIENT = (
+    "Authentication failed. No app registration configured for interactive "
+    "auth.\n\n"
+    "Set AZURE_CLIENT_ID and AZURE_TENANT_ID to enable device code "
+    "authentication,\n"
+    "or set all three (including AZURE_CLIENT_SECRET) for service principal "
+    "auth.\n\n"
+    "See the authentication documentation for app registration setup "
+    "instructions.\n"
+)
+
+_AUTH_FAILURE_HINT_DEVICE_CODE = (
+    "Authentication failed during device code flow.\n\n"
+    "To fix this:\n"
     "  Option 1:  re-run and complete the device code prompt in your browser\n"
-    "  Option 2:  az login  (then re-run)\n"
-    "  Option 3:  set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID\n"
+    "  Option 2:  set AZURE_CLIENT_SECRET to use service principal auth\n"
 )
 
 
 def get_credential() -> ChainedTokenCredential:
-    """Build a ChainedTokenCredential that tries auth methods in order.
+    """Build the Phase 1 credential chain for non-interactive authentication.
 
-    Constructs a credential chain. In interactive terminal sessions
-    (stdout is a TTY), DeviceCodeCredential is appended as a final
-    fallback so developers can authenticate without installing Azure CLI.
-    In non-interactive environments (CI/CD, redirected output),
-    DeviceCodeCredential is omitted to avoid hanging on an unattended prompt.
+    Returns a credential that tries service principal auth (via environment
+    variables) first, then managed identity for Azure-hosted workloads.
+    Both use the `.default` scope, suitable for application permissions.
+
+    For interactive device code auth, use `get_access_token()` directly,
+    which handles Phase 2 automatically when Phase 1 fails.
 
     Returns:
-        A ChainedTokenCredential configured for the current environment.
+        A ChainedTokenCredential for non-interactive authentication.
 
     """
-    credentials = [
+    return ChainedTokenCredential(
         EnvironmentCredential(),
         ManagedIdentityCredential(),
-        AzureCliCredential(),
-    ]
-    if sys.stdout.isatty():
-        credentials.append(DeviceCodeCredential())
-    return ChainedTokenCredential(*credentials)
+    )
 
 
 def get_access_token() -> str:
     """Acquire a Microsoft Graph API access token.
 
-    Tries credential methods in order until one succeeds. In interactive
-    sessions, DeviceCodeCredential is included as a final fallback.
+    Tries credential methods in order until one succeeds:
+
+    Phase 1 (always tried):
+        EnvironmentCredential (service principal via AZURE_CLIENT_ID,
+        AZURE_CLIENT_SECRET, AZURE_TENANT_ID) then ManagedIdentityCredential.
+        Both use the `.default` scope (application permissions).
+
+    Phase 2 (only if Phase 1 fails and stdout is a TTY):
+        DeviceCodeCredential using AZURE_CLIENT_ID and AZURE_TENANT_ID.
+        Uses the explicit DeviceManagementApps.ReadWrite.All scope, which
+        triggers a consent prompt on first run.
 
     Returns:
         Bearer token string for use in Authorization headers.
 
     Raises:
         AuthError: If all credential types fail or are unavailable,
-            with guidance on which environment variables to set or
-            which command to run.
+            with guidance on which environment variables to set.
 
     Example:
         Get a token and use it in a request:
@@ -131,13 +146,30 @@ def get_access_token() -> str:
             ```
 
     """
-    interactive = sys.stdout.isatty()
-    hint = (
-        _AUTH_FAILURE_HINT_INTERACTIVE
-        if interactive
-        else _AUTH_FAILURE_HINT_NONINTERACTIVE
-    )
+    # Phase 1: service principal or managed identity
     try:
         return get_credential().get_token(*GRAPH_SCOPES).token
-    except CredentialUnavailableError as err:
-        raise AuthError(f"{hint}Details: {err}") from err
+    except CredentialUnavailableError:
+        pass
+
+    # Phase 2: interactive device code (TTY only)
+    if sys.stdout.isatty():
+        client_id = os.environ.get("AZURE_CLIENT_ID", "")
+        tenant_id = os.environ.get("AZURE_TENANT_ID", "")
+        if client_id and tenant_id:
+            try:
+                return (
+                    DeviceCodeCredential(
+                        client_id=client_id,
+                        tenant_id=tenant_id,
+                    )
+                    .get_token(*_DEVICE_CODE_SCOPES)
+                    .token
+                )
+            except CredentialUnavailableError as err:
+                raise AuthError(
+                    f"{_AUTH_FAILURE_HINT_DEVICE_CODE}Details: {err}"
+                ) from err
+        raise AuthError(_AUTH_FAILURE_HINT_INTERACTIVE_NO_CLIENT)
+
+    raise AuthError(_AUTH_FAILURE_HINT_NONINTERACTIVE)

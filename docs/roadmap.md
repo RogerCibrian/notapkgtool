@@ -24,6 +24,7 @@ This roadmap is a living document showing potential future directions for NAPT. 
 | Feature | Status | Category | Complexity | Value |
 |---------|--------|----------|------------|-------|
 | Microsoft Intune Upload | ✅ Completed | User-Facing | High | Very High |
+| `napt auth setup` Command | 💡 Idea | User-Facing | Low | High |
 | Deployment Wave Management | 🔬 Investigating | User-Facing | Very High | High |
 | Pre/Post Install/Uninstall Script Support | 💡 Idea | User-Facing | Low | Medium |
 | Enhanced CLI Help Menu | 💡 Idea | User-Facing | Low | Medium |
@@ -41,8 +42,8 @@ This roadmap is a living document showing potential future directions for NAPT. 
 - ✅ **Completed**: 1
 - 📋 **Ready**: 0
 - 🔬 **Investigating**: 1
-- 💡 **Ideas**: 10
-- **Total**: 12 features
+- 💡 **Ideas**: 11
+- **Total**: 13 features
 
 ---
 
@@ -94,6 +95,31 @@ set `AZURE_*` env vars for CI/CD.
 > - **Technical Enhancements**: Internal improvements and infrastructure enhancements that improve performance, add backend capabilities, or optimize the tool's operation.
 
 ### User-Facing Features
+
+#### `napt auth setup` Command
+
+**Status**: 💡 Idea
+**Complexity**: Low (few hours to 1 day)
+**Value**: High
+
+**Description**: Automates app registration creation in Microsoft Entra ID
+using the Azure CLI.
+Runs `az ad app create`, adds `DeviceManagementApps.ReadWrite.All` application
+and delegated permissions, grants admin consent, and outputs the `AZURE_CLIENT_ID`
+and `AZURE_TENANT_ID` values to set.
+Creates a natural namespace for future `napt auth status` and `napt auth logout`
+subcommands.
+
+**Benefits**:
+
+- Reduces one-time setup from a multi-step portal workflow to a single command
+- Requires only `az login` as a prerequisite — no portal navigation needed
+- Outputs exact env vars to set, eliminating copy-paste errors
+- Enables future auth management subcommands
+
+**Prerequisites**:
+
+- Azure CLI installed and authenticated with an account that can create app registrations
 
 #### Pre/Post Install/Uninstall Script Support
 **Status**: 💡 Idea  

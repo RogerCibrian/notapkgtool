@@ -191,41 +191,65 @@ Graph API. Run `napt package` before uploading.
 
 #### Authentication
 
-`napt upload` uses `azure-identity` with no required configuration.
-Four methods are tried in order:
+`napt upload` requires a NAPT app registration in Microsoft Entra ID.
+See [App Registration Setup](#app-registration-setup) below.
+The authentication method is selected automatically based on environment
+variables:
 
 | Method | When it's used |
 |--------|---------------|
-| `EnvironmentCredential` | `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, and `AZURE_TENANT_ID` are set — use for CI/CD |
-| `ManagedIdentityCredential` | Running on an Azure VM, Container Instance, or pipeline agent with managed identity assigned |
-| `AzureCliCredential` | After running `az login` |
-| `DeviceCodeCredential` | Interactive terminal sessions — prompts with a URL and code to authenticate in any browser. Skipped in CI/CD and when output is redirected. |
+| `EnvironmentCredential` | `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, and `AZURE_TENANT_ID` are set — service principal, recommended for CI/CD |
+| `ManagedIdentityCredential` | Running on an Azure VM, Container Instance, or pipeline agent with managed identity assigned — no env vars needed |
+| `DeviceCodeCredential` | `AZURE_CLIENT_ID` and `AZURE_TENANT_ID` are set (no secret), interactive terminal — prompts with a URL and code to authenticate in any browser |
 
-**Developer setup (one time):**
+#### App Registration Setup
 
-No configuration is required for interactive use.
-When none of the first three methods are available, NAPT automatically prompts
-with a device code in the terminal:
+Create the app registration once per organization:
+
+1. Go to [entra.microsoft.com](https://entra.microsoft.com) →
+   **App registrations** → **New registration**
+2. Name it (e.g. "NAPT"), leave redirect URI blank, click **Register**
+3. Note the **Application (client) ID** and **Directory (tenant) ID**
+4. Go to **API permissions** → **Add a permission** →
+   **Microsoft Graph** → **Application permissions**
+5. Search for and add `DeviceManagementApps.ReadWrite.All`
+6. Also add the **Delegated** version of `DeviceManagementApps.ReadWrite.All`
+   (for interactive device code auth)
+7. Click **Grant admin consent**
+
+**Developer setup:**
+
+Set two environment variables — no client secret needed:
+
+```bash
+export AZURE_CLIENT_ID="<Application (client) ID>"
+export AZURE_TENANT_ID="<Directory (tenant) ID>"
+```
+
+On first run, NAPT prompts with a device code:
 
 ```console
 To sign in, use a web browser to open the page https://microsoft.com/devicelogin
 and enter the code ABCD1234 to authenticate.
 ```
 
-If you prefer `az login`, install Azure CLI first:
+After consenting once, subsequent runs authenticate silently.
 
-- **macOS:** `brew install azure-cli`
-- **Windows:** `winget install Microsoft.AzureCLI`
-- **Linux:** See the [Azure CLI install guide](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-linux)
+**CI/CD setup:**
 
-Then authenticate:
+Create a client secret under **Certificates & secrets** → **New client secret**.
+Set all three environment variables as pipeline secrets:
+
 ```bash
-az login
+AZURE_CLIENT_ID="<Application (client) ID>"
+AZURE_CLIENT_SECRET="<client secret value>"
+AZURE_TENANT_ID="<Directory (tenant) ID>"
 ```
 
-**CI/CD setup:** Set `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, and `AZURE_TENANT_ID`
-as environment secrets. The app registration must have the `DeviceManagementApps.ReadWrite.All`
-Microsoft Graph API permission.
+**Azure managed identity:**
+
+No environment variables needed. Assign the managed identity the
+`DeviceManagementApps.ReadWrite.All` application permission in Entra ID.
 
 ### Directory Structure
 
