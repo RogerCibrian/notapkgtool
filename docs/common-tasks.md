@@ -415,6 +415,9 @@ Upload a packaged app to Microsoft Intune. Requires `napt package` to have run f
 5. Search for and add `DeviceManagementApps.ReadWrite.All`
 6. Repeat for **Delegated permissions** → add `DeviceManagementApps.ReadWrite.All`
 7. Click **Grant admin consent**
+8. Go to **Authentication** → **Advanced settings** →
+   set **Allow public client flows** to **Yes** → click **Save**
+   (required for device code flow)
 
 ### Developer Setup (one time)
 

@@ -54,7 +54,6 @@ import sys
 from azure.core.exceptions import ClientAuthenticationError
 from azure.identity import (
     ChainedTokenCredential,
-    CredentialUnavailableError,
     DeviceCodeCredential,
     EnvironmentCredential,
     ManagedIdentityCredential,
@@ -89,9 +88,13 @@ _AUTH_FAILURE_HINT_INTERACTIVE_NO_CLIENT = (
 
 _AUTH_FAILURE_HINT_DEVICE_CODE = (
     "Authentication failed during device code flow.\n\n"
-    "To fix this:\n"
-    "  Option 1:  re-run and complete the device code prompt in your browser\n"
-    "  Option 2:  set AZURE_CLIENT_SECRET to use service principal auth\n"
+    "Common causes:\n"
+    "  - Public client flows not enabled: in the Azure portal, go to\n"
+    "    App registrations -> your app -> Authentication -> Advanced settings\n"
+    "    and set 'Allow public client flows' to Yes.\n"
+    "  - Wrong AZURE_CLIENT_ID or AZURE_TENANT_ID: verify the values.\n"
+    "  - Device code prompt not completed: re-run and finish in the browser.\n\n"
+    "Alternatively, set AZURE_CLIENT_SECRET to use service principal auth.\n"
 )
 
 
@@ -167,7 +170,7 @@ def get_access_token() -> str:
                     .get_token(*_DEVICE_CODE_SCOPES)
                     .token
                 )
-            except CredentialUnavailableError as err:
+            except ClientAuthenticationError as err:
                 raise AuthError(
                     f"{_AUTH_FAILURE_HINT_DEVICE_CODE}Details: {err}"
                 ) from err
