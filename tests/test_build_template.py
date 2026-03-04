@@ -90,7 +90,7 @@ class TestBuildAdtSessionVars:
             },
         }
 
-        result = _build_adtsession_vars(config, "1.0.0", "4.1.7")
+        result = _build_adtsession_vars(config, "1.0.0", "4.1.7", "x64")
 
         assert result["AppLang"] == "EN"
         assert result["AppRevision"] == "01"
@@ -104,7 +104,7 @@ class TestBuildAdtSessionVars:
             "app": {"psadt": {"app_vars": {"AppVersion": "${discovered_version}"}}},
         }
 
-        result = _build_adtsession_vars(config, "2.3.4", "4.1.7")
+        result = _build_adtsession_vars(config, "2.3.4", "4.1.7", "x64")
 
         assert result["AppVersion"] == "2.3.4"
 
@@ -117,7 +117,7 @@ class TestBuildAdtSessionVars:
             "app": {"psadt": {"app_vars": {}}},
         }
 
-        result = _build_adtsession_vars(config, "1.0.0", "4.1.7")
+        result = _build_adtsession_vars(config, "1.0.0", "4.1.7", "x64")
 
         assert "AppScriptDate" in result
         assert result["AppScriptDate"] == date.today().strftime("%Y-%m-%d")

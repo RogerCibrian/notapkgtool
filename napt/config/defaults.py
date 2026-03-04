@@ -71,7 +71,6 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "win32": {
             "build_types": "both",
             "installed_check": {
-                "fail_on_error": True,
                 "log_format": "cmtrace",
                 "log_level": "INFO",
                 "log_rotation_mb": 3,

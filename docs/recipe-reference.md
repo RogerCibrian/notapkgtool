@@ -466,7 +466,6 @@ The `installed_check` section configures detection and requirements script gener
 defaults:
   win32:
     installed_check:
-      fail_on_error: true       # If true, script generation failures abort the build.
       log_rotation_mb: 3        # Maximum log file size in MB before rotation
       detection:
         exact_match: false      # If true, version must match exactly.
@@ -540,27 +539,43 @@ app:
 
 #### architecture
 
-**Type:** `string`  
-**Required:** Yes for non-MSI installers, ignored for MSI installers  
+**Type:** `string`
+**Required:** Yes for non-MSI installers, ignored for MSI installers
 **Allowed values:** `x86`, `x64`, `arm64`, `any`
 
-Specifies the expected architecture for detection/requirements scripts. This controls which registry views are checked.
+Specifies the installer's binary architecture.
+This field drives two behaviors: which registry views detection and requirements
+scripts check, and which device architectures the app is offered to in Intune.
 
 **Behavior:**
 
-- **MSI installers:** This field is ignored (a warning is logged if set). Architecture is auto-detected from the MSI Summary Information `Template` property.
-- **Non-MSI installers (EXE, etc.):** Required. Must be set in recipe configuration.
+- **MSI installers:** This field is ignored (a warning is logged if set).
+Architecture is auto-detected from the MSI Summary Information `Template`
+property.
+- **Non-MSI installers (EXE, etc.):** Required. Must be set in recipe
+configuration.
 
 **Allowed values:**
 
-| Value | Description |
-|-------|-------------|
-| `x86` | 32-bit x86; checks only 32-bit registry view |
-| `x64` | 64-bit x64/AMD64; checks only 64-bit registry view |
-| `arm64` | 64-bit ARM; checks only 64-bit registry view |
-| `any` | Checks all registry views (permissive, matches legacy behavior) |
+| Value | Registry view | Intune device targets |
+|-------|---------------|-----------------------|
+| `x86` | 32-bit only | x86, x64, ARM64 — all Windows can run x86 via WOW64 |
+| `x64` | 64-bit only | x64, ARM64 — ARM64 Windows 11 supports x64 emulation |
+| `arm64` | 64-bit only | ARM64 only — native binary, not compatible with x64 |
+| `any` | All views | x86, x64, ARM64 — permissive; use when architecture varies |
 
-**Why this matters:** Without architecture filtering, an x86 installation could satisfy x64 detection if the DisplayName and version match, potentially blocking proper x64 deployment. The architecture-aware approach ensures detection scripts check the correct registry view for the target architecture.
+Intune targeting defaults reflect binary compatibility rather than strict
+architecture matching.
+For example, `x64` targets ARM64 devices by default because ARM64 Windows 11
+can run x64 binaries natively via its emulation layer.
+If you need finer control over which device architectures receive the app,
+see `intune.allowed_architectures` (planned — see roadmap).
+
+**Why this matters:** Without architecture filtering, an x86 installation could
+satisfy x64 detection if the DisplayName and version match, potentially blocking
+proper x64 deployment.
+The architecture-aware approach ensures detection scripts check the correct
+registry view for the target architecture.
 
 **Example:**
 ```yaml
@@ -609,19 +624,6 @@ app:
       override_msi_display_name: true        # Use display_name instead of MSI ProductName
       # architecture still auto-detected from MSI Template
 ```
-
-#### fail_on_error
-
-**Type:** `boolean`  
-**Required:** No  
-**Default:** `true`
-
-If `true`, script generation failures will abort the build. If `false`, build continues even if script generation fails (useful for development/testing).
-
-**Behavior:**
-
-- `fail_on_error: true` (default): Build fails if scripts cannot be generated
-- `fail_on_error: false`: Build continues, script paths will be `None` in BuildResult
 
 #### log_format
 

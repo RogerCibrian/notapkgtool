@@ -91,10 +91,6 @@ defaults:
       # Default: false (MSI ProductName is authoritative)
       # override_msi_display_name: false
 
-      # If true, script generation failures abort the build.
-      # Default: true (scripts are required for Intune deployment)
-      fail_on_error: true
-
       # Maximum log file size in MB before rotation
       log_rotation_mb: 3
 

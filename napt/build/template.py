@@ -89,7 +89,7 @@ def _format_powershell_value(value: Any) -> str:
 
 
 def _build_adtsession_vars(
-    config: dict[str, Any], version: str, psadt_version: str
+    config: dict[str, Any], version: str, psadt_version: str, architecture: str
 ) -> dict[str, Any]:
     """Build the $adtSession hashtable variables from configuration.
 
@@ -99,6 +99,8 @@ def _build_adtsession_vars(
         config: Merged configuration (org + vendor + recipe).
         version: Discovered application version.
         psadt_version: PSADT version being used.
+        architecture: Resolved installer architecture (e.g., "x64", "x86",
+            "arm64", "any"). "any" is skipped — AppArch is left unset.
 
     Returns:
         Dictionary of variable name -> value mappings.
@@ -108,6 +110,8 @@ def _build_adtsession_vars(
         Recipe overrides come from config['app']['psadt']['app_vars'].
         Special handling for ${discovered_version} placeholder.
         Auto-generates AppScriptDate if not set.
+        AppArch is set automatically from architecture (skipped for "any").
+        DeployAppScriptVersion is always set to psadt_version.
     """
     app = config["app"]
 
@@ -128,6 +132,10 @@ def _build_adtsession_vars(
     # Add auto-generated fields
     merged_vars.setdefault("AppScriptDate", date.today().strftime("%Y-%m-%d"))
     merged_vars["DeployAppScriptVersion"] = psadt_version
+
+    # Auto-populate AppArch from installer architecture ("any" means unset)
+    if architecture and architecture != "any":
+        merged_vars["AppArch"] = architecture
 
     # Add vendor if available
     vendor = config.get("vendor") or app.get("vendor", "")
@@ -228,6 +236,7 @@ def generate_invoke_script(
     config: dict[str, Any],
     version: str,
     psadt_version: str,
+    architecture: str,
 ) -> str:
     """Generate Invoke-AppDeployToolkit.ps1 from PSADT template and config.
 
@@ -240,6 +249,9 @@ def generate_invoke_script(
         config: Merged configuration (org + vendor + recipe).
         version: Application version (from filesystem).
         psadt_version: PSADT version being used.
+        architecture: Resolved installer architecture (e.g., "x64", "x86",
+            "arm64", "any"). Sets AppArch in the $adtSession hashtable;
+            "any" leaves AppArch unset.
 
     Returns:
         Generated PowerShell script text.
@@ -256,7 +268,8 @@ def generate_invoke_script(
                 Path("cache/psadt/4.1.7/Invoke-AppDeployToolkit.ps1"),
                 config,
                 "141.0.7390.123",
-                "4.1.7"
+                "4.1.7",
+                "x64",
             )
             ```
     """
@@ -273,7 +286,7 @@ def generate_invoke_script(
 
     # Build $adtSession variables
     logger.verbose("BUILD", "Building $adtSession variables...")
-    session_vars = _build_adtsession_vars(config, version, psadt_version)
+    session_vars = _build_adtsession_vars(config, version, psadt_version, architecture)
 
     logger.debug("BUILD", "--- $adtSession Variables ---")
     for key, value in session_vars.items():

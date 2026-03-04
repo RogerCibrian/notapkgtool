@@ -16,30 +16,22 @@
 
 This module extracts metadata from Windows Installer (MSI) database files,
 including ProductVersion, ProductName, and architecture (from Template).
-It tries multiple backends in order of preference to maximize cross-platform
-compatibility.
 
 Backend Priority:
 
 On Windows:
 
-1. msilib (Python standard library, Python 3.10 and earlier only - removed in 3.13)
-2. _msi (CPython extension module, Windows-specific)
-3. PowerShell COM (Windows Installer COM API, always available)
+1. PowerShell COM (Windows Installer COM API, always available)
 
 On Linux/macOS:
 
 1. msiinfo (from msitools package, must be installed separately)
 
-    The PowerShell fallback makes this truly universal on Windows systems,
-    even when Python MSI libraries aren't available.
-
 Installation Requirements:
 
 Windows:
 
-- No additional packages required (PowerShell fallback always works)
-- Optional: Ensure msilib is available for better performance
+- No additional packages required (PowerShell is always available)
 
 Linux/macOS:
 
@@ -58,36 +50,29 @@ Example:
         # 141.0.7390.123 from msi
         ```
 
-    Error handling:
+    Extract full metadata including architecture:
         ```python
-        try:
-            discovered = version_from_msi_product_version("missing.msi")
-        except PackagingError as e:
-            print(f"Extraction failed: {e}")
+        from napt.versioning.msi import extract_msi_metadata
+        metadata = extract_msi_metadata("chrome.msi")
+        print(f"{metadata.product_name} {metadata.product_version} ({metadata.architecture})")
+        # Google Chrome 144.0.7559.110 (x64)
         ```
 
 Note:
-    This is pure file introspection; no network calls are made. All backends
-    query the MSI Property table for ProductVersion. The PowerShell approach
-    uses COM (WindowsInstaller.Installer). Errors are chained for debugging
-    (check 'from err' clause).
+    This is pure file introspection; no network calls are made. The PowerShell
+    COM backend reads both the Property table (ProductName, ProductVersion) and
+    Summary Information stream (Template/architecture) in a single database open.
 
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 from typing import Literal
-
-try:
-    import msilib  # type: ignore  # Windows-only standard library module
-except ImportError:
-    msilib = None  # type: ignore
-
-from dataclasses import dataclass
 
 from napt.exceptions import ConfigError, PackagingError
 
@@ -115,16 +100,19 @@ Architecture = Literal["x86", "x64", "arm64"]
 
 @dataclass(frozen=True)
 class MSIMetadata:
-    """Represents metadata extracted from an MSI Property table.
+    """Represents metadata extracted from an MSI file.
 
     Attributes:
-        product_name: ProductName from MSI (display name).
-        product_version: ProductVersion from MSI.
+        product_name: ProductName from MSI Property table (display name).
+        product_version: ProductVersion from MSI Property table.
+        architecture: Installer architecture from MSI Template Summary
+            Information property. Always one of "x86", "x64", or "arm64".
 
     """
 
     product_name: str
     product_version: str
+    architecture: Architecture
 
 
 def version_from_msi_product_version(
@@ -132,10 +120,8 @@ def version_from_msi_product_version(
 ) -> DiscoveredVersion:
     """Extract ProductVersion from an MSI file.
 
-    Uses cross-platform backends to read the MSI Property table. On Windows,
-    tries msilib (Python 3.10 and earlier - removed in 3.13), _msi extension,
-    then PowerShell COM API as universal fallback. On Linux/macOS, requires
-    msitools package.
+    Uses cross-platform backends to read the MSI Property table.
+    On Windows, uses the PowerShell COM API. On Linux/macOS, requires msitools.
 
     Args:
         file_path: Path to the MSI file.
@@ -158,72 +144,14 @@ def version_from_msi_product_version(
     logger.verbose("VERSION", "Strategy: msi")
     logger.verbose("VERSION", f"Extracting version from: {p.name}")
 
-    # Try msilib first (standard library on Windows)
-    if sys.platform.startswith("win") and msilib is not None:
-        logger.debug("VERSION", "Trying backend: msilib...")
-        try:
-            db = msilib.OpenDatabase(str(p), msilib.MSIDBOPEN_READONLY)
-            view = db.OpenView(
-                "SELECT `Value` FROM `Property` WHERE `Property`='ProductVersion'"
-            )
-            view.Execute(None)
-            rec = view.Fetch()
-            if rec is None:
-                db.Close()
-                raise PackagingError("ProductVersion not found in MSI Property table.")
-            version = rec.GetString(1)
-            db.Close()
-            if not version:
-                raise PackagingError("Empty ProductVersion in MSI Property table.")
-            logger.verbose("VERSION", f"Success! Extracted: {version} (via msilib)")
-            return DiscoveredVersion(version=version, source="msi")
-        except Exception as err:
-            logger.debug("VERSION", "msilib failed, trying next backend...")
-            raise PackagingError(
-                f"failed to read MSI ProductVersion via msilib: {err}"
-            ) from err
-
-    # Try _msi module (alternative Windows approach)
-    if sys.platform.startswith("win"):
-        logger.debug("VERSION", "Trying backend: _msi...")
-        try:
-            import _msi  # type: ignore
-        except ImportError:
-            # _msi not available, fall through to msiinfo
-            logger.debug("VERSION", "_msi not available, trying next backend...")
-            pass
-        else:
-            try:
-                db = _msi.OpenDatabase(str(p), 0)  # 0: read-only
-                view = db.OpenView(
-                    "SELECT `Value` FROM `Property` WHERE `Property`='ProductVersion'"
-                )
-                view.Execute(None)
-                rec = view.Fetch()
-                if rec is None:
-                    raise PackagingError(
-                        "ProductVersion not found in MSI Property table."
-                    )
-                version = rec.GetString(1)
-                if not version:
-                    raise PackagingError("Empty ProductVersion in MSI Property table.")
-                view.Close()
-                db.Close()
-                logger.verbose("VERSION", f"Success! Extracted: {version} (via _msi)")
-                return DiscoveredVersion(version=version, source="msi")
-            except Exception as err:
-                logger.debug("VERSION", "_msi failed, trying next backend...")
-                raise PackagingError(
-                    f"failed to read MSI ProductVersion via _msi: {err}"
-                ) from err
-
     # Try PowerShell with Windows Installer COM on Windows
     if sys.platform.startswith("win"):
         logger.debug("VERSION", "Trying backend: PowerShell COM...")
         try:
+            escaped_path = str(p).replace("'", "''")
             ps_script = f"""
 $installer = New-Object -ComObject WindowsInstaller.Installer
-$db = $installer.OpenDatabase('{p}', 0)
+$db = $installer.OpenDatabase('{escaped_path}', 0)
 $view = $db.OpenView("SELECT Value FROM Property WHERE Property='ProductVersion'")
 $view.Execute()
 $record = $view.Fetch()
@@ -248,20 +176,17 @@ if ($record) {{
                 )
                 return DiscoveredVersion(version=version, source="msi")
         except subprocess.CalledProcessError as err:
-            logger.debug("VERSION", "PowerShell COM failed, trying next backend...")
             raise PackagingError(f"PowerShell MSI query failed: {err}") from err
         except subprocess.TimeoutExpired:
-            logger.debug("VERSION", "PowerShell COM timed out, trying next backend...")
             raise PackagingError("PowerShell MSI query timed out") from None
 
     # Try msiinfo on Linux/macOS
-    msiinfo = shutil.which("msiinfo")
-    if msiinfo:
+    msiinfo_bin = shutil.which("msiinfo")
+    if msiinfo_bin:
         logger.debug("VERSION", "Trying backend: msiinfo (msitools)...")
         try:
-            # msiinfo export <package> Property -> stdout (tab-separated)
             result = subprocess.run(
-                [msiinfo, "export", str(p), "Property"],
+                [msiinfo_bin, "export", str(p), "Property"],
                 check=True,
                 capture_output=True,
                 text=True,
@@ -279,7 +204,6 @@ if ($record) {{
             )
             return DiscoveredVersion(version=version_str, source="msi")
         except subprocess.CalledProcessError as err:
-            logger.debug("VERSION", "msiinfo failed")
             raise PackagingError(f"msiinfo failed: {err}") from err
 
     logger.debug("VERSION", "No MSI extraction backend available on this system")
@@ -291,24 +215,22 @@ if ($record) {{
 
 
 def extract_msi_metadata(file_path: str | Path) -> MSIMetadata:
-    """Extract ProductName and ProductVersion from MSI file.
+    """Extract ProductName, ProductVersion, and architecture from MSI file.
 
-    Uses cross-platform backends to read the MSI Property table. On Windows,
-    tries msilib (Python 3.10 and earlier - removed in 3.13), _msi extension,
-    then PowerShell COM API as universal fallback. On Linux/macOS, requires
-    msitools package.
-
-    This function extracts multiple properties in one pass for efficiency.
+    Reads the MSI Property table (ProductName, ProductVersion) and Summary
+    Information stream (Template/architecture) in a single database open.
+    On Windows, uses the PowerShell COM API. On Linux/macOS, requires msitools.
 
     Args:
         file_path: Path to the MSI file.
 
     Returns:
-        MSIMetadata with product information.
+        MSI metadata including product name, version, and architecture.
 
     Raises:
         PackagingError: If the MSI file doesn't exist or metadata extraction
             fails.
+        ConfigError: If the MSI platform is not supported by Intune.
         NotImplementedError: If no extraction backend is available on this
             system.
 
@@ -319,14 +241,14 @@ def extract_msi_metadata(file_path: str | Path) -> MSIMetadata:
             from napt.versioning.msi import extract_msi_metadata
 
             metadata = extract_msi_metadata(Path("chrome.msi"))
-            print(f"{metadata.product_name} {metadata.product_version}")
-            # Google Chrome 131.0.6778.86
+            print(f"{metadata.product_name} {metadata.product_version} ({metadata.architecture})")
+            # Google Chrome 131.0.6778.86 (x64)
             ```
 
     Note:
-        ProductName may be empty string if not found in MSI. This is handled
-        gracefully - build phase will fallback to recipe AppName if ProductName
-        is empty.
+        ProductName may be empty string if not found in MSI. The build phase
+        validates ProductName and raises ConfigError if empty — it is required
+        for detection script generation.
 
     """
     from napt.logging import get_global_logger
@@ -338,133 +260,38 @@ def extract_msi_metadata(file_path: str | Path) -> MSIMetadata:
 
     logger.verbose("MSI", f"Extracting metadata from: {p.name}")
 
-    # Try msilib first (standard library on Windows)
-    if sys.platform.startswith("win") and msilib is not None:
-        logger.debug("MSI", "Trying backend: msilib...")
-        try:
-            db = msilib.OpenDatabase(str(p), msilib.MSIDBOPEN_READONLY)
-            # Query for ProductName and ProductVersion
-            view = db.OpenView(
-                "SELECT `Property`,`Value` FROM `Property` "
-                "WHERE `Property` IN ('ProductName','ProductVersion')"
-            )
-            view.Execute(None)
-
-            metadata = {"ProductName": "", "ProductVersion": ""}
-            while True:
-                rec = view.Fetch()
-                if rec is None:
-                    break
-                prop_name = rec.GetString(1)
-                prop_value = rec.GetString(2)
-                if prop_name in metadata:
-                    metadata[prop_name] = prop_value
-
-            view.Close()
-            db.Close()
-
-            if not metadata["ProductVersion"]:
-                raise PackagingError("ProductVersion not found in MSI Property table.")
-
-            logger.verbose(
-                "MSI",
-                f"Success! Extracted: {metadata['ProductName']} "
-                f"{metadata['ProductVersion']} (via msilib)",
-            )
-            return MSIMetadata(
-                product_name=metadata["ProductName"] or "",
-                product_version=metadata["ProductVersion"],
-            )
-        except Exception as err:
-            logger.debug("MSI", f"msilib failed: {err}, trying next backend...")
-
-    # Try _msi module (alternative Windows approach)
-    if sys.platform.startswith("win"):
-        logger.debug("MSI", "Trying backend: _msi...")
-        try:
-            import _msi  # type: ignore
-        except ImportError:
-            logger.debug("MSI", "_msi not available, trying next backend...")
-        else:
-            try:
-                db = _msi.OpenDatabase(str(p), 0)  # 0: read-only
-                view = db.OpenView(
-                    "SELECT `Property`,`Value` FROM `Property` "
-                    "WHERE `Property` IN ('ProductName','ProductVersion')"
-                )
-                view.Execute(None)
-
-                metadata = {
-                    "ProductName": "",
-                    "ProductVersion": "",
-                }
-                while True:
-                    rec = view.Fetch()
-                    if rec is None:
-                        break
-                    prop_name = rec.GetString(1)
-                    prop_value = rec.GetString(2)
-                    if prop_name in metadata:
-                        metadata[prop_name] = prop_value
-
-                view.Close()
-                db.Close()
-
-                if not metadata["ProductVersion"]:
-                    raise PackagingError(
-                        "ProductVersion not found in MSI Property table."
-                    )
-
-                logger.verbose(
-                    "MSI",
-                    f"Success! Extracted: {metadata['ProductName']} "
-                    f"{metadata['ProductVersion']} (via _msi)",
-                )
-                return MSIMetadata(
-                    product_name=metadata["ProductName"] or "",
-                    product_version=metadata["ProductVersion"],
-                )
-            except Exception as err:
-                logger.debug("MSI", f"_msi failed: {err}, trying next backend...")
-
-    # Try PowerShell with Windows Installer COM on Windows
+    # PowerShell COM (Windows only)
     if sys.platform.startswith("win"):
         logger.debug("MSI", "Trying backend: PowerShell COM...")
-        try:
-            # Escape single quotes in path by doubling them (PowerShell escaping)
-            escaped_path = str(p).replace("'", "''")
-            # Use double quotes for SQL string (PowerShell), single quotes for string literals (MSI SQL)
-            # No backticks needed - Property and Value aren't reserved words
-            ps_script = f"""
+        escaped_path = str(p).replace("'", "''")
+        ps_script = f"""
 $installer = New-Object -ComObject WindowsInstaller.Installer
 $db = $installer.OpenDatabase('{escaped_path}', 0)
 if ($null -eq $db) {{
-    Write-Error "Failed to open database: '{escaped_path}'"
+    Write-Error "Failed to open database"
     exit 1
 }}
-$sqlQuery = "SELECT Property, Value FROM Property WHERE Property = 'ProductName' OR Property = 'ProductVersion'"
-$view = $db.OpenView($sqlQuery)
-if ($null -eq $view) {{
-    Write-Error "OpenView returned null for SQL: $sqlQuery"
-    exit 1
-}}
+$view = $db.OpenView("SELECT Property, Value FROM Property WHERE Property = 'ProductName' OR Property = 'ProductVersion'")
 $view.Execute()
-$metadata = @{{}}
+$props = @{{}}
 while ($record = $view.Fetch()) {{
-    $prop = $record.StringData(1)
-    $value = $record.StringData(2)
-    if ($prop -in @('ProductName','ProductVersion')) {{
-        $metadata[$prop] = $value
-    }}
+    $props[$record.StringData(1)] = $record.StringData(2)
 }}
 $view.Close()
-$db.Close()
-if (-not $metadata['ProductVersion']) {{
+if (-not $props['ProductVersion']) {{
     Write-Error "ProductVersion not found"
     exit 1
 }}
-@($metadata['ProductName'], $metadata['ProductVersion']) -join "`n"
+$sumInfo = $db.SummaryInformation(0)
+$template = $sumInfo.Property(7)
+$db.Close()
+if (-not $template) {{
+    Write-Error "Template (Summary Information Property 7) not found"
+    exit 1
+}}
+@($props['ProductName'], $props['ProductVersion'], $template) -join "`n"
 """
+        try:
             result = subprocess.run(
                 ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_script],
                 check=True,
@@ -472,73 +299,91 @@ if (-not $metadata['ProductVersion']) {{
                 text=True,
                 timeout=10,
             )
-            lines = result.stdout.strip().split("\n")
+            lines = result.stdout.splitlines()
             product_name = lines[0] if len(lines) > 0 else ""
             product_version = lines[1] if len(lines) > 1 else ""
+            template = lines[2] if len(lines) > 2 else ""
 
             if not product_version:
                 raise PackagingError("ProductVersion not found in MSI Property table.")
+            if not template:
+                raise PackagingError(
+                    "Template not found in MSI Summary Information stream."
+                )
 
+            architecture = architecture_from_template(template)
             logger.verbose(
                 "MSI",
-                f"Success! Extracted: {product_name} {product_version} "
-                "(via PowerShell COM)",
+                f"[OK] Extracted: {product_name} {product_version} "
+                f"({architecture}) (via PowerShell COM)",
             )
             return MSIMetadata(
-                product_name=product_name or "",
+                product_name=product_name,
                 product_version=product_version,
+                architecture=architecture,
             )
         except subprocess.CalledProcessError as err:
-            # Capture stderr to see what PowerShell actually reported
             stderr_output = err.stderr if err.stderr else "No stderr captured"
-            stdout_output = err.stdout if err.stdout else "No stdout captured"
-            logger.debug(
-                "MSI",
-                f"PowerShell COM failed: {err}. stdout: {stdout_output}, stderr: {stderr_output}. Trying next backend...",
-            )
+            raise PackagingError(
+                f"PowerShell MSI query failed (exit {err.returncode}). "
+                f"stderr: {stderr_output}"
+            ) from err
         except subprocess.TimeoutExpired:
-            logger.debug("MSI", "PowerShell COM timed out, trying next backend...")
-        except Exception as err:
-            logger.debug("MSI", f"PowerShell COM failed: {err}, trying next backend...")
+            raise PackagingError("PowerShell MSI query timed out") from None
 
-    # Try msiinfo on Linux/macOS (or as last resort on Windows)
-    msiinfo = shutil.which("msiinfo")
-    if msiinfo:
+    # msiinfo (Linux/macOS)
+    msiinfo_bin = shutil.which("msiinfo")
+    if msiinfo_bin:
         logger.debug("MSI", "Trying backend: msiinfo (msitools)...")
         try:
-            # msiinfo export <package> Property -> stdout (tab-separated)
-            result = subprocess.run(
-                [msiinfo, "export", str(p), "Property"],
+            prop_result = subprocess.run(
+                [msiinfo_bin, "export", str(p), "Property"],
                 check=True,
                 capture_output=True,
                 text=True,
             )
-            metadata = {"ProductName": "", "ProductVersion": ""}
-            for line in result.stdout.splitlines():
-                parts = line.strip().split("\t", 1)  # "Property<TAB>Value"
+            props: dict[str, str] = {}
+            for line in prop_result.stdout.splitlines():
+                parts = line.strip().split("\t", 1)
                 if len(parts) == 2:
-                    prop_name = parts[0]
-                    prop_value = parts[1]
-                    if prop_name in metadata:
-                        metadata[prop_name] = prop_value
+                    props[parts[0]] = parts[1]
 
-            if not metadata["ProductVersion"]:
+            product_version = props.get("ProductVersion", "")
+            if not product_version:
                 raise PackagingError("ProductVersion not found in MSI Property output.")
 
+            suminfo_result = subprocess.run(
+                [msiinfo_bin, "suminfo", str(p)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            template: str | None = None
+            for line in suminfo_result.stdout.splitlines():
+                if line.startswith("Template:"):
+                    template = line.split(":", 1)[1].strip()
+                    break
+
+            if template is None:
+                raise PackagingError(
+                    "Template not found in MSI Summary Information stream."
+                )
+
+            architecture = architecture_from_template(template)
+            product_name = props.get("ProductName", "")
             logger.verbose(
                 "MSI",
-                f"Success! Extracted: {metadata['ProductName']} "
-                f"{metadata['ProductVersion']} (via msiinfo)",
+                f"[OK] Extracted: {product_name} {product_version} "
+                f"({architecture}) (via msiinfo)",
             )
             return MSIMetadata(
-                product_name=metadata["ProductName"] or "",
-                product_version=metadata["ProductVersion"],
+                product_name=product_name,
+                product_version=product_version,
+                architecture=architecture,
             )
-        except Exception as err:
-            logger.debug("MSI", f"msiinfo failed: {err}")
+        except subprocess.CalledProcessError as err:
+            raise PackagingError(f"msiinfo failed: {err}") from err
 
-    # All backends failed
-    logger.debug("MSI", "No MSI extraction backend available on this system")
     raise NotImplementedError(
         "MSI metadata extraction is not available on this host. "
         "On Windows, ensure PowerShell is available. "
@@ -602,124 +447,3 @@ def architecture_from_template(template: str) -> Architecture:
     return arch  # type: ignore[return-value]
 
 
-def extract_msi_architecture(file_path: str | Path) -> Architecture:
-    """Extract architecture from MSI Summary Information Template property.
-
-    Uses cross-platform backends to read the MSI Summary Information stream.
-    On Windows, uses PowerShell COM API. On Linux/macOS, requires msitools.
-
-    Args:
-        file_path: Path to the MSI file.
-
-    Returns:
-        Architecture value: "x86", "x64", or "arm64".
-
-    Raises:
-        PackagingError: If the MSI file doesn't exist or extraction fails.
-        ConfigError: If the platform is not supported by Intune.
-        NotImplementedError: If no extraction backend is available.
-
-    Example:
-        Extract architecture from MSI:
-            ```python
-            from napt.versioning.msi import extract_msi_architecture
-
-            arch = extract_msi_architecture("chrome.msi")
-            print(f"Architecture: {arch}")
-            # Architecture: x64
-            ```
-
-    """
-    from napt.logging import get_global_logger
-
-    logger = get_global_logger()
-    p = Path(file_path)
-    if not p.exists():
-        raise PackagingError(f"MSI not found: {p}")
-
-    logger.verbose("MSI", f"Extracting architecture from: {p.name}")
-
-    template: str | None = None
-
-    # Try PowerShell with Windows Installer COM on Windows
-    # Summary Information Property ID 7 is Template
-    if sys.platform.startswith("win"):
-        logger.debug("MSI", "Trying backend: PowerShell COM (SummaryInformation)...")
-        try:
-            escaped_path = str(p).replace("'", "''")
-            ps_script = f"""
-$installer = New-Object -ComObject WindowsInstaller.Installer
-$db = $installer.OpenDatabase('{escaped_path}', 0)
-if ($null -eq $db) {{
-    Write-Error "Failed to open database: '{escaped_path}'"
-    exit 1
-}}
-$sumInfo = $db.SummaryInformation(0)
-$template = $sumInfo.Property(7)
-$db.Close()
-$template
-"""
-            result = subprocess.run(
-                ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_script],
-                check=True,
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-            template = result.stdout.strip()
-            logger.verbose(
-                "MSI",
-                f"Success! Extracted Template: '{template}' (via PowerShell COM)",
-            )
-        except subprocess.CalledProcessError as err:
-            stderr_output = err.stderr if err.stderr else "No stderr"
-            logger.debug(
-                "MSI",
-                f"PowerShell COM failed: {err}. stderr: {stderr_output}. "
-                "Trying next backend...",
-            )
-        except subprocess.TimeoutExpired:
-            logger.debug("MSI", "PowerShell COM timed out, trying next backend...")
-        except Exception as err:
-            logger.debug("MSI", f"PowerShell COM failed: {err}, trying next backend...")
-
-    # Try msiinfo on Linux/macOS (or as fallback on Windows)
-    if template is None:
-        msiinfo = shutil.which("msiinfo")
-        if msiinfo:
-            logger.debug("MSI", "Trying backend: msiinfo suminfo...")
-            try:
-                # msiinfo suminfo <package> outputs summary information
-                result = subprocess.run(
-                    [msiinfo, "suminfo", str(p)],
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                )
-                # Parse output for Template line
-                # Format: "Template: x64;1033"
-                for line in result.stdout.splitlines():
-                    if line.startswith("Template:"):
-                        template = line.split(":", 1)[1].strip()
-                        break
-
-                if template is not None:
-                    logger.verbose(
-                        "MSI",
-                        f"Success! Extracted Template: '{template}' (via msiinfo)",
-                    )
-            except subprocess.CalledProcessError as err:
-                logger.debug("MSI", f"msiinfo suminfo failed: {err}")
-            except Exception as err:
-                logger.debug("MSI", f"msiinfo failed: {err}")
-
-    if template is None:
-        logger.debug("MSI", "No backend could extract Template property")
-        raise NotImplementedError(
-            "MSI architecture extraction is not available on this host. "
-            "On Windows, ensure PowerShell is available. "
-            "On Linux/macOS, install 'msitools'."
-        )
-
-    # Parse the template into architecture
-    return architecture_from_template(template)

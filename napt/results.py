@@ -85,13 +85,9 @@ class BuildResult:
         status: Build status (typically "success").
         build_types: The build types setting used ("both", "app_only", or
             "update_only").
-        detection_script_path: Path to the generated detection script, if
-            created. None if detection script generation was skipped or failed
-            (and fail_on_error was False), or if build_types is "update_only".
+        detection_script_path: Path to the generated detection script.
         requirements_script_path: Path to the generated requirements script, if
-            created. None if requirements script generation was skipped or
-            failed (and fail_on_error was False), or if build_types is
-            "app_only".
+            created. None if build_types is "app_only".
     """
 
     app_id: str

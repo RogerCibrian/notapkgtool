@@ -155,8 +155,8 @@ class TestGenerateDetectionScript:
         assert "Google Chrome" in content
         assert "131.0.6778.86" in content
 
-    def test_script_has_utf8_bom(self, tmp_path: Path):
-        """Test that script is written with UTF-8 BOM encoding."""
+    def test_script_has_utf8_encoding(self, tmp_path: Path):
+        """Test that script is written with UTF-8 encoding (no BOM)."""
         config = DetectionConfig(
             app_name="Test App",
             version="1.0.0",
@@ -165,10 +165,10 @@ class TestGenerateDetectionScript:
 
         generate_detection_script(config, output_path)
 
-        # Read raw bytes to check for BOM
+        # Read raw bytes to verify UTF-8 without BOM
         content_bytes = output_path.read_bytes()
-        # UTF-8 BOM is: EF BB BF
-        assert content_bytes[:3] == b"\xef\xbb\xbf"
+        assert content_bytes[:3] != b"\xef\xbb\xbf", "Script should not have UTF-8 BOM"
+        assert output_path.read_text(encoding="utf-8")  # Valid UTF-8
 
     def test_script_creates_parent_directory(self, tmp_path: Path):
         """Test that parent directory is created if it doesn't exist."""

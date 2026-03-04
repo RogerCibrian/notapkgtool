@@ -18,7 +18,6 @@ app:
       app_vars:
         AppName: "Fictional App"
         AppVersion: "${discovered_version}"
-        AppArch: "x64"
       install: |
         # Example install for MSI from JSON API
         Start-ADTMsiProcess -Action Install -Path "$dirFiles\app-${discovered_version}.msi"
@@ -49,7 +48,6 @@ app:
       app_vars:
         AppName: "Nested API App"
         AppVersion: "${discovered_version}"
-        AppArch: "x64"
       install: |
         # Example EXE install with silent parameters
         Start-ADTProcess -Path "$dirFiles\installer.exe" -Parameters "/S"
@@ -82,7 +80,6 @@ app:
       app_vars:
         AppName: "POST API App"
         AppVersion: "${discovered_version}"
-        AppArch: "x64"
       install: |
         # Example EXE install with custom parameters
         Start-ADTProcess -Path "$dirFiles\setup.exe" -Parameters "--silent --install"

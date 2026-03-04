@@ -28,6 +28,7 @@ This roadmap is a living document showing potential future directions for NAPT. 
 | Deployment Wave Management | 🔬 Investigating | User-Facing | Very High | High |
 | Pre/Post Install/Uninstall Script Support | 💡 Idea | User-Facing | Low | Medium |
 | Enhanced CLI Help Menu | 💡 Idea | User-Facing | Low | Medium |
+| Intune Upload Settings Overrides | 💡 Idea | User-Facing | Low | Medium |
 | PowerShell Validation | 💡 Idea | Code Quality | High | High |
 | Recipe Linting & Best Practices | 💡 Idea | Code Quality | High | Medium |
 | Unrecognized Config Field Warnings | 💡 Idea | Code Quality | Low | Medium |
@@ -42,8 +43,8 @@ This roadmap is a living document showing potential future directions for NAPT. 
 - ✅ **Completed**: 1
 - 📋 **Ready**: 0
 - 🔬 **Investigating**: 1
-- 💡 **Ideas**: 11
-- **Total**: 13 features
+- 💡 **Ideas**: 12
+- **Total**: 14 features
 
 ---
 
@@ -120,6 +121,38 @@ subcommands.
 **Prerequisites**:
 
 - Azure CLI installed and authenticated with an account that can create app registrations
+
+#### Intune Upload Settings Overrides
+
+**Status**: 💡 Idea
+**Complexity**: Low (few hours to 1 day)
+**Value**: Medium
+
+**Description**: Expose per-recipe overrides for Intune upload settings that
+currently use fixed defaults.
+Planned fields under `intune:`:
+
+- `allowed_architectures` — override device targeting (e.g., `"x64"` to
+exclude ARM64 for apps with known emulation issues)
+- `requirement_rule.display_name` — custom display name for the requirements
+rule shown in the Intune portal
+- `requirement_rule.run_as_account` — `system` or `user` context for the
+requirements script
+- `requirement_rule.run_as_32_bit` — run requirements script as 32-bit process
+- `requirement_rule.enforce_signature_check` — require a signed requirements
+script
+
+**Benefits**:
+
+- Fine-grained control over deployment targeting without changing the recipe
+architecture field
+- Handles edge cases (apps with x64 emulation issues on ARM64, per-app
+requirement rule naming)
+- Consistent with NAPT's layered config approach — overrides at recipe level,
+defaults at org level
+
+**Related**: `architecture` field in `win32.installed_check` drives default
+Intune targeting; see [Recipe Reference](recipe-reference.md#architecture)
 
 #### Pre/Post Install/Uninstall Script Support
 **Status**: 💡 Idea  

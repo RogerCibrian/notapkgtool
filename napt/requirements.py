@@ -525,10 +525,6 @@ def generate_requirements_script(config: RequirementsConfig, output_path: Path) 
             )
             ```
 
-    Note:
-        The script is saved with UTF-8 BOM encoding for proper PowerShell
-        execution on Windows systems.
-
     """
     from napt.logging import get_global_logger
 
@@ -553,9 +549,8 @@ def generate_requirements_script(config: RequirementsConfig, output_path: Path) 
     # Ensure output directory exists
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Write script with UTF-8 BOM encoding (required for PowerShell)
     try:
-        script_bytes = script_content.encode("utf-8-sig")
+        script_bytes = script_content.encode("utf-8")
         output_path.write_bytes(script_bytes)
         logger.verbose("REQUIREMENTS", f"Requirements script written to: {output_path}")
     except OSError as err:

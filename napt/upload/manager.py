@@ -34,6 +34,7 @@ Example:
 from __future__ import annotations
 
 import base64
+import json
 from pathlib import Path
 import tempfile
 from typing import Any
@@ -74,19 +75,22 @@ _RETURN_CODES = [
     },
 ]
 
-# TODO: Investigate the difference between applicableArchitectures and
-# allowedArchitectures in the Graph API win32LobApp resource. The v1.0 docs
-# list both properties with overlapping but different value sets:
-#   applicableArchitectures (windowsArchitecture enum): none, x86, x64, arm, neutral
-#   allowedArchitectures: x86, x64, arm64
-# It's unclear when to use each, and whether allowedArchitectures is the
-# preferred field for arm64 targets. For now, map everything to
-# applicableArchitectures using the safe fallback of "none" for arm64.
-_ARCH_MAP: dict[str, str] = {
-    "x86": "x86",
-    "x64": "x64",
-    "arm64": "none",  # TODO: should this use allowedArchitectures: "arm64" instead?
-    "any": "none",
+# Maps recipe architecture to the allowedArchitectures Graph API field value.
+# Per the Graph API docs, setting allowedArchitectures to a non-null value
+# causes the server to automatically set applicableArchitectures to "none",
+# so we omit applicableArchitectures and drive targeting through
+# allowedArchitectures only.
+#
+# Defaults reflect Windows binary compatibility, not just installer architecture:
+#   x86  → x86,x64,ARM64  (WOW64 is universal; all Windows runs x86 binaries)
+#   x64  → x64,ARM64      (ARM64 Windows 11 supports x64 emulation natively)
+#   arm64 → ARM64          (native ARM64 binary; not compatible with x64 devices)
+#   any  → null           (no restriction; applicableArchitectures becomes "none")
+_ARCH_MAP: dict[str, str | None] = {
+    "x86": "x86,x64,ARM64",
+    "x64": "x64,ARM64",
+    "arm64": "ARM64",
+    "any": None,
 }
 
 
@@ -166,16 +170,15 @@ def _build_app_metadata(
         Dict ready to POST to the Graph API mobileApps endpoint.
 
     Raises:
-        ConfigError: If the detection script is missing from the package
-            directory, or the requirements script is missing when build_types
-            requires it. Run 'napt package' to recreate the package.
+        ConfigError: If the build manifest is missing, the architecture field
+            is absent or unrecognized, the detection script is missing, or the
+            requirements script is missing when build_types requires it.
+            Run 'napt build' and 'napt package' to recreate the package.
 
     """
     logger = get_global_logger()
     app = config["app"]
     intune_overrides: dict[str, Any] = config.get("intune", {})
-    win32: dict[str, Any] = app.get("win32", {})
-    installed_check: dict[str, Any] = win32.get("installed_check", {})
 
     display_name: str = app["name"]
     # Publisher: recipe intune.publisher override, then vendor directory name
@@ -184,8 +187,27 @@ def _build_app_metadata(
     privacy_url: str = intune_overrides.get("privacy_url", "")
     info_url: str = intune_overrides.get("info_url", "")
 
-    arch_raw: str = installed_check.get("architecture", "x64")
-    applicable_architectures: str = _ARCH_MAP.get(arch_raw, "x64")
+    # Read architecture from build manifest (written by napt build)
+    manifest_path = package_dir / "build-manifest.json"
+    if not manifest_path.exists():
+        raise ConfigError(
+            f"Build manifest not found in {package_dir}. "
+            "Run 'napt package' to recreate the package."
+        )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    arch_raw: str = manifest.get("architecture") or ""
+    if not arch_raw:
+        raise ConfigError(
+            f"Architecture not found in build manifest {manifest_path}. "
+            "Run 'napt build' and 'napt package' to recreate the package."
+        )
+    if arch_raw not in _ARCH_MAP:
+        raise ConfigError(
+            f"Unrecognized architecture '{arch_raw}' in build manifest. "
+            f"Expected one of: {', '.join(_ARCH_MAP)}. "
+            "Run 'napt build' and 'napt package' to recreate the package."
+        )
+    allowed_architectures: str | None = _ARCH_MAP[arch_raw]
 
     build_types: str = config["defaults"]["win32"]["build_types"]
 
@@ -220,12 +242,16 @@ def _build_app_metadata(
             )
         req_content = base64.b64encode(req_scripts[0].read_bytes()).decode()
         logger.verbose("UPLOAD", f"Requirements script: {req_scripts[0].name}")
+        # TODO: Make displayName, enforceSignatureCheck, runAs32Bit, and
+        # runAsAccount configurable per-recipe via intune.requirement_rule settings.
         rules.append(
             {
                 "@odata.type": "#microsoft.graph.win32LobAppPowerShellScriptRule",
+                "displayName": f"{display_name} - Requirements",
                 "ruleType": "requirement",
                 "enforceSignatureCheck": False,
                 "runAs32Bit": False,
+                "runAsAccount": "system",
                 "scriptContent": req_content,
             }
         )
@@ -246,7 +272,7 @@ def _build_app_metadata(
         },
         "returnCodes": _RETURN_CODES,
         "rules": rules,
-        "applicableArchitectures": applicable_architectures,
+        "allowedArchitectures": allowed_architectures,
         "setupFilePath": "Invoke-AppDeployToolkit.exe",
         "installCommandLine": (
             "Invoke-AppDeployToolkit.exe -DeploymentType Install -DeployMode Silent"

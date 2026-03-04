@@ -314,8 +314,9 @@ def create_intunewin(
         version_output_dir,
     )
 
-    # Copy detection/requirements scripts into the package output directory
-    # so napt upload is self-contained and does not need the builds directory.
+    # Copy detection/requirements scripts and build manifest into the package
+    # output directory so napt upload is self-contained and does not need
+    # the builds directory.
     logger.step(4, 5, "Copying detection scripts...")
     for script in sorted(build_dir.glob("*-Detection.ps1")):
         shutil.copy2(script, version_output_dir / script.name)
@@ -323,6 +324,10 @@ def create_intunewin(
     for script in sorted(build_dir.glob("*-Requirements.ps1")):
         shutil.copy2(script, version_output_dir / script.name)
         logger.verbose("PACKAGE", f"Copied: {script.name}")
+    manifest_src = build_dir.parent / "build-manifest.json"
+    if manifest_src.exists():
+        shutil.copy2(manifest_src, version_output_dir / "build-manifest.json")
+        logger.verbose("PACKAGE", "Copied: build-manifest.json")
 
     # Optionally clean source
     if clean_source:
