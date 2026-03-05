@@ -56,7 +56,12 @@ from napt.upload.intunewin import extract_encrypted_payload, parse_intunewin
 
 __all__ = ["upload_package"]
 
-# Intune return codes for PSADT deployments
+# Intune return codes for PSADT deployments.
+# 0    - success: clean install/uninstall
+# 1707 - success: removal succeeded (used by some uninstallers)
+# 3010 - softReboot: restart required but not yet initiated
+# 1641 - hardReboot: restart already initiated (ERROR_SUCCESS_REBOOT_INITIATED)
+# 1618 - retry: another installer is already running
 _RETURN_CODES = [
     {
         "@odata.type": "microsoft.graph.win32LobAppReturnCode",
@@ -65,13 +70,23 @@ _RETURN_CODES = [
     },
     {
         "@odata.type": "microsoft.graph.win32LobAppReturnCode",
-        "returnCode": 1641,
-        "type": "softReboot",
+        "returnCode": 1707,
+        "type": "success",
     },
     {
         "@odata.type": "microsoft.graph.win32LobAppReturnCode",
         "returnCode": 3010,
         "type": "softReboot",
+    },
+    {
+        "@odata.type": "microsoft.graph.win32LobAppReturnCode",
+        "returnCode": 1641,
+        "type": "hardReboot",
+    },
+    {
+        "@odata.type": "microsoft.graph.win32LobAppReturnCode",
+        "returnCode": 1618,
+        "type": "retry",
     },
 ]
 
@@ -242,12 +257,13 @@ def _build_app_metadata(
             )
         req_content = base64.b64encode(req_scripts[0].read_bytes()).decode()
         logger.verbose("UPLOAD", f"Requirements script: {req_scripts[0].name}")
-        # TODO: Make displayName, enforceSignatureCheck, runAs32Bit, and
-        # runAsAccount configurable per-recipe via intune.requirement_rule settings.
+        # TODO: Make enforceSignatureCheck, runAs32Bit, and runAsAccount
+        # configurable per-recipe via intune.requirement_rule settings.
+        # Also make allowAvailableUninstall configurable via intune.
         rules.append(
             {
                 "@odata.type": "#microsoft.graph.win32LobAppPowerShellScriptRule",
-                "displayName": f"{display_name} - Requirements",
+                "displayName": req_scripts[0].name,
                 "ruleType": "requirement",
                 "enforceSignatureCheck": False,
                 "runAs32Bit": False,
@@ -256,19 +272,50 @@ def _build_app_metadata(
             }
         )
 
+    # TODO: Add remaining Graph API fields after the recipe schema redesign
+    # (refactor/recipe-schema-redesign). Config paths will change so defer
+    # implementation until the new intune: section is in place. Fields to add:
+    #
+    # "developer" (str) — person or team that maintains the app; shown in the
+    #     Intune portal app detail view. Source: intune.developer
+    #
+    # "owner" (str) — business owner of the app (e.g., a team name or email);
+    #     informational only, shown in portal. Source: intune.owner
+    #
+    # "notes" (str) — free-text notes visible in the portal app detail view;
+    #     useful for documenting deployment caveats. Source: intune.notes
+    #
+    # "minimumSupportedWindowsRelease" (str) — minimum Windows 10/11 release
+    #     required to install the app (e.g., "21H2"). Enforced by Intune during
+    #     assignment evaluation. Required field in the Graph API.
+    #     Source: intune.minimum_supported_windows_release (org default: "1607")
+    #
+    # "largeIcon" (dict) — app icon displayed in the Company Portal and Intune
+    #     portal. Must be a dict with "type" (MIME type, e.g., "image/png") and
+    #     "value" (base64-encoded image bytes). Max size: 256x256 px.
+    #     Source: intune.logo_path (read file, base64-encode, detect MIME type)
+    #
+    # "categories" (list[dict]) — Intune app categories shown in the portal
+    #     (e.g., "Productivity"). Each entry requires a category ID from the
+    #     Graph API (GET /deviceAppManagement/mobileAppCategories). Requires a
+    #     lookup step before the POST. Source: intune.category
     return {
         "@odata.type": "#microsoft.graph.win32LobApp",
         "displayName": display_name,
+        "displayVersion": version,
         "publisher": publisher,
         "description": description,
         "privacyInformationUrl": privacy_url,
         "informationUrl": info_url,
         "isFeatured": False,
+        "allowAvailableUninstall": True,
+        "roleScopeTagIds": [],
         "fileName": "IntunePackage.intunewin",
         "installExperience": {
             "@odata.type": "microsoft.graph.win32LobAppInstallExperience",
             "runAsAccount": "system",
             "deviceRestartBehavior": "suppress",
+            "maxRunTimeInMinutes": 60,
         },
         "returnCodes": _RETURN_CODES,
         "rules": rules,
