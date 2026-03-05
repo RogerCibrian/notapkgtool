@@ -59,9 +59,9 @@ This roadmap is a living document showing potential future directions for NAPT. 
 **Description**: `napt upload <recipe>` uploads `.intunewin` packages directly to
 Microsoft Intune via the Graph API. Authentication is automatic via
 `azure-identity` (`EnvironmentCredential` → `ManagedIdentityCredential` →
-`AzureCliCredential`). Detection and requirements scripts are embedded inline
-from build output. No auth configuration required — run `az login` for dev,
-set `AZURE_*` env vars for CI/CD.
+`DeviceCodeCredential`). Detection and requirements scripts are embedded inline
+from build output. Developers set `AZURE_CLIENT_ID` and `AZURE_TENANT_ID` and
+complete the device code flow; CI/CD sets all three `AZURE_*` env vars.
 
 ### Investigating 🔬
 

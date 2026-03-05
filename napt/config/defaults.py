@@ -28,9 +28,9 @@ This design ensures that NAPT works out of the box without requiring any
 configuration files, while still allowing full customization when needed.
 
 Note:
-    Authentication for 'napt upload' requires no config file. Use 'az login'
-    for developer machines, or set AZURE_CLIENT_ID + AZURE_CLIENT_SECRET +
-    AZURE_TENANT_ID for CI/CD pipelines.
+    Authentication for 'napt upload' requires no config file. Developers set
+    AZURE_CLIENT_ID and AZURE_TENANT_ID and complete the device code flow;
+    CI/CD pipelines set all three env vars including AZURE_CLIENT_SECRET.
 """
 
 from __future__ import annotations

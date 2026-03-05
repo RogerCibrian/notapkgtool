@@ -39,7 +39,7 @@ Example:
         from napt.upload.intunewin import parse_intunewin
 
         token = get_access_token()
-        metadata = parse_intunewin(Path("packages/napt-chrome/Invoke-AppDeployToolkit.intunewin"))
+        metadata = parse_intunewin(Path("packages/napt-chrome/144.0.7559.110/Invoke-AppDeployToolkit.intunewin"))
         app_id = create_win32_app(token, app_metadata)
         cv_id = create_content_version(token, app_id)
         file_id, sas_uri = create_content_version_file(token, app_id, cv_id, metadata)

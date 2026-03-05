@@ -295,7 +295,7 @@ def upload_package(recipe_path: Path) -> UploadResult:
 
     Authentication is automatic — no configuration required:
 
-    - Developers: run 'az login' once
+    - Developers: set AZURE_CLIENT_ID and AZURE_TENANT_ID, complete device code flow
     - CI/CD: set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID
     - Azure-hosted runners: assign a managed identity to the resource
 

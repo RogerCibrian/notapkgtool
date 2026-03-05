@@ -485,7 +485,7 @@ def cmd_upload(args: argparse.Namespace) -> int:
     Graph API. Infers the package path from the recipe's app ID. Authentication
     is automatic: tries EnvironmentCredential (AZURE_CLIENT_ID +
     AZURE_CLIENT_SECRET + AZURE_TENANT_ID), ManagedIdentityCredential, and
-    AzureCliCredential (az login) in that order.
+    DeviceCodeCredential (browser login) in that order.
 
     Args:
         args: Parsed command-line arguments containing recipe path and
@@ -496,7 +496,8 @@ def cmd_upload(args: argparse.Namespace) -> int:
 
     Note:
         Run 'napt package' before this command to create the .intunewin file.
-        Run 'az login' once on developer machines to authenticate.
+        Developers: set AZURE_CLIENT_ID and AZURE_TENANT_ID, then complete
+        the device code flow when prompted.
         Set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID for CI/CD.
 
     """
@@ -938,8 +939,7 @@ def main() -> None:
             "Authentication is automatic — tried in this order:\n"
             "  1. AZURE_CLIENT_ID + AZURE_CLIENT_SECRET + AZURE_TENANT_ID env vars\n"
             "  2. Managed identity (Azure VMs, GitHub Actions OIDC)\n"
-            "  3. Existing 'az login' session (recommended for devs)\n"
-            "  4. Device code flow (browser login fallback — requires org.yaml auth config)\n\n"
+            "  3. Device code flow (browser login — set AZURE_CLIENT_ID + AZURE_TENANT_ID)\n\n"
             "Examples:\n"
             "  napt upload recipes/Google/chrome.yaml\n"
             "  napt upload recipes/Google/chrome.yaml --tenant-id <id>\n"

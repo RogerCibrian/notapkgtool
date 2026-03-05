@@ -19,7 +19,7 @@ to Microsoft Intune via the Graph API.
 
 Authentication is automatic — no configuration file required:
 
-- Developers: run 'az login' once (AzureCliCredential)
+- Developers: set AZURE_CLIENT_ID and AZURE_TENANT_ID, then complete the device code flow in a browser (DeviceCodeCredential)
 - CI/CD: set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID (EnvironmentCredential)
 - Azure-hosted runners: assign a managed identity to the resource (ManagedIdentityCredential)
 
