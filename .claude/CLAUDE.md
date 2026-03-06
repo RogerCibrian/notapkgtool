@@ -375,6 +375,31 @@ Status progression: 💡 Idea → 🔬 Investigating → 📋 Ready → 🚧 In 
 
 ---
 
+## Logging Levels
+
+| Method | When to use |
+|--------|-------------|
+| `logger.step(n, total, msg)` | Major pipeline stages (always visible) |
+| `logger.info(prefix, msg)` | Notable events: skipping a step for a known reason, replacing an artifact, key IDs returned by external systems |
+| `logger.warning(prefix, msg)` | Something unexpected but recoverable; user should be aware |
+| `logger.verbose(prefix, msg)` | Implementation detail: exact file paths, intermediate values, internal state |
+| `logger.debug(prefix, msg)` | Raw data dumps, backend selection attempts, very granular traces |
+
+**`info` vs `verbose` rule of thumb:**
+
+- "What happened?" (high-level outcome or decision) → `info`
+- "How did it happen?" (implementation detail) → `verbose`
+
+Examples:
+- `"Version unchanged, using cached file"` → `info` (step was skipped)
+- `"Cached ETag: abc123"` → `verbose` (internal state detail)
+- `"Created Intune app: <id>"` → `info` (key result from external system)
+- `"Content version: <cv_id>"` → `verbose` (intermediate internal ID)
+- `"Downloading PSADT 4.1.7..."` → `info` (network action the user should see)
+- `"Copying file: PSAppDeployToolkit/"` → `verbose` (internal file operation)
+
+---
+
 ## Console Output
 
 Use ASCII-only in console output. Windows (cp1252, cp437) causes `UnicodeEncodeError` with Unicode.

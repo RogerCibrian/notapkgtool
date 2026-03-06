@@ -85,13 +85,9 @@ class BuildResult:
         status: Build status (typically "success").
         build_types: The build types setting used ("both", "app_only", or
             "update_only").
-        detection_script_path: Path to the generated detection script, if
-            created. None if detection script generation was skipped or failed
-            (and fail_on_error was False), or if build_types is "update_only".
+        detection_script_path: Path to the generated detection script.
         requirements_script_path: Path to the generated requirements script, if
-            created. None if requirements script generation was skipped or
-            failed (and fail_on_error was False), or if build_types is
-            "app_only".
+            created. None if build_types is "app_only".
     """
 
     app_id: str
@@ -121,6 +117,27 @@ class PackageResult:
     package_path: Path
     app_id: str
     version: str
+    status: str
+
+
+@dataclass(frozen=True)
+class UploadResult:
+    """Result from uploading a .intunewin package to Microsoft Intune.
+
+    Attributes:
+        app_id: Unique application identifier (from recipe).
+        app_name: Application display name.
+        version: Application version uploaded.
+        intune_app_id: Graph API object ID of the newly created Intune Win32 app.
+        package_path: Path to the uploaded .intunewin file.
+        status: Always "success" for successful uploads.
+    """
+
+    app_id: str
+    app_name: str
+    version: str
+    intune_app_id: str
+    package_path: Path
     status: str
 
 

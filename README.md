@@ -36,7 +36,7 @@ This manual workflow is repetitive, difficult to automate in CI/CD pipelines, la
 - ✅ **YAML-based recipes** - Define app packaging once with layered configuration (Organization → Vendor → Recipe)
 - ✅ **Automated PSADT packaging** - Generate Intune-ready packages with detection and requirements scripts, no manual template editing
 - ✅ **Cross-platform workflow** - Run on Windows, Linux, and macOS (packaging requires Windows)
-- 🚧 **Direct Intune upload** - Automatic deployment (planned)
+- ✅ **Direct Intune upload** - Upload to Microsoft Intune via the Graph API, no portal required
 
 ## Cross-Platform Support
 
@@ -45,6 +45,7 @@ This manual workflow is repetitive, difficult to automate in CI/CD pipelines, la
 | Discovery & Download | ✅ | ✅ |
 | PSADT Package Building | ✅ | ✅ |
 | Intune Packaging | ✅ | ⚫ Windows Only |
+| Intune Upload | ✅ | ✅ |
 
 See the [Cross-Platform Support](https://rogercibrian.github.io/notapkgtool/user-guide/#cross-platform-support) section for platform-specific workflows.
 

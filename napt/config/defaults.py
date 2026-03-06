@@ -26,6 +26,11 @@ The configuration hierarchy is:
 
 This design ensures that NAPT works out of the box without requiring any
 configuration files, while still allowing full customization when needed.
+
+Note:
+    Authentication for 'napt upload' requires no config file. Developers set
+    AZURE_CLIENT_ID and AZURE_TENANT_ID and complete the device code flow;
+    CI/CD pipelines set all three env vars including AZURE_CLIENT_SECRET.
 """
 
 from __future__ import annotations
@@ -66,7 +71,6 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "win32": {
             "build_types": "both",
             "installed_check": {
-                "fail_on_error": True,
                 "log_format": "cmtrace",
                 "log_level": "INFO",
                 "log_rotation_mb": 3,

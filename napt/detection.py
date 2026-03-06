@@ -590,10 +590,6 @@ def generate_detection_script(config: DetectionConfig, output_path: Path) -> Pat
             )
             ```
 
-    Note:
-        The script is saved with UTF-8 BOM encoding for proper PowerShell
-        execution on Windows systems.
-
     """
     from napt.logging import get_global_logger
 
@@ -617,9 +613,8 @@ def generate_detection_script(config: DetectionConfig, output_path: Path) -> Pat
     # Ensure output directory exists
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Write script with UTF-8 BOM encoding (required for PowerShell)
     try:
-        script_bytes = script_content.encode("utf-8-sig")
+        script_bytes = script_content.encode("utf-8")
         output_path.write_bytes(script_bytes)
         logger.verbose("DETECTION", f"Detection script written to: {output_path}")
     except OSError as err:

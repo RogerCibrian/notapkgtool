@@ -18,9 +18,10 @@ This module provides a configurable logging interface that library modules
 can use for output without depending on the CLI. The logger can be configured
 globally or passed as a parameter for better isolation.
 
-The logger supports four output levels:
+The logger supports five output levels:
 
 - Step: Always printed (for progress indicators)
+- Info: Always printed (for notable events that are not warnings)
 - Warning: Always printed (for important warnings that users should see)
 - Verbose: Only printed when verbose mode is enabled
 - Debug: Only printed when debug mode is enabled (implies verbose)
@@ -40,6 +41,7 @@ Example:
 
         logger = get_logger()
         logger.step(1, 4, "Loading configuration...")
+        logger.info("PACKAGE", "Removing previous package: 144.0.0")
         logger.warning("DETECTION", "Could not extract MSI metadata")
         logger.verbose("STATE", "Loaded state from file")
         logger.debug("VERSION", "Trying backend: msilib...")
@@ -73,6 +75,18 @@ class Logger(Protocol):
             step: Current step number (1-based).
             total: Total number of steps.
             message: Step description.
+        """
+        ...
+
+    def info(self, prefix: str, message: str) -> None:
+        """Print an informational message (always visible).
+
+        Use for notable events that are not warnings — e.g., replacing a
+        previous artifact, skipping a step for a known reason.
+
+        Args:
+            prefix: Message prefix (e.g., "PACKAGE", "BUILD").
+            message: Informational message.
         """
         ...
 
@@ -125,6 +139,10 @@ class DefaultLogger:
         """Print a step indicator for non-verbose mode."""
         print(f"[{step}/{total}] {message}")
 
+    def info(self, prefix: str, message: str) -> None:
+        """Print an informational message (always visible)."""
+        print(f"[{prefix}] {message}")
+
     def warning(self, prefix: str, message: str) -> None:
         """Print a warning message (always visible)."""
         print(f"[{prefix}] {message}")
@@ -148,6 +166,10 @@ class SilentLogger:
 
     def step(self, step: int, total: int, message: str) -> None:
         """Suppress step output."""
+        pass
+
+    def info(self, prefix: str, message: str) -> None:
+        """Suppress info output."""
         pass
 
     def warning(self, prefix: str, message: str) -> None:

@@ -28,6 +28,7 @@ dependencies = [
     "pyyaml>=6.0.2",
     "jsonpath-ng>=1.6.1",
     "beautifulsoup4>=4.14.0",
+    "azure-identity>=1.25.2",
 ]
 
 [project.scripts]

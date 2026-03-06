@@ -69,7 +69,6 @@ _INSTALLED_CHECK_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
     "display_name": (str, None, "display name for registry lookup"),
     "architecture": (str, ["x86", "x64", "arm64", "any"], "architecture"),
     "override_msi_display_name": (bool, None, "MSI display name override flag"),
-    "fail_on_error": (bool, None, "fail on error flag"),
     "log_format": (str, ["cmtrace"], "log format"),
     "log_level": (str, ["INFO", "WARNING", "ERROR", "DEBUG"], "log level"),
     "log_rotation_mb": (int, None, "log rotation size in MB"),
@@ -79,6 +78,38 @@ _INSTALLED_CHECK_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
 _DETECTION_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
     "exact_match": (bool, None, "exact version match flag"),
 }
+
+# Schema for the optional top-level intune: section (upload overrides)
+_INTUNE_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
+    "description": (str, None, "app description for Intune portal"),
+    "publisher": (str, None, "publisher name override"),
+    "category": (str, None, "Intune app category"),
+    "privacy_url": (str, None, "privacy information URL"),
+    "info_url": (str, None, "information URL"),
+    "logo_path": (str, None, "path to app icon file"),
+}
+
+# Allowed keys for app.psadt.app_vars (and defaults.psadt.app_vars).
+# NAPT-managed keys (AppArch, DeployAppScriptVersion, DeployAppScriptFriendlyName,
+# DeployAppScriptParameters) are excluded — setting them in recipes is an error.
+_PSADT_APP_VAR_KEYS: frozenset[str] = frozenset(
+    {
+        "AppVendor",
+        "AppName",
+        "AppVersion",
+        "AppLang",
+        "AppRevision",
+        "AppSuccessExitCodes",
+        "AppRebootExitCodes",
+        "AppProcessesToClose",
+        "AppScriptVersion",
+        "AppScriptDate",
+        "AppScriptAuthor",
+        "RequireAdmin",
+        "InstallName",
+        "InstallTitle",
+    }
+)
 
 
 def _find_similar_field(unknown: str, known_fields: set[str]) -> str | None:
@@ -209,6 +240,95 @@ def _validate_section(
         # Value check (only for non-dict types with allowed values)
         if allowed_values is not None and expected_type is not dict:
             _validate_field_value(value, allowed_values, field_path, errors)
+
+
+def _validate_psadt_app_vars(
+    app_vars: object,
+    app_vars_path: str,
+    errors: list[str],
+) -> None:
+    """Validate that all keys in a psadt.app_vars dict are in the allowed set.
+
+    NAPT-managed keys (AppArch, DeployAppScriptVersion, etc.) are excluded
+    from the allowed set because NAPT sets them automatically.
+
+    Args:
+        app_vars: The app_vars value from the recipe (may not be a dict).
+        app_vars_path: Full path to the field for error messages.
+        errors: List to append errors to.
+
+    """
+    if not isinstance(app_vars, dict):
+        errors.append(f"{app_vars_path}: Must be a dictionary")
+        return
+
+    allowed_sorted = ", ".join(sorted(_PSADT_APP_VAR_KEYS))
+    for key in app_vars:
+        if key not in _PSADT_APP_VAR_KEYS:
+            errors.append(
+                f"{app_vars_path}: Unknown key '{key}'. NAPT sets AppArch and "
+                f"DeployAppScriptVersion automatically. "
+                f"Allowed keys: {allowed_sorted}"
+            )
+
+
+def _validate_psadt_config(
+    app: dict,
+    app_prefix: str,
+    errors: list[str],
+) -> None:
+    """Validate the psadt configuration section.
+
+    Checks that app_vars only contains known, user-settable keys.
+
+    Args:
+        app: The app configuration dictionary.
+        app_prefix: Prefix for error messages (e.g., "app").
+        errors: List to append errors to.
+
+    """
+    psadt = app.get("psadt")
+    if psadt is None:
+        return
+
+    psadt_path = f"{app_prefix}.psadt"
+
+    if not isinstance(psadt, dict):
+        errors.append(f"{psadt_path}: Must be a dictionary")
+        return
+
+    app_vars = psadt.get("app_vars")
+    if app_vars is not None:
+        _validate_psadt_app_vars(app_vars, f"{psadt_path}.app_vars", errors)
+
+
+def _validate_intune_config(
+    recipe: dict,
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    """Validate the optional top-level intune: section.
+
+    Validates field types and warns on unknown fields. The entire section
+    is optional — its absence produces no errors or warnings.
+
+    Args:
+        recipe: The full recipe dictionary.
+        errors: List to append errors to.
+        warnings: List to append warnings to.
+
+    """
+    intune = recipe.get("intune")
+    if intune is None:
+        return
+
+    intune_path = "intune"
+
+    if not isinstance(intune, dict):
+        errors.append(f"{intune_path}: Must be a dictionary")
+        return
+
+    _validate_section(intune, _INTUNE_FIELDS, intune_path, errors, warnings)
 
 
 def _validate_win32_config(
@@ -448,6 +568,12 @@ def validate_recipe(recipe_path: Path) -> ValidationResult:
 
     # Validate win32 configuration
     _validate_win32_config(app, app_prefix, errors, warnings)
+
+    # Validate psadt configuration
+    _validate_psadt_config(app, app_prefix, errors)
+
+    # Validate optional top-level intune: section
+    _validate_intune_config(recipe, errors, warnings)
 
     # Determine final status
     status = "valid" if len(errors) == 0 else "invalid"

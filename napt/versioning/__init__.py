@@ -23,8 +23,8 @@ Modules:
     keys
         Core version comparison logic with semver-like parsing and robust fallbacks.
     msi
-        MSI ProductVersion extraction and metadata extraction using msilib, _msi,
-        PowerShell, or msitools.
+        MSI ProductVersion extraction and metadata extraction using PowerShell COM
+        (Windows) or msitools (Linux/macOS).
 
 Version Comparison Strategies:
 
@@ -80,17 +80,8 @@ Example:
         from napt.versioning.msi import extract_msi_metadata
 
         metadata = extract_msi_metadata(Path("installer.msi"))
-        print(f"{metadata.product_name} {metadata.product_version}")
-        # e.g., "Google Chrome 131.0.6778.86"
-        ```
-
-    MSI architecture extraction:
-        ```python
-        from pathlib import Path
-        from napt.versioning.msi import extract_msi_architecture
-
-        arch = extract_msi_architecture(Path("installer.msi"))
-        print(f"Architecture: {arch}")  # e.g., "x64"
+        print(f"{metadata.product_name} {metadata.product_version} ({metadata.architecture})")
+        # e.g., "Google Chrome 131.0.6778.86 (x64)"
         ```
 
 Note:
@@ -110,6 +101,5 @@ from .keys import (
 from .msi import (
     MSIMetadata,
     architecture_from_template,
-    extract_msi_architecture,
     extract_msi_metadata,
 )

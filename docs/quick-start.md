@@ -157,11 +157,11 @@ napt build recipes/Google/chrome.yaml --downloads-dir ./downloads --output-dir .
 Package the PSADT build for Microsoft Intune:
 
 ```bash
-# Create .intunewin from build directory
-napt package builds/napt-chrome/144.0.7559.110/packagefiles/
+# Create .intunewin from recipe (infers most recent build automatically)
+napt package recipes/Google/chrome.yaml
 
 # Specify output directory and clean source after packaging
-napt package builds/napt-chrome/144.0.7559.110/packagefiles/ --output-dir ./packages --clean-source
+napt package recipes/Google/chrome.yaml --output-dir ./packages --clean-source
 ```
 
 ## Example Workflows
@@ -251,27 +251,28 @@ Status:          success
 #### 4. Create .intunewin package
 
 ```console
-$ napt package builds/napt-chrome/144.0.7559.110/packagefiles/
-Creating .intunewin package from: /path/to/builds/napt-chrome/144.0.7559.110/packagefiles
+$ napt package recipes/Google/chrome.yaml
+Creating .intunewin package from: /path/to/builds/napt-chrome/144.0.7559.110
 
-[1/4] Verifying build structure...
-[2/4] Getting IntuneWinAppUtil tool...
-[3/4] Creating .intunewin package...
-[4/4] Cleaning up...
+[1/5] Verifying build structure...
+[2/5] Getting IntuneWinAppUtil tool...
+[3/5] Creating .intunewin package...
+[4/5] Copying detection scripts...
+[5/5] Package complete
 ======================================================================
 PACKAGE RESULTS
 ======================================================================
 App ID:          napt-chrome
 Version:         144.0.7559.110
-Package Path:    /path/to/packages/napt-chrome/Invoke-AppDeployToolkit.intunewin
-Build Directory: /path/to/builds/napt-chrome/144.0.7559.110/packagefiles
+Package Path:    /path/to/packages/napt-chrome/144.0.7559.110/Invoke-AppDeployToolkit.intunewin
+Build Directory: /path/to/builds/napt-chrome/144.0.7559.110
 Status:          success
 ======================================================================
 
 [SUCCESS] .intunewin package created successfully!
 ```
 
-**Result:** Ready-to-upload .intunewin file in `packages/napt-chrome/`
+**Result:** Ready-to-upload .intunewin file in `packages/napt-chrome/144.0.7559.110/`
 
 ### Quick Check Workflow
 
@@ -304,7 +305,7 @@ napt discover recipes/Google/chrome.yaml --stateless
 napt build recipes/Google/chrome.yaml --output-dir ./my-builds
 
 # Package and clean up source
-napt package builds/napt-chrome/144.0.7559.110/packagefiles/ --clean-source
+napt package recipes/Google/chrome.yaml --clean-source
 ```
 
 ## Common Tasks

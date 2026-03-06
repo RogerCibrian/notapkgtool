@@ -51,6 +51,7 @@ __all__ = [
     "ConfigError",
     "NetworkError",
     "PackagingError",
+    "AuthError",
 ]
 
 
@@ -133,6 +134,8 @@ class PackagingError(NAPTError):
         MSI format)
     - Packaging operations (IntuneWinAppUtil.exe execution failures, invalid
         build directory structure)
+    - Malformed .intunewin files (invalid ZIP structure, missing Detection.xml,
+        missing required encryption fields)
 
     Example:
         Catching packaging errors:
@@ -143,6 +146,32 @@ class PackagingError(NAPTError):
                 build_package(Path("recipe.yaml"), Path("./builds"))
             except PackagingError as e:
                 print(f"Packaging error: {e}")
+            ```
+    """
+
+    pass
+
+
+class AuthError(NAPTError):
+    """Raised for authentication and authorization errors.
+
+    This exception is raised when there are problems with:
+
+    - azure-identity credential chain exhausted (all credential types
+        unavailable or failed)
+    - Graph API 401 Unauthorized or 403 Forbidden responses
+    - Device code flow timeout or user cancellation
+    - Invalid or missing credentials for the DeviceCodeCredential fallback
+
+    Example:
+        Catching auth errors:
+            ```python
+            from napt.exceptions import AuthError
+
+            try:
+                result = upload_package(Path("recipe.yaml"))
+            except AuthError as e:
+                print(f"Auth error: {e}")
             ```
     """
 

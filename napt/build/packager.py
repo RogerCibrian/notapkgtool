@@ -212,40 +212,49 @@ def create_intunewin(
     output_dir: Path | None = None,
     clean_source: bool = False,
 ) -> PackageResult:
-    """Create a .intunewin package from a PSADT build directory.
+    """Create a .intunewin package from a PSADT build version directory.
 
-    Uses Microsoft's IntuneWinAppUtil.exe tool to package a PSADT build
-    directory into a .intunewin file suitable for Intune deployment.
+    Uses Microsoft's IntuneWinAppUtil.exe tool to package the PSADT build
+    into a .intunewin file for Intune deployment.
+
+    The output directory is versioned: packages/{app_id}/{version}/.
+    Any previously packaged version for the same app is removed before the
+    new one is created (single-slot: one package on disk per app at a time).
+    Detection and requirements scripts are copied into the output directory
+    so that 'napt upload' is self-contained and does not need the builds
+    directory.
 
     Args:
-        build_dir: Path to the built PSADT package directory.
-        output_dir: Directory for the .intunewin output.
-            Default: packages/{app_id}/
-        clean_source: If True, remove the build directory
+        build_dir: Path to the version directory produced by 'napt build'
+            (e.g., builds/napt-chrome/144.0.7559.110/). Must contain a
+            packagefiles/ subdirectory with a valid PSADT structure.
+        output_dir: Parent directory for package output.
+            Default: packages/
+        clean_source: If True, remove the build version directory
             after packaging. Default is False.
 
     Returns:
         Package metadata including .intunewin path, app ID, and version.
 
     Raises:
-        ConfigError: If build directory structure is invalid.
-        PackagingError: If packaging fails.
+        ConfigError: If the build directory structure is invalid.
+        PackagingError: If packaging fails or build_dir is missing.
         NetworkError: If IntuneWinAppUtil.exe download fails.
 
     Example:
         Basic packaging:
             ```python
             result = create_intunewin(
-                build_dir=Path("builds/napt-chrome/141.0.7390.123")
+                build_dir=Path("builds/napt-chrome/144.0.7559.110")
             )
             print(result.package_path)
-            # packages/napt-chrome/Invoke-AppDeployToolkit.intunewin
+            # packages/napt-chrome/144.0.7559.110/Invoke-AppDeployToolkit.intunewin
             ```
 
         With cleanup:
             ```python
             result = create_intunewin(
-                build_dir=Path("builds/napt-chrome/141.0.7390.123"),
+                build_dir=Path("builds/napt-chrome/144.0.7559.110"),
                 clean_source=True
             )
             # Build directory is removed after packaging
@@ -255,7 +264,7 @@ def create_intunewin(
         Requires build directory from 'napt build' command. IntuneWinAppUtil.exe
         is downloaded and cached on first use. Setup file is always
         "Invoke-AppDeployToolkit.exe". Output file is named by IntuneWinAppUtil.exe:
-        packages/{app_id}/Invoke-AppDeployToolkit.intunewin
+        packages/{app_id}/{version}/Invoke-AppDeployToolkit.intunewin
     """
     from napt.logging import get_global_logger
 
@@ -266,43 +275,67 @@ def create_intunewin(
     if not build_dir.exists():
         raise PackagingError(f"Build directory not found: {build_dir}")
 
-    # Extract app_id and version from directory structure (app_id/version/)
+    # build_dir is the version directory: builds/{app_id}/{version}/
     version = build_dir.name
     app_id = build_dir.parent.name
+    packagefiles_dir = build_dir / "packagefiles"
 
     logger.verbose("PACKAGE", f"Packaging {app_id} v{version}")
 
-    # Verify build structure
-    logger.step(1, 4, "Verifying build structure...")
-    _verify_build_structure(build_dir)
+    # Verify PSADT structure inside packagefiles/
+    logger.step(1, 5, "Verifying build structure...")
+    _verify_build_structure(packagefiles_dir)
 
-    # Determine output directory
-    if output_dir is None:
-        output_dir = Path("packages") / app_id
+    # Determine versioned output directory: packages/{app_id}/{version}/
+    packages_root = output_dir.resolve() if output_dir else Path("packages").resolve()
+    app_package_dir = packages_root / app_id
+    version_output_dir = app_package_dir / version
 
-    output_dir = output_dir.resolve()
+    # Remove any previous version dirs for this app (single-slot)
+    if app_package_dir.exists():
+        for existing in [d for d in app_package_dir.iterdir() if d.is_dir()]:
+            if existing != version_output_dir:
+                logger.info("PACKAGE", f"Removing previous package: {existing.name}")
+                shutil.rmtree(existing)
+
+    version_output_dir.mkdir(parents=True, exist_ok=True)
 
     # Get IntuneWinAppUtil tool
-    logger.step(2, 4, "Getting IntuneWinAppUtil tool...")
+    logger.step(2, 5, "Getting IntuneWinAppUtil tool...")
     tool_cache = Path("cache/tools")
     tool_path = _get_intunewin_tool(tool_cache)
 
     # Create .intunewin package
-    logger.step(3, 4, "Creating .intunewin package...")
+    logger.step(3, 5, "Creating .intunewin package...")
     package_path = _execute_packaging(
         tool_path,
-        build_dir,
+        packagefiles_dir,
         "Invoke-AppDeployToolkit.exe",
-        output_dir,
+        version_output_dir,
     )
+
+    # Copy detection/requirements scripts and build manifest into the package
+    # output directory so napt upload is self-contained and does not need
+    # the builds directory.
+    logger.step(4, 5, "Copying detection scripts...")
+    for script in sorted(build_dir.glob("*-Detection.ps1")):
+        shutil.copy2(script, version_output_dir / script.name)
+        logger.verbose("PACKAGE", f"Copied: {script.name}")
+    for script in sorted(build_dir.glob("*-Requirements.ps1")):
+        shutil.copy2(script, version_output_dir / script.name)
+        logger.verbose("PACKAGE", f"Copied: {script.name}")
+    manifest_src = build_dir / "build-manifest.json"
+    if manifest_src.exists():
+        shutil.copy2(manifest_src, version_output_dir / "build-manifest.json")
+        logger.verbose("PACKAGE", "Copied: build-manifest.json")
 
     # Optionally clean source
     if clean_source:
-        logger.step(4, 4, "Cleaning source build directory...")
+        logger.step(5, 5, "Cleaning source build directory...")
         shutil.rmtree(build_dir)
         logger.verbose("PACKAGE", f"[OK] Removed build directory: {build_dir}")
     else:
-        logger.step(4, 4, "Package complete")
+        logger.step(5, 5, "Package complete")
 
     logger.verbose("PACKAGE", f"[OK] Package created: {package_path}")
 

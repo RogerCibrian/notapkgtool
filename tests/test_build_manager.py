@@ -266,6 +266,7 @@ class TestWriteBuildManifest:
             app_name="Test App",
             version="1.0.0",
             build_types="both",
+            architecture="x64",
             detection_script_path=detection_path,
             requirements_script_path=requirements_path,
         )
@@ -279,6 +280,7 @@ class TestWriteBuildManifest:
         assert manifest["app_name"] == "Test App"
         assert manifest["version"] == "1.0.0"
         assert manifest["win32_build_types"] == "both"
+        assert manifest["architecture"] == "x64"
         assert manifest["detection_script_path"] == "Test-App_1.0.0-Detection.ps1"
         assert manifest["requirements_script_path"] == "Test-App_1.0.0-Requirements.ps1"
 
@@ -297,6 +299,7 @@ class TestWriteBuildManifest:
             app_name="Test App",
             version="1.0.0",
             build_types="app_only",
+            architecture="x64",
             detection_script_path=detection_path,
             requirements_script_path=None,  # No requirements script for app_only
         )
@@ -324,6 +327,7 @@ class TestWriteBuildManifest:
             app_name="Test App",
             version="1.0.0",
             build_types="update_only",
+            architecture="x64",
             detection_script_path=detection_path,  # Detection always generated
             requirements_script_path=requirements_path,
         )
@@ -349,6 +353,7 @@ class TestWriteBuildManifest:
             app_name="Google Chrome",
             version="131.0.0",
             build_types="app_only",
+            architecture="x64",
             detection_script_path=detection_path,
             requirements_script_path=None,
         )
@@ -374,6 +379,7 @@ class TestWriteBuildManifest:
             app_name="Test App",
             version="1.0.0",
             build_types="both",
+            architecture="x64",
             detection_script_path=None,
             requirements_script_path=None,
         )

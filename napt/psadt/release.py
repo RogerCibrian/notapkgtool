@@ -218,7 +218,7 @@ def get_psadt_release(release_spec: str, cache_dir: Path) -> Path:
         return version_dir
 
     # Need to download
-    logger.verbose("PSADT", f"Downloading PSADT {version}...")
+    logger.info("PSADT", f"Downloading PSADT {version}...")
 
     # Get release info from GitHub
     release_url = f"https://api.github.com/repos/{PSADT_REPO}/releases/tags/{version}"

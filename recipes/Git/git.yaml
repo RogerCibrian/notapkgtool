@@ -19,7 +19,6 @@ app:
       app_vars:
         AppName: "Git for Windows"
         AppVersion: "${discovered_version}"
-        AppArch: "x64"
       install: |
         # Git for Windows silent install with default options
         Start-ADTProcess -Path "$dirFiles\Git-${discovered_version}-64-bit.exe" -Parameters "/VERYSILENT /NORESTART /NOCANCEL /SP- /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS /COMPONENTS=`"icons,ext\reg\shellhere,assoc,assoc_sh`""

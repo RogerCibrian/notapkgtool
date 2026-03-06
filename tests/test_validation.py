@@ -521,7 +521,6 @@ app:
       display_name: "Test App *"
       architecture: "x64"
       override_msi_display_name: false
-      fail_on_error: true
       log_rotation_mb: 3
       detection:
         exact_match: false

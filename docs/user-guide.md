@@ -145,21 +145,114 @@ builds/napt-chrome/144.0.7559.110/
 
 ### Package Process (`napt package`)
 
-The package process creates a `.intunewin` file from the built PSADT directory:
+The package process creates a `.intunewin` file from a PSADT build for the
+recipe's app:
 
-1. **Verify Structure** - Validates build directory has required PSADT structure:
+1. **Resolve Build Directory** - Scans `builds/{app_id}/` for the most recently
+   modified version directory that contains a `packagefiles/` folder.
+   Use `--version VERSION` to target a specific version instead
+2. **Verify Structure** - Validates the build directory has the required PSADT structure:
     - `PSAppDeployToolkit/` directory
     - `Files/` directory
     - `Invoke-AppDeployToolkit.ps1` script
     - `Invoke-AppDeployToolkit.exe` launcher
-2. **Get IntuneWinAppUtil** - Downloads/caches `IntuneWinAppUtil.exe` from Microsoft's GitHub repository if not already cached
-3. **Create Package** - Runs `IntuneWinAppUtil.exe` to create `.intunewin` file:
-    - Input: Build directory (entire PSADT structure)
-    - Output: `Invoke-AppDeployToolkit.intunewin` file (named by IntuneWinAppUtil.exe based on setup file)
-    - Package contains all files from build directory in compressed format
-4. **Optional Cleanup** - If `--clean-source` flag is used, removes the build directory after successful packaging
+3. **Get IntuneWinAppUtil** - Downloads/caches `IntuneWinAppUtil.exe` from Microsoft's GitHub repository if not already cached
+4. **Create Package** - Runs `IntuneWinAppUtil.exe` to create `.intunewin` file:
+    - Input: `packagefiles/` subdirectory of the build (PSADT structure)
+    - Output: `Invoke-AppDeployToolkit.intunewin` in `packages/{app_id}/{version}/`
+    - Previous version directory for this app is removed automatically
+5. **Copy Detection Scripts** - Copies `*-Detection.ps1` and `*-Requirements.ps1`
+   from the build version directory into `packages/{app_id}/{version}/` so that
+   `napt upload` is self-contained and does not need access to the builds directory
+6. **Optional Cleanup** - If `--clean-source` flag is used, removes the build
+   version directory after successful packaging
 
-**Output**: `.intunewin` package file in `packages/{app_id}/` directory, ready for Intune upload
+**Output**: `.intunewin` and detection scripts in `packages/{app_id}/{version}/`,
+ready for `napt upload`. Only one version is kept on disk per app at a time —
+packaging a new version removes the previous one automatically.
+
+### Upload Process (`napt upload`)
+
+The upload process publishes a packaged app to Microsoft Intune via the
+Graph API. Run `napt package` before uploading.
+
+1. **Locate Package** - Scans `packages/{app_id}/` for the versioned subdirectory
+   created by `napt package` and reads `Invoke-AppDeployToolkit.intunewin` from it
+2. **Authenticate** - Tries three credential methods in order (see [Authentication](#authentication) below)
+3. **Parse Package Metadata** - Reads encryption metadata from `Detection.xml` inside the `.intunewin` ZIP
+4. **Create App Record** - POSTs to Graph API to create a new Win32 LOB app in Intune.
+   App metadata (display name, install commands, detection/requirements scripts, architecture)
+   is assembled from the recipe config and the scripts in the package directory
+5. **Upload Encrypted Payload** - Extracts the encrypted payload from the `.intunewin` ZIP
+   and uploads it to Azure Blob Storage in 6 MiB chunks
+6. **Commit** - Finalizes the upload by committing the content version with encryption metadata
+
+**Output**: Intune app ID, app name, version, and package path
+
+#### Authentication
+
+`napt upload` requires a NAPT app registration in Microsoft Entra ID.
+See [App Registration Setup](#app-registration-setup) below.
+The authentication method is selected automatically based on environment
+variables:
+
+| Method | When it's used |
+|--------|---------------|
+| `EnvironmentCredential` | `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, and `AZURE_TENANT_ID` are set — service principal, recommended for CI/CD |
+| `ManagedIdentityCredential` | Running on an Azure VM, Container Instance, or pipeline agent with managed identity assigned — no env vars needed |
+| `DeviceCodeCredential` | `AZURE_CLIENT_ID` and `AZURE_TENANT_ID` are set (no secret), interactive terminal — prompts with a URL and code to authenticate in any browser |
+
+#### App Registration Setup
+
+Create the app registration once per organization:
+
+1. Go to [entra.microsoft.com](https://entra.microsoft.com) →
+   **App registrations** → **New registration**
+2. Name it (e.g. "NAPT"), leave redirect URI blank, click **Register**
+3. Note the **Application (client) ID** and **Directory (tenant) ID**
+4. Go to **API permissions** → **Add a permission** →
+   **Microsoft Graph** → **Application permissions**
+5. Search for and add `DeviceManagementApps.ReadWrite.All`
+6. Also add the **Delegated** version of `DeviceManagementApps.ReadWrite.All`
+   (for interactive device code auth)
+7. Click **Grant admin consent**
+8. Go to **Authentication** → **Advanced settings** →
+   set **Allow public client flows** to **Yes** → click **Save**
+   (required for device code flow)
+
+**Developer setup:**
+
+Set two environment variables — no client secret needed:
+
+```bash
+export AZURE_CLIENT_ID="<Application (client) ID>"
+export AZURE_TENANT_ID="<Directory (tenant) ID>"
+```
+
+On first run, NAPT prompts with a device code:
+
+```console
+To sign in, use a web browser to open the page https://microsoft.com/devicelogin
+and enter the code ABCD1234 to authenticate.
+```
+
+After consenting once, subsequent runs authenticate silently.
+
+**CI/CD setup:**
+
+Create a client secret under **Certificates & secrets** → **New client secret**.
+Set all three environment variables as pipeline secrets:
+
+```bash
+AZURE_CLIENT_ID="<Application (client) ID>"
+AZURE_CLIENT_SECRET="<client secret value>"
+AZURE_TENANT_ID="<Directory (tenant) ID>"
+```
+
+**Azure managed identity:**
+
+No environment variables needed. Assign the managed identity the
+`DeviceManagementApps.ReadWrite.All` application permission in Entra ID.
 
 ### Directory Structure
 
@@ -183,12 +276,15 @@ builds/
           │   ├── SupportFiles/            # Empty (for additional files)
           │   ├── Invoke-AppDeployToolkit.ps1  # Generated script
           │   └── Invoke-AppDeployToolkit.exe  # From template
-          ├── Google-Chrome-142.0.7444.163-Detection.ps1    # App (upload separately)
-          └── Google-Chrome-142.0.7444.163-Requirements.ps1 # Update (upload separately)
+          ├── Google-Chrome-142.0.7444.163-Detection.ps1
+          └── Google-Chrome-142.0.7444.163-Requirements.ps1
 
 packages/
   └── napt-chrome/
-      └── Invoke-AppDeployToolkit.intunewin
+      └── 142.0.7444.163/                              # One version kept at a time
+          ├── Invoke-AppDeployToolkit.intunewin        # Encrypted package
+          ├── Google-Chrome-142.0.7444.163-Detection.ps1    # Copied by napt package
+          └── Google-Chrome-142.0.7444.163-Requirements.ps1 # Copied by napt package
 
 state/
   └── versions.json                        # Version tracking
@@ -232,10 +328,23 @@ napt build recipes/Google/chrome.yaml [OPTIONS]
 
 ### napt package
 
-Creates a .intunewin package from a built PSADT directory for Intune deployment.
+Creates a `.intunewin` package for a recipe's build. The build directory is
+inferred automatically from the recipe's app ID. Without `--version`, packages
+the most recent build. Only one version is kept on disk per app — previous
+package directories are removed automatically.
 
 ```bash
-napt package BUILD_DIR [OPTIONS]
+napt package recipes/Google/chrome.yaml [OPTIONS]
+napt package recipes/Google/chrome.yaml --version 130.0.6723.116
+```
+
+### napt upload
+
+Uploads the `.intunewin` package to Microsoft Intune via the Graph API.
+Authentication is automatic — no configuration required.
+
+```bash
+napt upload recipes/Google/chrome.yaml [OPTIONS]
 ```
 
 ### Output Modes
@@ -471,7 +580,7 @@ The `napt package` command uses Microsoft's [IntuneWinAppUtil.exe](https://githu
 # Run everything on Windows
 napt discover recipes/Google/chrome.yaml
 napt build recipes/Google/chrome.yaml
-napt package builds/napt-chrome/144.0.7559.110/
+napt package recipes/Google/chrome.yaml
 ```
 
 #### Workflow 2: Mixed Platform Development
@@ -482,7 +591,7 @@ napt build recipes/Google/chrome.yaml
 
 # Transfer build directory to Windows (e.g., via shared storage)
 # On Windows: Package
-napt package builds/napt-chrome/144.0.7559.110/
+napt package recipes/Google/chrome.yaml
 ```
 
 ## Best Practices

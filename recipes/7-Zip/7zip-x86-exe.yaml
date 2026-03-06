@@ -20,7 +20,6 @@ app:
       app_vars:
         AppName: "7-Zip"
         AppVersion: "${discovered_version}"
-        AppArch: "x86"
         AppVendor: "Igor Pavlov"
       install: |
         # Install 7-Zip EXE with system-wide deployment

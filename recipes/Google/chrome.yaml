@@ -12,7 +12,6 @@ app:
       app_vars:
         AppName: "Google Chrome"
         AppVersion: "${discovered_version}"
-        AppArch: "x64"
       install: |
         # Install Chrome MSI with system-wide deployment
         Start-ADTMsiProcess -Action Install -Path "$dirFiles\googlechromestandaloneenterprise64.msi" -Parameters "ALLUSERS=1"
