@@ -110,7 +110,7 @@ _ARCH_MAP: dict[str, str | None] = {
 
 
 def _infer_package_dir(app_id: str) -> tuple[Path, str]:
-    """Find the versioned package directory for an app.
+    """Find the versioned package directory and .intunewin file for an app.
 
     Scans packages/{app_id}/ for a single version subdirectory created by
     'napt package'. The package directory is self-contained: it holds the
@@ -121,9 +121,9 @@ def _infer_package_dir(app_id: str) -> tuple[Path, str]:
         app_id: Application identifier (from recipe app.id).
 
     Returns:
-        A tuple of (version_dir, version_str) where version_dir contains the
-            .intunewin file and detection scripts, and version_str is the
-            version name (directory name).
+        A tuple of (package_path, version_str) where package_path is the
+            .intunewin file and version_str is the version name (directory
+            name).
 
     Raises:
         ConfigError: If no package directory exists for the app, or the
@@ -149,22 +149,22 @@ def _infer_package_dir(app_id: str) -> tuple[Path, str]:
     # Single-slot: there should be exactly one version dir, but take the most
     # recently modified in case of an interrupted previous run.
     version_dir = max(version_dirs, key=lambda d: d.stat().st_mtime)
-    package_path = version_dir / "Invoke-AppDeployToolkit.intunewin"
+    intunewin_files = list(version_dir.glob("*.intunewin"))
 
-    if not package_path.exists():
+    if not intunewin_files:
         raise ConfigError(
-            f"Package file not found: {package_path}\n"
+            f"No .intunewin file found in {version_dir}\n"
             "Run 'napt package' to recreate the package."
         )
 
-    return version_dir, version_dir.name
+    return intunewin_files[0], version_dir.name
 
 
 def _build_app_metadata(
     config: dict[str, Any],
     recipe_path: Path,
     version: str,
-    package_dir: Path,
+    package_path: Path,
 ) -> dict[str, Any]:
     """Build the Win32LobApp JSON payload for the Graph API.
 
@@ -177,9 +177,8 @@ def _build_app_metadata(
         config: Effective configuration dict from load_effective_config.
         recipe_path: Path to the recipe file (used to infer vendor/publisher).
         version: Application version string (from package directory name).
-        package_dir: Path to the versioned package directory containing the
-            .intunewin file and PS1 scripts
-            (e.g., packages/napt-chrome/144.0.7559.110/).
+        package_path: Path to the .intunewin file
+            (e.g., packages/napt-chrome/144.0.7559.110/Invoke-AppDeployToolkit.intunewin).
 
     Returns:
         Dict ready to POST to the Graph API mobileApps endpoint.
@@ -192,6 +191,7 @@ def _build_app_metadata(
 
     """
     logger = get_global_logger()
+    package_dir = package_path.parent
     app = config["app"]
     intune_overrides: dict[str, Any] = config.get("intune", {})
 
@@ -269,6 +269,9 @@ def _build_app_metadata(
                 "runAs32Bit": False,
                 "runAsAccount": "system",
                 "scriptContent": req_content,
+                "operationType": "string",
+                "operator": "equal",
+                "comparisonValue": "Required",
             }
         )
 
@@ -310,11 +313,12 @@ def _build_app_metadata(
         "isFeatured": False,
         "allowAvailableUninstall": True,
         "roleScopeTagIds": [],
-        "fileName": "IntunePackage.intunewin",
+        "runAs32Bit": False,
+        "fileName": package_path.name,
         "installExperience": {
             "@odata.type": "microsoft.graph.win32LobAppInstallExperience",
             "runAsAccount": "system",
-            "deviceRestartBehavior": "suppress",
+            "deviceRestartBehavior": "allow",
             "maxRunTimeInMinutes": 60,
         },
         "returnCodes": _RETURN_CODES,
@@ -383,8 +387,7 @@ def upload_package(recipe_path: Path) -> UploadResult:
 
     # Step 1: Locate the package directory
     logger.step(1, 6, "Locating .intunewin package...")
-    package_dir, version = _infer_package_dir(app_id)
-    package_path = package_dir / "Invoke-AppDeployToolkit.intunewin"
+    package_path, version = _infer_package_dir(app_id)
     logger.verbose("UPLOAD", f"Package: {package_path}")
     logger.verbose("UPLOAD", f"Version: {version}")
 
@@ -398,7 +401,7 @@ def upload_package(recipe_path: Path) -> UploadResult:
 
     # Step 4: Create Intune app record and content version
     logger.step(4, 6, f"Creating Intune app record for '{app_name}' {version}...")
-    app_metadata = _build_app_metadata(config, recipe_path, version, package_dir)
+    app_metadata = _build_app_metadata(config, recipe_path, version, package_path)
     intune_app_id = create_win32_app(access_token, app_metadata)
     logger.info("UPLOAD", f"Created Intune app: {intune_app_id}")
 
