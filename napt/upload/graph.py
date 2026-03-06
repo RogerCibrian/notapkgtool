@@ -70,7 +70,7 @@ __all__ = [
     "commit_content_version",
 ]
 
-GRAPH_BASE = "https://graph.microsoft.com/v1.0"
+GRAPH_BASE = "https://graph.microsoft.com/beta"
 WIN32_LOB_APP_TYPE = "#microsoft.graph.win32LobApp"
 
 # Azure Block Blob: minimum recommended chunk size is 4 MiB; 6 MiB is a

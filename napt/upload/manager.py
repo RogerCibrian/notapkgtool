@@ -316,7 +316,6 @@ def _build_app_metadata(
         "runAs32Bit": False,
         "fileName": package_path.name,
         "installExperience": {
-            "@odata.type": "microsoft.graph.win32LobAppInstallExperience",
             "runAsAccount": "system",
             "deviceRestartBehavior": "allow",
             "maxRunTimeInMinutes": 60,
