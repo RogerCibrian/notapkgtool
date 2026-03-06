@@ -324,7 +324,7 @@ def create_intunewin(
     for script in sorted(build_dir.glob("*-Requirements.ps1")):
         shutil.copy2(script, version_output_dir / script.name)
         logger.verbose("PACKAGE", f"Copied: {script.name}")
-    manifest_src = build_dir.parent / "build-manifest.json"
+    manifest_src = build_dir / "build-manifest.json"
     if manifest_src.exists():
         shutil.copy2(manifest_src, version_output_dir / "build-manifest.json")
         logger.verbose("PACKAGE", "Copied: build-manifest.json")
