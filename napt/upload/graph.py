@@ -70,6 +70,11 @@ __all__ = [
     "commit_content_version",
 ]
 
+# The Intune app management API (mobileApps, Win32LobApp) has never fully
+# graduated to v1.0. Fields critical to Win32 app uploads — allowedArchitectures,
+# maxRunTimeInMinutes, displayVersion, allowAvailableUninstall — are beta-only.
+# The Intune portal, Intune PowerShell SDK, and Microsoft's own tooling all use
+# the beta endpoint. Do not change this to v1.0.
 GRAPH_BASE = "https://graph.microsoft.com/beta"
 WIN32_LOB_APP_TYPE = "#microsoft.graph.win32LobApp"
 
