@@ -445,5 +445,3 @@ def architecture_from_template(template: str) -> Architecture:
         )
 
     return arch  # type: ignore[return-value]
-
-
