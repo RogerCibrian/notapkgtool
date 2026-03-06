@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
     
     
       
@@ -1057,17 +1057,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fail_on_error" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        fail_on_error
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#log_format" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1716,6 +1705,34 @@
     
   
     policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/upload/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    upload
   
 
     
@@ -2453,17 +2470,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fail_on_error" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        fail_on_error
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#log_format" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2961,19 +2967,18 @@
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nt">defaults</span><span class="p">:</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">win32</span><span class="p">:</span>
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="nt">installed_check</span><span class="p">:</span>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">      </span><span class="nt">fail_on_error</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">       </span><span class="c1"># If true, script generation failures abort the build.</span>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">      </span><span class="nt">log_rotation_mb</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span><span class="w">        </span><span class="c1"># Maximum log file size in MB before rotation</span>
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">      </span><span class="nt">detection</span><span class="p">:</span>
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">        </span><span class="nt">exact_match</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">      </span><span class="c1"># If true, version must match exactly.</span>
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>
-</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="c1"># Per-app override:</span>
-</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="nt">app</span><span class="p">:</span>
-</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;My</span><span class="nv"> </span><span class="s">App&quot;</span>
-</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">  </span><span class="nt">win32</span><span class="p">:</span>
-</span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="w">    </span><span class="nt">installed_check</span><span class="p">:</span>
-</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="w">      </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;My</span><span class="nv"> </span><span class="s">Application&quot;</span><span class="w">  </span><span class="c1"># Required for non-MSI installers</span>
-</span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="w">      </span><span class="nt">detection</span><span class="p">:</span>
-</span><span id="__span-12-16"><a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a><span class="w">        </span><span class="nt">exact_match</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">       </span><span class="c1"># Override default for this app</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">      </span><span class="nt">log_rotation_mb</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span><span class="w">        </span><span class="c1"># Maximum log file size in MB before rotation</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">      </span><span class="nt">detection</span><span class="p">:</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">        </span><span class="nt">exact_match</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">      </span><span class="c1"># If true, version must match exactly.</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="c1"># Per-app override:</span>
+</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="nt">app</span><span class="p">:</span>
+</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;My</span><span class="nv"> </span><span class="s">App&quot;</span>
+</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="w">  </span><span class="nt">win32</span><span class="p">:</span>
+</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">    </span><span class="nt">installed_check</span><span class="p">:</span>
+</span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="w">      </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;My</span><span class="nv"> </span><span class="s">Application&quot;</span><span class="w">  </span><span class="c1"># Required for non-MSI installers</span>
+</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="w">      </span><span class="nt">detection</span><span class="p">:</span>
+</span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="w">        </span><span class="nt">exact_match</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">       </span><span class="c1"># Override default for this app</span>
 </span></code></pre></div>
 <h4 id="display_name">display_name</h4>
 <p><strong>Type:</strong> <code>string</code><br />
@@ -3036,43 +3041,63 @@
 </span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">      </span><span class="nt">override_msi_display_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 </span></code></pre></div></p>
 <h4 id="architecture">architecture</h4>
-<p><strong>Type:</strong> <code>string</code><br />
-<strong>Required:</strong> Yes for non-MSI installers, ignored for MSI installers<br />
+<p><strong>Type:</strong> <code>string</code>
+<strong>Required:</strong> Yes for non-MSI installers, ignored for MSI installers
 <strong>Allowed values:</strong> <code>x86</code>, <code>x64</code>, <code>arm64</code>, <code>any</code></p>
-<p>Specifies the expected architecture for detection/requirements scripts. This controls which registry views are checked.</p>
+<p>Specifies the installer's binary architecture.
+This field drives two behaviors: which registry views detection and requirements
+scripts check, and which device architectures the app is offered to in Intune.</p>
 <p><strong>Behavior:</strong></p>
 <ul>
-<li><strong>MSI installers:</strong> This field is ignored (a warning is logged if set). Architecture is auto-detected from the MSI Summary Information <code>Template</code> property.</li>
-<li><strong>Non-MSI installers (EXE, etc.):</strong> Required. Must be set in recipe configuration.</li>
+<li><strong>MSI installers:</strong> This field is ignored (a warning is logged if set).
+Architecture is auto-detected from the MSI Summary Information <code>Template</code>
+property.</li>
+<li><strong>Non-MSI installers (EXE, etc.):</strong> Required. Must be set in recipe
+configuration.</li>
 </ul>
 <p><strong>Allowed values:</strong></p>
 <table>
 <thead>
 <tr>
 <th>Value</th>
-<th>Description</th>
+<th>Registry view</th>
+<th>Intune device targets</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>x86</code></td>
-<td>32-bit x86; checks only 32-bit registry view</td>
+<td>32-bit only</td>
+<td>x86, x64, ARM64 — all Windows can run x86 via WOW64</td>
 </tr>
 <tr>
 <td><code>x64</code></td>
-<td>64-bit x64/AMD64; checks only 64-bit registry view</td>
+<td>64-bit only</td>
+<td>x64, ARM64 — ARM64 Windows 11 supports x64 emulation</td>
 </tr>
 <tr>
 <td><code>arm64</code></td>
-<td>64-bit ARM; checks only 64-bit registry view</td>
+<td>64-bit only</td>
+<td>ARM64 only — native binary, not compatible with x64</td>
 </tr>
 <tr>
 <td><code>any</code></td>
-<td>Checks all registry views (permissive, matches legacy behavior)</td>
+<td>All views</td>
+<td>x86, x64, ARM64 — permissive; use when architecture varies</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Why this matters:</strong> Without architecture filtering, an x86 installation could satisfy x64 detection if the DisplayName and version match, potentially blocking proper x64 deployment. The architecture-aware approach ensures detection scripts check the correct registry view for the target architecture.</p>
+<p>Intune targeting defaults reflect binary compatibility rather than strict
+architecture matching.
+For example, <code>x64</code> targets ARM64 devices by default because ARM64 Windows 11
+can run x64 binaries natively via its emulation layer.
+If you need finer control over which device architectures receive the app,
+see <code>intune.allowed_architectures</code> (planned — see roadmap).</p>
+<p><strong>Why this matters:</strong> Without architecture filtering, an x86 installation could
+satisfy x64 detection if the DisplayName and version match, potentially blocking
+proper x64 deployment.
+The architecture-aware approach ensures detection scripts check the correct
+registry view for the target architecture.</p>
 <p><strong>Example:</strong>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nt">app</span><span class="p">:</span>
 </span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;My</span><span class="nv"> </span><span class="s">App&quot;</span>
@@ -3110,16 +3135,6 @@
 </span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">      </span><span class="nt">override_msi_display_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">        </span><span class="c1"># Use display_name instead of MSI ProductName</span>
 </span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="w">      </span><span class="c1"># architecture still auto-detected from MSI Template</span>
 </span></code></pre></div></p>
-<h4 id="fail_on_error">fail_on_error</h4>
-<p><strong>Type:</strong> <code>boolean</code><br />
-<strong>Required:</strong> No<br />
-<strong>Default:</strong> <code>true</code></p>
-<p>If <code>true</code>, script generation failures will abort the build. If <code>false</code>, build continues even if script generation fails (useful for development/testing).</p>
-<p><strong>Behavior:</strong></p>
-<ul>
-<li><code>fail_on_error: true</code> (default): Build fails if scripts cannot be generated</li>
-<li><code>fail_on_error: false</code>: Build continues, script paths will be <code>None</code> in BuildResult</li>
-</ul>
 <h4 id="log_format">log_format</h4>
 <p><strong>Type:</strong> <code>string</code>
 <strong>Required:</strong> No
@@ -3171,10 +3186,16 @@
 </ul>
 </li>
 <li><strong>Version Comparison:</strong> Uses <code>DisplayVersion</code> registry value. Detection: exit 0 if installed meets requirement, 1 otherwise. Requirements: always exit 0; output "Required" to stdout if an older version is installed, nothing otherwise.</li>
-<li><strong>Script Location:</strong> Generated scripts are saved as siblings to the <code>packagefiles/</code> directory (not included in <code>.intunewin</code> package - must be uploaded separately to Intune).</li>
+<li><strong>Script Location:</strong> Generated scripts are saved as siblings to the <code>packagefiles/</code> directory (not included in <code>.intunewin</code> package). <code>napt upload</code> reads them directly from the build output and embeds them as inline PowerShell rules in the Intune app record.</li>
 </ul>
 <p>See <a href="../user-guide/#detection-and-requirements-scripts">Detection and Requirements Scripts</a> in the User Guide for how the scripts work and how to use them in Intune.</p>
 <h2 id="intune-configuration">Intune Configuration</h2>
+<!-- TODO: Audit which intune: fields are required vs optional for napt upload.
+     Current implementation treats publisher, description, privacy_url, and
+     info_url as all optional (falling back to vendor dir name or empty string).
+     Verify whether Intune Graph API enforces any of these. Update validation
+     and this doc once confirmed. -->
+
 <p>The <code>intune</code> section configures Intune-specific settings for app publishing.</p>
 <h3 id="update_name_prefix">update_name_prefix</h3>
 <p><strong>Type:</strong> <code>string</code><br />

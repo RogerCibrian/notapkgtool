@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
     
     
       
@@ -1062,6 +1062,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../api/upload/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    upload
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/psadt/" class="md-nav__link">
         
   
@@ -1790,11 +1818,22 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.3.1...HEAD">Unreleased</a></h2>
 <h3 id="added">Added</h3>
 <ul>
+<li><strong><code>napt upload &lt;recipe&gt;</code></strong> - New command uploads <code>.intunewin</code> packages directly to Microsoft Intune via the Graph API. Authentication tries service principal (<code>AZURE_CLIENT_ID</code>, <code>AZURE_CLIENT_SECRET</code>, <code>AZURE_TENANT_ID</code>), then managed identity, then device code (requires <code>AZURE_CLIENT_ID</code> + <code>AZURE_TENANT_ID</code> set and a TTY)</li>
+<li><strong><code>napt package --version VERSION</code></strong> - New flag to target a specific build
+    version instead of the most recent (e.g.,
+    <code>napt package recipes/Google/chrome.yaml --version 130.0.6723.116</code>)</li>
 <li><strong>Code-Based Defaults</strong> - NAPT now ships with complete built-in defaults, making <code>pip install napt</code> work out of the box without requiring any configuration files. Organization defaults (<code>defaults/org.yaml</code>) and vendor defaults are now optional overrides rather than requirements</li>
 <li><strong><code>napt init</code> Command</strong> - New command to scaffold NAPT project structure. Creates <code>recipes/</code>, <code>defaults/vendors/</code>, and a commented <code>defaults/org.yaml</code> template. Safely skips existing files; use <code>--force</code> to overwrite with automatic backup</li>
 </ul>
 <h3 id="changed">Changed</h3>
 <ul>
+<li><strong><code>napt package</code> now takes <code>&lt;recipe&gt;</code> instead of <code>&lt;build_dir&gt;</code></strong> - All commands now take a recipe path for consistent CLI usage. The build directory is inferred automatically from the recipe's app ID by scanning the builds output directory for the most recent completed build</li>
+<li><strong><code>napt package</code> outputs to versioned paths</strong> - Package output is now
+    <code>packages/{app_id}/{version}/Invoke-AppDeployToolkit.intunewin</code>. Only one
+    version is kept per app — the previous version directory is removed
+    automatically when a new one is packaged (single-slot). Detection and
+    requirements scripts are copied alongside the <code>.intunewin</code> file so
+    <code>napt upload</code> is self-contained and does not need the builds directory</li>
 <li><strong>Four-Layer Configuration</strong> - Configuration system now has four layers: code defaults (baseline) -&gt; org.yaml (optional) -&gt; vendor.yaml (optional) -&gt; recipe (required). Old configs continue to work; new fields automatically get code defaults</li>
 </ul>
 <h2 id="031-2026-02-03"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.3.0...0.3.1">0.3.1</a> - 2026-02-03</h2>
