@@ -68,27 +68,28 @@ from pathlib import Path
 from napt import __version__
 from napt.config.loader import load_effective_config
 from napt.discovery import get_strategy
+from napt.download import download_file
 from napt.exceptions import ConfigError
-from napt.io import download_file
 from napt.logging import get_global_logger
 from napt.results import DiscoverResult
 from napt.state import load_state, save_state
 from napt.versioning.keys import DiscoveredVersion
 
 
-def derive_file_path_from_url(url: str, output_dir: Path) -> Path:
+def derive_file_path_from_url(url: str, output_dir: Path, app_id: str) -> Path:
     """Derive file path from URL using same logic as download_file.
 
     This function ensures version-first strategies can locate cached files
     without downloading by following the same naming convention as the
-    download module.
+    download module (app-scoped subdirectory).
 
     Args:
         url: Download URL.
-        output_dir: Directory where file would be downloaded.
+        output_dir: Base downloads directory.
+        app_id: Application identifier used to scope the subdirectory.
 
     Returns:
-        Expected path to the file.
+        Expected path to the file under output_dir/app_id/.
 
     Example:
         Get expected file path for a download URL:
@@ -97,21 +98,22 @@ def derive_file_path_from_url(url: str, output_dir: Path) -> Path:
 
             path = derive_file_path_from_url(
                 "https://example.com/app.msi",
-                Path("./downloads")
+                Path("./downloads"),
+                "my-app",
             )
-            # Returns: Path('./downloads/app.msi')
+            # Returns: Path('./downloads/my-app/app.msi')
             ```
 
     """
     from urllib.parse import urlparse
 
     filename = Path(urlparse(url).path).name
-    return output_dir / filename
+    return output_dir / app_id / filename
 
 
 def discover_recipe(
     recipe_path: Path,
-    output_dir: Path,
+    output_dir: Path | None = None,
     state_file: Path | None = Path("state/versions.json"),
     stateless: bool = False,
 ) -> DiscoverResult:
@@ -215,6 +217,10 @@ def discover_recipe(
     logger.step(1, 4, "Loading configuration...")
     config = load_effective_config(recipe_path)
 
+    # Resolve output_dir from config default when not provided by caller.
+    if output_dir is None:
+        output_dir = Path(config["defaults"]["discover"]["output_dir"])
+
     # 2. Extract the app configuration
     logger.step(2, 4, "Discovering version...")
     app = config.get("app")
@@ -268,7 +274,9 @@ def discover_recipe(
         # Check if we can use cached file (version match + file exists)
         if cache and cache.get("known_version") == version_info.version:
             # Derive file path from URL using same logic as download_file
-            file_path = derive_file_path_from_url(version_info.download_url, output_dir)
+            file_path = derive_file_path_from_url(
+                version_info.download_url, output_dir, app_id
+            )
 
             if file_path.exists():
                 # Fast path: version unchanged, file exists, skip download!
@@ -289,10 +297,11 @@ def discover_recipe(
                     f"Cached file {file_path} not found, re-downloading",
                 )
                 logger.step(4, 4, "Downloading installer...")
-                file_path, sha256, headers = download_file(
+                dl = download_file(
                     version_info.download_url,
-                    output_dir,
+                    output_dir / app_id,
                 )
+                file_path, sha256, headers = dl.file_path, dl.sha256, dl.headers
                 discovered_version = DiscoveredVersion(
                     version_info.version, version_info.source
                 )
@@ -307,10 +316,11 @@ def discover_recipe(
                     ),
                 )
             logger.step(4, 4, "Downloading installer...")
-            file_path, sha256, headers = download_file(
+            dl = download_file(
                 version_info.download_url,
-                output_dir,
+                output_dir / app_id,
             )
+            file_path, sha256, headers = dl.file_path, dl.sha256, dl.headers
             discovered_version = DiscoveredVersion(
                 version_info.version, version_info.source
             )

@@ -48,6 +48,21 @@ from pathlib import Path
 
 
 @dataclass(frozen=True)
+class DownloadResult:
+    """Result of a file download operation.
+
+    Attributes:
+        file_path: Path to the downloaded file.
+        sha256: SHA-256 hex digest of the downloaded file.
+        headers: HTTP response headers from the download.
+    """
+
+    file_path: Path
+    sha256: str
+    headers: dict
+
+
+@dataclass(frozen=True)
 class DiscoverResult:
     """Result from discovering a version and downloading an installer.
 

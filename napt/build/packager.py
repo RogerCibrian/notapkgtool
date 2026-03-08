@@ -229,7 +229,8 @@ def create_intunewin(
             (e.g., builds/napt-chrome/144.0.7559.110/). Must contain a
             packagefiles/ subdirectory with a valid PSADT structure.
         output_dir: Parent directory for package output.
-            Default: packages/
+            Default: packages/ (configurable via defaults.package.output_dir
+            in org.yaml).
         clean_source: If True, remove the build version directory
             after packaging. Default is False.
 

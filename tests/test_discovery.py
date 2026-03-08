@@ -65,9 +65,10 @@ class TestUrlDownloadStrategy:
     def test_discover_version_with_msi(self, tmp_test_dir):
         """Test discovering version from MSI file."""
         app_config = {
+            "id": "test-app",
             "source": {
                 "url": "https://example.com/installer.msi",
-            }
+            },
         }
 
         strategy = UrlDownloadStrategy()
@@ -95,8 +96,8 @@ class TestUrlDownloadStrategy:
 
         assert discovered.version == "1.2.3"
         assert discovered.source == "msi"
+        assert file_path == tmp_test_dir / "test-app" / "installer.msi"
         assert file_path.exists()
-        assert file_path.name == "installer.msi"
         assert isinstance(sha256, str)
         assert len(sha256) == 64  # SHA-256 hex length
 
@@ -174,16 +175,19 @@ class TestCacheAndETagSupport:
         """Test url_download with cache when file not modified (HTTP 304)."""
 
         app_config = {
+            "id": "test-app",
             "source": {
                 "url": "https://example.com/installer.msi",
                 "version": {"type": "msi"},
-            }
+            },
         }
 
         strategy = UrlDownloadStrategy()
 
-        # Create a fake cached file
-        cached_file = tmp_test_dir / "installer.msi"
+        # Create a fake cached file in the app-scoped directory
+        app_dir = tmp_test_dir / "test-app"
+        app_dir.mkdir()
+        cached_file = app_dir / "installer.msi"
         cached_file.write_bytes(b"fake cached msi")
 
         cache = {
@@ -208,7 +212,7 @@ class TestCacheAndETagSupport:
                     app_config, tmp_test_dir, cache=cache
                 )
 
-        # Should use cached file
+        # Should use cached file from app-scoped directory
         assert file_path == cached_file
         assert sha256 == "cached_sha256"
         assert discovered.version == "1.0.0"
@@ -219,10 +223,11 @@ class TestCacheAndETagSupport:
     def test_url_download_with_cache_modified(self, tmp_test_dir):
         """Test url_download downloads when file modified (HTTP 200)."""
         app_config = {
+            "id": "test-app",
             "source": {
                 "url": "https://example.com/installer.msi",
                 "version": {"type": "msi"},
-            }
+            },
         }
 
         strategy = UrlDownloadStrategy()
@@ -230,7 +235,7 @@ class TestCacheAndETagSupport:
         cache = {
             "version": "1.0.0",
             "etag": 'W/"old_etag"',
-            "file_path": str(tmp_test_dir / "old_installer.msi"),
+            "file_path": str(tmp_test_dir / "test-app" / "old_installer.msi"),
             "sha256": "old_sha256",
         }
 
@@ -258,19 +263,20 @@ class TestCacheAndETagSupport:
                     app_config, tmp_test_dir, cache=cache
                 )
 
-        # Should download new file
+        # Should download new file into app-scoped directory
+        assert file_path == tmp_test_dir / "test-app" / "installer.msi"
         assert file_path.exists()
-        assert file_path.name == "installer.msi"
         assert discovered.version == "2.0.0"
         assert len(sha256) == 64
 
     def test_strategy_without_cache_works(self, tmp_test_dir):
         """Test that strategies work without cache (backward compatible)."""
         app_config = {
+            "id": "test-app",
             "source": {
                 "url": "https://example.com/installer.msi",
                 "version": {"type": "msi"},
-            }
+            },
         }
 
         strategy = UrlDownloadStrategy()
@@ -297,15 +303,17 @@ class TestCacheAndETagSupport:
                 )
 
         assert discovered.version == "1.0.0"
+        assert file_path == tmp_test_dir / "test-app" / "installer.msi"
         assert file_path.exists()
 
     def test_cache_with_missing_file_raises(self, tmp_test_dir):
         """Test that cache with missing file raises helpful error."""
         app_config = {
+            "id": "test-app",
             "source": {
                 "url": "https://example.com/installer.msi",
                 "version": {"type": "msi"},
-            }
+            },
         }
 
         strategy = UrlDownloadStrategy()
@@ -314,7 +322,7 @@ class TestCacheAndETagSupport:
         cache = {
             "version": "1.0.0",
             "etag": 'W/"abc123"',
-            "file_path": str(tmp_test_dir / "nonexistent.msi"),
+            "file_path": str(tmp_test_dir / "test-app" / "nonexistent.msi"),
             "sha256": "cached_sha",
         }
 

@@ -156,12 +156,14 @@ def _find_installer_file(
     source = app.get("source", {})
     url = source.get("url", "")
 
+    app_dir = downloads_dir / app_id
+
     # Strategy 1: Extract filename from recipe URL (for url_download)
     if url:
         parsed = urlparse(url)
         filename = Path(parsed.path).name
         if filename:
-            installer_path = downloads_dir / filename
+            installer_path = app_dir / filename
 
             if installer_path.exists():
                 logger.verbose(
@@ -182,7 +184,7 @@ def _find_installer_file(
                 parsed = urlparse(state_url)
                 filename = Path(parsed.path).name
                 if filename:
-                    installer_path = downloads_dir / filename
+                    installer_path = app_dir / filename
 
                     if installer_path.exists():
                         logger.verbose(
@@ -196,27 +198,35 @@ def _find_installer_file(
     app_name = app.get("name", "").lower()
 
     # Try to find installer matching app_id or app_name in filename
-    for pattern in ["*.msi", "*.exe"]:
-        matches = list(downloads_dir.glob(pattern))
+    if app_dir.exists():
+        for pattern in ["*.msi", "*.exe"]:
+            matches = list(app_dir.glob(pattern))
 
-        # Filter by app name/id if possible
-        matching = [
-            p
-            for p in matches
-            if app_id.lower().replace("napt-", "") in p.name.lower()
-            or any(word in p.name.lower() for word in app_name.split() if len(word) > 3)
-        ]
+            # Filter by app name/id if possible
+            matching = [
+                p
+                for p in matches
+                if app_id.lower().replace("napt-", "") in p.name.lower()
+                or any(
+                    word in p.name.lower()
+                    for word in app_name.split()
+                    if len(word) > 3
+                )
+            ]
 
-        if matching:
-            installer_path = max(matching, key=lambda p: p.stat().st_mtime)
-            logger.verbose("BUILD", f"Found installer matching app: {installer_path}")
-            return installer_path
+            if matching:
+                installer_path = max(matching, key=lambda p: p.stat().st_mtime)
+                logger.verbose(
+                    "BUILD", f"Found installer matching app: {installer_path}"
+                )
+                return installer_path
 
     # No installer found after trying all strategies
     raise PackagingError(
-        f"Cannot locate installer file for {app_id} in {downloads_dir}. "
+        f"Cannot locate installer file for {app_id} in {downloads_dir}/{app_id}. "
         f"Tried locating via recipe URL, state file URL, and filename matching, "
-        f"but no matching installer found. Verify the installer file exists in {downloads_dir}."
+        f"but no matching installer found. "
+        f"Verify the installer file exists in {downloads_dir}/{app_id}."
     )
 
 
@@ -904,7 +914,7 @@ def build_package(
 
     # Set defaults
     if downloads_dir is None:
-        downloads_dir = Path("downloads")
+        downloads_dir = Path(config["defaults"]["discover"]["output_dir"])
 
     if output_dir is None:
         output_dir = Path(config["defaults"]["build"]["output_dir"])

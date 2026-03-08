@@ -36,11 +36,17 @@ class TestFindInstallerFile:
     def test_find_by_url(self, tmp_path):
         """Test finding installer using URL from config."""
         downloads_dir = tmp_path / "downloads"
-        downloads_dir.mkdir()
-        installer = downloads_dir / "chrome.msi"
+        app_dir = downloads_dir / "napt-chrome"
+        app_dir.mkdir(parents=True)
+        installer = app_dir / "chrome.msi"
         installer.write_text("fake msi")
 
-        config = {"app": {"source": {"url": "https://example.com/chrome.msi"}}}
+        config = {
+            "app": {
+                "id": "napt-chrome",
+                "source": {"url": "https://example.com/chrome.msi"},
+            }
+        }
 
         result = _find_installer_file(downloads_dir, config)
 
@@ -49,11 +55,12 @@ class TestFindInstallerFile:
     def test_find_by_pattern_msi(self, tmp_path):
         """Test finding installer by .msi pattern."""
         downloads_dir = tmp_path / "downloads"
-        downloads_dir.mkdir()
-        installer = downloads_dir / "app.msi"
+        app_dir = downloads_dir / "test-app"
+        app_dir.mkdir(parents=True)
+        installer = app_dir / "test-app.msi"
         installer.write_text("fake msi")
 
-        config = {"app": {"source": {}}}
+        config = {"app": {"id": "test-app", "source": {}}}
 
         result = _find_installer_file(downloads_dir, config)
 
@@ -62,11 +69,12 @@ class TestFindInstallerFile:
     def test_find_by_pattern_exe(self, tmp_path):
         """Test finding installer by .exe pattern."""
         downloads_dir = tmp_path / "downloads"
-        downloads_dir.mkdir()
-        installer = downloads_dir / "setup.exe"
+        app_dir = downloads_dir / "test-app"
+        app_dir.mkdir(parents=True)
+        installer = app_dir / "test-app-setup.exe"
         installer.write_text("fake exe")
 
-        config = {"app": {"source": {}}}
+        config = {"app": {"id": "test-app", "source": {}}}
 
         result = _find_installer_file(downloads_dir, config)
 
@@ -77,16 +85,17 @@ class TestFindInstallerFile:
         import time
 
         downloads_dir = tmp_path / "downloads"
-        downloads_dir.mkdir()
+        app_dir = downloads_dir / "test-app"
+        app_dir.mkdir(parents=True)
 
-        old = downloads_dir / "old.msi"
+        old = app_dir / "test-app-1.0.msi"
         old.write_text("old")
         time.sleep(0.01)
 
-        new = downloads_dir / "new.msi"
+        new = app_dir / "test-app-2.0.msi"
         new.write_text("new")
 
-        config = {"app": {"source": {}}}
+        config = {"app": {"id": "test-app", "source": {}}}
 
         result = _find_installer_file(downloads_dir, config)
 
@@ -95,9 +104,10 @@ class TestFindInstallerFile:
     def test_find_not_found_raises(self, tmp_path):
         """Test error when no installer found."""
         downloads_dir = tmp_path / "downloads"
-        downloads_dir.mkdir()
+        app_dir = downloads_dir / "test-app"
+        app_dir.mkdir(parents=True)
 
-        config = {"app": {"source": {}}}
+        config = {"app": {"id": "test-app", "source": {}}}
 
         from napt.exceptions import PackagingError
 

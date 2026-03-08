@@ -52,6 +52,7 @@ __all__ = [
     "NetworkError",
     "PackagingError",
     "AuthError",
+    "NotModifiedError",
 ]
 
 
@@ -172,6 +173,34 @@ class AuthError(NAPTError):
                 result = upload_package(Path("recipe.yaml"))
             except AuthError as e:
                 print(f"Auth error: {e}")
+            ```
+    """
+
+    pass
+
+
+class NotModifiedError(Exception):
+    """Raised when a conditional HTTP request returns 304 Not Modified.
+
+    This exception is raised when download_file() receives HTTP 304, meaning
+    the server has confirmed that the remote content has not changed since the
+    last request. The function is expected to return a file on disk, and with
+    a 304 response there is no file to return, so it raises instead.
+
+    Inherits from Exception (not NAPTError) so that broad catches of all NAPT
+    errors do not suppress 304 responses. Callers that supply an ETag must
+    handle this explicitly.
+
+    Example:
+        Handling a conditional download:
+            ```python
+            from napt.exceptions import NotModifiedError
+
+            try:
+                result = download_file(url, dest, etag=cached_etag)
+            except NotModifiedError:
+                # Server confirmed content unchanged, use the cached file
+                pass
             ```
     """
 

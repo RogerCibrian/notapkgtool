@@ -12,53 +12,46 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Robust HTTP(S) file download for NAPT.
+"""HTTP(S) file download for NAPT.
 
-This module provides production-grade file downloading with features designed
-for reliability, reproducibility, and efficiency in automated packaging workflows.
+Downloads files to a destination folder. Retries on transient failures,
+supports ETag-based conditional requests, and writes to a .part file
+before renaming on success.
 
-Key Features:
+Behavior:
+    - Retries on status codes 429, 500, 502, 503, 504 with exponential backoff
+    - Sends If-None-Match when etag is provided; If-Modified-Since when
+      last_modified is provided
+    - Writes to a .part file and renames on success
+    - Hashes content during download; validates against expected_sha256 if set
+    - Reads filename from Content-Disposition (including RFC 5987 filenames),
+      falling back to the URL path
+    - Forces Accept-Encoding: identity to keep ETags stable across requests
 
-- **Retry Logic with Exponential Backoff** - Automatically retries on
-  transient failures (429, 500, 502, 503, 504) with exponential backoff.
-  Configurable via urllib3.util.Retry.
-- **Conditional Requests (HTTP 304 Not Modified)** - Supports ETag and
-  Last-Modified headers to avoid re-downloading unchanged files.
-- **Atomic Writes** - Downloads to temporary .part files with atomic rename
-  on success to prevent partial files.
-- **Integrity Verification** - SHA-256 hashing during download with
-  optional checksum validation. Corrupted files are automatically removed.
-- **Smart Filename Detection** - Respects Content-Disposition headers,
-  falls back to URL path, handles edge cases.
-- **Stable ETags** - Forces Accept-Encoding: identity to avoid
-  representation-specific ETags and prevent false cache misses.
-
-NotModifiedError is raised when a conditional request returns HTTP 304
-(not an error condition). The module defines DEFAULT_CHUNK (1 MiB) as the
-stream chunk size, balancing memory usage vs. progress granularity.
+DEFAULT_CHUNK (1 MiB) is the stream chunk size.
 
 Example:
     Basic download:
         ```python
         from pathlib import Path
-        from napt.io import download_file
+        from napt.download import download_file
 
-        path, sha256, headers = download_file(
+        result = download_file(
             url="https://example.com/installer.msi",
-            destination_folder=Path("./downloads"),
+            destination_folder=Path("./downloads/my-app"),
         )
-        print(f"Downloaded to {path}")
-        print(f"SHA-256: {sha256}")
+        print(f"Downloaded to {result.file_path}")
+        print(f"SHA-256: {result.sha256}")
         ```
 
     Conditional download (avoid re-downloading):
         ```python
-        from napt.io import NotModifiedError
+        from napt.exceptions import NotModifiedError
 
         try:
-            path, sha256, headers = download_file(
+            result = download_file(
                 url="https://example.com/installer.msi",
-                destination_folder=Path("./downloads"),
+                destination_folder=Path("./downloads/my-app"),
                 etag=previous_etag,
             )
         except NotModifiedError:
@@ -67,10 +60,12 @@ Example:
 
     Checksum validation:
         ```python
+        from napt.exceptions import NetworkError
+
         try:
-            path, sha256, headers = download_file(
+            result = download_file(
                 url="https://example.com/installer.msi",
-                destination_folder=Path("./downloads"),
+                destination_folder=Path("./downloads/my-app"),
                 expected_sha256="abc123...",
             )
         except NetworkError as e:
@@ -78,89 +73,94 @@ Example:
         ```
 
 Note:
-    Progress output goes to stdout (can be captured/redirected). User-Agent
-    identifies NAPT to help with debugging/support. All HTTP errors are
-    chained for better debugging. Timeouts are per-request, not total
-    download time.
-
-    Identity encoding stabilizes ETags: CDNs like Cloudflare compute
-    representation-specific ETags, so requesting gzip vs identity yields
-    different ETags for the same content, causing unnecessary re-downloads.
-
-    Atomic writes prevent partial files from appearing in the destination,
-    which is critical for automation where another process might start using
-    a file before download completes. Stream hashing computes SHA-256 while
-    streaming to avoid a second file read, improving I/O efficiency for
-    large installers.
-
+    CDNs compute representation-specific ETags, so requesting gzip vs
+    identity can yield different ETags for the same content. Forcing
+    Accept-Encoding: identity keeps ETags stable. Timeouts are per-request,
+    not total download time.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 import hashlib
 from pathlib import Path
 import time
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from napt.exceptions import ConfigError, NetworkError
+from napt import __version__
+from napt.exceptions import ConfigError, NetworkError, NotModifiedError
+from napt.results import DownloadResult
 
 # Stream size per chunk (1 MiB). Tune up/down if needed.
 DEFAULT_CHUNK = 1024 * 1024
 
 
-class NotModifiedError(Exception):
-    """Raised when a conditional request (If-None-Match / If-Modified-Since)
-    returns HTTP 304 Not Modified. Caller can treat this as "no work to do".
-    """
-
-
 def _filename_from_cd(content_disposition: str) -> str | None:
-    """Extracts a filename from a Content-Disposition header if present.
+    """Extract a filename from a Content-Disposition header.
 
-    Parses headers like 'attachment; filename="setup.msi"' and returns the
-    filename value.
+    Parses standard filenames (filename=) and RFC 5987 encoded filenames
+    (filename*=). Per RFC 6266, filename*= takes precedence when both are
+    present.
+
+    Args:
+        content_disposition: Value of the Content-Disposition header.
+
+    Returns:
+        Extracted filename, or None if none found.
+
     """
     if not content_disposition:
         return None
     parts = [s.strip() for s in content_disposition.split(";")]
+    plain_name = None
+    ext_name = None
     for part in parts:
-        if part.lower().startswith("filename="):
+        lower = part.lower()
+        if lower.startswith("filename*="):
+            # RFC 5987 format: charset'language'encoded-value
+            value = part.split("=", 1)[1].strip()
+            try:
+                charset, _, encoded = value.split("'", 2)
+                ext_name = unquote(encoded, encoding=charset or "utf-8")
+            except ValueError:
+                pass  # Malformed, skip
+        elif lower.startswith("filename="):
             value = part.split("=", 1)[1].strip().strip('"')
-            return value or None
-    return None
+            if value:
+                plain_name = value
+    return ext_name or plain_name or None
 
 
 def _filename_from_url(url: str) -> str:
-    """Derive a filename from the URL path. Fallback to a generic name if empty."""
+    """Derive a filename from the URL path.
+
+    Args:
+        url: The URL to extract the filename from.
+
+    Returns:
+        Filename from the URL path, or "download.bin" if the path is empty.
+
+    """
     name = Path(urlparse(url).path).name
     return name or "download.bin"
 
 
-def _sha256_iter(chunks: Iterable[bytes]) -> str:
-    """Compute SHA-256 from an iterator of byte chunks (stream-friendly)."""
-    h = hashlib.sha256()
-    for c in chunks:
-        h.update(c)
-    return h.hexdigest()
-
-
-def make_session() -> requests.Session:
-    """Create a requests.Session with sane retry/backoff defaults.
+def _make_session() -> requests.Session:
+    """Create a requests.Session with retry/backoff defaults.
 
     Retries on common transient status codes, applies exponential backoff,
-    and sets a helpful User-Agent to avoid being blocked.
+    and sets a User-Agent header identifying NAPT.
 
     Note:
         Forces Accept-Encoding: identity to request raw (uncompressed) bytes.
-        Many CDNs compute representation-specific ETags (e.g., gzip vs identity),
-        which can cause conditional requests to miss and trigger unnecessary
-        re-downloads. Pinning identity stabilizes ETags for binary installers
-        (MSI/EXE/MSIX/ZIP), which are already compressed.
+        CDNs compute representation-specific ETags, so requesting gzip vs
+        identity can yield different ETags for the same content. Binary
+        installers (MSI/EXE/MSIX/ZIP) are already compressed, so identity
+        encoding has no size cost.
+
     """
     s = requests.Session()
     retries = Retry(
@@ -172,7 +172,9 @@ def make_session() -> requests.Session:
     )
     s.headers.update(
         {
-            "User-Agent": "napt/0.1 (+https://github.com/RogerCibrian/notapkgtool)",
+            "User-Agent": (
+                f"napt/{__version__} (+https://github.com/RogerCibrian/notapkgtool)"
+            ),
             # Request the raw, uncompressed representation to keep ETags stable
             # across runs and avoid spurious 200s when a CDN flips to gzip.
             "Accept-Encoding": "identity",
@@ -192,31 +194,38 @@ def download_file(
     timeout: int = 60,
     etag: str | None = None,
     last_modified: str | None = None,
-) -> tuple[Path, str, dict]:
-    """Download a URL to destination_folder with robustness and reproducibility.
+) -> DownloadResult:
+    """Downloads a URL to destination_folder.
 
-    Follows redirects and retries transient failures. Writes to `filename.part`
-    then renames to `filename` on success (atomic). Sends conditional headers
-    if etag/last_modified provided. Validates checksum if expected_sha256 is set.
+    Follows redirects and retries transient failures. Writes to a .part file
+    then renames to the final filename on success. Sends conditional headers
+    if etag or last_modified is provided. Validates checksum if
+    expected_sha256 is set.
 
     Args:
         url: Source URL.
         destination_folder: Folder to save into (created if missing).
-        expected_sha256: Optional known SHA-256 (hex). If set and mismatched,
-            raises NetworkError.
-        validate_content_type: If True, rejects responses with text/html content-type.
-        timeout: Per-request timeout (seconds).
-        etag: Previous ETag to use for If-None-Match (conditional GET).
-        last_modified: Previous Last-Modified to use for If-Modified-Since
-            (conditional GET).
+        expected_sha256: Optional known SHA-256 (hex). If provided and the
+            computed hash does not match, the .part file is deleted and
+            NetworkError is raised.
+        validate_content_type: If True, raises ConfigError when the server
+            responds with Content-Type: text/html.
+        timeout: Per-request timeout in seconds.
+        etag: Previous ETag for If-None-Match conditional GET.
+        last_modified: Previous Last-Modified for If-Modified-Since
+            conditional GET.
 
     Returns:
-        Tuple of file path, SHA-256 hash, and HTTP response headers.
+        Download result containing file path, SHA-256 hash, and HTTP response
+            headers.
 
     Raises:
-        NotModifiedError: On HTTP 304 (conditional request satisfied).
-        NetworkError: For non-2xx responses (after retries) or checksum mismatch.
-        ConfigError: For content-type mismatch.
+        NotModifiedError: On HTTP 304, when the server confirms the content
+            has not changed since the last request.
+        NetworkError: For non-2xx responses (after retries), checksum mismatch,
+            or incomplete download (Content-Length mismatch).
+        ConfigError: If validate_content_type is True and the server responds
+            with text/html.
 
     """
     from napt.logging import get_global_logger
@@ -236,18 +245,15 @@ def download_file(
         )
 
     logger.verbose("HTTP", f"GET {url}")
-    logger.verbose(
-        "HTTP",
-        "Request headers: Accept-Encoding: identity, User-Agent: napt/0.1.0",
-    )
 
-    with make_session() as session:
+    started_at = time.time()
+    with _make_session() as session:
         # Stream response so we can hash while writing.
         resp = session.get(
             url, stream=True, allow_redirects=True, timeout=timeout, headers=headers
         )
 
-        # Log redirects
+        # Log redirects.
         if len(resp.history) > 0:
             for hist in resp.history:
                 logger.verbose(
@@ -261,14 +267,12 @@ def download_file(
         # Conditional request satisfied: nothing changed since last time.
         if resp.status_code == 304:
             logger.verbose("HTTP", "Response: 304 Not Modified")
-            resp.close()
             raise NotModifiedError("Remote content not modified (HTTP 304).")
 
         # Raise for other HTTP errors after retries.
         try:
             resp.raise_for_status()
         except requests.HTTPError as err:
-            # Chain for better context.
             raise NetworkError(f"download failed for {url}: {err}") from err
 
         logger.verbose("HTTP", f"Response: {resp.status_code} {resp.reason}")
@@ -278,17 +282,17 @@ def download_file(
         filename = cd_name or _filename_from_url(resp.url)
         target = destination_folder / filename
 
-        # Log response details
+        # Log response details (always, not gated on Content-Length).
         content_length = resp.headers.get("Content-Length", "unknown")
         if content_length != "unknown":
             size_mb = int(content_length) / (1024 * 1024)
             logger.verbose(
                 "HTTP", f"Content-Length: {content_length} ({size_mb:.1f} MB)"
             )
-            etag_value = resp.headers.get("ETag", "not provided")
-            logger.verbose("HTTP", f"ETag: {etag_value}")
-            cd_header = resp.headers.get("Content-Disposition", "not provided")
-            logger.verbose("HTTP", f"Content-Disposition: {cd_header}")
+        etag_value = resp.headers.get("ETag", "not provided")
+        logger.verbose("HTTP", f"ETag: {etag_value}")
+        cd_header = resp.headers.get("Content-Disposition", "not provided")
+        logger.verbose("HTTP", f"Content-Disposition: {cd_header}")
 
         # Optional content-type sanity check.
         if validate_content_type:
@@ -305,7 +309,6 @@ def download_file(
         sha = hashlib.sha256()
         downloaded = 0
         last_percent = -1
-        started_at = time.time()
 
         with tmp.open("wb") as f:
             for chunk in resp.iter_content(chunk_size=DEFAULT_CHUNK):
@@ -315,43 +318,55 @@ def download_file(
                 sha.update(chunk)
                 downloaded += len(chunk)
 
-                # Optional lightweight progress indicator.
+                # TODO: Route progress output through the logger once a
+                # logger.progress() method is added. Bare print bypasses
+                # SilentLogger in library usage.
                 if total_size:
                     pct = int(downloaded * 100 / total_size)
                     if pct != last_percent:
                         print(f"download progress: {pct}%", end="\r")
                         last_percent = pct
 
-        # Cleanup response socket.
         resp.close()
 
         digest = sha.hexdigest()
         logger.verbose("FILE", f"SHA-256: {digest} (computed during download)")
 
-        # Atomically "commit" the file.
-        logger.verbose("FILE", f"Atomic rename: {tmp.name} -> {target.name}")
-        tmp.replace(target)
+        # Detect incomplete downloads (server closed connection early).
+        if total_size and downloaded != total_size:
+            tmp.unlink(missing_ok=True)
+            raise NetworkError(
+                f"Incomplete download for {url}: "
+                f"expected {total_size} bytes, received {downloaded}"
+            )
 
-        # Validate checksum if the caller expects a specific digest.
+        # Validate checksum before atomic rename to keep partial files out of
+        # the destination on mismatch.
         if expected_sha256 and digest.lower() != expected_sha256.lower():
             logger.verbose(
                 "FILE", f"Checksum mismatch! Expected: {expected_sha256}, Got: {digest}"
             )
-            try:
-                target.unlink()
-            except OSError:
-                pass
+            tmp.unlink(missing_ok=True)
             raise NetworkError(
                 f"sha256 mismatch for {filename}: got {digest}, "
                 f"expected {expected_sha256}"
             )
 
+        # Atomically commit the file.
+        logger.verbose("FILE", f"Atomic rename: {tmp.name} -> {target.name}")
+        tmp.replace(target)
+
         elapsed = time.time() - started_at
-        # Always show completion message
-        logger.step(1, 1, f"Download complete: {target} ({digest}) in {elapsed:.1f}s")
-        # Show detailed info in verbose mode
-        logger.verbose("FILE", f"Download complete: {target}")
-        logger.verbose("FILE", f"Time elapsed: {elapsed:.1f}s")
+        speed_mb = (downloaded / (1024 * 1024)) / elapsed if elapsed > 0 else 0
+        logger.info(
+            "DOWNLOAD",
+            f"Complete: {target.name} ({digest[:8]}...) "
+            f"in {elapsed:.1f}s at {speed_mb:.1f} MB/s",
+        )
 
         # Hand back headers the caller may want to persist (ETag, Last-Modified).
-        return target, digest, dict(resp.headers)
+        return DownloadResult(
+            file_path=target,
+            sha256=digest,
+            headers=dict(resp.headers),
+        )
