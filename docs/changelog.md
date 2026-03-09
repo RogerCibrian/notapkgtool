@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-03-08
+
 ### Added
 
 - **`napt upload <recipe>`** - New command uploads `.intunewin` packages directly to Microsoft Intune via the Graph API. Authentication tries service principal (`AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`), then managed identity, then device code (requires `AZURE_CLIENT_ID` + `AZURE_TENANT_ID` set and a TTY)
@@ -119,7 +121,8 @@ Initial internal release.
 - **Robust Downloads** - Retry logic, atomic writes, SHA-256 verification, and conditional requests
 
 
-[Unreleased]: https://github.com/RogerCibrian/notapkgtool/compare/0.3.1...HEAD
+[Unreleased]: https://github.com/RogerCibrian/notapkgtool/compare/0.4.0...HEAD
+[0.4.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.3.1...0.4.0
 [0.3.1]: https://github.com/RogerCibrian/notapkgtool/compare/0.3.0...0.3.1
 [0.3.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.2.0...0.3.0
 [0.2.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.1.0...0.2.0
