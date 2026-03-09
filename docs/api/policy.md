@@ -1,4 +1,0 @@
-# policy
-
-::: napt.policy.updates
-

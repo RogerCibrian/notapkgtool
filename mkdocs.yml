@@ -94,7 +94,6 @@ nav:
       - config: api/config.md
       - discovery: api/discovery.md
       - download: api/download.md
-      - policy: api/policy.md
       - upload: api/upload.md
       - psadt: api/psadt.md
       - state: api/state.md

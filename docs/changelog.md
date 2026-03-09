@@ -13,6 +13,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`napt package --version VERSION`** - New flag to target a specific build
     version instead of the most recent (e.g.,
     `napt package recipes/Google/chrome.yaml --version 130.0.6723.116`)
+- **Configurable directory defaults and new CLI flags** - All pipeline directory
+    flags now read from `defaults/org.yaml` when not set on the CLI, and new
+    flags are available on each command:
+    - `napt discover --output-dir DIR` - where to save downloaded installers
+    - `napt build --downloads-dir DIR` - where to find the installer
+    - `napt build --output-dir DIR` - where to save builds
+    - `napt package --builds-dir DIR` - where to find the build
+    - `napt package --output-dir DIR` - where to save packages
+    Three new config keys control the defaults: `defaults.discover.output_dir`
+    (`downloads`), `defaults.build.output_dir` (`builds`), and
+    `defaults.package.output_dir` (`packages`). Each key is shared between the
+    command that produces and the command that consumes the directory
 - **Code-Based Defaults** - NAPT now ships with complete built-in defaults, making `pip install napt` work out of the box without requiring any configuration files. Organization defaults (`defaults/org.yaml`) and vendor defaults are now optional overrides rather than requirements
 - **`napt init` Command** - New command to scaffold NAPT project structure. Creates `recipes/`, `defaults/vendors/`, and a commented `defaults/org.yaml` template. Safely skips existing files; use `--force` to overwrite with automatic backup
 

@@ -326,8 +326,8 @@ def discover_recipe(
             )
     else:
         # FILE-FIRST PATH (url_download only)
-        # Must download to extract version
-        logger.step(4, 4, "Downloading installer...")
+        # Must download to extract version (or use cached file via ETag)
+        logger.step(4, 4, "Fetching installer...")
         discovered_version, file_path, sha256, headers = strategy.discover_version(
             app, output_dir, cache=cache
         )
