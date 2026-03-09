@@ -120,8 +120,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from napt.exceptions import ConfigError, NetworkError
-from napt.io import NotModifiedError, download_file
+from napt.download import download_file
+from napt.exceptions import ConfigError, NetworkError, NotModifiedError
 from napt.versioning.keys import DiscoveredVersion
 from napt.versioning.msi import version_from_msi_product_version
 
@@ -172,6 +172,8 @@ class UrlDownloadStrategy:
         if not url:
             raise ConfigError("url_download strategy requires 'source.url' in config")
 
+        app_id = app_config.get("id", "")
+
         logger.verbose("DISCOVERY", "Strategy: url_download (file-first)")
         logger.verbose("DISCOVERY", f"Source URL: {url}")
 
@@ -186,17 +188,18 @@ class UrlDownloadStrategy:
 
         # Download the file (with conditional request if cache available)
         try:
-            file_path, sha256, headers = download_file(
+            dl = download_file(
                 url,
-                output_dir,
+                output_dir / app_id,
                 etag=etag,
                 last_modified=last_modified,
             )
+            file_path, sha256, headers = dl.file_path, dl.sha256, dl.headers
         except NotModifiedError:
             # File unchanged (HTTP 304), use cached version
             # Use convention-based path: derive filename from URL
-            logger.verbose(
-                "DISCOVERY", "File not modified (HTTP 304), using cached version"
+            logger.info(
+                "CACHE", "File not modified (HTTP 304), using cached version"
             )
 
             if not cache or "sha256" not in cache:
@@ -209,7 +212,7 @@ class UrlDownloadStrategy:
             from urllib.parse import urlparse
 
             filename = Path(urlparse(url).path).name
-            cached_file = output_dir / filename
+            cached_file = output_dir / app_id / filename
 
             if not cached_file.exists():
                 raise NetworkError(

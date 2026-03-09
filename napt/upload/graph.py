@@ -288,8 +288,7 @@ def upload_to_azure_blob(
 
     Splits the file into CHUNK_SIZE chunks, uploads each as a block with a
     base64-encoded block ID, then commits the block list. Prints an inline
-    progress percentage as each chunk completes (matching the download
-    progress format used by napt.io.download).
+    progress percentage as each chunk completes.
 
     Args:
         sas_uri: Azure Blob Storage SAS URI from create_content_version_file.
@@ -300,11 +299,16 @@ def upload_to_azure_blob(
         NetworkError: If any block upload or the block list commit fails.
 
     """
+    from napt.logging import get_global_logger
+
+    logger = get_global_logger()
+
     block_ids: list[str] = []
     total_bytes = encrypted_payload_path.stat().st_size
     bytes_uploaded = 0
     last_percent = -1
 
+    started_at = time.time()
     with open(encrypted_payload_path, "rb") as fh:
         block_index = 0
         while True:
@@ -336,6 +340,9 @@ def upload_to_azure_blob(
             if total_bytes:
                 pct = int(bytes_uploaded * 100 / total_bytes)
                 if pct != last_percent:
+                    # TODO: Route progress output through the logger once a
+                    # logger.progress() method is added. Bare print bypasses
+                    # SilentLogger in library usage.
                     print(f"upload progress: {pct}%", end="\r")
                     last_percent = pct
 
@@ -359,6 +366,15 @@ def upload_to_azure_blob(
         raise NetworkError(
             f"Azure Blob block list commit failed: HTTP {resp.status_code}\n{resp.text}"
         )
+
+    elapsed = time.time() - started_at
+    speed_mb = (bytes_uploaded / (1024 * 1024)) / elapsed if elapsed > 0 else 0
+    size_mb = bytes_uploaded / (1024 * 1024)
+    logger.info(
+        "UPLOAD",
+        f"Complete: {encrypted_payload_path.name} ({size_mb:.1f} MB) "
+        f"in {elapsed:.1f}s at {speed_mb:.1f} MB/s",
+    )
 
 
 def commit_content_version_file(

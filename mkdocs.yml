@@ -93,8 +93,7 @@ nav:
       - build: api/build.md
       - config: api/config.md
       - discovery: api/discovery.md
-      - io: api/io.md
-      - policy: api/policy.md
+      - download: api/download.md
       - upload: api/upload.md
       - psadt: api/psadt.md
       - state: api/state.md

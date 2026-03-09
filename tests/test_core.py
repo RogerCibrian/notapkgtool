@@ -134,8 +134,10 @@ class TestVersionFirstFastPath:
         }
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
 
-        # Create cached file
-        cached_file = tmp_test_dir / "app-v1.2.3-installer.msi"
+        # Create cached file in app-scoped subdirectory
+        app_dir = tmp_test_dir / "test-app"
+        app_dir.mkdir(parents=True)
+        cached_file = app_dir / "app-v1.2.3-installer.msi"
         cached_file.write_bytes(b"fake installer content")
 
         # Mock HTML page for web_scrape
@@ -223,10 +225,12 @@ class TestVersionFirstFastPath:
 
                 with patch("napt.core.save_state"):
                     with patch("napt.core.download_file") as mock_download:
-                        mock_download.return_value = (
-                            fake_file,
-                            "new_hash" * 8,
-                            {"ETag": 'W/"new123"'},
+                        from napt.results import DownloadResult
+
+                        mock_download.return_value = DownloadResult(
+                            file_path=fake_file,
+                            sha256="new_hash" * 8,
+                            headers={"ETag": 'W/"new123"'},
                         )
 
                         result = discover_recipe(
@@ -299,8 +303,8 @@ class TestVersionFirstFastPath:
                         recipe_path, tmp_test_dir, state_file=Path("state.json")
                     )
 
-        # Verify result and that file was downloaded
+        # Verify result and that file was downloaded into app-scoped subdirectory
         assert result.version == "1.2.3"
         assert result.status == "success"
-        fake_file = tmp_test_dir / "app-v1.2.3-installer.msi"
+        fake_file = tmp_test_dir / "test-app" / "app-v1.2.3-installer.msi"
         assert fake_file.exists()

@@ -63,9 +63,17 @@ DEFAULT_CONFIG: dict[str, Any] = {
                 "RequireAdmin": True,
             },
         },
+        # Discovery output settings
+        "discover": {
+            "output_dir": "downloads",
+        },
         # Build output settings
         "build": {
             "output_dir": "builds",
+        },
+        # Package output settings
+        "package": {
+            "output_dir": "packages",
         },
         # Windows/Intune settings
         "win32": {
@@ -119,9 +127,17 @@ defaults:
   #   app_vars:
   #     AppScriptAuthor: "IT Team"
 
+  # Discovery output settings
+  # discover:
+  #   output_dir: "downloads"
+
   # Build output settings
   # build:
   #   output_dir: "builds"
+
+  # Package output settings
+  # package:
+  #   output_dir: "packages"
 
   # Windows/Intune detection settings
   # win32:

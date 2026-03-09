@@ -100,7 +100,7 @@ Example:
     From Python (version-first approach):
         ```python
         from napt.discovery.api_github import ApiGithubStrategy
-        from napt.io import download_file
+        from napt.download import download_file
 
         strategy = ApiGithubStrategy()
         app_config = {
@@ -116,10 +116,10 @@ Example:
 
         # Download only if needed
         if need_to_download:
-            file_path, sha256, headers = download_file(
-                version_info.download_url, Path("./downloads")
+            result = download_file(
+                version_info.download_url, Path("./downloads/my-app")
             )
-            print(f"Downloaded to {file_path}")
+            print(f"Downloaded to {result.file_path}")
         ```
 
     From Python (using core orchestration):

@@ -86,8 +86,8 @@ class TestEndToEndWorkflow:
         assert result.strategy == "url_download"
         assert result.status == "success"
 
-        # Verify file was downloaded
-        downloaded_file = output_dir / "installer.msi"
+        # Verify file was downloaded into app-scoped subdirectory
+        downloaded_file = output_dir / "test-app" / "installer.msi"
         assert downloaded_file.exists()
         assert downloaded_file.read_bytes() == fake_msi
 

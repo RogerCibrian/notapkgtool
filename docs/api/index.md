@@ -33,11 +33,8 @@ napt/
 │   ├── url_download.py         # Direct URL download strategy
 │   └── web_scrape.py           # Web scraping strategy
 │
-├── io/                      # File operations
-│   └── download.py             # HTTP file downloads with ETag support
-│
-├── policy/                  # Update policy enforcement (planned)
-│   └── updates.py              # Update policy logic
+├── download/                # HTTP file downloads
+│   └── download.py             # HTTP downloads with ETag support
 │
 ├── psadt/                   # PSADT release management
 │   └── release.py              # PSADT release download and caching

@@ -557,6 +557,51 @@ app:
   # release will be "latest" (from org defaults)
 ```
 
+### Directory Flag Defaults
+
+All directory flags follow the same pattern: CLI flag overrides config;
+config overrides the built-in default.
+This is the same pattern used by tools like `npm`, `pytest`, and `ruff`.
+
+Each command reads from the previous command's output directory and writes
+to its own:
+
+| Command | Flag | Purpose | Config key | Built-in default |
+|---------|------|---------|-----------|-----------------|
+| `napt discover` | `--output-dir` | Where to save downloaded installers | `defaults.discover.output_dir` | `downloads` |
+| `napt build` | `--downloads-dir` | Where to find the installer | `defaults.discover.output_dir` | `downloads` |
+| `napt build` | `--output-dir` | Where to save builds | `defaults.build.output_dir` | `builds` |
+| `napt package` | `--builds-dir` | Where to find the build | `defaults.build.output_dir` | `builds` |
+| `napt package` | `--output-dir` | Where to save packages | `defaults.package.output_dir` | `packages` |
+
+Note that input and output share a config key across adjacent commands —
+`discover --output-dir` and `build --downloads-dir` both read from
+`defaults.discover.output_dir`, so the output of one is automatically
+the input of the next without extra configuration.
+
+To change the defaults org-wide, add to `defaults/org.yaml`:
+
+```yaml
+defaults:
+  discover:
+    output_dir: "cache/downloads"   # used by both discover and build
+  build:
+    output_dir: "artifacts/builds"  # used by both build and package
+  package:
+    output_dir: "artifacts/packages"
+```
+
+Any CLI flag still overrides the config value for that single run:
+
+```bash
+# Uses config default (or built-in if not configured)
+napt discover recipes/Google/chrome.yaml
+
+# Overrides for this run only
+napt discover recipes/Google/chrome.yaml --output-dir /tmp/downloads
+napt build recipes/Google/chrome.yaml --downloads-dir /tmp/downloads
+```
+
 ## Cross-Platform Support
 
 **NAPT is a Windows tool** for Microsoft Intune packaging. Develop on any platform, package on Windows.

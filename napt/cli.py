@@ -191,14 +191,15 @@ def cmd_discover(args: argparse.Namespace) -> int:
     set_global_logger(logger)
 
     recipe_path = Path(args.recipe).resolve()
-    output_dir = Path(args.output_dir).resolve()
+    output_dir = Path(args.output_dir).resolve() if args.output_dir else None
 
     if not recipe_path.exists():
         print(f"Error: Recipe file not found: {recipe_path}")
         return 1
 
     print(f"Discovering version for recipe: {recipe_path}")
-    print(f"Output directory: {output_dir}")
+    if output_dir:
+        print(f"Output directory: {output_dir}")
     print()
 
     try:
@@ -272,20 +273,16 @@ def cmd_build(args: argparse.Namespace) -> int:
     set_global_logger(logger)
 
     recipe_path = Path(args.recipe).resolve()
-    downloads_dir = Path(args.downloads_dir).resolve()
+    downloads_dir = Path(args.downloads_dir).resolve() if args.downloads_dir else None
     output_dir = Path(args.output_dir) if args.output_dir else None
 
     if not recipe_path.exists():
         print(f"Error: Recipe file not found: {recipe_path}")
         return 1
 
-    if not downloads_dir.exists():
-        print(f"Error: Downloads directory not found: {downloads_dir}")
-        print("Run 'napt discover' first to download the installer.")
-        return 1
-
     print(f"Building PSADT package for recipe: {recipe_path}")
-    print(f"Downloads directory: {downloads_dir}")
+    if downloads_dir:
+        print(f"Downloads directory: {downloads_dir}")
     if output_dir:
         print(f"Output directory: {output_dir}")
     print()
@@ -330,7 +327,9 @@ def cmd_build(args: argparse.Namespace) -> int:
 
 
 def _resolve_build_dir_from_recipe(
-    recipe_path: Path, version: str | None = None
+    recipe_path: Path,
+    version: str | None = None,
+    builds_dir: Path | None = None,
 ) -> Path:
     """Infer the PSADT build version directory from a recipe.
 
@@ -342,6 +341,8 @@ def _resolve_build_dir_from_recipe(
         version: Specific version to target (e.g., "144.0.7559.110").
             If None, picks the most recently modified version directory
             that contains a packagefiles/ subdirectory.
+        builds_dir: Directory containing builds. If None, reads from
+            config defaults.build.output_dir.
 
     Returns:
         Path to the version directory (e.g., builds/napt-chrome/144.0.7559.110/).
@@ -354,7 +355,11 @@ def _resolve_build_dir_from_recipe(
     """
     config = load_effective_config(recipe_path)
     app_id = config["app"]["id"]
-    build_output_dir = Path(config["defaults"]["build"]["output_dir"])
+    build_output_dir = (
+        builds_dir
+        if builds_dir is not None
+        else Path(config["defaults"]["build"]["output_dir"])
+    )
     app_build_dir = build_output_dir / app_id
 
     if not app_build_dir.exists():
@@ -420,21 +425,28 @@ def cmd_package(args: argparse.Namespace) -> int:
     set_global_logger(logger)
 
     recipe_path = Path(args.recipe).resolve()
-    output_dir = Path(args.output_dir) if args.output_dir else None
+    builds_dir = Path(args.builds_dir).resolve() if args.builds_dir else None
 
     if not recipe_path.exists():
         print(f"Error: Recipe file not found: {recipe_path}")
         return 1
 
     try:
-        build_dir = _resolve_build_dir_from_recipe(recipe_path, version=args.version)
+        build_dir = _resolve_build_dir_from_recipe(
+            recipe_path, version=args.version, builds_dir=builds_dir
+        )
     except ConfigError as err:
         print(f"Error: {err}")
         return 1
 
+    if args.output_dir:
+        output_dir = Path(args.output_dir)
+    else:
+        config = load_effective_config(recipe_path)
+        output_dir = Path(config["defaults"]["package"]["output_dir"])
+
     print(f"Creating .intunewin package from: {build_dir}")
-    if output_dir:
-        print(f"Output directory: {output_dir}")
+    print(f"Output directory: {output_dir}")
     print()
 
     try:
@@ -760,8 +772,8 @@ def main() -> None:
     )
     parser_discover.add_argument(
         "--output-dir",
-        default="./downloads",
-        help="Directory to save downloaded files (default: ./downloads)",
+        default=None,
+        help="Directory to save downloaded files (default: from config or ./downloads)",
     )
     parser_discover.add_argument(
         "--state-file",
@@ -812,8 +824,11 @@ def main() -> None:
     )
     parser_build.add_argument(
         "--downloads-dir",
-        default="./downloads",
-        help="Directory containing the downloaded installer (default: ./downloads)",
+        default=None,
+        help=(
+            "Directory containing the downloaded installer "
+            "(default: from config or ./downloads)"
+        ),
     )
     parser_build.add_argument(
         "--output-dir",
@@ -863,9 +878,19 @@ def main() -> None:
         help="Specific build version to package (default: most recent build)",
     )
     parser_package.add_argument(
+        "--builds-dir",
+        default=None,
+        help=(
+            "Directory containing the PSADT build " "(default: from config or ./builds)"
+        ),
+    )
+    parser_package.add_argument(
         "--output-dir",
         default=None,
-        help="Parent directory for package output (default: packages/)",
+        help=(
+            "Parent directory for package output "
+            "(default: from config or ./packages)"
+        ),
     )
     parser_package.add_argument(
         "--clean-source",
