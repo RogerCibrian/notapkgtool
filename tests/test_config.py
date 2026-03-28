@@ -75,8 +75,7 @@ class TestConfigMerging:
 
         # Org defaults
         org_path = defaults_dir / "org.yaml"
-        org_path.write_text(
-            """
+        org_path.write_text("""
 apiVersion: napt/v1
 defaults:
   psadt:
@@ -84,13 +83,11 @@ defaults:
     cache_dir: "cache/psadt"
     app_vars:
       AppLang: "EN"
-"""
-        )
+""")
 
         # Recipe
         recipe_path = tmp_test_dir / "recipe.yaml"
-        recipe_path.write_text(
-            """
+        recipe_path.write_text("""
 apiVersion: napt/v1
 defaults:
   psadt:
@@ -98,8 +95,7 @@ defaults:
       AppName: "MyApp"
 app:
   name: Test
-"""
-        )
+""")
 
         config = load_effective_config(recipe_path)
 
@@ -115,25 +111,21 @@ app:
 
         # Org defaults with list
         org_path = defaults_dir / "org.yaml"
-        org_path.write_text(
-            """
+        org_path.write_text("""
 apiVersion: napt/v1
 defaults:
   processes: [process1, process2]
-"""
-        )
+""")
 
         # Recipe with different list
         recipe_path = tmp_test_dir / "recipe.yaml"
-        recipe_path.write_text(
-            """
+        recipe_path.write_text("""
 apiVersion: napt/v1
 defaults:
   processes: [process3]
 app:
   name: Test
-"""
-        )
+""")
 
         config = load_effective_config(recipe_path)
 
@@ -147,25 +139,21 @@ app:
 
         # Org defaults
         org_path = defaults_dir / "org.yaml"
-        org_path.write_text(
-            """
+        org_path.write_text("""
 apiVersion: napt/v1
 defaults:
   comparator: semver
-"""
-        )
+""")
 
         # Recipe with different value
         recipe_path = tmp_test_dir / "recipe.yaml"
-        recipe_path.write_text(
-            """
+        recipe_path.write_text("""
 apiVersion: napt/v1
 defaults:
   comparator: lexicographic
 app:
   name: Test
-"""
-        )
+""")
 
         config = load_effective_config(recipe_path)
 
@@ -189,33 +177,27 @@ class TestVendorDetection:
 
         # Create org defaults (required)
         org_path = defaults_dir / "org.yaml"
-        org_path.write_text(
-            """
+        org_path.write_text("""
 apiVersion: napt/v1
 defaults:
   org_setting: "from org"
-"""
-        )
+""")
 
         # Create vendor defaults
         vendor_path = vendors_dir / "Google.yaml"
-        vendor_path.write_text(
-            """
+        vendor_path.write_text("""
 apiVersion: napt/v1
 defaults:
   vendor_setting: "from Google"
-"""
-        )
+""")
 
         # Create recipe
         recipe_path = recipes_dir / "chrome.yaml"
-        recipe_path.write_text(
-            """
+        recipe_path.write_text("""
 apiVersion: napt/v1
 app:
   name: Chrome
-"""
-        )
+""")
 
         config = load_effective_config(recipe_path)
 
@@ -277,14 +259,12 @@ class TestCodeDefaults:
         """Tests that code defaults are applied when no org.yaml exists."""
         # Create recipe without any defaults directory
         recipe_path = tmp_test_dir / "recipe.yaml"
-        recipe_path.write_text(
-            """
+        recipe_path.write_text("""
 apiVersion: napt/v1
 app:
   name: Test App
   id: test-app
-"""
-        )
+""")
 
         config = load_effective_config(recipe_path)
 
@@ -301,24 +281,20 @@ app:
         defaults_dir.mkdir()
 
         org_path = defaults_dir / "org.yaml"
-        org_path.write_text(
-            """
+        org_path.write_text("""
 apiVersion: napt/v1
 defaults:
   comparator: lexicographic
   psadt:
     release: "4.0.0"
-"""
-        )
+""")
 
         recipe_path = tmp_test_dir / "recipe.yaml"
-        recipe_path.write_text(
-            """
+        recipe_path.write_text("""
 apiVersion: napt/v1
 app:
   name: Test App
-"""
-        )
+""")
 
         config = load_effective_config(recipe_path)
 

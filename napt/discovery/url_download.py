@@ -198,9 +198,7 @@ class UrlDownloadStrategy:
         except NotModifiedError:
             # File unchanged (HTTP 304), use cached version
             # Use convention-based path: derive filename from URL
-            logger.info(
-                "CACHE", "File not modified (HTTP 304), using cached version"
-            )
+            logger.info("CACHE", "File not modified (HTTP 304), using cached version")
 
             if not cache or "sha256" not in cache:
                 raise NetworkError(
