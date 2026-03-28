@@ -24,11 +24,11 @@ classifiers = [
 ]
 requires-python = ">=3.11"
 dependencies = [
-    "requests>=2.32",
+    "requests>=2.33",
     "pyyaml>=6.0.2",
     "jsonpath-ng>=1.6.1",
     "beautifulsoup4>=4.14.0",
-    "azure-identity>=1.25.2",
+    "azure-identity>=1.25.3",
 ]
 
 [project.scripts]
@@ -52,7 +52,7 @@ packages = [{include = "napt"}]
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
 ruff = "^0.13.0"
-black = "^25.1.0"
+black = "^26.3.1"
 requests-mock = "^1.12.1"
 mkdocs = "^1.6.1"
 mkdocs-material = "^9.6.23"
