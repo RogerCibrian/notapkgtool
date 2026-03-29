@@ -51,18 +51,16 @@ def sample_recipe_data() -> dict[str, Any]:
     return {
         "apiVersion": "napt/v1",
         "project": "Test Project",
-        "app": {
-            "name": "Test App",
-            "id": "test-app",
-            "source": {
-                "strategy": "url_download",
-                "url": "https://example.com/installer.msi",
-            },
-            "psadt": {
-                "app_vars": {
-                    "AppName": "Test App",
-                    "AppVersion": "${discovered_version}",
-                },
+        "name": "Test App",
+        "id": "test-app",
+        "discovery": {
+            "strategy": "url_download",
+            "url": "https://example.com/installer.msi",
+        },
+        "psadt": {
+            "app_vars": {
+                "AppName": "Test App",
+                "AppVersion": "${discovered_version}",
             },
         },
     }
@@ -73,12 +71,9 @@ def sample_org_defaults() -> dict[str, Any]:
     """Provide sample organization defaults."""
     return {
         "apiVersion": "napt/v1",
-        "defaults": {
-            "comparator": "semver",
-            "psadt": {
-                "release": "latest",
-                "cache_dir": "cache/psadt",
-            },
+        "psadt": {
+            "release": "latest",
+            "cache_dir": "cache/psadt",
         },
     }
 
@@ -184,18 +179,16 @@ def fake_brand_pack(tmp_path: Path) -> tuple[Path, dict[str, Any]]:
     (brand_dir / "Banner.Classic.png").write_bytes(b"custom banner data")
 
     config = {
-        "defaults": {
-            "psadt": {
-                "brand_pack": {
-                    "path": str(brand_dir),
-                    "mappings": [
-                        {"source": "AppIcon.*", "target": "Assets/AppIcon"},
-                        {
-                            "source": "Banner.Classic.*",
-                            "target": "Assets/Banner.Classic",
-                        },
-                    ],
-                }
+        "psadt": {
+            "brand_pack": {
+                "path": str(brand_dir),
+                "mappings": [
+                    {"source": "AppIcon.*", "target": "Assets/AppIcon"},
+                    {
+                        "source": "Banner.Classic.*",
+                        "target": "Assets/Banner.Classic",
+                    },
+                ],
             }
         }
     }

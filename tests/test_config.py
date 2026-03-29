@@ -27,39 +27,29 @@ class TestConfigLoading:
         config = load_effective_config(recipe_path)
 
         assert config["apiVersion"] == "napt/v1"
-        assert "app" in config
-        assert config["app"]["name"] == "Test App"
+        assert config["name"] == "Test App"
+        assert config["id"] == "test-app"
 
-    def test_load_recipe_with_org_defaults(
-        self, tmp_test_dir, create_yaml_file, sample_recipe_data, sample_org_defaults
-    ):
+    def test_load_recipe_with_org_defaults(self, tmp_test_dir, create_yaml_file):
         """Test loading recipe with organization defaults."""
-        # Create directory structure
         defaults_dir = tmp_test_dir / "defaults"
         defaults_dir.mkdir()
         recipes_dir = tmp_test_dir / "recipes"
         recipes_dir.mkdir()
 
-        # Create org defaults
         org_path = defaults_dir / "org.yaml"
-        org_path.write_text("apiVersion: napt/v1\ndefaults:\n  comparator: semver\n")
+        org_path.write_text("apiVersion: napt/v1\npsadt:\n  release: '4.0.0'\n")
 
-        # Create recipe
         recipe_path = recipes_dir / "test.yaml"
-        recipe_path.write_text("apiVersion: napt/v1\napp:\n  name: Test\n")
+        recipe_path.write_text("apiVersion: napt/v1\nname: Test\nid: test\n")
 
         config = load_effective_config(recipe_path)
 
-        # Should have both recipe and defaults
-        assert "app" in config
-        assert "defaults" in config
-        assert config["defaults"]["comparator"] == "semver"
+        assert config["psadt"]["release"] == "4.0.0"
 
     def test_missing_recipe_file_raises(self, tmp_test_dir):
         """Test that missing recipe file raises FileNotFoundError."""
         nonexistent = tmp_test_dir / "nonexistent.yaml"
-
-        from napt.exceptions import ConfigError
 
         with pytest.raises(ConfigError):
             load_effective_config(nonexistent)
@@ -73,92 +63,86 @@ class TestConfigMerging:
         defaults_dir = tmp_test_dir / "defaults"
         defaults_dir.mkdir()
 
-        # Org defaults
         org_path = defaults_dir / "org.yaml"
         org_path.write_text("""
 apiVersion: napt/v1
-defaults:
-  psadt:
-    release: "latest"
-    cache_dir: "cache/psadt"
-    app_vars:
-      AppLang: "EN"
+psadt:
+  release: "latest"
+  cache_dir: "cache/psadt"
+  app_vars:
+    AppLang: "EN"
 """)
 
-        # Recipe
         recipe_path = tmp_test_dir / "recipe.yaml"
         recipe_path.write_text("""
 apiVersion: napt/v1
-defaults:
-  psadt:
-    app_vars:
-      AppName: "MyApp"
-app:
-  name: Test
+name: Test
+id: test
+psadt:
+  app_vars:
+    AppName: "MyApp"
 """)
 
         config = load_effective_config(recipe_path)
 
         # Both keys should be present (deep merge)
-        assert config["defaults"]["psadt"]["release"] == "latest"
-        assert config["defaults"]["psadt"]["app_vars"]["AppLang"] == "EN"
-        assert config["defaults"]["psadt"]["app_vars"]["AppName"] == "MyApp"
+        assert config["psadt"]["release"] == "latest"
+        assert config["psadt"]["app_vars"]["AppLang"] == "EN"
+        assert config["psadt"]["app_vars"]["AppName"] == "MyApp"
 
     def test_list_replacement(self, tmp_test_dir):
         """Test that lists are replaced, not merged."""
         defaults_dir = tmp_test_dir / "defaults"
         defaults_dir.mkdir()
 
-        # Org defaults with list
         org_path = defaults_dir / "org.yaml"
         org_path.write_text("""
 apiVersion: napt/v1
-defaults:
-  processes: [process1, process2]
+psadt:
+  app_vars:
+    AppSuccessExitCodes: [0, 1707]
 """)
 
-        # Recipe with different list
         recipe_path = tmp_test_dir / "recipe.yaml"
         recipe_path.write_text("""
 apiVersion: napt/v1
-defaults:
-  processes: [process3]
-app:
-  name: Test
+name: Test
+id: test
+psadt:
+  app_vars:
+    AppSuccessExitCodes: [0]
 """)
 
         config = load_effective_config(recipe_path)
 
         # Recipe list should replace org list
-        assert config["defaults"]["processes"] == ["process3"]
+        assert config["psadt"]["app_vars"]["AppSuccessExitCodes"] == [0]
 
     def test_scalar_overwrite(self, tmp_test_dir):
         """Test that scalar values are overwritten."""
         defaults_dir = tmp_test_dir / "defaults"
         defaults_dir.mkdir()
 
-        # Org defaults
         org_path = defaults_dir / "org.yaml"
         org_path.write_text("""
 apiVersion: napt/v1
-defaults:
-  comparator: semver
+psadt:
+  release: "latest"
 """)
 
-        # Recipe with different value
         recipe_path = tmp_test_dir / "recipe.yaml"
         recipe_path.write_text("""
 apiVersion: napt/v1
-defaults:
-  comparator: lexicographic
-app:
-  name: Test
+name: Test
+id: test
+psadt:
+  release: "4.0.0"
 """)
 
         config = load_effective_config(recipe_path)
 
         # Recipe value should win
-        assert config["defaults"]["comparator"] == "lexicographic"
+        assert config["psadt"]["release"] == "4.0.0"
 
 
 class TestVendorDetection:
@@ -166,8 +150,6 @@ class TestVendorDetection:
 
     def test_vendor_from_directory_name(self, tmp_test_dir):
         """Test that vendor is detected from directory structure."""
-        # Create structure: defaults/org.yaml, defaults/vendors/Google.yaml,
-        # recipes/Google/chrome.yaml
         defaults_dir = tmp_test_dir / "defaults"
         defaults_dir.mkdir()
         vendors_dir = defaults_dir / "vendors"
@@ -175,35 +157,30 @@ class TestVendorDetection:
         recipes_dir = tmp_test_dir / "recipes" / "Google"
         recipes_dir.mkdir(parents=True)
 
-        # Create org defaults (required)
         org_path = defaults_dir / "org.yaml"
         org_path.write_text("""
 apiVersion: napt/v1
-defaults:
-  org_setting: "from org"
+psadt:
+  release: "latest"
 """)
 
-        # Create vendor defaults
         vendor_path = vendors_dir / "Google.yaml"
         vendor_path.write_text("""
 apiVersion: napt/v1
-defaults:
-  vendor_setting: "from Google"
+intune:
+  publisher: "Google LLC"
 """)
 
-        # Create recipe
         recipe_path = recipes_dir / "chrome.yaml"
         recipe_path.write_text("""
 apiVersion: napt/v1
-app:
-  name: Chrome
+name: Chrome
+id: napt-chrome
 """)
 
         config = load_effective_config(recipe_path)
 
-        # Should include both org and vendor defaults
-        assert config["defaults"]["org_setting"] == "from org"
-        assert config["defaults"]["vendor_setting"] == "from Google"
+        assert config["intune"]["publisher"] == "Google LLC"
 
 
 class TestDynamicInjection:
@@ -216,12 +193,10 @@ class TestDynamicInjection:
         recipe_path = create_yaml_file("recipe.yaml", sample_recipe_data)
         config = load_effective_config(recipe_path)
 
-        # Should have injected AppScriptDate
         today = date.today().strftime("%Y-%m-%d")
-        if "defaults" in config and "psadt" in config["defaults"]:
-            app_vars = config["defaults"]["psadt"].get("app_vars", {})
-            if "AppScriptDate" in app_vars:
-                assert app_vars["AppScriptDate"] == today
+        app_vars = config.get("psadt", {}).get("app_vars", {})
+        if "AppScriptDate" in app_vars:
+            assert app_vars["AppScriptDate"] == today
 
 
 class TestErrorHandling:
@@ -257,69 +232,61 @@ class TestCodeDefaults:
 
     def test_code_defaults_applied_without_org_yaml(self, tmp_test_dir):
         """Tests that code defaults are applied when no org.yaml exists."""
-        # Create recipe without any defaults directory
         recipe_path = tmp_test_dir / "recipe.yaml"
         recipe_path.write_text("""
 apiVersion: napt/v1
-app:
-  name: Test App
-  id: test-app
+name: Test App
+id: test-app
 """)
 
         config = load_effective_config(recipe_path)
 
         # Should have code defaults applied
-        assert "defaults" in config
-        assert config["defaults"]["comparator"] == "semver"
-        assert config["defaults"]["psadt"]["release"] == "latest"
-        assert config["defaults"]["build"]["output_dir"] == "builds"
+        assert config["psadt"]["release"] == "latest"
+        assert config["directories"]["build"] == "builds"
+        assert config["intune"]["build_types"] == "both"
+        assert config["logging"]["log_format"] == "cmtrace"
 
     def test_org_yaml_overrides_code_defaults(self, tmp_test_dir):
         """Tests that org.yaml values override code defaults."""
-        # Create directory structure with org.yaml
         defaults_dir = tmp_test_dir / "defaults"
         defaults_dir.mkdir()
 
         org_path = defaults_dir / "org.yaml"
         org_path.write_text("""
 apiVersion: napt/v1
-defaults:
-  comparator: lexicographic
-  psadt:
-    release: "4.0.0"
+psadt:
+  release: "4.0.0"
+logging:
+  log_format: "cmtrace"
 """)
 
         recipe_path = tmp_test_dir / "recipe.yaml"
         recipe_path.write_text("""
 apiVersion: napt/v1
-app:
-  name: Test App
+name: Test App
+id: test-app
 """)
 
         config = load_effective_config(recipe_path)
 
         # org.yaml values should override code defaults
-        assert config["defaults"]["comparator"] == "lexicographic"
-        assert config["defaults"]["psadt"]["release"] == "4.0.0"
+        assert config["psadt"]["release"] == "4.0.0"
         # But code defaults should still provide unspecified values
-        assert config["defaults"]["build"]["output_dir"] == "builds"
+        assert config["directories"]["build"] == "builds"
 
     def test_code_defaults_structure_matches_expected(self):
         """Tests that code defaults have expected structure."""
-        # Verify the structure matches what we expect
-        assert "defaults" in DEFAULT_CONFIG
-        defaults = DEFAULT_CONFIG["defaults"]
+        assert "psadt" in DEFAULT_CONFIG
+        assert "intune" in DEFAULT_CONFIG
+        assert "logging" in DEFAULT_CONFIG
+        assert "directories" in DEFAULT_CONFIG
 
-        # Check top-level keys exist
-        assert "psadt" in defaults
-        assert "build" in defaults
-        assert "win32" in defaults
-
-        # Check nested structures
-        assert "release" in defaults["psadt"]
-        assert "app_vars" in defaults["psadt"]
-        assert "output_dir" in defaults["build"]
-        assert "build_types" in defaults["win32"]
+        assert "release" in DEFAULT_CONFIG["psadt"]
+        assert "app_vars" in DEFAULT_CONFIG["psadt"]
+        assert "build" in DEFAULT_CONFIG["directories"]
+        assert "build_types" in DEFAULT_CONFIG["intune"]
+        assert "log_format" in DEFAULT_CONFIG["logging"]
 
     def test_org_yaml_template_covers_all_sections(self):
         """Tests that ORG_YAML_TEMPLATE mentions all DEFAULT_CONFIG sections.
@@ -328,25 +295,21 @@ app:
         shown to users via `napt init`. If a new section is added to
         DEFAULT_CONFIG but not to the template, this test will fail.
         """
-        defaults = DEFAULT_CONFIG["defaults"]
-
-        # All top-level sections under defaults should be mentioned in template
-        # (either as actual keys or as comments)
-        for section in defaults.keys():
+        for section in DEFAULT_CONFIG.keys():
             assert section in ORG_YAML_TEMPLATE, (
                 f"Section '{section}' exists in DEFAULT_CONFIG but is not "
                 f"mentioned in ORG_YAML_TEMPLATE. Update the template in "
                 f"napt/config/defaults.py to include this section."
             )
 
-        # Also check key nested sections are mentioned
         nested_checks = [
             ("psadt", "release"),
             ("psadt", "brand_pack"),
             ("psadt", "app_vars"),
-            ("build", "output_dir"),
-            ("win32", "build_types"),
-            ("win32", "installed_check"),
+            ("directories", "build"),
+            ("intune", "build_types"),
+            ("intune", "detection"),
+            ("logging", "log_format"),
         ]
 
         for parent, key in nested_checks:

@@ -42,10 +42,8 @@ class TestFindInstallerFile:
         installer.write_text("fake msi")
 
         config = {
-            "app": {
-                "id": "napt-chrome",
-                "source": {"url": "https://example.com/chrome.msi"},
-            }
+            "id": "napt-chrome",
+            "discovery": {"url": "https://example.com/chrome.msi"},
         }
 
         result = _find_installer_file(downloads_dir, config)
@@ -60,7 +58,7 @@ class TestFindInstallerFile:
         installer = app_dir / "test-app.msi"
         installer.write_text("fake msi")
 
-        config = {"app": {"id": "test-app", "source": {}}}
+        config = {"id": "test-app", "discovery": {}}
 
         result = _find_installer_file(downloads_dir, config)
 
@@ -74,7 +72,7 @@ class TestFindInstallerFile:
         installer = app_dir / "test-app-setup.exe"
         installer.write_text("fake exe")
 
-        config = {"app": {"id": "test-app", "source": {}}}
+        config = {"id": "test-app", "discovery": {}}
 
         result = _find_installer_file(downloads_dir, config)
 
@@ -95,7 +93,7 @@ class TestFindInstallerFile:
         new = app_dir / "test-app-2.0.msi"
         new.write_text("new")
 
-        config = {"app": {"id": "test-app", "source": {}}}
+        config = {"id": "test-app", "discovery": {}}
 
         result = _find_installer_file(downloads_dir, config)
 
@@ -107,7 +105,7 @@ class TestFindInstallerFile:
         app_dir = downloads_dir / "test-app"
         app_dir.mkdir(parents=True)
 
-        config = {"app": {"id": "test-app", "source": {}}}
+        config = {"id": "test-app", "discovery": {}}
 
         from napt.exceptions import PackagingError
 
@@ -225,7 +223,7 @@ class TestApplyBranding:
         build_dir = tmp_path / "build"
         build_dir.mkdir()
 
-        config = {"defaults": {"psadt": {"brand_pack": {"path": "", "mappings": []}}}}
+        config = {"psadt": {"brand_pack": {"path": "", "mappings": []}}}
 
         # Should not raise
         _apply_branding(config, build_dir)
@@ -239,14 +237,12 @@ class TestApplyBranding:
         build_dir.mkdir()
 
         config = {
-            "defaults": {
-                "psadt": {
-                    "brand_pack": {
-                        "path": str(brand_dir),
-                        "mappings": [
-                            {"source": "NonExistent.*", "target": "Assets/AppIcon"}
-                        ],
-                    }
+            "psadt": {
+                "brand_pack": {
+                    "path": str(brand_dir),
+                    "mappings": [
+                        {"source": "NonExistent.*", "target": "Assets/AppIcon"}
+                    ],
                 }
             }
         }

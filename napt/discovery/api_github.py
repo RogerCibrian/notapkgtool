@@ -180,7 +180,7 @@ class ApiGithubStrategy:
         If the version matches cached state, the download can be skipped entirely.
 
         Args:
-            app_config: App configuration containing source.repo and
+            app_config: App configuration containing discovery.repo and
                 optional fields.
 
         Returns:
@@ -211,10 +211,10 @@ class ApiGithubStrategy:
 
         logger = get_global_logger()
         # Validate configuration
-        source = app_config.get("source", {})
+        source = app_config.get("discovery", {})
         repo = source.get("repo")
         if not repo:
-            raise ConfigError("api_github strategy requires 'source.repo' in config")
+            raise ConfigError("api_github strategy requires 'discovery.repo' in config")
 
         # Validate repo format
         if "/" not in repo or repo.count("/") != 1:
@@ -226,7 +226,7 @@ class ApiGithubStrategy:
         asset_pattern = source.get("asset_pattern")
         if not asset_pattern:
             raise ConfigError(
-                "api_github strategy requires 'source.asset_pattern' in config"
+                "api_github strategy requires 'discovery.asset_pattern' in config"
             )
 
         version_pattern = source.get("version_pattern", r"v?([0-9.]+)")
@@ -392,29 +392,29 @@ class ApiGithubStrategy:
 
         """
         errors = []
-        source = app_config.get("source", {})
+        source = app_config.get("discovery", {})
 
         # Check required fields
         if "repo" not in source:
-            errors.append("Missing required field: source.repo")
+            errors.append("Missing required field: discovery.repo")
         elif not isinstance(source["repo"], str):
-            errors.append("source.repo must be a string")
+            errors.append("discovery.repo must be a string")
         elif not source["repo"].strip():
-            errors.append("source.repo cannot be empty")
+            errors.append("discovery.repo cannot be empty")
         else:
             # Validate repo format
             repo = source["repo"]
             if repo.count("/") != 1:
                 errors.append(
-                    "source.repo must be in format 'owner/repo' (e.g., 'git/git')"
+                    "discovery.repo must be in format 'owner/repo' (e.g., 'git/git')"
                 )
 
         if "asset_pattern" not in source:
-            errors.append("Missing required field: source.asset_pattern")
+            errors.append("Missing required field: discovery.asset_pattern")
         elif not isinstance(source["asset_pattern"], str):
-            errors.append("source.asset_pattern must be a string")
+            errors.append("discovery.asset_pattern must be a string")
         elif not source["asset_pattern"].strip():
-            errors.append("source.asset_pattern cannot be empty")
+            errors.append("discovery.asset_pattern cannot be empty")
         else:
             # Validate regex pattern syntax
             pattern = source["asset_pattern"]
@@ -428,7 +428,7 @@ class ApiGithubStrategy:
         # Optional fields validation
         if "version_pattern" in source:
             if not isinstance(source["version_pattern"], str):
-                errors.append("source.version_pattern must be a string")
+                errors.append("discovery.version_pattern must be a string")
             else:
                 pattern = source["version_pattern"]
                 import re

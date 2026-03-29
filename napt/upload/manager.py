@@ -192,15 +192,14 @@ def _build_app_metadata(
     """
     logger = get_global_logger()
     package_dir = package_path.parent
-    app = config["app"]
-    intune_overrides: dict[str, Any] = config.get("intune", {})
+    intune: dict[str, Any] = config.get("intune", {})
 
-    display_name: str = app["name"]
+    display_name: str = config["name"]
     # Publisher: recipe intune.publisher override, then vendor directory name
-    publisher: str = intune_overrides.get("publisher") or recipe_path.parent.name
-    description: str = intune_overrides.get("description", "")
-    privacy_url: str = intune_overrides.get("privacy_url", "")
-    info_url: str = intune_overrides.get("info_url", "")
+    publisher: str = intune.get("publisher") or recipe_path.parent.name
+    description: str = intune.get("description", "")
+    privacy_url: str = intune.get("privacy_url", "")
+    info_url: str = intune.get("info_url", "")
 
     # Read architecture from build manifest (written by napt build)
     manifest_path = package_dir / "build-manifest.json"
@@ -224,7 +223,7 @@ def _build_app_metadata(
         )
     allowed_architectures: str | None = _ARCH_MAP[arch_raw]
 
-    build_types: str = config["defaults"]["win32"]["build_types"]
+    build_types: str = intune.get("build_types", "both")
 
     # Detection script (always required)
     detection_scripts = sorted(package_dir.glob("*-Detection.ps1"))
@@ -275,34 +274,19 @@ def _build_app_metadata(
             }
         )
 
-    # TODO: Add remaining Graph API fields after the recipe schema redesign
-    # (refactor/recipe-schema-redesign). Config paths will change so defer
-    # implementation until the new intune: section is in place. Fields to add:
-    #
-    # "developer" (str) — person or team that maintains the app; shown in the
-    #     Intune portal app detail view. Source: intune.developer
-    #
-    # "owner" (str) — business owner of the app (e.g., a team name or email);
-    #     informational only, shown in portal. Source: intune.owner
-    #
-    # "notes" (str) — free-text notes visible in the portal app detail view;
-    #     useful for documenting deployment caveats. Source: intune.notes
-    #
-    # "minimumSupportedWindowsRelease" (str) — minimum Windows 10/11 release
-    #     required to install the app (e.g., "21H2"). Enforced by Intune during
-    #     assignment evaluation. Required field in the Graph API.
-    #     Source: intune.minimum_supported_windows_release (org default: "1607")
-    #
-    # "largeIcon" (dict) — app icon displayed in the Company Portal and Intune
-    #     portal. Must be a dict with "type" (MIME type, e.g., "image/png") and
-    #     "value" (base64-encoded image bytes). Max size: 256x256 px.
-    #     Source: intune.logo_path (read file, base64-encode, detect MIME type)
-    #
-    # "categories" (list[dict]) — Intune app categories shown in the portal
-    #     (e.g., "Productivity"). Each entry requires a category ID from the
-    #     Graph API (GET /deviceAppManagement/mobileAppCategories). Requires a
-    #     lookup step before the POST. Source: intune.category
-    return {
+    install_command: str = intune.get(
+        "install_command",
+        "Invoke-AppDeployToolkit.exe -DeploymentType Install -DeployMode Silent",
+    )
+    uninstall_command: str = intune.get(
+        "uninstall_command",
+        "Invoke-AppDeployToolkit.exe -DeploymentType Uninstall -DeployMode Silent",
+    )
+    minimum_windows_release: str = intune.get(
+        "minimum_supported_windows_release", "Windows10_21H2"
+    )
+
+    payload: dict[str, Any] = {
         "@odata.type": "#microsoft.graph.win32LobApp",
         "displayName": display_name,
         "displayVersion": version,
@@ -315,6 +299,7 @@ def _build_app_metadata(
         "roleScopeTagIds": [],
         "runAs32Bit": False,
         "fileName": package_path.name,
+        "minimumSupportedWindowsRelease": minimum_windows_release,
         "installExperience": {
             "runAsAccount": "system",
             "deviceRestartBehavior": "allow",
@@ -324,13 +309,42 @@ def _build_app_metadata(
         "rules": rules,
         "allowedArchitectures": allowed_architectures,
         "setupFilePath": "Invoke-AppDeployToolkit.exe",
-        "installCommandLine": (
-            "Invoke-AppDeployToolkit.exe -DeploymentType Install -DeployMode Silent"
-        ),
-        "uninstallCommandLine": (
-            "Invoke-AppDeployToolkit.exe -DeploymentType Uninstall -DeployMode Silent"
-        ),
+        "installCommandLine": install_command,
+        "uninstallCommandLine": uninstall_command,
     }
+
+    # Optional fields: developer, owner, notes
+    if intune.get("developer"):
+        payload["developer"] = intune["developer"]
+    if intune.get("owner"):
+        payload["owner"] = intune["owner"]
+    if intune.get("notes"):
+        payload["notes"] = intune["notes"]
+
+    # Optional: app icon (largeIcon)
+    logo_path_str: str = intune.get("logo_path", "")
+    if logo_path_str:
+        logo_path = Path(logo_path_str)
+        if logo_path.exists():
+            suffix = logo_path.suffix.lower()
+            mime_types = {
+                ".png": "image/png",
+                ".jpg": "image/jpeg",
+                ".jpeg": "image/jpeg",
+                ".gif": "image/gif",
+            }
+            mime_type = mime_types.get(suffix, "image/png")
+            icon_value = base64.b64encode(logo_path.read_bytes()).decode()
+            payload["largeIcon"] = {"type": mime_type, "value": icon_value}
+            logger.verbose("UPLOAD", f"App icon: {logo_path.name}")
+        else:
+            logger.warning("UPLOAD", f"Logo file not found: {logo_path}, skipping icon")
+
+    # TODO: categories require a lookup against GET /deviceAppManagement/
+    # mobileAppCategories to resolve names to IDs before the POST.
+    # Source: intune.category
+
+    return payload
 
 
 def upload_package(recipe_path: Path) -> UploadResult:
@@ -378,9 +392,8 @@ def upload_package(recipe_path: Path) -> UploadResult:
     logger = get_global_logger()
 
     config = load_effective_config(recipe_path)
-    app = config["app"]
-    app_id: str = app["id"]
-    app_name: str = app["name"]
+    app_id: str = config["id"]
+    app_name: str = config["name"]
 
     logger.verbose("UPLOAD", f"Starting upload for '{app_name}' ({app_id})")
 

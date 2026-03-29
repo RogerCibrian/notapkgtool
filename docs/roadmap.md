@@ -23,7 +23,7 @@ This roadmap is a living document showing potential future directions for NAPT. 
 
 | Feature | Status | Category | Complexity | Value |
 |---------|--------|----------|------------|-------|
-| Recipe Schema Redesign | 📋 Ready | User-Facing | High | High |
+| Recipe Schema Redesign | ✅ Completed | User-Facing | High | High |
 | Microsoft Intune Upload | ✅ Completed | User-Facing | High | Very High |
 | `napt auth setup` Command | 💡 Idea | User-Facing | Low | High |
 | Deployment Wave Management | 🔬 Investigating | User-Facing | Very High | High |
@@ -32,7 +32,7 @@ This roadmap is a living document showing potential future directions for NAPT. 
 | Intune Upload Settings Overrides | 💡 Idea | User-Facing | Low | Medium |
 | PowerShell Validation | 💡 Idea | Code Quality | High | High |
 | Recipe Linting & Best Practices | 💡 Idea | Code Quality | High | Medium |
-| Unrecognized Config Field Warnings | 💡 Idea | Code Quality | Low | Medium |
+| Unrecognized Config Field Warnings | ✅ Completed | Code Quality | Low | Medium |
 | Typed Config with Dataclasses | 💡 Idea | Code Quality | Medium | Medium |
 | EXE Version Extraction | 💡 Idea | Technical | High | Medium |
 | Parallel Package Building | 💡 Idea | Technical | Medium | Medium |
@@ -41,33 +41,23 @@ This roadmap is a living document showing potential future directions for NAPT. 
 
 **Summary:**
 
-- ✅ **Completed**: 1
-- 📋 **Ready**: 1
+- ✅ **Completed**: 3
 - 🔬 **Investigating**: 1
-- 💡 **Ideas**: 12
+- 💡 **Ideas**: 11
 - **Total**: 15 features
 
 ---
 
 ## Active Work
 
-### Completed ✅
-
-#### Microsoft Intune Upload
-**Complexity**: High
-**Value**: Very High
-
-**Description**: `napt upload <recipe>` uploads `.intunewin` packages directly to
-Microsoft Intune via the Graph API. Authentication is automatic via
-`azure-identity` (`EnvironmentCredential` → `ManagedIdentityCredential` →
-`DeviceCodeCredential`). Detection and requirements scripts are embedded inline
-from build output. Developers set `AZURE_CLIENT_ID` and `AZURE_TENANT_ID` and
-complete the device code flow; CI/CD sets all three `AZURE_*` env vars.
-
 ### Investigating 🔬
 
 #### Deployment Wave Management
-**Complexity**: Very High (5-10 days)  
+
+**Status**: 🔬 Investigating
+
+**Complexity**: Very High (5-10 days)
+
 **Value**: High
 
 **Description**: Phased deployment with rings (Pilot → Production) and gradual rollout.
@@ -98,170 +88,12 @@ complete the device code flow; CI/CD sets all three `AZURE_*` env vars.
 
 ### User-Facing Features
 
-#### Recipe Schema Redesign
-
-**Status**: 📋 Ready
-**Complexity**: High (3-5 days)
-**Value**: High
-
-**Description**: Restructure the recipe and config schema to eliminate design
-awkwardness that accumulated during early development.
-All changes are breaking; do this in a dedicated branch before v1.0.0.
-Suggested branch: `refactor/recipe-schema-redesign`.
-
-**Problems being solved:**
-
-- The `defaults:` wrapper in `org.yaml` and `vendor.yaml` is redundant.
-    The file is already called `defaults/org.yaml`.
-    The wrapper also forces org-level settings (e.g., `defaults.psadt.*`) and
-    recipe-level settings (e.g., `app.psadt.*`) onto different paths, requiring
-    manual merging blocks throughout the codebase
-    (see `_generate_detection_script` and `_generate_requirements_script` in
-    `napt/build/manager.py`).
-- `app.win32.installed_check` nests Intune detection configuration under a
-    vague `win32` key.
-    Everything in `installed_check` generates Intune detection and requirements
-    scripts and belongs alongside other Intune configuration.
-- `log_format`, `log_level`, and `log_rotation_mb` are inside
-    `win32.installed_check` despite configuring on-device script behavior, not
-    Intune.
-    They apply equally to both detection and requirements scripts.
-- The `intune:` section only holds upload metadata while detection
-    configuration lives in `app.win32.installed_check` — all of it is
-    Intune-specific but split across two unrelated locations.
-
-**Target schema — three top-level sections alongside `app:`:**
-
-```yaml
-# defaults/org.yaml — no defaults: wrapper
-apiVersion: napt/v1
-
-psadt:
-  release: "latest"
-  app_vars:
-    AppScriptAuthor: "IT Team"
-
-intune:
-  minimum_supported_windows_release: "21H2"
-  build_types: "both"
-  detection:
-    exact_match: false
-
-logging:
-  log_format: "cmtrace"
-  log_level: "INFO"
-  log_rotation_mb: 3
-```
-
-```yaml
-# recipes/Google/chrome.yaml (MSI — intune.detection omitted, auto-detected)
-apiVersion: napt/v1
-
-app:
-  name: "Google Chrome"
-  id: "napt-chrome"
-  source:
-    strategy: url_download
-    url: "https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi"
-  psadt:
-    install: |
-      Start-ADTMsiProcess -Action Install -Path "$dirFiles\googlechromestandaloneenterprise64.msi" -Parameters "ALLUSERS=1"
-    uninstall: |
-      Uninstall-ADTApplication -Name "Google Chrome"
-
-psadt:
-  app_vars:
-    AppName: "Google Chrome"
-    AppVersion: "${discovered_version}"
-
-intune:
-  publisher: "Google"
-```
-
-```yaml
-# recipes/Git/git.yaml (EXE — intune.detection required)
-apiVersion: napt/v1
-
-app:
-  name: "Git for Windows"
-  id: "napt-git"
-  source:
-    strategy: api_github
-    repo: "git-for-windows/git"
-    asset_pattern: "Git-.*-64-bit\\.exe$"
-    version_pattern: "v?([0-9.]+)\\.windows"
-  psadt:
-    install: |
-      Start-ADTProcess -Path "$dirFiles\Git-${discovered_version}-64-bit.exe" -Parameters "/VERYSILENT /NORESTART"
-    uninstall: |
-      Uninstall-ADTApplication -Name "Git"
-
-psadt:
-  app_vars:
-    AppName: "Git for Windows"
-    AppVersion: "${discovered_version}"
-
-intune:
-  publisher: "Git"
-  detection:
-    display_name: "Git"
-    architecture: "x64"
-```
-
-**Key design decisions:**
-
-- `app:` contains only app identity and deployment scripts
-    (`source:`, `psadt.install`, `psadt.uninstall`).
-    No Intune or logging knowledge.
-- `psadt:` at the top level holds PSADT variables (`app_vars`) and settings
-    (`release`) that benefit from org/vendor/recipe layering.
-    Since org.yaml and recipes now share the same top-level keys, the deep
-    merger handles layering automatically — no manual merging needed.
-- `intune:` holds everything driven by or sent to the Intune API:
-    upload metadata (`publisher`, `description`,
-    `minimum_supported_windows_release`), build behavior (`build_types`), and
-    `detection:` (what the scripts check: `display_name`, `architecture`,
-    `exact_match`).
-    For MSI installers, `intune.detection` is omitted entirely — display name
-    and architecture are auto-detected from the MSI `Template` property.
-- `logging:` holds on-device script execution settings: `log_format`,
-    `log_level`, `log_rotation_mb`.
-    These apply equally to detection and requirements scripts and are not
-    Intune-specific.
-    `logging:` was chosen over `endpoint:` or `scripts:` because it accurately
-    describes the current scope.
-    If non-logging endpoint script settings are added later, reconsider the
-    name at that time.
-
-**Benefits:**
-
-- Recipes are significantly simpler — `app:` is clean and self-contained
-- No more `defaults:` nesting indentation in org.yaml and vendor.yaml
-- All Intune configuration in one place
-- Manual merge blocks in `napt/build/manager.py` can be deleted
-- Consistent mental model: `intune:` = what goes to Intune,
-    `logging:` = what runs on the device
-
-**Files to change:**
-
-- `napt/config/defaults.py` — restructure `DEFAULT_CONFIG` and
-    `ORG_YAML_TEMPLATE` to match new schema
-- `napt/config/loader.py` — remove any special-casing for `defaults:` key
-- `napt/validation.py` — update all section schemas and field paths
-- `napt/build/manager.py` — remove manual merge blocks, read from new paths
-- `napt/upload/manager.py` — read `intune.*` and `logging.*` from new paths
-- `napt/detection.py` and `napt/requirements.py` — update config key references
-- `defaults/org.yaml` — rewrite to new schema
-- `recipes/**/*.yaml` — migrate all recipes to new schema
-- `docs/recipe-reference.md` — rewrite Win32 Configuration and Intune
-    Configuration sections to reflect new structure
-- `docs/common-tasks.md`, `docs/user-guide.md` — update all config examples
-- `tests/` — update config fixtures and validation tests
-
 #### `napt auth setup` Command
 
 **Status**: 💡 Idea
+
 **Complexity**: Low (few hours to 1 day)
+
 **Value**: High
 
 **Description**: Automates app registration creation in Microsoft Entra ID
@@ -286,7 +118,9 @@ subcommands.
 #### Intune Upload Settings Overrides
 
 **Status**: 💡 Idea
+
 **Complexity**: Low (few hours to 1 day)
+
 **Value**: Medium
 
 **Description**: Expose per-recipe overrides for Intune upload settings that
@@ -312,12 +146,15 @@ requirement rule naming)
 - Consistent with NAPT's layered config approach — overrides at recipe level,
 defaults at org level
 
-**Related**: `architecture` field in `win32.installed_check` drives default
-Intune targeting; see [Recipe Reference](recipe-reference.md#architecture)
+**Related**: `intune.detection.architecture` drives default Intune targeting;
+see [Recipe Reference](recipe-reference.md#architecture)
 
 #### Pre/Post Install/Uninstall Script Support
-**Status**: 💡 Idea  
-**Complexity**: Low (few hours to 1 day)  
+
+**Status**: 💡 Idea
+
+**Complexity**: Low (few hours to 1 day)
+
 **Value**: Medium
 
 **Description**: Add support for pre-install, post-install, pre-uninstall, and post-uninstall script blocks in recipes, allowing separate script sections for each deployment phase.
@@ -333,8 +170,11 @@ Intune targeting; see [Recipe Reference](recipe-reference.md#architecture)
 **Related**: PSADT already has these phases in the template structure
 
 #### Enhanced CLI Help Menu
-**Status**: 💡 Idea  
-**Complexity**: Low (few hours to 1 day)  
+
+**Status**: 💡 Idea
+
+**Complexity**: Low (few hours to 1 day)
+
 **Value**: Medium
 
 **Description**: Improve the `napt -h` help output with more detailed information, examples, and better organization.
@@ -354,8 +194,11 @@ Intune targeting; see [Recipe Reference](recipe-reference.md#architecture)
 ### Code Quality & Validation
 
 #### PowerShell Validation
-**Status**: 💡 Idea  
-**Complexity**: High (3-5 days)  
+
+**Status**: 💡 Idea
+
+**Complexity**: High (3-5 days)
+
 **Value**: High
 
 **Description**: Validate PowerShell syntax in recipe install/uninstall blocks to catch errors before deployment.
@@ -370,8 +213,11 @@ Intune targeting; see [Recipe Reference](recipe-reference.md#architecture)
 **Related**: TODO in `napt/build/packager.py` - discovered during testing
 
 #### Recipe Linting & Best Practices
+
 **Status**: 💡 Idea
+
 **Complexity**: High (3-5 days)
+
 **Value**: Medium
 
 **Description**: Advanced recipe validation beyond syntax checking, including PSADT function validation, deprecation warnings, anti-pattern detection, and style guide enforcement.
@@ -384,27 +230,15 @@ Intune targeting; see [Recipe Reference](recipe-reference.md#architecture)
 - Validates PSADT function names exist in v4
 - Warns on deprecated patterns or old v3 functions
 - Suggests improvements (e.g., use Uninstall-ADTApplication)
-- Warns about unknown fields at app level (e.g., deprecated `detection` vs `win32.installed_check`)
+- Warns about unknown fields (e.g., deprecated keys from old schema versions)
 
-#### Unrecognized Config Field Warnings
-**Status**: 💡 Idea
-**Complexity**: Low (few hours to 1 day)
-**Value**: Medium
-
-**Description**: Warn users when config files (org.yaml, vendor files, recipes) contain unrecognized fields.
-Helps catch typos, deprecated fields, and fields from newer NAPT versions.
-
-**Benefits**:
-
-- Catches typos early (e.g., `pstdt` instead of `psadt`)
-- Alerts users to deprecated fields they should migrate
-- Identifies fields from newer NAPT versions when running older versions
-- Helps maintain clean, intentional configuration
-- Warning (not error) allows forward compatibility while informing users
 
 #### Typed Config with Dataclasses
+
 **Status**: 💡 Idea
+
 **Complexity**: Medium (1-3 days)
+
 **Value**: Medium
 
 **Description**: Convert the dict-based default configuration to typed dataclasses once the schema and naming are finalized.
@@ -426,8 +260,11 @@ Provides IDE autocomplete, type checking, and catches config key typos at develo
 ### Technical Enhancements
 
 #### EXE Version Extraction
-**Status**: 💡 Idea  
-**Complexity**: High (3-5 days)  
+
+**Status**: 💡 Idea
+
+**Complexity**: High (3-5 days)
+
 **Value**: Medium
 
 **Description**: Extract version information from PE (Portable Executable) headers for .exe installers.
@@ -440,8 +277,11 @@ Provides IDE autocomplete, type checking, and catches config key typos at develo
 **Related**: Mentioned in `napt/discovery/url_download.py` docstring
 
 #### Parallel Package Building
-**Status**: 💡 Idea  
-**Complexity**: Medium (1-3 days)  
+
+**Status**: 💡 Idea
+
+**Complexity**: Medium (1-3 days)
+
 **Value**: Medium
 
 **Description**: Build multiple PSADT packages in parallel for faster multi-app workflows.
@@ -454,8 +294,11 @@ Provides IDE autocomplete, type checking, and catches config key typos at develo
 - Progress reporting for multiple concurrent builds
 
 #### IntuneWinAppUtil Version Tracking
-**Status**: 💡 Idea  
-**Complexity**: Low (few hours to 1 day)  
+
+**Status**: 💡 Idea
+
+**Complexity**: Low (few hours to 1 day)
+
 **Value**: Low
 
 **Description**: Track version of IntuneWinAppUtil.exe in cache metadata instead of always using latest from master, allowing pinning to specific commits/releases and optional configuration for tool version/source.
@@ -470,8 +313,11 @@ Provides IDE autocomplete, type checking, and catches config key typos at develo
 **Related**: TODO in `napt/build/packager.py:47`
 
 #### Minify Scripts at Intune Upload
-**Status**: 💡 Idea  
-**Complexity**: Medium (1-3 days)  
+
+**Status**: 💡 Idea
+
+**Complexity**: Medium (1-3 days)
+
 **Value**: Medium
 
 **Description**: Minify detection and requirements scripts in memory when preparing them for Intune upload, so the payload sent to Intune is smaller while on-disk build output stays readable. Conservative approach: strip comment-only lines, blank lines, and trailing whitespace (no AST). Optional: PowerShell-invoked AST-based minifier for greater reduction.
@@ -485,7 +331,7 @@ Provides IDE autocomplete, type checking, and catches config key typos at develo
 
 **Dependencies**:
 
-- Requires Intune upload implementation (or a separate “prepare for upload” step that emits minified content)
+- Requires Intune upload implementation (or a separate "prepare for upload" step that emits minified content)
 
 **Related**: Intune default policy limit is 4 MB total; NAPT detection + requirements scripts are ~40 KB per app (~70–100 apps depending on code signing)
 
@@ -497,26 +343,91 @@ Provides IDE autocomplete, type checking, and catches config key typos at develo
 
 ## Recently Completed
 
+#### Recipe Schema Redesign ✅
+
+**Status**: ✅ Completed
+
+**Complexity**: High
+
+**Value**: High
+
+**Description**: Restructured the recipe and config schema to eliminate design
+awkwardness accumulated during early development. All changes were breaking and
+landed on branch `refactor/recipe-schema-redesign`.
+
+**Changes made:**
+
+- Removed `app:` wrapper — `name`, `id`, `discovery:`, `psadt:`, `intune:`, and
+    `logging:` are now top-level fields in recipe files.
+- `source:` renamed to `discovery:` for clarity.
+- Removed `defaults:` wrapper from `org.yaml` and `vendor.yaml` — the deep
+    merger now handles layering automatically without manual merge blocks.
+- `win32.installed_check` replaced by `intune.detection` — all Intune
+    configuration (upload metadata, build behavior, detection settings) is now
+    in one place.
+- `log_format`, `log_level`, `log_rotation_mb` moved out of `win32.installed_check`
+    into a top-level `logging:` section, reflecting that they configure on-device
+    script behavior rather than Intune.
+- Added `directories:` section to replace `defaults.discover/build/package.output_dir`.
+
+**Related**: See [Recipe Reference](recipe-reference.md) for the current schema.
+
+---
+
+#### Unrecognized Config Field Warnings ✅
+
+**Status**: ✅ Completed
+
+**Complexity**: Low
+
+**Value**: Medium
+
+**Description**: `napt validate` warns when recipes, org.yaml, or vendor files contain
+unrecognized fields. Typo detection suggests similar field names
+(e.g., "Did you mean 'display_name'?"). Implemented in `napt/validation.py`.
+
+---
+
+#### Microsoft Intune Upload ✅
+
+**Status**: ✅ Completed
+
+**Complexity**: High
+
+**Value**: Very High
+
+**Description**: `napt upload <recipe>` uploads `.intunewin` packages directly to
+Microsoft Intune via the Graph API. Authentication is automatic via
+`azure-identity` (`EnvironmentCredential` → `ManagedIdentityCredential` →
+`DeviceCodeCredential`). Detection and requirements scripts are embedded inline
+from build output. Developers set `AZURE_CLIENT_ID` and `AZURE_TENANT_ID` and
+complete the device code flow; CI/CD sets all three `AZURE_*` env vars.
+
+---
+
 #### Detection Script Generation ✅
-**Status**: ✅ Completed  
-**Complexity**: High (3-5 days)  
+
+**Status**: ✅ Completed
+
+**Complexity**: High (3-5 days)
+
 **Value**: High
 
 **Description**: Automatic PowerShell detection and requirements script generation for Intune Win32 app deployments during build process. Detection scripts check if the app is installed at the required version (App entry); requirements scripts check if an older version is installed (Update entry). Both use the same registry checks, installer-type filtering, and CMTrace logging.
 
 **Implementation Details**:
 
-- Extracts app name from MSI ProductName (for MSI installers) or uses `win32.installed_check.display_name` (for non-MSI installers)
-- Always generates detection script `{AppName}_{Version}-Detection.ps1`; generates requirements script `{AppName}_{Version}-Requirements.ps1` when `win32.build_types` is both or update_only
+- Extracts app name from MSI ProductName (for MSI installers) or uses `intune.detection.display_name` (for non-MSI installers)
+- Always generates detection script `{AppName}_{Version}-Detection.ps1`; generates requirements script `{AppName}_{Version}-Requirements.ps1` when `intune.build_types` is both or update_only
 - Supports exact match or minimum version (installed >= expected); installer-type filtering (MSI strict, non-MSI permissive)
 - Includes CMTrace-formatted logging with log rotation (NAPTDetections.log, NAPTRequirements.log)
-- Configurable via `win32.installed_check` section in defaults or recipe
+- Configurable via `intune.detection` and `logging` sections in defaults or recipe
 
-**Related**: Implemented in `napt/detection.py`, `napt/requirements.py`, and integrated into build process in `napt/build/manager.py`. See [User Guide - Detection and Requirements Scripts](user-guide.md#detection-and-requirements-scripts) and [Recipe Reference - Win32 Configuration](recipe-reference.md#win32-configuration).
+**Related**: Implemented in `napt/detection.py`, `napt/requirements.py`, and integrated into build process in `napt/build/manager.py`. See [User Guide - Detection and Requirements Scripts](user-guide.md#detection-and-requirements-scripts) and [Recipe Reference - Intune Configuration](recipe-reference.md#intune-configuration).
 
 ---
 
-**v0.2.0** - PSADT building, packaging, and new discovery strategies  
+**v0.2.0** - PSADT building, packaging, and new discovery strategies
 **v0.1.0** - Core validation, discovery, and configuration system
 
 See [CHANGELOG.md](changelog.md) for detailed release history.

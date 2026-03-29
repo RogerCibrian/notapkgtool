@@ -207,8 +207,8 @@ class ApiJsonStrategy:
         can be skipped entirely.
 
         Args:
-            app_config: App configuration containing source.api_url,
-                source.version_path, and source.download_url_path.
+            app_config: App configuration containing discovery.api_url,
+                discovery.version_path, and discovery.download_url_path.
 
         Returns:
             Version info with version string, download URL, and
@@ -224,7 +224,7 @@ class ApiJsonStrategy:
                 ```python
                 strategy = ApiJsonStrategy()
                 config = {
-                    "source": {
+                    "discovery": {
                         "api_url": "https://api.vendor.com/latest",
                         "version_path": "version",
                         "download_url_path": "download_url"
@@ -239,21 +239,21 @@ class ApiJsonStrategy:
 
         logger = get_global_logger()
         # Validate configuration
-        source = app_config.get("source", {})
+        source = app_config.get("discovery", {})
         api_url = source.get("api_url")
         if not api_url:
-            raise ConfigError("api_json strategy requires 'source.api_url' in config")
+            raise ConfigError("api_json strategy requires 'discovery.api_url' in config")
 
         version_path = source.get("version_path")
         if not version_path:
             raise ConfigError(
-                "api_json strategy requires 'source.version_path' in config"
+                "api_json strategy requires 'discovery.version_path' in config"
             )
 
         download_url_path = source.get("download_url_path")
         if not download_url_path:
             raise ConfigError(
-                "api_json strategy requires 'source.download_url_path' in config"
+                "api_json strategy requires 'discovery.download_url_path' in config"
             )
 
         # Optional configuration
@@ -391,22 +391,22 @@ class ApiJsonStrategy:
 
         """
         errors = []
-        source = app_config.get("source", {})
+        source = app_config.get("discovery", {})
 
         # Check required fields
         if "api_url" not in source:
-            errors.append("Missing required field: source.api_url")
+            errors.append("Missing required field: discovery.api_url")
         elif not isinstance(source["api_url"], str):
-            errors.append("source.api_url must be a string")
+            errors.append("discovery.api_url must be a string")
         elif not source["api_url"].strip():
-            errors.append("source.api_url cannot be empty")
+            errors.append("discovery.api_url cannot be empty")
 
         if "version_path" not in source:
-            errors.append("Missing required field: source.version_path")
+            errors.append("Missing required field: discovery.version_path")
         elif not isinstance(source["version_path"], str):
-            errors.append("source.version_path must be a string")
+            errors.append("discovery.version_path must be a string")
         elif not source["version_path"].strip():
-            errors.append("source.version_path cannot be empty")
+            errors.append("discovery.version_path cannot be empty")
         else:
             # Validate JSONPath syntax
             from jsonpath_ng import parse as jsonpath_parse
@@ -417,11 +417,11 @@ class ApiJsonStrategy:
                 errors.append(f"Invalid version_path JSONPath: {err}")
 
         if "download_url_path" not in source:
-            errors.append("Missing required field: source.download_url_path")
+            errors.append("Missing required field: discovery.download_url_path")
         elif not isinstance(source["download_url_path"], str):
-            errors.append("source.download_url_path must be a string")
+            errors.append("discovery.download_url_path must be a string")
         elif not source["download_url_path"].strip():
-            errors.append("source.download_url_path cannot be empty")
+            errors.append("discovery.download_url_path cannot be empty")
         else:
             # Validate JSONPath syntax
             from jsonpath_ng import parse as jsonpath_parse
@@ -435,15 +435,15 @@ class ApiJsonStrategy:
         if "method" in source:
             method = source["method"]
             if not isinstance(method, str):
-                errors.append("source.method must be a string")
+                errors.append("discovery.method must be a string")
             elif method.upper() not in ["GET", "POST"]:
-                errors.append("source.method must be 'GET' or 'POST'")
+                errors.append("discovery.method must be 'GET' or 'POST'")
 
         if "headers" in source and not isinstance(source["headers"], dict):
-            errors.append("source.headers must be a dictionary")
+            errors.append("discovery.headers must be a dictionary")
 
         if "body" in source and not isinstance(source["body"], dict):
-            errors.append("source.body must be a dictionary")
+            errors.append("discovery.body must be a dictionary")
 
         return errors
 

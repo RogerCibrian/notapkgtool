@@ -1,109 +1,71 @@
-# Top-level API version (used to validate schema in the future)
+# Top-level API version
 apiVersion: napt/v1
 
 # Friendly project name (appears in logs/reports)
 project: "napt - Windows Apps"
 
-defaults:
-  # How to compare versions by default.
-  # Options: "semver" (semantic versioning, recommended), "lexicographic" (string compare).
-  comparator: semver
+psadt:
+  # PSADT release to use - "latest" or specific version (e.g., "4.1.7")
+  release: "latest"
 
-  updates:
-    # Policy for deciding when to stage new builds.
-    # - version_only: only when version number increases
-    # - version_then_hash: prefer version, but also stage if bits changed (repack)
-    # - hash_or_version: stage if version OR hash differs
-    # - hash_only: only when hash changes, ignore version strings
-    strategy: "version_then_hash"
+  # Cache directory for downloaded PSADT releases
+  cache_dir: "cache/psadt"
 
-    # If true, stage repacks where the version is unchanged but the hash differs.
-    allow_same_version_hash_change: true
+  # Brand pack replaces default PSADT assets (logo/banner) with custom ones.
+  brand_pack:
+    # Relative path to folder containing your replacement assets.
+    path: brand-packs/napt
 
-    # Comparator to use when evaluating versions: "semver" or "lexicographic".
-    comparator: "semver"
+    # Mapping rules: local source → template target location.
+    mappings:
+      - source: "AppIcon.*"        # Any file matching AppIcon.*
+        target: "Assets/AppIcon"   # Replaces the template's AppIcon
+      - source: "Banner.Classic.*"
+        target: "Assets/Banner.Classic"
 
-    # Use conditional HTTP requests (ETag / Last-Modified) to avoid redundant downloads.
-    use_conditional_requests: true
+  # Default app variables injected into Invoke-AppDeployToolkit.ps1
+  app_vars:
+    AppLang: "EN"                       # Language (EN = English)
+    AppRevision: "01"                   # Revision counter for same version
+    AppSuccessExitCodes: [0]            # Exit codes treated as success
+    AppRebootExitCodes: [1641, 3010]    # Codes that require reboot
+    AppProcessesToClose: []             # Processes to close before install
+    AppScriptVersion: "1.0.0"           # Script version metadata
+    AppScriptAuthor: "napt"             # Author name shown in script header
+    RequireAdmin: true                  # Require admin privileges
 
-    # Security settings (future use):
-    # - verify_signature: enforce Authenticode signature check
-    # - enforce_vendor_cn: restrict signer common name (e.g. "Google LLC")
-    verify_signature: false
-    enforce_vendor_cn: null
+intune:
+  # Which app entries to create in Intune
+  # - both: create both App and Update entries (default)
+  # - app_only: create only the App entry
+  # - update_only: create only the Update entry
+  build_types: "both"
 
-  psadt:
-    # PSADT release to use - "latest" or specific version (e.g., "4.1.7")
-    release: "latest"
-    
-    # Cache directory for downloaded PSADT releases
-    cache_dir: "cache/psadt"
+  # Prefix added to the app name for the Update entry in Intune
+  update_name_prefix: "[Update] "
 
-    # Brand pack replaces default PSADT assets (logo/banner) with custom ones.
-    brand_pack:
-      # Relative path to folder containing your replacement assets.
-      path: brand-packs/napt
+  # Minimum Windows 10/11 release required to install (enforced during assignment)
+  # Format: "Windows10_<release>" or "Windows11_<release>" (e.g. "Windows10_22H2", "Windows11_23H2")
+  minimum_supported_windows_release: "Windows10_21H2"
 
-      # Mapping rules: local source → template target location.
-      mappings:
-        - source: "AppIcon.*"        # Any file matching AppIcon.*
-          target: "Assets/AppIcon"   # Replaces the template's AppIcon
-        - source: "Banner.Classic.*"
-          target: "Assets/Banner.Classic"
+  # Command lines used in the Intune app entry (rarely need changing)
+  install_command: "Invoke-AppDeployToolkit.exe -DeploymentType Install -DeployMode Silent"
+  uninstall_command: "Invoke-AppDeployToolkit.exe -DeploymentType Uninstall -DeployMode Silent"
 
-    # Default app variables injected into Invoke-AppDeployToolkit.ps1
-    app_vars:
-      AppLang: "EN"                       # Language (EN = English)
-      AppRevision: "01"                   # Revision counter for same version
-      AppSuccessExitCodes: [0]            # Exit codes treated as success
-      AppRebootExitCodes: [1641, 3010]    # Codes that require reboot
-      AppProcessesToClose: []             # Processes to close before install
-      AppScriptVersion: "1.0.0"           # Script version metadata
-      AppScriptAuthor: "napt"             # Author name shown in script header
-      RequireAdmin: true                  # Require admin privileges
+  # Detection defaults (apply to all recipes unless overridden in intune.detection)
+  detection:
+    # If true, version must match exactly.
+    # If false, installed >= required passes (allows users to have newer versions).
+    exact_match: false
 
-  build:
-    # Output directory for built PSADT packages
-    output_dir: "builds"
-    
-    # Directory naming pattern
-    # Supported placeholders: {app_id}, {version}, {vendor}
-    naming: "{app_id}/{version}"
+logging:
+  # On-device logging settings for detection and requirements scripts
+  log_format: "cmtrace"  # cmtrace or legacy
+  log_level: "INFO"      # DEBUG, INFO, WARNING, ERROR
+  log_rotation_mb: 3
 
-  win32:
-    # Build types: which Intune app entries to create
-    # - both: create both App and Update entries (default)
-    # - app_only: create only the App entry
-    # - update_only: create only the Update entry
-    build_types: "both"
-
-    # Installed-state check configuration (shared by detection and requirements scripts)
-    installed_check:
-      # display_name: Required for non-MSI installers. MSI uses ProductName automatically.
-      # Set in recipe's app.win32.installed_check.display_name for non-MSI installers.
-
-      # architecture: Required for non-MSI installers. MSI auto-detects from Template.
-      # Allowed values: x86, x64, arm64, any
-      # Set in recipe's app.win32.installed_check.architecture for non-MSI installers.
-
-      # If true, use display_name instead of MSI ProductName for registry lookup.
-      # Useful when MSI ProductName contains version numbers that change (e.g., "7-Zip 25.01").
-      # Default: false (MSI ProductName is authoritative)
-      # override_msi_display_name: false
-
-      # Maximum log file size in MB before rotation
-      log_rotation_mb: 3
-
-      # Detection-specific settings
-      detection:
-        # If true, version must match exactly. If false, installed >= required passes.
-        # Default: false (allows users to have newer versions without triggering reinstall)
-        exact_match: false
-
-  intune:
-    # Prefix for Update app display name in Intune
-    # Update app name = update_name_prefix + app.name
-    update_name_prefix: "[Update] "
-
-  # Future configuration sections (not yet implemented):
-  # - intune.assignments: Deployment waves and ring management
+directories:
+  # Output directories for each pipeline stage
+  discover: "downloads"
+  build: "builds"
+  package: "packages"

@@ -62,7 +62,7 @@ Example:
         register_strategy("my_custom", MyCustomStrategy)
 
         # Now it can be used in recipes:
-        # source:
+        # discovery:
         #   strategy: my_custom
         #   ...
         ```
@@ -98,8 +98,7 @@ class DiscoveryStrategy(Protocol):
         """Discover and download an application version.
 
         Args:
-            app_config: The app configuration from the recipe
-                (`config["app"]`).
+            app_config: The merged recipe configuration dict.
             output_dir: Directory to download the installer to.
 
         Returns:
@@ -123,8 +122,7 @@ class DiscoveryStrategy(Protocol):
         Useful for quick feedback during recipe development.
 
         Args:
-            app_config: The app configuration from the recipe
-                (`config["app"]`).
+            app_config: The merged recipe configuration dict.
 
         Returns:
             List of error messages. Empty list if configuration is valid.
@@ -135,9 +133,9 @@ class DiscoveryStrategy(Protocol):
                 ```python
                 def validate_config(self, app_config):
                     errors = []
-                    source = app_config.get("source", {})
+                    source = app_config.get("discovery", {})
                     if "url" not in source:
-                        errors.append("Missing required field: source.url")
+                        errors.append("Missing required field: discovery.url")
                     return errors
                 ```
 
@@ -167,7 +165,7 @@ def register_strategy(name: str, strategy_class: type[DiscoveryStrategy]) -> Non
 
     Args:
         name: Strategy name (e.g., "url_download"). This is the value
-            used in recipe YAML files under source.strategy. Names should be
+            used in recipe YAML files under discovery.strategy. Names should be
             lowercase with underscores for readability.
         strategy_class: The strategy class to
             register. Must implement the DiscoveryStrategy protocol (have a

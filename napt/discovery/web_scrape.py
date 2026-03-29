@@ -203,9 +203,9 @@ class WebScrapeStrategy:
         If the version matches cached state, the download can be skipped entirely.
 
         Args:
-            app_config: App configuration containing source.page_url,
-                source.link_selector or source.link_pattern, and
-                source.version_pattern.
+            app_config: App configuration containing discovery.page_url,
+                discovery.link_selector or discovery.link_pattern, and
+                discovery.version_pattern.
 
         Returns:
             Version info with version string, download URL, and
@@ -221,7 +221,7 @@ class WebScrapeStrategy:
                 ```python
                 strategy = WebScrapeStrategy()
                 config = {
-                    "source": {
+                    "discovery": {
                         "page_url": "https://www.7-zip.org/download.html",
                         "link_selector": 'a[href$="-x64.msi"]',
                         "version_pattern": "7z(\\d{2})(\\d{2})-x64",
@@ -237,11 +237,11 @@ class WebScrapeStrategy:
 
         logger = get_global_logger()
         # Validate configuration
-        source = app_config.get("source", {})
+        source = app_config.get("discovery", {})
         page_url = source.get("page_url")
         if not page_url:
             raise ConfigError(
-                "web_scrape strategy requires 'source.page_url' in config"
+                "web_scrape strategy requires 'discovery.page_url' in config"
             )
 
         link_selector = source.get("link_selector")
@@ -249,14 +249,14 @@ class WebScrapeStrategy:
 
         if not link_selector and not link_pattern:
             raise ConfigError(
-                "web_scrape strategy requires either 'source.link_selector' or "
-                "'source.link_pattern' in config"
+                "web_scrape strategy requires either 'discovery.link_selector' or "
+                "'discovery.link_pattern' in config"
             )
 
         version_pattern = source.get("version_pattern")
         if not version_pattern:
             raise ConfigError(
-                "web_scrape strategy requires 'source.version_pattern' in config"
+                "web_scrape strategy requires 'discovery.version_pattern' in config"
             )
 
         version_format = source.get("version_format", "{0}")
@@ -391,15 +391,15 @@ class WebScrapeStrategy:
 
         """
         errors = []
-        source = app_config.get("source", {})
+        source = app_config.get("discovery", {})
 
         # Check page_url
         if "page_url" not in source:
-            errors.append("Missing required field: source.page_url")
+            errors.append("Missing required field: discovery.page_url")
         elif not isinstance(source["page_url"], str):
-            errors.append("source.page_url must be a string")
+            errors.append("discovery.page_url must be a string")
         elif not source["page_url"].strip():
-            errors.append("source.page_url cannot be empty")
+            errors.append("discovery.page_url cannot be empty")
 
         # Check that at least one link finding method is provided
         link_selector = source.get("link_selector")
@@ -408,15 +408,15 @@ class WebScrapeStrategy:
         if not link_selector and not link_pattern:
             errors.append(
                 "Missing required field: must provide either "
-                "source.link_selector or source.link_pattern"
+                "discovery.link_selector or discovery.link_pattern"
             )
 
         # Validate link_selector if provided
         if link_selector:
             if not isinstance(link_selector, str):
-                errors.append("source.link_selector must be a string")
+                errors.append("discovery.link_selector must be a string")
             elif not link_selector.strip():
-                errors.append("source.link_selector cannot be empty")
+                errors.append("discovery.link_selector cannot be empty")
             else:
                 # Try to validate CSS selector syntax
                 try:
@@ -429,9 +429,9 @@ class WebScrapeStrategy:
         # Validate link_pattern if provided
         if link_pattern:
             if not isinstance(link_pattern, str):
-                errors.append("source.link_pattern must be a string")
+                errors.append("discovery.link_pattern must be a string")
             elif not link_pattern.strip():
-                errors.append("source.link_pattern cannot be empty")
+                errors.append("discovery.link_pattern cannot be empty")
             else:
                 # Validate regex compiles
                 try:
@@ -441,11 +441,11 @@ class WebScrapeStrategy:
 
         # Check version_pattern
         if "version_pattern" not in source:
-            errors.append("Missing required field: source.version_pattern")
+            errors.append("Missing required field: discovery.version_pattern")
         elif not isinstance(source["version_pattern"], str):
-            errors.append("source.version_pattern must be a string")
+            errors.append("discovery.version_pattern must be a string")
         elif not source["version_pattern"].strip():
-            errors.append("source.version_pattern cannot be empty")
+            errors.append("discovery.version_pattern cannot be empty")
         else:
             # Validate regex compiles
             try:
@@ -456,9 +456,9 @@ class WebScrapeStrategy:
         # Validate version_format if provided
         if "version_format" in source:
             if not isinstance(source["version_format"], str):
-                errors.append("source.version_format must be a string")
+                errors.append("discovery.version_format must be a string")
             elif not source["version_format"].strip():
-                errors.append("source.version_format cannot be empty")
+                errors.append("discovery.version_format cannot be empty")
 
         return errors
 

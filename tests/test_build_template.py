@@ -69,23 +69,16 @@ class TestBuildAdtSessionVars:
     """Tests for building $adtSession variables."""
 
     def test_merge_org_and_recipe_vars(self):
-        """Test merging org defaults with recipe overrides."""
+        """Test that already-merged app_vars are used directly."""
+        # The config loader deep-merges psadt.app_vars before this function runs.
+        # This test verifies the function reads the merged result correctly.
         config = {
-            "defaults": {
-                "psadt": {
-                    "app_vars": {
-                        "AppLang": "EN",
-                        "AppRevision": "01",
-                        "AppScriptAuthor": "OrgDefault",
-                    }
-                }
-            },
-            "app": {
-                "psadt": {
-                    "app_vars": {
-                        "AppName": "Test App",
-                        "AppScriptAuthor": "RecipeOverride",
-                    }
+            "psadt": {
+                "app_vars": {
+                    "AppLang": "EN",
+                    "AppRevision": "01",
+                    "AppScriptAuthor": "RecipeOverride",
+                    "AppName": "Test App",
                 }
             },
         }
@@ -94,14 +87,15 @@ class TestBuildAdtSessionVars:
 
         assert result["AppLang"] == "EN"
         assert result["AppRevision"] == "01"
-        assert result["AppScriptAuthor"] == "RecipeOverride"  # Recipe wins
+        assert result["AppScriptAuthor"] == "RecipeOverride"
         assert result["AppName"] == "Test App"
 
     def test_discovered_version_substitution(self):
         """Test ${discovered_version} placeholder replacement."""
         config = {
-            "defaults": {"psadt": {"app_vars": {}}},
-            "app": {"psadt": {"app_vars": {"AppVersion": "${discovered_version}"}}},
+            "psadt": {
+                "app_vars": {"AppVersion": "${discovered_version}"},
+            },
         }
 
         result = _build_adtsession_vars(config, "2.3.4", "4.1.7", "x64")
@@ -112,10 +106,7 @@ class TestBuildAdtSessionVars:
         """Test auto-generated fields like AppScriptDate."""
         from datetime import date
 
-        config = {
-            "defaults": {"psadt": {"app_vars": {}}},
-            "app": {"psadt": {"app_vars": {}}},
-        }
+        config = {"psadt": {"app_vars": {}}}
 
         result = _build_adtsession_vars(config, "1.0.0", "4.1.7", "x64")
 

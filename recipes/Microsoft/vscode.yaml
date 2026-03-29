@@ -1,0 +1,32 @@
+apiVersion: napt/v1
+
+name: "Visual Studio Code"
+id: "napt-vscode"
+
+# VS Code publishes a JSON endpoint for each update channel and platform.
+# The endpoint returns productVersion (e.g., "1.97.0") and a direct
+# download URL for the installer, making it a clean api_json target.
+discovery:
+  strategy: api_json
+  api_url: "https://update.code.visualstudio.com/api/update/win32-x64/stable/latest"
+  version_path: "productVersion"
+  download_url_path: "url"
+  headers:
+    Accept: "application/json"
+
+intune:
+  detection:
+    display_name: "Microsoft Visual Studio Code"
+    architecture: "x64"
+
+psadt:
+  app_vars:
+    AppName: "Visual Studio Code"
+    AppVersion: "${discovered_version}"
+    AppVendor: "Microsoft"
+  install: |
+    # VS Code system installer - silent install for all users
+    Start-ADTExecutable -Path "$dirFiles\VSCodeSetup-x64-${discovered_version}.exe" -Parameters "/VERYSILENT /NORESTART /MERGETASKS=!runcode,addcontextmenufiles,addcontextmenufolders,associatewithfiles,addtopath"
+  uninstall: |
+    # VS Code uninstall via registry (Inno Setup uninstaller)
+    Uninstall-ADTApplication -Name "Microsoft Visual Studio Code"

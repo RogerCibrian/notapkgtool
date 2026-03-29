@@ -199,7 +199,7 @@ class StateTracker:
             recipe_id: Recipe identifier.
             url: Download URL for provenance tracking. For version-first strategies
                 (url_pattern, api_github, api_json), this is the actual download URL
-                from version_info. For file-first (url_download), this is source.url.
+                from version_info. For file-first (url_download), this is discovery.url.
             sha256: SHA-256 hash of file (for integrity checks).
             etag: ETag header from download response. Used by url_download for HTTP 304
                 conditional requests. Saved but unused by version-first strategies.

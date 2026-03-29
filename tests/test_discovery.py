@@ -66,7 +66,7 @@ class TestUrlDownloadStrategy:
         """Test discovering version from MSI file."""
         app_config = {
             "id": "test-app",
-            "source": {
+            "discovery": {
                 "url": "https://example.com/installer.msi",
             },
         }
@@ -103,17 +103,17 @@ class TestUrlDownloadStrategy:
 
     def test_discover_version_missing_url_raises(self, tmp_test_dir):
         """Test that missing URL raises ValueError."""
-        app_config = {"source": {}}
+        app_config = {"discovery": {}}
 
         strategy = UrlDownloadStrategy()
 
-        with pytest.raises(ConfigError, match="requires 'source.url'"):
+        with pytest.raises(ConfigError, match="requires 'discovery.url'"):
             strategy.discover_version(app_config, tmp_test_dir)
 
     def test_discover_version_download_failure_raises(self, tmp_test_dir):
         """Test that download failures raise NetworkError."""
         app_config = {
-            "source": {
+            "discovery": {
                 "url": "https://example.com/installer.msi",
             }
         }
@@ -131,7 +131,7 @@ class TestUrlDownloadStrategy:
     def test_discover_version_extraction_failure_raises(self, tmp_test_dir):
         """Test that version extraction failures raise NetworkError."""
         app_config = {
-            "source": {
+            "discovery": {
                 "url": "https://example.com/installer.msi",
                 "version": {"type": "msi"},
             }
@@ -176,7 +176,7 @@ class TestCacheAndETagSupport:
 
         app_config = {
             "id": "test-app",
-            "source": {
+            "discovery": {
                 "url": "https://example.com/installer.msi",
                 "version": {"type": "msi"},
             },
@@ -224,7 +224,7 @@ class TestCacheAndETagSupport:
         """Test url_download downloads when file modified (HTTP 200)."""
         app_config = {
             "id": "test-app",
-            "source": {
+            "discovery": {
                 "url": "https://example.com/installer.msi",
                 "version": {"type": "msi"},
             },
@@ -273,7 +273,7 @@ class TestCacheAndETagSupport:
         """Test that strategies work without cache (backward compatible)."""
         app_config = {
             "id": "test-app",
-            "source": {
+            "discovery": {
                 "url": "https://example.com/installer.msi",
                 "version": {"type": "msi"},
             },
@@ -310,7 +310,7 @@ class TestCacheAndETagSupport:
         """Test that cache with missing file raises helpful error."""
         app_config = {
             "id": "test-app",
-            "source": {
+            "discovery": {
                 "url": "https://example.com/installer.msi",
                 "version": {"type": "msi"},
             },
@@ -346,7 +346,7 @@ class TestVersionFirstStrategies:
 
         strategy = WebScrapeStrategy()
         app_config = {
-            "source": {
+            "discovery": {
                 "page_url": "https://example.com/download.html",
                 "link_selector": 'a[href$="-x64.msi"]',
                 "version_pattern": r"7z(\d{2})(\d{2})-x64",
@@ -383,7 +383,7 @@ class TestVersionFirstStrategies:
 
         strategy = WebScrapeStrategy()
         app_config = {
-            "source": {
+            "discovery": {
                 "page_url": "https://example.com/download.html",
                 "link_pattern": r'href="(/files/app-v[0-9.]+-installer\.msi)"',
                 "version_pattern": r"app-v([0-9.]+)-installer",
@@ -412,7 +412,7 @@ class TestVersionFirstStrategies:
 
         strategy = ApiGithubStrategy()
         app_config = {
-            "source": {
+            "discovery": {
                 "repo": "owner/repo",
                 "asset_pattern": r".*\.msi$",
                 "version_pattern": r"v?([0-9.]+)",
@@ -449,7 +449,7 @@ class TestVersionFirstStrategies:
 
         strategy = ApiJsonStrategy()
         app_config = {
-            "source": {
+            "discovery": {
                 "api_url": "https://api.example.com/latest",
                 "version_path": "version",
                 "download_url_path": "download_url",

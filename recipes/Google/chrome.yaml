@@ -1,20 +1,19 @@
 apiVersion: napt/v1
 
-app:
-  name: "Google Chrome"
-  id: "napt-chrome"
+name: "Google Chrome"
+id: "napt-chrome"
 
-  source:
-      strategy: url_download
-      url: "https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi"
+discovery:
+  strategy: url_download
+  url: "https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi"
 
-  psadt:
-      app_vars:
-        AppName: "Google Chrome"
-        AppVersion: "${discovered_version}"
-      install: |
-        # Install Chrome MSI with system-wide deployment
-        Start-ADTMsiProcess -Action Install -Path "$dirFiles\googlechromestandaloneenterprise64.msi" -Parameters "ALLUSERS=1"
-      uninstall: |
-        # Uninstall Chrome automatically (handles MSI ProductCode lookup)
-        Uninstall-ADTApplication -Name "Google Chrome"
+psadt:
+  app_vars:
+    AppName: "Google Chrome"
+    AppVersion: "${discovered_version}"
+  install: |
+    # Install Chrome MSI with system-wide deployment
+    Start-ADTMsiProcess -Action Install -Path "$dirFiles\googlechromestandaloneenterprise64.msi" -Parameters "ALLUSERS=1"
+  uninstall: |
+    # Uninstall Chrome automatically (handles MSI ProductCode lookup)
+    Uninstall-ADTApplication -Name "Google Chrome"

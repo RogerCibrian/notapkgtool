@@ -146,8 +146,7 @@ class UrlDownloadStrategy:
         """Download from static URL and extract version from the file.
 
         Args:
-            app_config: App configuration containing source.url and
-                source.version.
+            app_config: App configuration containing discovery.url.
             output_dir: Directory to save the downloaded file.
             cache: Cached state with etag, last_modified,
                 file_path, and sha256 for conditional requests. If provided
@@ -167,10 +166,12 @@ class UrlDownloadStrategy:
         from napt.logging import get_global_logger
 
         logger = get_global_logger()
-        source = app_config.get("source", {})
+        source = app_config.get("discovery", {})
         url = source.get("url")
         if not url:
-            raise ConfigError("url_download strategy requires 'source.url' in config")
+            raise ConfigError(
+                "url_download strategy requires 'discovery.url' in config"
+            )
 
         app_id = app_config.get("id", "")
 
@@ -285,15 +286,15 @@ class UrlDownloadStrategy:
 
         """
         errors = []
-        source = app_config.get("source", {})
+        source = app_config.get("discovery", {})
 
         # Check required fields
         if "url" not in source:
-            errors.append("Missing required field: source.url")
+            errors.append("Missing required field: discovery.url")
         elif not isinstance(source["url"], str):
-            errors.append("source.url must be a string")
+            errors.append("discovery.url must be a string")
         elif not source["url"].strip():
-            errors.append("source.url cannot be empty")
+            errors.append("discovery.url cannot be empty")
 
         # Version extraction is now auto-detected by file extension
         # No version configuration validation needed
