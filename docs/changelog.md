@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`logging:` top-level section** - New optional section for per-recipe logging
+    configuration. Supports `log_format` (`cmtrace`, `text`), `log_level`
+    (`verbose`, `debug`), and `log_rotation_mb`
+- **New `intune:` fields** - `developer`, `owner`, `notes`, `logo_path`,
+    `minimum_supported_windows_release`, `install_command`, and
+    `uninstall_command` are now supported in the `intune:` section
+- **Sample recipe: `recipes/Microsoft/vscode.yaml`** - New example recipe for
+    Visual Studio Code using the `api_json` strategy
+
+### Changed
+
+- **BREAKING: Recipe schema flattened** - The `app:` wrapper is removed. Fields
+    `name`, `id`, `discovery:`, `psadt:`, `intune:`, and `logging:` are now
+    top-level. Update all recipes by moving fields out of `app:`
+- **BREAKING: `source:` renamed to `discovery:`** - All discovery configuration
+    must move from `source:` to `discovery:`. Affects all four strategies:
+    `api_github`, `api_json`, `url_download`, `web_scrape`
+- **BREAKING: `win32.installed_check` replaced by `intune.detection`** -
+    Detection configuration moves from `win32.installed_check.*` to
+    `intune.detection.*`. Fields are unchanged (`display_name`, `architecture`,
+    `exact_match`, `override_msi_display_name`)
+- **BREAKING: Directory config keys renamed** - `defaults.discover.output_dir`,
+    `defaults.build.output_dir`, and `defaults.package.output_dir` are now
+    `directories.discover`, `directories.build`, and `directories.package`.
+    Update `defaults/org.yaml` if you set these keys
+
 ## [0.4.0] - 2026-03-08
 
 ### Added

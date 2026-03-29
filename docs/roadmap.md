@@ -32,7 +32,7 @@ This roadmap is a living document showing potential future directions for NAPT. 
 | Intune Upload Settings Overrides | 💡 Idea | User-Facing | Low | Medium |
 | PowerShell Validation | 💡 Idea | Code Quality | High | High |
 | Recipe Linting & Best Practices | 💡 Idea | Code Quality | High | Medium |
-| Unrecognized Config Field Warnings | 💡 Idea | Code Quality | Low | Medium |
+| Unrecognized Config Field Warnings | ✅ Completed | Code Quality | Low | Medium |
 | Typed Config with Dataclasses | 💡 Idea | Code Quality | Medium | Medium |
 | EXE Version Extraction | 💡 Idea | Technical | High | Medium |
 | Parallel Package Building | 💡 Idea | Technical | Medium | Medium |
@@ -41,9 +41,9 @@ This roadmap is a living document showing potential future directions for NAPT. 
 
 **Summary:**
 
-- ✅ **Completed**: 2
+- ✅ **Completed**: 3
 - 🔬 **Investigating**: 1
-- 💡 **Ideas**: 12
+- 💡 **Ideas**: 11
 - **Total**: 15 features
 
 ---
@@ -232,24 +232,6 @@ see [Recipe Reference](recipe-reference.md#architecture)
 - Suggests improvements (e.g., use Uninstall-ADTApplication)
 - Warns about unknown fields (e.g., deprecated keys from old schema versions)
 
-#### Unrecognized Config Field Warnings
-
-**Status**: 💡 Idea
-
-**Complexity**: Low (few hours to 1 day)
-
-**Value**: Medium
-
-**Description**: Warn users when config files (org.yaml, vendor files, recipes) contain unrecognized fields.
-Helps catch typos, deprecated fields, and fields from newer NAPT versions.
-
-**Benefits**:
-
-- Catches typos early (e.g., `pstdt` instead of `psadt`)
-- Alerts users to deprecated fields they should migrate
-- Identifies fields from newer NAPT versions when running older versions
-- Helps maintain clean, intentional configuration
-- Warning (not error) allows forward compatibility while informing users
 
 #### Typed Config with Dataclasses
 
@@ -389,6 +371,20 @@ landed on branch `refactor/recipe-schema-redesign`.
 - Added `directories:` section to replace `defaults.discover/build/package.output_dir`.
 
 **Related**: See [Recipe Reference](recipe-reference.md) for the current schema.
+
+---
+
+#### Unrecognized Config Field Warnings ✅
+
+**Status**: ✅ Completed
+
+**Complexity**: Low
+
+**Value**: Medium
+
+**Description**: `napt validate` warns when recipes, org.yaml, or vendor files contain
+unrecognized fields. Typo detection suggests similar field names
+(e.g., "Did you mean 'display_name'?"). Implemented in `napt/validation.py`.
 
 ---
 
