@@ -50,12 +50,12 @@ Path Resolution:
     Relative paths in configuration are resolved against the RECIPE FILE location,
     making recipes relocatable and portable. Currently resolved paths:
 
-    - defaults.psadt.brand_pack.path
+    - psadt.brand_pack.path
 
 Dynamic Injection:
     Some fields are injected at load time:
 
-    - defaults.psadt.app_vars.AppScriptDate: Today's date (YYYY-MM-DD)
+    - psadt.app_vars.AppScriptDate: Today's date (YYYY-MM-DD)
 
 Error Handling:
     - ConfigError: Recipe file doesn't exist, YAML parse errors, empty files,
@@ -69,12 +69,12 @@ Example:
         from napt.config import load_effective_config
 
         cfg = load_effective_config(Path("recipes/Google/chrome.yaml"))
-        print(cfg["app"]["name"])  # Output: Google Chrome
+        print(cfg["name"])  # Output: Google Chrome
         ```
 
     Access merged defaults:
         ```python
-        psadt_release = cfg["defaults"]["psadt"]["release"]
+        psadt_release = cfg["psadt"]["release"]
         print(psadt_release)  # Output: latest
         ```
 
@@ -216,7 +216,7 @@ def _detect_vendor(recipe_path: Path, recipe_obj: dict[str, Any]) -> str | None:
     Uses the following priority order:
 
     1. Folder name under recipes/ (e.g., recipes/Google/chrome.yaml -> Google)
-    2. recipe.app.psadt.app_vars.AppVendor (if present)
+    2. recipe.psadt.app_vars.AppVendor (if present)
     3. None if not found
 
     Args:
@@ -232,9 +232,8 @@ def _detect_vendor(recipe_path: Path, recipe_obj: dict[str, Any]) -> str | None:
     # Try reading from the recipe content
     vendor_from_recipe: str | None = None
     try:
-        app = recipe_obj.get("app")
-        if app and isinstance(app, dict):
-            psadt = app.get("psadt", {})
+        psadt = recipe_obj.get("psadt", {})
+        if isinstance(psadt, dict):
             app_vars = psadt.get("app_vars", {})
             v = app_vars.get("AppVendor")
             if isinstance(v, str) and v.strip():
@@ -257,7 +256,7 @@ def _resolve_known_paths(
     """Resolves relative path fields inside the merged config.
 
     We keep this explicit and conservative to avoid unexpected rewrites.
-    Currently handles cfg["defaults"]["psadt"]["brand_pack"]["path"].
+    Currently handles cfg["psadt"]["brand_pack"]["path"].
 
     Brand pack paths are resolved relative to defaults_root (if available),
     otherwise relative to recipe_dir as fallback. Modifies cfg in place.
@@ -268,7 +267,7 @@ def _resolve_known_paths(
         defaults_root: Root directory containing defaults/, if found.
     """
     try:
-        brand_pack = cfg["defaults"]["psadt"]["brand_pack"]
+        brand_pack = cfg["psadt"]["brand_pack"]
         raw_path = brand_pack.get("path")
         if isinstance(raw_path, str) and raw_path:
             p = Path(raw_path)
@@ -292,7 +291,7 @@ def _resolve_known_paths(
 def _inject_dynamic_values(cfg: dict[str, Any]) -> None:
     """Injects dynamic fields that should be set at load/build time.
 
-    Currently injects defaults.psadt.app_vars.AppScriptDate with today's date
+    Currently injects psadt.app_vars.AppScriptDate with today's date
     in YYYY-MM-DD format.
 
     Args:
@@ -300,11 +299,7 @@ def _inject_dynamic_values(cfg: dict[str, Any]) -> None:
     """
     today_str = date.today().strftime("%Y-%m-%d")
     try:
-        app_vars = (
-            cfg.setdefault("defaults", {})
-            .setdefault("psadt", {})
-            .setdefault("app_vars", {})
-        )
+        app_vars = cfg.setdefault("psadt", {}).setdefault("app_vars", {})
         # Do not overwrite if explicitly set in recipe; only set if absent
         app_vars.setdefault("AppScriptDate", today_str)
     except Exception as err:

@@ -32,8 +32,7 @@ Example:
         from napt.config import load_effective_config
 
         config = load_effective_config(Path("recipes/Google/chrome.yaml"))
-        app = config.get("app")
-        print(app["name"])  # "Google Chrome"
+        print(config["name"])  # "Google Chrome"
         ```
 """
 

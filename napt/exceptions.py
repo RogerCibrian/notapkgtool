@@ -72,7 +72,7 @@ class ConfigError(NAPTError):
 
     - YAML parse errors (syntax errors, invalid structure)
     - Missing required configuration fields (e.g., no apps defined, missing
-        'source.strategy' field)
+        'discovery.strategy' field)
     - Invalid strategy configuration (unknown strategy name, invalid strategy
         parameters)
     - Missing recipe files (file not found)

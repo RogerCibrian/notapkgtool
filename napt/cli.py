@@ -342,7 +342,7 @@ def _resolve_build_dir_from_recipe(
             If None, picks the most recently modified version directory
             that contains a packagefiles/ subdirectory.
         builds_dir: Directory containing builds. If None, reads from
-            config defaults.build.output_dir.
+            config directories.build.
 
     Returns:
         Path to the version directory (e.g., builds/napt-chrome/144.0.7559.110/).
@@ -354,11 +354,9 @@ def _resolve_build_dir_from_recipe(
 
     """
     config = load_effective_config(recipe_path)
-    app_id = config["app"]["id"]
+    app_id = config["id"]
     build_output_dir = (
-        builds_dir
-        if builds_dir is not None
-        else Path(config["defaults"]["build"]["output_dir"])
+        builds_dir if builds_dir is not None else Path(config["directories"]["build"])
     )
     app_build_dir = build_output_dir / app_id
 

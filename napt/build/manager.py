@@ -91,8 +91,7 @@ def _get_installer_version(
     from napt.logging import get_global_logger
 
     logger = get_global_logger()
-    app = config["app"]
-    app_id = app.get("id", "unknown")
+    app_id = config.get("id", "unknown")
 
     # MSI: version is authoritative from the installer — no fallback
     if installer_file.suffix.lower() == ".msi":
@@ -151,10 +150,8 @@ def _find_installer_file(
     from napt.logging import get_global_logger
 
     logger = get_global_logger()
-    app = config["app"]
-    app_id = app.get("id", "")
-    source = app.get("source", {})
-    url = source.get("url", "")
+    app_id = config.get("id", "")
+    url = config.get("discovery", {}).get("url", "")
 
     app_dir = downloads_dir / app_id
 
@@ -195,7 +192,7 @@ def _find_installer_file(
             logger.warning("BUILD", f"Could not check state file: {err}")
 
     # Strategy 3: Fallback - Search for installer matching app name/id
-    app_name = app.get("name", "").lower()
+    app_name = config.get("name", "").lower()
 
     # Try to find installer matching app_id or app_name in filename
     if app_dir.exists():
@@ -356,7 +353,7 @@ def _apply_branding(config: dict[str, Any], build_dir: Path) -> None:
     from napt.logging import get_global_logger
 
     logger = get_global_logger()
-    brand_pack = config["defaults"]["psadt"]["brand_pack"]
+    brand_pack = config["psadt"]["brand_pack"]
 
     if not brand_pack["path"]:
         logger.verbose("BUILD", "No brand pack configured, using PSADT defaults")
@@ -416,7 +413,7 @@ def _generate_detection_script(
     """Generate detection script for Intune Win32 app.
 
     Uses MSI metadata (ProductName, architecture) for MSI installers, or
-    win32.installed_check config for non-MSI installers. Saves the script as
+    intune.detection config for non-MSI installers. Saves the script as
     a sibling to the packagefiles directory.
 
     Args:
@@ -433,49 +430,37 @@ def _generate_detection_script(
     Raises:
         PackagingError: If detection script generation fails.
         ConfigError: If required configuration is missing
-            (win32.installed_check.display_name required for non-MSI installers).
+            (intune.detection.display_name required for non-MSI installers).
     """
     from napt.logging import get_global_logger
 
     logger = get_global_logger()
-    app = config["app"]
 
-    # Get installed_check configuration (merged defaults + app-specific)
-    defaults_installed_check = (
-        config.get("defaults", {}).get("win32", {}).get("installed_check", {})
-    )
-    app_installed_check = app.get("win32", {}).get("installed_check", {})
-    # Merge: app overrides defaults (shallow merge at top level)
-    installed_check_config = {**defaults_installed_check, **app_installed_check}
-
-    # Merge nested detection config separately
-    defaults_detection_nested = defaults_installed_check.get("detection", {})
-    app_detection_nested = app_installed_check.get("detection", {})
-    detection_nested_config = {**defaults_detection_nested, **app_detection_nested}
+    # intune.detection and logging are already deep-merged by the config loader
+    detection_config = config.get("intune", {}).get("detection", {})
+    logging_config = config.get("logging", {})
 
     # Determine AppName for detection
     app_name_for_detection = None
     installer_ext = installer_file.suffix.lower()
-    override_msi_display_name = installed_check_config.get(
-        "override_msi_display_name", False
-    )
+    override_msi_display_name = detection_config.get("override_msi_display_name", False)
 
     # Check if display_name is set for MSI without override flag
-    if installer_ext == ".msi" and installed_check_config.get("display_name"):
+    if installer_ext == ".msi" and detection_config.get("display_name"):
         if not override_msi_display_name:
             logger.warning(
                 "DETECTION",
-                "win32.installed_check.display_name is set but will be ignored for "
+                "intune.detection.display_name is set but will be ignored for "
                 "MSI installers. MSI ProductName is used as the authoritative source "
                 "for registry DisplayName. Set override_msi_display_name: true to use "
                 "display_name instead.",
             )
 
     # Check if architecture is set for MSI installers (not allowed)
-    if installer_ext == ".msi" and installed_check_config.get("architecture"):
+    if installer_ext == ".msi" and detection_config.get("architecture"):
         logger.warning(
             "DETECTION",
-            "win32.installed_check.architecture is set but will be ignored for MSI "
+            "intune.detection.architecture is set but will be ignored for MSI "
             "installers. MSI Template is used as the authoritative source for "
             "architecture.",
         )
@@ -484,7 +469,7 @@ def _generate_detection_script(
     if installer_ext != ".msi" and override_msi_display_name:
         logger.warning(
             "DETECTION",
-            "win32.installed_check.override_msi_display_name is set but will be "
+            "intune.detection.override_msi_display_name is set but will be "
             "ignored for non-MSI installers. This flag only applies to MSI installers.",
         )
 
@@ -495,13 +480,13 @@ def _generate_detection_script(
         assert msi_metadata is not None  # guaranteed by build_package
         if override_msi_display_name:
             # MSI with override: Use display_name instead of ProductName
-            if not installed_check_config.get("display_name"):
+            if not detection_config.get("display_name"):
                 raise ConfigError(
-                    "win32.installed_check.override_msi_display_name is true but "
-                    "display_name is not set. Set display_name when using "
-                    "override_msi_display_name."
+                    "intune.detection.override_msi_display_name is true but "
+                    "display_name is not set. Set intune.detection.display_name when "
+                    "using override_msi_display_name."
                 )
-            app_name_for_detection = installed_check_config["display_name"]
+            app_name_for_detection = detection_config["display_name"]
             # Support ${discovered_version} template variable
             if "${discovered_version}" in app_name_for_detection:
                 app_name_for_detection = app_name_for_detection.replace(
@@ -529,37 +514,37 @@ def _generate_detection_script(
         logger.verbose(
             "DETECTION", f"MSI architecture: {expected_architecture}"
         )
-    elif installed_check_config.get("display_name"):
+    elif detection_config.get("display_name"):
         # Non-MSI: Use explicit display_name (required)
         # Support ${discovered_version} template variable
-        app_name_for_detection = installed_check_config["display_name"]
+        app_name_for_detection = detection_config["display_name"]
         if "${discovered_version}" in app_name_for_detection:
             app_name_for_detection = app_name_for_detection.replace(
                 "${discovered_version}", version
             )
         logger.verbose(
             "DETECTION",
-            f"Using win32.installed_check.display_name: {app_name_for_detection}",
+            f"Using intune.detection.display_name: {app_name_for_detection}",
         )
 
         # Non-MSI: architecture is required
-        if installed_check_config.get("architecture"):
-            expected_architecture = installed_check_config["architecture"]
+        if detection_config.get("architecture"):
+            expected_architecture = detection_config["architecture"]
             logger.verbose(
                 "DETECTION",
-                f"Using win32.installed_check.architecture: {expected_architecture}",
+                f"Using intune.detection.architecture: {expected_architecture}",
             )
         else:
             raise ConfigError(
-                "win32.installed_check.architecture is required for non-MSI installers. "
-                "Set app.win32.installed_check.architecture in recipe configuration. "
+                "intune.detection.architecture is required for non-MSI installers. "
+                "Set intune.detection.architecture in the recipe. "
                 "Allowed values: x86, x64, arm64, any"
             )
     else:
         # Non-MSI: display_name required
         raise ConfigError(
-            "win32.installed_check.display_name is required for non-MSI installers. "
-            "Set app.win32.installed_check.display_name in recipe configuration."
+            "intune.detection.display_name is required for non-MSI installers. "
+            "Set intune.detection.display_name in the recipe."
         )
 
     # Determine if wildcard matching is needed
@@ -569,10 +554,10 @@ def _generate_detection_script(
     detection_config_obj = DetectionConfig(
         app_name=app_name_for_detection,
         version=version,
-        log_format=installed_check_config["log_format"],
-        log_level=installed_check_config["log_level"],
-        log_rotation_mb=installed_check_config["log_rotation_mb"],
-        exact_match=detection_nested_config["exact_match"],
+        log_format=logging_config.get("log_format", "cmtrace"),
+        log_level=logging_config.get("log_level", "INFO"),
+        log_rotation_mb=logging_config.get("log_rotation_mb", 3),
+        exact_match=detection_config.get("exact_match", False),
         app_id=app_id,
         is_msi_installer=(installer_ext == ".msi"),
         expected_architecture=expected_architecture,
@@ -612,7 +597,7 @@ def _generate_requirements_script(
     """Generate requirements script for Intune Win32 app (Update entry).
 
     Uses MSI metadata (ProductName, architecture) for MSI installers, or
-    win32.installed_check config for non-MSI installers. Saves the script as
+    intune.detection config for non-MSI installers. Saves the script as
     a sibling to the packagefiles directory.
 
     The requirements script determines if an older version is installed,
@@ -632,24 +617,20 @@ def _generate_requirements_script(
     Raises:
         PackagingError: If requirements script generation fails.
         ConfigError: If required configuration is missing
-            (win32.installed_check.display_name required for non-MSI installers).
+            (intune.detection.display_name required for non-MSI installers).
     """
     from napt.logging import get_global_logger
 
     logger = get_global_logger()
-    app = config["app"]
 
-    # Get installed_check configuration (merged defaults + app-specific)
-    defaults_installed_check = (
-        config.get("defaults", {}).get("win32", {}).get("installed_check", {})
-    )
-    app_installed_check = app.get("win32", {}).get("installed_check", {})
-    installed_check_config = {**defaults_installed_check, **app_installed_check}
+    # intune.detection and logging are already deep-merged by the config loader
+    detection_config = config.get("intune", {}).get("detection", {})
+    logging_config = config.get("logging", {})
 
     # Determine AppName for requirements
     app_name_for_requirements = None
     installer_ext = installer_file.suffix.lower()
-    override_msi_display_name = installed_check_config.get(
+    override_msi_display_name = detection_config.get(
         "override_msi_display_name", False
     )
 
@@ -660,13 +641,13 @@ def _generate_requirements_script(
         assert msi_metadata is not None  # guaranteed by build_package
         if override_msi_display_name:
             # MSI with override: Use display_name instead of ProductName
-            if not installed_check_config.get("display_name"):
+            if not detection_config.get("display_name"):
                 raise ConfigError(
-                    "win32.installed_check.override_msi_display_name is true but "
-                    "display_name is not set. Set display_name when using "
-                    "override_msi_display_name."
+                    "intune.detection.override_msi_display_name is true but "
+                    "display_name is not set. Set intune.detection.display_name when "
+                    "using override_msi_display_name."
                 )
-            app_name_for_requirements = installed_check_config["display_name"]
+            app_name_for_requirements = detection_config["display_name"]
             # Support ${discovered_version} template variable
             if "${discovered_version}" in app_name_for_requirements:
                 app_name_for_requirements = app_name_for_requirements.replace(
@@ -694,37 +675,37 @@ def _generate_requirements_script(
         logger.verbose(
             "REQUIREMENTS", f"MSI architecture: {expected_architecture}"
         )
-    elif installed_check_config.get("display_name"):
+    elif detection_config.get("display_name"):
         # Non-MSI: Use explicit display_name (required)
         # Support ${discovered_version} template variable
-        app_name_for_requirements = installed_check_config["display_name"]
+        app_name_for_requirements = detection_config["display_name"]
         if "${discovered_version}" in app_name_for_requirements:
             app_name_for_requirements = app_name_for_requirements.replace(
                 "${discovered_version}", version
             )
         logger.verbose(
             "REQUIREMENTS",
-            f"Using win32.installed_check.display_name: {app_name_for_requirements}",
+            f"Using intune.detection.display_name: {app_name_for_requirements}",
         )
 
         # Non-MSI: architecture is required
-        if installed_check_config.get("architecture"):
-            expected_architecture = installed_check_config["architecture"]
+        if detection_config.get("architecture"):
+            expected_architecture = detection_config["architecture"]
             logger.verbose(
                 "REQUIREMENTS",
-                f"Using win32.installed_check.architecture: {expected_architecture}",
+                f"Using intune.detection.architecture: {expected_architecture}",
             )
         else:
             raise ConfigError(
-                "win32.installed_check.architecture is required for non-MSI installers. "
-                "Set app.win32.installed_check.architecture in recipe configuration. "
+                "intune.detection.architecture is required for non-MSI installers. "
+                "Set intune.detection.architecture in the recipe. "
                 "Allowed values: x86, x64, arm64, any"
             )
     else:
         # Non-MSI: display_name required
         raise ConfigError(
-            "win32.installed_check.display_name is required for non-MSI installers. "
-            "Set app.win32.installed_check.display_name in recipe configuration."
+            "intune.detection.display_name is required for non-MSI installers. "
+            "Set intune.detection.display_name in the recipe."
         )
 
     # Determine if wildcard matching is needed
@@ -734,9 +715,9 @@ def _generate_requirements_script(
     requirements_config_obj = RequirementsConfig(
         app_name=app_name_for_requirements,
         version=version,
-        log_format=installed_check_config["log_format"],
-        log_level=installed_check_config["log_level"],
-        log_rotation_mb=installed_check_config["log_rotation_mb"],
+        log_format=logging_config.get("log_format", "cmtrace"),
+        log_level=logging_config.get("log_level", "INFO"),
+        log_rotation_mb=logging_config.get("log_rotation_mb", 3),
         app_id=app_id,
         is_msi_installer=(installer_ext == ".msi"),
         expected_architecture=expected_architecture,
@@ -908,16 +889,15 @@ def build_package(
     logger.step(1, 8, "Loading configuration...")
     config = load_effective_config(recipe_path)
 
-    app = config["app"]
-    app_id = app.get("id", "unknown-app")
-    app_name = app.get("name", "Unknown App")
+    app_id = config.get("id", "unknown-app")
+    app_name = config.get("name", "Unknown App")
 
     # Set defaults
     if downloads_dir is None:
-        downloads_dir = Path(config["defaults"]["discover"]["output_dir"])
+        downloads_dir = Path(config["directories"]["discover"])
 
     if output_dir is None:
-        output_dir = Path(config["defaults"]["build"]["output_dir"])
+        output_dir = Path(config["directories"]["build"])
 
     # Find installer file
     logger.step(2, 8, "Finding installer...")
@@ -936,18 +916,18 @@ def build_package(
         msi_metadata = extract_msi_metadata(installer_file)
         architecture: str = msi_metadata.architecture
     else:
-        installed_check = app.get("win32", {}).get("installed_check", {})
-        architecture = installed_check.get("architecture") or ""
+        detection_config = config.get("intune", {}).get("detection", {})
+        architecture = detection_config.get("architecture") or ""
         if not architecture:
             raise ConfigError(
-                "win32.installed_check.architecture is required for non-MSI installers. "
-                "Set app.win32.installed_check.architecture in recipe configuration. "
+                "intune.detection.architecture is required for non-MSI installers. "
+                "Set intune.detection.architecture in the recipe. "
                 "Allowed values: x86, x64, arm64, any"
             )
 
     # Get PSADT release
     logger.step(4, 8, "Getting PSADT release...")
-    psadt_config = config["defaults"]["psadt"]
+    psadt_config = config["psadt"]
     release_spec = psadt_config["release"]
     cache_dir = Path(psadt_config["cache_dir"])
 
@@ -984,9 +964,7 @@ def build_package(
     _apply_branding(config, build_dir)
 
     # Get build_types configuration
-    defaults_win32 = config.get("defaults", {}).get("win32", {})
-    app_win32 = app.get("win32", {})
-    build_types = app_win32.get("build_types", defaults_win32["build_types"])
+    build_types = config.get("intune", {}).get("build_types", "both")
 
     detection_script_path = None
     requirements_script_path = None

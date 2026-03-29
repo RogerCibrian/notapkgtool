@@ -158,8 +158,8 @@ def discover_recipe(
         Discovery results and metadata including version, file path, and SHA-256 hash.
 
     Raises:
-        ConfigError: On missing or invalid configuration fields (no app defined,
-            missing 'source.strategy' field, unknown discovery strategy name),
+        ConfigError: On missing or invalid configuration fields (missing name or id,
+            missing 'discovery.strategy' field, unknown discovery strategy name),
             YAML parse errors (from config loader), or if recipe file doesn't exist.
         NetworkError: On download failures or version extraction errors.
 
@@ -219,22 +219,18 @@ def discover_recipe(
 
     # Resolve output_dir from config default when not provided by caller.
     if output_dir is None:
-        output_dir = Path(config["defaults"]["discover"]["output_dir"])
+        output_dir = Path(config["directories"]["discover"])
 
-    # 2. Extract the app configuration
+    # 2. Extract app identity
     logger.step(2, 4, "Discovering version...")
-    app = config.get("app")
-    if not app:
-        raise ConfigError(f"No app defined in recipe: {recipe_path}")
-
-    app_name = app.get("name", "Unknown")
-    app_id = app.get("id", "unknown-id")
+    app_name = config.get("name", "Unknown")
+    app_id = config.get("id", "unknown-id")
 
     # 3. Get the discovery strategy name
-    source = app.get("source", {})
-    strategy_name = source.get("strategy")
+    discovery = config.get("discovery", {})
+    strategy_name = discovery.get("strategy")
     if not strategy_name:
-        raise ConfigError(f"No 'source.strategy' defined for app: {app_name}")
+        raise ConfigError(f"No 'discovery.strategy' defined for app: {app_name}")
 
     # 4. Get the strategy implementation
     # Import strategies to ensure they're registered
@@ -266,7 +262,7 @@ def discover_recipe(
     if hasattr(strategy, "get_version_info"):
         # VERSION-FIRST PATH (web_scrape, api_github, api_json)
         # Get version without downloading
-        version_info = strategy.get_version_info(app)
+        version_info = strategy.get_version_info(config)
         download_url = version_info.download_url  # Save for state file
 
         logger.verbose("DISCOVERY", f"Version discovered: {version_info.version}")
@@ -329,9 +325,9 @@ def discover_recipe(
         # Must download to extract version (or use cached file via ETag)
         logger.step(4, 4, "Fetching installer...")
         discovered_version, file_path, sha256, headers = strategy.discover_version(
-            app, output_dir, cache=cache
+            config, output_dir, cache=cache
         )
-        download_url = str(app.get("source", {}).get("url", ""))  # Use source.url
+        download_url = str(config.get("discovery", {}).get("url", ""))
 
     # Update state with discovered information
     if state and app_id and state_file:
@@ -354,7 +350,7 @@ def discover_recipe(
         # Build cache entry with new schema v2
         cache_entry = {
             "url": download_url
-            or "",  # Actual download URL (from version_info or source.url)
+            or "",  # Actual download URL (from version_info or discovery.url)
             "etag": etag if etag else None,  # Only useful for url_download
             "last_modified": (
                 last_modified if last_modified else None

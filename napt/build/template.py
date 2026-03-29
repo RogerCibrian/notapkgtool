@@ -106,23 +106,15 @@ def _build_adtsession_vars(
         Dictionary of variable name -> value mappings.
 
     Note:
-        Organization defaults come from config['defaults']['psadt']['app_vars'].
-        Recipe overrides come from config['app']['psadt']['app_vars'].
+        psadt.app_vars is the already-deep-merged result from code defaults,
+        org.yaml, vendor.yaml, and the recipe. No manual merge needed here.
         Special handling for ${discovered_version} placeholder.
         Auto-generates AppScriptDate if not set.
         AppArch is set automatically from architecture (skipped for "any").
         DeployAppScriptVersion is always set to psadt_version.
     """
-    app = config["app"]
-
-    # Get base variables from org defaults
-    org_defaults = config["defaults"]["psadt"]["app_vars"]
-
-    # Get recipe overrides
-    recipe_overrides = app.get("psadt", {}).get("app_vars", {})
-
-    # Merge (recipe overrides org)
-    merged_vars = {**org_defaults, **recipe_overrides}
+    # psadt.app_vars is already fully merged by the config loader
+    merged_vars = dict(config.get("psadt", {}).get("app_vars", {}))
 
     # Replace ${discovered_version} placeholder
     for key, value in merged_vars.items():
@@ -138,7 +130,7 @@ def _build_adtsession_vars(
         merged_vars["AppArch"] = architecture
 
     # Add vendor if available
-    vendor = config.get("vendor") or app.get("vendor", "")
+    vendor = config.get("vendor", "")
     if vendor:
         merged_vars.setdefault("AppVendor", vendor)
 
@@ -297,8 +289,7 @@ def generate_invoke_script(
     logger.verbose("BUILD", "[OK] Replaced $adtSession hashtable")
 
     # Insert recipe code
-    app = config["app"]
-    psadt_config = app.get("psadt", {})
+    psadt_config = config.get("psadt", {})
     install_code = psadt_config.get("install")
     uninstall_code = psadt_config.get("uninstall")
 

@@ -41,52 +41,57 @@ from typing import Any
 # These provide sensible defaults for all settings, ensuring NAPT works
 # without requiring a defaults/org.yaml file.
 DEFAULT_CONFIG: dict[str, Any] = {
-    "defaults": {
-        # PSADT (PowerShell App Deployment Toolkit) settings
-        "psadt": {
-            "release": "latest",
-            "cache_dir": "cache/psadt",
-            # Brand pack is not set by default - users must configure their own
-            "brand_pack": {
-                "path": "",
-                "mappings": [],
-            },
-            # Default app variables injected into PSADT scripts
-            "app_vars": {
-                "AppLang": "EN",
-                "AppRevision": "01",
-                "AppSuccessExitCodes": [0],
-                "AppRebootExitCodes": [1641, 3010],
-                "AppProcessesToClose": [],
-                "AppScriptVersion": "1.0.0",
-                "AppScriptAuthor": "napt",
-                "RequireAdmin": True,
-            },
+    # Tool-internal output directory settings.
+    # These are not recipe-facing; they control where napt stores its outputs.
+    "directories": {
+        "discover": "downloads",
+        "build": "builds",
+        "package": "packages",
+    },
+    # PSADT (PowerShell App Deployment Toolkit) settings.
+    # Merged with recipe psadt: section via the config loader.
+    "psadt": {
+        "release": "latest",
+        "cache_dir": "cache/psadt",
+        # Brand pack is not set by default - users must configure their own
+        "brand_pack": {
+            "path": "",
+            "mappings": [],
         },
-        # Discovery output settings
-        "discover": {
-            "output_dir": "downloads",
+        # Default app variables injected into Invoke-AppDeployToolkit.ps1
+        "app_vars": {
+            "AppLang": "EN",
+            "AppRevision": "01",
+            "AppSuccessExitCodes": [0],
+            "AppRebootExitCodes": [1641, 3010],
+            "AppProcessesToClose": [],
+            "AppScriptVersion": "1.0.0",
+            "AppScriptAuthor": "napt",
+            "RequireAdmin": True,
         },
-        # Build output settings
-        "build": {
-            "output_dir": "builds",
+    },
+    # Intune/Win32 settings.
+    # Merged with recipe intune: section via the config loader.
+    "intune": {
+        "build_types": "both",
+        "update_name_prefix": "[Update] ",
+        "minimum_supported_windows_release": "21H2",
+        "install_command": (
+            "Invoke-AppDeployToolkit.exe -DeploymentType Install -DeployMode Silent"
+        ),
+        "uninstall_command": (
+            "Invoke-AppDeployToolkit.exe -DeploymentType Uninstall -DeployMode Silent"
+        ),
+        "detection": {
+            "exact_match": False,
         },
-        # Package output settings
-        "package": {
-            "output_dir": "packages",
-        },
-        # Windows/Intune settings
-        "win32": {
-            "build_types": "both",
-            "installed_check": {
-                "log_format": "cmtrace",
-                "log_level": "INFO",
-                "log_rotation_mb": 3,
-                "detection": {
-                    "exact_match": False,
-                },
-            },
-        },
+    },
+    # On-device script logging settings.
+    # Controls log behavior of detection and requirements scripts on endpoints.
+    "logging": {
+        "log_format": "cmtrace",
+        "log_level": "INFO",
+        "log_rotation_mb": 3,
     },
 }
 
@@ -108,44 +113,50 @@ ORG_YAML_TEMPLATE = """\
 
 apiVersion: napt/v1
 
-defaults:
-  # PSADT settings
-  # psadt:
-  #   # PSADT release: "latest" or specific version (e.g., "4.1.7")
-  #   release: "latest"
-  #
-  #   # Custom branding (logo/banner)
-  #   brand_pack:
-  #     path: brand-packs/my-company
-  #     mappings:
-  #       - source: "AppIcon.*"
-  #         target: "Assets/AppIcon"
-  #       - source: "Banner.Classic.*"
-  #         target: "Assets/Banner.Classic"
-  #
-  #   # Default app variables
-  #   app_vars:
-  #     AppScriptAuthor: "IT Team"
+# psadt:
+#   # PSADT release: "latest" or specific version (e.g., "4.1.7")
+#   release: "latest"
+#
+#   # Custom branding (logo/banner)
+#   brand_pack:
+#     path: brand-packs/my-company
+#     mappings:
+#       - source: "AppIcon.*"
+#         target: "Assets/AppIcon"
+#       - source: "Banner.Classic.*"
+#         target: "Assets/Banner.Classic"
+#
+#   # Default app variables injected into deployment scripts
+#   app_vars:
+#     AppScriptAuthor: "IT Team"
 
-  # Discovery output settings
-  # discover:
-  #   output_dir: "downloads"
+# intune:
+#   # Which app entries to create in Intune
+#   build_types: "both"  # both, app_only, update_only
+#
+#   # Prefix added to app name for the Update entry
+#   update_name_prefix: "[Update] "
+#
+#   # Minimum Windows 10/11 release required to install (enforced by Intune)
+#   minimum_supported_windows_release: "21H2"
+#
+#   # Intune install/uninstall command lines (rarely need changing)
+#   install_command: "Invoke-AppDeployToolkit.exe -DeploymentType Install -DeployMode Silent"
+#   uninstall_command: "Invoke-AppDeployToolkit.exe -DeploymentType Uninstall -DeployMode Silent"
+#
+#   # Detection defaults (override per-recipe in intune.detection)
+#   detection:
+#     exact_match: false  # true = version must match exactly
 
-  # Build output settings
-  # build:
-  #   output_dir: "builds"
+# logging:
+#   # On-device logging for detection and requirements scripts
+#   log_format: "cmtrace"  # cmtrace or legacy
+#   log_level: "INFO"      # DEBUG, INFO, WARNING, ERROR
+#   log_rotation_mb: 3
 
-  # Package output settings
-  # package:
-  #   output_dir: "packages"
-
-  # Windows/Intune detection settings
-  # win32:
-  #   build_types: "both"  # both, app_only, update_only
-  #   installed_check:
-  #     log_format: "cmtrace"  # cmtrace or legacy
-  #     log_level: "INFO"      # DEBUG, INFO, WARNING, ERROR
-  #     log_rotation_mb: 3
-  #     detection:
-  #       exact_match: false  # true = version must match exactly
+# directories:
+#   # Output directories for each pipeline stage
+#   discover: "downloads"
+#   build: "builds"
+#   package: "packages"
 """

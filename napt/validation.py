@@ -21,12 +21,13 @@ useful for quick feedback during recipe development and in CI/CD pipelines.
 Validation Checks:
 
 - YAML syntax is valid
-- Required top-level fields present (apiVersion, app)
+- Required top-level fields present (apiVersion, name, id, discovery)
 - apiVersion is supported
-- App has required fields (name, id, source)
-- Discovery strategy exists and is registered
+- discovery.strategy exists and is registered
 - Strategy-specific configuration is valid
-- Win32 configuration fields are valid (types, values, unknown field warnings)
+- intune.detection fields are valid (types, values, unknown field warnings)
+- psadt.app_vars only contains user-settable keys
+- logging section fields are valid
 
 Example:
     Validate a recipe and handle results:
@@ -58,38 +59,41 @@ from napt.results import ValidationResult
 __all__ = ["validate_recipe"]
 
 
-# Schema definitions for win32 configuration validation
-# Each entry: field_name -> (expected_type, allowed_values or None, description)
-_WIN32_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
-    "build_types": (str, ["both", "app_only", "update_only"], "build type"),
-    "installed_check": (dict, None, "installed check configuration"),
-}
-
-_INSTALLED_CHECK_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
+# Schema for the intune.detection subsection
+_INTUNE_DETECTION_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
     "display_name": (str, None, "display name for registry lookup"),
     "architecture": (str, ["x86", "x64", "arm64", "any"], "architecture"),
-    "override_msi_display_name": (bool, None, "MSI display name override flag"),
-    "log_format": (str, ["cmtrace"], "log format"),
-    "log_level": (str, ["INFO", "WARNING", "ERROR", "DEBUG"], "log level"),
-    "log_rotation_mb": (int, None, "log rotation size in MB"),
-    "detection": (dict, None, "detection configuration"),
-}
-
-_DETECTION_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
     "exact_match": (bool, None, "exact version match flag"),
+    "override_msi_display_name": (bool, None, "MSI display name override flag"),
 }
 
-# Schema for the optional top-level intune: section (upload overrides)
+# Schema for the intune: section
 _INTUNE_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
+    "build_types": (str, ["both", "app_only", "update_only"], "build type"),
+    "update_name_prefix": (str, None, "prefix for update entry display name"),
+    "minimum_supported_windows_release": (str, None, "minimum Windows release"),
+    "install_command": (str, None, "Intune install command line"),
+    "uninstall_command": (str, None, "Intune uninstall command line"),
     "description": (str, None, "app description for Intune portal"),
     "publisher": (str, None, "publisher name override"),
     "category": (str, None, "Intune app category"),
     "privacy_url": (str, None, "privacy information URL"),
     "info_url": (str, None, "information URL"),
     "logo_path": (str, None, "path to app icon file"),
+    "developer": (str, None, "app developer or maintainer"),
+    "owner": (str, None, "business owner of the app"),
+    "notes": (str, None, "free-text notes shown in Intune portal"),
+    "detection": (dict, None, "detection configuration"),
 }
 
-# Allowed keys for app.psadt.app_vars (and defaults.psadt.app_vars).
+# Schema for the logging: section
+_LOGGING_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
+    "log_format": (str, ["cmtrace"], "log format"),
+    "log_level": (str, ["INFO", "WARNING", "ERROR", "DEBUG"], "log level"),
+    "log_rotation_mb": (int, None, "log rotation size in MB"),
+}
+
+# Allowed keys for psadt.app_vars.
 # NAPT-managed keys (AppArch, DeployAppScriptVersion, DeployAppScriptFriendlyName,
 # DeployAppScriptParameters) are excluded — setting them in recipes is an error.
 _PSADT_APP_VAR_KEYS: frozenset[str] = frozenset(
@@ -272,45 +276,41 @@ def _validate_psadt_app_vars(
             )
 
 
-def _validate_psadt_config(
-    app: dict,
-    app_prefix: str,
+def _validate_psadt_section(
+    recipe: dict,
     errors: list[str],
 ) -> None:
-    """Validate the psadt configuration section.
+    """Validate the top-level psadt: section.
 
     Checks that app_vars only contains known, user-settable keys.
 
     Args:
-        app: The app configuration dictionary.
-        app_prefix: Prefix for error messages (e.g., "app").
+        recipe: The full recipe dictionary.
         errors: List to append errors to.
 
     """
-    psadt = app.get("psadt")
+    psadt = recipe.get("psadt")
     if psadt is None:
         return
 
-    psadt_path = f"{app_prefix}.psadt"
-
     if not isinstance(psadt, dict):
-        errors.append(f"{psadt_path}: Must be a dictionary")
+        errors.append("psadt: Must be a dictionary")
         return
 
     app_vars = psadt.get("app_vars")
     if app_vars is not None:
-        _validate_psadt_app_vars(app_vars, f"{psadt_path}.app_vars", errors)
+        _validate_psadt_app_vars(app_vars, "psadt.app_vars", errors)
 
 
-def _validate_intune_config(
+def _validate_intune_section(
     recipe: dict,
     errors: list[str],
     warnings: list[str],
 ) -> None:
-    """Validate the optional top-level intune: section.
+    """Validate the top-level intune: section.
 
-    Validates field types and warns on unknown fields. The entire section
-    is optional — its absence produces no errors or warnings.
+    Validates field types, allowed values, and warns on unknown fields. Also
+    validates the intune.detection subsection if present.
 
     Args:
         recipe: The full recipe dictionary.
@@ -322,72 +322,51 @@ def _validate_intune_config(
     if intune is None:
         return
 
-    intune_path = "intune"
-
     if not isinstance(intune, dict):
-        errors.append(f"{intune_path}: Must be a dictionary")
+        errors.append("intune: Must be a dictionary")
         return
 
-    _validate_section(intune, _INTUNE_FIELDS, intune_path, errors, warnings)
+    _validate_section(intune, _INTUNE_FIELDS, "intune", errors, warnings)
+
+    # Validate detection subsection
+    detection = intune.get("detection")
+    if detection is not None:
+        if not isinstance(detection, dict):
+            errors.append("intune.detection: Must be a dictionary")
+        else:
+            _validate_section(
+                detection,
+                _INTUNE_DETECTION_FIELDS,
+                "intune.detection",
+                errors,
+                warnings,
+            )
 
 
-def _validate_win32_config(
-    app: dict,
-    app_prefix: str,
+def _validate_logging_section(
+    recipe: dict,
     errors: list[str],
     warnings: list[str],
 ) -> None:
-    """Validate the win32 configuration section.
+    """Validate the top-level logging: section.
 
-    Validates:
-    - win32.build_types
-    - win32.installed_check.*
-    - win32.installed_check.detection.*
+    Validates log_format, log_level, and log_rotation_mb fields.
 
     Args:
-        app: The app configuration dictionary.
-        app_prefix: Prefix for error messages (e.g., "app").
+        recipe: The full recipe dictionary.
         errors: List to append errors to.
         warnings: List to append warnings to.
 
     """
-    win32 = app.get("win32")
-    if win32 is None:
+    logging_config = recipe.get("logging")
+    if logging_config is None:
         return
 
-    win32_path = f"{app_prefix}.win32"
-
-    # Validate win32 is a dict
-    if not isinstance(win32, dict):
-        errors.append(f"{win32_path}: Must be a dictionary")
+    if not isinstance(logging_config, dict):
+        errors.append("logging: Must be a dictionary")
         return
 
-    # Validate win32 section
-    _validate_section(win32, _WIN32_FIELDS, win32_path, errors, warnings)
-
-    # Validate installed_check subsection
-    installed_check = win32.get("installed_check")
-    if installed_check is not None:
-        ic_path = f"{win32_path}.installed_check"
-
-        if not isinstance(installed_check, dict):
-            errors.append(f"{ic_path}: Must be a dictionary")
-        else:
-            _validate_section(
-                installed_check, _INSTALLED_CHECK_FIELDS, ic_path, errors, warnings
-            )
-
-            # Validate detection subsection
-            detection = installed_check.get("detection")
-            if detection is not None:
-                det_path = f"{ic_path}.detection"
-
-                if not isinstance(detection, dict):
-                    errors.append(f"{det_path}: Must be a dictionary")
-                else:
-                    _validate_section(
-                        detection, _DETECTION_FIELDS, det_path, errors, warnings
-                    )
+    _validate_section(logging_config, _LOGGING_FIELDS, "logging", errors, warnings)
 
 
 def validate_recipe(recipe_path: Path) -> ValidationResult:
@@ -420,7 +399,6 @@ def validate_recipe(recipe_path: Path) -> ValidationResult:
 
     errors = []
     warnings = []
-    app_count = 0
 
     logger.verbose("VALIDATION", f"Validating recipe: {recipe_path}")
 
@@ -485,95 +463,60 @@ def validate_recipe(recipe_path: Path) -> ValidationResult:
         if not errors:
             logger.verbose("VALIDATION", f"apiVersion: {api_version}")
 
-    # Check app field
-    app = recipe.get("app")
-    if not app:
-        errors.append("Field 'app' is required")
-        return ValidationResult(
-            status="invalid",
-            errors=errors,
-            warnings=warnings,
-            app_count=0,
-            recipe_path=str(recipe_path),
-        )
+    # Check required top-level fields: name and id
+    for field in ["name", "id"]:
+        if field not in recipe:
+            errors.append(f"Missing required field: {field}")
 
-    if not isinstance(app, dict):
-        errors.append("Field 'app' must be a dictionary")
-        return ValidationResult(
-            status="invalid",
-            errors=errors,
-            warnings=warnings,
-            app_count=0,
-            recipe_path=str(recipe_path),
-        )
+    if "name" in recipe and not isinstance(recipe["name"], str):
+        errors.append("Field 'name' must be a string")
 
-    app_prefix = "app"
+    if "id" in recipe:
+        if not isinstance(recipe["id"], str):
+            errors.append("Field 'id' must be a string")
+        elif not recipe["id"]:
+            errors.append("Field 'id' cannot be empty")
 
-    logger.verbose("VALIDATION", f"Found app: {app.get('name', 'unnamed')}")
+    app_name = recipe.get("name", "unnamed")
+    logger.verbose("VALIDATION", f"Validating: {app_name}")
 
-    # Check required fields
-    for field in ["name", "id", "source"]:
-        if field not in app:
-            errors.append(f"{app_prefix}: Missing required field: {field}")
-
-    # Validate name
-    if "name" in app and not isinstance(app["name"], str):
-        errors.append(f"{app_prefix}: Field 'name' must be a string")
-
-    # Validate id
-    if "id" in app:
-        if not isinstance(app["id"], str):
-            errors.append(f"{app_prefix}: Field 'id' must be a string")
-        elif not app["id"]:
-            errors.append(f"{app_prefix}: Field 'id' cannot be empty")
-
-    # Validate source
-    if "source" not in app:
-        # Already reported missing field, but continue to check other things
-        pass
+    # Validate discovery section
+    discovery = recipe.get("discovery")
+    if not discovery:
+        errors.append("Missing required field: discovery")
+    elif not isinstance(discovery, dict):
+        errors.append("Field 'discovery' must be a dictionary")
     else:
-        source = app["source"]
-        if not isinstance(source, dict):
-            errors.append(f"{app_prefix}.source: Must be a dictionary")
+        if "strategy" not in discovery:
+            errors.append("discovery: Missing required field: strategy")
         else:
-            # Check strategy field
-            if "strategy" not in source:
-                errors.append(f"{app_prefix}.source: Missing required field: strategy")
+            strategy_name = discovery["strategy"]
+            if not isinstance(strategy_name, str):
+                errors.append("discovery.strategy: Must be a string")
             else:
-                strategy_name = source["strategy"]
-                if not isinstance(strategy_name, str):
-                    errors.append(f"{app_prefix}.source.strategy: Must be a string")
+                logger.verbose(
+                    "VALIDATION",
+                    f"'{app_name}' uses strategy: {strategy_name}",
+                )
+
+                # Check if strategy exists
+                try:
+                    strategy = get_strategy(strategy_name)
+                except ConfigError as err:
+                    errors.append(f"discovery.strategy: {err}")
                 else:
-                    logger.verbose(
-                        "VALIDATION",
-                        f"App '{app.get('name', 'unnamed')}' uses strategy: {strategy_name}",
-                    )
+                    # Validate strategy-specific configuration
+                    if hasattr(strategy, "validate_config"):
+                        try:
+                            config_errors = strategy.validate_config(recipe)
+                            errors.extend(config_errors)
+                        except Exception as err:
+                            errors.append(f"Strategy validation failed: {err}")
 
-                    # Check if strategy exists
-                    try:
-                        strategy = get_strategy(strategy_name)
-                    except ConfigError as err:
-                        errors.append(f"{app_prefix}.source.strategy: {err}")
-                    else:
-                        # Validate strategy-specific configuration
-                        if hasattr(strategy, "validate_config"):
-                            try:
-                                config_errors = strategy.validate_config(app)
-                                for error in config_errors:
-                                    errors.append(f"{app_prefix}: {error}")
-                            except Exception as err:
-                                errors.append(
-                                    f"{app_prefix}: Strategy validation failed: {err}"
-                                )
-
-    # Validate win32 configuration
-    _validate_win32_config(app, app_prefix, errors, warnings)
-
-    # Validate psadt configuration
-    _validate_psadt_config(app, app_prefix, errors)
-
-    # Validate optional top-level intune: section
-    _validate_intune_config(recipe, errors, warnings)
+    # Validate optional sections
+    _validate_psadt_section(recipe, errors)
+    _validate_intune_section(recipe, errors, warnings)
+    _validate_logging_section(recipe, errors, warnings)
 
     # Determine final status
     status = "valid" if len(errors) == 0 else "invalid"
