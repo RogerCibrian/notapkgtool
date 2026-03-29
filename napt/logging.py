@@ -14,15 +14,16 @@
 
 """Logging interface for NAPT.
 
-This module provides a configurable logging interface that library modules
-can use for output without depending on the CLI. The logger can be configured
-globally or passed as a parameter for better isolation.
+This module provides a configurable logging interface that all NAPT modules
+use for output. The logger can be configured globally by the CLI or passed
+as a parameter for better isolation in tests.
 
-The logger supports five output levels:
+The logger supports six output levels:
 
-- Step: Always printed (for progress indicators)
+- Step: Always printed (for major pipeline stages)
 - Info: Always printed (for notable events that are not warnings)
 - Warning: Always printed (for important warnings that users should see)
+- Progress: Always printed with carriage return (for download/upload progress)
 - Verbose: Only printed when verbose mode is enabled
 - Debug: Only printed when debug mode is enabled (implies verbose)
 
@@ -35,7 +36,7 @@ Example:
         set_global_logger(logger)
         ```
 
-    Use in library code:
+    Use in a module:
         ```python
         from napt.logging import get_logger
 
@@ -43,6 +44,7 @@ Example:
         logger.step(1, 4, "Loading configuration...")
         logger.info("PACKAGE", "Removing previous package: 144.0.0")
         logger.warning("DETECTION", "Could not extract MSI metadata")
+        logger.progress("DOWNLOAD", "42%")
         logger.verbose("STATE", "Loaded state from file")
         logger.debug("VERSION", "Trying backend: msilib...")
         ```
@@ -55,9 +57,9 @@ Example:
             logger.verbose("MODULE", "Processing...")
 
 Note:
-    The default logger is silent (verbose=False, debug=False), so library
-    functions won't print anything unless explicitly configured. The CLI
-    configures the global logger when commands are executed.
+    The CLI configures the global logger when commands are executed. The
+    default logger is non-verbose, so verbose and debug messages are
+    suppressed unless explicitly enabled.
 """
 
 from __future__ import annotations
@@ -96,6 +98,18 @@ class Logger(Protocol):
         Args:
             prefix: Message prefix (e.g., "DETECTION", "BUILD").
             message: Warning message.
+        """
+        ...
+
+    def progress(self, prefix: str, message: str) -> None:
+        """Print a progress message, overwriting the current line.
+
+        Used for download and upload progress that updates in place.
+        Always visible regardless of verbosity settings.
+
+        Args:
+            prefix: Message prefix (e.g., "DOWNLOAD", "UPLOAD").
+            message: Progress message (e.g., "42%").
         """
         ...
 
@@ -147,6 +161,10 @@ class DefaultLogger:
         """Print a warning message (always visible)."""
         print(f"[{prefix}] {message}")
 
+    def progress(self, prefix: str, message: str) -> None:
+        """Print a progress message, overwriting the current line."""
+        print(f"[{prefix}] {message}", end="\r")
+
     def verbose(self, prefix: str, message: str) -> None:
         """Print a verbose log message (only when verbose mode is active)."""
         if self._verbose:
@@ -158,35 +176,8 @@ class DefaultLogger:
             print(f"[{prefix}] {message}")
 
 
-class SilentLogger:
-    """Logger that suppresses all output.
-
-    Useful for programmatic usage when output is not desired.
-    """
-
-    def step(self, step: int, total: int, message: str) -> None:
-        """Suppress step output."""
-        pass
-
-    def info(self, prefix: str, message: str) -> None:
-        """Suppress info output."""
-        pass
-
-    def warning(self, prefix: str, message: str) -> None:
-        """Suppress warning output."""
-        pass
-
-    def verbose(self, prefix: str, message: str) -> None:
-        """Suppress verbose output."""
-        pass
-
-    def debug(self, prefix: str, message: str) -> None:
-        """Suppress debug output."""
-        pass
-
-
-# Global logger instance (defaults to silent)
-_global_logger: Logger = SilentLogger()
+# Global logger instance (defaults to non-verbose)
+_global_logger: Logger = DefaultLogger()
 
 
 def get_logger(verbose: bool = False, debug: bool = False) -> Logger:

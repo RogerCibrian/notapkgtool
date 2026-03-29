@@ -318,13 +318,10 @@ def download_file(
                 sha.update(chunk)
                 downloaded += len(chunk)
 
-                # TODO: Route progress output through the logger once a
-                # logger.progress() method is added. Bare print bypasses
-                # SilentLogger in library usage.
                 if total_size:
                     pct = int(downloaded * 100 / total_size)
                     if pct != last_percent:
-                        print(f"download progress: {pct}%", end="\r")
+                        logger.progress("DOWNLOAD", f"{pct}%")
                         last_percent = pct
 
         resp.close()

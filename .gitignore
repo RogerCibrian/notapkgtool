@@ -198,4 +198,5 @@ state/*.json
 
 # IDE files
 .claude_context
+.claude/settings.local.json
 .vscode/settings.json
