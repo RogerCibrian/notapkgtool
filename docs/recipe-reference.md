@@ -396,7 +396,7 @@ The `intune` section configures Win32 app settings for Intune packaging and uplo
 intune:
   build_types: "both"                                # Optional: which entries to create
   update_name_prefix: "[Update] "                    # Optional: prefix for Update entry name
-  minimum_supported_windows_release: "21H2"          # Optional: minimum Windows release
+  minimum_supported_windows_release: "Windows10_21H2" # Optional: minimum Windows release
   install_command: "Invoke-AppDeployToolkit.exe ..."  # Optional: override install command
   uninstall_command: "Invoke-AppDeployToolkit.exe ..." # Optional: override uninstall command
   description: "App description for Intune portal"  # Optional: app description
@@ -458,10 +458,11 @@ intune:
 
 **Type:** `string`
 **Required:** No
-**Default:** `"21H2"`
+**Default:** `"Windows10_21H2"`
 
 Minimum Windows 10/11 feature update required to install the app, enforced during Intune
-assignment. Use Windows release names such as `"21H2"`, `"22H2"`, `"23H2"`.
+assignment. Format: `"Windows10_<release>"` or `"Windows11_<release>"` where release is
+the feature update name (e.g., `"Windows10_21H2"`, `"Windows10_22H2"`, `"Windows11_23H2"`).
 
 ### install_command
 

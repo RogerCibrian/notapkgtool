@@ -283,7 +283,7 @@ def _build_app_metadata(
         "Invoke-AppDeployToolkit.exe -DeploymentType Uninstall -DeployMode Silent",
     )
     minimum_windows_release: str = intune.get(
-        "minimum_supported_windows_release", "21H2"
+        "minimum_supported_windows_release", "Windows10_21H2"
     )
 
     payload: dict[str, Any] = {

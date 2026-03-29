@@ -45,7 +45,8 @@ intune:
   update_name_prefix: "[Update] "
 
   # Minimum Windows 10/11 release required to install (enforced during assignment)
-  minimum_supported_windows_release: "21H2"
+  # Format: "Windows10_<release>" or "Windows11_<release>" (e.g. "Windows10_22H2", "Windows11_23H2")
+  minimum_supported_windows_release: "Windows10_21H2"
 
   # Command lines used in the Intune app entry (rarely need changing)
   install_command: "Invoke-AppDeployToolkit.exe -DeploymentType Install -DeployMode Silent"

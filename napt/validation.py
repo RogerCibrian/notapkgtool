@@ -328,6 +328,17 @@ def _validate_intune_section(
 
     _validate_section(intune, _INTUNE_FIELDS, "intune", errors, warnings)
 
+    # Validate minimum_supported_windows_release format (e.g. "Windows10_21H2")
+    release = intune.get("minimum_supported_windows_release")
+    if release is not None and isinstance(release, str):
+        import re
+
+        if not re.fullmatch(r"Windows(?:10|11)_(?:\d{4}|\d{2}H[12])", release):
+            errors.append(
+                f"intune.minimum_supported_windows_release: Invalid format {release!r}. "
+                f"Expected format: 'Windows10_21H2' or 'Windows11_23H2'"
+            )
+
     # Validate detection subsection
     detection = intune.get("detection")
     if detection is not None:

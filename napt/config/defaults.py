@@ -75,7 +75,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "intune": {
         "build_types": "both",
         "update_name_prefix": "[Update] ",
-        "minimum_supported_windows_release": "21H2",
+        "minimum_supported_windows_release": "Windows10_21H2",
         "install_command": (
             "Invoke-AppDeployToolkit.exe -DeploymentType Install -DeployMode Silent"
         ),
@@ -138,7 +138,7 @@ apiVersion: napt/v1
 #   update_name_prefix: "[Update] "
 #
 #   # Minimum Windows 10/11 release required to install (enforced by Intune)
-#   minimum_supported_windows_release: "21H2"
+#   minimum_supported_windows_release: "Windows10_21H2"
 #
 #   # Intune install/uninstall command lines (rarely need changing)
 #   install_command: "Invoke-AppDeployToolkit.exe -DeploymentType Install -DeployMode Silent"
