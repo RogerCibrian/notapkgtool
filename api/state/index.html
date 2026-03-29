@@ -2134,7 +2134,7 @@ provides convenience methods for common operations.</p>
 </span><span id="__span-0-199"><a id="__codelineno-0-199" name="__codelineno-0-199"></a><span class="sd">            recipe_id: Recipe identifier.</span>
 </span><span id="__span-0-200"><a id="__codelineno-0-200" name="__codelineno-0-200"></a><span class="sd">            url: Download URL for provenance tracking. For version-first strategies</span>
 </span><span id="__span-0-201"><a id="__codelineno-0-201" name="__codelineno-0-201"></a><span class="sd">                (url_pattern, api_github, api_json), this is the actual download URL</span>
-</span><span id="__span-0-202"><a id="__codelineno-0-202" name="__codelineno-0-202"></a><span class="sd">                from version_info. For file-first (url_download), this is source.url.</span>
+</span><span id="__span-0-202"><a id="__codelineno-0-202" name="__codelineno-0-202"></a><span class="sd">                from version_info. For file-first (url_download), this is discovery.url.</span>
 </span><span id="__span-0-203"><a id="__codelineno-0-203" name="__codelineno-0-203"></a><span class="sd">            sha256: SHA-256 hash of file (for integrity checks).</span>
 </span><span id="__span-0-204"><a id="__codelineno-0-204" name="__codelineno-0-204"></a><span class="sd">            etag: ETag header from download response. Used by url_download for HTTP 304</span>
 </span><span id="__span-0-205"><a id="__codelineno-0-205" name="__codelineno-0-205"></a><span class="sd">                conditional requests. Saved but unused by version-first strategies.</span>
@@ -2705,7 +2705,7 @@ Creates parent directories if needed.</p>
               <div class="doc-md-description">
                 <p>Download URL for provenance tracking. For version-first strategies
 (url_pattern, api_github, api_json), this is the actual download URL
-from version_info. For file-first (url_download), this is source.url.</p>
+from version_info. For file-first (url_download), this is discovery.url.</p>
               </div>
             </td>
             <td>
@@ -2916,7 +2916,7 @@ version -&gt; known_version.</p>
 </span><span id="__span-0-199"><a id="__codelineno-0-199" name="__codelineno-0-199"></a><span class="sd">        recipe_id: Recipe identifier.</span>
 </span><span id="__span-0-200"><a id="__codelineno-0-200" name="__codelineno-0-200"></a><span class="sd">        url: Download URL for provenance tracking. For version-first strategies</span>
 </span><span id="__span-0-201"><a id="__codelineno-0-201" name="__codelineno-0-201"></a><span class="sd">            (url_pattern, api_github, api_json), this is the actual download URL</span>
-</span><span id="__span-0-202"><a id="__codelineno-0-202" name="__codelineno-0-202"></a><span class="sd">            from version_info. For file-first (url_download), this is source.url.</span>
+</span><span id="__span-0-202"><a id="__codelineno-0-202" name="__codelineno-0-202"></a><span class="sd">            from version_info. For file-first (url_download), this is discovery.url.</span>
 </span><span id="__span-0-203"><a id="__codelineno-0-203" name="__codelineno-0-203"></a><span class="sd">        sha256: SHA-256 hash of file (for integrity checks).</span>
 </span><span id="__span-0-204"><a id="__codelineno-0-204" name="__codelineno-0-204"></a><span class="sd">        etag: ETag header from download response. Used by url_download for HTTP 304</span>
 </span><span id="__span-0-205"><a id="__codelineno-0-205" name="__codelineno-0-205"></a><span class="sd">            conditional requests. Saved but unused by version-first strategies.</span>

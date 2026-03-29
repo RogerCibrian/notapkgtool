@@ -2623,8 +2623,8 @@
 <li>
 <p><strong>App name determination:</strong></p>
 <ul>
-<li><strong>MSI installers:</strong> Uses MSI <code>ProductName</code> property (authoritative source for registry DisplayName). For MSIs where the vendor includes version in the ProductName (e.g., "7-Zip 25.01"), use <code>win32.installed_check.override_msi_display_name: true</code> to specify a custom <code>display_name</code> pattern instead. See <a href="../recipe-reference/#override_msi_display_name">Recipe Reference - Win32 Configuration</a> for details.</li>
-<li><strong>Non-MSI installers:</strong> Requires <code>win32.installed_check.display_name</code> in recipe configuration. Scripts match registry <code>DisplayName</code> to this value.</li>
+<li><strong>MSI installers:</strong> Uses MSI <code>ProductName</code> property (authoritative source for registry DisplayName). For MSIs where the vendor includes version in the ProductName (e.g., "7-Zip 25.01"), use <code>intune.detection.override_msi_display_name: true</code> to specify a custom <code>display_name</code> pattern instead. See <a href="../recipe-reference/#detection">Recipe Reference - detection</a> for details.</li>
+<li><strong>Non-MSI installers:</strong> Requires <code>intune.detection.display_name</code> in recipe configuration. Scripts match registry <code>DisplayName</code> to this value.</li>
 </ul>
 </li>
 <li>
@@ -2639,7 +2639,7 @@
 <ul>
 <li>Controls which registry views are checked based on the <code>AppArch</code> value from <code>psadt.app_vars</code> in the recipe</li>
 <li><strong>MSI installers:</strong> AppArch is automatically extracted from MSI package metadata during discovery (no manual configuration needed)</li>
-<li><strong>Non-MSI installers:</strong> AppArch must be explicitly specified in <code>psadt.app_vars</code> (e.g., <code>AppArch: "x64"</code>)</li>
+<li><strong>Non-MSI installers:</strong> AppArch must be explicitly specified in <code>intune.detection</code> (e.g., <code>architecture: "x64"</code>)</li>
 <li><strong>Architecture values:</strong><ul>
 <li><code>x64</code> / <code>arm64</code>: Checks only 64-bit registry view (ARM64 uses 64-bit registry)</li>
 <li><code>x86</code>: Checks only 32-bit registry view</li>
@@ -2698,7 +2698,7 @@
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  ├── Google-Chrome-144.0.7559.110-Detection.ps1    # Detection script
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  └── Google-Chrome-144.0.7559.110-Requirements.ps1 # Requirements script (if generated)
 </span></code></pre></div>
-<p><strong>Configuration:</strong> See <a href="../recipe-reference/#win32-configuration">Recipe Reference - Win32 Configuration</a> for <code>win32.installed_check</code> and <code>win32.build_types</code> options.</p>
+<p><strong>Configuration:</strong> See <a href="../recipe-reference/#intune-configuration">Recipe Reference - Intune Configuration</a> for <code>intune.detection</code> and <code>intune.build_types</code> options.</p>
 <h3 id="package-process-napt-package">Package Process (<code>napt package</code>)</h3>
 <p>The package process creates a <code>.intunewin</code> file from a PSADT build for the
 recipe's app:</p>
@@ -2959,30 +2959,32 @@ Authentication is automatic — no configuration required.</p>
 <li><strong>PSADT configuration</strong> - PowerShell deployment scripts and variables</li>
 </ul>
 <h3 id="basic-structure">Basic Structure</h3>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span><span class="w">  </span><span class="c1"># Recipe format version</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="nt">app</span><span class="p">:</span>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Application</span><span class="nv"> </span><span class="s">Name&quot;</span><span class="w">  </span><span class="c1"># Display name</span>
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">  </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;napt-app-id&quot;</span><span class="w">  </span><span class="c1"># Unique identifier</span>
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>
-</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">  </span><span class="nt">source</span><span class="p">:</span><span class="w">  </span><span class="c1"># Discovery configuration</span>
-</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">      </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span><span class="w">  </span><span class="c1"># One of: api_github, api_json, url_download, web_scrape</span>
-</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="w">      </span><span class="c1"># ... strategy-specific fields</span>
-</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>
-</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="w">  </span><span class="nt">psadt</span><span class="p">:</span><span class="w">  </span><span class="c1"># PSADT configuration</span>
-</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="w">      </span><span class="nt">app_vars</span><span class="p">:</span>
-</span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="w">        </span><span class="nt">AppName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Application</span><span class="nv"> </span><span class="s">Name&quot;</span>
-</span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="w">        </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${discovered_version}&quot;</span>
-</span><span id="__span-11-15"><a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="w">        </span><span class="nt">AppArch</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;x64&quot;</span>
-</span><span id="__span-11-16"><a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="w">      </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># Installation script</span>
-</span><span id="__span-11-17"><a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a><span class="w">        </span><span class="no"># PowerShell code here</span>
-</span><span id="__span-11-18"><a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a><span class="w">      </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">  </span><span class="c1"># Uninstallation script</span>
-</span><span id="__span-11-19"><a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a><span class="w">        </span><span class="no"># PowerShell code here</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span><span class="w">    </span><span class="c1"># Recipe format version</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Application</span><span class="nv"> </span><span class="s">Name&quot;</span><span class="w">  </span><span class="c1"># Display name</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;napt-app-id&quot;</span><span class="w">      </span><span class="c1"># Unique identifier</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="nt">discovery</span><span class="p">:</span><span class="w">             </span><span class="c1"># Discovery configuration</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span><span class="w">  </span><span class="c1"># One of: api_github, api_json, url_download, web_scrape</span>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">  </span><span class="c1"># ... strategy-specific fields</span>
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>
+</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="nt">psadt</span><span class="p">:</span><span class="w">                 </span><span class="c1"># PSADT configuration</span>
+</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
+</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="w">    </span><span class="nt">AppName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Application</span><span class="nv"> </span><span class="s">Name&quot;</span>
+</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="w">    </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${discovered_version}&quot;</span>
+</span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="w">  </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">           </span><span class="c1"># Installation script</span>
+</span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="w">    </span><span class="no"># PowerShell code here</span>
+</span><span id="__span-11-15"><a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="w">  </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">         </span><span class="c1"># Uninstallation script</span>
+</span><span id="__span-11-16"><a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="w">    </span><span class="no"># PowerShell code here</span>
+</span><span id="__span-11-17"><a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a>
+</span><span id="__span-11-18"><a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a><span class="nt">intune</span><span class="p">:</span><span class="w">                </span><span class="c1"># Optional: Intune-specific settings</span>
+</span><span id="__span-11-19"><a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a><span class="w">  </span><span class="nt">detection</span><span class="p">:</span>
+</span><span id="__span-11-20"><a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a><span class="w">    </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Application</span><span class="nv"> </span><span class="s">Name&quot;</span><span class="w">  </span><span class="c1"># Required for EXE installers</span>
+</span><span id="__span-11-21"><a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a><span class="w">    </span><span class="nt">architecture</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;x64&quot;</span><span class="w">               </span><span class="c1"># Required for EXE installers</span>
 </span></code></pre></div>
 <h3 id="quick-reference">Quick Reference</h3>
 <ul>
-<li><strong>Top-level fields:</strong> <code>apiVersion</code> (required), <code>app</code> (required)</li>
-<li><strong>App fields:</strong> <code>name</code> (required), <code>id</code> (required), <code>source</code> (required), <code>psadt</code> (required)</li>
+<li><strong>Top-level fields:</strong> <code>apiVersion</code> (required), <code>name</code> (required), <code>id</code> (required),
+  <code>discovery</code> (required), <code>psadt</code> (required), <code>intune</code> (optional), <code>logging</code> (optional)</li>
 <li><strong>Discovery strategies:</strong> See <a href="#discovery-strategies">Discovery Strategies</a> section above for strategy selection and examples</li>
 <li><strong>PSADT scripts:</strong> Use <code>${discovered_version}</code> for auto-substituted version, <code>$dirFiles</code> for installer path</li>
 </ul>
@@ -3070,23 +3072,24 @@ Always required; defines the specific app with final overrides.</p>
 </ol>
 <h3 id="example">Example</h3>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># defaults/org.yaml</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="nt">defaults</span><span class="p">:</span>
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span><span class="nt">psadt</span><span class="p">:</span>
-</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">    </span><span class="nt">release</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;latest&quot;</span>
-</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">    </span><span class="nt">app_vars</span><span class="p">:</span>
-</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">      </span><span class="nt">AppVendor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Unknown&quot;</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="nt">psadt</span><span class="p">:</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span><span class="nt">release</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;latest&quot;</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">    </span><span class="nt">AppVendor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Unknown&quot;</span>
 </span></code></pre></div>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># defaults/vendors/Google.yaml</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="nt">defaults</span><span class="p">:</span>
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span><span class="nt">psadt</span><span class="p">:</span>
-</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">    </span><span class="nt">app_vars</span><span class="p">:</span>
-</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">      </span><span class="nt">AppVendor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Google</span><span class="nv"> </span><span class="s">LLC&quot;</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="nt">psadt</span><span class="p">:</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">    </span><span class="nt">AppVendor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Google</span><span class="nv"> </span><span class="s">LLC&quot;</span>
 </span></code></pre></div>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># recipes/Google/chrome.yaml</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="nt">app</span><span class="p">:</span>
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Google</span><span class="nv"> </span><span class="s">Chrome&quot;</span>
-</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">  </span><span class="c1"># AppVendor will be &quot;Google LLC&quot; (from vendor defaults)</span>
-</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">  </span><span class="c1"># release will be &quot;latest&quot; (from org defaults)</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Google</span><span class="nv"> </span><span class="s">Chrome&quot;</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;napt-chrome&quot;</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="nt">discovery</span><span class="p">:</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">url_download</span>
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">  </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://dl.google.com/...&quot;</span>
+</span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="c1"># AppVendor will be &quot;Google LLC&quot; (from vendor defaults)</span>
+</span><span id="__span-17-8"><a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="c1"># psadt.release will be &quot;latest&quot; (from org defaults)</span>
 </span></code></pre></div>
 <h3 id="directory-flag-defaults">Directory Flag Defaults</h3>
 <p>All directory flags follow the same pattern: CLI flag overrides config;
@@ -3109,51 +3112,48 @@ to its own:</p>
 <td><code>napt discover</code></td>
 <td><code>--output-dir</code></td>
 <td>Where to save downloaded installers</td>
-<td><code>defaults.discover.output_dir</code></td>
+<td><code>directories.discover</code></td>
 <td><code>downloads</code></td>
 </tr>
 <tr>
 <td><code>napt build</code></td>
 <td><code>--downloads-dir</code></td>
 <td>Where to find the installer</td>
-<td><code>defaults.discover.output_dir</code></td>
+<td><code>directories.discover</code></td>
 <td><code>downloads</code></td>
 </tr>
 <tr>
 <td><code>napt build</code></td>
 <td><code>--output-dir</code></td>
 <td>Where to save builds</td>
-<td><code>defaults.build.output_dir</code></td>
+<td><code>directories.build</code></td>
 <td><code>builds</code></td>
 </tr>
 <tr>
 <td><code>napt package</code></td>
 <td><code>--builds-dir</code></td>
 <td>Where to find the build</td>
-<td><code>defaults.build.output_dir</code></td>
+<td><code>directories.build</code></td>
 <td><code>builds</code></td>
 </tr>
 <tr>
 <td><code>napt package</code></td>
 <td><code>--output-dir</code></td>
 <td>Where to save packages</td>
-<td><code>defaults.package.output_dir</code></td>
+<td><code>directories.package</code></td>
 <td><code>packages</code></td>
 </tr>
 </tbody>
 </table>
 <p>Note that input and output share a config key across adjacent commands —
 <code>discover --output-dir</code> and <code>build --downloads-dir</code> both read from
-<code>defaults.discover.output_dir</code>, so the output of one is automatically
+<code>directories.discover</code>, so the output of one is automatically
 the input of the next without extra configuration.</p>
 <p>To change the defaults org-wide, add to <code>defaults/org.yaml</code>:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nt">defaults</span><span class="p">:</span>
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span><span class="nt">discover</span><span class="p">:</span>
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">    </span><span class="nt">output_dir</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;cache/downloads&quot;</span><span class="w">   </span><span class="c1"># used by both discover and build</span>
-</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">  </span><span class="nt">build</span><span class="p">:</span>
-</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">    </span><span class="nt">output_dir</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;artifacts/builds&quot;</span><span class="w">  </span><span class="c1"># used by both build and package</span>
-</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="w">  </span><span class="nt">package</span><span class="p">:</span>
-</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="w">    </span><span class="nt">output_dir</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;artifacts/packages&quot;</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nt">directories</span><span class="p">:</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span><span class="nt">discover</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;cache/downloads&quot;</span><span class="w">   </span><span class="c1"># used by both discover and build</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">  </span><span class="nt">build</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;artifacts/builds&quot;</span><span class="w">     </span><span class="c1"># used by both build and package</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">  </span><span class="nt">package</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;artifacts/packages&quot;</span>
 </span></code></pre></div>
 <p>Any CLI flag still overrides the config value for that single run:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Uses config default (or built-in if not configured)</span>
@@ -3245,7 +3245,7 @@ the input of the next without extra configuration.</p>
 <p><strong>⚠️ Security Note:</strong> Never put tokens directly in recipe files (e.g., <code>token: "ghp_abc123"</code>). Always use environment variable substitution (<code>token: "${GITHUB_TOKEN}"</code>) to keep tokens out of version control. See <a href="../common-tasks/#handle-authentication-tokens">Handle Authentication Tokens</a> for best practices.</p>
 </blockquote>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="c1"># Solution: Use authentication token via environment variable</span>
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="nt">source</span><span class="p">:</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="nt">discovery</span><span class="p">:</span>
 </span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
 </span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${GITHUB_TOKEN}&quot;</span><span class="w">  </span><span class="c1"># Environment variable substitution (secure)</span>
 </span></code></pre></div>
