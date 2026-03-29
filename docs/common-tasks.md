@@ -108,27 +108,30 @@ Use this when the application is hosted on GitHub with releases.
 
 ```yaml
 # recipes/Git/git.yaml
-apiVersion: napt/v1  # Recipe format version
+apiVersion: napt/v1
 
-app:  # Application configuration
-  name: "Git for Windows"  # Display name for the application
-  id: "napt-git"  # Unique identifier (used for build directories and package names)
+name: "Git for Windows"
+id: "napt-git"
 
-  source:  # Discovery configuration - how to find and download the installer
-      strategy: api_github  # Discovery strategy: api_github, api_json, url_download, or web_scrape
-      repo: "git-for-windows/git"  # GitHub repository (owner/repo format)
-      asset_pattern: "Git-.*-64-bit\\.exe$"  # Regex pattern to match installer filename in release assets
-      version_pattern: "v?([0-9.]+)\\.windows"  # Regex pattern to extract version from Git tag
+discovery:
+  strategy: api_github
+  repo: "git-for-windows/git"
+  asset_pattern: "Git-.*-64-bit\\.exe$"
+  version_pattern: "v?([0-9.]+)\\.windows"
 
-  psadt:  # PSAppDeployToolkit configuration
-      app_vars:  # PSADT variables (AppName, AppVersion, AppArch)
-        AppName: "Git for Windows"
-        AppVersion: "${discovered_version}"  # Auto-populated from discovery
-        AppArch: "x64"
-      install: |  # PowerShell script executed during installation
-        Start-ADTProcess -Path "$dirFiles\Git-${discovered_version}-64-bit.exe" -Parameters "/VERYSILENT /NORESTART"
-      uninstall: |  # PowerShell script executed during uninstallation
-        Uninstall-ADTApplication -Name "Git"
+intune:
+  detection:
+    display_name: "Git"
+    architecture: "x64"
+
+psadt:
+  app_vars:
+    AppName: "Git for Windows"
+    AppVersion: "${discovered_version}"
+  install: |
+    Start-ADTProcess -Path "$dirFiles\Git-${discovered_version}-64-bit.exe" -Parameters "/VERYSILENT /NORESTART"
+  uninstall: |
+    Uninstall-ADTApplication -Name "Git"
 ```
 
 2. Validate the recipe:
@@ -158,34 +161,32 @@ Use this when the vendor has a download page listing installers (no API availabl
 1. Create the recipe file:
 
 ```yaml
-# recipes/7-Zip/7zip.yaml
-apiVersion: napt/v1  # Recipe format version
+# recipes/7-Zip/7zip-x64-msi.yaml
+apiVersion: napt/v1
 
-app:
-  name: "7-Zip"  # Display name
-  id: "napt-7zip"  # Unique identifier
+name: "7-Zip (x64) MSI"
+id: "napt-7zip-x64-msi"
 
-  source:
-      strategy: web_scrape  # Scrape vendor download page for installer link
-      page_url: "https://www.7-zip.org/download.html"  # URL of vendor download page
-      link_selector: 'a[href$="-x64.msi"]'  # CSS selector to find download link
-      version_pattern: "7z(\\d{2})(\\d{2})-x64"  # Regex to extract version from URL (captures year and month)
-      version_format: "{0}.{1}"  # Format captured groups as "25.01" (year.month)
+discovery:
+  strategy: web_scrape
+  page_url: "https://www.7-zip.org/download.html"
+  link_selector: 'a[href$="-x64.msi"]'
+  version_pattern: "7z(\\d{2})(\\d{2})-x64"
+  version_format: "{0}.{1}"
 
-  win32:  # Windows-specific configuration for detection and validation
-      installed_check:
-          display_name: "7-Zip * (x64 edition)"  # Pattern for detecting installed app (wildcards supported)
-          override_msi_display_name: true  # Override MSI DisplayName that includes version
+intune:
+  detection:
+    display_name: "7-Zip * (x64 edition)"  # Wildcard matches any 7-Zip x64 version
+    override_msi_display_name: true         # Override MSI ProductName which includes version
 
-  psadt:
-      app_vars:  # PSADT variables
-        AppName: "7-Zip"
-        AppVersion: "${discovered_version}"
-        AppArch: "x64"
-      install: |  # MSI installation script
-        Start-ADTMsiProcess -Action Install -Path "$dirFiles\7z*-x64.msi" -Parameters "ALLUSERS=1"
-      uninstall: |  # MSI uninstallation script
-        Uninstall-ADTApplication -Name "7-Zip"
+psadt:
+  app_vars:
+    AppName: "7-Zip"
+    AppVersion: "${discovered_version}"
+  install: |
+    Start-ADTMsiProcess -Action Install -Path "$dirFiles\7z*-x64.msi" -Parameters "ALLUSERS=1"
+  uninstall: |
+    Uninstall-ADTApplication -Name "7-Zip"
 ```
 
 2. Validate and test:
@@ -201,7 +202,7 @@ napt discover recipes/7-Zip/7zip.yaml --verbose
 - `link_selector`: CSS selector to find the download link
 - `version_pattern`: Regex to extract version from URL
 - `version_format`: Format string to transform version (optional)
-- `win32.installed_check`: Configure when vendor includes version in DisplayName (e.g., "7-Zip 25.01")
+- `intune.detection`: Configure when vendor includes version in DisplayName (e.g., "7-Zip 25.01")
   - `display_name`: Pattern with wildcards to match the installed app name
   - `override_msi_display_name`: Set to `true` to override MSI's versioned DisplayName
 
@@ -215,29 +216,27 @@ Use this when the vendor provides a JSON API with version and download URL.
 
 ```yaml
 # recipes/Vendor/app.yaml
-apiVersion: napt/v1  # Recipe format version
+apiVersion: napt/v1
 
-app:
-  name: "Application Name"  # Display name
-  id: "napt-app"  # Unique identifier
+name: "Application Name"
+id: "napt-app"
 
-  source:
-      strategy: api_json  # Query JSON API for version and download URL
-      api_url: "https://api.vendor.com/latest"  # JSON API endpoint URL
-      version_path: "version"  # JSONPath to version field (e.g., "version" or "data.version")
-      download_url_path: "download_url"  # JSONPath to download URL field
-      headers:  # Optional HTTP headers (e.g., for authentication)
-        Authorization: "Bearer ${API_TOKEN}"  # Environment variable substitution supported
+discovery:
+  strategy: api_json
+  api_url: "https://api.vendor.com/latest"
+  version_path: "version"          # JSONPath to version field (e.g., "version" or "data.version")
+  download_url_path: "download_url"
+  headers:                         # Optional HTTP headers (e.g., for authentication)
+    Authorization: "Bearer ${API_TOKEN}"
 
-  psadt:
-      app_vars:  # PSADT variables
-        AppName: "Application Name"
-        AppVersion: "${discovered_version}"
-        AppArch: "x64"
-      install: |  # Installation script
-        Start-ADTProcess -Path "$dirFiles\app-installer.exe" -Parameters "/S"
-      uninstall: |  # Uninstallation script
-        Uninstall-ADTApplication -Name "Application Name"
+psadt:
+  app_vars:
+    AppName: "Application Name"
+    AppVersion: "${discovered_version}"
+  install: |
+    Start-ADTProcess -Path "$dirFiles\app-installer.exe" -Parameters "/S"
+  uninstall: |
+    Uninstall-ADTApplication -Name "Application Name"
 ```
 
 2. Set environment variable (if needed):
@@ -275,25 +274,23 @@ Use this when the vendor has a stable download URL (like Chrome enterprise MSI).
 
 ```yaml
 # recipes/Google/chrome.yaml
-apiVersion: napt/v1  # Recipe format version
+apiVersion: napt/v1
 
-app:
-  name: "Google Chrome"  # Display name
-  id: "napt-chrome"  # Unique identifier
+name: "Google Chrome"
+id: "napt-chrome"
 
-  source:
-      strategy: url_download  # Direct download from fixed URL
-      url: "https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi"  # Stable download URL
+discovery:
+  strategy: url_download
+  url: "https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi"
 
-  psadt:
-      app_vars:  # PSADT variables
-        AppName: "Google Chrome"
-        AppVersion: "${discovered_version}"
-        AppArch: "x64"
-      install: |  # MSI installation script
-        Start-ADTMsiProcess -Action Install -Path "$dirFiles\googlechromestandaloneenterprise64.msi" -Parameters "ALLUSERS=1"
-      uninstall: |  # MSI uninstallation script
-        Uninstall-ADTApplication -Name "Google Chrome"
+psadt:
+  app_vars:
+    AppName: "Google Chrome"
+    AppVersion: "${discovered_version}"
+  install: |
+    Start-ADTMsiProcess -Action Install -Path "$dirFiles\googlechromestandaloneenterprise64.msi" -Parameters "ALLUSERS=1"
+  uninstall: |
+    Uninstall-ADTApplication -Name "Google Chrome"
 ```
 
 2. Validate and test:
@@ -329,7 +326,7 @@ Many APIs require authentication. Here's how to handle tokens securely.
 
 2. **Reference in recipe:**
    ```yaml
-   source:
+   discovery:
      strategy: api_json
      api_url: "https://api.vendor.com/latest"
      headers:
@@ -350,7 +347,7 @@ Many APIs require authentication. Here's how to handle tokens securely.
 If you must store tokens in recipes (not recommended for production):
 
 ```yaml
-source:
+discovery:
   strategy: api_github
   repo: "owner/repo"
   token: "ghp_your_token_here"  # Not recommended - use env vars instead
@@ -524,16 +521,21 @@ By default, the publisher is inferred from the vendor directory name
 ```yaml
 apiVersion: napt/v1
 
-app:
-  name: "Google Chrome"
-  id: "napt-chrome"
-  # ... rest of recipe
+name: "Google Chrome"
+id: "napt-chrome"
+
+discovery:
+  strategy: url_download
+  url: "https://dl.google.com/..."
 
 intune:
   publisher: "Google LLC"
   description: "Google Chrome browser for enterprise deployment."
   privacy_url: "https://policies.google.com/privacy"
   info_url: "https://chromeenterprise.google"
+
+psadt:
+  # ... rest of recipe
 ```
 
 ## Update Existing Recipes
@@ -614,7 +616,7 @@ Common issues and solutions when `napt discover` fails.
 1. Create a GitHub personal access token
 2. Add to recipe:
    ```yaml
-   source:
+   discovery:
      strategy: api_github
      repo: "owner/repo"
      token: "${GITHUB_TOKEN}"

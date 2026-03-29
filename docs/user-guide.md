@@ -83,8 +83,8 @@ Both scripts share the same logic for registry lookup, app name resolution, and 
     - **When architecture is "any"** (default): Checks both 64-bit and 32-bit views (all applicable paths above)
 
 - **App name determination:**
-    - **MSI installers:** Uses MSI `ProductName` property (authoritative source for registry DisplayName). For MSIs where the vendor includes version in the ProductName (e.g., "7-Zip 25.01"), use `win32.installed_check.override_msi_display_name: true` to specify a custom `display_name` pattern instead. See [Recipe Reference - Win32 Configuration](recipe-reference.md#override_msi_display_name) for details.
-    - **Non-MSI installers:** Requires `win32.installed_check.display_name` in recipe configuration. Scripts match registry `DisplayName` to this value.
+    - **MSI installers:** Uses MSI `ProductName` property (authoritative source for registry DisplayName). For MSIs where the vendor includes version in the ProductName (e.g., "7-Zip 25.01"), use `intune.detection.override_msi_display_name: true` to specify a custom `display_name` pattern instead. See [Recipe Reference - detection](recipe-reference.md#detection) for details.
+    - **Non-MSI installers:** Requires `intune.detection.display_name` in recipe configuration. Scripts match registry `DisplayName` to this value.
 
 - **Installer type filtering:**
     - **MSI installers (strict):** Only match registry entries that are MSI-based (checks `WindowsInstaller` = 1). Prevents false matches when both MSI and EXE versions exist.
@@ -93,7 +93,7 @@ Both scripts share the same logic for registry lookup, app name resolution, and 
 - **Architecture filtering:**
     - Controls which registry views are checked based on the `AppArch` value from `psadt.app_vars` in the recipe
     - **MSI installers:** AppArch is automatically extracted from MSI package metadata during discovery (no manual configuration needed)
-    - **Non-MSI installers:** AppArch must be explicitly specified in `psadt.app_vars` (e.g., `AppArch: "x64"`)
+    - **Non-MSI installers:** AppArch must be explicitly specified in `intune.detection` (e.g., `architecture: "x64"`)
     - **Architecture values:**
         - `x64` / `arm64`: Checks only 64-bit registry view (ARM64 uses 64-bit registry)
         - `x86`: Checks only 32-bit registry view
@@ -141,7 +141,7 @@ builds/napt-chrome/144.0.7559.110/
   └── Google-Chrome-144.0.7559.110-Requirements.ps1 # Requirements script (if generated)
 ```
 
-**Configuration:** See [Recipe Reference - Win32 Configuration](recipe-reference.md#win32-configuration) for `win32.installed_check` and `win32.build_types` options.
+**Configuration:** See [Recipe Reference - Intune Configuration](recipe-reference.md#intune-configuration) for `intune.detection` and `intune.build_types` options.
 
 ### Package Process (`napt package`)
 
@@ -401,31 +401,33 @@ A recipe file defines how to discover, download, and package an application. Rec
 ### Basic Structure
 
 ```yaml
-apiVersion: napt/v1  # Recipe format version
+apiVersion: napt/v1    # Recipe format version
+name: "Application Name"  # Display name
+id: "napt-app-id"      # Unique identifier
 
-app:
-  name: "Application Name"  # Display name
-  id: "napt-app-id"  # Unique identifier
+discovery:             # Discovery configuration
+  strategy: api_github  # One of: api_github, api_json, url_download, web_scrape
+  # ... strategy-specific fields
 
-  source:  # Discovery configuration
-      strategy: api_github  # One of: api_github, api_json, url_download, web_scrape
-      # ... strategy-specific fields
+psadt:                 # PSADT configuration
+  app_vars:
+    AppName: "Application Name"
+    AppVersion: "${discovered_version}"
+  install: |           # Installation script
+    # PowerShell code here
+  uninstall: |         # Uninstallation script
+    # PowerShell code here
 
-  psadt:  # PSADT configuration
-      app_vars:
-        AppName: "Application Name"
-        AppVersion: "${discovered_version}"
-        AppArch: "x64"
-      install: |  # Installation script
-        # PowerShell code here
-      uninstall: |  # Uninstallation script
-        # PowerShell code here
+intune:                # Optional: Intune-specific settings
+  detection:
+    display_name: "Application Name"  # Required for EXE installers
+    architecture: "x64"               # Required for EXE installers
 ```
 
 ### Quick Reference
 
-- **Top-level fields:** `apiVersion` (required), `app` (required)
-- **App fields:** `name` (required), `id` (required), `source` (required), `psadt` (required)
+- **Top-level fields:** `apiVersion` (required), `name` (required), `id` (required),
+  `discovery` (required), `psadt` (required), `intune` (optional), `logging` (optional)
 - **Discovery strategies:** See [Discovery Strategies](#discovery-strategies) section above for strategy selection and examples
 - **PSADT scripts:** Use `${discovered_version}` for auto-substituted version, `$dirFiles` for installer path
 
@@ -534,27 +536,28 @@ Always required; defines the specific app with final overrides.
 
 ```yaml
 # defaults/org.yaml
-defaults:
-  psadt:
-    release: "latest"
-    app_vars:
-      AppVendor: "Unknown"
+psadt:
+  release: "latest"
+  app_vars:
+    AppVendor: "Unknown"
 ```
 
 ```yaml
 # defaults/vendors/Google.yaml
-defaults:
-  psadt:
-    app_vars:
-      AppVendor: "Google LLC"
+psadt:
+  app_vars:
+    AppVendor: "Google LLC"
 ```
 
 ```yaml
 # recipes/Google/chrome.yaml
-app:
-  name: "Google Chrome"
-  # AppVendor will be "Google LLC" (from vendor defaults)
-  # release will be "latest" (from org defaults)
+name: "Google Chrome"
+id: "napt-chrome"
+discovery:
+  strategy: url_download
+  url: "https://dl.google.com/..."
+# AppVendor will be "Google LLC" (from vendor defaults)
+# psadt.release will be "latest" (from org defaults)
 ```
 
 ### Directory Flag Defaults
@@ -568,27 +571,24 @@ to its own:
 
 | Command | Flag | Purpose | Config key | Built-in default |
 |---------|------|---------|-----------|-----------------|
-| `napt discover` | `--output-dir` | Where to save downloaded installers | `defaults.discover.output_dir` | `downloads` |
-| `napt build` | `--downloads-dir` | Where to find the installer | `defaults.discover.output_dir` | `downloads` |
-| `napt build` | `--output-dir` | Where to save builds | `defaults.build.output_dir` | `builds` |
-| `napt package` | `--builds-dir` | Where to find the build | `defaults.build.output_dir` | `builds` |
-| `napt package` | `--output-dir` | Where to save packages | `defaults.package.output_dir` | `packages` |
+| `napt discover` | `--output-dir` | Where to save downloaded installers | `directories.discover` | `downloads` |
+| `napt build` | `--downloads-dir` | Where to find the installer | `directories.discover` | `downloads` |
+| `napt build` | `--output-dir` | Where to save builds | `directories.build` | `builds` |
+| `napt package` | `--builds-dir` | Where to find the build | `directories.build` | `builds` |
+| `napt package` | `--output-dir` | Where to save packages | `directories.package` | `packages` |
 
 Note that input and output share a config key across adjacent commands —
 `discover --output-dir` and `build --downloads-dir` both read from
-`defaults.discover.output_dir`, so the output of one is automatically
+`directories.discover`, so the output of one is automatically
 the input of the next without extra configuration.
 
 To change the defaults org-wide, add to `defaults/org.yaml`:
 
 ```yaml
-defaults:
-  discover:
-    output_dir: "cache/downloads"   # used by both discover and build
-  build:
-    output_dir: "artifacts/builds"  # used by both build and package
-  package:
-    output_dir: "artifacts/packages"
+directories:
+  discover: "cache/downloads"   # used by both discover and build
+  build: "artifacts/builds"     # used by both build and package
+  package: "artifacts/packages"
 ```
 
 Any CLI flag still overrides the config value for that single run:
@@ -689,7 +689,7 @@ napt discover recipes/app.yaml --stateless
 
 ```yaml
 # Solution: Use authentication token via environment variable
-source:
+discovery:
   strategy: api_github
   token: "${GITHUB_TOKEN}"  # Environment variable substitution (secure)
 ```
