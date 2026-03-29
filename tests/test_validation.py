@@ -18,12 +18,11 @@ class TestValidateRecipe:
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test App"
-  id: "test-app"
-  source:
-    strategy: url_download
-    url: "https://example.com/app.msi"
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
 """)
 
         result = validate_recipe(recipe)
@@ -38,13 +37,12 @@ app:
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Git"
-  id: "git"
-  source:
-    strategy: api_github
-    repo: "git/git"
-    asset_pattern: ".*\\\\.exe$"
+name: "Git"
+id: "git"
+discovery:
+  strategy: api_github
+  repo: "git/git"
+  asset_pattern: ".*\\\\.exe$"
 """)
 
         result = validate_recipe(recipe)
@@ -58,14 +56,13 @@ app:
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test App"
-  id: "test-app"
-  source:
-    strategy: web_scrape
-    page_url: "https://example.com/download.html"
-    link_selector: 'a[href$=".msi"]'
-    version_pattern: "app-v([0-9.]+)\\\\.msi"
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: web_scrape
+  page_url: "https://example.com/download.html"
+  link_selector: 'a[href$=".msi"]'
+  version_pattern: "app-v([0-9.]+)\\\\.msi"
 """)
 
         result = validate_recipe(recipe)
@@ -79,14 +76,13 @@ app:
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test App"
-  id: "test-app"
-  source:
-    strategy: api_json
-    api_url: "https://api.example.com/latest"
-    version_path: "version"
-    download_url_path: "download_url"
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: api_json
+  api_url: "https://api.example.com/latest"
+  version_path: "version"
+  download_url_path: "download_url"
 """)
 
         result = validate_recipe(recipe)
@@ -110,8 +106,7 @@ app:
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test"
+name: "Test"
   invalid yaml: [unclosed bracket
 """)
 
@@ -145,14 +140,11 @@ app:
         """Test that missing apiVersion is detected."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
-app:
-  name: "Test"
-  id: "test"
-  source:
-    strategy: url_download
-    url: "https://example.com/app.msi"
-    version:
-      type: msi
+name: "Test"
+id: "test"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
 """)
 
         result = validate_recipe(recipe)
@@ -165,14 +157,11 @@ app:
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v99
-app:
-  name: "Test"
-  id: "test"
-  source:
-    strategy: url_download
-    url: "https://example.com/app.msi"
-    version:
-      type: msi
+name: "Test"
+id: "test"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
 """)
 
         result = validate_recipe(recipe)
@@ -180,41 +169,15 @@ app:
         assert len(result.warnings) >= 1
         assert any("napt/v99" in warn for warn in result.warnings)
 
-    def test_missing_app(self, tmp_path):
-        """Test that missing app field is detected."""
+    def test_missing_name(self, tmp_path):
+        """Test that missing name field is detected."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-""")
-
-        result = validate_recipe(recipe)
-
-        assert result.status == "invalid"
-        assert any("app" in err for err in result.errors)
-
-    def test_app_not_dict(self, tmp_path):
-        """Test that app must be a dictionary."""
-        recipe = tmp_path / "recipe.yaml"
-        recipe.write_text("""
-apiVersion: napt/v1
-app: "not a dict"
-""")
-
-        result = validate_recipe(recipe)
-
-        assert result.status == "invalid"
-        assert any("dictionary" in err for err in result.errors)
-
-    def test_missing_app_name(self, tmp_path):
-        """Test that missing app name is detected."""
-        recipe = tmp_path / "recipe.yaml"
-        recipe.write_text("""
-apiVersion: napt/v1
-app:
-  id: "test"
-  source:
-    strategy: url_download
-    url: "https://example.com/app.msi"
+id: "test"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
 """)
 
         result = validate_recipe(recipe)
@@ -222,18 +185,15 @@ app:
         assert result.status == "invalid"
         assert any("name" in err for err in result.errors)
 
-    def test_missing_app_id(self, tmp_path):
-        """Test that missing app id is detected."""
+    def test_missing_id(self, tmp_path):
+        """Test that missing id field is detected."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test"
-  source:
-    strategy: url_download
-    url: "https://example.com/app.msi"
-    version:
-      type: msi
+name: "Test"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
 """)
 
         result = validate_recipe(recipe)
@@ -241,31 +201,29 @@ app:
         assert result.status == "invalid"
         assert any("id" in err for err in result.errors)
 
-    def test_missing_source(self, tmp_path):
-        """Test that missing source is detected."""
+    def test_missing_discovery(self, tmp_path):
+        """Test that missing discovery section is detected."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test"
-  id: "test"
+name: "Test"
+id: "test"
 """)
 
         result = validate_recipe(recipe)
 
         assert result.status == "invalid"
-        assert any("source" in err for err in result.errors)
+        assert any("discovery" in err for err in result.errors)
 
     def test_missing_strategy(self, tmp_path):
         """Test that missing strategy is detected."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test"
-  id: "test"
-  source:
-    url: "https://example.com/app.msi"
+name: "Test"
+id: "test"
+discovery:
+  url: "https://example.com/app.msi"
 """)
 
         result = validate_recipe(recipe)
@@ -278,12 +236,11 @@ app:
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test"
-  id: "test"
-  source:
-    strategy: nonexistent_strategy
-    url: "https://example.com/app.msi"
+name: "Test"
+id: "test"
+discovery:
+  strategy: nonexistent_strategy
+  url: "https://example.com/app.msi"
 """)
 
         result = validate_recipe(recipe)
@@ -296,13 +253,10 @@ app:
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test"
-  id: "test"
-  source:
-    strategy: url_download
-    version:
-      type: msi
+name: "Test"
+id: "test"
+discovery:
+  strategy: url_download
 """)
 
         result = validate_recipe(recipe)
@@ -315,12 +269,11 @@ app:
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test"
-  id: "test"
-  source:
-    strategy: api_github
-    asset_pattern: ".*\\\\.exe$"
+name: "Test"
+id: "test"
+discovery:
+  strategy: api_github
+  asset_pattern: ".*\\\\.exe$"
 """)
 
         result = validate_recipe(recipe)
@@ -333,13 +286,12 @@ app:
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test"
-  id: "test"
-  source:
-    strategy: api_github
-    repo: "invalid-repo-format"
-    asset_pattern: ".*\\\\.exe$"
+name: "Test"
+id: "test"
+discovery:
+  strategy: api_github
+  repo: "invalid-repo-format"
+  asset_pattern: ".*\\\\.exe$"
 """)
 
         result = validate_recipe(recipe)
@@ -352,12 +304,11 @@ app:
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test"
-  id: "test"
-  source:
-    strategy: web_scrape
-    page_url: "https://example.com/download.html"
+name: "Test"
+id: "test"
+discovery:
+  strategy: web_scrape
+  page_url: "https://example.com/download.html"
 """)
 
         result = validate_recipe(recipe)
@@ -372,14 +323,13 @@ app:
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test"
-  id: "test"
-  source:
-    strategy: web_scrape
-    page_url: "https://example.com/download.html"
-    link_selector: 'a[href$=".msi"]'
-    version_pattern: "[unclosed bracket"
+name: "Test"
+id: "test"
+discovery:
+  strategy: web_scrape
+  page_url: "https://example.com/download.html"
+  link_selector: 'a[href$=".msi"]'
+  version_pattern: "[unclosed bracket"
 """)
 
         result = validate_recipe(recipe)
@@ -392,39 +342,33 @@ app:
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test"
-  id: "test"
-  source:
-    strategy: api_json
-    api_url: "https://api.example.com/latest"
+name: "Test"
+id: "test"
+discovery:
+  strategy: api_json
+  api_url: "https://api.example.com/latest"
 """)
 
         result = validate_recipe(recipe)
 
         assert result.status == "invalid"
-        # Should be missing version_path and download_url_path
         assert len(result.errors) >= 2
 
     def test_verbose_mode(self, tmp_path, capsys):
         """Test that verbose mode prints progress."""
         from napt.logging import get_logger, set_global_logger
 
-        # Set up verbose logger
         logger = get_logger(verbose=True, debug=False)
         set_global_logger(logger)
 
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test"
-  id: "test"
-  source:
-    strategy: url_download
-    url: "https://example.com/app.msi"
-    version:
-      type: msi
+name: "Test"
+id: "test"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
 """)
 
         result = validate_recipe(recipe)
@@ -440,14 +384,11 @@ app:
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test"
-  id: "test"
-  source:
-    strategy: url_download
-    url: "https://example.com/app.msi"
-    version:
-      type: msi
+name: "Test"
+id: "test"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
 """)
 
         result = validate_recipe(recipe)
@@ -456,29 +397,26 @@ app:
         assert str(recipe) in result.recipe_path
 
 
-class TestWin32Validation:
-    """Tests for win32 configuration validation."""
+class TestIntuneValidation:
+    """Tests for intune: section validation."""
 
-    def test_valid_win32_config(self, tmp_path):
-        """Test that valid win32 config passes validation."""
+    def test_valid_intune_detection(self, tmp_path):
+        """Test that valid intune.detection config passes validation."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test App"
-  id: "test-app"
-  source:
-    strategy: url_download
-    url: "https://example.com/app.msi"
-  win32:
-    build_types: "both"
-    installed_check:
-      display_name: "Test App *"
-      architecture: "x64"
-      override_msi_display_name: false
-      log_rotation_mb: 3
-      detection:
-        exact_match: false
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+intune:
+  build_types: "both"
+  detection:
+    display_name: "Test App *"
+    architecture: "x64"
+    override_msi_display_name: false
+    exact_match: false
 """)
 
         result = validate_recipe(recipe)
@@ -487,19 +425,18 @@ app:
         assert len(result.errors) == 0
         assert len(result.warnings) == 0
 
-    def test_win32_invalid_build_types_value(self, tmp_path):
+    def test_intune_invalid_build_types_value(self, tmp_path):
         """Test that invalid build_types value is detected."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test App"
-  id: "test-app"
-  source:
-    strategy: url_download
-    url: "https://example.com/app.msi"
-  win32:
-    build_types: "invalid"
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+intune:
+  build_types: "invalid"
 """)
 
         result = validate_recipe(recipe)
@@ -509,19 +446,18 @@ app:
             "build_types" in err and "Invalid value" in err for err in result.errors
         )
 
-    def test_win32_invalid_build_types_type(self, tmp_path):
+    def test_intune_invalid_build_types_type(self, tmp_path):
         """Test that invalid build_types type is detected."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test App"
-  id: "test-app"
-  source:
-    strategy: url_download
-    url: "https://example.com/app.msi"
-  win32:
-    build_types: 123
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+intune:
+  build_types: 123
 """)
 
         result = validate_recipe(recipe)
@@ -529,19 +465,18 @@ app:
         assert result.status == "invalid"
         assert any("build_types" in err and "str" in err for err in result.errors)
 
-    def test_win32_unknown_field_warning(self, tmp_path):
-        """Test that unknown win32 field generates warning."""
+    def test_intune_unknown_field_warning(self, tmp_path):
+        """Test that unknown intune field generates warning."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test App"
-  id: "test-app"
-  source:
-    strategy: url_download
-    url: "https://example.com/app.msi"
-  win32:
-    buildtypes: "both"
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+intune:
+  buildtypes: "both"
 """)
 
         result = validate_recipe(recipe)
@@ -550,21 +485,20 @@ app:
         assert any("Unknown field 'buildtypes'" in warn for warn in result.warnings)
         assert any("build_types" in warn for warn in result.warnings)
 
-    def test_installed_check_invalid_architecture(self, tmp_path):
+    def test_detection_invalid_architecture(self, tmp_path):
         """Test that invalid architecture value is detected."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test App"
-  id: "test-app"
-  source:
-    strategy: url_download
-    url: "https://example.com/app.msi"
-  win32:
-    installed_check:
-      display_name: "Test App"
-      architecture: "x128"
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+intune:
+  detection:
+    display_name: "Test App"
+    architecture: "x128"
 """)
 
         result = validate_recipe(recipe)
@@ -574,20 +508,19 @@ app:
             "architecture" in err and "Invalid value" in err for err in result.errors
         )
 
-    def test_installed_check_unknown_field_with_suggestion(self, tmp_path):
-        """Test that unknown installed_check field suggests similar field."""
+    def test_detection_unknown_field_with_suggestion(self, tmp_path):
+        """Test that unknown detection field suggests similar field."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test App"
-  id: "test-app"
-  source:
-    strategy: url_download
-    url: "https://example.com/app.msi"
-  win32:
-    installed_check:
-      displayname: "Test App"
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+intune:
+  detection:
+    displayname: "Test App"
 """)
 
         result = validate_recipe(recipe)
@@ -598,20 +531,19 @@ app:
             for warn in result.warnings
         )
 
-    def test_installed_check_invalid_bool_type(self, tmp_path):
+    def test_detection_invalid_bool_type(self, tmp_path):
         """Test that invalid boolean type is detected."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test App"
-  id: "test-app"
-  source:
-    strategy: url_download
-    url: "https://example.com/app.msi"
-  win32:
-    installed_check:
-      override_msi_display_name: "yes"
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+intune:
+  detection:
+    override_msi_display_name: "yes"
 """)
 
         result = validate_recipe(recipe)
@@ -622,42 +554,19 @@ app:
             for err in result.errors
         )
 
-    def test_installed_check_invalid_int_type(self, tmp_path):
-        """Test that invalid integer type is detected."""
-        recipe = tmp_path / "recipe.yaml"
-        recipe.write_text("""
-apiVersion: napt/v1
-app:
-  name: "Test App"
-  id: "test-app"
-  source:
-    strategy: url_download
-    url: "https://example.com/app.msi"
-  win32:
-    installed_check:
-      log_rotation_mb: "three"
-""")
-
-        result = validate_recipe(recipe)
-
-        assert result.status == "invalid"
-        assert any("log_rotation_mb" in err and "int" in err for err in result.errors)
-
     def test_detection_invalid_exact_match_type(self, tmp_path):
         """Test that invalid exact_match type is detected."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test App"
-  id: "test-app"
-  source:
-    strategy: url_download
-    url: "https://example.com/app.msi"
-  win32:
-    installed_check:
-      detection:
-        exact_match: "true"
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+intune:
+  detection:
+    exact_match: "true"
 """)
 
         result = validate_recipe(recipe)
@@ -670,16 +579,14 @@ app:
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test App"
-  id: "test-app"
-  source:
-    strategy: url_download
-    url: "https://example.com/app.msi"
-  win32:
-    installed_check:
-      detection:
-        exactmatch: true
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+intune:
+  detection:
+    exactmatch: true
 """)
 
         result = validate_recipe(recipe)
@@ -690,61 +597,36 @@ app:
             for warn in result.warnings
         )
 
-    def test_win32_not_dict_error(self, tmp_path):
-        """Test that non-dict win32 is detected."""
+    def test_intune_not_dict_error(self, tmp_path):
+        """Test that non-dict intune section is detected."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test App"
-  id: "test-app"
-  source:
-    strategy: url_download
-    url: "https://example.com/app.msi"
-  win32: "not a dict"
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+intune: "not a dict"
 """)
 
         result = validate_recipe(recipe)
 
         assert result.status == "invalid"
-        assert any("win32" in err and "dictionary" in err for err in result.errors)
-
-    def test_installed_check_not_dict_error(self, tmp_path):
-        """Test that non-dict installed_check is detected."""
-        recipe = tmp_path / "recipe.yaml"
-        recipe.write_text("""
-apiVersion: napt/v1
-app:
-  name: "Test App"
-  id: "test-app"
-  source:
-    strategy: url_download
-    url: "https://example.com/app.msi"
-  win32:
-    installed_check: "not a dict"
-""")
-
-        result = validate_recipe(recipe)
-
-        assert result.status == "invalid"
-        assert any(
-            "installed_check" in err and "dictionary" in err for err in result.errors
-        )
+        assert any("intune" in err and "dictionary" in err for err in result.errors)
 
     def test_detection_not_dict_error(self, tmp_path):
         """Test that non-dict detection is detected."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test App"
-  id: "test-app"
-  source:
-    strategy: url_download
-    url: "https://example.com/app.msi"
-  win32:
-    installed_check:
-      detection: "not a dict"
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+intune:
+  detection: "not a dict"
 """)
 
         result = validate_recipe(recipe)
@@ -752,20 +634,84 @@ app:
         assert result.status == "invalid"
         assert any("detection" in err and "dictionary" in err for err in result.errors)
 
-    def test_installed_check_invalid_log_level(self, tmp_path):
+    def test_no_intune_section_is_valid(self, tmp_path):
+        """Test that missing intune section is valid (optional)."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text("""
+apiVersion: napt/v1
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+""")
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "valid"
+        assert len(result.errors) == 0
+        assert len(result.warnings) == 0
+
+    def test_multiple_unknown_fields_all_warned(self, tmp_path):
+        """Test that multiple unknown fields all generate warnings."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text("""
+apiVersion: napt/v1
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+intune:
+  buildtypes: "both"
+  unknownfield: "value"
+  detection:
+    displayname: "Test"
+    arch: "x64"
+""")
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "valid"
+        assert len(result.warnings) >= 4
+
+
+class TestLoggingValidation:
+    """Tests for logging: section validation."""
+
+    def test_valid_logging_section(self, tmp_path):
+        """Test that valid logging config passes validation."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text("""
+apiVersion: napt/v1
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+logging:
+  log_format: "cmtrace"
+  log_level: "INFO"
+  log_rotation_mb: 5
+""")
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "valid"
+        assert len(result.errors) == 0
+
+    def test_logging_invalid_log_level(self, tmp_path):
         """Test that invalid log_level value is detected."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test App"
-  id: "test-app"
-  source:
-    strategy: url_download
-    url: "https://example.com/app.msi"
-  win32:
-    installed_check:
-      log_level: "VERBOSE"
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+logging:
+  log_level: "VERBOSE"
 """)
 
         result = validate_recipe(recipe)
@@ -775,46 +721,39 @@ app:
             "log_level" in err and "Invalid value" in err for err in result.errors
         )
 
-    def test_multiple_unknown_fields_all_warned(self, tmp_path):
-        """Test that multiple unknown fields all generate warnings."""
+    def test_logging_invalid_log_rotation_type(self, tmp_path):
+        """Test that invalid log_rotation_mb type is detected."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test App"
-  id: "test-app"
-  source:
-    strategy: url_download
-    url: "https://example.com/app.msi"
-  win32:
-    buildtypes: "both"
-    unknownfield: "value"
-    installed_check:
-      displayname: "Test"
-      arch: "x64"
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+logging:
+  log_rotation_mb: "three"
 """)
 
         result = validate_recipe(recipe)
 
-        assert result.status == "valid"
-        # Should have warnings for: buildtypes, unknownfield, displayname, arch
-        assert len(result.warnings) >= 4
+        assert result.status == "invalid"
+        assert any("log_rotation_mb" in err and "int" in err for err in result.errors)
 
-    def test_no_win32_section_is_valid(self, tmp_path):
-        """Test that missing win32 section is valid (optional)."""
+    def test_logging_not_dict_error(self, tmp_path):
+        """Test that non-dict logging section is detected."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
-app:
-  name: "Test App"
-  id: "test-app"
-  source:
-    strategy: url_download
-    url: "https://example.com/app.msi"
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+logging: "not a dict"
 """)
 
         result = validate_recipe(recipe)
 
-        assert result.status == "valid"
-        assert len(result.errors) == 0
-        assert len(result.warnings) == 0
+        assert result.status == "invalid"
+        assert any("logging" in err and "dictionary" in err for err in result.errors)

@@ -26,13 +26,11 @@ class TestDiscoverRecipe:
         # Create a minimal recipe
         recipe_data = {
             "apiVersion": "napt/v1",
-            "app": {
-                "name": "Test App",
-                "id": "test-app",
-                "source": {
-                    "strategy": "url_download",
-                    "url": "https://example.com/test.msi",
-                },
+            "name": "Test App",
+            "id": "test-app",
+            "discovery": {
+                "strategy": "url_download",
+                "url": "https://example.com/test.msi",
             },
         }
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
@@ -60,12 +58,14 @@ class TestDiscoverRecipe:
         assert hasattr(result, "file_path")
         assert hasattr(result, "sha256")
 
-    def test_discover_recipe_no_app_raises(self, tmp_test_dir, create_yaml_file):
-        """Test that recipe with no app raises ConfigError."""
-        recipe_data = {"apiVersion": "napt/v1"}
+    def test_discover_recipe_missing_strategy_in_empty_recipe_raises(
+        self, tmp_test_dir, create_yaml_file
+    ):
+        """Test that recipe without discovery section raises ConfigError."""
+        recipe_data = {"apiVersion": "napt/v1", "name": "Test", "id": "test"}
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
 
-        with pytest.raises(ConfigError, match="No app defined"):
+        with pytest.raises(ConfigError, match="No 'discovery.strategy' defined"):
             discover_recipe(recipe_path, tmp_test_dir)
 
     def test_discover_recipe_missing_strategy_raises(
@@ -74,14 +74,13 @@ class TestDiscoverRecipe:
         """Test that missing strategy raises ConfigError."""
         recipe_data = {
             "apiVersion": "napt/v1",
-            "app": {
-                "name": "Test App",
-                "source": {},  # No strategy
-            },
+            "name": "Test App",
+            "id": "test-app",
+            "discovery": {},  # No strategy
         }
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
 
-        with pytest.raises(ConfigError, match="No 'source.strategy' defined"):
+        with pytest.raises(ConfigError, match="No 'discovery.strategy' defined"):
             discover_recipe(recipe_path, tmp_test_dir)
 
     def test_discover_recipe_unknown_strategy_raises(
@@ -90,10 +89,9 @@ class TestDiscoverRecipe:
         """Test that unknown strategy raises ConfigError."""
         recipe_data = {
             "apiVersion": "napt/v1",
-            "app": {
-                "name": "Test App",
-                "source": {"strategy": "nonexistent_strategy"},
-            },
+            "name": "Test App",
+            "id": "test-app",
+            "discovery": {"strategy": "nonexistent_strategy"},
         }
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
 
@@ -121,15 +119,13 @@ class TestVersionFirstFastPath:
         # Create a minimal recipe with web_scrape strategy
         recipe_data = {
             "apiVersion": "napt/v1",
-            "app": {
-                "name": "Test App",
-                "id": "test-app",
-                "source": {
-                    "strategy": "web_scrape",
-                    "page_url": "https://example.com/download.html",
-                    "link_selector": 'a[href$=".msi"]',
-                    "version_pattern": r"app-v([0-9.]+)-installer",
-                },
+            "name": "Test App",
+            "id": "test-app",
+            "discovery": {
+                "strategy": "web_scrape",
+                "page_url": "https://example.com/download.html",
+                "link_selector": 'a[href$=".msi"]',
+                "version_pattern": r"app-v([0-9.]+)-installer",
             },
         }
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
@@ -184,15 +180,13 @@ class TestVersionFirstFastPath:
         # Create a minimal recipe with web_scrape strategy
         recipe_data = {
             "apiVersion": "napt/v1",
-            "app": {
-                "name": "Test App",
-                "id": "test-app",
-                "source": {
-                    "strategy": "web_scrape",
-                    "page_url": "https://example.com/download.html",
-                    "link_selector": 'a[href$=".msi"]',
-                    "version_pattern": r"app-v([0-9.]+)-installer",
-                },
+            "name": "Test App",
+            "id": "test-app",
+            "discovery": {
+                "strategy": "web_scrape",
+                "page_url": "https://example.com/download.html",
+                "link_selector": 'a[href$=".msi"]',
+                "version_pattern": r"app-v([0-9.]+)-installer",
             },
         }
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
@@ -257,15 +251,13 @@ class TestVersionFirstFastPath:
         # Create a minimal recipe with web_scrape strategy
         recipe_data = {
             "apiVersion": "napt/v1",
-            "app": {
-                "name": "Test App",
-                "id": "test-app",
-                "source": {
-                    "strategy": "web_scrape",
-                    "page_url": "https://example.com/download.html",
-                    "link_selector": 'a[href$=".msi"]',
-                    "version_pattern": r"app-v([0-9.]+)-installer",
-                },
+            "name": "Test App",
+            "id": "test-app",
+            "discovery": {
+                "strategy": "web_scrape",
+                "page_url": "https://example.com/download.html",
+                "link_selector": 'a[href$=".msi"]',
+                "version_pattern": r"app-v([0-9.]+)-installer",
             },
         }
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
