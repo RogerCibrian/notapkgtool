@@ -382,6 +382,7 @@ Status progression: 💡 Idea → 🔬 Investigating → 📋 Ready → 🚧 In 
 | `logger.step(n, total, msg)` | Major pipeline stages (always visible) |
 | `logger.info(prefix, msg)` | Notable events: skipping a step for a known reason, replacing an artifact, key IDs returned by external systems |
 | `logger.warning(prefix, msg)` | Something unexpected but recoverable; user should be aware |
+| `logger.progress(prefix, msg)` | Download/upload progress that overwrites the current line (always visible) |
 | `logger.verbose(prefix, msg)` | Implementation detail: exact file paths, intermediate values, internal state |
 | `logger.debug(prefix, msg)` | Raw data dumps, backend selection attempts, very granular traces |
 

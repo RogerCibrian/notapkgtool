@@ -340,10 +340,7 @@ def upload_to_azure_blob(
             if total_bytes:
                 pct = int(bytes_uploaded * 100 / total_bytes)
                 if pct != last_percent:
-                    # TODO: Route progress output through the logger once a
-                    # logger.progress() method is added. Bare print bypasses
-                    # SilentLogger in library usage.
-                    print(f"upload progress: {pct}%", end="\r")
+                    logger.progress("UPLOAD", f"{pct}%")
                     last_percent = pct
 
             block_index += 1

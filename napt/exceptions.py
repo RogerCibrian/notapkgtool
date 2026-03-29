@@ -14,10 +14,9 @@
 
 """Exception hierarchy for NAPT.
 
-This module defines a custom exception hierarchy that allows library users
-to distinguish between different types of errors. All exceptions inherit from
-NAPTError, allowing users to catch all NAPT errors with a single except clause
-if needed.
+This module defines a custom exception hierarchy for distinguishing between
+different types of errors. All exceptions inherit from NAPTError, allowing
+callers to catch all NAPT errors with a single except clause if needed.
 
 Example:
     Catching specific error types:
@@ -59,7 +58,7 @@ __all__ = [
 class NAPTError(Exception):
     """Base exception for all NAPT errors.
 
-    All NAPT-specific exceptions inherit from this class, allowing users
+    All NAPT-specific exceptions inherit from this class, allowing callers
     to catch all NAPT errors with a single except clause if needed.
     """
 
