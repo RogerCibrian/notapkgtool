@@ -441,7 +441,7 @@ def cmd_package(args: argparse.Namespace) -> int:
         output_dir = Path(args.output_dir)
     else:
         config = load_effective_config(recipe_path)
-        output_dir = Path(config["defaults"]["package"]["output_dir"])
+        output_dir = Path(config["directories"]["package"])
 
     print(f"Creating .intunewin package from: {build_dir}")
     print(f"Output directory: {output_dir}")
