@@ -12,11 +12,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from napt.detection import (
+from napt.build.detection import (
     DetectionConfig,
     generate_detection_script,
-    sanitize_filename,
 )
+from napt.build.manager import sanitize_filename
 
 # All tests in this file are unit tests (fast, mocked)
 

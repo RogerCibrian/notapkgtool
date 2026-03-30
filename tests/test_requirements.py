@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from napt.requirements import (
+from napt.build.requirements import (
     RequirementsConfig,
     generate_requirements_script,
 )

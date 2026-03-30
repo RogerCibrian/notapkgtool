@@ -43,18 +43,18 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import re
 import shutil
 from typing import Any
 
 from napt.config import load_effective_config
-from napt.detection import (
+from napt.build.detection import (
     DetectionConfig,
     generate_detection_script,
-    sanitize_filename,
 )
 from napt.exceptions import ConfigError, PackagingError
 from napt.psadt import get_psadt_release
-from napt.requirements import (
+from napt.build.requirements import (
     RequirementsConfig,
     generate_requirements_script,
 )
@@ -64,6 +64,49 @@ from napt.versioning.msi import (
     extract_msi_metadata,
     version_from_msi_product_version,
 )
+
+
+def sanitize_filename(name: str, app_id: str = "") -> str:
+    """Sanitize string for use in Windows filename.
+
+    Rules:
+        - Replace spaces with hyphens
+        - Remove invalid Windows filename characters (< > : " | ? * \\ /)
+        - Normalize multiple consecutive hyphens to single hyphen
+        - Remove leading/trailing hyphens and dots
+        - If result is empty, fallback to app_id (or "app" if app_id is empty)
+
+    Args:
+        name: String to sanitize (e.g., "Google Chrome").
+        app_id: Fallback identifier if name becomes empty after sanitization.
+
+    Returns:
+        Sanitized filename-safe string (e.g., "Google-Chrome").
+
+    Example:
+        Basic sanitization:
+            ```python
+            sanitize_filename("Google Chrome")  # Returns: "Google-Chrome"
+            sanitize_filename("My App v2.0")    # Returns: "My-App-v2.0"
+            sanitize_filename("Test<>App")      # Returns: "TestApp"
+            ```
+
+        Fallback behavior:
+            ```python
+            sanitize_filename("  ", "my-app")   # Returns: "my-app"
+            sanitize_filename("", "test")       # Returns: "test"
+            ```
+
+    """
+    sanitized = name.replace(" ", "-")
+    invalid_chars = '<>:"|?*\\/'
+    for char in invalid_chars:
+        sanitized = sanitized.replace(char, "")
+    sanitized = re.sub(r"-+", "-", sanitized)
+    sanitized = sanitized.strip(".-")
+    if not sanitized:
+        sanitized = app_id if app_id else "app"
+    return sanitized
 
 
 def _get_installer_version(
