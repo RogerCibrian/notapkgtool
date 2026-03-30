@@ -82,6 +82,12 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "uninstall_command": (
             "Invoke-AppDeployToolkit.exe -DeploymentType Uninstall -DeployMode Silent"
         ),
+        "allow_available_uninstall": True,
+        "run_as_account": "system",
+        "device_restart_behavior": "allow",
+        "max_run_time_minutes": 60,
+        "enforce_signature_check": False,
+        "run_as_32_bit": False,
         "detection": {
             "exact_match": False,
         },
@@ -143,6 +149,24 @@ apiVersion: napt/v1
 #   # Intune install/uninstall command lines (rarely need changing)
 #   install_command: "Invoke-AppDeployToolkit.exe -DeploymentType Install -DeployMode Silent"
 #   uninstall_command: "Invoke-AppDeployToolkit.exe -DeploymentType Uninstall -DeployMode Silent"
+#
+#   # Show "Uninstall" in Company Portal (Available assignments)
+#   allow_available_uninstall: true
+#
+#   # Run installer and detection/requirements scripts as "system" or "user"
+#   run_as_account: "system"
+#
+#   # Device restart behavior: allow, suppress, force, basedOnReturnCode
+#   device_restart_behavior: "allow"
+#
+#   # Maximum installer runtime in minutes before Intune times out
+#   max_run_time_minutes: 60
+#
+#   # Require code signing on detection/requirements scripts
+#   enforce_signature_check: false
+#
+#   # Run installer and scripts in 32-bit PowerShell context
+#   run_as_32_bit: false
 #
 #   # Detection defaults (override per-recipe in intune.detection)
 #   detection:

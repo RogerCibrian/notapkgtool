@@ -399,6 +399,13 @@ intune:
   minimum_supported_windows_release: "Windows10_21H2" # Optional: minimum Windows release
   install_command: "Invoke-AppDeployToolkit.exe ..."  # Optional: override install command
   uninstall_command: "Invoke-AppDeployToolkit.exe ..." # Optional: override uninstall command
+  is_featured: false                                 # Optional: feature app in Company Portal
+  allow_available_uninstall: true                    # Optional: show Uninstall in Company Portal
+  run_as_account: "system"                           # Optional: system or user
+  device_restart_behavior: "allow"                   # Optional: allow, suppress, force, basedOnReturnCode
+  max_run_time_minutes: 60                           # Optional: max installer runtime
+  enforce_signature_check: false                     # Optional: require script signing
+  run_as_32_bit: false                               # Optional: run in 32-bit context
   description: "App description for Intune portal"  # Optional: app description
   publisher: "Vendor Name"                           # Optional: publisher name override
   category: "Productivity"                           # Optional: Intune app category
@@ -480,6 +487,82 @@ PSADT deployment parameters.
 **Default:** `"Invoke-AppDeployToolkit.exe -DeploymentType Uninstall -DeployMode Silent"`
 
 Command line used by Intune to uninstall the app.
+
+### is_featured
+
+**Type:** `boolean`
+**Required:** No
+**Default:** `false`
+
+When `true`, the app is marked as featured in the Company Portal, giving it
+prominent placement on the home screen.
+
+### allow_available_uninstall
+
+**Type:** `boolean`
+**Required:** No
+**Default:** `true`
+
+When `true`, the "Uninstall" action is available in the Company Portal for Available
+assignments.
+Set to `false` to prevent self-service uninstall for this app.
+
+### run_as_account
+
+**Type:** `string`
+**Required:** No
+**Default:** `"system"`
+**Allowed values:** `"system"`, `"user"`
+
+Execution account for the installer and detection/requirements scripts.
+Use `"system"` for most enterprise deployments.
+Use `"user"` for apps that must be installed in the user's profile context.
+
+### device_restart_behavior
+
+**Type:** `string`
+**Required:** No
+**Default:** `"allow"`
+**Allowed values:** `"allow"`, `"suppress"`, `"force"`, `"basedOnReturnCode"`
+
+Controls how Intune handles device restarts after install:
+
+| Value | Behavior |
+|-------|----------|
+| `"allow"` | Intune may restart the device if needed |
+| `"suppress"` | Suppress any restart, even if the installer requests one |
+| `"force"` | Force a restart after install completes |
+| `"basedOnReturnCode"` | Restart based on the installer's return code |
+
+### max_run_time_minutes
+
+**Type:** `integer`
+**Required:** No
+**Default:** `60`
+
+Maximum time in minutes Intune waits for the installer to complete before
+marking the install as failed.
+Increase for apps with long installation times (e.g., large Office deployments).
+
+### enforce_signature_check
+
+**Type:** `boolean`
+**Required:** No
+**Default:** `false`
+
+When `true`, Intune requires detection and requirements scripts to be
+code-signed before execution.
+Leave as `false` unless your organization enforces PowerShell script signing policy.
+
+### run_as_32_bit
+
+**Type:** `boolean`
+**Required:** No
+**Default:** `false`
+
+When `true`, runs the installer and detection/requirements scripts in a
+32-bit PowerShell context.
+Required for 32-bit installers that cannot run in a 64-bit host process.
 
 ### description
 
