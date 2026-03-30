@@ -99,6 +99,11 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "log_level": "INFO",
         "log_rotation_mb": 3,
     },
+    # IntuneWinAppUtil.exe version pinning.
+    # Controls which release of Microsoft's packaging tool is downloaded and cached.
+    "intunewin": {
+        "release": "latest",
+    },
 }
 
 
@@ -183,4 +188,8 @@ apiVersion: napt/v1
 #   discover: "downloads"
 #   build: "builds"
 #   package: "packages"
+
+# intunewin:
+#   # IntuneWinAppUtil.exe release: "latest" or specific version (e.g., "1.8.6")
+#   release: "latest"
 """

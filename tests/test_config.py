@@ -310,6 +310,7 @@ id: test-app
             ("intune", "build_types"),
             ("intune", "detection"),
             ("logging", "log_format"),
+            ("intunewin", "release"),
         ]
 
         for parent, key in nested_checks:

@@ -156,7 +156,10 @@ recipe's app:
     - `Files/` directory
     - `Invoke-AppDeployToolkit.ps1` script
     - `Invoke-AppDeployToolkit.exe` launcher
-3. **Get IntuneWinAppUtil** - Downloads/caches `IntuneWinAppUtil.exe` from Microsoft's GitHub repository if not already cached
+3. **Get IntuneWinAppUtil** - Downloads/caches `IntuneWinAppUtil.exe` from Microsoft's GitHub
+   repository. The release is controlled by `intunewin.release` in `defaults/org.yaml`
+   (default: `"latest"`). The tool is cached under `cache/tools/{version}/` so each
+   pinned release is stored independently
 4. **Create Package** - Runs `IntuneWinAppUtil.exe` to create `.intunewin` file:
     - Input: `packagefiles/` subdirectory of the build (PSADT structure)
     - Output: `Invoke-AppDeployToolkit.intunewin` in `packages/{app_id}/{version}/`
@@ -519,6 +522,7 @@ recipe.yaml                         <- recipe-specific overrides
 - Config files only override what you need to change
 - Missing fields always fall back to code defaults
 - Old configs never break when NAPT adds new features
+- Any setting can be overridden at any layer — org, vendor, or recipe
 
 ### The Three Override Layers
 
@@ -556,8 +560,9 @@ id: "napt-chrome"
 discovery:
   strategy: url_download
   url: "https://dl.google.com/..."
+psadt:
+  release: "4.1.7"   # overrides org default of "latest" for this recipe only
 # AppVendor will be "Google LLC" (from vendor defaults)
-# psadt.release will be "latest" (from org defaults)
 ```
 
 ### Directory Flag Defaults
@@ -600,6 +605,28 @@ napt discover recipes/Google/chrome.yaml
 # Overrides for this run only
 napt discover recipes/Google/chrome.yaml --output-dir /tmp/downloads
 napt build recipes/Google/chrome.yaml --downloads-dir /tmp/downloads
+```
+
+### IntuneWinAppUtil Release Pinning
+
+By default NAPT always resolves `"latest"` for `IntuneWinAppUtil.exe` by querying
+the GitHub releases API and caching the resolved version.
+To pin to a specific release for reproducible builds, set `intunewin.release` in
+`defaults/org.yaml`:
+
+```yaml
+intunewin:
+  release: "1.8.6"   # pin to a specific release
+```
+
+The tool is cached under `cache/tools/{version}/` — each pinned release lives in
+its own subdirectory, so switching versions just downloads once and caches both.
+
+Use `"latest"` to always resolve the current release:
+
+```yaml
+intunewin:
+  release: "latest"  # default; resolves via GitHub API on each run if not cached
 ```
 
 ## Cross-Platform Support

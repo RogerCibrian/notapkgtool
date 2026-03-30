@@ -49,17 +49,71 @@ import requests
 from napt.exceptions import ConfigError, NetworkError, PackagingError
 from napt.results import PackageResult
 
-# TODO: Add version tracking for IntuneWinAppUtil.exe
-# Currently downloads from master branch (always latest), with no version tracking.
-# Future enhancements:
-#   - Track tool version in cache metadata
-#   - Allow pinning to specific commit/release
-#   - Auto-detect when tool updates are available
-#   - Optional: Add config setting for tool version/source
-INTUNEWIN_TOOL_URL = (
-    "https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool"
-    "/raw/master/IntuneWinAppUtil.exe"
+INTUNEWIN_REPO = "microsoft/Microsoft-Win32-Content-Prep-Tool"
+INTUNEWIN_GITHUB_API = (
+    f"https://api.github.com/repos/{INTUNEWIN_REPO}/releases/latest"
 )
+INTUNEWIN_DOWNLOAD_URL = (
+    f"https://github.com/{INTUNEWIN_REPO}/raw/{{tag}}/IntuneWinAppUtil.exe"
+)
+
+
+def fetch_latest_intunewin_version() -> str:
+    """Fetch the latest IntuneWinAppUtil.exe release version from GitHub.
+
+    Queries the GitHub API for the latest release and extracts the version
+    number from the tag name (e.g., "1.8.6" from tag "v1.8.6").
+
+    Returns:
+        Version number without "v" prefix (e.g., "1.8.6").
+
+    Raises:
+        NetworkError: If the GitHub API request fails or the version cannot
+            be extracted from the response.
+
+    Example:
+        Get latest IntuneWinAppUtil version from GitHub:
+            ```python
+            version = fetch_latest_intunewin_version()
+            print(version)  # Output: "1.8.6"
+            ```
+
+    Note:
+        Uses GitHub's public API (60 requests/hour limit without auth).
+        Set GITHUB_TOKEN environment variable for higher rate limits.
+    """
+    import os
+    import re
+
+    from napt.logging import get_global_logger
+
+    logger = get_global_logger()
+    logger.verbose("PACKAGE", f"Querying GitHub API: {INTUNEWIN_GITHUB_API}")
+
+    headers = {"Accept": "application/vnd.github+json"}
+    token = os.environ.get("GITHUB_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    try:
+        response = requests.get(INTUNEWIN_GITHUB_API, headers=headers, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+    except requests.RequestException as err:
+        raise NetworkError(
+            f"Failed to fetch latest IntuneWinAppUtil version: {err}"
+        ) from err
+
+    tag = data.get("tag_name", "")
+    match = re.match(r"v?(\d+(?:\.\d+)+)", tag)
+    if not match:
+        raise NetworkError(
+            f"Could not extract version from IntuneWinAppUtil release tag: {tag!r}"
+        )
+
+    version = match.group(1)
+    logger.verbose("PACKAGE", f"Latest IntuneWinAppUtil release: {version}")
+    return version
 
 
 def _verify_build_structure(build_dir: Path) -> None:
@@ -90,41 +144,68 @@ def _verify_build_structure(build_dir: Path) -> None:
         )
 
 
-def _get_intunewin_tool(cache_dir: Path) -> Path:
-    """Download and cache IntuneWinAppUtil.exe.
+def _get_intunewin_tool(cache_dir: Path, release: str) -> Path:
+    """Download and cache IntuneWinAppUtil.exe for a specific release.
+
+    Resolves "latest" to the current release via the GitHub API, then
+    downloads and caches the tool under a versioned subdirectory.
 
     Args:
-        cache_dir: Directory to cache the tool.
+        cache_dir: Base directory for caching tool releases.
+        release: Release specifier — either "latest" or a specific version
+            (e.g., "1.8.6" or "v1.8.6").
 
     Returns:
-        Path to the IntuneWinAppUtil.exe tool.
+        Path to the cached IntuneWinAppUtil.exe.
 
     Raises:
-        NetworkError: If download fails.
+        NetworkError: If the GitHub API query or download fails.
     """
     from napt.logging import get_global_logger
 
     logger = get_global_logger()
-    tool_path = cache_dir / "IntuneWinAppUtil.exe"
+
+    if release == "latest":
+        logger.verbose("PACKAGE", "Resolving 'latest' IntuneWinAppUtil release...")
+        version = fetch_latest_intunewin_version()
+    else:
+        version = release.lstrip("v")
+
+    tool_path = cache_dir / version / "IntuneWinAppUtil.exe"
 
     if tool_path.exists():
-        logger.verbose("PACKAGE", f"Using cached IntuneWinAppUtil: {tool_path}")
+        logger.info("PACKAGE", f"Using cached IntuneWinAppUtil.exe {version}")
         return tool_path
 
-    logger.verbose("PACKAGE", "Downloading IntuneWinAppUtil.exe...")
+    logger.info("PACKAGE", f"Downloading IntuneWinAppUtil.exe {version}...")
 
-    # Download the tool
-    try:
-        response = requests.get(INTUNEWIN_TOOL_URL, timeout=60)
-        response.raise_for_status()
-    except requests.RequestException as err:
-        raise NetworkError(f"Failed to download IntuneWinAppUtil.exe: {err}") from err
+    # The repo uses inconsistent tag formats (e.g. "v1.8.6" and "1.8.3"),
+    # so try both and use whichever resolves.
+    response = None
+    for tag in [f"v{version}", version]:
+        url = INTUNEWIN_DOWNLOAD_URL.format(tag=tag)
+        try:
+            r = requests.get(url, timeout=60)
+            if r.status_code == 404:
+                continue
+            r.raise_for_status()
+            response = r
+            break
+        except requests.RequestException as err:
+            raise NetworkError(
+                f"Failed to download IntuneWinAppUtil.exe {version}: {err}"
+            ) from err
 
-    # Save to cache
-    cache_dir.mkdir(parents=True, exist_ok=True)
+    if response is None:
+        raise NetworkError(
+            f"IntuneWinAppUtil.exe {version} not found "
+            f"(tried tags v{version} and {version})"
+        )
+
+    tool_path.parent.mkdir(parents=True, exist_ok=True)
     tool_path.write_bytes(response.content)
 
-    logger.verbose("PACKAGE", f"[OK] IntuneWinAppUtil.exe cached: {tool_path}")
+    logger.info("PACKAGE", f"IntuneWinAppUtil.exe {version} cached successfully")
 
     return tool_path
 
@@ -211,6 +292,7 @@ def create_intunewin(
     build_dir: Path,
     output_dir: Path | None = None,
     clean_source: bool = False,
+    tool_release: str = "latest",
 ) -> PackageResult:
     """Create a .intunewin package from a PSADT build version directory.
 
@@ -233,6 +315,8 @@ def create_intunewin(
             in org.yaml).
         clean_source: If True, remove the build version directory
             after packaging. Default is False.
+        tool_release: IntuneWinAppUtil.exe release to use — "latest" or a
+            specific version (e.g., "1.8.6"). Default is "latest".
 
     Returns:
         Package metadata including .intunewin path, app ID, and version.
@@ -304,7 +388,7 @@ def create_intunewin(
     # Get IntuneWinAppUtil tool
     logger.step(2, 5, "Getting IntuneWinAppUtil tool...")
     tool_cache = Path("cache/tools")
-    tool_path = _get_intunewin_tool(tool_cache)
+    tool_path = _get_intunewin_tool(tool_cache, tool_release)
 
     # Create .intunewin package
     logger.step(3, 5, "Creating .intunewin package...")

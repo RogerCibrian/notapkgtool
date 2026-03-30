@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`intunewin.release` config key** - Pin `IntuneWinAppUtil.exe` to a specific
+    release for reproducible builds (e.g., `release: "1.8.6"`). Defaults to
+    `"latest"`, which resolves the current release via GitHub API. Each version
+    is cached independently under `cache/tools/{version}/`
 - **`logging:` top-level section** - New optional section for per-recipe logging
     configuration. Supports `log_format` (`cmtrace`, `text`), `log_level`
     (`verbose`, `debug`), and `log_rotation_mb`
