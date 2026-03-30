@@ -1406,10 +1406,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#intune-upload-settings-overrides" class="md-nav__link">
+  <a href="#intune-app-categorization-scope-tags" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Intune Upload Settings Overrides
+        Intune App Categorization &amp; Scope Tags
       
     </span>
   </a>
@@ -1586,7 +1586,7 @@
   <a href="#recipe-schema-redesign" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Recipe Schema Redesign ✅
+        Recipe Schema Redesign
       
     </span>
   </a>
@@ -1597,7 +1597,7 @@
   <a href="#unrecognized-config-field-warnings" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Unrecognized Config Field Warnings ✅
+        Unrecognized Config Field Warnings
       
     </span>
   </a>
@@ -1608,7 +1608,7 @@
   <a href="#microsoft-intune-upload" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Microsoft Intune Upload ✅
+        Microsoft Intune Upload
       
     </span>
   </a>
@@ -1619,7 +1619,7 @@
   <a href="#detection-script-generation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Detection Script Generation ✅
+        Detection Script Generation
       
     </span>
   </a>
@@ -1804,10 +1804,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#intune-upload-settings-overrides" class="md-nav__link">
+  <a href="#intune-app-categorization-scope-tags" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Intune Upload Settings Overrides
+        Intune App Categorization &amp; Scope Tags
       
     </span>
   </a>
@@ -1984,7 +1984,7 @@
   <a href="#recipe-schema-redesign" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Recipe Schema Redesign ✅
+        Recipe Schema Redesign
       
     </span>
   </a>
@@ -1995,7 +1995,7 @@
   <a href="#unrecognized-config-field-warnings" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Unrecognized Config Field Warnings ✅
+        Unrecognized Config Field Warnings
       
     </span>
   </a>
@@ -2006,7 +2006,7 @@
   <a href="#microsoft-intune-upload" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Microsoft Intune Upload ✅
+        Microsoft Intune Upload
       
     </span>
   </a>
@@ -2017,7 +2017,7 @@
   <a href="#detection-script-generation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Detection Script Generation ✅
+        Detection Script Generation
       
     </span>
   </a>
@@ -2122,10 +2122,10 @@
 <td>Medium</td>
 </tr>
 <tr>
-<td>Intune Upload Settings Overrides</td>
+<td>Intune App Categorization &amp; Scope Tags</td>
 <td>💡 Idea</td>
 <td>User-Facing</td>
-<td>Low</td>
+<td>Medium</td>
 <td>Medium</td>
 </tr>
 <tr>
@@ -2190,17 +2190,18 @@
 <ul>
 <li>✅ <strong>Completed</strong>: 3</li>
 <li>🔬 <strong>Investigating</strong>: 1</li>
-<li>💡 <strong>Ideas</strong>: 11</li>
-<li><strong>Total</strong>: 15 features</li>
+<li>💡 <strong>Ideas</strong>: 12</li>
+<li><strong>Total</strong>: 16 features</li>
 </ul>
 <hr />
 <h2 id="active-work">Active Work</h2>
 <h3 id="investigating">Investigating 🔬</h3>
 <h4 id="deployment-wave-management">Deployment Wave Management</h4>
-<p><strong>Status</strong>: 🔬 Investigating</p>
-<p><strong>Complexity</strong>: Very High (5-10 days)</p>
-<p><strong>Value</strong>: High</p>
-<p><strong>Description</strong>: Phased deployment with rings (Pilot → Production) and gradual rollout.</p>
+<p><strong>Status</strong>: 🔬 Investigating
+<strong>Complexity</strong>: Very High (5-10 days)
+<strong>Value</strong>: High</p>
+<p><strong>Description</strong>: Phased deployment with rings (Pilot → Production) and gradual
+rollout.</p>
 <p><strong>Benefits</strong>:</p>
 <ul>
 <li>Enables controlled, staged deployments to reduce risk</li>
@@ -2227,9 +2228,9 @@
 </blockquote>
 <h3 id="user-facing-features">User-Facing Features</h3>
 <h4 id="napt-auth-setup-command"><code>napt auth setup</code> Command</h4>
-<p><strong>Status</strong>: 💡 Idea</p>
-<p><strong>Complexity</strong>: Low (few hours to 1 day)</p>
-<p><strong>Value</strong>: High</p>
+<p><strong>Status</strong>: 💡 Idea
+<strong>Complexity</strong>: Low (few hours to 1 day)
+<strong>Value</strong>: High</p>
 <p><strong>Description</strong>: Automates app registration creation in Microsoft Entra ID
 using the Azure CLI.
 Runs <code>az ad app create</code>, adds <code>DeviceManagementApps.ReadWrite.All</code> application
@@ -2246,42 +2247,37 @@ subcommands.</p>
 </ul>
 <p><strong>Prerequisites</strong>:</p>
 <ul>
-<li>Azure CLI installed and authenticated with an account that can create app registrations</li>
+<li>Azure CLI installed and authenticated with an account that can create app
+  registrations</li>
 </ul>
-<h4 id="intune-upload-settings-overrides">Intune Upload Settings Overrides</h4>
-<p><strong>Status</strong>: 💡 Idea</p>
-<p><strong>Complexity</strong>: Low (few hours to 1 day)</p>
-<p><strong>Value</strong>: Medium</p>
-<p><strong>Description</strong>: Expose per-recipe overrides for Intune upload settings that
-currently use fixed defaults.
-Planned fields under <code>intune:</code>:</p>
-<ul>
-<li><code>allowed_architectures</code> — override device targeting (e.g., <code>"x64"</code> to
-exclude ARM64 for apps with known emulation issues)</li>
-<li><code>requirement_rule.display_name</code> — custom display name for the requirements
-rule shown in the Intune portal</li>
-<li><code>requirement_rule.run_as_account</code> — <code>system</code> or <code>user</code> context for the
-requirements script</li>
-<li><code>requirement_rule.run_as_32_bit</code> — run requirements script as 32-bit process</li>
-<li><code>requirement_rule.enforce_signature_check</code> — require a signed requirements
-script</li>
-</ul>
+<h4 id="intune-app-categorization-scope-tags">Intune App Categorization &amp; Scope Tags</h4>
+<p><strong>Status</strong>: 💡 Idea
+<strong>Complexity</strong>: Medium (1-3 days)
+<strong>Value</strong>: Medium</p>
+<p><strong>Description</strong>: Expose <code>intune.category</code> and <code>intune.role_scope_tag_ids</code> as
+recipe fields.
+Both require a Graph API lookup before the app POST — category names must be
+resolved to IDs via <code>GET /deviceAppManagement/mobileAppCategories</code>, and scope
+tag names must be resolved via <code>GET /deviceManagement/roleScopeTags</code>.</p>
 <p><strong>Benefits</strong>:</p>
 <ul>
-<li>Fine-grained control over deployment targeting without changing the recipe
-architecture field</li>
-<li>Handles edge cases (apps with x64 emulation issues on ARM64, per-app
-requirement rule naming)</li>
-<li>Consistent with NAPT's layered config approach — overrides at recipe level,
-defaults at org level</li>
+<li>Categorized apps are easier to find in the Intune portal and Company Portal</li>
+<li>Scope tags enable RBAC so only authorized admins can see/manage an app</li>
+<li>Both fields are already stubbed in validation but produce no effect until
+  implemented</li>
 </ul>
-<p><strong>Related</strong>: <code>intune.detection.architecture</code> drives default Intune targeting;
-see <a href="../recipe-reference/#architecture">Recipe Reference</a></p>
+<p><strong>Dependencies</strong>:</p>
+<ul>
+<li>Requires two additional Graph API calls per upload (one per lookup type)</li>
+<li>Error handling needed when a name doesn't match any tenant entry</li>
+</ul>
 <h4 id="prepost-installuninstall-script-support">Pre/Post Install/Uninstall Script Support</h4>
-<p><strong>Status</strong>: 💡 Idea</p>
-<p><strong>Complexity</strong>: Low (few hours to 1 day)</p>
-<p><strong>Value</strong>: Medium</p>
-<p><strong>Description</strong>: Add support for pre-install, post-install, pre-uninstall, and post-uninstall script blocks in recipes, allowing separate script sections for each deployment phase.</p>
+<p><strong>Status</strong>: 💡 Idea
+<strong>Complexity</strong>: Low (few hours to 1 day)
+<strong>Value</strong>: Medium</p>
+<p><strong>Description</strong>: Add support for pre-install, post-install, pre-uninstall, and
+post-uninstall script blocks in recipes, allowing separate script sections for
+each deployment phase.</p>
 <p><strong>Benefits</strong>:</p>
 <ul>
 <li>More granular control over deployment lifecycle</li>
@@ -2292,10 +2288,11 @@ see <a href="../recipe-reference/#architecture">Recipe Reference</a></p>
 </ul>
 <p><strong>Related</strong>: PSADT already has these phases in the template structure</p>
 <h4 id="enhanced-cli-help-menu">Enhanced CLI Help Menu</h4>
-<p><strong>Status</strong>: 💡 Idea</p>
-<p><strong>Complexity</strong>: Low (few hours to 1 day)</p>
-<p><strong>Value</strong>: Medium</p>
-<p><strong>Description</strong>: Improve the <code>napt -h</code> help output with more detailed information, examples, and better organization.</p>
+<p><strong>Status</strong>: 💡 Idea
+<strong>Complexity</strong>: Low (few hours to 1 day)
+<strong>Value</strong>: Medium</p>
+<p><strong>Description</strong>: Improve the <code>napt -h</code> help output with more detailed
+information, examples, and better organization.</p>
 <p><strong>Benefits</strong>:</p>
 <ul>
 <li>Better discoverability of features</li>
@@ -2309,10 +2306,11 @@ see <a href="../recipe-reference/#architecture">Recipe Reference</a></p>
 <p><strong>Related</strong>: CLI help currently minimal, relies on online documentation</p>
 <h3 id="code-quality-validation">Code Quality &amp; Validation</h3>
 <h4 id="powershell-validation">PowerShell Validation</h4>
-<p><strong>Status</strong>: 💡 Idea</p>
-<p><strong>Complexity</strong>: High (3-5 days)</p>
-<p><strong>Value</strong>: High</p>
-<p><strong>Description</strong>: Validate PowerShell syntax in recipe install/uninstall blocks to catch errors before deployment.</p>
+<p><strong>Status</strong>: 💡 Idea
+<strong>Complexity</strong>: High (3-5 days)
+<strong>Value</strong>: High</p>
+<p><strong>Description</strong>: Validate PowerShell syntax in recipe install/uninstall blocks
+to catch errors before deployment.</p>
 <p><strong>Benefits</strong>:</p>
 <ul>
 <li>Catch syntax errors at recipe validation time</li>
@@ -2322,10 +2320,12 @@ see <a href="../recipe-reference/#architecture">Recipe Reference</a></p>
 </ul>
 <p><strong>Related</strong>: TODO in <code>napt/build/packager.py</code> - discovered during testing</p>
 <h4 id="recipe-linting-best-practices">Recipe Linting &amp; Best Practices</h4>
-<p><strong>Status</strong>: 💡 Idea</p>
-<p><strong>Complexity</strong>: High (3-5 days)</p>
-<p><strong>Value</strong>: Medium</p>
-<p><strong>Description</strong>: Advanced recipe validation beyond syntax checking, including PSADT function validation, deprecation warnings, anti-pattern detection, and style guide enforcement.</p>
+<p><strong>Status</strong>: 💡 Idea
+<strong>Complexity</strong>: High (3-5 days)
+<strong>Value</strong>: Medium</p>
+<p><strong>Description</strong>: Advanced recipe validation beyond syntax checking, including
+PSADT function validation, deprecation warnings, anti-pattern detection, and
+style guide enforcement.</p>
 <p><strong>Benefits</strong>:</p>
 <ul>
 <li>Higher quality recipes</li>
@@ -2337,11 +2337,13 @@ see <a href="../recipe-reference/#architecture">Recipe Reference</a></p>
 <li>Warns about unknown fields (e.g., deprecated keys from old schema versions)</li>
 </ul>
 <h4 id="typed-config-with-dataclasses">Typed Config with Dataclasses</h4>
-<p><strong>Status</strong>: 💡 Idea</p>
-<p><strong>Complexity</strong>: Medium (1-3 days)</p>
-<p><strong>Value</strong>: Medium</p>
-<p><strong>Description</strong>: Convert the dict-based default configuration to typed dataclasses once the schema and naming are finalized.
-Provides IDE autocomplete, type checking, and catches config key typos at development time.</p>
+<p><strong>Status</strong>: 💡 Idea
+<strong>Complexity</strong>: Medium (1-3 days)
+<strong>Value</strong>: Medium</p>
+<p><strong>Description</strong>: Convert the dict-based default configuration to typed
+dataclasses once the schema and naming are finalized.
+Provides IDE autocomplete, type checking, and catches config key typos at
+development time.</p>
 <p><strong>Benefits</strong>:</p>
 <ul>
 <li>IDE autocomplete when accessing config values</li>
@@ -2357,10 +2359,11 @@ Provides IDE autocomplete, type checking, and catches config key typos at develo
 </ul>
 <h3 id="technical-enhancements">Technical Enhancements</h3>
 <h4 id="exe-version-extraction">EXE Version Extraction</h4>
-<p><strong>Status</strong>: 💡 Idea</p>
-<p><strong>Complexity</strong>: High (3-5 days)</p>
-<p><strong>Value</strong>: Medium</p>
-<p><strong>Description</strong>: Extract version information from PE (Portable Executable) headers for .exe installers.</p>
+<p><strong>Status</strong>: 💡 Idea
+<strong>Complexity</strong>: High (3-5 days)
+<strong>Value</strong>: Medium</p>
+<p><strong>Description</strong>: Extract version information from PE (Portable Executable)
+headers for .exe installers.</p>
 <p><strong>Benefits</strong>:</p>
 <ul>
 <li>Enables version discovery for applications distributed as EXE</li>
@@ -2368,10 +2371,11 @@ Provides IDE autocomplete, type checking, and catches config key typos at develo
 </ul>
 <p><strong>Related</strong>: Mentioned in <code>napt/discovery/url_download.py</code> docstring</p>
 <h4 id="parallel-package-building">Parallel Package Building</h4>
-<p><strong>Status</strong>: 💡 Idea</p>
-<p><strong>Complexity</strong>: Medium (1-3 days)</p>
-<p><strong>Value</strong>: Medium</p>
-<p><strong>Description</strong>: Build multiple PSADT packages in parallel for faster multi-app workflows.</p>
+<p><strong>Status</strong>: 💡 Idea
+<strong>Complexity</strong>: Medium (1-3 days)
+<strong>Value</strong>: Medium</p>
+<p><strong>Description</strong>: Build multiple PSADT packages in parallel for faster
+multi-app workflows.</p>
 <p><strong>Benefits</strong>:</p>
 <ul>
 <li>Significantly faster builds for organizations with 50+ apps</li>
@@ -2380,10 +2384,12 @@ Provides IDE autocomplete, type checking, and catches config key typos at develo
 <li>Progress reporting for multiple concurrent builds</li>
 </ul>
 <h4 id="intunewinapputil-version-tracking">IntuneWinAppUtil Version Tracking</h4>
-<p><strong>Status</strong>: 💡 Idea</p>
-<p><strong>Complexity</strong>: Low (few hours to 1 day)</p>
-<p><strong>Value</strong>: Low</p>
-<p><strong>Description</strong>: Track version of IntuneWinAppUtil.exe in cache metadata instead of always using latest from master, allowing pinning to specific commits/releases and optional configuration for tool version/source.</p>
+<p><strong>Status</strong>: 💡 Idea
+<strong>Complexity</strong>: Low (few hours to 1 day)
+<strong>Value</strong>: Low</p>
+<p><strong>Description</strong>: Track version of IntuneWinAppUtil.exe in cache metadata
+instead of always using latest from master, allowing pinning to specific
+commits/releases and optional configuration for tool version/source.</p>
 <p><strong>Benefits</strong>:</p>
 <ul>
 <li>Reproducible builds (pin to known-good version)</li>
@@ -2393,85 +2399,116 @@ Provides IDE autocomplete, type checking, and catches config key typos at develo
 </ul>
 <p><strong>Related</strong>: TODO in <code>napt/build/packager.py:47</code></p>
 <h4 id="minify-scripts-at-intune-upload">Minify Scripts at Intune Upload</h4>
-<p><strong>Status</strong>: 💡 Idea</p>
-<p><strong>Complexity</strong>: Medium (1-3 days)</p>
-<p><strong>Value</strong>: Medium</p>
-<p><strong>Description</strong>: Minify detection and requirements scripts in memory when preparing them for Intune upload, so the payload sent to Intune is smaller while on-disk build output stays readable. Conservative approach: strip comment-only lines, blank lines, and trailing whitespace (no AST). Optional: PowerShell-invoked AST-based minifier for greater reduction.</p>
+<p><strong>Status</strong>: 💡 Idea
+<strong>Complexity</strong>: Medium (1-3 days)
+<strong>Value</strong>: Medium</p>
+<p><strong>Description</strong>: Minify detection and requirements scripts in memory when
+preparing them for Intune upload, so the payload sent to Intune is smaller
+while on-disk build output stays readable.
+Conservative approach: strip comment-only lines, blank lines, and trailing
+whitespace (no AST).
+Optional: PowerShell-invoked AST-based minifier for greater reduction.</p>
 <p><strong>Benefits</strong>:</p>
 <ul>
 <li>Reduces per-app script size in the Intune policy payload</li>
 <li>Helps organizations approaching the Intune 4 MB policy limit</li>
 <li>On-disk scripts remain readable and easy to debug</li>
-<li>No change to build output or script behavior; minification only in the upload path</li>
+<li>No change to build output or script behavior; minification only in the
+  upload path</li>
 </ul>
 <p><strong>Dependencies</strong>:</p>
 <ul>
-<li>Requires Intune upload implementation (or a separate "prepare for upload" step that emits minified content)</li>
+<li>Requires Intune upload implementation (or a separate "prepare for upload"
+  step that emits minified content)</li>
 </ul>
-<p><strong>Related</strong>: Intune default policy limit is 4 MB total; NAPT detection + requirements scripts are ~40 KB per app (~70–100 apps depending on code signing)</p>
+<p><strong>Related</strong>: Intune default policy limit is 4 MB total; NAPT detection +
+requirements scripts are ~40 KB per app (~70–100 apps depending on code
+signing)</p>
 <hr />
 <h2 id="declined-wont-implement">Declined / Won't Implement</h2>
 <hr />
 <h2 id="recently-completed">Recently Completed</h2>
-<h4 id="recipe-schema-redesign">Recipe Schema Redesign ✅</h4>
-<p><strong>Status</strong>: ✅ Completed</p>
-<p><strong>Complexity</strong>: High</p>
-<p><strong>Value</strong>: High</p>
+<h4 id="recipe-schema-redesign">Recipe Schema Redesign</h4>
+<p><strong>Status</strong>: ✅ Completed
+<strong>Complexity</strong>: High
+<strong>Value</strong>: High</p>
 <p><strong>Description</strong>: Restructured the recipe and config schema to eliminate design
-awkwardness accumulated during early development. All changes were breaking and
-landed on branch <code>refactor/recipe-schema-redesign</code>.</p>
-<p><strong>Changes made:</strong></p>
+awkwardness accumulated during early development.
+All changes were breaking and landed on branch <code>refactor/recipe-schema-redesign</code>.</p>
+<p><strong>Changes</strong>:</p>
 <ul>
-<li>Removed <code>app:</code> wrapper — <code>name</code>, <code>id</code>, <code>discovery:</code>, <code>psadt:</code>, <code>intune:</code>, and
-    <code>logging:</code> are now top-level fields in recipe files.</li>
-<li><code>source:</code> renamed to <code>discovery:</code> for clarity.</li>
+<li>Removed <code>app:</code> wrapper — <code>name</code>, <code>id</code>, <code>discovery:</code>, <code>psadt:</code>, <code>intune:</code>,
+  and <code>logging:</code> are now top-level fields in recipe files</li>
+<li><code>source:</code> renamed to <code>discovery:</code> for clarity</li>
 <li>Removed <code>defaults:</code> wrapper from <code>org.yaml</code> and <code>vendor.yaml</code> — the deep
-    merger now handles layering automatically without manual merge blocks.</li>
+  merger now handles layering automatically without manual merge blocks</li>
 <li><code>win32.installed_check</code> replaced by <code>intune.detection</code> — all Intune
-    configuration (upload metadata, build behavior, detection settings) is now
-    in one place.</li>
-<li><code>log_format</code>, <code>log_level</code>, <code>log_rotation_mb</code> moved out of <code>win32.installed_check</code>
-    into a top-level <code>logging:</code> section, reflecting that they configure on-device
-    script behavior rather than Intune.</li>
-<li>Added <code>directories:</code> section to replace <code>defaults.discover/build/package.output_dir</code>.</li>
+  configuration (upload metadata, build behavior, detection settings) is now
+  in one place</li>
+<li><code>log_format</code>, <code>log_level</code>, <code>log_rotation_mb</code> moved out of
+  <code>win32.installed_check</code> into a top-level <code>logging:</code> section, reflecting that
+  they configure on-device script behavior rather than Intune</li>
+<li>Added <code>directories:</code> section to replace
+  <code>defaults.discover/build/package.output_dir</code></li>
 </ul>
 <p><strong>Related</strong>: See <a href="../recipe-reference/">Recipe Reference</a> for the current schema.</p>
 <hr />
-<h4 id="unrecognized-config-field-warnings">Unrecognized Config Field Warnings ✅</h4>
-<p><strong>Status</strong>: ✅ Completed</p>
-<p><strong>Complexity</strong>: Low</p>
-<p><strong>Value</strong>: Medium</p>
-<p><strong>Description</strong>: <code>napt validate</code> warns when recipes, org.yaml, or vendor files contain
-unrecognized fields. Typo detection suggests similar field names
-(e.g., "Did you mean 'display_name'?"). Implemented in <code>napt/validation.py</code>.</p>
+<h4 id="unrecognized-config-field-warnings">Unrecognized Config Field Warnings</h4>
+<p><strong>Status</strong>: ✅ Completed
+<strong>Complexity</strong>: Low
+<strong>Value</strong>: Medium</p>
+<p><strong>Description</strong>: <code>napt validate</code> warns when recipes, org.yaml, or vendor files
+contain unrecognized fields.
+Typo detection suggests similar field names (e.g., "Did you mean
+'display_name'?").</p>
+<p><strong>Related</strong>: Implemented in <code>napt/validation.py</code>.</p>
 <hr />
-<h4 id="microsoft-intune-upload">Microsoft Intune Upload ✅</h4>
-<p><strong>Status</strong>: ✅ Completed</p>
-<p><strong>Complexity</strong>: High</p>
-<p><strong>Value</strong>: Very High</p>
-<p><strong>Description</strong>: <code>napt upload &lt;recipe&gt;</code> uploads <code>.intunewin</code> packages directly to
-Microsoft Intune via the Graph API. Authentication is automatic via
-<code>azure-identity</code> (<code>EnvironmentCredential</code> → <code>ManagedIdentityCredential</code> →
-<code>DeviceCodeCredential</code>). Detection and requirements scripts are embedded inline
-from build output. Developers set <code>AZURE_CLIENT_ID</code> and <code>AZURE_TENANT_ID</code> and
-complete the device code flow; CI/CD sets all three <code>AZURE_*</code> env vars.</p>
+<h4 id="microsoft-intune-upload">Microsoft Intune Upload</h4>
+<p><strong>Status</strong>: ✅ Completed
+<strong>Complexity</strong>: High
+<strong>Value</strong>: Very High</p>
+<p><strong>Description</strong>: <code>napt upload &lt;recipe&gt;</code> uploads <code>.intunewin</code> packages directly
+to Microsoft Intune via the Graph API.
+Authentication is automatic via <code>azure-identity</code> (<code>EnvironmentCredential</code> →
+<code>ManagedIdentityCredential</code> → <code>DeviceCodeCredential</code>).
+Detection and requirements scripts are embedded inline from build output.
+Developers set <code>AZURE_CLIENT_ID</code> and <code>AZURE_TENANT_ID</code> and complete the device
+code flow; CI/CD sets all three <code>AZURE_*</code> env vars.</p>
 <hr />
-<h4 id="detection-script-generation">Detection Script Generation ✅</h4>
-<p><strong>Status</strong>: ✅ Completed</p>
-<p><strong>Complexity</strong>: High (3-5 days)</p>
-<p><strong>Value</strong>: High</p>
-<p><strong>Description</strong>: Automatic PowerShell detection and requirements script generation for Intune Win32 app deployments during build process. Detection scripts check if the app is installed at the required version (App entry); requirements scripts check if an older version is installed (Update entry). Both use the same registry checks, installer-type filtering, and CMTrace logging.</p>
-<p><strong>Implementation Details</strong>:</p>
+<h4 id="detection-script-generation">Detection Script Generation</h4>
+<p><strong>Status</strong>: ✅ Completed
+<strong>Complexity</strong>: High
+<strong>Value</strong>: High</p>
+<p><strong>Description</strong>: Automatic PowerShell detection and requirements script
+generation for Intune Win32 app deployments during the build process.
+Detection scripts check if the app is installed at the required version (App
+entry); requirements scripts check if an older version is installed (Update
+entry).
+Both use the same registry checks, installer-type filtering, and CMTrace
+logging.</p>
+<p><strong>Notes</strong>:</p>
 <ul>
-<li>Extracts app name from MSI ProductName (for MSI installers) or uses <code>intune.detection.display_name</code> (for non-MSI installers)</li>
-<li>Always generates detection script <code>{AppName}_{Version}-Detection.ps1</code>; generates requirements script <code>{AppName}_{Version}-Requirements.ps1</code> when <code>intune.build_types</code> is both or update_only</li>
-<li>Supports exact match or minimum version (installed &gt;= expected); installer-type filtering (MSI strict, non-MSI permissive)</li>
-<li>Includes CMTrace-formatted logging with log rotation (NAPTDetections.log, NAPTRequirements.log)</li>
-<li>Configurable via <code>intune.detection</code> and <code>logging</code> sections in defaults or recipe</li>
+<li>Extracts app name from MSI ProductName (for MSI installers) or uses
+  <code>intune.detection.display_name</code> (for non-MSI installers)</li>
+<li>Always generates detection script <code>{AppName}_{Version}-Detection.ps1</code>;
+  generates requirements script <code>{AppName}_{Version}-Requirements.ps1</code> when
+  <code>intune.build_types</code> is <code>both</code> or <code>update_only</code></li>
+<li>Supports exact match or minimum version (installed &gt;= expected);
+  installer-type filtering (MSI strict, non-MSI permissive)</li>
+<li>Includes CMTrace-formatted logging with log rotation (NAPTDetections.log,
+  NAPTRequirements.log)</li>
+<li>Configurable via <code>intune.detection</code> and <code>logging</code> sections in defaults or
+  recipe</li>
 </ul>
-<p><strong>Related</strong>: Implemented in <code>napt/detection.py</code>, <code>napt/requirements.py</code>, and integrated into build process in <code>napt/build/manager.py</code>. See <a href="../user-guide/#detection-and-requirements-scripts">User Guide - Detection and Requirements Scripts</a> and <a href="../recipe-reference/#intune-configuration">Recipe Reference - Intune Configuration</a>.</p>
+<p><strong>Related</strong>: Implemented in <code>napt/detection.py</code>, <code>napt/requirements.py</code>, and
+integrated into the build process in <code>napt/build/manager.py</code>.
+See <a href="../user-guide/#detection-and-requirements-scripts">User Guide - Detection and Requirements Scripts</a>
+and <a href="../recipe-reference/#intune-configuration">Recipe Reference - Intune Configuration</a>.</p>
 <hr />
-<p><strong>v0.2.0</strong> - PSADT building, packaging, and new discovery strategies
+<p><strong>v0.4.0</strong> - Intune upload (<code>napt upload</code>), <code>napt init</code>, and four-layer configuration
+<strong>v0.3.1</strong> - PyPI rename to <code>napt</code> and automated publishing
+<strong>v0.3.0</strong> - Detection and requirements scripts, Win32 validation, architecture-aware detection
+<strong>v0.2.0</strong> - PSADT building, <code>.intunewin</code> packaging, and new discovery strategies
 <strong>v0.1.0</strong> - Core validation, discovery, and configuration system</p>
 <p>See <a href="../changelog/">CHANGELOG.md</a> for detailed release history.</p>
 

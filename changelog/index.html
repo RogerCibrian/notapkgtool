@@ -1874,6 +1874,11 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong>New <code>intune:</code> fields</strong> - <code>developer</code>, <code>owner</code>, <code>notes</code>, <code>logo_path</code>,
     <code>minimum_supported_windows_release</code>, <code>install_command</code>, and
     <code>uninstall_command</code> are now supported in the <code>intune:</code> section</li>
+<li><strong>Configurable upload settings</strong> - New <code>intune:</code> fields control Intune Graph
+    API upload behavior: <code>is_featured</code>, <code>allow_available_uninstall</code>,
+    <code>run_as_account</code>, <code>device_restart_behavior</code>, <code>max_run_time_minutes</code>,
+    <code>enforce_signature_check</code>, and <code>run_as_32_bit</code>. All fields are validated and
+    configurable at org, vendor, or recipe level</li>
 <li><strong>Sample recipe: <code>recipes/Microsoft/vscode.yaml</code></strong> - New example recipe for
     Visual Studio Code using the <code>api_json</code> strategy</li>
 </ul>
