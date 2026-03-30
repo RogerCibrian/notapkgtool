@@ -18,10 +18,13 @@ from unittest.mock import patch
 import pytest
 
 from napt.build.packager import (
+    INTUNEWIN_GITHUB_API,
+    _get_intunewin_tool,
     _verify_build_structure,
     create_intunewin,
+    fetch_latest_intunewin_version,
 )
-from napt.exceptions import ConfigError, PackagingError
+from napt.exceptions import ConfigError, NetworkError, PackagingError
 
 # All tests in this file are unit tests (fast, mocked)
 
@@ -57,6 +60,141 @@ def _make_build_dir(
     if requirements:
         (version_dir / f"{app_id}-Requirements.ps1").write_text("requirements script")
     return version_dir
+
+
+_DOWNLOAD_URL_PREFIX = (
+    "https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool/raw"
+)
+
+
+class TestFetchLatestIntunewinVersion:
+    """Tests for fetching latest IntuneWinAppUtil version from GitHub."""
+
+    def test_fetch_latest_success_bare_tag(self, requests_mock):
+        """Tests version extraction when tag has no v prefix."""
+        requests_mock.get(INTUNEWIN_GITHUB_API, json={"tag_name": "1.8.6"})
+
+        assert fetch_latest_intunewin_version() == "1.8.6"
+
+    def test_fetch_latest_success_v_prefix(self, requests_mock):
+        """Tests that v prefix is stripped from tag name."""
+        requests_mock.get(INTUNEWIN_GITHUB_API, json={"tag_name": "v1.8.6"})
+
+        assert fetch_latest_intunewin_version() == "1.8.6"
+
+    def test_fetch_latest_api_error(self, requests_mock):
+        """Tests NetworkError on GitHub API failure."""
+        requests_mock.get(INTUNEWIN_GITHUB_API, status_code=500)
+
+        with pytest.raises(NetworkError, match="Failed to fetch latest IntuneWinAppUtil"):
+            fetch_latest_intunewin_version()
+
+    def test_fetch_latest_invalid_tag(self, requests_mock):
+        """Tests NetworkError when tag name cannot be parsed."""
+        requests_mock.get(INTUNEWIN_GITHUB_API, json={"tag_name": "not-a-version"})
+
+        with pytest.raises(NetworkError, match="Could not extract version"):
+            fetch_latest_intunewin_version()
+
+
+class TestGetIntunewinTool:
+    """Tests for _get_intunewin_tool version resolution and caching."""
+
+    def test_cache_hit_returns_path(self, tmp_path):
+        """Tests that a cached tool is returned without downloading."""
+        cache_dir = tmp_path / "tools"
+        tool_path = cache_dir / "1.8.6" / "IntuneWinAppUtil.exe"
+        tool_path.parent.mkdir(parents=True)
+        tool_path.write_bytes(b"fake exe")
+
+        result = _get_intunewin_tool(cache_dir, "1.8.6")
+
+        assert result == tool_path
+
+    @patch("napt.build.packager.fetch_latest_intunewin_version")
+    def test_latest_resolves_via_api(self, mock_fetch, tmp_path, requests_mock):
+        """Tests that 'latest' calls fetch_latest_intunewin_version."""
+        mock_fetch.return_value = "1.8.6"
+        cache_dir = tmp_path / "tools"
+
+        requests_mock.get(
+            f"{_DOWNLOAD_URL_PREFIX}/v1.8.6/IntuneWinAppUtil.exe",
+            content=b"fake exe",
+        )
+
+        _get_intunewin_tool(cache_dir, "latest")
+
+        mock_fetch.assert_called_once()
+
+    def test_v_prefix_stripped_from_release(self, tmp_path, requests_mock):
+        """Tests that a user-specified v prefix is normalised."""
+        cache_dir = tmp_path / "tools"
+        requests_mock.get(
+            f"{_DOWNLOAD_URL_PREFIX}/v1.8.6/IntuneWinAppUtil.exe",
+            content=b"fake exe",
+        )
+
+        result = _get_intunewin_tool(cache_dir, "v1.8.6")
+
+        assert result == cache_dir / "1.8.6" / "IntuneWinAppUtil.exe"
+
+    def test_download_uses_v_prefix_tag_first(self, tmp_path, requests_mock):
+        """Tests that download tries v{version} before bare tag."""
+        cache_dir = tmp_path / "tools"
+        requests_mock.get(
+            f"{_DOWNLOAD_URL_PREFIX}/v1.8.6/IntuneWinAppUtil.exe",
+            content=b"fake exe",
+        )
+
+        result = _get_intunewin_tool(cache_dir, "1.8.6")
+
+        assert result.exists()
+        assert result == cache_dir / "1.8.6" / "IntuneWinAppUtil.exe"
+
+    def test_download_falls_back_to_bare_tag(self, tmp_path, requests_mock):
+        """Tests fallback to bare tag when v-prefixed tag 404s."""
+        cache_dir = tmp_path / "tools"
+        requests_mock.get(
+            f"{_DOWNLOAD_URL_PREFIX}/v1.8.3/IntuneWinAppUtil.exe",
+            status_code=404,
+        )
+        requests_mock.get(
+            f"{_DOWNLOAD_URL_PREFIX}/1.8.3/IntuneWinAppUtil.exe",
+            content=b"fake exe",
+        )
+
+        result = _get_intunewin_tool(cache_dir, "1.8.3")
+
+        assert result.exists()
+        assert result == cache_dir / "1.8.3" / "IntuneWinAppUtil.exe"
+
+    def test_both_tags_404_raises_network_error(self, tmp_path, requests_mock):
+        """Tests NetworkError when both tag formats return 404."""
+        cache_dir = tmp_path / "tools"
+        requests_mock.get(
+            f"{_DOWNLOAD_URL_PREFIX}/v9.9.9/IntuneWinAppUtil.exe",
+            status_code=404,
+        )
+        requests_mock.get(
+            f"{_DOWNLOAD_URL_PREFIX}/9.9.9/IntuneWinAppUtil.exe",
+            status_code=404,
+        )
+
+        with pytest.raises(NetworkError, match="not found"):
+            _get_intunewin_tool(cache_dir, "9.9.9")
+
+    def test_download_cached_on_disk(self, tmp_path, requests_mock):
+        """Tests downloaded tool is written to the versioned cache path."""
+        cache_dir = tmp_path / "tools"
+        requests_mock.get(
+            f"{_DOWNLOAD_URL_PREFIX}/v1.8.6/IntuneWinAppUtil.exe",
+            content=b"fake exe content",
+        )
+
+        result = _get_intunewin_tool(cache_dir, "1.8.6")
+
+        assert result.read_bytes() == b"fake exe content"
+        assert result.parent == cache_dir / "1.8.6"
 
 
 class TestVerifyBuildStructure:

@@ -190,6 +190,6 @@ apiVersion: napt/v1
 #   package: "packages"
 
 # intunewin:
-#   # IntuneWinAppUtil.exe release: "latest" or specific version (e.g., "v1.8.6.0")
+#   # IntuneWinAppUtil.exe release: "latest" or specific version (e.g., "1.8.6")
 #   release: "latest"
 """
