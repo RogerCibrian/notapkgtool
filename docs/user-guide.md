@@ -522,6 +522,7 @@ recipe.yaml                         <- recipe-specific overrides
 - Config files only override what you need to change
 - Missing fields always fall back to code defaults
 - Old configs never break when NAPT adds new features
+- Any setting can be overridden at any layer — org, vendor, or recipe
 
 ### The Three Override Layers
 
@@ -559,8 +560,9 @@ id: "napt-chrome"
 discovery:
   strategy: url_download
   url: "https://dl.google.com/..."
+psadt:
+  release: "4.1.7"   # overrides org default of "latest" for this recipe only
 # AppVendor will be "Google LLC" (from vendor defaults)
-# psadt.release will be "latest" (from org defaults)
 ```
 
 ### Directory Flag Defaults
