@@ -1868,6 +1868,10 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.4.0...HEAD">Unreleased</a></h2>
 <h3 id="added">Added</h3>
 <ul>
+<li><strong><code>intunewin.release</code> config key</strong> - Pin <code>IntuneWinAppUtil.exe</code> to a specific
+    release for reproducible builds (e.g., <code>release: "1.8.6"</code>). Defaults to
+    <code>"latest"</code>, which resolves the current release via GitHub API. Each version
+    is cached independently under <code>cache/tools/{version}/</code></li>
 <li><strong><code>logging:</code> top-level section</strong> - New optional section for per-recipe logging
     configuration. Supports <code>log_format</code> (<code>cmtrace</code>, <code>text</code>), <code>log_level</code>
     (<code>verbose</code>, <code>debug</code>), and <code>log_rotation_mb</code></li>
