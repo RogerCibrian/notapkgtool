@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **New `intune:` fields** - `developer`, `owner`, `notes`, `logo_path`,
     `minimum_supported_windows_release`, `install_command`, and
     `uninstall_command` are now supported in the `intune:` section
+- **Configurable upload settings** - New `intune:` fields control Intune Graph
+    API upload behavior: `is_featured`, `allow_available_uninstall`,
+    `run_as_account`, `device_restart_behavior`, `max_run_time_minutes`,
+    `enforce_signature_check`, and `run_as_32_bit`. All fields are validated and
+    configurable at org, vendor, or recipe level
 - **Sample recipe: `recipes/Microsoft/vscode.yaml`** - New example recipe for
     Visual Studio Code using the `api_json` strategy
 

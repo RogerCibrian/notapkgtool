@@ -235,12 +235,16 @@ def _build_app_metadata(
     detection_content = base64.b64encode(detection_scripts[0].read_bytes()).decode()
     logger.verbose("UPLOAD", f"Detection script: {detection_scripts[0].name}")
 
+    enforce_sig: bool = intune.get("enforce_signature_check", False)
+    run_as_32_bit: bool = intune.get("run_as_32_bit", False)
+    run_as_account: str = intune.get("run_as_account", "system")
+
     rules: list[dict[str, Any]] = [
         {
             "@odata.type": "#microsoft.graph.win32LobAppPowerShellScriptRule",
             "ruleType": "detection",
-            "enforceSignatureCheck": False,
-            "runAs32Bit": False,
+            "enforceSignatureCheck": enforce_sig,
+            "runAs32Bit": run_as_32_bit,
             "scriptContent": detection_content,
         }
     ]
@@ -256,17 +260,14 @@ def _build_app_metadata(
             )
         req_content = base64.b64encode(req_scripts[0].read_bytes()).decode()
         logger.verbose("UPLOAD", f"Requirements script: {req_scripts[0].name}")
-        # TODO: Make enforceSignatureCheck, runAs32Bit, and runAsAccount
-        # configurable per-recipe via intune.requirement_rule settings.
-        # Also make allowAvailableUninstall configurable via intune.
         rules.append(
             {
                 "@odata.type": "#microsoft.graph.win32LobAppPowerShellScriptRule",
                 "displayName": req_scripts[0].name,
                 "ruleType": "requirement",
-                "enforceSignatureCheck": False,
-                "runAs32Bit": False,
-                "runAsAccount": "system",
+                "enforceSignatureCheck": enforce_sig,
+                "runAs32Bit": run_as_32_bit,
+                "runAsAccount": run_as_account,
                 "scriptContent": req_content,
                 "operationType": "string",
                 "operator": "equal",
@@ -286,6 +287,11 @@ def _build_app_metadata(
         "minimum_supported_windows_release", "Windows10_21H2"
     )
 
+    is_featured: bool = intune.get("is_featured", False)
+    allow_available_uninstall: bool = intune.get("allow_available_uninstall", True)
+    device_restart_behavior: str = intune.get("device_restart_behavior", "allow")
+    max_run_time_minutes: int = intune.get("max_run_time_minutes", 60)
+
     payload: dict[str, Any] = {
         "@odata.type": "#microsoft.graph.win32LobApp",
         "displayName": display_name,
@@ -294,16 +300,16 @@ def _build_app_metadata(
         "description": description,
         "privacyInformationUrl": privacy_url,
         "informationUrl": info_url,
-        "isFeatured": False,
-        "allowAvailableUninstall": True,
+        "isFeatured": is_featured,
+        "allowAvailableUninstall": allow_available_uninstall,
         "roleScopeTagIds": [],
-        "runAs32Bit": False,
+        "runAs32Bit": run_as_32_bit,
         "fileName": package_path.name,
         "minimumSupportedWindowsRelease": minimum_windows_release,
         "installExperience": {
-            "runAsAccount": "system",
-            "deviceRestartBehavior": "allow",
-            "maxRunTimeInMinutes": 60,
+            "runAsAccount": run_as_account,
+            "deviceRestartBehavior": device_restart_behavior,
+            "maxRunTimeInMinutes": max_run_time_minutes,
         },
         "returnCodes": _RETURN_CODES,
         "rules": rules,
