@@ -84,7 +84,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         ),
         "allow_available_uninstall": True,
         "run_as_account": "system",
-        "device_restart_behavior": "allow",
+        "device_restart_behavior": "basedOnReturnCode",
         "max_run_time_minutes": 60,
         "enforce_signature_check": False,
         "run_as_32_bit": False,
@@ -157,7 +157,7 @@ apiVersion: napt/v1
 #   run_as_account: "system"
 #
 #   # Device restart behavior: allow, suppress, force, basedOnReturnCode
-#   device_restart_behavior: "allow"
+#   device_restart_behavior: "basedOnReturnCode"
 #
 #   # Maximum installer runtime in minutes before Intune times out
 #   max_run_time_minutes: 60

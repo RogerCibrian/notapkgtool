@@ -538,6 +538,42 @@ psadt:
   # ... rest of recipe
 ```
 
+### Override Upload Behavior
+
+Control how Intune handles installation, restarts, and script execution
+per-recipe using the `intune:` section.
+All fields have sensible defaults and can also be set in `defaults/org.yaml`
+for org-wide policy.
+
+```yaml
+intune:
+  # Run installer and scripts as the logged-in user instead of SYSTEM.
+  # Required for apps that install into the user profile. Default: "system".
+  run_as_account: "user"
+
+  # Suppress any device restart after install (useful for background updates).
+  # Default: "basedOnReturnCode". Allowed: allow, suppress, force, basedOnReturnCode.
+  device_restart_behavior: "suppress"
+
+  # Increase timeout for large or slow installers. Default: 60.
+  max_run_time_minutes: 120
+
+  # Feature the app in Company Portal. Default: false.
+  is_featured: true
+
+  # Prevent self-service uninstall from Company Portal. Default: true.
+  allow_available_uninstall: false
+
+  # Require scripts to be code-signed before Intune will run them. Default: false.
+  enforce_signature_check: true
+
+  # Run installer and scripts in a 32-bit PowerShell context. Default: false.
+  run_as_32_bit: true
+```
+
+See [recipe-reference.md](recipe-reference.md#intune-configuration) for all
+allowed values.
+
 ## Update Existing Recipes
 
 When a recipe needs changes (new version format, different download URL, etc.).

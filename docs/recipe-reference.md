@@ -402,7 +402,7 @@ intune:
   is_featured: false                                 # Optional: feature app in Company Portal
   allow_available_uninstall: true                    # Optional: show Uninstall in Company Portal
   run_as_account: "system"                           # Optional: system or user
-  device_restart_behavior: "allow"                   # Optional: allow, suppress, force, basedOnReturnCode
+  device_restart_behavior: "basedOnReturnCode"        # Optional: allow, suppress, force, basedOnReturnCode
   max_run_time_minutes: 60                           # Optional: max installer runtime
   enforce_signature_check: false                     # Optional: require script signing
   run_as_32_bit: false                               # Optional: run in 32-bit context
@@ -522,17 +522,17 @@ Use `"user"` for apps that must be installed in the user's profile context.
 
 **Type:** `string`
 **Required:** No
-**Default:** `"allow"`
+**Default:** `"basedOnReturnCode"`
 **Allowed values:** `"allow"`, `"suppress"`, `"force"`, `"basedOnReturnCode"`
 
 Controls how Intune handles device restarts after install:
 
 | Value | Behavior |
 |-------|----------|
+| `"basedOnReturnCode"` | Restart based on the installer's return code (PSADT signals 3010/1641) |
 | `"allow"` | Intune may restart the device if needed |
 | `"suppress"` | Suppress any restart, even if the installer requests one |
 | `"force"` | Force a restart after install completes |
-| `"basedOnReturnCode"` | Restart based on the installer's return code |
 
 ### max_run_time_minutes
 
