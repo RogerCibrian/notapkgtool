@@ -273,3 +273,22 @@ class TestCreateIntunewin:
 
         assert not build_dir.exists()
         assert result.status == "success"
+
+    @patch("napt.build.packager._get_intunewin_tool")
+    @patch("napt.build.packager._execute_packaging")
+    def test_tool_release_forwarded_to_get_tool(
+        self, mock_execute, mock_get_tool, tmp_path
+    ):
+        """Tests that tool_release is forwarded to _get_intunewin_tool."""
+        build_dir = _make_build_dir(tmp_path)
+        packages_dir = tmp_path / "packages"
+
+        mock_get_tool.return_value = Path("tool/IntuneWinAppUtil.exe")
+        mock_execute.return_value = (
+            packages_dir / "test-app" / "1.0.0" / "Invoke-AppDeployToolkit.intunewin"
+        )
+
+        create_intunewin(build_dir, output_dir=packages_dir, tool_release="1.8.6")
+
+        _, call_release = mock_get_tool.call_args[0]
+        assert call_release == "1.8.6"

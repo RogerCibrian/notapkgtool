@@ -437,11 +437,14 @@ def cmd_package(args: argparse.Namespace) -> int:
         print(f"Error: {err}")
         return 1
 
-    if args.output_dir:
-        output_dir = Path(args.output_dir)
-    else:
-        config = load_effective_config(recipe_path)
-        output_dir = Path(config["directories"]["package"])
+    config = load_effective_config(recipe_path)
+
+    output_dir = (
+        Path(args.output_dir)
+        if args.output_dir
+        else Path(config["directories"]["package"])
+    )
+    tool_release = config.get("intunewin", {}).get("release", "latest")
 
     print(f"Creating .intunewin package from: {build_dir}")
     print(f"Output directory: {output_dir}")
@@ -452,6 +455,7 @@ def cmd_package(args: argparse.Namespace) -> int:
             build_dir,
             output_dir=output_dir,
             clean_source=args.clean_source,
+            tool_release=tool_release,
         )
     except (ConfigError, NetworkError, PackagingError) as err:
         print(f"Error: {err}")
