@@ -1,0 +1,8 @@
+# Normalize all text files to LF on checkout
+* text=auto eol=lf
+
+# Python diff heuristic for better hunk headers
+*.py diff=python
+
+# PowerShell scripts keep CRLF
+*.ps1 text eol=crlf
