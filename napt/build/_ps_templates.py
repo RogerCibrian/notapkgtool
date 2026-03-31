@@ -15,20 +15,19 @@
 """PowerShell template loader for build script generation.
 
 Loads .ps1 template files from the templates/ directory, resolves
-# <include filename> directives, then substitutes @@var_name@@ markers
-with caller-supplied values.
+# <include filename> directives, then substitutes $Napt* PowerShell
+variables with caller-supplied values via string replacement.
 
-The @@...@@ delimiter avoids conflicts with PowerShell's $Variable syntax,
-so .ps1 template files can be written as standard PowerShell without escaping.
+Templates are written as valid PowerShell with $Napt*-prefixed variables
+as placeholders. Python replaces these with concrete values at build time.
 """
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
+import re
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
-_MARKER_RE = re.compile(r"@@(\w+)@@")
 _INCLUDE_RE = re.compile(r"^# <include (.+)>$", re.MULTILINE)
 
 
@@ -44,7 +43,7 @@ def _load_ps_template(name: str) -> str:
 
     Returns:
         Assembled template text with includes resolved. Call
-        substitute_ps_template() to fill in @@var_name@@ markers.
+        substitute_ps_template() to fill in $Napt* variables.
 
     Raises:
         FileNotFoundError: If the template or any included file is missing.
@@ -57,26 +56,40 @@ def _load_ps_template(name: str) -> str:
     return _INCLUDE_RE.sub(_resolve_include, content)
 
 
-def substitute_ps_template(template: str, **kwargs: str) -> str:
-    """Substitute @@var_name@@ markers in a PS template string.
+def substitute_ps_template(template: str, substitutions: dict[str, str]) -> str:
+    """Substitutes $Napt* variables in a PowerShell template string.
 
-    All @@name@@ markers must have a corresponding keyword argument.
-    Unknown markers raise KeyError; unrecognised PowerShell $Variables
-    are left untouched.
+    All substitutions are applied in a single regex pass so that
+    already-substituted text is never re-processed. Keys are matched
+    longest-first to prevent shorter variables from partially matching
+    longer ones (e.g., "$NaptLogBaseName" inside "$NaptLogBaseNameUser").
+
+    After substitution, verifies that no $Napt* placeholders remain
+    in the output.
 
     Args:
         template: Template text returned by _load_ps_template().
-        **kwargs: Substitution values keyed by marker name.
+        substitutions: Mapping of placeholder strings to their values.
 
     Returns:
         Final PowerShell script content ready to write to disk.
 
     Raises:
-        KeyError: If a marker in the template has no matching kwarg.
+        ValueError: If any $Napt* placeholders remain after substitution.
     """
+    # Sort keys longest-first so e.g. $NaptLogBaseNameUser (if it were
+    # a key) would match before $NaptLogBaseName.
+    pattern = re.compile(
+        "|".join(
+            re.escape(k) for k in sorted(substitutions, key=len, reverse=True)
+        )
+    )
+    result = pattern.sub(lambda m: substitutions[m.group(0)], template)
 
-    def _replace(match: re.Match) -> str:
-        key = match.group(1)
-        return kwargs[key]
+    remaining = re.findall(r"\$Napt[A-Z]\w*", result)
+    if remaining:
+        raise ValueError(
+            f"Unreplaced $Napt* variables in template: {sorted(set(remaining))}"
+        )
 
-    return _MARKER_RE.sub(_replace, template)
+    return result

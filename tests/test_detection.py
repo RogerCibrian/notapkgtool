@@ -487,3 +487,20 @@ class TestGenerateDetectionScript:
         assert "$DisplayNameValue -like $AppName" in content
         # Check app name is in script
         assert "7-Zip ??.??" in content
+
+    def test_no_unreplaced_napt_variables(self, tmp_path: Path):
+        """Tests that all $Napt* variables are substituted."""
+        config = DetectionConfig(
+            app_name="Test App",
+            version="1.0.0",
+        )
+        output_path = tmp_path / "Test-App_1.0.0-Detection.ps1"
+
+        generate_detection_script(config, output_path)
+
+        content = output_path.read_text(encoding="utf-8")
+
+        import re
+
+        remaining = re.findall(r"\$Napt[A-Z]\w*", content)
+        assert remaining == [], f"Unreplaced $Napt* variables: {remaining}"

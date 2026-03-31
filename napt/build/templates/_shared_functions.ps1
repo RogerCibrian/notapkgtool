@@ -2,11 +2,7 @@
 # Shared PowerShell functions - template fragment, not a standalone script.
 # Assembled at build time by napt/build/_ps_templates.py
 #
-# Substitution markers used here (resolved by substitute_ps_template):
-#   @@script_type@@          - "Detection" or "Requirements"
-#   @@log_base_name@@        - "Detections" or "Requirements" (for log file names)
-#   @@log_rotation_mb@@      - Maximum log size in MB before rotation
-#   @@fallback_script_name@@ - "detection.ps1" or "requirements.ps1"
+# $Napt* variables in this fragment are substituted by Python at build time.
 # =============================================================================
 
 # CMTrace log format function
@@ -44,7 +40,7 @@ function Write-CMTraceLog {
 
     # Get context (user identity name) and script file path
     $ContextName = if ($script:CurrentIdentity) { $script:CurrentIdentity.Name } else { "UNKNOWN" }
-    $ScriptFile = if ($MyInvocation.ScriptName) { $MyInvocation.ScriptName } else { "@@fallback_script_name@@" }
+    $ScriptFile = if ($MyInvocation.ScriptName) { $MyInvocation.ScriptName } else { "$NaptFallbackScriptName" }
 
     $Line = "<![LOG[$Message]LOG]!><time=""$TimeWithOffset"" date=""$DateFormatted"" component=""$Component"" context=""$ContextName"" type=""$TypeNumber"" thread=""$PID"" file=""$ScriptFile"">"
 
@@ -63,15 +59,15 @@ function Initialize-LogFile {
     if ($IsSystemContext) {
         # System context - try Intune log folder first
         $PrimaryLogDir = "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs"
-        $PrimaryLogFile = Join-Path $PrimaryLogDir "NAPT@@log_base_name@@.log"
+        $PrimaryLogFile = Join-Path $PrimaryLogDir "$NaptLogBaseName.log"
         $FallbackLogDir = "C:\ProgramData\NAPT"
-        $FallbackLogFile = Join-Path $FallbackLogDir "NAPT@@log_base_name@@.log"
+        $FallbackLogFile = Join-Path $FallbackLogDir "$NaptLogBaseName.log"
     } else {
         # User context
         $PrimaryLogDir = "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs"
-        $PrimaryLogFile = Join-Path $PrimaryLogDir "NAPT@@log_base_name@@User.log"
+        $PrimaryLogFile = Join-Path $PrimaryLogDir "$NaptLogBaseNameUser.log"
         $FallbackLogDir = $env:LOCALAPPDATA
-        $FallbackLogFile = Join-Path $FallbackLogDir "NAPT\NAPT@@log_base_name@@User.log"
+        $FallbackLogFile = Join-Path $FallbackLogDir "NAPT\$NaptLogBaseNameUser.log"
     }
 
     # Try primary location first
@@ -85,7 +81,7 @@ function Initialize-LogFile {
         # Handle log rotation if needed
         if (Test-Path -Path $PrimaryLogFile) {
             $LogSize = (Get-Item $PrimaryLogFile).Length
-            $MaxSize = @@log_rotation_mb@@ * 1024 * 1024
+            $MaxSize = $NaptLogRotationMb * 1024 * 1024
             if ($LogSize -ge $MaxSize) {
                 $OldLogFile = "$PrimaryLogFile.old"
                 if (Test-Path $OldLogFile) { Remove-Item $OldLogFile -Force -ErrorAction Stop }
@@ -110,7 +106,7 @@ function Initialize-LogFile {
 
         if (Test-Path -Path $FallbackLogFile) {
             $LogSize = (Get-Item $FallbackLogFile).Length
-            $MaxSize = @@log_rotation_mb@@ * 1024 * 1024
+            $MaxSize = $NaptLogRotationMb * 1024 * 1024
             if ($LogSize -ge $MaxSize) {
                 $OldLogFile = "$FallbackLogFile.old"
                 if (Test-Path $OldLogFile) { Remove-Item $OldLogFile -Force -ErrorAction Stop }
@@ -122,7 +118,7 @@ function Initialize-LogFile {
         $script:LogFilePath = $FallbackLogFile
     } catch {
         # All log locations failed - log warning to stderr and continue
-        Write-Warning "NAPT @@script_type@@: Failed to initialize logging (primary and fallback locations unavailable). Script will continue but no log file will be created."
+        Write-Warning "NAPT $NaptScriptType`: Failed to initialize logging (primary and fallback locations unavailable). Script will continue but no log file will be created."
         $script:LogFilePath = $null
     }
 }
@@ -179,7 +175,7 @@ function Get-UninstallKeys {
 
         # Note: Don't close BaseKey/UninstallKey here as SubKeys are still in use
     } catch {
-        Write-CMTraceLog -Message "[@@script_type@@] Error opening registry: $Hive $ViewName - $($_.Exception.Message)" -Type "WARNING"
+        Write-CMTraceLog -Message "[$NaptScriptType] Error opening registry: $Hive $ViewName - $($_.Exception.Message)" -Type "WARNING"
     }
 
     return $Results

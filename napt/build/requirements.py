@@ -169,16 +169,24 @@ def generate_requirements_script(config: RequirementsConfig, output_path: Path) 
     template = _load_ps_template("requirements_script.ps1")
     script_content = substitute_ps_template(
         template,
-        app_name=config.app_name,
-        version=config.version,
-        log_rotation_mb=str(config.log_rotation_mb),
-        is_msi_installer="$True" if config.is_msi_installer else "$False",
-        expected_architecture=config.expected_architecture,
-        display_name_operator="-like" if config.use_wildcard else "-eq",
-        script_type="Requirements",
-        log_base_name="Requirements",
-        fallback_script_name="requirements.ps1",
+        {
+            "$NaptAppName": config.app_name,
+            "$NaptVersion": config.version,
+            "$NaptLogRotationMb": str(config.log_rotation_mb),
+            "$NaptIsMsiInstaller": "$True" if config.is_msi_installer else "$False",
+            "$NaptExpectedArchitecture": config.expected_architecture,
+            "$NaptScriptType": "Requirements",
+            "$NaptLogBaseName": "NAPTRequirements",
+            "$NaptFallbackScriptName": "requirements.ps1",
+        },
     )
+
+    # Template defaults to -like; replace with -eq for exact matching
+    if not config.use_wildcard:
+        script_content = script_content.replace(
+            "$DisplayNameValue -like $AppName",
+            "$DisplayNameValue -eq $AppName",
+        )
 
     # Ensure output directory exists
     output_path.parent.mkdir(parents=True, exist_ok=True)

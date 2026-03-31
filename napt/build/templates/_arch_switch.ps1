@@ -2,8 +2,7 @@
 # Architecture detection block - template fragment, not a standalone script.
 # Assembled at build time by napt/build/_ps_templates.py
 #
-# Substitution markers used here (resolved by substitute_ps_template):
-#   @@script_type@@ - "Detection" or "Requirements"
+# $NaptScriptType is substituted by Python at build time.
 #
 # Reads:  $ExpectedArchitecture (param), $Is64BitOS (already set by caller)
 # Writes: $CheckViews (array of hashtables with View and Name keys)
@@ -12,7 +11,7 @@
 switch ($ExpectedArchitecture.ToLower()) {
     "x64" {
         if (-not $Is64BitOS) {
-            Write-CMTraceLog -Message "[@@script_type@@] Expected x64 architecture but running on 32-bit OS - app cannot be installed" -Type "WARNING"
+            Write-CMTraceLog -Message "[$NaptScriptType] Expected x64 architecture but running on 32-bit OS - app cannot be installed" -Type "WARNING"
         } else {
             $CheckViews += @{ View = [Microsoft.Win32.RegistryView]::Registry64; Name = "64-bit" }
         }
@@ -20,7 +19,7 @@ switch ($ExpectedArchitecture.ToLower()) {
     "arm64" {
         # ARM64 uses 64-bit registry view
         if (-not $Is64BitOS) {
-            Write-CMTraceLog -Message "[@@script_type@@] Expected arm64 architecture but running on 32-bit OS - app cannot be installed" -Type "WARNING"
+            Write-CMTraceLog -Message "[$NaptScriptType] Expected arm64 architecture but running on 32-bit OS - app cannot be installed" -Type "WARNING"
         } else {
             $CheckViews += @{ View = [Microsoft.Win32.RegistryView]::Registry64; Name = "64-bit (ARM64)" }
         }
@@ -36,7 +35,7 @@ switch ($ExpectedArchitecture.ToLower()) {
         $CheckViews += @{ View = [Microsoft.Win32.RegistryView]::Registry32; Name = "32-bit" }
     }
     default {
-        Write-CMTraceLog -Message "[@@script_type@@] Unknown architecture '$ExpectedArchitecture', defaulting to 'any'" -Type "WARNING"
+        Write-CMTraceLog -Message "[$NaptScriptType] Unknown architecture '$ExpectedArchitecture', defaulting to 'any'" -Type "WARNING"
         if ($Is64BitOS) {
             $CheckViews += @{ View = [Microsoft.Win32.RegistryView]::Registry64; Name = "64-bit" }
         }
