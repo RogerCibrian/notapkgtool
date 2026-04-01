@@ -1,10 +1,3 @@
-# =============================================================================
-# Shared PowerShell functions - template fragment, not a standalone script.
-# Assembled at build time by napt/build/_ps_templates.py
-#
-# $Napt* variables in this fragment are substituted by Python at build time.
-# =============================================================================
-
 # CMTrace log format function
 function Write-CMTraceLog {
     param(
@@ -118,7 +111,7 @@ function Initialize-LogFile {
         $script:LogFilePath = $FallbackLogFile
     } catch {
         # All log locations failed - log warning to stderr and continue
-        Write-Warning "NAPT $NaptScriptType`: Failed to initialize logging (primary and fallback locations unavailable). Script will continue but no log file will be created."
+        Write-Warning "NAPT [$NaptScriptType] Failed to initialize logging (primary and fallback locations unavailable). Script will continue but no log file will be created."
         $script:LogFilePath = $null
     }
 }

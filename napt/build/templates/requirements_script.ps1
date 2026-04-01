@@ -3,7 +3,6 @@
 # This script checks if an older version is installed (for Update entry applicability).
 # Outputs "Required" if installed version < target version, nothing otherwise.
 # Always exits with code 0 so Intune can evaluate STDOUT.
-# Uses explicit registry views for deterministic architecture-aware detection.
 
 param(
     [string]$AppName = "$NaptAppName",

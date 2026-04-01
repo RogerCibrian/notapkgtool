@@ -1,13 +1,3 @@
-# =============================================================================
-# Architecture detection block - template fragment, not a standalone script.
-# Assembled at build time by napt/build/_ps_templates.py
-#
-# $NaptScriptType is substituted by Python at build time.
-#
-# Reads:  $ExpectedArchitecture (param), $Is64BitOS (already set by caller)
-# Writes: $CheckViews (array of hashtables with View and Name keys)
-# =============================================================================
-
 switch ($ExpectedArchitecture.ToLower()) {
     "x64" {
         if (-not $Is64BitOS) {
