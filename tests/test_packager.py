@@ -86,7 +86,9 @@ class TestFetchLatestIntunewinVersion:
         """Tests NetworkError on GitHub API failure."""
         requests_mock.get(INTUNEWIN_GITHUB_API, status_code=500)
 
-        with pytest.raises(NetworkError, match="Failed to fetch latest IntuneWinAppUtil"):
+        with pytest.raises(
+            NetworkError, match="Failed to fetch latest IntuneWinAppUtil"
+        ):
             fetch_latest_intunewin_version()
 
     def test_fetch_latest_invalid_tag(self, requests_mock):

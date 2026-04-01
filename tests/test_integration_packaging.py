@@ -27,7 +27,7 @@ class TestIntuneWinToolDownload:
         """Test downloading IntuneWinAppUtil.exe from Microsoft."""
         cache_dir = tmp_path / "cache" / "tools"
 
-        tool_path = _get_intunewin_tool(cache_dir)
+        tool_path = _get_intunewin_tool(cache_dir, "latest")
 
         assert tool_path.exists()
         assert tool_path.name == "IntuneWinAppUtil.exe"
@@ -38,11 +38,11 @@ class TestIntuneWinToolDownload:
         cache_dir = tmp_path / "cache" / "tools"
 
         # First download
-        tool_path_1 = _get_intunewin_tool(cache_dir)
+        tool_path_1 = _get_intunewin_tool(cache_dir, "latest")
         mtime_1 = tool_path_1.stat().st_mtime
 
         # Second call should use cache
-        tool_path_2 = _get_intunewin_tool(cache_dir)
+        tool_path_2 = _get_intunewin_tool(cache_dir, "latest")
         mtime_2 = tool_path_2.stat().st_mtime
 
         assert tool_path_1 == tool_path_2

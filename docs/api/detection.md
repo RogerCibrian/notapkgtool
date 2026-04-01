@@ -1,4 +1,4 @@
 # detection
 
-::: napt.detection
+::: napt.build.detection
 

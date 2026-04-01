@@ -242,7 +242,9 @@ class ApiJsonStrategy:
         source = app_config.get("discovery", {})
         api_url = source.get("api_url")
         if not api_url:
-            raise ConfigError("api_json strategy requires 'discovery.api_url' in config")
+            raise ConfigError(
+                "api_json strategy requires 'discovery.api_url' in config"
+            )
 
         version_path = source.get("version_path")
         if not version_path:

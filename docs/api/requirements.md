@@ -1,3 +1,3 @@
 # requirements
 
-::: napt.requirements
+::: napt.build.requirements
