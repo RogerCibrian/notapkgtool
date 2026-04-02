@@ -19,40 +19,20 @@ including ProductVersion, ProductName, and architecture (from Template).
 
 Backend Priority:
 
-On Windows:
-
-1. PowerShell COM (Windows Installer COM API, always available)
-
-On Linux/macOS:
-
-1. msiinfo (from msitools package, must be installed separately)
+- Windows: PowerShell COM (Windows Installer COM API, always available)
+- Linux/macOS: msiinfo (from the msitools package, must be installed separately)
 
 Installation Requirements:
 
-Windows:
-
-- No additional packages required (PowerShell is always available)
-
-Linux/macOS:
-
-- Install msitools package:
-    - Debian/Ubuntu: `sudo apt-get install msitools`
-    - RHEL/Fedora: `sudo dnf install msitools`
-    - macOS: `brew install msitools`
+- Windows: No additional packages required (PowerShell is always available).
+- Linux/macOS: Install the msitools package (``apt-get install msitools``,
+    ``dnf install msitools``, or ``brew install msitools``).
 
 Example:
-    Extract version from MSI:
-        ```python
-        from pathlib import Path
-        from napt.versioning.msi import version_from_msi_product_version
-        discovered = version_from_msi_product_version("chrome.msi")
-        print(f"{discovered.version} from {discovered.source}")
-        # 141.0.7390.123 from msi
-        ```
-
-    Extract full metadata including architecture:
+    Extract metadata including architecture:
         ```python
         from napt.versioning.msi import extract_msi_metadata
+
         metadata = extract_msi_metadata("chrome.msi")
         print(f"{metadata.product_name} {metadata.product_version} ({metadata.architecture})")
         # Google Chrome 144.0.7559.110 (x64)
@@ -75,8 +55,6 @@ import sys
 from typing import Literal
 
 from napt.exceptions import ConfigError, PackagingError
-
-from .keys import DiscoveredVersion  # reuse the shared DTO
 
 # MSI Template platform mapping
 # See: https://learn.microsoft.com/en-us/windows/win32/msi/template-summary
@@ -107,7 +85,6 @@ class MSIMetadata:
         product_version: ProductVersion from MSI Property table.
         architecture: Installer architecture from MSI Template Summary
             Information property. Always one of "x86", "x64", or "arm64".
-
     """
 
     product_name: str
@@ -115,107 +92,8 @@ class MSIMetadata:
     architecture: Architecture
 
 
-def version_from_msi_product_version(
-    file_path: str | Path,
-) -> DiscoveredVersion:
-    """Extract ProductVersion from an MSI file.
-
-    Uses cross-platform backends to read the MSI Property table.
-    On Windows, uses the PowerShell COM API. On Linux/macOS, requires msitools.
-
-    Args:
-        file_path: Path to the MSI file.
-
-    Returns:
-        Discovered version with source information.
-
-    Raises:
-        PackagingError: If the MSI file doesn't exist or version extraction fails.
-        NotImplementedError: If no extraction backend is available on this system.
-
-    """
-    from napt.logging import get_global_logger
-
-    logger = get_global_logger()
-    p = Path(file_path)
-    if not p.exists():
-        raise PackagingError(f"MSI not found: {p}")
-
-    logger.verbose("VERSION", "Strategy: msi")
-    logger.verbose("VERSION", f"Extracting version from: {p.name}")
-
-    # Try PowerShell with Windows Installer COM on Windows
-    if sys.platform.startswith("win"):
-        logger.debug("VERSION", "Trying backend: PowerShell COM...")
-        try:
-            escaped_path = str(p).replace("'", "''")
-            ps_script = f"""
-$installer = New-Object -ComObject WindowsInstaller.Installer
-$db = $installer.OpenDatabase('{escaped_path}', 0)
-$view = $db.OpenView("SELECT Value FROM Property WHERE Property='ProductVersion'")
-$view.Execute()
-$record = $view.Fetch()
-if ($record) {{
-    $record.StringData(1)
-}} else {{
-    Write-Error "ProductVersion not found"
-    exit 1
-}}
-"""
-            result = subprocess.run(
-                ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_script],
-                check=True,
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-            version = result.stdout.strip()
-            if version:
-                logger.verbose(
-                    "VERSION", f"Success! Extracted: {version} (via PowerShell COM)"
-                )
-                return DiscoveredVersion(version=version, source="msi")
-        except subprocess.CalledProcessError as err:
-            raise PackagingError(f"PowerShell MSI query failed: {err}") from err
-        except subprocess.TimeoutExpired:
-            raise PackagingError("PowerShell MSI query timed out") from None
-
-    # Try msiinfo on Linux/macOS
-    msiinfo_bin = shutil.which("msiinfo")
-    if msiinfo_bin:
-        logger.debug("VERSION", "Trying backend: msiinfo (msitools)...")
-        try:
-            result = subprocess.run(
-                [msiinfo_bin, "export", str(p), "Property"],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-            version_str: str | None = None
-            for line in result.stdout.splitlines():
-                parts = line.strip().split("\t", 1)  # "Property<TAB>Value"
-                if len(parts) == 2 and parts[0] == "ProductVersion":
-                    version_str = parts[1]
-                    break
-            if not version_str:
-                raise PackagingError("ProductVersion not found in MSI Property output.")
-            logger.verbose(
-                "VERSION", f"Success! Extracted: {version_str} (via msiinfo)"
-            )
-            return DiscoveredVersion(version=version_str, source="msi")
-        except subprocess.CalledProcessError as err:
-            raise PackagingError(f"msiinfo failed: {err}") from err
-
-    logger.debug("VERSION", "No MSI extraction backend available on this system")
-    raise NotImplementedError(
-        "MSI version extraction is not available on this host. "
-        "On Windows, ensure PowerShell is available. "
-        "On Linux/macOS, install 'msitools'."
-    )
-
-
 def extract_msi_metadata(file_path: str | Path) -> MSIMetadata:
-    """Extract ProductName, ProductVersion, and architecture from MSI file.
+    """Extracts ProductName, ProductVersion, and architecture from an MSI file.
 
     Reads the MSI Property table (ProductName, ProductVersion) and Summary
     Information stream (Template/architecture) in a single database open.
@@ -228,11 +106,9 @@ def extract_msi_metadata(file_path: str | Path) -> MSIMetadata:
         MSI metadata including product name, version, and architecture.
 
     Raises:
-        PackagingError: If the MSI file doesn't exist or metadata extraction
-            fails.
+        PackagingError: If the MSI file does not exist or extraction fails.
         ConfigError: If the MSI platform is not supported by Intune.
-        NotImplementedError: If no extraction backend is available on this
-            system.
+        NotImplementedError: If no extraction backend is available on this system.
 
     Example:
         Extract MSI metadata:
@@ -254,16 +130,16 @@ def extract_msi_metadata(file_path: str | Path) -> MSIMetadata:
     from napt.logging import get_global_logger
 
     logger = get_global_logger()
-    p = Path(file_path)
-    if not p.exists():
-        raise PackagingError(f"MSI not found: {p}")
+    msi_path = Path(file_path)
+    if not msi_path.exists():
+        raise PackagingError(f"MSI not found: {msi_path}")
 
-    logger.verbose("MSI", f"Extracting metadata from: {p.name}")
+    logger.verbose("MSI", f"Extracting metadata from: {msi_path.name}")
 
     # PowerShell COM (Windows only)
     if sys.platform.startswith("win"):
         logger.debug("MSI", "Trying backend: PowerShell COM...")
-        escaped_path = str(p).replace("'", "''")
+        escaped_path = str(msi_path).replace("'", "''")
         ps_script = f"""
 $installer = New-Object -ComObject WindowsInstaller.Installer
 $db = $installer.OpenDatabase('{escaped_path}', 0)
@@ -292,17 +168,17 @@ if (-not $template) {{
 @($props['ProductName'], $props['ProductVersion'], $template) -join "`n"
 """
         try:
-            result = subprocess.run(
+            ps_result = subprocess.run(
                 ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_script],
                 check=True,
                 capture_output=True,
                 text=True,
                 timeout=10,
             )
-            lines = result.stdout.splitlines()
-            product_name = lines[0] if len(lines) > 0 else ""
-            product_version = lines[1] if len(lines) > 1 else ""
-            template = lines[2] if len(lines) > 2 else ""
+            output_lines = ps_result.stdout.splitlines()
+            product_name = output_lines[0] if len(output_lines) > 0 else ""
+            product_version = output_lines[1] if len(output_lines) > 1 else ""
+            template = output_lines[2] if len(output_lines) > 2 else ""
 
             if not product_version:
                 raise PackagingError("ProductVersion not found in MSI Property table.")
@@ -311,7 +187,7 @@ if (-not $template) {{
                     "Template not found in MSI Summary Information stream."
                 )
 
-            architecture = architecture_from_template(template)
+            architecture = _architecture_from_template(template)
             logger.verbose(
                 "MSI",
                 f"[OK] Extracted: {product_name} {product_version} "
@@ -336,24 +212,24 @@ if (-not $template) {{
     if msiinfo_bin:
         logger.debug("MSI", "Trying backend: msiinfo (msitools)...")
         try:
-            prop_result = subprocess.run(
-                [msiinfo_bin, "export", str(p), "Property"],
+            property_result = subprocess.run(
+                [msiinfo_bin, "export", str(msi_path), "Property"],
                 check=True,
                 capture_output=True,
                 text=True,
             )
-            props: dict[str, str] = {}
-            for line in prop_result.stdout.splitlines():
-                parts = line.strip().split("\t", 1)
-                if len(parts) == 2:
-                    props[parts[0]] = parts[1]
+            properties: dict[str, str] = {}
+            for line in property_result.stdout.splitlines():
+                columns = line.strip().split("\t", 1)
+                if len(columns) == 2:
+                    properties[columns[0]] = columns[1]
 
-            product_version = props.get("ProductVersion", "")
+            product_version = properties.get("ProductVersion", "")
             if not product_version:
                 raise PackagingError("ProductVersion not found in MSI Property output.")
 
             suminfo_result = subprocess.run(
-                [msiinfo_bin, "suminfo", str(p)],
+                [msiinfo_bin, "suminfo", str(msi_path)],
                 check=True,
                 capture_output=True,
                 text=True,
@@ -369,8 +245,8 @@ if (-not $template) {{
                     "Template not found in MSI Summary Information stream."
                 )
 
-            architecture = architecture_from_template(template)
-            product_name = props.get("ProductName", "")
+            architecture = _architecture_from_template(template)
+            product_name = properties.get("ProductName", "")
             logger.verbose(
                 "MSI",
                 f"[OK] Extracted: {product_name} {product_version} "
@@ -391,10 +267,10 @@ if (-not $template) {{
     )
 
 
-def architecture_from_template(template: str) -> Architecture:
-    """Parse MSI Template property into NAPT architecture value.
+def _architecture_from_template(template: str) -> Architecture:
+    """Parses the MSI Template Summary property into a NAPT architecture value.
 
-    The Template property format is platform;language_id (semicolon, then
+    The Template property format is ``platform;language_id`` (semicolon, then
     optional language codes). Examples: "x64;1033", "Intel;1033,1041",
     ";1033" (empty platform defaults to Intel).
 
@@ -405,20 +281,8 @@ def architecture_from_template(template: str) -> Architecture:
         Architecture value: "x86", "x64", or "arm64".
 
     Raises:
-        ConfigError: If the platform is not supported by Intune (Itanium, ARM32).
-
-    Example:
-        Parse template strings:
-            ```python
-            arch = architecture_from_template("x64;1033")
-            # Returns: "x64"
-
-            arch = architecture_from_template("Intel;1033")
-            # Returns: "x86"
-
-            arch = architecture_from_template(";1033")
-            # Returns: "x86" (empty defaults to Intel)
-            ```
+        ConfigError: If the platform is not supported by Intune (Itanium, ARM32)
+            or is unrecognized.
 
     """
     # Split on semicolon and take only the first token (platform)

@@ -73,7 +73,6 @@ from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
 from napt.results import DiscoverResult
 from napt.state import load_state, save_state
-from napt.versioning.keys import DiscoveredVersion
 
 
 def derive_file_path_from_url(url: str, output_dir: Path, app_id: str) -> Path:
@@ -282,9 +281,8 @@ def discover_recipe(
                 )
                 logger.step(4, 4, "Using cached file...")
                 sha256 = cache.get("sha256")
-                discovered_version = DiscoveredVersion(
-                    version_info.version, version_info.source
-                )
+                version = version_info.version
+                version_source = version_info.source
                 headers = {}  # No download occurred, no headers
             else:
                 # File was deleted, re-download
@@ -298,9 +296,8 @@ def discover_recipe(
                     output_dir / app_id,
                 )
                 file_path, sha256, headers = dl.file_path, dl.sha256, dl.headers
-                discovered_version = DiscoveredVersion(
-                    version_info.version, version_info.source
-                )
+                version = version_info.version
+                version_source = version_info.source
         else:
             # Version changed or no cache, download new version
             if cache:
@@ -317,14 +314,13 @@ def discover_recipe(
                 output_dir / app_id,
             )
             file_path, sha256, headers = dl.file_path, dl.sha256, dl.headers
-            discovered_version = DiscoveredVersion(
-                version_info.version, version_info.source
-            )
+            version = version_info.version
+            version_source = version_info.source
     else:
         # FILE-FIRST PATH (url_download only)
         # Must download to extract version (or use cached file via ETag)
         logger.step(4, 4, "Fetching installer...")
-        discovered_version, file_path, sha256, headers = strategy.discover_version(
+        version, version_source, file_path, sha256, headers = strategy.discover_version(
             config, output_dir, cache=cache
         )
         download_url = str(config.get("discovery", {}).get("url", ""))
@@ -359,8 +355,8 @@ def discover_recipe(
         }
 
         # Optional fields
-        if discovered_version.version:
-            cache_entry["known_version"] = discovered_version.version
+        if version:
+            cache_entry["known_version"] = version
         if strategy_name:
             cache_entry["strategy"] = strategy_name
 
@@ -383,8 +379,8 @@ def discover_recipe(
         app_name=app_name,
         app_id=app_id,
         strategy=strategy_name,
-        version=discovered_version.version,
-        version_source=discovered_version.source,
+        version=version,
+        version_source=version_source,
         file_path=file_path,
         sha256=sha256,
         status="success",

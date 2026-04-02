@@ -49,12 +49,10 @@ Example:
         from napt.discovery.base import register_strategy, DiscoveryStrategy
         from pathlib import Path
         from typing import Any
-        from napt.versioning.keys import DiscoveredVersion
-
         class MyCustomStrategy:
             def discover_version(
                 self, app_config: dict[str, Any], output_dir: Path
-            ) -> tuple[DiscoveredVersion, Path, str]:
+            ) -> tuple[str, str, Path, str, dict]:
                 # Implement your discovery logic here
                 ...
 
@@ -71,11 +69,39 @@ Example:
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
 from napt.exceptions import ConfigError
-from napt.versioning.keys import DiscoveredVersion
+
+# ----------------------------
+# Discovery DTOs
+# ----------------------------
+
+
+@dataclass(frozen=True)
+class RemoteVersion:
+    """Represents a version and download URL obtained from a remote source.
+
+    Used by version-first strategies (web_scrape, api_github, api_json) that
+    can determine both the version and where to download the installer *without*
+    fetching the file first. This allows the core pipeline to skip the download
+    entirely when the version is unchanged.
+
+    Contrast with DiscoveredVersion (napt.versioning), which is produced after
+    a file has been obtained and its version extracted locally.
+
+    Attributes:
+        version: Raw version string (e.g., "140.0.7339.128").
+        download_url: URL to download the installer.
+        source: Strategy name for logging (e.g., "web_scrape", "api_github").
+    """
+
+    version: str
+    download_url: str
+    source: str
+
 
 # -------------------------------
 # Strategy Protocol
@@ -94,7 +120,7 @@ class DiscoveryStrategy(Protocol):
 
     def discover_version(
         self, app_config: dict[str, Any], output_dir: Path
-    ) -> tuple[DiscoveredVersion, Path, str, dict]:
+    ) -> tuple[str, str, Path, str, dict]:
         """Discover and download an application version.
 
         Args:
@@ -102,8 +128,9 @@ class DiscoveryStrategy(Protocol):
             output_dir: Directory to download the installer to.
 
         Returns:
-            A tuple (discovered_version, file_path, sha256, headers), where
-                discovered_version is the version information, file_path is
+            A tuple (version, version_source, file_path, sha256, headers), where
+                version is the extracted version string, version_source identifies
+                how the version was obtained (e.g., "url_download"), file_path is
                 the path to the downloaded file, sha256 is the SHA-256 hash,
                 and headers contains HTTP response headers for caching.
 

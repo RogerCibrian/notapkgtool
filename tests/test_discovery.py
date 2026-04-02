@@ -21,8 +21,8 @@ from napt.discovery.base import get_strategy, register_strategy
 from napt.discovery.url_download import UrlDownloadStrategy
 from napt.discovery.web_scrape import WebScrapeStrategy
 from napt.exceptions import ConfigError, NetworkError
-from napt.versioning import DiscoveredVersion
-from napt.versioning.keys import VersionInfo
+from napt.versioning.msi import MSIMetadata
+from napt.discovery.base import RemoteVersion
 
 
 class TestStrategyRegistry:
@@ -86,18 +86,18 @@ class TestUrlDownloadStrategy:
             )
 
             with patch(
-                "napt.discovery.url_download.version_from_msi_product_version"
+                "napt.discovery.url_download.extract_msi_metadata"
             ) as mock_extract:
-                mock_extract.return_value = DiscoveredVersion(
-                    version="1.2.3", source="msi"
+                mock_extract.return_value = MSIMetadata(
+                    product_name="", product_version="1.2.3", architecture="x64"
                 )
 
-                discovered, file_path, sha256, headers = strategy.discover_version(
+                version, version_source, file_path, sha256, headers = strategy.discover_version(
                     app_config, tmp_test_dir
                 )
 
-        assert discovered.version == "1.2.3"
-        assert discovered.source == "msi"
+        assert version == "1.2.3"
+        assert version_source == "url_download"
         assert file_path == tmp_test_dir / "test-app" / "installer.msi"
         assert file_path.exists()
         assert isinstance(sha256, str)
@@ -150,7 +150,7 @@ class TestUrlDownloadStrategy:
             )
 
             with patch(
-                "napt.discovery.url_download.version_from_msi_product_version"
+                "napt.discovery.url_download.extract_msi_metadata"
             ) as mock_extract:
                 mock_extract.side_effect = NetworkError("Invalid MSI")
 
@@ -204,20 +204,20 @@ class TestCacheAndETagSupport:
             m.get("https://example.com/installer.msi", status_code=304)
 
             with patch(
-                "napt.discovery.url_download.version_from_msi_product_version"
+                "napt.discovery.url_download.extract_msi_metadata"
             ) as mock_extract:
-                mock_extract.return_value = DiscoveredVersion(
-                    version="1.0.0", source="msi"
+                mock_extract.return_value = MSIMetadata(
+                    product_name="", product_version="1.0.0", architecture="x64"
                 )
 
-                discovered, file_path, sha256, headers = strategy.discover_version(
+                version, version_source, file_path, sha256, headers = strategy.discover_version(
                     app_config, tmp_test_dir, cache=cache
                 )
 
         # Should use cached file from app-scoped directory
         assert file_path == cached_file
         assert sha256 == "cached_sha256"
-        assert discovered.version == "1.0.0"
+        assert version == "1.0.0"
 
     # test_api_github_with_cache_not_modified removed -
     # discover_version() no longer exists
@@ -255,20 +255,20 @@ class TestCacheAndETagSupport:
             )
 
             with patch(
-                "napt.discovery.url_download.version_from_msi_product_version"
+                "napt.discovery.url_download.extract_msi_metadata"
             ) as mock_extract:
-                mock_extract.return_value = DiscoveredVersion(
-                    version="2.0.0", source="msi"
+                mock_extract.return_value = MSIMetadata(
+                    product_name="", product_version="2.0.0", architecture="x64"
                 )
 
-                discovered, file_path, sha256, headers = strategy.discover_version(
+                version, version_source, file_path, sha256, headers = strategy.discover_version(
                     app_config, tmp_test_dir, cache=cache
                 )
 
         # Should download new file into app-scoped directory
         assert file_path == tmp_test_dir / "test-app" / "installer.msi"
         assert file_path.exists()
-        assert discovered.version == "2.0.0"
+        assert version == "2.0.0"
         assert len(sha256) == 64
 
     def test_strategy_without_cache_works(self, tmp_test_dir):
@@ -293,18 +293,18 @@ class TestCacheAndETagSupport:
             )
 
             with patch(
-                "napt.discovery.url_download.version_from_msi_product_version"
+                "napt.discovery.url_download.extract_msi_metadata"
             ) as mock_extract:
-                mock_extract.return_value = DiscoveredVersion(
-                    version="1.0.0", source="msi"
+                mock_extract.return_value = MSIMetadata(
+                    product_name="", product_version="1.0.0", architecture="x64"
                 )
 
                 # Call without cache parameter (None is default)
-                discovered, file_path, sha256, headers = strategy.discover_version(
+                version, version_source, file_path, sha256, headers = strategy.discover_version(
                     app_config, tmp_test_dir
                 )
 
-        assert discovered.version == "1.0.0"
+        assert version == "1.0.0"
         assert file_path == tmp_test_dir / "test-app" / "installer.msi"
         assert file_path.exists()
 
@@ -370,7 +370,7 @@ class TestVersionFirstStrategies:
 
             version_info = strategy.get_version_info(app_config)
 
-        assert isinstance(version_info, VersionInfo)
+        assert isinstance(version_info, RemoteVersion)
         assert version_info.version == "25.01"
         assert version_info.download_url == "https://example.com/a/7z2501-x64.msi"
         assert version_info.source == "web_scrape"
@@ -393,7 +393,7 @@ class TestVersionFirstStrategies:
 
             version_info = strategy.get_version_info(app_config)
 
-        assert isinstance(version_info, VersionInfo)
+        assert isinstance(version_info, RemoteVersion)
         assert version_info.version == "1.2.3"
         assert (
             version_info.download_url
@@ -402,7 +402,7 @@ class TestVersionFirstStrategies:
         assert version_info.source == "web_scrape"
 
     def test_api_github_get_version_info(self):
-        """Test api_github.get_version_info() returns VersionInfo without
+        """Test api_github.get_version_info() returns RemoteVersion without
         downloading."""
         strategy = ApiGithubStrategy()
         app_config = {
@@ -432,13 +432,13 @@ class TestVersionFirstStrategies:
 
             version_info = strategy.get_version_info(app_config)
 
-        assert isinstance(version_info, VersionInfo)
+        assert isinstance(version_info, RemoteVersion)
         assert version_info.version == "1.2.3"
         assert "github.com" in version_info.download_url
         assert version_info.source == "api_github"
 
     def test_api_json_get_version_info(self):
-        """Test api_json.get_version_info() returns VersionInfo without downloading."""
+        """Test api_json.get_version_info() returns RemoteVersion without downloading."""
         strategy = ApiJsonStrategy()
         app_config = {
             "discovery": {
@@ -458,7 +458,7 @@ class TestVersionFirstStrategies:
 
             version_info = strategy.get_version_info(app_config)
 
-        assert isinstance(version_info, VersionInfo)
+        assert isinstance(version_info, RemoteVersion)
         assert version_info.version == "1.2.3"
         assert version_info.download_url == "https://example.com/installer.msi"
         assert version_info.source == "api_json"

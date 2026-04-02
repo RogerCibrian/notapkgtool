@@ -23,13 +23,13 @@ Strategy Pattern:
     Discovery strategies implement one of two approaches:
 
 VERSION-FIRST (api_github, api_json, web_scrape):
-  - Implement get_version_info() -> VersionInfo
+  - Implement get_version_info() -> RemoteVersion
   - Can determine version and download URL without downloading installer
   - Core orchestration checks version first, then decides whether to download
   - Enables zero-bandwidth update checks when version unchanged
 
 FILE-FIRST (url_download):
-  - Implement discover_version() -> tuple[DiscoveredVersion, Path, str, dict]
+  - Implement discover_version() -> tuple[str, str, Path, str, dict]
   - Must download installer to extract version from file metadata
   - Uses HTTP ETag conditional requests for efficiency
 

@@ -62,7 +62,6 @@ from napt.results import BuildResult
 from napt.versioning.msi import (
     MSIMetadata,
     extract_msi_metadata,
-    version_from_msi_product_version,
 )
 
 
@@ -141,9 +140,9 @@ def _get_installer_version(
         logger.verbose(
             "BUILD", f"Auto-detected MSI, extracting version: {installer_file.name}"
         )
-        discovered = version_from_msi_product_version(installer_file)
-        logger.verbose("BUILD", f"Extracted version: {discovered.version}")
-        return discovered.version
+        metadata = extract_msi_metadata(installer_file)
+        logger.verbose("BUILD", f"Extracted version: {metadata.product_version}")
+        return metadata.product_version
 
     # Non-MSI: fall back to state file
     if state_file and state_file.exists():

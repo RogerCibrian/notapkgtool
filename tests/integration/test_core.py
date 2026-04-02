@@ -16,7 +16,7 @@ import requests_mock
 
 from napt.core import discover_recipe
 from napt.exceptions import NetworkError
-from napt.versioning import DiscoveredVersion
+from napt.versioning.msi import MSIMetadata
 
 
 class TestEndToEndWorkflow:
@@ -67,10 +67,10 @@ class TestEndToEndWorkflow:
             )
 
             with patch(
-                "napt.discovery.url_download.version_from_msi_product_version"
+                "napt.discovery.url_download.extract_msi_metadata"
             ) as mock_extract:
-                mock_extract.return_value = DiscoveredVersion(
-                    version="1.2.3", source="msi"
+                mock_extract.return_value = MSIMetadata(
+                    product_name="", product_version="1.2.3", architecture="x64"
                 )
 
                 result = discover_recipe(recipe_path, output_dir)
@@ -111,10 +111,10 @@ class TestConfigAndDiscoveryIntegration:
             )
 
             with patch(
-                "napt.discovery.url_download.version_from_msi_product_version"
+                "napt.discovery.url_download.extract_msi_metadata"
             ) as mock_extract:
-                mock_extract.return_value = DiscoveredVersion(
-                    version="1.0.0", source="msi"
+                mock_extract.return_value = MSIMetadata(
+                    product_name="", product_version="1.0.0", architecture="x64"
                 )
 
                 result = discover_recipe(recipe_path, tmp_test_dir)
@@ -168,7 +168,7 @@ class TestErrorPropagation:
             )
 
             with patch(
-                "napt.discovery.url_download.version_from_msi_product_version"
+                "napt.discovery.url_download.extract_msi_metadata"
             ) as mock_extract:
                 mock_extract.side_effect = NetworkError("Invalid MSI")
 
