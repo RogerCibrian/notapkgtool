@@ -15,69 +15,48 @@
 """Version comparison and extraction utilities for NAPT.
 
 This package provides tools for comparing version strings and extracting
-version information from binary files (MSI, EXE). It supports multiple
+version information from MSI files. It supports multiple
 comparison strategies and handles various versioning schemes including
 semantic versioning, numeric versions, and prerelease tags.
 
 Modules:
-    keys
+    compare
         Core version comparison logic with semver-like parsing and robust fallbacks.
     msi
-        MSI ProductVersion extraction and metadata extraction using PowerShell COM
-        (Windows) or msitools (Linux/macOS).
+        MSI metadata extraction using PowerShell COM (Windows) or msitools (Linux/macOS).
 
-Version Comparison Strategies:
+Version Comparison Strategy:
 
-The versioning system supports multiple comparison modes:
-
-1. **Semantic Versioning (semver)**:
-   - Parses X.Y.Z tuples with optional prerelease and build metadata
-   - Handles prerelease tags: alpha, beta, rc, dev, etc.
-   - Correctly orders: 1.0.0-alpha < 1.0.0-beta < 1.0.0-rc < 1.0.0
-
-2. **Numeric (MSI/EXE)**:
-   - Strict numeric-only parsing
-   - MSI: 3-part versions (major.minor.patch)
-   - EXE: 4-part versions (major.minor.patch.build)
-
-3. **Lexicographic**:
-   - Fallback string comparison for non-version-like strings
-   - Useful for build IDs, timestamps, etc.
+Versions are compared using semver-like parsing: X.Y.Z tuples with optional
+prerelease and build metadata. Handles prerelease tags (alpha, beta, rc, dev)
+and correctly orders 1.0.0-alpha < 1.0.0-beta < 1.0.0-rc < 1.0.0. Falls back
+to lexicographic comparison for non-version-like strings (build IDs, timestamps).
 
 Example:
     Basic version comparison:
         ```python
-        from napt.versioning import compare_any, is_newer_any
+        from napt.versioning import compare, is_newer
 
         # Compare versions (returns 1 for newer, 0 for equal, -1 for older)
-        result = compare_any("1.2.0", "1.1.9")  # Returns: 1
+        result = compare("1.2.0", "1.1.9")  # Returns: 1
 
         # Check if version is newer
-        is_newer = is_newer_any("1.2.0", "1.1.9")  # Returns: True
+        is_newer_version = is_newer("1.2.0", "1.1.9")  # Returns: True
         ```
 
     Prerelease handling:
         ```python
         # rc is newer than beta
-        compare_any("1.0.0-rc.1", "1.0.0-beta.5")  # Returns: 1
+        compare("1.0.0-rc.1", "1.0.0-beta.5")  # Returns: 1
 
         # Release is newer than prerelease
-        compare_any("1.0.0", "1.0.0-rc.1")  # Returns: 1
-        ```
-
-    MSI version extraction:
-        ```python
-        from pathlib import Path
-        from napt.versioning.msi import version_from_msi_product_version
-
-        discovered = version_from_msi_product_version(Path("installer.msi"))
-        print(discovered.version)  # e.g., "1.2.3"
+        compare("1.0.0", "1.0.0-rc.1")  # Returns: 1
         ```
 
     MSI metadata extraction:
         ```python
         from pathlib import Path
-        from napt.versioning.msi import extract_msi_metadata
+        from napt.versioning import extract_msi_metadata
 
         metadata = extract_msi_metadata(Path("installer.msi"))
         print(f"{metadata.product_name} {metadata.product_version} ({metadata.architecture})")
@@ -91,15 +70,12 @@ Note:
 
 """
 
-from .keys import (
-    DiscoveredVersion,
-    SourceHint,
-    compare_any,
-    is_newer_any,
-    version_key_any,
+from .compare import (
+    compare,
+    is_newer,
+    version_key,
 )
 from .msi import (
     MSIMetadata,
-    architecture_from_template,
     extract_msi_metadata,
 )
