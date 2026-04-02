@@ -21,7 +21,7 @@ import pytest
 from napt.build.manager import (
     _apply_branding,
     _copy_installer,
-    _copy_psadt_pristine,
+    _copy_psadt_template,
     _create_build_directory,
     _find_installer_file,
     _write_build_manifest,
@@ -156,7 +156,7 @@ class TestCopyPSADTPristine:
         build_dir = tmp_path / "build"
         build_dir.mkdir()
 
-        _copy_psadt_pristine(fake_psadt_template, build_dir)
+        _copy_psadt_template(fake_psadt_template, build_dir)
 
         # Verify v4 structure copied
         assert (build_dir / "PSAppDeployToolkit" / "PSAppDeployToolkit.psd1").exists()
@@ -175,7 +175,7 @@ class TestCopyPSADTPristine:
         from napt.exceptions import PackagingError
 
         with pytest.raises(PackagingError, match="PSADT.*not found"):
-            _copy_psadt_pristine(cache_dir, build_dir)
+            _copy_psadt_template(cache_dir, build_dir)
 
 
 class TestCopyInstaller:
@@ -207,7 +207,7 @@ class TestApplyBranding:
         # Create build with fake template
         build_dir = tmp_path / "build"
         build_dir.mkdir()
-        _copy_psadt_pristine(fake_psadt_template, build_dir)
+        _copy_psadt_template(fake_psadt_template, build_dir)
 
         brand_dir, config = fake_brand_pack
 

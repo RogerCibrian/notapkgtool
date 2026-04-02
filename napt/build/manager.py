@@ -19,7 +19,7 @@ packages from recipes and downloaded installers.
 
 Design Principles:
     - Filesystem is source of truth for version information
-    - Entire PSADT Template_v4 structure copied pristine
+    - Entire PSADT Template_v4 structure copied unmodified
     - Invoke-AppDeployToolkit.ps1 is generated from template (not copied)
     - Build directories are versioned: {app_id}/{version}/
     - Branding applied by replacing files in root Assets/ directory (v4 structure)
@@ -309,8 +309,8 @@ def _create_build_directory(base_dir: Path, app_id: str, version: str) -> Path:
     return packagefiles_dir
 
 
-def _copy_psadt_pristine(psadt_cache_dir: Path, build_dir: Path) -> None:
-    """Copy PSADT template files from cache to build directory (pristine, unmodified).
+def _copy_psadt_template(psadt_cache_dir: Path, build_dir: Path) -> None:
+    """Copy PSADT template files from cache to build directory without modification.
 
     Copies the entire v4 template structure including:
     - PSAppDeployToolkit/ (module)
@@ -778,7 +778,7 @@ def build_package(
     3. Extracts version from installer (filesystem is truth)
     4. Gets/downloads PSADT release
     5. Creates build directory structure
-    6. Copies PSADT files (pristine)
+    6. Copies PSADT files unmodified
     7. Generates Invoke-AppDeployToolkit.ps1 from template
     8. Copies installer to Files/
     9. Applies custom branding
@@ -821,7 +821,7 @@ def build_package(
         Requires installer to be downloaded first (run 'napt discover').
         Version extracted from installer file, not state cache.
         Overwrites existing build directory if it exists.
-        PSADT files are copied pristine from cache.
+        PSADT files are copied unmodified from cache.
         Invoke-AppDeployToolkit.ps1 is generated (not copied).
         Scripts are generated as siblings to the packagefiles directory
         (not included in .intunewin package - must be uploaded separately to Intune).
@@ -888,8 +888,8 @@ def build_package(
     logger.step(5, 8, "Creating build structure...")
     build_dir = _create_build_directory(output_dir, app_id, version)
 
-    # Copy PSADT files (pristine)
-    _copy_psadt_pristine(psadt_cache_dir, build_dir)
+    # Copy PSADT files
+    _copy_psadt_template(psadt_cache_dir, build_dir)
 
     # Generate Invoke-AppDeployToolkit.ps1
     from .template import generate_invoke_script

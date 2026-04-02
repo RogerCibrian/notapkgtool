@@ -20,7 +20,7 @@ import pytest
 from napt.build.manager import (
     _apply_branding,
     _copy_installer,
-    _copy_psadt_pristine,
+    _copy_psadt_template,
 )
 
 
@@ -72,7 +72,7 @@ class TestCopyPSADTWithRealTemplate:
         build_dir = tmp_path / "build"
         build_dir.mkdir()
 
-        _copy_psadt_pristine(real_psadt_template, build_dir)
+        _copy_psadt_template(real_psadt_template, build_dir)
 
         # Verify all root files copied
         assert (build_dir / "Invoke-AppDeployToolkit.exe").exists()
@@ -94,7 +94,7 @@ class TestCopyPSADTWithRealTemplate:
         build_dir = tmp_path / "build"
         build_dir.mkdir()
 
-        _copy_psadt_pristine(real_psadt_template, build_dir)
+        _copy_psadt_template(real_psadt_template, build_dir)
 
         module_dir = build_dir / "PSAppDeployToolkit"
         assert (module_dir / "PSAppDeployToolkit.psd1").exists()
@@ -109,7 +109,7 @@ class TestCopyPSADTWithRealTemplate:
         build_dir = tmp_path / "build"
         build_dir.mkdir()
 
-        _copy_psadt_pristine(real_psadt_template, build_dir)
+        _copy_psadt_template(real_psadt_template, build_dir)
 
         files_dir = build_dir / "Files"
         assert files_dir.exists()
@@ -128,7 +128,7 @@ class TestBrandingWithRealTemplate:
         build_dir.mkdir()
 
         # Copy real template
-        _copy_psadt_pristine(real_psadt_template, build_dir)
+        _copy_psadt_template(real_psadt_template, build_dir)
 
         brand_dir, config = fake_brand_pack
 
@@ -153,7 +153,7 @@ class TestBrandingWithRealTemplate:
         build_dir = tmp_path / "build"
         build_dir.mkdir()
 
-        _copy_psadt_pristine(real_psadt_template, build_dir)
+        _copy_psadt_template(real_psadt_template, build_dir)
         brand_dir, config = fake_brand_pack
 
         _apply_branding(config, build_dir)
@@ -175,7 +175,7 @@ class TestInstallerCopyWithRealTemplate:
         build_dir.mkdir()
 
         # Copy real template
-        _copy_psadt_pristine(real_psadt_template, build_dir)
+        _copy_psadt_template(real_psadt_template, build_dir)
 
         # Create fake installer
         installer = tmp_path / "app.msi"
@@ -196,7 +196,7 @@ class TestInstallerCopyWithRealTemplate:
         build_dir = tmp_path / "build"
         build_dir.mkdir()
 
-        _copy_psadt_pristine(real_psadt_template, build_dir)
+        _copy_psadt_template(real_psadt_template, build_dir)
 
         files_dir = build_dir / "Files"
         assert files_dir.is_dir()
