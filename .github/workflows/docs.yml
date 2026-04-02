@@ -25,7 +25,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install mkdocs mkdocs-material 'mkdocstrings[python]'
+          pip install mkdocs mkdocs-material 'mkdocstrings[python]' ruff
 
       - name: Build and deploy documentation
         run: |

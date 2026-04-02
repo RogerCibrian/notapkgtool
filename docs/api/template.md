@@ -1,0 +1,3 @@
+# template
+
+::: napt.build.template

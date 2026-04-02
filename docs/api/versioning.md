@@ -1,6 +1,6 @@
 # versioning
 
-::: napt.versioning.keys
+::: napt.versioning.compare
 
 ::: napt.versioning.msi
 
