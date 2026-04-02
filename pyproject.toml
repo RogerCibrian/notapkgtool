@@ -100,6 +100,7 @@ force-sort-within-sections = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--basetemp=.pytest-tmp"
+norecursedirs = [".git", ".tox", "dist", ".eggs", "*.egg", ".venv", "venv"]
 markers = [
     "integration: Slow tests requiring network and real external dependencies",
 ]

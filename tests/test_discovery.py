@@ -19,8 +19,10 @@ from napt.discovery.api_github import ApiGithubStrategy
 from napt.discovery.api_json import ApiJsonStrategy
 from napt.discovery.base import get_strategy, register_strategy
 from napt.discovery.url_download import UrlDownloadStrategy
+from napt.discovery.web_scrape import WebScrapeStrategy
 from napt.exceptions import ConfigError, NetworkError
 from napt.versioning import DiscoveredVersion
+from napt.versioning.keys import VersionInfo
 
 
 class TestStrategyRegistry:
@@ -341,9 +343,6 @@ class TestVersionFirstStrategies:
 
     def test_web_scrape_with_css_selector(self):
         """Test web_scrape.get_version_info() with CSS selector."""
-        from napt.discovery.web_scrape import WebScrapeStrategy
-        from napt.versioning.keys import VersionInfo
-
         strategy = WebScrapeStrategy()
         app_config = {
             "discovery": {
@@ -378,9 +377,6 @@ class TestVersionFirstStrategies:
 
     def test_web_scrape_with_regex_pattern(self):
         """Test web_scrape.get_version_info() with regex fallback."""
-        from napt.discovery.web_scrape import WebScrapeStrategy
-        from napt.versioning.keys import VersionInfo
-
         strategy = WebScrapeStrategy()
         app_config = {
             "discovery": {
@@ -408,8 +404,6 @@ class TestVersionFirstStrategies:
     def test_api_github_get_version_info(self):
         """Test api_github.get_version_info() returns VersionInfo without
         downloading."""
-        from napt.versioning.keys import VersionInfo
-
         strategy = ApiGithubStrategy()
         app_config = {
             "discovery": {
@@ -445,8 +439,6 @@ class TestVersionFirstStrategies:
 
     def test_api_json_get_version_info(self):
         """Test api_json.get_version_info() returns VersionInfo without downloading."""
-        from napt.versioning.keys import VersionInfo
-
         strategy = ApiJsonStrategy()
         app_config = {
             "discovery": {
@@ -470,3 +462,659 @@ class TestVersionFirstStrategies:
         assert version_info.version == "1.2.3"
         assert version_info.download_url == "https://example.com/installer.msi"
         assert version_info.source == "api_json"
+
+
+# =============================================================================
+# WebScrapeStrategy — error cases and validate_config
+# =============================================================================
+
+
+class TestWebScrapeStrategyErrors:
+    """Tests error handling in WebScrapeStrategy.get_version_info()."""
+
+    def test_missing_page_url_raises(self):
+        """Tests that missing page_url raises ConfigError."""
+        strategy = WebScrapeStrategy()
+        with pytest.raises(ConfigError, match="requires 'discovery.page_url'"):
+            strategy.get_version_info(
+                {"discovery": {"link_selector": "a", "version_pattern": "."}}
+            )
+
+    def test_missing_link_finding_method_raises(self):
+        """Tests that omitting both link_selector and link_pattern raises ConfigError."""
+        strategy = WebScrapeStrategy()
+        with pytest.raises(ConfigError, match="link_selector.*link_pattern"):
+            strategy.get_version_info(
+                {
+                    "discovery": {
+                        "page_url": "https://example.com",
+                        "version_pattern": r"(\d+)",
+                    }
+                }
+            )
+
+    def test_missing_version_pattern_raises(self):
+        """Tests that missing version_pattern raises ConfigError."""
+        strategy = WebScrapeStrategy()
+        with pytest.raises(ConfigError, match="requires 'discovery.version_pattern'"):
+            strategy.get_version_info(
+                {
+                    "discovery": {
+                        "page_url": "https://example.com",
+                        "link_selector": "a",
+                    }
+                }
+            )
+
+    def test_page_fetch_failure_raises(self):
+        """Tests that a non-2xx page response raises NetworkError."""
+        strategy = WebScrapeStrategy()
+        app_config = {
+            "discovery": {
+                "page_url": "https://example.com/dl.html",
+                "link_selector": "a",
+                "version_pattern": r"(\d+)",
+            }
+        }
+        with requests_mock.Mocker() as m:
+            m.get("https://example.com/dl.html", status_code=503)
+            with pytest.raises(NetworkError, match="Failed to fetch page"):
+                strategy.get_version_info(app_config)
+
+    def test_css_selector_not_found_raises(self):
+        """Tests that a CSS selector matching nothing raises ConfigError."""
+        strategy = WebScrapeStrategy()
+        app_config = {
+            "discovery": {
+                "page_url": "https://example.com/dl.html",
+                "link_selector": 'a[href$=".msi"]',
+                "version_pattern": r"(\d+)",
+            }
+        }
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://example.com/dl.html",
+                text="<html><body>no links here</body></html>",
+            )
+            with pytest.raises(ConfigError, match="did not match any elements"):
+                strategy.get_version_info(app_config)
+
+    def test_regex_link_pattern_not_found_raises(self):
+        """Tests that a regex link_pattern matching nothing raises ConfigError."""
+        strategy = WebScrapeStrategy()
+        app_config = {
+            "discovery": {
+                "page_url": "https://example.com/dl.html",
+                "link_pattern": r'href="(/files/nomatch\.msi)"',
+                "version_pattern": r"(\d+)",
+            }
+        }
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://example.com/dl.html", text="<html><body>nothing</body></html>"
+            )
+            with pytest.raises(ConfigError, match="did not match anything"):
+                strategy.get_version_info(app_config)
+
+    def test_version_pattern_no_match_raises(self):
+        """Tests that a version_pattern not matching the URL raises ConfigError."""
+        strategy = WebScrapeStrategy()
+        app_config = {
+            "discovery": {
+                "page_url": "https://example.com/dl.html",
+                "link_selector": "a",
+                "version_pattern": r"no_match_here(\d+)",
+            }
+        }
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://example.com/dl.html",
+                text='<a href="/files/installer.msi">Download</a>',
+            )
+            with pytest.raises(ConfigError, match="did not match"):
+                strategy.get_version_info(app_config)
+
+    def test_version_format_with_multiple_groups(self):
+        """Tests that version_format combines multiple capture groups correctly."""
+        strategy = WebScrapeStrategy()
+        app_config = {
+            "discovery": {
+                "page_url": "https://example.com/dl.html",
+                "link_selector": "a",
+                "version_pattern": r"v(\d+)\.(\d+)\.(\d+)",
+                "version_format": "{0}.{1}.{2}",
+            }
+        }
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://example.com/dl.html",
+                text='<a href="/app-v3.14.1-x64.msi">Download</a>',
+            )
+            version_info = strategy.get_version_info(app_config)
+        assert version_info.version == "3.14.1"
+        assert version_info.source == "web_scrape"
+
+
+class TestWebScrapeValidateConfig:
+    """Tests for WebScrapeStrategy.validate_config()."""
+
+    def test_valid_config_returns_empty(self):
+        """Tests that a fully valid config returns no errors."""
+        strategy = WebScrapeStrategy()
+        errors = strategy.validate_config(
+            {
+                "discovery": {
+                    "page_url": "https://example.com",
+                    "link_selector": "a",
+                    "version_pattern": r"v([0-9.]+)",
+                }
+            }
+        )
+        assert errors == []
+
+    def test_missing_page_url(self):
+        """Tests that missing page_url is reported."""
+        strategy = WebScrapeStrategy()
+        errors = strategy.validate_config(
+            {"discovery": {"link_selector": "a", "version_pattern": "."}}
+        )
+        assert any("page_url" in e for e in errors)
+
+    def test_missing_link_methods(self):
+        """Tests that missing both link fields is reported."""
+        strategy = WebScrapeStrategy()
+        errors = strategy.validate_config(
+            {
+                "discovery": {
+                    "page_url": "https://example.com",
+                    "version_pattern": ".",
+                }
+            }
+        )
+        assert any("link_selector" in e or "link_pattern" in e for e in errors)
+
+    def test_missing_version_pattern(self):
+        """Tests that missing version_pattern is reported."""
+        strategy = WebScrapeStrategy()
+        errors = strategy.validate_config(
+            {"discovery": {"page_url": "https://example.com", "link_selector": "a"}}
+        )
+        assert any("version_pattern" in e for e in errors)
+
+    def test_invalid_version_pattern_regex(self):
+        """Tests that an invalid version_pattern regex is reported."""
+        strategy = WebScrapeStrategy()
+        errors = strategy.validate_config(
+            {
+                "discovery": {
+                    "page_url": "https://example.com",
+                    "link_selector": "a",
+                    "version_pattern": "[unclosed",
+                }
+            }
+        )
+        assert any("regex" in e.lower() or "Invalid" in e for e in errors)
+
+    def test_invalid_link_pattern_regex(self):
+        """Tests that an invalid link_pattern regex is reported."""
+        strategy = WebScrapeStrategy()
+        errors = strategy.validate_config(
+            {
+                "discovery": {
+                    "page_url": "https://example.com",
+                    "link_pattern": "[unclosed",
+                    "version_pattern": r"(\d+)",
+                }
+            }
+        )
+        assert any("regex" in e.lower() or "Invalid" in e for e in errors)
+
+
+# =============================================================================
+# ApiGithubStrategy — error cases and validate_config
+# =============================================================================
+
+
+class TestApiGithubStrategyErrors:
+    """Tests error handling in ApiGithubStrategy.get_version_info()."""
+
+    def test_missing_repo_raises(self):
+        """Tests that missing repo raises ConfigError."""
+        strategy = ApiGithubStrategy()
+        with pytest.raises(ConfigError, match="requires 'discovery.repo'"):
+            strategy.get_version_info({"discovery": {"asset_pattern": ".*"}})
+
+    def test_invalid_repo_format_raises(self):
+        """Tests that repo without slash raises ConfigError."""
+        strategy = ApiGithubStrategy()
+        with pytest.raises(ConfigError, match="Invalid repo format"):
+            strategy.get_version_info(
+                {"discovery": {"repo": "noslash", "asset_pattern": ".*"}}
+            )
+
+    def test_missing_asset_pattern_raises(self):
+        """Tests that missing asset_pattern raises ConfigError."""
+        strategy = ApiGithubStrategy()
+        with pytest.raises(ConfigError, match="requires 'discovery.asset_pattern'"):
+            strategy.get_version_info({"discovery": {"repo": "owner/repo"}})
+
+    def test_repo_not_found_raises(self):
+        """Tests that a 404 API response raises NetworkError."""
+        strategy = ApiGithubStrategy()
+        app_config = {"discovery": {"repo": "owner/repo", "asset_pattern": ".*"}}
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://api.github.com/repos/owner/repo/releases/latest",
+                status_code=404,
+            )
+            with pytest.raises(NetworkError, match="not found"):
+                strategy.get_version_info(app_config)
+
+    def test_rate_limited_raises(self):
+        """Tests that a 403 API response raises NetworkError mentioning rate limit."""
+        strategy = ApiGithubStrategy()
+        app_config = {"discovery": {"repo": "owner/repo", "asset_pattern": ".*"}}
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://api.github.com/repos/owner/repo/releases/latest",
+                status_code=403,
+            )
+            with pytest.raises(NetworkError, match="rate limit"):
+                strategy.get_version_info(app_config)
+
+    def test_prerelease_rejected_when_flag_false(self):
+        """Tests that a prerelease latest release is rejected when prerelease=False."""
+        strategy = ApiGithubStrategy()
+        app_config = {
+            "discovery": {
+                "repo": "owner/repo",
+                "asset_pattern": r".*\.msi$",
+                "prerelease": False,
+            }
+        }
+        release_data = {
+            "tag_name": "v2.0.0-beta",
+            "prerelease": True,
+            "assets": [
+                {
+                    "name": "installer.msi",
+                    "browser_download_url": "https://example.com/installer.msi",
+                }
+            ],
+        }
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://api.github.com/repos/owner/repo/releases/latest",
+                json=release_data,
+            )
+            with pytest.raises(NetworkError, match="pre-release"):
+                strategy.get_version_info(app_config)
+
+    def test_no_assets_raises(self):
+        """Tests that a release with no assets raises NetworkError."""
+        strategy = ApiGithubStrategy()
+        app_config = {"discovery": {"repo": "owner/repo", "asset_pattern": r".*\.msi$"}}
+        release_data = {"tag_name": "v1.0.0", "prerelease": False, "assets": []}
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://api.github.com/repos/owner/repo/releases/latest",
+                json=release_data,
+            )
+            with pytest.raises(NetworkError, match="has no assets"):
+                strategy.get_version_info(app_config)
+
+    def test_no_matching_asset_raises(self):
+        """Tests that no asset matching the pattern raises ConfigError."""
+        strategy = ApiGithubStrategy()
+        app_config = {"discovery": {"repo": "owner/repo", "asset_pattern": r".*\.msi$"}}
+        release_data = {
+            "tag_name": "v1.0.0",
+            "prerelease": False,
+            "assets": [
+                {
+                    "name": "installer.exe",
+                    "browser_download_url": "https://example.com/installer.exe",
+                }
+            ],
+        }
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://api.github.com/repos/owner/repo/releases/latest",
+                json=release_data,
+            )
+            with pytest.raises(ConfigError, match="No assets matched"):
+                strategy.get_version_info(app_config)
+
+    def test_named_version_capture_group(self):
+        """Tests that a named 'version' capture group is used correctly."""
+        strategy = ApiGithubStrategy()
+        app_config = {
+            "discovery": {
+                "repo": "owner/repo",
+                "asset_pattern": r".*\.msi$",
+                "version_pattern": r"release-(?P<version>[0-9.]+)",
+            }
+        }
+        release_data = {
+            "tag_name": "release-3.5.0",
+            "prerelease": False,
+            "assets": [
+                {
+                    "name": "installer.msi",
+                    "browser_download_url": "https://example.com/installer.msi",
+                }
+            ],
+        }
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://api.github.com/repos/owner/repo/releases/latest",
+                json=release_data,
+            )
+            version_info = strategy.get_version_info(app_config)
+        assert version_info.version == "3.5.0"
+        assert version_info.source == "api_github"
+
+
+class TestApiGithubValidateConfig:
+    """Tests for ApiGithubStrategy.validate_config()."""
+
+    def test_valid_config_returns_empty(self):
+        """Tests that a fully valid config returns no errors."""
+        strategy = ApiGithubStrategy()
+        errors = strategy.validate_config(
+            {"discovery": {"repo": "owner/repo", "asset_pattern": r".*\.msi$"}}
+        )
+        assert errors == []
+
+    def test_missing_repo(self):
+        """Tests that missing repo is reported."""
+        strategy = ApiGithubStrategy()
+        errors = strategy.validate_config({"discovery": {"asset_pattern": r".*\.msi$"}})
+        assert any("repo" in e for e in errors)
+
+    def test_invalid_repo_format(self):
+        """Tests that repo without slash is reported."""
+        strategy = ApiGithubStrategy()
+        errors = strategy.validate_config(
+            {"discovery": {"repo": "noslash", "asset_pattern": r".*\.msi$"}}
+        )
+        assert any("owner/repo" in e for e in errors)
+
+    def test_missing_asset_pattern(self):
+        """Tests that missing asset_pattern is reported."""
+        strategy = ApiGithubStrategy()
+        errors = strategy.validate_config({"discovery": {"repo": "owner/repo"}})
+        assert any("asset_pattern" in e for e in errors)
+
+    def test_invalid_version_pattern_regex(self):
+        """Tests that an invalid version_pattern regex is reported."""
+        strategy = ApiGithubStrategy()
+        errors = strategy.validate_config(
+            {
+                "discovery": {
+                    "repo": "owner/repo",
+                    "asset_pattern": r".*",
+                    "version_pattern": "[unclosed",
+                }
+            }
+        )
+        assert any("regex" in e.lower() or "Invalid" in e for e in errors)
+
+
+# =============================================================================
+# ApiJsonStrategy — error cases and validate_config
+# =============================================================================
+
+
+class TestApiJsonStrategyErrors:
+    """Tests error handling in ApiJsonStrategy.get_version_info()."""
+
+    def test_missing_api_url_raises(self):
+        """Tests that missing api_url raises ConfigError."""
+        strategy = ApiJsonStrategy()
+        with pytest.raises(ConfigError, match="requires 'discovery.api_url'"):
+            strategy.get_version_info(
+                {
+                    "discovery": {
+                        "version_path": "version",
+                        "download_url_path": "url",
+                    }
+                }
+            )
+
+    def test_missing_version_path_raises(self):
+        """Tests that missing version_path raises ConfigError."""
+        strategy = ApiJsonStrategy()
+        with pytest.raises(ConfigError, match="requires 'discovery.version_path'"):
+            strategy.get_version_info(
+                {
+                    "discovery": {
+                        "api_url": "https://api.example.com",
+                        "download_url_path": "url",
+                    }
+                }
+            )
+
+    def test_missing_download_url_path_raises(self):
+        """Tests that missing download_url_path raises ConfigError."""
+        strategy = ApiJsonStrategy()
+        with pytest.raises(ConfigError, match="requires 'discovery.download_url_path'"):
+            strategy.get_version_info(
+                {
+                    "discovery": {
+                        "api_url": "https://api.example.com",
+                        "version_path": "version",
+                    }
+                }
+            )
+
+    def test_http_error_raises(self):
+        """Tests that a non-2xx API response raises NetworkError."""
+        strategy = ApiJsonStrategy()
+        app_config = {
+            "discovery": {
+                "api_url": "https://api.example.com/latest",
+                "version_path": "version",
+                "download_url_path": "url",
+            }
+        }
+        with requests_mock.Mocker() as m:
+            m.get("https://api.example.com/latest", status_code=500)
+            with pytest.raises(NetworkError, match="API request failed"):
+                strategy.get_version_info(app_config)
+
+    def test_invalid_json_response_raises(self):
+        """Tests that a non-JSON response raises NetworkError."""
+        strategy = ApiJsonStrategy()
+        app_config = {
+            "discovery": {
+                "api_url": "https://api.example.com/latest",
+                "version_path": "version",
+                "download_url_path": "url",
+            }
+        }
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://api.example.com/latest",
+                text="not json at all",
+                status_code=200,
+            )
+            with pytest.raises(NetworkError, match="Invalid JSON"):
+                strategy.get_version_info(app_config)
+
+    def test_version_path_not_found_raises(self):
+        """Tests that a version_path that matches nothing raises ConfigError."""
+        strategy = ApiJsonStrategy()
+        app_config = {
+            "discovery": {
+                "api_url": "https://api.example.com/latest",
+                "version_path": "nonexistent_field",
+                "download_url_path": "download_url",
+            }
+        }
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://api.example.com/latest",
+                json={"version": "1.0.0", "download_url": "https://example.com/f.msi"},
+            )
+            with pytest.raises(ConfigError, match="did not match"):
+                strategy.get_version_info(app_config)
+
+    def test_post_method(self):
+        """Tests that method=POST sends a POST request."""
+        strategy = ApiJsonStrategy()
+        app_config = {
+            "discovery": {
+                "api_url": "https://api.example.com/query",
+                "version_path": "version",
+                "download_url_path": "download_url",
+                "method": "POST",
+                "body": {"platform": "windows"},
+            }
+        }
+        with requests_mock.Mocker() as m:
+            m.post(
+                "https://api.example.com/query",
+                json={
+                    "version": "2.0.0",
+                    "download_url": "https://example.com/v2.msi",
+                },
+            )
+            version_info = strategy.get_version_info(app_config)
+        assert version_info.version == "2.0.0"
+        assert version_info.source == "api_json"
+
+    def test_env_var_header_expansion(self, monkeypatch):
+        """Tests that ${VAR} placeholders in headers are expanded from env."""
+        monkeypatch.setenv("TEST_API_TOKEN", "secret123")
+        strategy = ApiJsonStrategy()
+        app_config = {
+            "discovery": {
+                "api_url": "https://api.example.com/latest",
+                "version_path": "version",
+                "download_url_path": "download_url",
+                "headers": {"Authorization": "${TEST_API_TOKEN}"},
+            }
+        }
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://api.example.com/latest",
+                json={
+                    "version": "1.0.0",
+                    "download_url": "https://example.com/file.msi",
+                },
+            )
+            version_info = strategy.get_version_info(app_config)
+            assert m.last_request.headers.get("Authorization") == "secret123"
+        assert version_info.version == "1.0.0"
+
+    def test_nested_json_path(self):
+        """Tests that nested JSONPath expressions extract values correctly."""
+        strategy = ApiJsonStrategy()
+        app_config = {
+            "discovery": {
+                "api_url": "https://api.example.com/latest",
+                "version_path": "release.version",
+                "download_url_path": "release.windows.x64",
+            }
+        }
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://api.example.com/latest",
+                json={
+                    "release": {
+                        "version": "3.1.4",
+                        "windows": {"x64": "https://example.com/app-3.1.4-x64.msi"},
+                    }
+                },
+            )
+            version_info = strategy.get_version_info(app_config)
+        assert version_info.version == "3.1.4"
+        assert "3.1.4" in version_info.download_url
+
+
+class TestApiJsonValidateConfig:
+    """Tests for ApiJsonStrategy.validate_config()."""
+
+    def test_valid_config_returns_empty(self):
+        """Tests that a fully valid config returns no errors."""
+        strategy = ApiJsonStrategy()
+        errors = strategy.validate_config(
+            {
+                "discovery": {
+                    "api_url": "https://api.example.com/latest",
+                    "version_path": "version",
+                    "download_url_path": "download_url",
+                }
+            }
+        )
+        assert errors == []
+
+    def test_missing_api_url(self):
+        """Tests that missing api_url is reported."""
+        strategy = ApiJsonStrategy()
+        errors = strategy.validate_config(
+            {
+                "discovery": {
+                    "version_path": "version",
+                    "download_url_path": "url",
+                }
+            }
+        )
+        assert any("api_url" in e for e in errors)
+
+    def test_missing_version_path(self):
+        """Tests that missing version_path is reported."""
+        strategy = ApiJsonStrategy()
+        errors = strategy.validate_config(
+            {
+                "discovery": {
+                    "api_url": "https://api.example.com",
+                    "download_url_path": "url",
+                }
+            }
+        )
+        assert any("version_path" in e for e in errors)
+
+    def test_missing_download_url_path(self):
+        """Tests that missing download_url_path is reported."""
+        strategy = ApiJsonStrategy()
+        errors = strategy.validate_config(
+            {
+                "discovery": {
+                    "api_url": "https://api.example.com",
+                    "version_path": "version",
+                }
+            }
+        )
+        assert any("download_url_path" in e for e in errors)
+
+    def test_invalid_method(self):
+        """Tests that an invalid HTTP method is reported."""
+        strategy = ApiJsonStrategy()
+        errors = strategy.validate_config(
+            {
+                "discovery": {
+                    "api_url": "https://api.example.com",
+                    "version_path": "version",
+                    "download_url_path": "url",
+                    "method": "DELETE",
+                }
+            }
+        )
+        assert any("method" in e for e in errors)
+
+    def test_headers_not_dict_reported(self):
+        """Tests that a non-dict headers value is reported."""
+        strategy = ApiJsonStrategy()
+        errors = strategy.validate_config(
+            {
+                "discovery": {
+                    "api_url": "https://api.example.com",
+                    "version_path": "version",
+                    "download_url_path": "url",
+                    "headers": "not-a-dict",
+                }
+            }
+        )
+        assert any("headers" in e for e in errors)

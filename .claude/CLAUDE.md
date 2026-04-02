@@ -20,8 +20,11 @@
 ```powershell
 .venv\Scripts\python.exe -m ruff check --fix napt/ tests/
 .venv\Scripts\python.exe -m black napt/ tests/
-.venv\Scripts\python.exe -m pytest tests/
+.venv\Scripts\python.exe -m pytest tests/ -m "not integration"   # unit tests only (fast)
+.venv\Scripts\python.exe -m pytest tests/                        # all tests including integration
 ```
+
+**Integration tests** (`tests/integration/`) require network access and download real dependencies. They are marked `@pytest.mark.integration`. Run unit tests during development; run the full suite before opening a PR.
 
 **Never use `&&`** in PowerShell 5.1. Use `;` or separate commands.
 
