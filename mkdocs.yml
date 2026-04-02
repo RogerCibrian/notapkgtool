@@ -82,22 +82,25 @@ nav:
   - Developer Reference:
     - Overview: api/index.md
     - cli: api/cli.md
-    - core: api/core.md
-    - detection: api/detection.md
-    - requirements: api/requirements.md
     - exceptions: api/exceptions.md
     - logging: api/logging.md
     - results: api/results.md
     - validation: api/validation.md
-    - Modules:
-      - build: api/build.md
-      - config: api/config.md
+    - build:
+      - manager: api/build.md
+      - template: api/template.md
+      - packager: api/packager.md
+      - detection: api/detection.md
+      - requirements: api/requirements.md
+    - config: api/config.md
+    - discovery:
       - discovery: api/discovery.md
-      - download: api/download.md
-      - upload: api/upload.md
-      - psadt: api/psadt.md
-      - state: api/state.md
-      - versioning: api/versioning.md
+      - manager: api/core.md
+    - download: api/download.md
+    - psadt: api/psadt.md
+    - state: api/state.md
+    - upload: api/upload.md
+    - versioning: api/versioning.md
   - About:
     - Changelog: changelog.md
     - Roadmap: roadmap.md

@@ -109,10 +109,6 @@ import yaml
 from napt.config.defaults import DEFAULT_CONFIG
 from napt.exceptions import ConfigError
 
-# -------------------------------
-# Data types
-# -------------------------------
-
 
 @dataclass(frozen=True)
 class LoadContext:
@@ -125,11 +121,6 @@ class LoadContext:
     vendor_name: str | None
     org_defaults_path: Path | None
     vendor_defaults_path: Path | None
-
-
-# -------------------------------
-# YAML helpers
-# -------------------------------
 
 
 def _load_yaml_file(p: Path) -> Any:
@@ -154,11 +145,6 @@ def _load_yaml_file(p: Path) -> Any:
     if data is None:
         raise ConfigError(f"YAML file is empty: {p}")
     return data
-
-
-# -------------------------------
-# Merge logic
-# -------------------------------
 
 
 def _deep_merge_dicts(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
@@ -187,11 +173,6 @@ def _deep_merge_dicts(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str
             # Replace lists and scalars entirely
             result[k] = v
     return result
-
-
-# -------------------------------
-# Defaults discovery
-# -------------------------------
 
 
 def _find_defaults_root(start_dir: Path) -> Path | None:
@@ -245,11 +226,6 @@ def _detect_vendor(recipe_path: Path, recipe_obj: dict[str, Any]) -> str | None:
     return parent_name or vendor_from_recipe
 
 
-# -------------------------------
-# Path resolution
-# -------------------------------
-
-
 def _resolve_known_paths(
     cfg: dict[str, Any], recipe_dir: Path, defaults_root: Path | None = None
 ) -> None:
@@ -283,11 +259,6 @@ def _resolve_known_paths(
         pass
 
 
-# -------------------------------
-# Dynamic injection
-# -------------------------------
-
-
 def _inject_dynamic_values(cfg: dict[str, Any]) -> None:
     """Injects dynamic fields that should be set at load/build time.
 
@@ -310,11 +281,6 @@ def _inject_dynamic_values(cfg: dict[str, Any]) -> None:
         logger.warning("CONFIG", f"Could not inject AppScriptDate: {err}")
 
 
-# -------------------------------
-# Verbose helpers
-# -------------------------------
-
-
 def _print_yaml_content(data: dict[str, Any], indent: int = 0) -> None:
     """Print YAML content in a readable format for debug mode."""
     import yaml
@@ -329,11 +295,6 @@ def _print_yaml_content(data: dict[str, Any], indent: int = 0) -> None:
     for line in yaml_str.split("\n"):
         if line.strip():  # Skip empty lines
             logger.debug("CONFIG", " " * indent + line)
-
-
-# -------------------------------
-# Public API
-# -------------------------------
 
 
 def load_effective_config(

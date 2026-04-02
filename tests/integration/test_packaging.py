@@ -55,13 +55,13 @@ class TestBuildStructureValidation:
 
     def test_verify_valid_real_build(self, real_psadt_template: Path, tmp_path: Path):
         """Test validation passes for real PSADT build."""
-        from napt.build.manager import _copy_psadt_pristine
+        from napt.build.manager import _copy_psadt_template
 
         build_dir = tmp_path / "build"
         build_dir.mkdir()
 
         # Create real build structure
-        _copy_psadt_pristine(real_psadt_template, build_dir)
+        _copy_psadt_template(real_psadt_template, build_dir)
 
         # Should not raise - real template has everything needed
         _verify_build_structure(build_dir)
@@ -70,12 +70,12 @@ class TestBuildStructureValidation:
         self, real_psadt_template: Path, tmp_path: Path
     ):
         """Test validation fails when Invoke-AppDeployToolkit.exe missing."""
-        from napt.build.manager import _copy_psadt_pristine
+        from napt.build.manager import _copy_psadt_template
 
         build_dir = tmp_path / "build"
         build_dir.mkdir()
 
-        _copy_psadt_pristine(real_psadt_template, build_dir)
+        _copy_psadt_template(real_psadt_template, build_dir)
 
         # Remove the exe
         (build_dir / "Invoke-AppDeployToolkit.exe").unlink()
@@ -91,12 +91,12 @@ class TestBuildStructureValidation:
         """Test validation fails when PSAppDeployToolkit directory missing."""
         import shutil
 
-        from napt.build.manager import _copy_psadt_pristine
+        from napt.build.manager import _copy_psadt_template
 
         build_dir = tmp_path / "build"
         build_dir.mkdir()
 
-        _copy_psadt_pristine(real_psadt_template, build_dir)
+        _copy_psadt_template(real_psadt_template, build_dir)
 
         # Remove PSAppDeployToolkit module
         shutil.rmtree(build_dir / "PSAppDeployToolkit")

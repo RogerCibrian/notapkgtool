@@ -17,12 +17,11 @@ import requests_mock
 
 from napt.discovery.api_github import ApiGithubStrategy
 from napt.discovery.api_json import ApiJsonStrategy
-from napt.discovery.base import get_strategy, register_strategy
+from napt.discovery.base import RemoteVersion, get_strategy, register_strategy
 from napt.discovery.url_download import UrlDownloadStrategy
 from napt.discovery.web_scrape import WebScrapeStrategy
 from napt.exceptions import ConfigError, NetworkError
 from napt.versioning.msi import MSIMetadata
-from napt.discovery.base import RemoteVersion
 
 
 class TestStrategyRegistry:
@@ -50,7 +49,7 @@ class TestStrategyRegistry:
         class CustomStrategy:
             def discover_version(self, app_config, output_dir):
                 return (
-                    DiscoveredVersion(version="1.0.0", source="custom"),
+                    RemoteVersion(version="1.0.0", source="custom"),
                     Path("/fake/path"),
                     "fakehash",
                     {},  # HTTP headers

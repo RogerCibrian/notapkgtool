@@ -44,6 +44,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `directories.discover`, `directories.build`, and `directories.package`.
     Update `defaults/org.yaml` if you set these keys
 
+### Fixed
+
+- Version cache check now uses semantic comparison instead of string equality,
+    so versions with a `v` prefix (e.g., `v1.2.3` vs `1.2.3`) are correctly
+    recognized as matching and won't re-download unnecessarily
+
 ## [0.4.0] - 2026-03-08
 
 ### Added

@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Core orchestration for NAPT.
+"""Discovery pipeline orchestration for NAPT.
 
-This module provides high-level orchestration functions that coordinate the
-complete workflow for recipe validation, package building, and deployment.
+This module provides high-level orchestration for the discovery workflow,
+coordinating config loading, strategy selection, version checking, downloading,
+and state management.
 
 Two-Path Architecture:
 
@@ -42,10 +43,10 @@ Design Principles:
 - Configuration is immutable once loaded
 
 Example:
-    Programmatic usage:
+    Basic version discovery:
         ```python
         from pathlib import Path
-        from napt.core import discover_recipe
+        from napt.discovery import discover_recipe
 
         result = discover_recipe(
             recipe_path=Path("recipes/Google/chrome.yaml"),
@@ -67,20 +68,21 @@ from pathlib import Path
 
 from napt import __version__
 from napt.config.loader import load_effective_config
-from napt.discovery import get_strategy
+from napt.discovery.base import get_strategy
 from napt.download import download_file
 from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
 from napt.results import DiscoverResult
 from napt.state import load_state, save_state
+from napt.versioning import is_newer
 
 
 def derive_file_path_from_url(url: str, output_dir: Path, app_id: str) -> Path:
-    """Derive file path from URL using same logic as download_file.
+    """Derives the expected local file path for a download URL.
 
-    This function ensures version-first strategies can locate cached files
-    without downloading by following the same naming convention as the
-    download module (app-scoped subdirectory).
+    Ensures version-first strategies can locate cached files without
+    downloading by following the same naming convention as the download
+    module (app-scoped subdirectory).
 
     Args:
         url: Download URL.
@@ -232,12 +234,6 @@ def discover_recipe(
         raise ConfigError(f"No 'discovery.strategy' defined for app: {app_name}")
 
     # 4. Get the strategy implementation
-    # Import strategies to ensure they're registered
-    import napt.discovery.api_github  # noqa: F401
-    import napt.discovery.api_json  # noqa: F401
-    import napt.discovery.url_download  # noqa: F401
-    import napt.discovery.web_scrape  # noqa: F401
-
     strategy = get_strategy(strategy_name)
 
     # Get cache for this recipe from state
@@ -264,10 +260,10 @@ def discover_recipe(
         version_info = strategy.get_version_info(config)
         download_url = version_info.download_url  # Save for state file
 
-        logger.verbose("DISCOVERY", f"Version discovered: {version_info.version}")
+        logger.info("DISCOVERY", f"Version discovered: {version_info.version}")
 
         # Check if we can use cached file (version match + file exists)
-        if cache and cache.get("known_version") == version_info.version:
+        if not is_newer(version_info.version, cache.get("known_version") if cache else None):
             # Derive file path from URL using same logic as download_file
             file_path = derive_file_path_from_url(
                 version_info.download_url, output_dir, app_id

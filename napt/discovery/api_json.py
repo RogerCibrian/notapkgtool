@@ -149,7 +149,7 @@ Example:
     From Python (using core orchestration):
         ```python
         from pathlib import Path
-        from napt.core import discover_recipe
+        from napt.discovery import discover_recipe
 
         # Automatically uses version-first optimization
         result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
@@ -175,8 +175,8 @@ from typing import Any
 from jsonpath_ng import parse as jsonpath_parse
 import requests
 
-from napt.exceptions import ConfigError, NetworkError
 from napt.discovery.base import RemoteVersion
+from napt.exceptions import ConfigError, NetworkError
 
 from .base import register_strategy
 

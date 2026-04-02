@@ -1,4 +1,3 @@
-# core
+# discovery.manager
 
-::: napt.core
-
+::: napt.discovery.manager

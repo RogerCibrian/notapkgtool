@@ -75,10 +75,6 @@ from typing import Any, Protocol
 
 from napt.exceptions import ConfigError
 
-# ----------------------------
-# Discovery DTOs
-# ----------------------------
-
 
 @dataclass(frozen=True)
 class RemoteVersion:
@@ -89,9 +85,6 @@ class RemoteVersion:
     fetching the file first. This allows the core pipeline to skip the download
     entirely when the version is unchanged.
 
-    Contrast with DiscoveredVersion (napt.versioning), which is produced after
-    a file has been obtained and its version extracted locally.
-
     Attributes:
         version: Raw version string (e.g., "140.0.7339.128").
         download_url: URL to download the installer.
@@ -101,11 +94,6 @@ class RemoteVersion:
     version: str
     download_url: str
     source: str
-
-
-# -------------------------------
-# Strategy Protocol
-# -------------------------------
 
 
 class DiscoveryStrategy(Protocol):
@@ -175,10 +163,6 @@ class DiscoveryStrategy(Protocol):
         """
         ...
 
-
-# -------------------------------
-# Strategy Registry
-# -------------------------------
 
 _STRATEGY_REGISTRY: dict[str, type[DiscoveryStrategy]] = {}
 

@@ -97,7 +97,7 @@ Example:
 From Python (using core orchestration):
     ```python
     from pathlib import Path
-    from napt.core import discover_recipe
+    from napt.discovery import discover_recipe
 
     # Automatically uses ETag optimization
     result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
