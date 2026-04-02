@@ -30,18 +30,6 @@ def tmp_test_dir(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def fixtures_dir() -> Path:
-    """Provide path to test fixtures directory."""
-    return Path(__file__).parent / "fixtures"
-
-
-@pytest.fixture
-def sample_yaml_path(fixtures_dir: Path) -> Path:
-    """Provide path to sample YAML fixture."""
-    return fixtures_dir / "test.yaml"
-
-
-@pytest.fixture
 def sample_recipe_data() -> dict[str, Any]:
     """
     Provide sample recipe configuration data.
@@ -67,18 +55,6 @@ def sample_recipe_data() -> dict[str, Any]:
 
 
 @pytest.fixture
-def sample_org_defaults() -> dict[str, Any]:
-    """Provide sample organization defaults."""
-    return {
-        "apiVersion": "napt/v1",
-        "psadt": {
-            "release": "latest",
-            "cache_dir": "cache/psadt",
-        },
-    }
-
-
-@pytest.fixture
 def create_yaml_file(tmp_test_dir: Path):
     """
     Factory fixture for creating temporary YAML files.
@@ -95,23 +71,6 @@ def create_yaml_file(tmp_test_dir: Path):
         return path
 
     return _create
-
-
-@pytest.fixture
-def mock_download_response():
-    """
-    Provide mock data for download responses.
-
-    Returns common test data for HTTP download testing.
-    """
-    return {
-        "content": b"test file content",
-        "headers": {
-            "Content-Length": "17",
-            "ETag": '"abc123"',
-            "Last-Modified": "Mon, 01 Jan 2024 00:00:00 GMT",
-        },
-    }
 
 
 # =============================================================================
