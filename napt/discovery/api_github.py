@@ -150,7 +150,7 @@ from typing import Any
 import requests
 
 from napt.exceptions import ConfigError, NetworkError
-from napt.versioning.keys import VersionInfo
+from napt.discovery.base import RemoteVersion
 
 from .base import register_strategy
 
@@ -171,7 +171,7 @@ class ApiGithubStrategy:
     def get_version_info(
         self,
         app_config: dict[str, Any],
-    ) -> VersionInfo:
+    ) -> RemoteVersion:
         """Fetch latest release from GitHub API without downloading
         (version-first path).
 
@@ -373,7 +373,7 @@ class ApiGithubStrategy:
 
         logger.verbose("DISCOVERY", f"Download URL: {download_url}")
 
-        return VersionInfo(
+        return RemoteVersion(
             version=version_str,
             download_url=download_url,
             source="api_github",

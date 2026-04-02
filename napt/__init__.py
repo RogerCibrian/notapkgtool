@@ -66,7 +66,7 @@ from napt.results import (
     ValidationResult,
 )
 from napt.validation import validate_recipe
-from napt.versioning import DiscoveredVersion, compare_any, is_newer_any
+from napt.versioning import compare, is_newer
 
 __all__ = [
     "__version__",
@@ -81,9 +81,8 @@ __all__ = [
     "validate_recipe",
     "load_effective_config",
     "download_file",
-    "compare_any",
-    "is_newer_any",
-    "DiscoveredVersion",
+    "compare",
+    "is_newer",
     "NAPTError",
     "ConfigError",
     "NetworkError",

@@ -173,7 +173,7 @@ from bs4 import BeautifulSoup
 import requests
 
 from napt.exceptions import ConfigError, NetworkError
-from napt.versioning.keys import VersionInfo
+from napt.discovery.base import RemoteVersion
 
 from .base import register_strategy
 
@@ -194,7 +194,7 @@ class WebScrapeStrategy:
     def get_version_info(
         self,
         app_config: dict[str, Any],
-    ) -> VersionInfo:
+    ) -> RemoteVersion:
         """Scrape download page for version and URL without downloading
         (version-first path).
 
@@ -372,7 +372,7 @@ class WebScrapeStrategy:
 
         logger.verbose("DISCOVERY", f"Extracted version: {version_str}")
 
-        return VersionInfo(
+        return RemoteVersion(
             version=version_str,
             download_url=download_url,
             source="web_scrape",

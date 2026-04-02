@@ -122,8 +122,7 @@ from typing import Any
 
 from napt.download import download_file
 from napt.exceptions import ConfigError, NetworkError, NotModifiedError
-from napt.versioning.keys import DiscoveredVersion
-from napt.versioning.msi import version_from_msi_product_version
+from napt.versioning.msi import extract_msi_metadata
 
 from .base import register_strategy
 
@@ -142,7 +141,7 @@ class UrlDownloadStrategy:
         app_config: dict[str, Any],
         output_dir: Path,
         cache: dict[str, Any] | None = None,
-    ) -> tuple[DiscoveredVersion, Path, str, dict]:
+    ) -> tuple[str, str, Path, str, dict]:
         """Download from static URL and extract version from the file.
 
         Args:
@@ -225,7 +224,8 @@ class UrlDownloadStrategy:
                     "DISCOVERY", "Auto-detected MSI file, extracting version"
                 )
                 try:
-                    discovered = version_from_msi_product_version(cached_file)
+                    metadata = extract_msi_metadata(cached_file)
+                    version, version_source = metadata.product_version, "url_download"
                 except Exception as err:
                     raise NetworkError(
                         f"Failed to extract MSI ProductVersion from cached "
@@ -248,7 +248,7 @@ class UrlDownloadStrategy:
             if cache.get("last_modified"):
                 preserved_headers["Last-Modified"] = cache["last_modified"]
 
-            return discovered, cached_file, cache["sha256"], preserved_headers
+            return version, version_source, cached_file, cache["sha256"], preserved_headers
         except Exception as err:
             if isinstance(err, (NetworkError, ConfigError)):
                 raise
@@ -258,7 +258,8 @@ class UrlDownloadStrategy:
         if file_path.suffix.lower() == ".msi":
             logger.verbose("DISCOVERY", "Auto-detected MSI file, extracting version")
             try:
-                discovered = version_from_msi_product_version(file_path)
+                metadata = extract_msi_metadata(file_path)
+                version, version_source = metadata.product_version, "url_download"
             except Exception as err:
                 raise NetworkError(
                     f"Failed to extract MSI ProductVersion from {file_path}: {err}"
@@ -271,7 +272,7 @@ class UrlDownloadStrategy:
                 f"api_json, web_scrape) or ensure the file is an MSI installer."
             )
 
-        return discovered, file_path, sha256, headers
+        return version, version_source, file_path, sha256, headers
 
     def validate_config(self, app_config: dict[str, Any]) -> list[str]:
         """Validate url_download strategy configuration.

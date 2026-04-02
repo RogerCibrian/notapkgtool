@@ -15,7 +15,6 @@ import pytest
 
 from napt.core import discover_recipe
 from napt.exceptions import ConfigError
-from napt.versioning import DiscoveredVersion
 
 
 class TestDiscoverRecipe:
@@ -41,7 +40,8 @@ class TestDiscoverRecipe:
             # Ensure it doesn't have get_version_info (file-first strategy)
             del mock_strategy.get_version_info
             mock_strategy.discover_version.return_value = (
-                DiscoveredVersion(version="1.2.3", source="msi"),
+                "1.2.3",
+                "url_download",
                 tmp_test_dir / "test.msi",
                 "abc123" * 8,  # fake SHA-256
                 {"ETag": 'W/"test123"'},  # HTTP headers
@@ -53,7 +53,7 @@ class TestDiscoverRecipe:
         assert result.app_id == "test-app"
         assert result.strategy == "url_download"
         assert result.version == "1.2.3"
-        assert result.version_source == "msi"
+        assert result.version_source == "url_download"
         assert result.status == "success"
         assert hasattr(result, "file_path")
         assert hasattr(result, "sha256")
