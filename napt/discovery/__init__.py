@@ -67,10 +67,10 @@ Example:
             }
         }
 
-        discovered, file_path, sha256 = strategy.discover_version(
+        version, source, file_path, sha256, headers = strategy.discover_version(
             app_config, Path("./downloads")
         )
-        print(f"Version: {discovered.version}")
+        print(f"Version: {version}")
 
 """
 
@@ -82,5 +82,6 @@ from . import (
     web_scrape,  # noqa: F401
 )
 from .base import DiscoveryStrategy, get_strategy
+from .manager import discover_recipe
 
-__all__ = ["DiscoveryStrategy", "get_strategy"]
+__all__ = ["DiscoveryStrategy", "discover_recipe", "get_strategy"]

@@ -86,7 +86,7 @@ import sys
 from napt.build import build_package, create_intunewin
 from napt.config import load_effective_config
 from napt.config.defaults import ORG_YAML_TEMPLATE
-from napt.core import discover_recipe
+from napt.discovery.manager import discover_recipe
 from napt.exceptions import (
     AuthError,
     ConfigError,

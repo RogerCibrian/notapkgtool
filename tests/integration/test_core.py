@@ -14,7 +14,7 @@ from unittest.mock import patch
 import pytest
 import requests_mock
 
-from napt.core import discover_recipe
+from napt.discovery.manager import discover_recipe
 from napt.exceptions import NetworkError
 from napt.versioning.msi import MSIMetadata
 

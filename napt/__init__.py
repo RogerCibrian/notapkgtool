@@ -51,7 +51,7 @@ __description__ = "Not a Pkg Tool - Windows/Intune packaging with PSADT"
 
 # Re-export commonly used functions for convenience
 from napt.config import load_effective_config
-from napt.core import discover_recipe
+from napt.discovery.manager import discover_recipe
 from napt.download import download_file
 from napt.exceptions import (
     ConfigError,

@@ -21,7 +21,7 @@ callers to catch all NAPT errors with a single except clause if needed.
 Example:
     Catching specific error types:
         ```python
-        from napt.core import discover_recipe
+        from napt.discovery import discover_recipe
         from napt.exceptions import ConfigError, NetworkError
 
         try:

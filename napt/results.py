@@ -25,7 +25,7 @@ Example:
     Using result types:
         ```python
         from pathlib import Path
-        from napt.core import discover_recipe
+        from napt.discovery import discover_recipe
         from napt.results import DiscoverResult
 
         result: DiscoverResult = discover_recipe(
