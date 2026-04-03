@@ -348,10 +348,51 @@ installer.
 
 **Environment Variable Substitution:** All values support `${VARIABLE_NAME}` syntax.
 
+### override_msix_commands
+
+**Type:** `boolean`
+**Required:** No
+**Default:** `false`
+**Applies to:** MSIX installers only
+
+When `true`, uses recipe `install` and `uninstall` scripts instead of the
+auto-generated MSIX commands.
+
+**MSIX auto-generation:** For MSIX installers, NAPT auto-generates install and
+uninstall commands from manifest metadata:
+
+- **Install:** `Add-AppxPackage -Path "$dirFiles\{filename}"`
+- **Uninstall:** `Get-AppxPackage -Name "{identity_name}" | Remove-AppxPackage`
+
+These commands are used unless `override_msix_commands: true` is set. If the
+recipe specifies `psadt.install` or `psadt.uninstall` without this flag, a
+warning is logged and the recipe values are ignored.
+
+**Behavior:**
+
+- `false` (default): Auto-generated commands are used; recipe `install`/`uninstall` are ignored with a warning if set
+- `true`: Recipe `install` and/or `uninstall` are used; auto-generated commands fill in any that are missing
+- `true` but neither `install` nor `uninstall` set: Error (nothing to override with)
+- Non-MSIX installers: Flag is ignored
+
+**When to use:** Apps that need license files (`Add-AppxProvisionedAppxPackage`),
+apps requiring custom provisioning, or uninstall logic that differs from the
+standard `Remove-AppxPackage` pipeline.
+
+**Example:**
+```yaml
+psadt:
+  override_msix_commands: true
+  install: |
+    Add-AppxProvisionedAppxPackage -Online -PackagePath "$dirFiles\app.msix" -LicensePath "$dirFiles\license.xml"
+  uninstall: |
+    Get-AppxProvisionedPackage -Online | Where-Object { $_.PackageName -like "Vendor.App*" } | Remove-AppxProvisionedPackage -Online
+```
+
 ### install
 
 **Type:** `string` (multiline)
-**Required:** Yes
+**Required:** Yes (MSI/EXE); auto-generated for MSIX unless overridden
 
 PowerShell script executed during installation. Inserted into the generated
 `Invoke-AppDeployToolkit.ps1` in the installation section.
@@ -378,7 +419,7 @@ install: |
 ### uninstall
 
 **Type:** `string` (multiline)
-**Required:** Yes
+**Required:** Yes (MSI/EXE); auto-generated for MSIX unless overridden
 
 PowerShell script executed during uninstallation. Same available variables as `install`.
 
@@ -641,10 +682,17 @@ Free-text notes shown in the Intune portal. Useful for internal documentation.
 ### detection
 
 The `intune.detection` subsection configures detection and requirements script generation for
-Intune Win32 app deployments. These scripts check Windows uninstall registry keys to determine
+Intune Win32 app deployments.
+
+**MSI/EXE installers:** Scripts check Windows uninstall registry keys to determine
 application installation state.
 
+**MSIX installers:** Scripts use `Get-AppxPackage` to query the AppX package database by
+package identity name. The `display_name`, `architecture`, and `override_msi_display_name`
+fields are not used for MSIX (metadata is extracted from `AppxManifest.xml`).
+
 ```yaml
+# MSI/EXE detection configuration
 intune:
   detection:
     display_name: "Application Name"  # See below
@@ -782,7 +830,7 @@ intune:
     # architecture still auto-detected from MSI Template
 ```
 
-**How Scripts Work:**
+**How Scripts Work (MSI/EXE - Registry-based):**
 
 - **App Name Detection:**
     - **MSI installers:** Uses MSI `ProductName` property (authoritative source for registry
@@ -800,9 +848,25 @@ intune:
 - **Version Comparison:** Uses `DisplayVersion` registry value. Detection: exit 0 if installed
   meets requirement, 1 otherwise. Requirements: always exit 0; output "Required" to stdout if
   an older version is installed, nothing otherwise.
-- **Script Location:** Generated scripts are saved as siblings to the `packagefiles/` directory
-  (not included in `.intunewin` package). `napt upload` reads them directly from the build
-  output and embeds them as inline PowerShell rules in the Intune app record.
+
+**How Scripts Work (MSIX - AppX Package-based):**
+
+- **Package Detection:** Uses `Get-AppxPackage -Name "{identity_name}"` to query the Windows
+  AppX package database. The identity name is extracted from the MSIX manifest's `Identity`
+  element.
+- **No registry scanning:** MSIX detection does not check uninstall registry keys. The AppX
+  package database is the authoritative source for MSIX installations.
+- **Architecture:** Auto-detected from `ProcessorArchitecture` in the MSIX manifest. Not
+  configurable via recipe (manifest is authoritative).
+- **Version Comparison:** Same logic as registry-based scripts. Detection: exit 0 if installed
+  meets requirement, 1 otherwise. Requirements: always exit 0; output "Required" if installed
+  version < target.
+
+**Script Location (all installer types):**
+
+Generated scripts are saved as siblings to the `packagefiles/` directory
+(not included in `.intunewin` package). `napt upload` reads them directly from the build
+output and embeds them as inline PowerShell rules in the Intune app record.
 
 See [Detection and Requirements Scripts](user-guide.md#detection-and-requirements-scripts) in
 the User Guide for how scripts work and how to configure them in Intune.

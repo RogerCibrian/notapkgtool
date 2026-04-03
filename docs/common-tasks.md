@@ -264,6 +264,69 @@ napt discover recipes/Vendor/app.yaml --verbose
 - `download_url_path`: JSONPath to download URL field
 - `headers`: Optional authentication headers
 
+## Create a Recipe for an MSIX Installer
+
+Use this when the application distributes an `.msix` installer. NAPT extracts
+metadata from `AppxManifest.xml` and auto-generates install/uninstall commands.
+
+**Example: Slack (MSIX via JSON API)**
+
+1. Create the recipe file:
+
+```yaml
+# recipes/Slack/slack.yaml
+apiVersion: napt/v1
+
+name: "Slack"
+id: "napt-slack"
+
+discovery:
+  strategy: api_json
+  api_url: "https://slack.com/api/desktop.latestRelease?arch=x64&variant=msix&redirect=false"
+  version_path: "version"
+  download_url_path: "url"
+
+# No psadt.install or psadt.uninstall needed!
+# NAPT auto-generates from MSIX manifest:
+#   Install:   Add-AppxPackage -Path "$dirFiles\slack.msix"
+#   Uninstall: Get-AppxPackage -Name "com.tinyspeck.slackdesktop" | Remove-AppxPackage
+
+psadt:
+  app_vars:
+    AppName: "Slack"
+    AppVersion: "${discovered_version}"
+```
+
+2. Validate and test:
+
+```bash
+napt validate recipes/Slack/slack.yaml
+napt discover recipes/Slack/slack.yaml --verbose
+```
+
+**What makes MSIX different:**
+
+- **No `psadt.install` / `psadt.uninstall` needed** - NAPT auto-generates
+  `Add-AppxPackage` and `Remove-AppxPackage` commands from the MSIX manifest
+- **No `intune.detection` needed** - Detection uses `Get-AppxPackage` with
+  the package identity name from the manifest (not registry scanning)
+- **Architecture auto-detected** - Extracted from `ProcessorArchitecture` in
+  the MSIX manifest
+
+**Overriding auto-generated commands:**
+
+If the default commands are insufficient (e.g., provisioned installs needing
+license files), set `override_msix_commands: true`:
+
+```yaml
+psadt:
+  override_msix_commands: true
+  install: |
+    Add-AppxProvisionedAppxPackage -Online -PackagePath "$dirFiles\app.msix" -LicensePath "$dirFiles\license.xml"
+  uninstall: |
+    Get-AppxProvisionedPackage -Online | Where-Object { $_.PackageName -like "Vendor.App*" } | Remove-AppxProvisionedPackage -Online
+```
+
 ## Create a Recipe for a Fixed Download URL
 
 Use this when the vendor has a stable download URL (like Chrome enterprise MSI).

@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **MSIX installer support** - NAPT now supports `.msix` installers as a third
+    installer type alongside MSI and EXE. MSIX metadata (display name, version,
+    architecture, package identity) is extracted from `AppxManifest.xml` inside
+    the package. Detection scripts use `Get-AppxPackage` for identity-based
+    matching instead of registry scanning. Install and uninstall commands are
+    auto-generated from manifest metadata (`Add-AppxPackage` / `Remove-AppxPackage`)
+    unless overridden with `psadt.override_msix_commands: true`
+- **`psadt.override_msix_commands` config key** - When `true`, uses recipe
+    `psadt.install` and `psadt.uninstall` instead of the auto-generated MSIX
+    commands. Required when the default `Add-AppxPackage` / `Remove-AppxPackage`
+    commands are insufficient (e.g., apps needing license files or provisioning)
 - **`intunewin.release` config key** - Pin `IntuneWinAppUtil.exe` to a specific
     release for reproducible builds (e.g., `release: "1.8.6"`). Defaults to
     `"latest"`, which resolves the current release via GitHub API. Each version
@@ -29,6 +40,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Build script module restructured** - Detection and requirements script
+    generation consolidated into `registry_scripts` module (registry-based
+    MSI/EXE) and new `msix_scripts` module (AppX-based MSIX). Shared
+    PowerShell logging functions split from registry-specific helpers for
+    cleaner template reuse
 - **BREAKING: Recipe schema flattened** - The `app:` wrapper is removed. Fields
     `name`, `id`, `discovery:`, `psadt:`, `intune:`, and `logging:` are now
     top-level. Update all recipes by moving fields out of `app:`

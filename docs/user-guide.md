@@ -26,8 +26,8 @@ The discovery process finds the latest version and downloads the installer:
 The build process creates a complete PSADT package from the recipe and downloaded installer:
 
 1. **Load Configuration** - Merges configuration layers (org → vendor → recipe)
-2. **Find Installer** - Locates installer in `downloads/` directory (tries URL filename, then app name/id, then most recent)
-3. **Extract Version** - Extracts version from installer file (MSI files auto-detected by extension), otherwise uses state file version
+2. **Find Installer** - Locates installer in `downloads/` directory (tries URL filename, then app name/id, then most recent). Supports `.msi`, `.exe`, and `.msix` files
+3. **Extract Version** - Extracts version from installer file (MSI from ProductVersion, MSIX from AppxManifest.xml), otherwise uses state file version
 4. **Get PSADT Release** - Downloads/caches PSADT Template_v4 from GitHub if not already cached
 5. **Create Build Directory** - Creates versioned directory using discovered app version: `builds/{app_id}/{version}/`
 6. **Copy PSADT Template** - Copies entire PSADT template structure (unmodified) from cache:
@@ -42,7 +42,7 @@ The build process creates a complete PSADT package from the recipe and downloade
     - `Invoke-AppDeployToolkit.ps1` - Template script (will be overwritten)
 7. **Generate Deployment Script** - Generates `Invoke-AppDeployToolkit.ps1` from template:
     - Substitutes PSADT variables (`$appVendor`, `$appName`, `$appVersion`, etc.) from recipe configuration
-    - Inserts install script from `psadt.install` field
+    - Inserts install script from `psadt.install` field (for MSIX, auto-generates `Add-AppxPackage` / `Remove-AppxPackage` commands from manifest unless `override_msix_commands: true`)
     - Inserts uninstall script from `psadt.uninstall` field
     - Sets dynamic values (AppScriptDate, discovered version, PSADT version)
     - Preserves PSADT's structure and comments
@@ -65,7 +65,10 @@ NAPT generates PowerShell scripts used by Intune Win32 app entries to check inst
 - **Detection script** (always generated): Used by the **App** entry and by the **Update** entry when using the two-app model to determine if the app is installed at the expected version. Filename: `{AppName}_{Version}-Detection.ps1`.
 - **Requirements script** (when `build_types` is `both` or `update_only`): Used by the **Update** entry to determine if an older version is installed so Intune can offer the update. Filename: `{AppName}_{Version}-Requirements.ps1`.
 
-Both scripts share the same logic for registry lookup, app name resolution, and installer-type filtering; they differ only in how they interpret the version comparison (see below).
+For MSI and EXE installers, both scripts share the same logic for registry lookup, app name
+resolution, and installer-type filtering; they differ only in how they interpret the version
+comparison (see below). For MSIX installers, scripts use `Get-AppxPackage` for identity-based
+matching instead of registry scanning.
 
 **How the scripts work:**
 
@@ -100,6 +103,14 @@ Both scripts share the same logic for registry lookup, app name resolution, and 
         - `any` (default if not specified): Checks both 64-bit and 32-bit views for maximum compatibility
     - Uses explicit `RegistryView` API for deterministic behavior regardless of PowerShell process bitness
     - Prevents false matches when both 32-bit and 64-bit versions of the same software are installed
+
+- **MSIX detection (AppX package-based):**
+    - MSIX installers use a completely different detection mechanism: `Get-AppxPackage` queries
+      the Windows AppX package database by package identity name (from `AppxManifest.xml`)
+    - No registry scanning or `DisplayName` matching is used for MSIX
+    - Architecture is auto-detected from the MSIX manifest's `ProcessorArchitecture` attribute
+    - The `intune.detection.display_name`, `architecture`, and `override_msi_display_name`
+      fields are not used for MSIX installers
 
 - **Logging:**
     - **Format:** CMTrace format for compatibility with Intune diagnostics tools
