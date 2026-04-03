@@ -922,14 +922,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/detection/" class="md-nav__link">
+      <a href="../api/registry_scripts/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    detection
+    registry_scripts
   
 
     
@@ -950,14 +950,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/requirements/" class="md-nav__link">
+      <a href="../api/msix_scripts/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    requirements
+    msix_scripts
   
 
     
@@ -2004,6 +2004,17 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.4.0...HEAD">Unreleased</a></h2>
 <h3 id="added">Added</h3>
 <ul>
+<li><strong>MSIX installer support</strong> - NAPT now supports <code>.msix</code> installers as a third
+    installer type alongside MSI and EXE. MSIX metadata (display name, version,
+    architecture, package identity) is extracted from <code>AppxManifest.xml</code> inside
+    the package. Detection scripts use <code>Get-AppxPackage</code> for identity-based
+    matching instead of registry scanning. Install and uninstall commands are
+    auto-generated from manifest metadata (<code>Add-AppxPackage</code> / <code>Remove-AppxPackage</code>)
+    unless overridden with <code>psadt.override_msix_commands: true</code></li>
+<li><strong><code>psadt.override_msix_commands</code> config key</strong> - When <code>true</code>, uses recipe
+    <code>psadt.install</code> and <code>psadt.uninstall</code> instead of the auto-generated MSIX
+    commands. Required when the default <code>Add-AppxPackage</code> / <code>Remove-AppxPackage</code>
+    commands are insufficient (e.g., apps needing license files or provisioning)</li>
 <li><strong><code>intunewin.release</code> config key</strong> - Pin <code>IntuneWinAppUtil.exe</code> to a specific
     release for reproducible builds (e.g., <code>release: "1.8.6"</code>). Defaults to
     <code>"latest"</code>, which resolves the current release via GitHub API. Each version
@@ -2024,6 +2035,11 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="changed">Changed</h3>
 <ul>
+<li><strong>Build script module restructured</strong> - Detection and requirements script
+    generation consolidated into <code>registry_scripts</code> module (registry-based
+    MSI/EXE) and new <code>msix_scripts</code> module (AppX-based MSIX). Shared
+    PowerShell logging functions split from registry-specific helpers for
+    cleaner template reuse</li>
 <li><strong>BREAKING: Recipe schema flattened</strong> - The <code>app:</code> wrapper is removed. Fields
     <code>name</code>, <code>id</code>, <code>discovery:</code>, <code>psadt:</code>, <code>intune:</code>, and <code>logging:</code> are now
     top-level. Update all recipes by moving fields out of <code>app:</code></li>

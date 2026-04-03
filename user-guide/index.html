@@ -1552,14 +1552,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/detection/" class="md-nav__link">
+      <a href="../api/registry_scripts/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    detection
+    registry_scripts
   
 
     
@@ -1580,14 +1580,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/requirements/" class="md-nav__link">
+      <a href="../api/msix_scripts/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    requirements
+    msix_scripts
   
 
     
@@ -2686,8 +2686,8 @@
 <p>The build process creates a complete PSADT package from the recipe and downloaded installer:</p>
 <ol>
 <li><strong>Load Configuration</strong> - Merges configuration layers (org → vendor → recipe)</li>
-<li><strong>Find Installer</strong> - Locates installer in <code>downloads/</code> directory (tries URL filename, then app name/id, then most recent)</li>
-<li><strong>Extract Version</strong> - Extracts version from installer file (MSI files auto-detected by extension), otherwise uses state file version</li>
+<li><strong>Find Installer</strong> - Locates installer in <code>downloads/</code> directory (tries URL filename, then app name/id, then most recent). Supports <code>.msi</code>, <code>.exe</code>, and <code>.msix</code> files</li>
+<li><strong>Extract Version</strong> - Extracts version from installer file (MSI from ProductVersion, MSIX from AppxManifest.xml), otherwise uses state file version</li>
 <li><strong>Get PSADT Release</strong> - Downloads/caches PSADT Template_v4 from GitHub if not already cached</li>
 <li><strong>Create Build Directory</strong> - Creates versioned directory using discovered app version: <code>builds/{app_id}/{version}/</code></li>
 <li><strong>Copy PSADT Template</strong> - Copies entire PSADT template structure (unmodified) from cache:<ul>
@@ -2704,7 +2704,7 @@
 </li>
 <li><strong>Generate Deployment Script</strong> - Generates <code>Invoke-AppDeployToolkit.ps1</code> from template:<ul>
 <li>Substitutes PSADT variables (<code>$appVendor</code>, <code>$appName</code>, <code>$appVersion</code>, etc.) from recipe configuration</li>
-<li>Inserts install script from <code>psadt.install</code> field</li>
+<li>Inserts install script from <code>psadt.install</code> field (for MSIX, auto-generates <code>Add-AppxPackage</code> / <code>Remove-AppxPackage</code> commands from manifest unless <code>override_msix_commands: true</code>)</li>
 <li>Inserts uninstall script from <code>psadt.uninstall</code> field</li>
 <li>Sets dynamic values (AppScriptDate, discovered version, PSADT version)</li>
 <li>Preserves PSADT's structure and comments</li>
@@ -2731,7 +2731,10 @@
 <li><strong>Detection script</strong> (always generated): Used by the <strong>App</strong> entry and by the <strong>Update</strong> entry when using the two-app model to determine if the app is installed at the expected version. Filename: <code>{AppName}_{Version}-Detection.ps1</code>.</li>
 <li><strong>Requirements script</strong> (when <code>build_types</code> is <code>both</code> or <code>update_only</code>): Used by the <strong>Update</strong> entry to determine if an older version is installed so Intune can offer the update. Filename: <code>{AppName}_{Version}-Requirements.ps1</code>.</li>
 </ul>
-<p>Both scripts share the same logic for registry lookup, app name resolution, and installer-type filtering; they differ only in how they interpret the version comparison (see below).</p>
+<p>For MSI and EXE installers, both scripts share the same logic for registry lookup, app name
+resolution, and installer-type filtering; they differ only in how they interpret the version
+comparison (see below). For MSIX installers, scripts use <code>Get-AppxPackage</code> for identity-based
+matching instead of registry scanning.</p>
 <p><strong>How the scripts work:</strong></p>
 <ul>
 <li>
@@ -2784,6 +2787,17 @@
 </li>
 <li>Uses explicit <code>RegistryView</code> API for deterministic behavior regardless of PowerShell process bitness</li>
 <li>Prevents false matches when both 32-bit and 64-bit versions of the same software are installed</li>
+</ul>
+</li>
+<li>
+<p><strong>MSIX detection (AppX package-based):</strong></p>
+<ul>
+<li>MSIX installers use a completely different detection mechanism: <code>Get-AppxPackage</code> queries
+  the Windows AppX package database by package identity name (from <code>AppxManifest.xml</code>)</li>
+<li>No registry scanning or <code>DisplayName</code> matching is used for MSIX</li>
+<li>Architecture is auto-detected from the MSIX manifest's <code>ProcessorArchitecture</code> attribute</li>
+<li>The <code>intune.detection.display_name</code>, <code>architecture</code>, and <code>override_msi_display_name</code>
+  fields are not used for MSIX installers</li>
 </ul>
 </li>
 <li>
