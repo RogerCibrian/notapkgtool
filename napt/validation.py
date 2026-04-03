@@ -64,7 +64,11 @@ _INTUNE_DETECTION_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
     "display_name": (str, None, "display name for registry lookup"),
     "architecture": (str, ["x86", "x64", "arm64", "any"], "architecture"),
     "exact_match": (bool, None, "exact version match flag"),
-    "override_msi_display_name": (bool, None, "MSI display name override flag"),
+    "override_msi_display_name": (
+        bool,
+        None,
+        "installer display name override flag",
+    ),
 }
 
 # Schema for the intune: section
@@ -311,6 +315,10 @@ def _validate_psadt_section(
     app_vars = psadt.get("app_vars")
     if app_vars is not None:
         _validate_psadt_app_vars(app_vars, "psadt.app_vars", errors)
+
+    override_msix = psadt.get("override_msix_commands")
+    if override_msix is not None and not isinstance(override_msix, bool):
+        errors.append("psadt.override_msix_commands: Must be a boolean (true/false)")
 
 
 def _validate_intune_section(

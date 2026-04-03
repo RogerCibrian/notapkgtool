@@ -758,11 +758,11 @@ the installed version is greater than or equal to the required version.
 **Default:** `false`
 **Applies to:** MSI installers only
 
-When `true`, uses the `display_name` field instead of the MSI's ProductName for registry
-lookups.
+When `true`, uses the `display_name` field instead of the MSI
+`ProductName` for detection scripts.
 
-**When to use:** When the MSI's ProductName contains a version number that changes with each
-release (e.g., "7-Zip 25.01").
+**When to use:** When the MSI ProductName contains a version
+number that changes with each release (e.g., "7-Zip 25.01").
 
 **Behavior:**
 

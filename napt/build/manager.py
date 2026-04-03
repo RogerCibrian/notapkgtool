@@ -47,12 +47,16 @@ import re
 import shutil
 from typing import Any
 
-from napt.build.detection import (
-    DetectionConfig,
-    generate_detection_script,
+from napt.build.msix_scripts import (
+    MSIXDetectionConfig,
+    MSIXRequirementsConfig,
+    generate_msix_detection_script,
+    generate_msix_requirements_script,
 )
-from napt.build.requirements import (
+from napt.build.registry_scripts import (
+    DetectionConfig,
     RequirementsConfig,
+    generate_detection_script,
     generate_requirements_script,
 )
 from napt.config import load_effective_config
@@ -62,6 +66,10 @@ from napt.results import BuildResult
 from napt.versioning.msi import (
     MSIMetadata,
     extract_msi_metadata,
+)
+from napt.versioning.msix import (
+    MSIXMetadata,
+    extract_msix_metadata,
 )
 
 
@@ -115,8 +123,9 @@ def _get_installer_version(
 
     Priority:
         1. Auto-detect MSI files (`.msi` extension) and extract version
-        2. Fall back to known_version from state file
-        3. If all else fails, raise an error
+        2. Auto-detect MSIX files (`.msix` extension) and extract version
+        3. Fall back to known_version from state file
+        4. If all else fails, raise an error
 
     Args:
         installer_file: Path to the installer file.
@@ -144,7 +153,17 @@ def _get_installer_version(
         logger.verbose("BUILD", f"Extracted version: {metadata.product_version}")
         return metadata.product_version
 
-    # Non-MSI: fall back to state file
+    # MSIX: version is authoritative from the manifest — no fallback
+    if installer_file.suffix.lower() == ".msix":
+        logger.verbose(
+            "BUILD",
+            f"Auto-detected MSIX, extracting version: {installer_file.name}",
+        )
+        metadata = extract_msix_metadata(installer_file)
+        logger.verbose("BUILD", f"Extracted version: {metadata.version}")
+        return metadata.version
+
+    # Non-MSI/MSIX: fall back to state file
     if state_file and state_file.exists():
         from napt.state import load_state
 
@@ -160,7 +179,7 @@ def _get_installer_version(
     # No version found - provide error
     raise ConfigError(
         f"Could not determine version for {app_id}. Either:\n"
-        f"  - Use an MSI installer (auto-detected from file extension)\n"
+        f"  - Use an MSI or MSIX installer (auto-detected from file extension)\n"
         f"  - Run 'napt discover' first to populate state file with version"
     )
 
@@ -238,7 +257,7 @@ def _find_installer_file(
 
     # Try to find installer matching app_id or app_name in filename
     if app_dir.exists():
-        for pattern in ["*.msi", "*.exe"]:
+        for pattern in ["*.msi", "*.msix", "*.exe"]:
             matches = list(app_dir.glob(pattern))
 
             # Filter by app name/id if possible
@@ -447,23 +466,28 @@ def _resolve_app_info(
     config: dict[str, Any],
     version: str,
     msi_metadata: MSIMetadata | None,
+    msix_metadata: MSIXMetadata | None = None,
 ) -> tuple[str, str]:
     """Resolve app name and architecture for script generation.
 
-    Determines the correct display name and architecture from MSI metadata
-    (authoritative for MSI installers) or from intune.detection recipe config
-    (required for non-MSI installers). Also emits warnings for misconfigured
-    fields that will be silently ignored.
+    Determines the correct display name and architecture from installer
+    metadata (authoritative for MSI and MSIX installers) or from
+    intune.detection recipe config (required for EXE installers). Also
+    emits warnings for misconfigured fields that will be silently ignored.
 
     Args:
         installer_file: Path to the installer file.
         config: Recipe configuration.
-        version: Extracted version string (used for ${discovered_version} substitution).
-        msi_metadata: Pre-extracted MSI metadata (non-None for MSI installers).
+        version: Extracted version string (used for
+            ${discovered_version} substitution).
+        msi_metadata: Pre-extracted MSI metadata (non-None for MSI
+            installers).
+        msix_metadata: Pre-extracted MSIX metadata (non-None for MSIX
+            installers).
 
     Returns:
         A tuple (app_name, architecture), where
-            app_name is the resolved display name for registry matching,
+            app_name is the resolved display name for detection,
             architecture is one of "x86", "x64", "arm64", "any".
 
     Raises:
@@ -473,22 +497,25 @@ def _resolve_app_info(
 
     logger = get_global_logger()
 
-    detection_config = config.get("intune", {}).get("detection", {})
+    detection_settings = config.get("intune", {}).get("detection", {})
     installer_ext = installer_file.suffix.lower()
-    override_msi_display_name = detection_config.get("override_msi_display_name", False)
+    override_display_name = detection_settings.get(
+        "override_msi_display_name", False
+    )
 
-    # Warn about fields that will be ignored
-    if installer_ext == ".msi" and detection_config.get("display_name"):
-        if not override_msi_display_name:
+    # Warn about fields that will be ignored for MSI installers
+    if installer_ext == ".msi" and detection_settings.get("display_name"):
+        if not override_display_name:
             logger.warning(
                 "BUILD",
                 "intune.detection.display_name is set but will be ignored for "
-                "MSI installers. MSI ProductName is used as the authoritative source "
-                "for registry DisplayName. Set override_msi_display_name: true to use "
-                "display_name instead.",
+                "MSI installers. MSI ProductName is used as the authoritative "
+                "source for registry DisplayName. Set "
+                "override_msi_display_name: true to use display_name "
+                "instead.",
             )
 
-    if installer_ext == ".msi" and detection_config.get("architecture"):
+    if installer_ext == ".msi" and detection_settings.get("architecture"):
         logger.warning(
             "BUILD",
             "intune.detection.architecture is set but will be ignored for MSI "
@@ -496,59 +523,98 @@ def _resolve_app_info(
             "architecture.",
         )
 
-    if installer_ext != ".msi" and override_msi_display_name:
+    # Warn about fields that will be ignored for MSIX installers
+    if installer_ext == ".msix" and detection_settings.get("display_name"):
         logger.warning(
             "BUILD",
-            "intune.detection.override_msi_display_name is set but will be "
-            "ignored for non-MSI installers. This flag only applies to MSI installers.",
+            "intune.detection.display_name is set but will be ignored for "
+            "MSIX installers. MSIX DisplayName is used as the authoritative "
+            "source for detection.",
+        )
+
+    if installer_ext == ".msix" and detection_settings.get("architecture"):
+        logger.warning(
+            "BUILD",
+            "intune.detection.architecture is set but will be ignored for "
+            "MSIX installers. MSIX ProcessorArchitecture is used as the "
+            "authoritative source for architecture.",
+        )
+
+    # Warn about override flag on non-MSI installers
+    if installer_ext != ".msi" and override_display_name:
+        logger.warning(
+            "BUILD",
+            "intune.detection.override_msi_display_name is set but will "
+            "be ignored for non-MSI installers. This flag only applies to "
+            "MSI installers.",
         )
 
     expected_architecture: str = "any"
 
     if installer_ext == ".msi":
         assert msi_metadata is not None  # guaranteed by build_package
-        if override_msi_display_name:
-            if not detection_config.get("display_name"):
+        if override_display_name:
+            if not detection_settings.get("display_name"):
                 raise ConfigError(
-                    "intune.detection.override_msi_display_name is true but "
-                    "display_name is not set. Set intune.detection.display_name when "
-                    "using override_msi_display_name."
+                    "intune.detection.override_msi_display_name is true "
+                    "but display_name is not set. Set "
+                    "intune.detection.display_name when using "
+                    "override_msi_display_name."
                 )
-            app_name = detection_config["display_name"]
+            app_name = detection_settings["display_name"]
             if "${discovered_version}" in app_name:
                 app_name = app_name.replace("${discovered_version}", version)
             logger.verbose("BUILD", f"Using display_name (override): {app_name}")
         else:
             if not msi_metadata.product_name:
                 raise ConfigError(
-                    "MSI ProductName property not found. Cannot generate scripts. "
-                    "Ensure the MSI file is valid and contains ProductName property."
+                    "MSI ProductName property not found. Cannot generate "
+                    "scripts. Ensure the MSI file is valid and contains "
+                    "ProductName property."
                 )
             app_name = msi_metadata.product_name
             logger.verbose("BUILD", f"Using MSI ProductName: {app_name}")
 
         expected_architecture = msi_metadata.architecture
         logger.verbose("BUILD", f"MSI architecture: {expected_architecture}")
-    elif detection_config.get("display_name"):
-        app_name = detection_config["display_name"]
+
+    elif installer_ext == ".msix":
+        assert msix_metadata is not None  # guaranteed by build_package
+        if not msix_metadata.display_name:
+            raise ConfigError(
+                "MSIX DisplayName property not found. Cannot generate "
+                "scripts. Ensure the MSIX file is valid and contains "
+                "a DisplayName in Properties."
+            )
+        app_name = msix_metadata.display_name
+        logger.verbose("BUILD", f"Using MSIX DisplayName: {app_name}")
+
+        expected_architecture = msix_metadata.architecture
+        logger.verbose(
+            "BUILD", f"MSIX architecture: {expected_architecture}"
+        )
+
+    elif detection_settings.get("display_name"):
+        app_name = detection_settings["display_name"]
         if "${discovered_version}" in app_name:
             app_name = app_name.replace("${discovered_version}", version)
         logger.verbose("BUILD", f"Using intune.detection.display_name: {app_name}")
 
-        if detection_config.get("architecture"):
-            expected_architecture = detection_config["architecture"]
+        if detection_settings.get("architecture"):
+            expected_architecture = detection_settings["architecture"]
             logger.verbose(
-                "BUILD", f"Using intune.detection.architecture: {expected_architecture}"
+                "BUILD",
+                f"Using intune.detection.architecture: {expected_architecture}",
             )
         else:
             raise ConfigError(
-                "intune.detection.architecture is required for non-MSI installers. "
+                "intune.detection.architecture is required for EXE installers. "
                 "Set intune.detection.architecture in the recipe. "
                 "Allowed values: x86, x64, arm64, any"
             )
     else:
         raise ConfigError(
-            "intune.detection.display_name is required for non-MSI installers. "
+            "intune.detection.display_name is required for EXE installers. "
             "Set intune.detection.display_name in the recipe."
         )
 
@@ -562,12 +628,14 @@ def _generate_detection_script(
     app_id: str,
     build_dir: Path,
     msi_metadata: MSIMetadata | None,
+    msix_metadata: MSIXMetadata | None = None,
 ) -> Path:
     """Generate detection script for Intune Win32 app.
 
-    Uses MSI metadata (ProductName, architecture) for MSI installers, or
-    intune.detection config for non-MSI installers. Saves the script as
-    a sibling to the packagefiles directory.
+    Uses installer metadata (ProductName for MSI, DisplayName/IdentityName
+    for MSIX) or intune.detection config for EXE installers. MSIX uses
+    AppX package detection; MSI/EXE use registry-based detection. Saves
+    the script as a sibling to the packagefiles directory.
 
     Args:
         installer_file: Path to the installer file.
@@ -575,7 +643,10 @@ def _generate_detection_script(
         version: Extracted version string.
         app_id: Application ID.
         build_dir: Build directory (packagefiles subdirectory).
-        msi_metadata: Pre-extracted MSI metadata (non-None for MSI installers).
+        msi_metadata: Pre-extracted MSI metadata (non-None for MSI
+            installers).
+        msix_metadata: Pre-extracted MSIX metadata (non-None for MSIX
+            installers).
 
     Returns:
         Path to the generated detection script.
@@ -587,38 +658,53 @@ def _generate_detection_script(
 
     logger = get_global_logger()
 
-    detection_config = config.get("intune", {}).get("detection", {})
-    logging_config = config.get("logging", {})
+    detection_settings = config.get("intune", {}).get("detection", {})
+    logging_settings = config.get("logging", {})
     installer_ext = installer_file.suffix.lower()
 
     app_name, architecture = _resolve_app_info(
-        installer_file, config, version, msi_metadata
-    )
-    use_wildcard = "*" in app_name or "?" in app_name
-
-    detection_config_obj = DetectionConfig(
-        app_name=app_name,
-        version=version,
-        log_format=logging_config.get("log_format", "cmtrace"),
-        log_level=logging_config.get("log_level", "INFO"),
-        log_rotation_mb=logging_config.get("log_rotation_mb", 3),
-        exact_match=detection_config.get("exact_match", False),
-        app_id=app_id,
-        is_msi_installer=(installer_ext == ".msi"),
-        expected_architecture=architecture,
-        use_wildcard=use_wildcard,
+        installer_file, config, version, msi_metadata, msix_metadata
     )
 
     sanitized_app_name = sanitize_filename(app_name, app_id)
     sanitized_version = version.replace(" ", "-")
-    detection_filename = f"{sanitized_app_name}_{sanitized_version}-Detection.ps1"
+    detection_filename = (
+        f"{sanitized_app_name}_{sanitized_version}-Detection.ps1"
+    )
     detection_script_path = build_dir.parent / detection_filename
 
     logger.verbose("DETECTION", f"Generating detection script: {detection_filename}")
     logger.verbose("DETECTION", f"AppName: {app_name}")
     logger.verbose("DETECTION", f"Version: {version}")
 
-    generate_detection_script(detection_config_obj, detection_script_path)
+    if installer_ext == ".msix":
+        assert msix_metadata is not None
+        detection_config = MSIXDetectionConfig(
+            identity_name=msix_metadata.identity_name,
+            app_name=app_name,
+            version=version,
+            log_format=logging_settings.get("log_format", "cmtrace"),
+            log_level=logging_settings.get("log_level", "INFO"),
+            log_rotation_mb=logging_settings.get("log_rotation_mb", 3),
+            exact_match=detection_settings.get("exact_match", False),
+            app_id=app_id,
+        )
+        generate_msix_detection_script(detection_config, detection_script_path)
+    else:
+        use_wildcard = "*" in app_name or "?" in app_name
+        detection_config = DetectionConfig(
+            app_name=app_name,
+            version=version,
+            log_format=logging_settings.get("log_format", "cmtrace"),
+            log_level=logging_settings.get("log_level", "INFO"),
+            log_rotation_mb=logging_settings.get("log_rotation_mb", 3),
+            exact_match=detection_settings.get("exact_match", False),
+            app_id=app_id,
+            is_msi_installer=(installer_ext == ".msi"),
+            expected_architecture=architecture,
+            use_wildcard=use_wildcard,
+        )
+        generate_detection_script(detection_config, detection_script_path)
 
     return detection_script_path
 
@@ -630,12 +716,14 @@ def _generate_requirements_script(
     app_id: str,
     build_dir: Path,
     msi_metadata: MSIMetadata | None,
+    msix_metadata: MSIXMetadata | None = None,
 ) -> Path:
     """Generate requirements script for Intune Win32 app (Update entry).
 
-    Uses MSI metadata (ProductName, architecture) for MSI installers, or
-    intune.detection config for non-MSI installers. Saves the script as
-    a sibling to the packagefiles directory.
+    Uses installer metadata (ProductName for MSI, DisplayName/IdentityName
+    for MSIX) or intune.detection config for EXE installers. MSIX uses
+    AppX package detection; MSI/EXE use registry-based detection. Saves
+    the script as a sibling to the packagefiles directory.
 
     The requirements script determines if an older version is installed,
     making the Update entry applicable only to devices that need updating.
@@ -646,7 +734,10 @@ def _generate_requirements_script(
         version: Extracted version string (target version).
         app_id: Application ID.
         build_dir: Build directory (packagefiles subdirectory).
-        msi_metadata: Pre-extracted MSI metadata (non-None for MSI installers).
+        msi_metadata: Pre-extracted MSI metadata (non-None for MSI
+            installers).
+        msix_metadata: Pre-extracted MSIX metadata (non-None for MSIX
+            installers).
 
     Returns:
         Path to the generated requirements script.
@@ -658,38 +749,57 @@ def _generate_requirements_script(
 
     logger = get_global_logger()
 
-    logging_config = config.get("logging", {})
+    logging_settings = config.get("logging", {})
     installer_ext = installer_file.suffix.lower()
 
     app_name, architecture = _resolve_app_info(
-        installer_file, config, version, msi_metadata
-    )
-    use_wildcard = "*" in app_name or "?" in app_name
-
-    requirements_config_obj = RequirementsConfig(
-        app_name=app_name,
-        version=version,
-        log_format=logging_config.get("log_format", "cmtrace"),
-        log_level=logging_config.get("log_level", "INFO"),
-        log_rotation_mb=logging_config.get("log_rotation_mb", 3),
-        app_id=app_id,
-        is_msi_installer=(installer_ext == ".msi"),
-        expected_architecture=architecture,
-        use_wildcard=use_wildcard,
+        installer_file, config, version, msi_metadata, msix_metadata
     )
 
     sanitized_app_name = sanitize_filename(app_name, app_id)
     sanitized_version = version.replace(" ", "-")
-    requirements_filename = f"{sanitized_app_name}_{sanitized_version}-Requirements.ps1"
+    requirements_filename = (
+        f"{sanitized_app_name}_{sanitized_version}-Requirements.ps1"
+    )
     requirements_script_path = build_dir.parent / requirements_filename
 
     logger.verbose(
-        "REQUIREMENTS", f"Generating requirements script: {requirements_filename}"
+        "REQUIREMENTS",
+        f"Generating requirements script: {requirements_filename}",
     )
     logger.verbose("REQUIREMENTS", f"AppName: {app_name}")
     logger.verbose("REQUIREMENTS", f"Version: {version}")
 
-    generate_requirements_script(requirements_config_obj, requirements_script_path)
+    if installer_ext == ".msix":
+        assert msix_metadata is not None
+        requirements_config = MSIXRequirementsConfig(
+            identity_name=msix_metadata.identity_name,
+            app_name=app_name,
+            version=version,
+            log_format=logging_settings.get("log_format", "cmtrace"),
+            log_level=logging_settings.get("log_level", "INFO"),
+            log_rotation_mb=logging_settings.get("log_rotation_mb", 3),
+            app_id=app_id,
+        )
+        generate_msix_requirements_script(
+            requirements_config, requirements_script_path
+        )
+    else:
+        use_wildcard = "*" in app_name or "?" in app_name
+        requirements_config = RequirementsConfig(
+            app_name=app_name,
+            version=version,
+            log_format=logging_settings.get("log_format", "cmtrace"),
+            log_level=logging_settings.get("log_level", "INFO"),
+            log_rotation_mb=logging_settings.get("log_rotation_mb", 3),
+            app_id=app_id,
+            is_msi_installer=(installer_ext == ".msi"),
+            expected_architecture=architecture,
+            use_wildcard=use_wildcard,
+        )
+        generate_requirements_script(
+            requirements_config, requirements_script_path
+        )
 
     return requirements_script_path
 
@@ -762,6 +872,97 @@ def _write_build_manifest(
         ) from err
 
     return manifest_path
+
+
+def _apply_msix_commands(
+    config: dict[str, Any],
+    msix_metadata: MSIXMetadata,
+    installer_file: Path,
+    logger: Any,
+) -> None:
+    """Auto-generates MSIX install/uninstall commands or applies overrides.
+
+    For MSIX installers, generates ``Add-AppxPackage`` and
+    ``Remove-AppxPackage`` commands from manifest metadata. If the recipe
+    specifies ``psadt.install`` or ``psadt.uninstall``, those are ignored
+    unless ``psadt.override_msix_commands`` is set to true.
+
+    Args:
+        config: Recipe configuration (mutated in place to inject
+            auto-generated commands).
+        msix_metadata: Pre-extracted MSIX metadata.
+        installer_file: Path to the MSIX installer file.
+        logger: Logger instance.
+
+    Raises:
+        ConfigError: If ``override_msix_commands`` is true but no
+            ``psadt.install`` or ``psadt.uninstall`` is provided.
+    """
+    psadt_config = config.get("psadt", {})
+    override_commands = psadt_config.get("override_msix_commands", False)
+    recipe_install = psadt_config.get("install")
+    recipe_uninstall = psadt_config.get("uninstall")
+
+    auto_install = (
+        f'Add-AppxPackage -Path "$dirFiles\\{installer_file.name}"'
+    )
+    auto_uninstall = (
+        f"Get-AppxPackage -Name "
+        f'"{msix_metadata.identity_name}" | Remove-AppxPackage'
+    )
+
+    if override_commands:
+        if not recipe_install and not recipe_uninstall:
+            raise ConfigError(
+                "psadt.override_msix_commands is true but neither "
+                "psadt.install nor psadt.uninstall is set. Set "
+                "psadt.install and/or psadt.uninstall when using "
+                "override_msix_commands."
+            )
+        if recipe_install:
+            logger.verbose(
+                "BUILD",
+                "Using recipe psadt.install (override_msix_commands)",
+            )
+        else:
+            config["psadt"]["install"] = auto_install
+            logger.verbose("BUILD", f"Auto-generated MSIX install: {auto_install}")
+
+        if recipe_uninstall:
+            logger.verbose(
+                "BUILD",
+                "Using recipe psadt.uninstall (override_msix_commands)",
+            )
+        else:
+            config["psadt"]["uninstall"] = auto_uninstall
+            logger.verbose(
+                "BUILD", f"Auto-generated MSIX uninstall: {auto_uninstall}"
+            )
+        return
+
+    # No override flag — auto-generate and warn if recipe code is set
+    if recipe_install:
+        logger.warning(
+            "BUILD",
+            "psadt.install is set but will be ignored for MSIX installers. "
+            "MSIX manifest is used as the authoritative source for install "
+            "commands (Add-AppxPackage). Set override_msix_commands: true "
+            "to use psadt.install instead.",
+        )
+
+    if recipe_uninstall:
+        logger.warning(
+            "BUILD",
+            "psadt.uninstall is set but will be ignored for MSIX installers. "
+            "MSIX manifest is used as the authoritative source for uninstall "
+            "commands (Remove-AppxPackage). Set override_msix_commands: true "
+            "to use psadt.uninstall instead.",
+        )
+
+    config["psadt"]["install"] = auto_install
+    config["psadt"]["uninstall"] = auto_uninstall
+    logger.verbose("BUILD", f"Auto-generated MSIX install: {auto_install}")
+    logger.verbose("BUILD", f"Auto-generated MSIX uninstall: {auto_uninstall}")
 
 
 def build_package(
@@ -858,19 +1059,25 @@ def build_package(
 
     logger.info("BUILD", f"Building {app_name} v{version}")
 
-    # Extract MSI metadata upfront (or validate non-MSI architecture from recipe)
+    # Extract installer metadata upfront (or validate EXE architecture from recipe)
+    installer_ext = installer_file.suffix.lower()
     msi_metadata: MSIMetadata | None = None
-    if installer_file.suffix.lower() == ".msi":
+    msix_metadata: MSIXMetadata | None = None
+
+    if installer_ext == ".msi":
         msi_metadata = extract_msi_metadata(installer_file)
         architecture: str = msi_metadata.architecture
+    elif installer_ext == ".msix":
+        msix_metadata = extract_msix_metadata(installer_file)
+        architecture = msix_metadata.architecture
     else:
-        detection_config = config.get("intune", {}).get("detection", {})
-        architecture = detection_config.get("architecture") or ""
+        detection_settings = config.get("intune", {}).get("detection", {})
+        architecture = detection_settings.get("architecture") or ""
         if not architecture:
             raise ConfigError(
-                "intune.detection.architecture is required for non-MSI installers. "
-                "Set intune.detection.architecture in the recipe. "
-                "Allowed values: x86, x64, arm64, any"
+                "intune.detection.architecture is required for EXE "
+                "installers. Set intune.detection.architecture in the "
+                "recipe. Allowed values: x86, x64, arm64, any"
             )
 
     # Get PSADT release
@@ -890,6 +1097,11 @@ def build_package(
 
     # Copy PSADT files
     _copy_psadt_template(psadt_cache_dir, build_dir)
+
+    # Auto-generate MSIX install/uninstall commands (or warn if overridden)
+    if installer_ext == ".msix":
+        assert msix_metadata is not None
+        _apply_msix_commands(config, msix_metadata, installer_file, logger)
 
     # Generate Invoke-AppDeployToolkit.ps1
     from .template import generate_invoke_script
@@ -920,7 +1132,8 @@ def build_package(
     # Generate detection script (always; needed for App and Update entries)
     logger.step(7, 8, "Generating detection script...")
     detection_script_path = _generate_detection_script(
-        installer_file, config, version, app_id, build_dir, msi_metadata
+        installer_file, config, version, app_id, build_dir,
+        msi_metadata, msix_metadata,
     )
     logger.verbose("BUILD", "[OK] Detection script generated")
 
@@ -928,7 +1141,8 @@ def build_package(
     if build_types in ("both", "update_only"):
         logger.step(8, 8, "Generating requirements script...")
         requirements_script_path = _generate_requirements_script(
-            installer_file, config, version, app_id, build_dir, msi_metadata
+            installer_file, config, version, app_id, build_dir,
+            msi_metadata, msix_metadata,
         )
         logger.verbose("BUILD", "[OK] Requirements script generated")
     else:
