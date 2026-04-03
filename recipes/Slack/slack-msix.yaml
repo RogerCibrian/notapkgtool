@@ -7,7 +7,7 @@ discovery:
   strategy: api_json
   api_url: "https://slack.com/api/desktop.latestRelease?arch=x64&variant=msix&redirect=false"
   version_path: "version"
-  download_url_path: "url"
+  download_url_path: "download_url"
 
 # MSIX installers auto-generate install/uninstall commands from manifest:
 #   Install:   Add-AppxPackage -Path "$dirFiles\<filename>"
