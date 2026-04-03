@@ -90,8 +90,8 @@ nav:
       - manager: api/build.md
       - template: api/template.md
       - packager: api/packager.md
-      - detection: api/detection.md
-      - requirements: api/requirements.md
+      - registry_scripts: api/registry_scripts.md
+      - msix_scripts: api/msix_scripts.md
     - config: api/config.md
     - discovery:
       - discovery: api/discovery.md

@@ -263,7 +263,9 @@ def discover_recipe(
         logger.info("DISCOVERY", f"Version discovered: {version_info.version}")
 
         # Check if we can use cached file (version match + file exists)
-        if not is_newer(version_info.version, cache.get("known_version") if cache else None):
+        if not is_newer(
+            version_info.version, cache.get("known_version") if cache else None
+        ):
             # Derive file path from URL using same logic as download_file
             file_path = derive_file_path_from_url(
                 version_info.download_url, output_dir, app_id

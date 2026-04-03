@@ -1,4 +1,0 @@
-# detection
-
-::: napt.build.detection
-

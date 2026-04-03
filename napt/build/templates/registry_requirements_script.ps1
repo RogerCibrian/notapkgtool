@@ -64,7 +64,7 @@ $AllKeys = @()
 # Determine which registry views to check based on architecture
 $CheckViews = @()
 
-# <include _arch_switch.ps1>
+# <include _registry_shared.ps1>
 
 # Collect all registry keys from selected views
 foreach ($ViewInfo in $CheckViews) {

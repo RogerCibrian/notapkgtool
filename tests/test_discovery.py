@@ -91,8 +91,8 @@ class TestUrlDownloadStrategy:
                     product_name="", product_version="1.2.3", architecture="x64"
                 )
 
-                version, version_source, file_path, sha256, headers = strategy.discover_version(
-                    app_config, tmp_test_dir
+                version, version_source, file_path, sha256, headers = (
+                    strategy.discover_version(app_config, tmp_test_dir)
                 )
 
         assert version == "1.2.3"
@@ -209,8 +209,8 @@ class TestCacheAndETagSupport:
                     product_name="", product_version="1.0.0", architecture="x64"
                 )
 
-                version, version_source, file_path, sha256, headers = strategy.discover_version(
-                    app_config, tmp_test_dir, cache=cache
+                version, version_source, file_path, sha256, headers = (
+                    strategy.discover_version(app_config, tmp_test_dir, cache=cache)
                 )
 
         # Should use cached file from app-scoped directory
@@ -260,8 +260,8 @@ class TestCacheAndETagSupport:
                     product_name="", product_version="2.0.0", architecture="x64"
                 )
 
-                version, version_source, file_path, sha256, headers = strategy.discover_version(
-                    app_config, tmp_test_dir, cache=cache
+                version, version_source, file_path, sha256, headers = (
+                    strategy.discover_version(app_config, tmp_test_dir, cache=cache)
                 )
 
         # Should download new file into app-scoped directory
@@ -299,8 +299,8 @@ class TestCacheAndETagSupport:
                 )
 
                 # Call without cache parameter (None is default)
-                version, version_source, file_path, sha256, headers = strategy.discover_version(
-                    app_config, tmp_test_dir
+                version, version_source, file_path, sha256, headers = (
+                    strategy.discover_version(app_config, tmp_test_dir)
                 )
 
         assert version == "1.0.0"

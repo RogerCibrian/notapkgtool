@@ -248,7 +248,13 @@ class UrlDownloadStrategy:
             if cache.get("last_modified"):
                 preserved_headers["Last-Modified"] = cache["last_modified"]
 
-            return version, version_source, cached_file, cache["sha256"], preserved_headers
+            return (
+                version,
+                version_source,
+                cached_file,
+                cache["sha256"],
+                preserved_headers,
+            )
         except Exception as err:
             if isinstance(err, (NetworkError, ConfigError)):
                 raise

@@ -1,7 +1,6 @@
-"""
-Tests for napt.detection module.
+"""Tests for napt.build.registry_scripts module (detection).
 
-Tests detection script generation including:
+Tests registry-based detection script generation including:
 - Script content validation (log paths, output)
 - Script filename conventions
 - DetectionConfig dataclass
@@ -12,7 +11,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from napt.build.detection import (
+from napt.build.registry_scripts import (
     DetectionConfig,
     generate_detection_script,
 )
