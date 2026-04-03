@@ -80,6 +80,7 @@ class TestIsNewer:
         assert is_newer("1.0.0", None)
         assert is_newer("0.0.1", None)
 
+
 class TestVersionKey:
     """Tests for version_key function."""
 
@@ -95,6 +96,7 @@ class TestVersionKey:
         sorted_versions = sorted(versions, key=lambda v: version_key(v))
         expected = ["1.0.0-alpha", "1.0.0-beta", "1.0.0-rc.1", "1.0.0"]
         assert sorted_versions == expected
+
 
 class TestEdgeCases:
     """Tests for edge cases and special scenarios."""
