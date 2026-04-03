@@ -1,7 +1,6 @@
-"""
-Tests for napt.requirements module.
+"""Tests for napt.build.registry_scripts module (requirements).
 
-Tests requirements script generation including:
+Tests registry-based requirements script generation including:
 - Script content validation (log paths, Required output)
 - Script filename conventions
 - RequirementsConfig dataclass
@@ -11,7 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from napt.build.requirements import (
+from napt.build.registry_scripts import (
     RequirementsConfig,
     generate_requirements_script,
 )
