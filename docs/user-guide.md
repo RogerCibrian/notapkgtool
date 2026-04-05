@@ -42,14 +42,14 @@ The build process creates a complete PSADT package from the recipe and downloade
     - `Invoke-AppDeployToolkit.ps1` - Template script (will be overwritten)
 7. **Generate Deployment Script** - Generates `Invoke-AppDeployToolkit.ps1` from template:
     - Substitutes PSADT variables (`$appVendor`, `$appName`, `$appVersion`, etc.) from recipe configuration
-    - Inserts install script from `psadt.install` field (for MSIX, auto-generates `Add-AppxPackage` / `Remove-AppxPackage` commands from manifest unless `override_msix_commands: true`)
+    - Inserts install script from `psadt.install` field (for MSIX, auto-generates install/uninstall commands from manifest based on `intune.run_as_account` unless `override_msix_commands: true`)
     - Inserts uninstall script from `psadt.uninstall` field
     - Sets dynamic values (AppScriptDate, discovered version, PSADT version)
     - Preserves PSADT's structure and comments
 8. **Copy Installer** - Copies downloaded installer file to `Files/` directory:
     - Source: `downloads/{installer_filename}`
     - Destination: `builds/{app_id}/{version}/Files/{installer_filename}`
-    - Installer is accessible in scripts via `$dirFiles` variable
+    - Installer is accessible in scripts via `$($adtSession.DirFiles)` (PSADT 4.x)
 9. **Apply Branding** - Replaces PSADT default assets with custom branding (if configured):
     - Reads `brand_pack` configuration from org/vendor defaults
     - Replaces files in `Assets/` directory (AppIcon.png, Banner.Classic.png, etc.)
@@ -67,8 +67,9 @@ NAPT generates PowerShell scripts used by Intune Win32 app entries to check inst
 
 For MSI and EXE installers, both scripts share the same logic for registry lookup, app name
 resolution, and installer-type filtering; they differ only in how they interpret the version
-comparison (see below). For MSIX installers, scripts use `Get-AppxPackage` for identity-based
-matching instead of registry scanning.
+comparison (see below). For MSIX installers, scripts query the AppX package database by
+identity name instead of registry scanning; which store is queried depends on
+`intune.run_as_account` (see below).
 
 **How the scripts work:**
 
@@ -105,9 +106,11 @@ matching instead of registry scanning.
     - Prevents false matches when both 32-bit and 64-bit versions of the same software are installed
 
 - **MSIX detection (AppX package-based):**
-    - MSIX installers use a completely different detection mechanism: `Get-AppxPackage` queries
-      the Windows AppX package database by package identity name (from `AppxManifest.xml`)
-    - No registry scanning or `DisplayName` matching is used for MSIX
+    - MSIX installers query the Windows AppX package database by package identity name
+      (from `AppxManifest.xml`), not the registry
+    - Which store is queried depends on `intune.run_as_account`:
+        - `"system"` (default): `Get-AppxProvisionedPackage -Online` (provisioned/all-users store)
+        - `"user"`: `Get-AppxPackage -Name` (per-user store)
     - Architecture is auto-detected from the MSIX manifest's `ProcessorArchitecture` attribute
     - The `intune.detection.display_name`, `architecture`, and `override_msi_display_name`
       fields are not used for MSIX installers
@@ -443,7 +446,7 @@ intune:                # Optional: Intune-specific settings
 - **Top-level fields:** `apiVersion` (required), `name` (required), `id` (required),
   `discovery` (required), `psadt` (required), `intune` (optional), `logging` (optional)
 - **Discovery strategies:** See [Discovery Strategies](#discovery-strategies) section above for strategy selection and examples
-- **PSADT scripts:** Use `${discovered_version}` for auto-substituted version, `$dirFiles` for installer path
+- **PSADT scripts:** Use `${discovered_version}` for auto-substituted version, `$($adtSession.DirFiles)` for installer path (PSADT 4.x)
 
 ### Complete Documentation
 

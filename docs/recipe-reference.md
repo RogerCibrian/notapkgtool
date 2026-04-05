@@ -359,10 +359,13 @@ When `true`, uses recipe `install` and `uninstall` scripts instead of the
 auto-generated MSIX commands.
 
 **MSIX auto-generation:** For MSIX installers, NAPT auto-generates install and
-uninstall commands from manifest metadata:
+uninstall commands from manifest metadata.
+The commands vary based on `intune.run_as_account`:
 
-- **Install:** `Add-AppxPackage -Path "$dirFiles\{filename}"`
-- **Uninstall:** `Get-AppxPackage -Name "{identity_name}" | Remove-AppxPackage`
+- **Install (`system`, default):** `Add-AppxProvisionedPackage -Online -PackagePath "$($adtSession.DirFiles)\{filename}" -SkipLicense`
+- **Uninstall (`system`, default):** `Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq "{identity_name}" } | Remove-AppxProvisionedPackage -Online`
+- **Install (`user`):** `Add-AppxPackage -Path "$($adtSession.DirFiles)\{filename}"`
+- **Uninstall (`user`):** `Get-AppxPackage -Name "{identity_name}" | Remove-AppxPackage`
 
 These commands are used unless `override_msix_commands: true` is set. If the
 recipe specifies `psadt.install` or `psadt.uninstall` without this flag, a
@@ -375,18 +378,17 @@ warning is logged and the recipe values are ignored.
 - `true` but neither `install` nor `uninstall` set: Error (nothing to override with)
 - Non-MSIX installers: Flag is ignored
 
-**When to use:** Apps that need license files (`Add-AppxProvisionedAppxPackage`),
-apps requiring custom provisioning, or uninstall logic that differs from the
-standard `Remove-AppxPackage` pipeline.
+**When to use:** Apps that require a license file during provisioning or uninstall
+logic that differs from the standard pipeline.
 
 **Example:**
 ```yaml
 psadt:
   override_msix_commands: true
   install: |
-    Add-AppxProvisionedAppxPackage -Online -PackagePath "$dirFiles\app.msix" -LicensePath "$dirFiles\license.xml"
+    Add-AppxProvisionedPackage -Online -PackagePath "$($adtSession.DirFiles)\app.msix" -LicensePath "$($adtSession.DirFiles)\license.xml" -SkipLicense
   uninstall: |
-    Get-AppxProvisionedPackage -Online | Where-Object { $_.PackageName -like "Vendor.App*" } | Remove-AppxProvisionedPackage -Online
+    Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq "Vendor.App" } | Remove-AppxProvisionedPackage -Online
 ```
 
 ### install
@@ -399,7 +401,7 @@ PowerShell script executed during installation. Inserted into the generated
 
 **Available Variables:**
 
-- `$dirFiles`: Path to installer files directory (contains downloaded installer)
+- `$($adtSession.DirFiles)`: Path to installer files directory (contains downloaded installer)
 - `$discovered_version`: Version discovered by NAPT
 - Standard PSADT variables: `$dirApp`, `$dirSupportFiles`, etc.
 - All `app_vars` are available (e.g., `$AppName`, `$AppVersion`)
@@ -558,6 +560,22 @@ Set to `false` to prevent self-service uninstall for this app.
 Execution account for the installer and detection/requirements scripts.
 Use `"system"` for most enterprise deployments.
 Use `"user"` for apps that must be installed in the user's profile context.
+
+**MSIX installers:** This field also controls which AppX cmdlets are
+auto-generated and which package store is queried by detection and
+requirements scripts:
+
+| Value | Install cmdlet | Detection |
+|-------|---------------|-----------|
+| `"system"` (default) | `Add-AppxProvisionedPackage` (all users) | `Get-AppxProvisionedPackage` |
+| `"user"` | `Add-AppxPackage` (current user) | `Get-AppxPackage` |
+
+**`RequireAdmin` default:** For user-context installs, NAPT defaults
+`psadt.app_vars.RequireAdmin` to `false`.
+PSADT will error if `RequireAdmin` is `true` but the process is not running
+as an administrator.
+If your environment grants local admin to users and you want PSADT to enforce
+it, set `RequireAdmin: true` explicitly in `psadt.app_vars`.
 
 ### device_restart_behavior
 
