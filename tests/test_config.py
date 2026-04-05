@@ -198,6 +198,45 @@ class TestDynamicInjection:
         if "AppScriptDate" in app_vars:
             assert app_vars["AppScriptDate"] == today
 
+    def test_require_admin_defaults_true_for_system_scope(self):
+        """Tests that _inject_dynamic_values defaults RequireAdmin to true for system scope."""
+        from napt.config.loader import _inject_dynamic_values
+
+        cfg = {"psadt": {"app_vars": {}}, "intune": {"run_as_account": "system"}}
+        _inject_dynamic_values(cfg)
+
+        assert cfg["psadt"]["app_vars"]["RequireAdmin"] is True
+
+    def test_require_admin_defaults_false_for_user_scope(self):
+        """Tests that _inject_dynamic_values defaults RequireAdmin to false for user scope."""
+        from napt.config.loader import _inject_dynamic_values
+
+        cfg = {"psadt": {"app_vars": {}}, "intune": {"run_as_account": "user"}}
+        _inject_dynamic_values(cfg)
+
+        assert cfg["psadt"]["app_vars"]["RequireAdmin"] is False
+
+    def test_require_admin_explicit_value_not_overridden(self):
+        """Tests that an explicit RequireAdmin value is not overridden by injection."""
+        from napt.config.loader import _inject_dynamic_values
+
+        cfg = {
+            "psadt": {"app_vars": {"RequireAdmin": True}},
+            "intune": {"run_as_account": "user"},
+        }
+        _inject_dynamic_values(cfg)
+
+        assert cfg["psadt"]["app_vars"]["RequireAdmin"] is True
+
+    def test_require_admin_defaults_true_when_no_run_as_account(self):
+        """Tests that RequireAdmin defaults to true when run_as_account is absent."""
+        from napt.config.loader import _inject_dynamic_values
+
+        cfg = {"psadt": {"app_vars": {}}}
+        _inject_dynamic_values(cfg)
+
+        assert cfg["psadt"]["app_vars"]["RequireAdmin"] is True
+
 
 class TestErrorHandling:
     """Tests for error handling in config loading."""
