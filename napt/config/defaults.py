@@ -67,7 +67,6 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "AppProcessesToClose": [],
             "AppScriptVersion": "1.0.0",
             "AppScriptAuthor": "napt",
-            "RequireAdmin": True,
         },
     },
     # Intune/Win32 settings.
