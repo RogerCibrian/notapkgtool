@@ -2509,11 +2509,24 @@ created. None if build_types is "app_only".</p>
           <tr class="doc-section-item">
             <td><code><span title="napt.results.UploadResult.intune_app_id">intune_app_id</span></code></td>
             <td>
-                  <code><span title="str">str</span></code>
+                  <code><span title="str">str</span> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Graph API object ID of the newly created Intune Win32 app.</p>
+                <p>Graph API object ID of the install app entry.
+None when build_types is "update_only".</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="napt.results.UploadResult.intune_update_app_id">intune_update_app_id</span></code></td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Graph API object ID of the update app entry.
+None when build_types is "app_only".</p>
               </div>
             </td>
           </tr>
@@ -2569,7 +2582,11 @@ created. None if build_types is "app_only".</p>
 <span class="normal"><a href="#__codelineno-0-153">153</a></span>
 <span class="normal"><a href="#__codelineno-0-154">154</a></span>
 <span class="normal"><a href="#__codelineno-0-155">155</a></span>
-<span class="normal"><a href="#__codelineno-0-156">156</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-138"><a id="__codelineno-0-138" name="__codelineno-0-138"></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="normal"><a href="#__codelineno-0-156">156</a></span>
+<span class="normal"><a href="#__codelineno-0-157">157</a></span>
+<span class="normal"><a href="#__codelineno-0-158">158</a></span>
+<span class="normal"><a href="#__codelineno-0-159">159</a></span>
+<span class="normal"><a href="#__codelineno-0-160">160</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-138"><a id="__codelineno-0-138" name="__codelineno-0-138"></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </span><span id="__span-0-139"><a id="__codelineno-0-139" name="__codelineno-0-139"></a><span class="k">class</span><span class="w"> </span><span class="nc">UploadResult</span><span class="p">:</span>
 </span><span id="__span-0-140"><a id="__codelineno-0-140" name="__codelineno-0-140"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Result from uploading a .intunewin package to Microsoft Intune.</span>
 </span><span id="__span-0-141"><a id="__codelineno-0-141" name="__codelineno-0-141"></a>
@@ -2577,17 +2594,21 @@ created. None if build_types is "app_only".</p>
 </span><span id="__span-0-143"><a id="__codelineno-0-143" name="__codelineno-0-143"></a><span class="sd">        app_id: Unique application identifier (from recipe).</span>
 </span><span id="__span-0-144"><a id="__codelineno-0-144" name="__codelineno-0-144"></a><span class="sd">        app_name: Application display name.</span>
 </span><span id="__span-0-145"><a id="__codelineno-0-145" name="__codelineno-0-145"></a><span class="sd">        version: Application version uploaded.</span>
-</span><span id="__span-0-146"><a id="__codelineno-0-146" name="__codelineno-0-146"></a><span class="sd">        intune_app_id: Graph API object ID of the newly created Intune Win32 app.</span>
-</span><span id="__span-0-147"><a id="__codelineno-0-147" name="__codelineno-0-147"></a><span class="sd">        package_path: Path to the uploaded .intunewin file.</span>
-</span><span id="__span-0-148"><a id="__codelineno-0-148" name="__codelineno-0-148"></a><span class="sd">        status: Always &quot;success&quot; for successful uploads.</span>
-</span><span id="__span-0-149"><a id="__codelineno-0-149" name="__codelineno-0-149"></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="__span-0-150"><a id="__codelineno-0-150" name="__codelineno-0-150"></a>
-</span><span id="__span-0-151"><a id="__codelineno-0-151" name="__codelineno-0-151"></a>    <span class="n">app_id</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="__span-0-152"><a id="__codelineno-0-152" name="__codelineno-0-152"></a>    <span class="n">app_name</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="__span-0-153"><a id="__codelineno-0-153" name="__codelineno-0-153"></a>    <span class="n">version</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="__span-0-154"><a id="__codelineno-0-154" name="__codelineno-0-154"></a>    <span class="n">intune_app_id</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="__span-0-155"><a id="__codelineno-0-155" name="__codelineno-0-155"></a>    <span class="n">package_path</span><span class="p">:</span> <span class="n">Path</span>
-</span><span id="__span-0-156"><a id="__codelineno-0-156" name="__codelineno-0-156"></a>    <span class="n">status</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-0-146"><a id="__codelineno-0-146" name="__codelineno-0-146"></a><span class="sd">        intune_app_id: Graph API object ID of the install app entry.</span>
+</span><span id="__span-0-147"><a id="__codelineno-0-147" name="__codelineno-0-147"></a><span class="sd">            None when build_types is &quot;update_only&quot;.</span>
+</span><span id="__span-0-148"><a id="__codelineno-0-148" name="__codelineno-0-148"></a><span class="sd">        intune_update_app_id: Graph API object ID of the update app entry.</span>
+</span><span id="__span-0-149"><a id="__codelineno-0-149" name="__codelineno-0-149"></a><span class="sd">            None when build_types is &quot;app_only&quot;.</span>
+</span><span id="__span-0-150"><a id="__codelineno-0-150" name="__codelineno-0-150"></a><span class="sd">        package_path: Path to the uploaded .intunewin file.</span>
+</span><span id="__span-0-151"><a id="__codelineno-0-151" name="__codelineno-0-151"></a><span class="sd">        status: Always &quot;success&quot; for successful uploads.</span>
+</span><span id="__span-0-152"><a id="__codelineno-0-152" name="__codelineno-0-152"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__span-0-153"><a id="__codelineno-0-153" name="__codelineno-0-153"></a>
+</span><span id="__span-0-154"><a id="__codelineno-0-154" name="__codelineno-0-154"></a>    <span class="n">app_id</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-0-155"><a id="__codelineno-0-155" name="__codelineno-0-155"></a>    <span class="n">app_name</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-0-156"><a id="__codelineno-0-156" name="__codelineno-0-156"></a>    <span class="n">version</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-0-157"><a id="__codelineno-0-157" name="__codelineno-0-157"></a>    <span class="n">package_path</span><span class="p">:</span> <span class="n">Path</span>
+</span><span id="__span-0-158"><a id="__codelineno-0-158" name="__codelineno-0-158"></a>    <span class="n">status</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-0-159"><a id="__codelineno-0-159" name="__codelineno-0-159"></a>    <span class="n">intune_app_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="__span-0-160"><a id="__codelineno-0-160" name="__codelineno-0-160"></a>    <span class="n">intune_update_app_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 </span></code></pre></div></td></tr></table></div>
               </details>
 
@@ -2711,11 +2732,7 @@ created. None if build_types is "app_only".</p>
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>napt/results.py</code></summary>
-                <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-159">159</a></span>
-<span class="normal"><a href="#__codelineno-0-160">160</a></span>
-<span class="normal"><a href="#__codelineno-0-161">161</a></span>
-<span class="normal"><a href="#__codelineno-0-162">162</a></span>
-<span class="normal"><a href="#__codelineno-0-163">163</a></span>
+                <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-163">163</a></span>
 <span class="normal"><a href="#__codelineno-0-164">164</a></span>
 <span class="normal"><a href="#__codelineno-0-165">165</a></span>
 <span class="normal"><a href="#__codelineno-0-166">166</a></span>
@@ -2727,23 +2744,27 @@ created. None if build_types is "app_only".</p>
 <span class="normal"><a href="#__codelineno-0-172">172</a></span>
 <span class="normal"><a href="#__codelineno-0-173">173</a></span>
 <span class="normal"><a href="#__codelineno-0-174">174</a></span>
-<span class="normal"><a href="#__codelineno-0-175">175</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-159"><a id="__codelineno-0-159" name="__codelineno-0-159"></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="__span-0-160"><a id="__codelineno-0-160" name="__codelineno-0-160"></a><span class="k">class</span><span class="w"> </span><span class="nc">ValidationResult</span><span class="p">:</span>
-</span><span id="__span-0-161"><a id="__codelineno-0-161" name="__codelineno-0-161"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Result from validating a recipe.</span>
-</span><span id="__span-0-162"><a id="__codelineno-0-162" name="__codelineno-0-162"></a>
-</span><span id="__span-0-163"><a id="__codelineno-0-163" name="__codelineno-0-163"></a><span class="sd">    Attributes:</span>
-</span><span id="__span-0-164"><a id="__codelineno-0-164" name="__codelineno-0-164"></a><span class="sd">        status: Validation status (&quot;valid&quot; or &quot;invalid&quot;).</span>
-</span><span id="__span-0-165"><a id="__codelineno-0-165" name="__codelineno-0-165"></a><span class="sd">        errors: List of error messages (empty if valid).</span>
-</span><span id="__span-0-166"><a id="__codelineno-0-166" name="__codelineno-0-166"></a><span class="sd">        warnings: List of warning messages.</span>
-</span><span id="__span-0-167"><a id="__codelineno-0-167" name="__codelineno-0-167"></a><span class="sd">        app_count: Number of apps in the recipe.</span>
-</span><span id="__span-0-168"><a id="__codelineno-0-168" name="__codelineno-0-168"></a><span class="sd">        recipe_path: String path to the validated recipe file.</span>
-</span><span id="__span-0-169"><a id="__codelineno-0-169" name="__codelineno-0-169"></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="__span-0-170"><a id="__codelineno-0-170" name="__codelineno-0-170"></a>
-</span><span id="__span-0-171"><a id="__codelineno-0-171" name="__codelineno-0-171"></a>    <span class="n">status</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="__span-0-172"><a id="__codelineno-0-172" name="__codelineno-0-172"></a>    <span class="n">errors</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
-</span><span id="__span-0-173"><a id="__codelineno-0-173" name="__codelineno-0-173"></a>    <span class="n">warnings</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
-</span><span id="__span-0-174"><a id="__codelineno-0-174" name="__codelineno-0-174"></a>    <span class="n">app_count</span><span class="p">:</span> <span class="nb">int</span>
-</span><span id="__span-0-175"><a id="__codelineno-0-175" name="__codelineno-0-175"></a>    <span class="n">recipe_path</span><span class="p">:</span> <span class="nb">str</span>
+<span class="normal"><a href="#__codelineno-0-175">175</a></span>
+<span class="normal"><a href="#__codelineno-0-176">176</a></span>
+<span class="normal"><a href="#__codelineno-0-177">177</a></span>
+<span class="normal"><a href="#__codelineno-0-178">178</a></span>
+<span class="normal"><a href="#__codelineno-0-179">179</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-163"><a id="__codelineno-0-163" name="__codelineno-0-163"></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-0-164"><a id="__codelineno-0-164" name="__codelineno-0-164"></a><span class="k">class</span><span class="w"> </span><span class="nc">ValidationResult</span><span class="p">:</span>
+</span><span id="__span-0-165"><a id="__codelineno-0-165" name="__codelineno-0-165"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Result from validating a recipe.</span>
+</span><span id="__span-0-166"><a id="__codelineno-0-166" name="__codelineno-0-166"></a>
+</span><span id="__span-0-167"><a id="__codelineno-0-167" name="__codelineno-0-167"></a><span class="sd">    Attributes:</span>
+</span><span id="__span-0-168"><a id="__codelineno-0-168" name="__codelineno-0-168"></a><span class="sd">        status: Validation status (&quot;valid&quot; or &quot;invalid&quot;).</span>
+</span><span id="__span-0-169"><a id="__codelineno-0-169" name="__codelineno-0-169"></a><span class="sd">        errors: List of error messages (empty if valid).</span>
+</span><span id="__span-0-170"><a id="__codelineno-0-170" name="__codelineno-0-170"></a><span class="sd">        warnings: List of warning messages.</span>
+</span><span id="__span-0-171"><a id="__codelineno-0-171" name="__codelineno-0-171"></a><span class="sd">        app_count: Number of apps in the recipe.</span>
+</span><span id="__span-0-172"><a id="__codelineno-0-172" name="__codelineno-0-172"></a><span class="sd">        recipe_path: String path to the validated recipe file.</span>
+</span><span id="__span-0-173"><a id="__codelineno-0-173" name="__codelineno-0-173"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__span-0-174"><a id="__codelineno-0-174" name="__codelineno-0-174"></a>
+</span><span id="__span-0-175"><a id="__codelineno-0-175" name="__codelineno-0-175"></a>    <span class="n">status</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-0-176"><a id="__codelineno-0-176" name="__codelineno-0-176"></a>    <span class="n">errors</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</span><span id="__span-0-177"><a id="__codelineno-0-177" name="__codelineno-0-177"></a>    <span class="n">warnings</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</span><span id="__span-0-178"><a id="__codelineno-0-178" name="__codelineno-0-178"></a>    <span class="n">app_count</span><span class="p">:</span> <span class="nb">int</span>
+</span><span id="__span-0-179"><a id="__codelineno-0-179" name="__codelineno-0-179"></a>    <span class="n">recipe_path</span><span class="p">:</span> <span class="nb">str</span>
 </span></code></pre></div></td></tr></table></div>
               </details>
 

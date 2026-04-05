@@ -2936,7 +2936,10 @@ Set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID for CI/CD.</p>
 <span class="normal"><a href="#__codelineno-0-573">573</a></span>
 <span class="normal"><a href="#__codelineno-0-574">574</a></span>
 <span class="normal"><a href="#__codelineno-0-575">575</a></span>
-<span class="normal"><a href="#__codelineno-0-576">576</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-495"><a id="__codelineno-0-495" name="__codelineno-0-495"></a><span class="k">def</span><span class="w"> </span><span class="nf">cmd_upload</span><span class="p">(</span><span class="n">args</span><span class="p">:</span> <span class="n">argparse</span><span class="o">.</span><span class="n">Namespace</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-576">576</a></span>
+<span class="normal"><a href="#__codelineno-0-577">577</a></span>
+<span class="normal"><a href="#__codelineno-0-578">578</a></span>
+<span class="normal"><a href="#__codelineno-0-579">579</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-495"><a id="__codelineno-0-495" name="__codelineno-0-495"></a><span class="k">def</span><span class="w"> </span><span class="nf">cmd_upload</span><span class="p">(</span><span class="n">args</span><span class="p">:</span> <span class="n">argparse</span><span class="o">.</span><span class="n">Namespace</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 </span><span id="__span-0-496"><a id="__codelineno-0-496" name="__codelineno-0-496"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Handler for &#39;napt upload&#39; command.</span>
 </span><span id="__span-0-497"><a id="__codelineno-0-497" name="__codelineno-0-497"></a>
 </span><span id="__span-0-498"><a id="__codelineno-0-498" name="__codelineno-0-498"></a><span class="sd">    Uploads the .intunewin package for a recipe to Microsoft Intune via the</span>
@@ -3010,14 +3013,17 @@ Set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID for CI/CD.</p>
 </span><span id="__span-0-566"><a id="__codelineno-0-566" name="__codelineno-0-566"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;App ID:          </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">app_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span><span id="__span-0-567"><a id="__codelineno-0-567" name="__codelineno-0-567"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;App Name:        </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">app_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span><span id="__span-0-568"><a id="__codelineno-0-568" name="__codelineno-0-568"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Version:         </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">version</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-0-569"><a id="__codelineno-0-569" name="__codelineno-0-569"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Intune App ID:   </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">intune_app_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-0-570"><a id="__codelineno-0-570" name="__codelineno-0-570"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Package:         </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">package_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-0-571"><a id="__codelineno-0-571" name="__codelineno-0-571"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Status:          </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-0-572"><a id="__codelineno-0-572" name="__codelineno-0-572"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">70</span><span class="p">)</span>
-</span><span id="__span-0-573"><a id="__codelineno-0-573" name="__codelineno-0-573"></a>    <span class="nb">print</span><span class="p">()</span>
-</span><span id="__span-0-574"><a id="__codelineno-0-574" name="__codelineno-0-574"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;[SUCCESS] Package uploaded to Intune successfully!&quot;</span><span class="p">)</span>
-</span><span id="__span-0-575"><a id="__codelineno-0-575" name="__codelineno-0-575"></a>
-</span><span id="__span-0-576"><a id="__codelineno-0-576" name="__codelineno-0-576"></a>    <span class="k">return</span> <span class="mi">0</span>
+</span><span id="__span-0-569"><a id="__codelineno-0-569" name="__codelineno-0-569"></a>    <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">intune_app_id</span><span class="p">:</span>
+</span><span id="__span-0-570"><a id="__codelineno-0-570" name="__codelineno-0-570"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Intune Win32 App ID:    </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">intune_app_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-0-571"><a id="__codelineno-0-571" name="__codelineno-0-571"></a>    <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">intune_update_app_id</span><span class="p">:</span>
+</span><span id="__span-0-572"><a id="__codelineno-0-572" name="__codelineno-0-572"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Intune Win32 Update ID: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">intune_update_app_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-0-573"><a id="__codelineno-0-573" name="__codelineno-0-573"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Package:         </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">package_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-0-574"><a id="__codelineno-0-574" name="__codelineno-0-574"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Status:          </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">status</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-0-575"><a id="__codelineno-0-575" name="__codelineno-0-575"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">70</span><span class="p">)</span>
+</span><span id="__span-0-576"><a id="__codelineno-0-576" name="__codelineno-0-576"></a>    <span class="nb">print</span><span class="p">()</span>
+</span><span id="__span-0-577"><a id="__codelineno-0-577" name="__codelineno-0-577"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;[SUCCESS] Package uploaded to Intune successfully!&quot;</span><span class="p">)</span>
+</span><span id="__span-0-578"><a id="__codelineno-0-578" name="__codelineno-0-578"></a>
+</span><span id="__span-0-579"><a id="__codelineno-0-579" name="__codelineno-0-579"></a>    <span class="k">return</span> <span class="mi">0</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3106,10 +3112,7 @@ Use --force to backup existing files and create fresh ones.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>napt/cli.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-579">579</a></span>
-<span class="normal"><a href="#__codelineno-0-580">580</a></span>
-<span class="normal"><a href="#__codelineno-0-581">581</a></span>
-<span class="normal"><a href="#__codelineno-0-582">582</a></span>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-582">582</a></span>
 <span class="normal"><a href="#__codelineno-0-583">583</a></span>
 <span class="normal"><a href="#__codelineno-0-584">584</a></span>
 <span class="normal"><a href="#__codelineno-0-585">585</a></span>
@@ -3225,126 +3228,129 @@ Use --force to backup existing files and create fresh ones.</p>
 <span class="normal"><a href="#__codelineno-0-695">695</a></span>
 <span class="normal"><a href="#__codelineno-0-696">696</a></span>
 <span class="normal"><a href="#__codelineno-0-697">697</a></span>
-<span class="normal"><a href="#__codelineno-0-698">698</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-579"><a id="__codelineno-0-579" name="__codelineno-0-579"></a><span class="k">def</span><span class="w"> </span><span class="nf">cmd_init</span><span class="p">(</span><span class="n">args</span><span class="p">:</span> <span class="n">argparse</span><span class="o">.</span><span class="n">Namespace</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-</span><span id="__span-0-580"><a id="__codelineno-0-580" name="__codelineno-0-580"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Handler for &#39;napt init&#39; command.</span>
-</span><span id="__span-0-581"><a id="__codelineno-0-581" name="__codelineno-0-581"></a>
-</span><span id="__span-0-582"><a id="__codelineno-0-582" name="__codelineno-0-582"></a><span class="sd">    Initializes a new NAPT project by creating the directory structure and</span>
-</span><span id="__span-0-583"><a id="__codelineno-0-583" name="__codelineno-0-583"></a><span class="sd">    default configuration files. This command creates the recipes/ directory,</span>
-</span><span id="__span-0-584"><a id="__codelineno-0-584" name="__codelineno-0-584"></a><span class="sd">    defaults/ directory with org.yaml template, and defaults/vendors/ directory.</span>
-</span><span id="__span-0-585"><a id="__codelineno-0-585" name="__codelineno-0-585"></a>
-</span><span id="__span-0-586"><a id="__codelineno-0-586" name="__codelineno-0-586"></a><span class="sd">    Args:</span>
-</span><span id="__span-0-587"><a id="__codelineno-0-587" name="__codelineno-0-587"></a><span class="sd">        args: Parsed command-line arguments containing</span>
-</span><span id="__span-0-588"><a id="__codelineno-0-588" name="__codelineno-0-588"></a><span class="sd">            directory path, force flag, and debug flags.</span>
-</span><span id="__span-0-589"><a id="__codelineno-0-589" name="__codelineno-0-589"></a>
-</span><span id="__span-0-590"><a id="__codelineno-0-590" name="__codelineno-0-590"></a><span class="sd">    Returns:</span>
-</span><span id="__span-0-591"><a id="__codelineno-0-591" name="__codelineno-0-591"></a><span class="sd">        Exit code (0 for success, 1 for failure).</span>
+<span class="normal"><a href="#__codelineno-0-698">698</a></span>
+<span class="normal"><a href="#__codelineno-0-699">699</a></span>
+<span class="normal"><a href="#__codelineno-0-700">700</a></span>
+<span class="normal"><a href="#__codelineno-0-701">701</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-582"><a id="__codelineno-0-582" name="__codelineno-0-582"></a><span class="k">def</span><span class="w"> </span><span class="nf">cmd_init</span><span class="p">(</span><span class="n">args</span><span class="p">:</span> <span class="n">argparse</span><span class="o">.</span><span class="n">Namespace</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+</span><span id="__span-0-583"><a id="__codelineno-0-583" name="__codelineno-0-583"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Handler for &#39;napt init&#39; command.</span>
+</span><span id="__span-0-584"><a id="__codelineno-0-584" name="__codelineno-0-584"></a>
+</span><span id="__span-0-585"><a id="__codelineno-0-585" name="__codelineno-0-585"></a><span class="sd">    Initializes a new NAPT project by creating the directory structure and</span>
+</span><span id="__span-0-586"><a id="__codelineno-0-586" name="__codelineno-0-586"></a><span class="sd">    default configuration files. This command creates the recipes/ directory,</span>
+</span><span id="__span-0-587"><a id="__codelineno-0-587" name="__codelineno-0-587"></a><span class="sd">    defaults/ directory with org.yaml template, and defaults/vendors/ directory.</span>
+</span><span id="__span-0-588"><a id="__codelineno-0-588" name="__codelineno-0-588"></a>
+</span><span id="__span-0-589"><a id="__codelineno-0-589" name="__codelineno-0-589"></a><span class="sd">    Args:</span>
+</span><span id="__span-0-590"><a id="__codelineno-0-590" name="__codelineno-0-590"></a><span class="sd">        args: Parsed command-line arguments containing</span>
+</span><span id="__span-0-591"><a id="__codelineno-0-591" name="__codelineno-0-591"></a><span class="sd">            directory path, force flag, and debug flags.</span>
 </span><span id="__span-0-592"><a id="__codelineno-0-592" name="__codelineno-0-592"></a>
-</span><span id="__span-0-593"><a id="__codelineno-0-593" name="__codelineno-0-593"></a><span class="sd">    Note:</span>
-</span><span id="__span-0-594"><a id="__codelineno-0-594" name="__codelineno-0-594"></a><span class="sd">        By default, existing files are skipped (not overwritten).</span>
-</span><span id="__span-0-595"><a id="__codelineno-0-595" name="__codelineno-0-595"></a><span class="sd">        Use --force to backup existing files and create fresh ones.</span>
-</span><span id="__span-0-596"><a id="__codelineno-0-596" name="__codelineno-0-596"></a>
-</span><span id="__span-0-597"><a id="__codelineno-0-597" name="__codelineno-0-597"></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="__span-0-598"><a id="__codelineno-0-598" name="__codelineno-0-598"></a>    <span class="c1"># Configure global logger</span>
-</span><span id="__span-0-599"><a id="__codelineno-0-599" name="__codelineno-0-599"></a>    <span class="n">logger</span> <span class="o">=</span> <span class="n">get_logger</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">debug</span><span class="p">)</span>
-</span><span id="__span-0-600"><a id="__codelineno-0-600" name="__codelineno-0-600"></a>    <span class="n">set_global_logger</span><span class="p">(</span><span class="n">logger</span><span class="p">)</span>
-</span><span id="__span-0-601"><a id="__codelineno-0-601" name="__codelineno-0-601"></a>
-</span><span id="__span-0-602"><a id="__codelineno-0-602" name="__codelineno-0-602"></a>    <span class="n">target_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
-</span><span id="__span-0-603"><a id="__codelineno-0-603" name="__codelineno-0-603"></a>
-</span><span id="__span-0-604"><a id="__codelineno-0-604" name="__codelineno-0-604"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Initializing NAPT project in: </span><span class="si">{</span><span class="n">target_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-0-605"><a id="__codelineno-0-605" name="__codelineno-0-605"></a>    <span class="nb">print</span><span class="p">()</span>
+</span><span id="__span-0-593"><a id="__codelineno-0-593" name="__codelineno-0-593"></a><span class="sd">    Returns:</span>
+</span><span id="__span-0-594"><a id="__codelineno-0-594" name="__codelineno-0-594"></a><span class="sd">        Exit code (0 for success, 1 for failure).</span>
+</span><span id="__span-0-595"><a id="__codelineno-0-595" name="__codelineno-0-595"></a>
+</span><span id="__span-0-596"><a id="__codelineno-0-596" name="__codelineno-0-596"></a><span class="sd">    Note:</span>
+</span><span id="__span-0-597"><a id="__codelineno-0-597" name="__codelineno-0-597"></a><span class="sd">        By default, existing files are skipped (not overwritten).</span>
+</span><span id="__span-0-598"><a id="__codelineno-0-598" name="__codelineno-0-598"></a><span class="sd">        Use --force to backup existing files and create fresh ones.</span>
+</span><span id="__span-0-599"><a id="__codelineno-0-599" name="__codelineno-0-599"></a>
+</span><span id="__span-0-600"><a id="__codelineno-0-600" name="__codelineno-0-600"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__span-0-601"><a id="__codelineno-0-601" name="__codelineno-0-601"></a>    <span class="c1"># Configure global logger</span>
+</span><span id="__span-0-602"><a id="__codelineno-0-602" name="__codelineno-0-602"></a>    <span class="n">logger</span> <span class="o">=</span> <span class="n">get_logger</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">debug</span><span class="p">)</span>
+</span><span id="__span-0-603"><a id="__codelineno-0-603" name="__codelineno-0-603"></a>    <span class="n">set_global_logger</span><span class="p">(</span><span class="n">logger</span><span class="p">)</span>
+</span><span id="__span-0-604"><a id="__codelineno-0-604" name="__codelineno-0-604"></a>
+</span><span id="__span-0-605"><a id="__codelineno-0-605" name="__codelineno-0-605"></a>    <span class="n">target_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
 </span><span id="__span-0-606"><a id="__codelineno-0-606" name="__codelineno-0-606"></a>
-</span><span id="__span-0-607"><a id="__codelineno-0-607" name="__codelineno-0-607"></a>    <span class="c1"># Track what we create/skip</span>
-</span><span id="__span-0-608"><a id="__codelineno-0-608" name="__codelineno-0-608"></a>    <span class="n">created</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="__span-0-609"><a id="__codelineno-0-609" name="__codelineno-0-609"></a>    <span class="n">skipped</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="__span-0-610"><a id="__codelineno-0-610" name="__codelineno-0-610"></a>    <span class="n">backed_up</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="__span-0-611"><a id="__codelineno-0-611" name="__codelineno-0-611"></a>
-</span><span id="__span-0-612"><a id="__codelineno-0-612" name="__codelineno-0-612"></a>    <span class="c1"># Step 1: Create directory structure</span>
-</span><span id="__span-0-613"><a id="__codelineno-0-613" name="__codelineno-0-613"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;Creating directory structure...&quot;</span><span class="p">)</span>
+</span><span id="__span-0-607"><a id="__codelineno-0-607" name="__codelineno-0-607"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Initializing NAPT project in: </span><span class="si">{</span><span class="n">target_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-0-608"><a id="__codelineno-0-608" name="__codelineno-0-608"></a>    <span class="nb">print</span><span class="p">()</span>
+</span><span id="__span-0-609"><a id="__codelineno-0-609" name="__codelineno-0-609"></a>
+</span><span id="__span-0-610"><a id="__codelineno-0-610" name="__codelineno-0-610"></a>    <span class="c1"># Track what we create/skip</span>
+</span><span id="__span-0-611"><a id="__codelineno-0-611" name="__codelineno-0-611"></a>    <span class="n">created</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="__span-0-612"><a id="__codelineno-0-612" name="__codelineno-0-612"></a>    <span class="n">skipped</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="__span-0-613"><a id="__codelineno-0-613" name="__codelineno-0-613"></a>    <span class="n">backed_up</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
 </span><span id="__span-0-614"><a id="__codelineno-0-614" name="__codelineno-0-614"></a>
-</span><span id="__span-0-615"><a id="__codelineno-0-615" name="__codelineno-0-615"></a>    <span class="c1"># Create recipes/ directory</span>
-</span><span id="__span-0-616"><a id="__codelineno-0-616" name="__codelineno-0-616"></a>    <span class="n">recipes_dir</span> <span class="o">=</span> <span class="n">target_dir</span> <span class="o">/</span> <span class="s2">&quot;recipes&quot;</span>
-</span><span id="__span-0-617"><a id="__codelineno-0-617" name="__codelineno-0-617"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">recipes_dir</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-</span><span id="__span-0-618"><a id="__codelineno-0-618" name="__codelineno-0-618"></a>        <span class="n">recipes_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="__span-0-619"><a id="__codelineno-0-619" name="__codelineno-0-619"></a>        <span class="n">created</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;recipes/&quot;</span><span class="p">)</span>
-</span><span id="__span-0-620"><a id="__codelineno-0-620" name="__codelineno-0-620"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">&quot;INIT&quot;</span><span class="p">,</span> <span class="s2">&quot;Created: recipes/&quot;</span><span class="p">)</span>
-</span><span id="__span-0-621"><a id="__codelineno-0-621" name="__codelineno-0-621"></a>    <span class="k">else</span><span class="p">:</span>
-</span><span id="__span-0-622"><a id="__codelineno-0-622" name="__codelineno-0-622"></a>        <span class="n">skipped</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;recipes/&quot;</span><span class="p">)</span>
-</span><span id="__span-0-623"><a id="__codelineno-0-623" name="__codelineno-0-623"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">&quot;INIT&quot;</span><span class="p">,</span> <span class="s2">&quot;Skipped: recipes/ (already exists)&quot;</span><span class="p">)</span>
-</span><span id="__span-0-624"><a id="__codelineno-0-624" name="__codelineno-0-624"></a>
-</span><span id="__span-0-625"><a id="__codelineno-0-625" name="__codelineno-0-625"></a>    <span class="c1"># Create defaults/vendors/ directory</span>
-</span><span id="__span-0-626"><a id="__codelineno-0-626" name="__codelineno-0-626"></a>    <span class="n">vendors_dir</span> <span class="o">=</span> <span class="n">target_dir</span> <span class="o">/</span> <span class="s2">&quot;defaults&quot;</span> <span class="o">/</span> <span class="s2">&quot;vendors&quot;</span>
-</span><span id="__span-0-627"><a id="__codelineno-0-627" name="__codelineno-0-627"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">vendors_dir</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-</span><span id="__span-0-628"><a id="__codelineno-0-628" name="__codelineno-0-628"></a>        <span class="n">vendors_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="__span-0-629"><a id="__codelineno-0-629" name="__codelineno-0-629"></a>        <span class="n">created</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;defaults/vendors/&quot;</span><span class="p">)</span>
-</span><span id="__span-0-630"><a id="__codelineno-0-630" name="__codelineno-0-630"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">&quot;INIT&quot;</span><span class="p">,</span> <span class="s2">&quot;Created: defaults/vendors/&quot;</span><span class="p">)</span>
-</span><span id="__span-0-631"><a id="__codelineno-0-631" name="__codelineno-0-631"></a>    <span class="k">else</span><span class="p">:</span>
-</span><span id="__span-0-632"><a id="__codelineno-0-632" name="__codelineno-0-632"></a>        <span class="n">skipped</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;defaults/vendors/&quot;</span><span class="p">)</span>
-</span><span id="__span-0-633"><a id="__codelineno-0-633" name="__codelineno-0-633"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">&quot;INIT&quot;</span><span class="p">,</span> <span class="s2">&quot;Skipped: defaults/vendors/ (already exists)&quot;</span><span class="p">)</span>
-</span><span id="__span-0-634"><a id="__codelineno-0-634" name="__codelineno-0-634"></a>
-</span><span id="__span-0-635"><a id="__codelineno-0-635" name="__codelineno-0-635"></a>    <span class="c1"># Step 2: Create configuration files</span>
-</span><span id="__span-0-636"><a id="__codelineno-0-636" name="__codelineno-0-636"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;Creating configuration files...&quot;</span><span class="p">)</span>
+</span><span id="__span-0-615"><a id="__codelineno-0-615" name="__codelineno-0-615"></a>    <span class="c1"># Step 1: Create directory structure</span>
+</span><span id="__span-0-616"><a id="__codelineno-0-616" name="__codelineno-0-616"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;Creating directory structure...&quot;</span><span class="p">)</span>
+</span><span id="__span-0-617"><a id="__codelineno-0-617" name="__codelineno-0-617"></a>
+</span><span id="__span-0-618"><a id="__codelineno-0-618" name="__codelineno-0-618"></a>    <span class="c1"># Create recipes/ directory</span>
+</span><span id="__span-0-619"><a id="__codelineno-0-619" name="__codelineno-0-619"></a>    <span class="n">recipes_dir</span> <span class="o">=</span> <span class="n">target_dir</span> <span class="o">/</span> <span class="s2">&quot;recipes&quot;</span>
+</span><span id="__span-0-620"><a id="__codelineno-0-620" name="__codelineno-0-620"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">recipes_dir</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+</span><span id="__span-0-621"><a id="__codelineno-0-621" name="__codelineno-0-621"></a>        <span class="n">recipes_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-0-622"><a id="__codelineno-0-622" name="__codelineno-0-622"></a>        <span class="n">created</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;recipes/&quot;</span><span class="p">)</span>
+</span><span id="__span-0-623"><a id="__codelineno-0-623" name="__codelineno-0-623"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">&quot;INIT&quot;</span><span class="p">,</span> <span class="s2">&quot;Created: recipes/&quot;</span><span class="p">)</span>
+</span><span id="__span-0-624"><a id="__codelineno-0-624" name="__codelineno-0-624"></a>    <span class="k">else</span><span class="p">:</span>
+</span><span id="__span-0-625"><a id="__codelineno-0-625" name="__codelineno-0-625"></a>        <span class="n">skipped</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;recipes/&quot;</span><span class="p">)</span>
+</span><span id="__span-0-626"><a id="__codelineno-0-626" name="__codelineno-0-626"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">&quot;INIT&quot;</span><span class="p">,</span> <span class="s2">&quot;Skipped: recipes/ (already exists)&quot;</span><span class="p">)</span>
+</span><span id="__span-0-627"><a id="__codelineno-0-627" name="__codelineno-0-627"></a>
+</span><span id="__span-0-628"><a id="__codelineno-0-628" name="__codelineno-0-628"></a>    <span class="c1"># Create defaults/vendors/ directory</span>
+</span><span id="__span-0-629"><a id="__codelineno-0-629" name="__codelineno-0-629"></a>    <span class="n">vendors_dir</span> <span class="o">=</span> <span class="n">target_dir</span> <span class="o">/</span> <span class="s2">&quot;defaults&quot;</span> <span class="o">/</span> <span class="s2">&quot;vendors&quot;</span>
+</span><span id="__span-0-630"><a id="__codelineno-0-630" name="__codelineno-0-630"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">vendors_dir</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+</span><span id="__span-0-631"><a id="__codelineno-0-631" name="__codelineno-0-631"></a>        <span class="n">vendors_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-0-632"><a id="__codelineno-0-632" name="__codelineno-0-632"></a>        <span class="n">created</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;defaults/vendors/&quot;</span><span class="p">)</span>
+</span><span id="__span-0-633"><a id="__codelineno-0-633" name="__codelineno-0-633"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">&quot;INIT&quot;</span><span class="p">,</span> <span class="s2">&quot;Created: defaults/vendors/&quot;</span><span class="p">)</span>
+</span><span id="__span-0-634"><a id="__codelineno-0-634" name="__codelineno-0-634"></a>    <span class="k">else</span><span class="p">:</span>
+</span><span id="__span-0-635"><a id="__codelineno-0-635" name="__codelineno-0-635"></a>        <span class="n">skipped</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;defaults/vendors/&quot;</span><span class="p">)</span>
+</span><span id="__span-0-636"><a id="__codelineno-0-636" name="__codelineno-0-636"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">&quot;INIT&quot;</span><span class="p">,</span> <span class="s2">&quot;Skipped: defaults/vendors/ (already exists)&quot;</span><span class="p">)</span>
 </span><span id="__span-0-637"><a id="__codelineno-0-637" name="__codelineno-0-637"></a>
-</span><span id="__span-0-638"><a id="__codelineno-0-638" name="__codelineno-0-638"></a>    <span class="c1"># Create defaults/org.yaml</span>
-</span><span id="__span-0-639"><a id="__codelineno-0-639" name="__codelineno-0-639"></a>    <span class="n">org_yaml_path</span> <span class="o">=</span> <span class="n">target_dir</span> <span class="o">/</span> <span class="s2">&quot;defaults&quot;</span> <span class="o">/</span> <span class="s2">&quot;org.yaml&quot;</span>
-</span><span id="__span-0-640"><a id="__codelineno-0-640" name="__codelineno-0-640"></a>    <span class="k">if</span> <span class="n">org_yaml_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-</span><span id="__span-0-641"><a id="__codelineno-0-641" name="__codelineno-0-641"></a>        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">force</span><span class="p">:</span>
-</span><span id="__span-0-642"><a id="__codelineno-0-642" name="__codelineno-0-642"></a>            <span class="c1"># Backup existing file</span>
-</span><span id="__span-0-643"><a id="__codelineno-0-643" name="__codelineno-0-643"></a>            <span class="n">backup_path</span> <span class="o">=</span> <span class="n">org_yaml_path</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;.yaml.backup&quot;</span><span class="p">)</span>
-</span><span id="__span-0-644"><a id="__codelineno-0-644" name="__codelineno-0-644"></a>            <span class="n">org_yaml_path</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">backup_path</span><span class="p">)</span>
-</span><span id="__span-0-645"><a id="__codelineno-0-645" name="__codelineno-0-645"></a>            <span class="n">backed_up</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;defaults/org.yaml -&gt; </span><span class="si">{</span><span class="n">backup_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-0-646"><a id="__codelineno-0-646" name="__codelineno-0-646"></a>            <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span>
-</span><span id="__span-0-647"><a id="__codelineno-0-647" name="__codelineno-0-647"></a>                <span class="s2">&quot;INIT&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Backed up: defaults/org.yaml -&gt; </span><span class="si">{</span><span class="n">backup_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span id="__span-0-648"><a id="__codelineno-0-648" name="__codelineno-0-648"></a>            <span class="p">)</span>
-</span><span id="__span-0-649"><a id="__codelineno-0-649" name="__codelineno-0-649"></a>
-</span><span id="__span-0-650"><a id="__codelineno-0-650" name="__codelineno-0-650"></a>            <span class="c1"># Write new file</span>
-</span><span id="__span-0-651"><a id="__codelineno-0-651" name="__codelineno-0-651"></a>            <span class="n">org_yaml_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">ORG_YAML_TEMPLATE</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
-</span><span id="__span-0-652"><a id="__codelineno-0-652" name="__codelineno-0-652"></a>            <span class="n">created</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;defaults/org.yaml&quot;</span><span class="p">)</span>
-</span><span id="__span-0-653"><a id="__codelineno-0-653" name="__codelineno-0-653"></a>            <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">&quot;INIT&quot;</span><span class="p">,</span> <span class="s2">&quot;Created: defaults/org.yaml&quot;</span><span class="p">)</span>
-</span><span id="__span-0-654"><a id="__codelineno-0-654" name="__codelineno-0-654"></a>        <span class="k">else</span><span class="p">:</span>
-</span><span id="__span-0-655"><a id="__codelineno-0-655" name="__codelineno-0-655"></a>            <span class="n">skipped</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;defaults/org.yaml&quot;</span><span class="p">)</span>
-</span><span id="__span-0-656"><a id="__codelineno-0-656" name="__codelineno-0-656"></a>            <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">&quot;INIT&quot;</span><span class="p">,</span> <span class="s2">&quot;Skipped: defaults/org.yaml (already exists)&quot;</span><span class="p">)</span>
-</span><span id="__span-0-657"><a id="__codelineno-0-657" name="__codelineno-0-657"></a>    <span class="k">else</span><span class="p">:</span>
-</span><span id="__span-0-658"><a id="__codelineno-0-658" name="__codelineno-0-658"></a>        <span class="c1"># Ensure parent directory exists</span>
-</span><span id="__span-0-659"><a id="__codelineno-0-659" name="__codelineno-0-659"></a>        <span class="n">org_yaml_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="__span-0-660"><a id="__codelineno-0-660" name="__codelineno-0-660"></a>        <span class="n">org_yaml_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">ORG_YAML_TEMPLATE</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
-</span><span id="__span-0-661"><a id="__codelineno-0-661" name="__codelineno-0-661"></a>        <span class="n">created</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;defaults/org.yaml&quot;</span><span class="p">)</span>
-</span><span id="__span-0-662"><a id="__codelineno-0-662" name="__codelineno-0-662"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">&quot;INIT&quot;</span><span class="p">,</span> <span class="s2">&quot;Created: defaults/org.yaml&quot;</span><span class="p">)</span>
-</span><span id="__span-0-663"><a id="__codelineno-0-663" name="__codelineno-0-663"></a>
-</span><span id="__span-0-664"><a id="__codelineno-0-664" name="__codelineno-0-664"></a>    <span class="c1"># Display results</span>
-</span><span id="__span-0-665"><a id="__codelineno-0-665" name="__codelineno-0-665"></a>    <span class="nb">print</span><span class="p">()</span>
-</span><span id="__span-0-666"><a id="__codelineno-0-666" name="__codelineno-0-666"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">70</span><span class="p">)</span>
-</span><span id="__span-0-667"><a id="__codelineno-0-667" name="__codelineno-0-667"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;INITIALIZATION RESULTS&quot;</span><span class="p">)</span>
-</span><span id="__span-0-668"><a id="__codelineno-0-668" name="__codelineno-0-668"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">70</span><span class="p">)</span>
-</span><span id="__span-0-669"><a id="__codelineno-0-669" name="__codelineno-0-669"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Project Root:    </span><span class="si">{</span><span class="n">target_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-0-670"><a id="__codelineno-0-670" name="__codelineno-0-670"></a>    <span class="nb">print</span><span class="p">()</span>
-</span><span id="__span-0-671"><a id="__codelineno-0-671" name="__codelineno-0-671"></a>
-</span><span id="__span-0-672"><a id="__codelineno-0-672" name="__codelineno-0-672"></a>    <span class="k">if</span> <span class="n">created</span><span class="p">:</span>
-</span><span id="__span-0-673"><a id="__codelineno-0-673" name="__codelineno-0-673"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Created (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">created</span><span class="p">)</span><span class="si">}</span><span class="s2">):&quot;</span><span class="p">)</span>
-</span><span id="__span-0-674"><a id="__codelineno-0-674" name="__codelineno-0-674"></a>        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">created</span><span class="p">:</span>
-</span><span id="__span-0-675"><a id="__codelineno-0-675" name="__codelineno-0-675"></a>            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  [OK] </span><span class="si">{</span><span class="n">item</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-0-676"><a id="__codelineno-0-676" name="__codelineno-0-676"></a>        <span class="nb">print</span><span class="p">()</span>
-</span><span id="__span-0-677"><a id="__codelineno-0-677" name="__codelineno-0-677"></a>
-</span><span id="__span-0-678"><a id="__codelineno-0-678" name="__codelineno-0-678"></a>    <span class="k">if</span> <span class="n">backed_up</span><span class="p">:</span>
-</span><span id="__span-0-679"><a id="__codelineno-0-679" name="__codelineno-0-679"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Backed Up (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">backed_up</span><span class="p">)</span><span class="si">}</span><span class="s2">):&quot;</span><span class="p">)</span>
-</span><span id="__span-0-680"><a id="__codelineno-0-680" name="__codelineno-0-680"></a>        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">backed_up</span><span class="p">:</span>
-</span><span id="__span-0-681"><a id="__codelineno-0-681" name="__codelineno-0-681"></a>            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  [OK] </span><span class="si">{</span><span class="n">item</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-0-682"><a id="__codelineno-0-682" name="__codelineno-0-682"></a>        <span class="nb">print</span><span class="p">()</span>
-</span><span id="__span-0-683"><a id="__codelineno-0-683" name="__codelineno-0-683"></a>
-</span><span id="__span-0-684"><a id="__codelineno-0-684" name="__codelineno-0-684"></a>    <span class="k">if</span> <span class="n">skipped</span><span class="p">:</span>
-</span><span id="__span-0-685"><a id="__codelineno-0-685" name="__codelineno-0-685"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Skipped (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">skipped</span><span class="p">)</span><span class="si">}</span><span class="s2">):&quot;</span><span class="p">)</span>
-</span><span id="__span-0-686"><a id="__codelineno-0-686" name="__codelineno-0-686"></a>        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">skipped</span><span class="p">:</span>
-</span><span id="__span-0-687"><a id="__codelineno-0-687" name="__codelineno-0-687"></a>            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  [SKIP] </span><span class="si">{</span><span class="n">item</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__span-0-688"><a id="__codelineno-0-688" name="__codelineno-0-688"></a>        <span class="nb">print</span><span class="p">()</span>
-</span><span id="__span-0-689"><a id="__codelineno-0-689" name="__codelineno-0-689"></a>
-</span><span id="__span-0-690"><a id="__codelineno-0-690" name="__codelineno-0-690"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">70</span><span class="p">)</span>
-</span><span id="__span-0-691"><a id="__codelineno-0-691" name="__codelineno-0-691"></a>    <span class="nb">print</span><span class="p">()</span>
+</span><span id="__span-0-638"><a id="__codelineno-0-638" name="__codelineno-0-638"></a>    <span class="c1"># Step 2: Create configuration files</span>
+</span><span id="__span-0-639"><a id="__codelineno-0-639" name="__codelineno-0-639"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;Creating configuration files...&quot;</span><span class="p">)</span>
+</span><span id="__span-0-640"><a id="__codelineno-0-640" name="__codelineno-0-640"></a>
+</span><span id="__span-0-641"><a id="__codelineno-0-641" name="__codelineno-0-641"></a>    <span class="c1"># Create defaults/org.yaml</span>
+</span><span id="__span-0-642"><a id="__codelineno-0-642" name="__codelineno-0-642"></a>    <span class="n">org_yaml_path</span> <span class="o">=</span> <span class="n">target_dir</span> <span class="o">/</span> <span class="s2">&quot;defaults&quot;</span> <span class="o">/</span> <span class="s2">&quot;org.yaml&quot;</span>
+</span><span id="__span-0-643"><a id="__codelineno-0-643" name="__codelineno-0-643"></a>    <span class="k">if</span> <span class="n">org_yaml_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+</span><span id="__span-0-644"><a id="__codelineno-0-644" name="__codelineno-0-644"></a>        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">force</span><span class="p">:</span>
+</span><span id="__span-0-645"><a id="__codelineno-0-645" name="__codelineno-0-645"></a>            <span class="c1"># Backup existing file</span>
+</span><span id="__span-0-646"><a id="__codelineno-0-646" name="__codelineno-0-646"></a>            <span class="n">backup_path</span> <span class="o">=</span> <span class="n">org_yaml_path</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;.yaml.backup&quot;</span><span class="p">)</span>
+</span><span id="__span-0-647"><a id="__codelineno-0-647" name="__codelineno-0-647"></a>            <span class="n">org_yaml_path</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">backup_path</span><span class="p">)</span>
+</span><span id="__span-0-648"><a id="__codelineno-0-648" name="__codelineno-0-648"></a>            <span class="n">backed_up</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;defaults/org.yaml -&gt; </span><span class="si">{</span><span class="n">backup_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-0-649"><a id="__codelineno-0-649" name="__codelineno-0-649"></a>            <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span>
+</span><span id="__span-0-650"><a id="__codelineno-0-650" name="__codelineno-0-650"></a>                <span class="s2">&quot;INIT&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Backed up: defaults/org.yaml -&gt; </span><span class="si">{</span><span class="n">backup_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span id="__span-0-651"><a id="__codelineno-0-651" name="__codelineno-0-651"></a>            <span class="p">)</span>
+</span><span id="__span-0-652"><a id="__codelineno-0-652" name="__codelineno-0-652"></a>
+</span><span id="__span-0-653"><a id="__codelineno-0-653" name="__codelineno-0-653"></a>            <span class="c1"># Write new file</span>
+</span><span id="__span-0-654"><a id="__codelineno-0-654" name="__codelineno-0-654"></a>            <span class="n">org_yaml_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">ORG_YAML_TEMPLATE</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+</span><span id="__span-0-655"><a id="__codelineno-0-655" name="__codelineno-0-655"></a>            <span class="n">created</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;defaults/org.yaml&quot;</span><span class="p">)</span>
+</span><span id="__span-0-656"><a id="__codelineno-0-656" name="__codelineno-0-656"></a>            <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">&quot;INIT&quot;</span><span class="p">,</span> <span class="s2">&quot;Created: defaults/org.yaml&quot;</span><span class="p">)</span>
+</span><span id="__span-0-657"><a id="__codelineno-0-657" name="__codelineno-0-657"></a>        <span class="k">else</span><span class="p">:</span>
+</span><span id="__span-0-658"><a id="__codelineno-0-658" name="__codelineno-0-658"></a>            <span class="n">skipped</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;defaults/org.yaml&quot;</span><span class="p">)</span>
+</span><span id="__span-0-659"><a id="__codelineno-0-659" name="__codelineno-0-659"></a>            <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">&quot;INIT&quot;</span><span class="p">,</span> <span class="s2">&quot;Skipped: defaults/org.yaml (already exists)&quot;</span><span class="p">)</span>
+</span><span id="__span-0-660"><a id="__codelineno-0-660" name="__codelineno-0-660"></a>    <span class="k">else</span><span class="p">:</span>
+</span><span id="__span-0-661"><a id="__codelineno-0-661" name="__codelineno-0-661"></a>        <span class="c1"># Ensure parent directory exists</span>
+</span><span id="__span-0-662"><a id="__codelineno-0-662" name="__codelineno-0-662"></a>        <span class="n">org_yaml_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-0-663"><a id="__codelineno-0-663" name="__codelineno-0-663"></a>        <span class="n">org_yaml_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">ORG_YAML_TEMPLATE</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+</span><span id="__span-0-664"><a id="__codelineno-0-664" name="__codelineno-0-664"></a>        <span class="n">created</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;defaults/org.yaml&quot;</span><span class="p">)</span>
+</span><span id="__span-0-665"><a id="__codelineno-0-665" name="__codelineno-0-665"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">&quot;INIT&quot;</span><span class="p">,</span> <span class="s2">&quot;Created: defaults/org.yaml&quot;</span><span class="p">)</span>
+</span><span id="__span-0-666"><a id="__codelineno-0-666" name="__codelineno-0-666"></a>
+</span><span id="__span-0-667"><a id="__codelineno-0-667" name="__codelineno-0-667"></a>    <span class="c1"># Display results</span>
+</span><span id="__span-0-668"><a id="__codelineno-0-668" name="__codelineno-0-668"></a>    <span class="nb">print</span><span class="p">()</span>
+</span><span id="__span-0-669"><a id="__codelineno-0-669" name="__codelineno-0-669"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">70</span><span class="p">)</span>
+</span><span id="__span-0-670"><a id="__codelineno-0-670" name="__codelineno-0-670"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;INITIALIZATION RESULTS&quot;</span><span class="p">)</span>
+</span><span id="__span-0-671"><a id="__codelineno-0-671" name="__codelineno-0-671"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">70</span><span class="p">)</span>
+</span><span id="__span-0-672"><a id="__codelineno-0-672" name="__codelineno-0-672"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Project Root:    </span><span class="si">{</span><span class="n">target_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-0-673"><a id="__codelineno-0-673" name="__codelineno-0-673"></a>    <span class="nb">print</span><span class="p">()</span>
+</span><span id="__span-0-674"><a id="__codelineno-0-674" name="__codelineno-0-674"></a>
+</span><span id="__span-0-675"><a id="__codelineno-0-675" name="__codelineno-0-675"></a>    <span class="k">if</span> <span class="n">created</span><span class="p">:</span>
+</span><span id="__span-0-676"><a id="__codelineno-0-676" name="__codelineno-0-676"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Created (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">created</span><span class="p">)</span><span class="si">}</span><span class="s2">):&quot;</span><span class="p">)</span>
+</span><span id="__span-0-677"><a id="__codelineno-0-677" name="__codelineno-0-677"></a>        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">created</span><span class="p">:</span>
+</span><span id="__span-0-678"><a id="__codelineno-0-678" name="__codelineno-0-678"></a>            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  [OK] </span><span class="si">{</span><span class="n">item</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-0-679"><a id="__codelineno-0-679" name="__codelineno-0-679"></a>        <span class="nb">print</span><span class="p">()</span>
+</span><span id="__span-0-680"><a id="__codelineno-0-680" name="__codelineno-0-680"></a>
+</span><span id="__span-0-681"><a id="__codelineno-0-681" name="__codelineno-0-681"></a>    <span class="k">if</span> <span class="n">backed_up</span><span class="p">:</span>
+</span><span id="__span-0-682"><a id="__codelineno-0-682" name="__codelineno-0-682"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Backed Up (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">backed_up</span><span class="p">)</span><span class="si">}</span><span class="s2">):&quot;</span><span class="p">)</span>
+</span><span id="__span-0-683"><a id="__codelineno-0-683" name="__codelineno-0-683"></a>        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">backed_up</span><span class="p">:</span>
+</span><span id="__span-0-684"><a id="__codelineno-0-684" name="__codelineno-0-684"></a>            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  [OK] </span><span class="si">{</span><span class="n">item</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-0-685"><a id="__codelineno-0-685" name="__codelineno-0-685"></a>        <span class="nb">print</span><span class="p">()</span>
+</span><span id="__span-0-686"><a id="__codelineno-0-686" name="__codelineno-0-686"></a>
+</span><span id="__span-0-687"><a id="__codelineno-0-687" name="__codelineno-0-687"></a>    <span class="k">if</span> <span class="n">skipped</span><span class="p">:</span>
+</span><span id="__span-0-688"><a id="__codelineno-0-688" name="__codelineno-0-688"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Skipped (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">skipped</span><span class="p">)</span><span class="si">}</span><span class="s2">):&quot;</span><span class="p">)</span>
+</span><span id="__span-0-689"><a id="__codelineno-0-689" name="__codelineno-0-689"></a>        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">skipped</span><span class="p">:</span>
+</span><span id="__span-0-690"><a id="__codelineno-0-690" name="__codelineno-0-690"></a>            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  [SKIP] </span><span class="si">{</span><span class="n">item</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-0-691"><a id="__codelineno-0-691" name="__codelineno-0-691"></a>        <span class="nb">print</span><span class="p">()</span>
 </span><span id="__span-0-692"><a id="__codelineno-0-692" name="__codelineno-0-692"></a>
-</span><span id="__span-0-693"><a id="__codelineno-0-693" name="__codelineno-0-693"></a>    <span class="k">if</span> <span class="n">skipped</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">force</span><span class="p">:</span>
-</span><span id="__span-0-694"><a id="__codelineno-0-694" name="__codelineno-0-694"></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Note: Existing files were preserved. Use --force to overwrite.&quot;</span><span class="p">)</span>
-</span><span id="__span-0-695"><a id="__codelineno-0-695" name="__codelineno-0-695"></a>        <span class="nb">print</span><span class="p">()</span>
-</span><span id="__span-0-696"><a id="__codelineno-0-696" name="__codelineno-0-696"></a>
-</span><span id="__span-0-697"><a id="__codelineno-0-697" name="__codelineno-0-697"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;[SUCCESS] Project initialized!&quot;</span><span class="p">)</span>
-</span><span id="__span-0-698"><a id="__codelineno-0-698" name="__codelineno-0-698"></a>    <span class="k">return</span> <span class="mi">0</span>
+</span><span id="__span-0-693"><a id="__codelineno-0-693" name="__codelineno-0-693"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">70</span><span class="p">)</span>
+</span><span id="__span-0-694"><a id="__codelineno-0-694" name="__codelineno-0-694"></a>    <span class="nb">print</span><span class="p">()</span>
+</span><span id="__span-0-695"><a id="__codelineno-0-695" name="__codelineno-0-695"></a>
+</span><span id="__span-0-696"><a id="__codelineno-0-696" name="__codelineno-0-696"></a>    <span class="k">if</span> <span class="n">skipped</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">force</span><span class="p">:</span>
+</span><span id="__span-0-697"><a id="__codelineno-0-697" name="__codelineno-0-697"></a>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Note: Existing files were preserved. Use --force to overwrite.&quot;</span><span class="p">)</span>
+</span><span id="__span-0-698"><a id="__codelineno-0-698" name="__codelineno-0-698"></a>        <span class="nb">print</span><span class="p">()</span>
+</span><span id="__span-0-699"><a id="__codelineno-0-699" name="__codelineno-0-699"></a>
+</span><span id="__span-0-700"><a id="__codelineno-0-700" name="__codelineno-0-700"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;[SUCCESS] Project initialized!&quot;</span><span class="p">)</span>
+</span><span id="__span-0-701"><a id="__codelineno-0-701" name="__codelineno-0-701"></a>    <span class="k">return</span> <span class="mi">0</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3370,10 +3376,7 @@ Use --force to backup existing files and create fresh ones.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>napt/cli.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-701"> 701</a></span>
-<span class="normal"><a href="#__codelineno-0-702"> 702</a></span>
-<span class="normal"><a href="#__codelineno-0-703"> 703</a></span>
-<span class="normal"><a href="#__codelineno-0-704"> 704</a></span>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-704"> 704</a></span>
 <span class="normal"><a href="#__codelineno-0-705"> 705</a></span>
 <span class="normal"><a href="#__codelineno-0-706"> 706</a></span>
 <span class="normal"><a href="#__codelineno-0-707"> 707</a></span>
@@ -3675,312 +3678,315 @@ Use --force to backup existing files and create fresh ones.</p>
 <span class="normal"><a href="#__codelineno-0-1003">1003</a></span>
 <span class="normal"><a href="#__codelineno-0-1004">1004</a></span>
 <span class="normal"><a href="#__codelineno-0-1005">1005</a></span>
-<span class="normal"><a href="#__codelineno-0-1006">1006</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-701"><a id="__codelineno-0-701" name="__codelineno-0-701"></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-0-702"><a id="__codelineno-0-702" name="__codelineno-0-702"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Main entry point for the napt CLI.</span>
-</span><span id="__span-0-703"><a id="__codelineno-0-703" name="__codelineno-0-703"></a>
-</span><span id="__span-0-704"><a id="__codelineno-0-704" name="__codelineno-0-704"></a><span class="sd">    This function is registered as the &#39;napt&#39; console script in pyproject.toml.</span>
-</span><span id="__span-0-705"><a id="__codelineno-0-705" name="__codelineno-0-705"></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="__span-0-706"><a id="__codelineno-0-706" name="__codelineno-0-706"></a>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
-</span><span id="__span-0-707"><a id="__codelineno-0-707" name="__codelineno-0-707"></a>        <span class="n">prog</span><span class="o">=</span><span class="s2">&quot;napt&quot;</span><span class="p">,</span>
-</span><span id="__span-0-708"><a id="__codelineno-0-708" name="__codelineno-0-708"></a>        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;NAPT - Not a Pkg Tool for Windows/Intune packaging with PSADT&quot;</span><span class="p">,</span>
-</span><span id="__span-0-709"><a id="__codelineno-0-709" name="__codelineno-0-709"></a>        <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">RawDescriptionHelpFormatter</span><span class="p">,</span>
-</span><span id="__span-0-710"><a id="__codelineno-0-710" name="__codelineno-0-710"></a>    <span class="p">)</span>
-</span><span id="__span-0-711"><a id="__codelineno-0-711" name="__codelineno-0-711"></a>
-</span><span id="__span-0-712"><a id="__codelineno-0-712" name="__codelineno-0-712"></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-713"><a id="__codelineno-0-713" name="__codelineno-0-713"></a>        <span class="s2">&quot;--version&quot;</span><span class="p">,</span>
-</span><span id="__span-0-714"><a id="__codelineno-0-714" name="__codelineno-0-714"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;version&quot;</span><span class="p">,</span>
-</span><span id="__span-0-715"><a id="__codelineno-0-715" name="__codelineno-0-715"></a>        <span class="n">version</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;napt </span><span class="si">{</span><span class="n">version</span><span class="p">(</span><span class="s1">&#39;napt&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-</span><span id="__span-0-716"><a id="__codelineno-0-716" name="__codelineno-0-716"></a>    <span class="p">)</span>
-</span><span id="__span-0-717"><a id="__codelineno-0-717" name="__codelineno-0-717"></a>
-</span><span id="__span-0-718"><a id="__codelineno-0-718" name="__codelineno-0-718"></a>    <span class="n">subparsers</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_subparsers</span><span class="p">(</span>
-</span><span id="__span-0-719"><a id="__codelineno-0-719" name="__codelineno-0-719"></a>        <span class="n">dest</span><span class="o">=</span><span class="s2">&quot;command&quot;</span><span class="p">,</span>
-</span><span id="__span-0-720"><a id="__codelineno-0-720" name="__codelineno-0-720"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Available commands&quot;</span><span class="p">,</span>
-</span><span id="__span-0-721"><a id="__codelineno-0-721" name="__codelineno-0-721"></a>        <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-</span><span id="__span-0-722"><a id="__codelineno-0-722" name="__codelineno-0-722"></a>    <span class="p">)</span>
-</span><span id="__span-0-723"><a id="__codelineno-0-723" name="__codelineno-0-723"></a>
-</span><span id="__span-0-724"><a id="__codelineno-0-724" name="__codelineno-0-724"></a>    <span class="c1"># &#39;validate&#39; command</span>
-</span><span id="__span-0-725"><a id="__codelineno-0-725" name="__codelineno-0-725"></a>    <span class="n">parser_validate</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span>
-</span><span id="__span-0-726"><a id="__codelineno-0-726" name="__codelineno-0-726"></a>        <span class="s2">&quot;validate&quot;</span><span class="p">,</span>
-</span><span id="__span-0-727"><a id="__codelineno-0-727" name="__codelineno-0-727"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Validate recipe syntax and configuration (no downloads)&quot;</span><span class="p">,</span>
-</span><span id="__span-0-728"><a id="__codelineno-0-728" name="__codelineno-0-728"></a>        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-</span><span id="__span-0-729"><a id="__codelineno-0-729" name="__codelineno-0-729"></a>            <span class="s2">&quot;Check recipe YAML for syntax errors and configuration issues &quot;</span>
-</span><span id="__span-0-730"><a id="__codelineno-0-730" name="__codelineno-0-730"></a>            <span class="s2">&quot;without making network calls.</span><span class="se">\n\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-731"><a id="__codelineno-0-731" name="__codelineno-0-731"></a>            <span class="s2">&quot;Examples:</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-732"><a id="__codelineno-0-732" name="__codelineno-0-732"></a>            <span class="s2">&quot;  napt validate recipes/Google/chrome.yaml</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-733"><a id="__codelineno-0-733" name="__codelineno-0-733"></a>            <span class="s2">&quot;  napt validate recipes/Google/chrome.yaml --verbose</span><span class="se">\n\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-734"><a id="__codelineno-0-734" name="__codelineno-0-734"></a>            <span class="s2">&quot;See docs for more examples and workflows.&quot;</span>
-</span><span id="__span-0-735"><a id="__codelineno-0-735" name="__codelineno-0-735"></a>        <span class="p">),</span>
-</span><span id="__span-0-736"><a id="__codelineno-0-736" name="__codelineno-0-736"></a>        <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">RawDescriptionHelpFormatter</span><span class="p">,</span>
-</span><span id="__span-0-737"><a id="__codelineno-0-737" name="__codelineno-0-737"></a>    <span class="p">)</span>
-</span><span id="__span-0-738"><a id="__codelineno-0-738" name="__codelineno-0-738"></a>    <span class="n">parser_validate</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-739"><a id="__codelineno-0-739" name="__codelineno-0-739"></a>        <span class="s2">&quot;recipe&quot;</span><span class="p">,</span>
-</span><span id="__span-0-740"><a id="__codelineno-0-740" name="__codelineno-0-740"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to the recipe YAML file&quot;</span><span class="p">,</span>
-</span><span id="__span-0-741"><a id="__codelineno-0-741" name="__codelineno-0-741"></a>    <span class="p">)</span>
-</span><span id="__span-0-742"><a id="__codelineno-0-742" name="__codelineno-0-742"></a>    <span class="n">parser_validate</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-743"><a id="__codelineno-0-743" name="__codelineno-0-743"></a>        <span class="s2">&quot;-v&quot;</span><span class="p">,</span>
-</span><span id="__span-0-744"><a id="__codelineno-0-744" name="__codelineno-0-744"></a>        <span class="s2">&quot;--verbose&quot;</span><span class="p">,</span>
-</span><span id="__span-0-745"><a id="__codelineno-0-745" name="__codelineno-0-745"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
-</span><span id="__span-0-746"><a id="__codelineno-0-746" name="__codelineno-0-746"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show validation progress and details&quot;</span><span class="p">,</span>
-</span><span id="__span-0-747"><a id="__codelineno-0-747" name="__codelineno-0-747"></a>    <span class="p">)</span>
-</span><span id="__span-0-748"><a id="__codelineno-0-748" name="__codelineno-0-748"></a>    <span class="n">parser_validate</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-749"><a id="__codelineno-0-749" name="__codelineno-0-749"></a>        <span class="s2">&quot;-d&quot;</span><span class="p">,</span>
-</span><span id="__span-0-750"><a id="__codelineno-0-750" name="__codelineno-0-750"></a>        <span class="s2">&quot;--debug&quot;</span><span class="p">,</span>
-</span><span id="__span-0-751"><a id="__codelineno-0-751" name="__codelineno-0-751"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
-</span><span id="__span-0-752"><a id="__codelineno-0-752" name="__codelineno-0-752"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show detailed debugging output (implies --verbose)&quot;</span><span class="p">,</span>
-</span><span id="__span-0-753"><a id="__codelineno-0-753" name="__codelineno-0-753"></a>    <span class="p">)</span>
-</span><span id="__span-0-754"><a id="__codelineno-0-754" name="__codelineno-0-754"></a>    <span class="n">parser_validate</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">cmd_validate</span><span class="p">)</span>
-</span><span id="__span-0-755"><a id="__codelineno-0-755" name="__codelineno-0-755"></a>
-</span><span id="__span-0-756"><a id="__codelineno-0-756" name="__codelineno-0-756"></a>    <span class="c1"># &#39;discover&#39; command</span>
-</span><span id="__span-0-757"><a id="__codelineno-0-757" name="__codelineno-0-757"></a>    <span class="n">parser_discover</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span>
-</span><span id="__span-0-758"><a id="__codelineno-0-758" name="__codelineno-0-758"></a>        <span class="s2">&quot;discover&quot;</span><span class="p">,</span>
-</span><span id="__span-0-759"><a id="__codelineno-0-759" name="__codelineno-0-759"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Discover latest version and download installer&quot;</span><span class="p">,</span>
-</span><span id="__span-0-760"><a id="__codelineno-0-760" name="__codelineno-0-760"></a>        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-</span><span id="__span-0-761"><a id="__codelineno-0-761" name="__codelineno-0-761"></a>            <span class="s2">&quot;Find the latest version using the configured discovery strategy &quot;</span>
-</span><span id="__span-0-762"><a id="__codelineno-0-762" name="__codelineno-0-762"></a>            <span class="s2">&quot;and download the installer.</span><span class="se">\n\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-763"><a id="__codelineno-0-763" name="__codelineno-0-763"></a>            <span class="s2">&quot;Examples:</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-764"><a id="__codelineno-0-764" name="__codelineno-0-764"></a>            <span class="s2">&quot;  napt discover recipes/Google/chrome.yaml</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-765"><a id="__codelineno-0-765" name="__codelineno-0-765"></a>            <span class="s2">&quot;  napt discover recipes/Google/chrome.yaml --verbose</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-766"><a id="__codelineno-0-766" name="__codelineno-0-766"></a>            <span class="s2">&quot;  napt discover recipes/Google/chrome.yaml --stateless</span><span class="se">\n\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-767"><a id="__codelineno-0-767" name="__codelineno-0-767"></a>            <span class="s2">&quot;See docs for more examples and workflows.&quot;</span>
-</span><span id="__span-0-768"><a id="__codelineno-0-768" name="__codelineno-0-768"></a>        <span class="p">),</span>
-</span><span id="__span-0-769"><a id="__codelineno-0-769" name="__codelineno-0-769"></a>        <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">RawDescriptionHelpFormatter</span><span class="p">,</span>
-</span><span id="__span-0-770"><a id="__codelineno-0-770" name="__codelineno-0-770"></a>    <span class="p">)</span>
-</span><span id="__span-0-771"><a id="__codelineno-0-771" name="__codelineno-0-771"></a>    <span class="n">parser_discover</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-772"><a id="__codelineno-0-772" name="__codelineno-0-772"></a>        <span class="s2">&quot;recipe&quot;</span><span class="p">,</span>
-</span><span id="__span-0-773"><a id="__codelineno-0-773" name="__codelineno-0-773"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to the recipe YAML file&quot;</span><span class="p">,</span>
-</span><span id="__span-0-774"><a id="__codelineno-0-774" name="__codelineno-0-774"></a>    <span class="p">)</span>
-</span><span id="__span-0-775"><a id="__codelineno-0-775" name="__codelineno-0-775"></a>    <span class="n">parser_discover</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-776"><a id="__codelineno-0-776" name="__codelineno-0-776"></a>        <span class="s2">&quot;--output-dir&quot;</span><span class="p">,</span>
-</span><span id="__span-0-777"><a id="__codelineno-0-777" name="__codelineno-0-777"></a>        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-778"><a id="__codelineno-0-778" name="__codelineno-0-778"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Directory to save downloaded files (default: from config or ./downloads)&quot;</span><span class="p">,</span>
-</span><span id="__span-0-779"><a id="__codelineno-0-779" name="__codelineno-0-779"></a>    <span class="p">)</span>
-</span><span id="__span-0-780"><a id="__codelineno-0-780" name="__codelineno-0-780"></a>    <span class="n">parser_discover</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-781"><a id="__codelineno-0-781" name="__codelineno-0-781"></a>        <span class="s2">&quot;--state-file&quot;</span><span class="p">,</span>
-</span><span id="__span-0-782"><a id="__codelineno-0-782" name="__codelineno-0-782"></a>        <span class="nb">type</span><span class="o">=</span><span class="n">Path</span><span class="p">,</span>
-</span><span id="__span-0-783"><a id="__codelineno-0-783" name="__codelineno-0-783"></a>        <span class="n">default</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;state/versions.json&quot;</span><span class="p">),</span>
-</span><span id="__span-0-784"><a id="__codelineno-0-784" name="__codelineno-0-784"></a>        <span class="n">help</span><span class="o">=</span><span class="p">(</span>
-</span><span id="__span-0-785"><a id="__codelineno-0-785" name="__codelineno-0-785"></a>            <span class="s2">&quot;State file for version tracking and ETag caching &quot;</span>
-</span><span id="__span-0-786"><a id="__codelineno-0-786" name="__codelineno-0-786"></a>            <span class="s2">&quot;(default: state/versions.json)&quot;</span>
-</span><span id="__span-0-787"><a id="__codelineno-0-787" name="__codelineno-0-787"></a>        <span class="p">),</span>
-</span><span id="__span-0-788"><a id="__codelineno-0-788" name="__codelineno-0-788"></a>    <span class="p">)</span>
-</span><span id="__span-0-789"><a id="__codelineno-0-789" name="__codelineno-0-789"></a>    <span class="n">parser_discover</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-790"><a id="__codelineno-0-790" name="__codelineno-0-790"></a>        <span class="s2">&quot;--stateless&quot;</span><span class="p">,</span>
-</span><span id="__span-0-791"><a id="__codelineno-0-791" name="__codelineno-0-791"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
-</span><span id="__span-0-792"><a id="__codelineno-0-792" name="__codelineno-0-792"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Disable state tracking (no caching, always download full files)&quot;</span><span class="p">,</span>
-</span><span id="__span-0-793"><a id="__codelineno-0-793" name="__codelineno-0-793"></a>    <span class="p">)</span>
-</span><span id="__span-0-794"><a id="__codelineno-0-794" name="__codelineno-0-794"></a>    <span class="n">parser_discover</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-795"><a id="__codelineno-0-795" name="__codelineno-0-795"></a>        <span class="s2">&quot;-v&quot;</span><span class="p">,</span>
-</span><span id="__span-0-796"><a id="__codelineno-0-796" name="__codelineno-0-796"></a>        <span class="s2">&quot;--verbose&quot;</span><span class="p">,</span>
-</span><span id="__span-0-797"><a id="__codelineno-0-797" name="__codelineno-0-797"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
-</span><span id="__span-0-798"><a id="__codelineno-0-798" name="__codelineno-0-798"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show progress and high-level status updates&quot;</span><span class="p">,</span>
-</span><span id="__span-0-799"><a id="__codelineno-0-799" name="__codelineno-0-799"></a>    <span class="p">)</span>
-</span><span id="__span-0-800"><a id="__codelineno-0-800" name="__codelineno-0-800"></a>    <span class="n">parser_discover</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-801"><a id="__codelineno-0-801" name="__codelineno-0-801"></a>        <span class="s2">&quot;-d&quot;</span><span class="p">,</span>
-</span><span id="__span-0-802"><a id="__codelineno-0-802" name="__codelineno-0-802"></a>        <span class="s2">&quot;--debug&quot;</span><span class="p">,</span>
-</span><span id="__span-0-803"><a id="__codelineno-0-803" name="__codelineno-0-803"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
-</span><span id="__span-0-804"><a id="__codelineno-0-804" name="__codelineno-0-804"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show detailed debugging output (implies --verbose)&quot;</span><span class="p">,</span>
-</span><span id="__span-0-805"><a id="__codelineno-0-805" name="__codelineno-0-805"></a>    <span class="p">)</span>
-</span><span id="__span-0-806"><a id="__codelineno-0-806" name="__codelineno-0-806"></a>    <span class="n">parser_discover</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">cmd_discover</span><span class="p">)</span>
-</span><span id="__span-0-807"><a id="__codelineno-0-807" name="__codelineno-0-807"></a>
-</span><span id="__span-0-808"><a id="__codelineno-0-808" name="__codelineno-0-808"></a>    <span class="c1"># &#39;build&#39; command</span>
-</span><span id="__span-0-809"><a id="__codelineno-0-809" name="__codelineno-0-809"></a>    <span class="n">parser_build</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span>
-</span><span id="__span-0-810"><a id="__codelineno-0-810" name="__codelineno-0-810"></a>        <span class="s2">&quot;build&quot;</span><span class="p">,</span>
-</span><span id="__span-0-811"><a id="__codelineno-0-811" name="__codelineno-0-811"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Build PSADT package from recipe and installer&quot;</span><span class="p">,</span>
-</span><span id="__span-0-812"><a id="__codelineno-0-812" name="__codelineno-0-812"></a>        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-</span><span id="__span-0-813"><a id="__codelineno-0-813" name="__codelineno-0-813"></a>            <span class="s2">&quot;Create a PSADT deployment package from a recipe and &quot;</span>
-</span><span id="__span-0-814"><a id="__codelineno-0-814" name="__codelineno-0-814"></a>            <span class="s2">&quot;downloaded installer.</span><span class="se">\n\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-815"><a id="__codelineno-0-815" name="__codelineno-0-815"></a>            <span class="s2">&quot;Examples:</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-816"><a id="__codelineno-0-816" name="__codelineno-0-816"></a>            <span class="s2">&quot;  napt build recipes/Google/chrome.yaml</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-817"><a id="__codelineno-0-817" name="__codelineno-0-817"></a>            <span class="s2">&quot;  napt build recipes/Google/chrome.yaml --verbose</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-818"><a id="__codelineno-0-818" name="__codelineno-0-818"></a>            <span class="s2">&quot;  napt build recipes/Google/chrome.yaml --output-dir ./builds</span><span class="se">\n\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-819"><a id="__codelineno-0-819" name="__codelineno-0-819"></a>            <span class="s2">&quot;See docs for more examples and workflows.&quot;</span>
-</span><span id="__span-0-820"><a id="__codelineno-0-820" name="__codelineno-0-820"></a>        <span class="p">),</span>
-</span><span id="__span-0-821"><a id="__codelineno-0-821" name="__codelineno-0-821"></a>        <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">RawDescriptionHelpFormatter</span><span class="p">,</span>
-</span><span id="__span-0-822"><a id="__codelineno-0-822" name="__codelineno-0-822"></a>    <span class="p">)</span>
-</span><span id="__span-0-823"><a id="__codelineno-0-823" name="__codelineno-0-823"></a>    <span class="n">parser_build</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-824"><a id="__codelineno-0-824" name="__codelineno-0-824"></a>        <span class="s2">&quot;recipe&quot;</span><span class="p">,</span>
-</span><span id="__span-0-825"><a id="__codelineno-0-825" name="__codelineno-0-825"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to the recipe YAML file&quot;</span><span class="p">,</span>
-</span><span id="__span-0-826"><a id="__codelineno-0-826" name="__codelineno-0-826"></a>    <span class="p">)</span>
-</span><span id="__span-0-827"><a id="__codelineno-0-827" name="__codelineno-0-827"></a>    <span class="n">parser_build</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-828"><a id="__codelineno-0-828" name="__codelineno-0-828"></a>        <span class="s2">&quot;--downloads-dir&quot;</span><span class="p">,</span>
-</span><span id="__span-0-829"><a id="__codelineno-0-829" name="__codelineno-0-829"></a>        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-830"><a id="__codelineno-0-830" name="__codelineno-0-830"></a>        <span class="n">help</span><span class="o">=</span><span class="p">(</span>
-</span><span id="__span-0-831"><a id="__codelineno-0-831" name="__codelineno-0-831"></a>            <span class="s2">&quot;Directory containing the downloaded installer &quot;</span>
-</span><span id="__span-0-832"><a id="__codelineno-0-832" name="__codelineno-0-832"></a>            <span class="s2">&quot;(default: from config or ./downloads)&quot;</span>
-</span><span id="__span-0-833"><a id="__codelineno-0-833" name="__codelineno-0-833"></a>        <span class="p">),</span>
-</span><span id="__span-0-834"><a id="__codelineno-0-834" name="__codelineno-0-834"></a>    <span class="p">)</span>
-</span><span id="__span-0-835"><a id="__codelineno-0-835" name="__codelineno-0-835"></a>    <span class="n">parser_build</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-836"><a id="__codelineno-0-836" name="__codelineno-0-836"></a>        <span class="s2">&quot;--output-dir&quot;</span><span class="p">,</span>
-</span><span id="__span-0-837"><a id="__codelineno-0-837" name="__codelineno-0-837"></a>        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-838"><a id="__codelineno-0-838" name="__codelineno-0-838"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Base directory for build output (default: from config or ./builds)&quot;</span><span class="p">,</span>
-</span><span id="__span-0-839"><a id="__codelineno-0-839" name="__codelineno-0-839"></a>    <span class="p">)</span>
-</span><span id="__span-0-840"><a id="__codelineno-0-840" name="__codelineno-0-840"></a>    <span class="n">parser_build</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-841"><a id="__codelineno-0-841" name="__codelineno-0-841"></a>        <span class="s2">&quot;-v&quot;</span><span class="p">,</span>
-</span><span id="__span-0-842"><a id="__codelineno-0-842" name="__codelineno-0-842"></a>        <span class="s2">&quot;--verbose&quot;</span><span class="p">,</span>
-</span><span id="__span-0-843"><a id="__codelineno-0-843" name="__codelineno-0-843"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
-</span><span id="__span-0-844"><a id="__codelineno-0-844" name="__codelineno-0-844"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show progress and high-level status updates&quot;</span><span class="p">,</span>
-</span><span id="__span-0-845"><a id="__codelineno-0-845" name="__codelineno-0-845"></a>    <span class="p">)</span>
-</span><span id="__span-0-846"><a id="__codelineno-0-846" name="__codelineno-0-846"></a>    <span class="n">parser_build</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-847"><a id="__codelineno-0-847" name="__codelineno-0-847"></a>        <span class="s2">&quot;-d&quot;</span><span class="p">,</span>
-</span><span id="__span-0-848"><a id="__codelineno-0-848" name="__codelineno-0-848"></a>        <span class="s2">&quot;--debug&quot;</span><span class="p">,</span>
-</span><span id="__span-0-849"><a id="__codelineno-0-849" name="__codelineno-0-849"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
-</span><span id="__span-0-850"><a id="__codelineno-0-850" name="__codelineno-0-850"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show detailed debugging output (implies --verbose)&quot;</span><span class="p">,</span>
-</span><span id="__span-0-851"><a id="__codelineno-0-851" name="__codelineno-0-851"></a>    <span class="p">)</span>
-</span><span id="__span-0-852"><a id="__codelineno-0-852" name="__codelineno-0-852"></a>    <span class="n">parser_build</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">cmd_build</span><span class="p">)</span>
-</span><span id="__span-0-853"><a id="__codelineno-0-853" name="__codelineno-0-853"></a>
-</span><span id="__span-0-854"><a id="__codelineno-0-854" name="__codelineno-0-854"></a>    <span class="c1"># &#39;package&#39; command</span>
-</span><span id="__span-0-855"><a id="__codelineno-0-855" name="__codelineno-0-855"></a>    <span class="n">parser_package</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span>
-</span><span id="__span-0-856"><a id="__codelineno-0-856" name="__codelineno-0-856"></a>        <span class="s2">&quot;package&quot;</span><span class="p">,</span>
-</span><span id="__span-0-857"><a id="__codelineno-0-857" name="__codelineno-0-857"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Create .intunewin package from a PSADT build&quot;</span><span class="p">,</span>
-</span><span id="__span-0-858"><a id="__codelineno-0-858" name="__codelineno-0-858"></a>        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-</span><span id="__span-0-859"><a id="__codelineno-0-859" name="__codelineno-0-859"></a>            <span class="s2">&quot;Package a PSADT build for a recipe into a .intunewin file for &quot;</span>
-</span><span id="__span-0-860"><a id="__codelineno-0-860" name="__codelineno-0-860"></a>            <span class="s2">&quot;Intune deployment. Without --version, packages the most recently &quot;</span>
-</span><span id="__span-0-861"><a id="__codelineno-0-861" name="__codelineno-0-861"></a>            <span class="s2">&quot;modified build. Only one packaged version is kept on disk per app &quot;</span>
-</span><span id="__span-0-862"><a id="__codelineno-0-862" name="__codelineno-0-862"></a>            <span class="s2">&quot;(previous version is removed automatically).</span><span class="se">\n\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-863"><a id="__codelineno-0-863" name="__codelineno-0-863"></a>            <span class="s2">&quot;Examples:</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-864"><a id="__codelineno-0-864" name="__codelineno-0-864"></a>            <span class="s2">&quot;  napt package recipes/Google/chrome.yaml</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-865"><a id="__codelineno-0-865" name="__codelineno-0-865"></a>            <span class="s2">&quot;  napt package recipes/Google/chrome.yaml --version 130.0.6723.116</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-866"><a id="__codelineno-0-866" name="__codelineno-0-866"></a>            <span class="s2">&quot;  napt package recipes/Google/chrome.yaml --clean-source</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-867"><a id="__codelineno-0-867" name="__codelineno-0-867"></a>            <span class="s2">&quot;  napt package recipes/Google/chrome.yaml --verbose</span><span class="se">\n\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-868"><a id="__codelineno-0-868" name="__codelineno-0-868"></a>            <span class="s2">&quot;See docs for more examples and workflows.&quot;</span>
-</span><span id="__span-0-869"><a id="__codelineno-0-869" name="__codelineno-0-869"></a>        <span class="p">),</span>
-</span><span id="__span-0-870"><a id="__codelineno-0-870" name="__codelineno-0-870"></a>        <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">RawDescriptionHelpFormatter</span><span class="p">,</span>
-</span><span id="__span-0-871"><a id="__codelineno-0-871" name="__codelineno-0-871"></a>    <span class="p">)</span>
-</span><span id="__span-0-872"><a id="__codelineno-0-872" name="__codelineno-0-872"></a>    <span class="n">parser_package</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-873"><a id="__codelineno-0-873" name="__codelineno-0-873"></a>        <span class="s2">&quot;recipe&quot;</span><span class="p">,</span>
-</span><span id="__span-0-874"><a id="__codelineno-0-874" name="__codelineno-0-874"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to the recipe YAML file&quot;</span><span class="p">,</span>
-</span><span id="__span-0-875"><a id="__codelineno-0-875" name="__codelineno-0-875"></a>    <span class="p">)</span>
-</span><span id="__span-0-876"><a id="__codelineno-0-876" name="__codelineno-0-876"></a>    <span class="n">parser_package</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-877"><a id="__codelineno-0-877" name="__codelineno-0-877"></a>        <span class="s2">&quot;--version&quot;</span><span class="p">,</span>
-</span><span id="__span-0-878"><a id="__codelineno-0-878" name="__codelineno-0-878"></a>        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-879"><a id="__codelineno-0-879" name="__codelineno-0-879"></a>        <span class="n">metavar</span><span class="o">=</span><span class="s2">&quot;VERSION&quot;</span><span class="p">,</span>
-</span><span id="__span-0-880"><a id="__codelineno-0-880" name="__codelineno-0-880"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Specific build version to package (default: most recent build)&quot;</span><span class="p">,</span>
-</span><span id="__span-0-881"><a id="__codelineno-0-881" name="__codelineno-0-881"></a>    <span class="p">)</span>
-</span><span id="__span-0-882"><a id="__codelineno-0-882" name="__codelineno-0-882"></a>    <span class="n">parser_package</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-883"><a id="__codelineno-0-883" name="__codelineno-0-883"></a>        <span class="s2">&quot;--builds-dir&quot;</span><span class="p">,</span>
-</span><span id="__span-0-884"><a id="__codelineno-0-884" name="__codelineno-0-884"></a>        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-885"><a id="__codelineno-0-885" name="__codelineno-0-885"></a>        <span class="n">help</span><span class="o">=</span><span class="p">(</span>
-</span><span id="__span-0-886"><a id="__codelineno-0-886" name="__codelineno-0-886"></a>            <span class="s2">&quot;Directory containing the PSADT build &quot;</span> <span class="s2">&quot;(default: from config or ./builds)&quot;</span>
-</span><span id="__span-0-887"><a id="__codelineno-0-887" name="__codelineno-0-887"></a>        <span class="p">),</span>
-</span><span id="__span-0-888"><a id="__codelineno-0-888" name="__codelineno-0-888"></a>    <span class="p">)</span>
-</span><span id="__span-0-889"><a id="__codelineno-0-889" name="__codelineno-0-889"></a>    <span class="n">parser_package</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-890"><a id="__codelineno-0-890" name="__codelineno-0-890"></a>        <span class="s2">&quot;--output-dir&quot;</span><span class="p">,</span>
-</span><span id="__span-0-891"><a id="__codelineno-0-891" name="__codelineno-0-891"></a>        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-892"><a id="__codelineno-0-892" name="__codelineno-0-892"></a>        <span class="n">help</span><span class="o">=</span><span class="p">(</span>
-</span><span id="__span-0-893"><a id="__codelineno-0-893" name="__codelineno-0-893"></a>            <span class="s2">&quot;Parent directory for package output &quot;</span>
-</span><span id="__span-0-894"><a id="__codelineno-0-894" name="__codelineno-0-894"></a>            <span class="s2">&quot;(default: from config or ./packages)&quot;</span>
-</span><span id="__span-0-895"><a id="__codelineno-0-895" name="__codelineno-0-895"></a>        <span class="p">),</span>
-</span><span id="__span-0-896"><a id="__codelineno-0-896" name="__codelineno-0-896"></a>    <span class="p">)</span>
-</span><span id="__span-0-897"><a id="__codelineno-0-897" name="__codelineno-0-897"></a>    <span class="n">parser_package</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-898"><a id="__codelineno-0-898" name="__codelineno-0-898"></a>        <span class="s2">&quot;--clean-source&quot;</span><span class="p">,</span>
-</span><span id="__span-0-899"><a id="__codelineno-0-899" name="__codelineno-0-899"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
-</span><span id="__span-0-900"><a id="__codelineno-0-900" name="__codelineno-0-900"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Remove the build directory after packaging&quot;</span><span class="p">,</span>
-</span><span id="__span-0-901"><a id="__codelineno-0-901" name="__codelineno-0-901"></a>    <span class="p">)</span>
-</span><span id="__span-0-902"><a id="__codelineno-0-902" name="__codelineno-0-902"></a>    <span class="n">parser_package</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-903"><a id="__codelineno-0-903" name="__codelineno-0-903"></a>        <span class="s2">&quot;-v&quot;</span><span class="p">,</span>
-</span><span id="__span-0-904"><a id="__codelineno-0-904" name="__codelineno-0-904"></a>        <span class="s2">&quot;--verbose&quot;</span><span class="p">,</span>
-</span><span id="__span-0-905"><a id="__codelineno-0-905" name="__codelineno-0-905"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
-</span><span id="__span-0-906"><a id="__codelineno-0-906" name="__codelineno-0-906"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show progress and high-level status updates&quot;</span><span class="p">,</span>
-</span><span id="__span-0-907"><a id="__codelineno-0-907" name="__codelineno-0-907"></a>    <span class="p">)</span>
-</span><span id="__span-0-908"><a id="__codelineno-0-908" name="__codelineno-0-908"></a>    <span class="n">parser_package</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-909"><a id="__codelineno-0-909" name="__codelineno-0-909"></a>        <span class="s2">&quot;-d&quot;</span><span class="p">,</span>
-</span><span id="__span-0-910"><a id="__codelineno-0-910" name="__codelineno-0-910"></a>        <span class="s2">&quot;--debug&quot;</span><span class="p">,</span>
-</span><span id="__span-0-911"><a id="__codelineno-0-911" name="__codelineno-0-911"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
-</span><span id="__span-0-912"><a id="__codelineno-0-912" name="__codelineno-0-912"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show detailed debugging output (implies --verbose)&quot;</span><span class="p">,</span>
-</span><span id="__span-0-913"><a id="__codelineno-0-913" name="__codelineno-0-913"></a>    <span class="p">)</span>
-</span><span id="__span-0-914"><a id="__codelineno-0-914" name="__codelineno-0-914"></a>    <span class="n">parser_package</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">cmd_package</span><span class="p">)</span>
-</span><span id="__span-0-915"><a id="__codelineno-0-915" name="__codelineno-0-915"></a>
-</span><span id="__span-0-916"><a id="__codelineno-0-916" name="__codelineno-0-916"></a>    <span class="c1"># &#39;init&#39; command</span>
-</span><span id="__span-0-917"><a id="__codelineno-0-917" name="__codelineno-0-917"></a>    <span class="n">parser_init</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span>
-</span><span id="__span-0-918"><a id="__codelineno-0-918" name="__codelineno-0-918"></a>        <span class="s2">&quot;init&quot;</span><span class="p">,</span>
-</span><span id="__span-0-919"><a id="__codelineno-0-919" name="__codelineno-0-919"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Initialize a new NAPT project&quot;</span><span class="p">,</span>
-</span><span id="__span-0-920"><a id="__codelineno-0-920" name="__codelineno-0-920"></a>        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-</span><span id="__span-0-921"><a id="__codelineno-0-921" name="__codelineno-0-921"></a>            <span class="s2">&quot;Create a new NAPT project structure with default configuration.</span><span class="se">\n\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-922"><a id="__codelineno-0-922" name="__codelineno-0-922"></a>            <span class="s2">&quot;Creates:</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-923"><a id="__codelineno-0-923" name="__codelineno-0-923"></a>            <span class="s2">&quot;  - recipes/              Directory for recipe YAML files</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-924"><a id="__codelineno-0-924" name="__codelineno-0-924"></a>            <span class="s2">&quot;  - defaults/org.yaml     Organization defaults template</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-925"><a id="__codelineno-0-925" name="__codelineno-0-925"></a>            <span class="s2">&quot;  - defaults/vendors/     Directory for vendor-specific defaults</span><span class="se">\n\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-926"><a id="__codelineno-0-926" name="__codelineno-0-926"></a>            <span class="s2">&quot;Examples:</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-927"><a id="__codelineno-0-927" name="__codelineno-0-927"></a>            <span class="s2">&quot;  napt init</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-928"><a id="__codelineno-0-928" name="__codelineno-0-928"></a>            <span class="s2">&quot;  napt init ./my-project</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-929"><a id="__codelineno-0-929" name="__codelineno-0-929"></a>            <span class="s2">&quot;  napt init --force</span><span class="se">\n\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-930"><a id="__codelineno-0-930" name="__codelineno-0-930"></a>            <span class="s2">&quot;See docs for more examples and workflows.&quot;</span>
-</span><span id="__span-0-931"><a id="__codelineno-0-931" name="__codelineno-0-931"></a>        <span class="p">),</span>
-</span><span id="__span-0-932"><a id="__codelineno-0-932" name="__codelineno-0-932"></a>        <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">RawDescriptionHelpFormatter</span><span class="p">,</span>
-</span><span id="__span-0-933"><a id="__codelineno-0-933" name="__codelineno-0-933"></a>    <span class="p">)</span>
-</span><span id="__span-0-934"><a id="__codelineno-0-934" name="__codelineno-0-934"></a>    <span class="n">parser_init</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-935"><a id="__codelineno-0-935" name="__codelineno-0-935"></a>        <span class="s2">&quot;directory&quot;</span><span class="p">,</span>
-</span><span id="__span-0-936"><a id="__codelineno-0-936" name="__codelineno-0-936"></a>        <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;?&quot;</span><span class="p">,</span>
-</span><span id="__span-0-937"><a id="__codelineno-0-937" name="__codelineno-0-937"></a>        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">,</span>
-</span><span id="__span-0-938"><a id="__codelineno-0-938" name="__codelineno-0-938"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Directory to initialize (default: current directory)&quot;</span><span class="p">,</span>
-</span><span id="__span-0-939"><a id="__codelineno-0-939" name="__codelineno-0-939"></a>    <span class="p">)</span>
-</span><span id="__span-0-940"><a id="__codelineno-0-940" name="__codelineno-0-940"></a>    <span class="n">parser_init</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-941"><a id="__codelineno-0-941" name="__codelineno-0-941"></a>        <span class="s2">&quot;--force&quot;</span><span class="p">,</span>
-</span><span id="__span-0-942"><a id="__codelineno-0-942" name="__codelineno-0-942"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
-</span><span id="__span-0-943"><a id="__codelineno-0-943" name="__codelineno-0-943"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Backup and overwrite existing configuration files&quot;</span><span class="p">,</span>
-</span><span id="__span-0-944"><a id="__codelineno-0-944" name="__codelineno-0-944"></a>    <span class="p">)</span>
-</span><span id="__span-0-945"><a id="__codelineno-0-945" name="__codelineno-0-945"></a>    <span class="n">parser_init</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-946"><a id="__codelineno-0-946" name="__codelineno-0-946"></a>        <span class="s2">&quot;-v&quot;</span><span class="p">,</span>
-</span><span id="__span-0-947"><a id="__codelineno-0-947" name="__codelineno-0-947"></a>        <span class="s2">&quot;--verbose&quot;</span><span class="p">,</span>
-</span><span id="__span-0-948"><a id="__codelineno-0-948" name="__codelineno-0-948"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
-</span><span id="__span-0-949"><a id="__codelineno-0-949" name="__codelineno-0-949"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show detailed initialization steps&quot;</span><span class="p">,</span>
-</span><span id="__span-0-950"><a id="__codelineno-0-950" name="__codelineno-0-950"></a>    <span class="p">)</span>
-</span><span id="__span-0-951"><a id="__codelineno-0-951" name="__codelineno-0-951"></a>    <span class="n">parser_init</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-952"><a id="__codelineno-0-952" name="__codelineno-0-952"></a>        <span class="s2">&quot;-d&quot;</span><span class="p">,</span>
-</span><span id="__span-0-953"><a id="__codelineno-0-953" name="__codelineno-0-953"></a>        <span class="s2">&quot;--debug&quot;</span><span class="p">,</span>
-</span><span id="__span-0-954"><a id="__codelineno-0-954" name="__codelineno-0-954"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
-</span><span id="__span-0-955"><a id="__codelineno-0-955" name="__codelineno-0-955"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show detailed debugging output (implies --verbose)&quot;</span><span class="p">,</span>
-</span><span id="__span-0-956"><a id="__codelineno-0-956" name="__codelineno-0-956"></a>    <span class="p">)</span>
-</span><span id="__span-0-957"><a id="__codelineno-0-957" name="__codelineno-0-957"></a>    <span class="n">parser_init</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">cmd_init</span><span class="p">)</span>
-</span><span id="__span-0-958"><a id="__codelineno-0-958" name="__codelineno-0-958"></a>
-</span><span id="__span-0-959"><a id="__codelineno-0-959" name="__codelineno-0-959"></a>    <span class="c1"># &#39;upload&#39; command</span>
-</span><span id="__span-0-960"><a id="__codelineno-0-960" name="__codelineno-0-960"></a>    <span class="n">parser_upload</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span>
-</span><span id="__span-0-961"><a id="__codelineno-0-961" name="__codelineno-0-961"></a>        <span class="s2">&quot;upload&quot;</span><span class="p">,</span>
-</span><span id="__span-0-962"><a id="__codelineno-0-962" name="__codelineno-0-962"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Upload .intunewin package to Microsoft Intune&quot;</span><span class="p">,</span>
-</span><span id="__span-0-963"><a id="__codelineno-0-963" name="__codelineno-0-963"></a>        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-</span><span id="__span-0-964"><a id="__codelineno-0-964" name="__codelineno-0-964"></a>            <span class="s2">&quot;Upload the most recent .intunewin package for a recipe to &quot;</span>
-</span><span id="__span-0-965"><a id="__codelineno-0-965" name="__codelineno-0-965"></a>            <span class="s2">&quot;Microsoft Intune via the Graph API.</span><span class="se">\n\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-966"><a id="__codelineno-0-966" name="__codelineno-0-966"></a>            <span class="s2">&quot;Authentication is automatic — tried in this order:</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-967"><a id="__codelineno-0-967" name="__codelineno-0-967"></a>            <span class="s2">&quot;  1. AZURE_CLIENT_ID + AZURE_CLIENT_SECRET + AZURE_TENANT_ID env vars</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-968"><a id="__codelineno-0-968" name="__codelineno-0-968"></a>            <span class="s2">&quot;  2. Managed identity (Azure VMs, GitHub Actions OIDC)</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-969"><a id="__codelineno-0-969" name="__codelineno-0-969"></a>            <span class="s2">&quot;  3. Device code flow (browser login — set AZURE_CLIENT_ID + AZURE_TENANT_ID)</span><span class="se">\n\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-970"><a id="__codelineno-0-970" name="__codelineno-0-970"></a>            <span class="s2">&quot;Examples:</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-971"><a id="__codelineno-0-971" name="__codelineno-0-971"></a>            <span class="s2">&quot;  napt upload recipes/Google/chrome.yaml</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-972"><a id="__codelineno-0-972" name="__codelineno-0-972"></a>            <span class="s2">&quot;  napt upload recipes/Google/chrome.yaml --tenant-id &lt;id&gt;</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-973"><a id="__codelineno-0-973" name="__codelineno-0-973"></a>            <span class="s2">&quot;  napt upload recipes/Google/chrome.yaml --verbose</span><span class="se">\n\n</span><span class="s2">&quot;</span>
-</span><span id="__span-0-974"><a id="__codelineno-0-974" name="__codelineno-0-974"></a>            <span class="s2">&quot;See docs for auth setup and full configuration guide.&quot;</span>
-</span><span id="__span-0-975"><a id="__codelineno-0-975" name="__codelineno-0-975"></a>        <span class="p">),</span>
-</span><span id="__span-0-976"><a id="__codelineno-0-976" name="__codelineno-0-976"></a>        <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">RawDescriptionHelpFormatter</span><span class="p">,</span>
-</span><span id="__span-0-977"><a id="__codelineno-0-977" name="__codelineno-0-977"></a>    <span class="p">)</span>
-</span><span id="__span-0-978"><a id="__codelineno-0-978" name="__codelineno-0-978"></a>    <span class="n">parser_upload</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-979"><a id="__codelineno-0-979" name="__codelineno-0-979"></a>        <span class="s2">&quot;recipe&quot;</span><span class="p">,</span>
-</span><span id="__span-0-980"><a id="__codelineno-0-980" name="__codelineno-0-980"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to the recipe YAML file&quot;</span><span class="p">,</span>
-</span><span id="__span-0-981"><a id="__codelineno-0-981" name="__codelineno-0-981"></a>    <span class="p">)</span>
-</span><span id="__span-0-982"><a id="__codelineno-0-982" name="__codelineno-0-982"></a>    <span class="n">parser_upload</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-983"><a id="__codelineno-0-983" name="__codelineno-0-983"></a>        <span class="s2">&quot;--tenant-id&quot;</span><span class="p">,</span>
-</span><span id="__span-0-984"><a id="__codelineno-0-984" name="__codelineno-0-984"></a>        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-985"><a id="__codelineno-0-985" name="__codelineno-0-985"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Azure AD tenant ID (overrides defaults/org.yaml)&quot;</span><span class="p">,</span>
-</span><span id="__span-0-986"><a id="__codelineno-0-986" name="__codelineno-0-986"></a>    <span class="p">)</span>
-</span><span id="__span-0-987"><a id="__codelineno-0-987" name="__codelineno-0-987"></a>    <span class="n">parser_upload</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-988"><a id="__codelineno-0-988" name="__codelineno-0-988"></a>        <span class="s2">&quot;-v&quot;</span><span class="p">,</span>
-</span><span id="__span-0-989"><a id="__codelineno-0-989" name="__codelineno-0-989"></a>        <span class="s2">&quot;--verbose&quot;</span><span class="p">,</span>
-</span><span id="__span-0-990"><a id="__codelineno-0-990" name="__codelineno-0-990"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
-</span><span id="__span-0-991"><a id="__codelineno-0-991" name="__codelineno-0-991"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show progress and high-level status updates&quot;</span><span class="p">,</span>
-</span><span id="__span-0-992"><a id="__codelineno-0-992" name="__codelineno-0-992"></a>    <span class="p">)</span>
-</span><span id="__span-0-993"><a id="__codelineno-0-993" name="__codelineno-0-993"></a>    <span class="n">parser_upload</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
-</span><span id="__span-0-994"><a id="__codelineno-0-994" name="__codelineno-0-994"></a>        <span class="s2">&quot;-d&quot;</span><span class="p">,</span>
-</span><span id="__span-0-995"><a id="__codelineno-0-995" name="__codelineno-0-995"></a>        <span class="s2">&quot;--debug&quot;</span><span class="p">,</span>
-</span><span id="__span-0-996"><a id="__codelineno-0-996" name="__codelineno-0-996"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
-</span><span id="__span-0-997"><a id="__codelineno-0-997" name="__codelineno-0-997"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show detailed debugging output (implies --verbose)&quot;</span><span class="p">,</span>
-</span><span id="__span-0-998"><a id="__codelineno-0-998" name="__codelineno-0-998"></a>    <span class="p">)</span>
-</span><span id="__span-0-999"><a id="__codelineno-0-999" name="__codelineno-0-999"></a>    <span class="n">parser_upload</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">cmd_upload</span><span class="p">)</span>
-</span><span id="__span-0-1000"><a id="__codelineno-0-1000" name="__codelineno-0-1000"></a>
-</span><span id="__span-0-1001"><a id="__codelineno-0-1001" name="__codelineno-0-1001"></a>    <span class="c1"># Parse and dispatch</span>
-</span><span id="__span-0-1002"><a id="__codelineno-0-1002" name="__codelineno-0-1002"></a>    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+<span class="normal"><a href="#__codelineno-0-1006">1006</a></span>
+<span class="normal"><a href="#__codelineno-0-1007">1007</a></span>
+<span class="normal"><a href="#__codelineno-0-1008">1008</a></span>
+<span class="normal"><a href="#__codelineno-0-1009">1009</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-704"><a id="__codelineno-0-704" name="__codelineno-0-704"></a><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-705"><a id="__codelineno-0-705" name="__codelineno-0-705"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Main entry point for the napt CLI.</span>
+</span><span id="__span-0-706"><a id="__codelineno-0-706" name="__codelineno-0-706"></a>
+</span><span id="__span-0-707"><a id="__codelineno-0-707" name="__codelineno-0-707"></a><span class="sd">    This function is registered as the &#39;napt&#39; console script in pyproject.toml.</span>
+</span><span id="__span-0-708"><a id="__codelineno-0-708" name="__codelineno-0-708"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__span-0-709"><a id="__codelineno-0-709" name="__codelineno-0-709"></a>    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
+</span><span id="__span-0-710"><a id="__codelineno-0-710" name="__codelineno-0-710"></a>        <span class="n">prog</span><span class="o">=</span><span class="s2">&quot;napt&quot;</span><span class="p">,</span>
+</span><span id="__span-0-711"><a id="__codelineno-0-711" name="__codelineno-0-711"></a>        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;NAPT - Not a Pkg Tool for Windows/Intune packaging with PSADT&quot;</span><span class="p">,</span>
+</span><span id="__span-0-712"><a id="__codelineno-0-712" name="__codelineno-0-712"></a>        <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">RawDescriptionHelpFormatter</span><span class="p">,</span>
+</span><span id="__span-0-713"><a id="__codelineno-0-713" name="__codelineno-0-713"></a>    <span class="p">)</span>
+</span><span id="__span-0-714"><a id="__codelineno-0-714" name="__codelineno-0-714"></a>
+</span><span id="__span-0-715"><a id="__codelineno-0-715" name="__codelineno-0-715"></a>    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-716"><a id="__codelineno-0-716" name="__codelineno-0-716"></a>        <span class="s2">&quot;--version&quot;</span><span class="p">,</span>
+</span><span id="__span-0-717"><a id="__codelineno-0-717" name="__codelineno-0-717"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;version&quot;</span><span class="p">,</span>
+</span><span id="__span-0-718"><a id="__codelineno-0-718" name="__codelineno-0-718"></a>        <span class="n">version</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;napt </span><span class="si">{</span><span class="n">version</span><span class="p">(</span><span class="s1">&#39;napt&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+</span><span id="__span-0-719"><a id="__codelineno-0-719" name="__codelineno-0-719"></a>    <span class="p">)</span>
+</span><span id="__span-0-720"><a id="__codelineno-0-720" name="__codelineno-0-720"></a>
+</span><span id="__span-0-721"><a id="__codelineno-0-721" name="__codelineno-0-721"></a>    <span class="n">subparsers</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_subparsers</span><span class="p">(</span>
+</span><span id="__span-0-722"><a id="__codelineno-0-722" name="__codelineno-0-722"></a>        <span class="n">dest</span><span class="o">=</span><span class="s2">&quot;command&quot;</span><span class="p">,</span>
+</span><span id="__span-0-723"><a id="__codelineno-0-723" name="__codelineno-0-723"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Available commands&quot;</span><span class="p">,</span>
+</span><span id="__span-0-724"><a id="__codelineno-0-724" name="__codelineno-0-724"></a>        <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-0-725"><a id="__codelineno-0-725" name="__codelineno-0-725"></a>    <span class="p">)</span>
+</span><span id="__span-0-726"><a id="__codelineno-0-726" name="__codelineno-0-726"></a>
+</span><span id="__span-0-727"><a id="__codelineno-0-727" name="__codelineno-0-727"></a>    <span class="c1"># &#39;validate&#39; command</span>
+</span><span id="__span-0-728"><a id="__codelineno-0-728" name="__codelineno-0-728"></a>    <span class="n">parser_validate</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span>
+</span><span id="__span-0-729"><a id="__codelineno-0-729" name="__codelineno-0-729"></a>        <span class="s2">&quot;validate&quot;</span><span class="p">,</span>
+</span><span id="__span-0-730"><a id="__codelineno-0-730" name="__codelineno-0-730"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Validate recipe syntax and configuration (no downloads)&quot;</span><span class="p">,</span>
+</span><span id="__span-0-731"><a id="__codelineno-0-731" name="__codelineno-0-731"></a>        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+</span><span id="__span-0-732"><a id="__codelineno-0-732" name="__codelineno-0-732"></a>            <span class="s2">&quot;Check recipe YAML for syntax errors and configuration issues &quot;</span>
+</span><span id="__span-0-733"><a id="__codelineno-0-733" name="__codelineno-0-733"></a>            <span class="s2">&quot;without making network calls.</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-734"><a id="__codelineno-0-734" name="__codelineno-0-734"></a>            <span class="s2">&quot;Examples:</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-735"><a id="__codelineno-0-735" name="__codelineno-0-735"></a>            <span class="s2">&quot;  napt validate recipes/Google/chrome.yaml</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-736"><a id="__codelineno-0-736" name="__codelineno-0-736"></a>            <span class="s2">&quot;  napt validate recipes/Google/chrome.yaml --verbose</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-737"><a id="__codelineno-0-737" name="__codelineno-0-737"></a>            <span class="s2">&quot;See docs for more examples and workflows.&quot;</span>
+</span><span id="__span-0-738"><a id="__codelineno-0-738" name="__codelineno-0-738"></a>        <span class="p">),</span>
+</span><span id="__span-0-739"><a id="__codelineno-0-739" name="__codelineno-0-739"></a>        <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">RawDescriptionHelpFormatter</span><span class="p">,</span>
+</span><span id="__span-0-740"><a id="__codelineno-0-740" name="__codelineno-0-740"></a>    <span class="p">)</span>
+</span><span id="__span-0-741"><a id="__codelineno-0-741" name="__codelineno-0-741"></a>    <span class="n">parser_validate</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-742"><a id="__codelineno-0-742" name="__codelineno-0-742"></a>        <span class="s2">&quot;recipe&quot;</span><span class="p">,</span>
+</span><span id="__span-0-743"><a id="__codelineno-0-743" name="__codelineno-0-743"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to the recipe YAML file&quot;</span><span class="p">,</span>
+</span><span id="__span-0-744"><a id="__codelineno-0-744" name="__codelineno-0-744"></a>    <span class="p">)</span>
+</span><span id="__span-0-745"><a id="__codelineno-0-745" name="__codelineno-0-745"></a>    <span class="n">parser_validate</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-746"><a id="__codelineno-0-746" name="__codelineno-0-746"></a>        <span class="s2">&quot;-v&quot;</span><span class="p">,</span>
+</span><span id="__span-0-747"><a id="__codelineno-0-747" name="__codelineno-0-747"></a>        <span class="s2">&quot;--verbose&quot;</span><span class="p">,</span>
+</span><span id="__span-0-748"><a id="__codelineno-0-748" name="__codelineno-0-748"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+</span><span id="__span-0-749"><a id="__codelineno-0-749" name="__codelineno-0-749"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show validation progress and details&quot;</span><span class="p">,</span>
+</span><span id="__span-0-750"><a id="__codelineno-0-750" name="__codelineno-0-750"></a>    <span class="p">)</span>
+</span><span id="__span-0-751"><a id="__codelineno-0-751" name="__codelineno-0-751"></a>    <span class="n">parser_validate</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-752"><a id="__codelineno-0-752" name="__codelineno-0-752"></a>        <span class="s2">&quot;-d&quot;</span><span class="p">,</span>
+</span><span id="__span-0-753"><a id="__codelineno-0-753" name="__codelineno-0-753"></a>        <span class="s2">&quot;--debug&quot;</span><span class="p">,</span>
+</span><span id="__span-0-754"><a id="__codelineno-0-754" name="__codelineno-0-754"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+</span><span id="__span-0-755"><a id="__codelineno-0-755" name="__codelineno-0-755"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show detailed debugging output (implies --verbose)&quot;</span><span class="p">,</span>
+</span><span id="__span-0-756"><a id="__codelineno-0-756" name="__codelineno-0-756"></a>    <span class="p">)</span>
+</span><span id="__span-0-757"><a id="__codelineno-0-757" name="__codelineno-0-757"></a>    <span class="n">parser_validate</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">cmd_validate</span><span class="p">)</span>
+</span><span id="__span-0-758"><a id="__codelineno-0-758" name="__codelineno-0-758"></a>
+</span><span id="__span-0-759"><a id="__codelineno-0-759" name="__codelineno-0-759"></a>    <span class="c1"># &#39;discover&#39; command</span>
+</span><span id="__span-0-760"><a id="__codelineno-0-760" name="__codelineno-0-760"></a>    <span class="n">parser_discover</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span>
+</span><span id="__span-0-761"><a id="__codelineno-0-761" name="__codelineno-0-761"></a>        <span class="s2">&quot;discover&quot;</span><span class="p">,</span>
+</span><span id="__span-0-762"><a id="__codelineno-0-762" name="__codelineno-0-762"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Discover latest version and download installer&quot;</span><span class="p">,</span>
+</span><span id="__span-0-763"><a id="__codelineno-0-763" name="__codelineno-0-763"></a>        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+</span><span id="__span-0-764"><a id="__codelineno-0-764" name="__codelineno-0-764"></a>            <span class="s2">&quot;Find the latest version using the configured discovery strategy &quot;</span>
+</span><span id="__span-0-765"><a id="__codelineno-0-765" name="__codelineno-0-765"></a>            <span class="s2">&quot;and download the installer.</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-766"><a id="__codelineno-0-766" name="__codelineno-0-766"></a>            <span class="s2">&quot;Examples:</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-767"><a id="__codelineno-0-767" name="__codelineno-0-767"></a>            <span class="s2">&quot;  napt discover recipes/Google/chrome.yaml</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-768"><a id="__codelineno-0-768" name="__codelineno-0-768"></a>            <span class="s2">&quot;  napt discover recipes/Google/chrome.yaml --verbose</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-769"><a id="__codelineno-0-769" name="__codelineno-0-769"></a>            <span class="s2">&quot;  napt discover recipes/Google/chrome.yaml --stateless</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-770"><a id="__codelineno-0-770" name="__codelineno-0-770"></a>            <span class="s2">&quot;See docs for more examples and workflows.&quot;</span>
+</span><span id="__span-0-771"><a id="__codelineno-0-771" name="__codelineno-0-771"></a>        <span class="p">),</span>
+</span><span id="__span-0-772"><a id="__codelineno-0-772" name="__codelineno-0-772"></a>        <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">RawDescriptionHelpFormatter</span><span class="p">,</span>
+</span><span id="__span-0-773"><a id="__codelineno-0-773" name="__codelineno-0-773"></a>    <span class="p">)</span>
+</span><span id="__span-0-774"><a id="__codelineno-0-774" name="__codelineno-0-774"></a>    <span class="n">parser_discover</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-775"><a id="__codelineno-0-775" name="__codelineno-0-775"></a>        <span class="s2">&quot;recipe&quot;</span><span class="p">,</span>
+</span><span id="__span-0-776"><a id="__codelineno-0-776" name="__codelineno-0-776"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to the recipe YAML file&quot;</span><span class="p">,</span>
+</span><span id="__span-0-777"><a id="__codelineno-0-777" name="__codelineno-0-777"></a>    <span class="p">)</span>
+</span><span id="__span-0-778"><a id="__codelineno-0-778" name="__codelineno-0-778"></a>    <span class="n">parser_discover</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-779"><a id="__codelineno-0-779" name="__codelineno-0-779"></a>        <span class="s2">&quot;--output-dir&quot;</span><span class="p">,</span>
+</span><span id="__span-0-780"><a id="__codelineno-0-780" name="__codelineno-0-780"></a>        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-781"><a id="__codelineno-0-781" name="__codelineno-0-781"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Directory to save downloaded files (default: from config or ./downloads)&quot;</span><span class="p">,</span>
+</span><span id="__span-0-782"><a id="__codelineno-0-782" name="__codelineno-0-782"></a>    <span class="p">)</span>
+</span><span id="__span-0-783"><a id="__codelineno-0-783" name="__codelineno-0-783"></a>    <span class="n">parser_discover</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-784"><a id="__codelineno-0-784" name="__codelineno-0-784"></a>        <span class="s2">&quot;--state-file&quot;</span><span class="p">,</span>
+</span><span id="__span-0-785"><a id="__codelineno-0-785" name="__codelineno-0-785"></a>        <span class="nb">type</span><span class="o">=</span><span class="n">Path</span><span class="p">,</span>
+</span><span id="__span-0-786"><a id="__codelineno-0-786" name="__codelineno-0-786"></a>        <span class="n">default</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;state/versions.json&quot;</span><span class="p">),</span>
+</span><span id="__span-0-787"><a id="__codelineno-0-787" name="__codelineno-0-787"></a>        <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+</span><span id="__span-0-788"><a id="__codelineno-0-788" name="__codelineno-0-788"></a>            <span class="s2">&quot;State file for version tracking and ETag caching &quot;</span>
+</span><span id="__span-0-789"><a id="__codelineno-0-789" name="__codelineno-0-789"></a>            <span class="s2">&quot;(default: state/versions.json)&quot;</span>
+</span><span id="__span-0-790"><a id="__codelineno-0-790" name="__codelineno-0-790"></a>        <span class="p">),</span>
+</span><span id="__span-0-791"><a id="__codelineno-0-791" name="__codelineno-0-791"></a>    <span class="p">)</span>
+</span><span id="__span-0-792"><a id="__codelineno-0-792" name="__codelineno-0-792"></a>    <span class="n">parser_discover</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-793"><a id="__codelineno-0-793" name="__codelineno-0-793"></a>        <span class="s2">&quot;--stateless&quot;</span><span class="p">,</span>
+</span><span id="__span-0-794"><a id="__codelineno-0-794" name="__codelineno-0-794"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+</span><span id="__span-0-795"><a id="__codelineno-0-795" name="__codelineno-0-795"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Disable state tracking (no caching, always download full files)&quot;</span><span class="p">,</span>
+</span><span id="__span-0-796"><a id="__codelineno-0-796" name="__codelineno-0-796"></a>    <span class="p">)</span>
+</span><span id="__span-0-797"><a id="__codelineno-0-797" name="__codelineno-0-797"></a>    <span class="n">parser_discover</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-798"><a id="__codelineno-0-798" name="__codelineno-0-798"></a>        <span class="s2">&quot;-v&quot;</span><span class="p">,</span>
+</span><span id="__span-0-799"><a id="__codelineno-0-799" name="__codelineno-0-799"></a>        <span class="s2">&quot;--verbose&quot;</span><span class="p">,</span>
+</span><span id="__span-0-800"><a id="__codelineno-0-800" name="__codelineno-0-800"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+</span><span id="__span-0-801"><a id="__codelineno-0-801" name="__codelineno-0-801"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show progress and high-level status updates&quot;</span><span class="p">,</span>
+</span><span id="__span-0-802"><a id="__codelineno-0-802" name="__codelineno-0-802"></a>    <span class="p">)</span>
+</span><span id="__span-0-803"><a id="__codelineno-0-803" name="__codelineno-0-803"></a>    <span class="n">parser_discover</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-804"><a id="__codelineno-0-804" name="__codelineno-0-804"></a>        <span class="s2">&quot;-d&quot;</span><span class="p">,</span>
+</span><span id="__span-0-805"><a id="__codelineno-0-805" name="__codelineno-0-805"></a>        <span class="s2">&quot;--debug&quot;</span><span class="p">,</span>
+</span><span id="__span-0-806"><a id="__codelineno-0-806" name="__codelineno-0-806"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+</span><span id="__span-0-807"><a id="__codelineno-0-807" name="__codelineno-0-807"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show detailed debugging output (implies --verbose)&quot;</span><span class="p">,</span>
+</span><span id="__span-0-808"><a id="__codelineno-0-808" name="__codelineno-0-808"></a>    <span class="p">)</span>
+</span><span id="__span-0-809"><a id="__codelineno-0-809" name="__codelineno-0-809"></a>    <span class="n">parser_discover</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">cmd_discover</span><span class="p">)</span>
+</span><span id="__span-0-810"><a id="__codelineno-0-810" name="__codelineno-0-810"></a>
+</span><span id="__span-0-811"><a id="__codelineno-0-811" name="__codelineno-0-811"></a>    <span class="c1"># &#39;build&#39; command</span>
+</span><span id="__span-0-812"><a id="__codelineno-0-812" name="__codelineno-0-812"></a>    <span class="n">parser_build</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span>
+</span><span id="__span-0-813"><a id="__codelineno-0-813" name="__codelineno-0-813"></a>        <span class="s2">&quot;build&quot;</span><span class="p">,</span>
+</span><span id="__span-0-814"><a id="__codelineno-0-814" name="__codelineno-0-814"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Build PSADT package from recipe and installer&quot;</span><span class="p">,</span>
+</span><span id="__span-0-815"><a id="__codelineno-0-815" name="__codelineno-0-815"></a>        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+</span><span id="__span-0-816"><a id="__codelineno-0-816" name="__codelineno-0-816"></a>            <span class="s2">&quot;Create a PSADT deployment package from a recipe and &quot;</span>
+</span><span id="__span-0-817"><a id="__codelineno-0-817" name="__codelineno-0-817"></a>            <span class="s2">&quot;downloaded installer.</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-818"><a id="__codelineno-0-818" name="__codelineno-0-818"></a>            <span class="s2">&quot;Examples:</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-819"><a id="__codelineno-0-819" name="__codelineno-0-819"></a>            <span class="s2">&quot;  napt build recipes/Google/chrome.yaml</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-820"><a id="__codelineno-0-820" name="__codelineno-0-820"></a>            <span class="s2">&quot;  napt build recipes/Google/chrome.yaml --verbose</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-821"><a id="__codelineno-0-821" name="__codelineno-0-821"></a>            <span class="s2">&quot;  napt build recipes/Google/chrome.yaml --output-dir ./builds</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-822"><a id="__codelineno-0-822" name="__codelineno-0-822"></a>            <span class="s2">&quot;See docs for more examples and workflows.&quot;</span>
+</span><span id="__span-0-823"><a id="__codelineno-0-823" name="__codelineno-0-823"></a>        <span class="p">),</span>
+</span><span id="__span-0-824"><a id="__codelineno-0-824" name="__codelineno-0-824"></a>        <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">RawDescriptionHelpFormatter</span><span class="p">,</span>
+</span><span id="__span-0-825"><a id="__codelineno-0-825" name="__codelineno-0-825"></a>    <span class="p">)</span>
+</span><span id="__span-0-826"><a id="__codelineno-0-826" name="__codelineno-0-826"></a>    <span class="n">parser_build</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-827"><a id="__codelineno-0-827" name="__codelineno-0-827"></a>        <span class="s2">&quot;recipe&quot;</span><span class="p">,</span>
+</span><span id="__span-0-828"><a id="__codelineno-0-828" name="__codelineno-0-828"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to the recipe YAML file&quot;</span><span class="p">,</span>
+</span><span id="__span-0-829"><a id="__codelineno-0-829" name="__codelineno-0-829"></a>    <span class="p">)</span>
+</span><span id="__span-0-830"><a id="__codelineno-0-830" name="__codelineno-0-830"></a>    <span class="n">parser_build</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-831"><a id="__codelineno-0-831" name="__codelineno-0-831"></a>        <span class="s2">&quot;--downloads-dir&quot;</span><span class="p">,</span>
+</span><span id="__span-0-832"><a id="__codelineno-0-832" name="__codelineno-0-832"></a>        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-833"><a id="__codelineno-0-833" name="__codelineno-0-833"></a>        <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+</span><span id="__span-0-834"><a id="__codelineno-0-834" name="__codelineno-0-834"></a>            <span class="s2">&quot;Directory containing the downloaded installer &quot;</span>
+</span><span id="__span-0-835"><a id="__codelineno-0-835" name="__codelineno-0-835"></a>            <span class="s2">&quot;(default: from config or ./downloads)&quot;</span>
+</span><span id="__span-0-836"><a id="__codelineno-0-836" name="__codelineno-0-836"></a>        <span class="p">),</span>
+</span><span id="__span-0-837"><a id="__codelineno-0-837" name="__codelineno-0-837"></a>    <span class="p">)</span>
+</span><span id="__span-0-838"><a id="__codelineno-0-838" name="__codelineno-0-838"></a>    <span class="n">parser_build</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-839"><a id="__codelineno-0-839" name="__codelineno-0-839"></a>        <span class="s2">&quot;--output-dir&quot;</span><span class="p">,</span>
+</span><span id="__span-0-840"><a id="__codelineno-0-840" name="__codelineno-0-840"></a>        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-841"><a id="__codelineno-0-841" name="__codelineno-0-841"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Base directory for build output (default: from config or ./builds)&quot;</span><span class="p">,</span>
+</span><span id="__span-0-842"><a id="__codelineno-0-842" name="__codelineno-0-842"></a>    <span class="p">)</span>
+</span><span id="__span-0-843"><a id="__codelineno-0-843" name="__codelineno-0-843"></a>    <span class="n">parser_build</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-844"><a id="__codelineno-0-844" name="__codelineno-0-844"></a>        <span class="s2">&quot;-v&quot;</span><span class="p">,</span>
+</span><span id="__span-0-845"><a id="__codelineno-0-845" name="__codelineno-0-845"></a>        <span class="s2">&quot;--verbose&quot;</span><span class="p">,</span>
+</span><span id="__span-0-846"><a id="__codelineno-0-846" name="__codelineno-0-846"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+</span><span id="__span-0-847"><a id="__codelineno-0-847" name="__codelineno-0-847"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show progress and high-level status updates&quot;</span><span class="p">,</span>
+</span><span id="__span-0-848"><a id="__codelineno-0-848" name="__codelineno-0-848"></a>    <span class="p">)</span>
+</span><span id="__span-0-849"><a id="__codelineno-0-849" name="__codelineno-0-849"></a>    <span class="n">parser_build</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-850"><a id="__codelineno-0-850" name="__codelineno-0-850"></a>        <span class="s2">&quot;-d&quot;</span><span class="p">,</span>
+</span><span id="__span-0-851"><a id="__codelineno-0-851" name="__codelineno-0-851"></a>        <span class="s2">&quot;--debug&quot;</span><span class="p">,</span>
+</span><span id="__span-0-852"><a id="__codelineno-0-852" name="__codelineno-0-852"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+</span><span id="__span-0-853"><a id="__codelineno-0-853" name="__codelineno-0-853"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show detailed debugging output (implies --verbose)&quot;</span><span class="p">,</span>
+</span><span id="__span-0-854"><a id="__codelineno-0-854" name="__codelineno-0-854"></a>    <span class="p">)</span>
+</span><span id="__span-0-855"><a id="__codelineno-0-855" name="__codelineno-0-855"></a>    <span class="n">parser_build</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">cmd_build</span><span class="p">)</span>
+</span><span id="__span-0-856"><a id="__codelineno-0-856" name="__codelineno-0-856"></a>
+</span><span id="__span-0-857"><a id="__codelineno-0-857" name="__codelineno-0-857"></a>    <span class="c1"># &#39;package&#39; command</span>
+</span><span id="__span-0-858"><a id="__codelineno-0-858" name="__codelineno-0-858"></a>    <span class="n">parser_package</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span>
+</span><span id="__span-0-859"><a id="__codelineno-0-859" name="__codelineno-0-859"></a>        <span class="s2">&quot;package&quot;</span><span class="p">,</span>
+</span><span id="__span-0-860"><a id="__codelineno-0-860" name="__codelineno-0-860"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Create .intunewin package from a PSADT build&quot;</span><span class="p">,</span>
+</span><span id="__span-0-861"><a id="__codelineno-0-861" name="__codelineno-0-861"></a>        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+</span><span id="__span-0-862"><a id="__codelineno-0-862" name="__codelineno-0-862"></a>            <span class="s2">&quot;Package a PSADT build for a recipe into a .intunewin file for &quot;</span>
+</span><span id="__span-0-863"><a id="__codelineno-0-863" name="__codelineno-0-863"></a>            <span class="s2">&quot;Intune deployment. Without --version, packages the most recently &quot;</span>
+</span><span id="__span-0-864"><a id="__codelineno-0-864" name="__codelineno-0-864"></a>            <span class="s2">&quot;modified build. Only one packaged version is kept on disk per app &quot;</span>
+</span><span id="__span-0-865"><a id="__codelineno-0-865" name="__codelineno-0-865"></a>            <span class="s2">&quot;(previous version is removed automatically).</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-866"><a id="__codelineno-0-866" name="__codelineno-0-866"></a>            <span class="s2">&quot;Examples:</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-867"><a id="__codelineno-0-867" name="__codelineno-0-867"></a>            <span class="s2">&quot;  napt package recipes/Google/chrome.yaml</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-868"><a id="__codelineno-0-868" name="__codelineno-0-868"></a>            <span class="s2">&quot;  napt package recipes/Google/chrome.yaml --version 130.0.6723.116</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-869"><a id="__codelineno-0-869" name="__codelineno-0-869"></a>            <span class="s2">&quot;  napt package recipes/Google/chrome.yaml --clean-source</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-870"><a id="__codelineno-0-870" name="__codelineno-0-870"></a>            <span class="s2">&quot;  napt package recipes/Google/chrome.yaml --verbose</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-871"><a id="__codelineno-0-871" name="__codelineno-0-871"></a>            <span class="s2">&quot;See docs for more examples and workflows.&quot;</span>
+</span><span id="__span-0-872"><a id="__codelineno-0-872" name="__codelineno-0-872"></a>        <span class="p">),</span>
+</span><span id="__span-0-873"><a id="__codelineno-0-873" name="__codelineno-0-873"></a>        <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">RawDescriptionHelpFormatter</span><span class="p">,</span>
+</span><span id="__span-0-874"><a id="__codelineno-0-874" name="__codelineno-0-874"></a>    <span class="p">)</span>
+</span><span id="__span-0-875"><a id="__codelineno-0-875" name="__codelineno-0-875"></a>    <span class="n">parser_package</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-876"><a id="__codelineno-0-876" name="__codelineno-0-876"></a>        <span class="s2">&quot;recipe&quot;</span><span class="p">,</span>
+</span><span id="__span-0-877"><a id="__codelineno-0-877" name="__codelineno-0-877"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to the recipe YAML file&quot;</span><span class="p">,</span>
+</span><span id="__span-0-878"><a id="__codelineno-0-878" name="__codelineno-0-878"></a>    <span class="p">)</span>
+</span><span id="__span-0-879"><a id="__codelineno-0-879" name="__codelineno-0-879"></a>    <span class="n">parser_package</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-880"><a id="__codelineno-0-880" name="__codelineno-0-880"></a>        <span class="s2">&quot;--version&quot;</span><span class="p">,</span>
+</span><span id="__span-0-881"><a id="__codelineno-0-881" name="__codelineno-0-881"></a>        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-882"><a id="__codelineno-0-882" name="__codelineno-0-882"></a>        <span class="n">metavar</span><span class="o">=</span><span class="s2">&quot;VERSION&quot;</span><span class="p">,</span>
+</span><span id="__span-0-883"><a id="__codelineno-0-883" name="__codelineno-0-883"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Specific build version to package (default: most recent build)&quot;</span><span class="p">,</span>
+</span><span id="__span-0-884"><a id="__codelineno-0-884" name="__codelineno-0-884"></a>    <span class="p">)</span>
+</span><span id="__span-0-885"><a id="__codelineno-0-885" name="__codelineno-0-885"></a>    <span class="n">parser_package</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-886"><a id="__codelineno-0-886" name="__codelineno-0-886"></a>        <span class="s2">&quot;--builds-dir&quot;</span><span class="p">,</span>
+</span><span id="__span-0-887"><a id="__codelineno-0-887" name="__codelineno-0-887"></a>        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-888"><a id="__codelineno-0-888" name="__codelineno-0-888"></a>        <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+</span><span id="__span-0-889"><a id="__codelineno-0-889" name="__codelineno-0-889"></a>            <span class="s2">&quot;Directory containing the PSADT build &quot;</span> <span class="s2">&quot;(default: from config or ./builds)&quot;</span>
+</span><span id="__span-0-890"><a id="__codelineno-0-890" name="__codelineno-0-890"></a>        <span class="p">),</span>
+</span><span id="__span-0-891"><a id="__codelineno-0-891" name="__codelineno-0-891"></a>    <span class="p">)</span>
+</span><span id="__span-0-892"><a id="__codelineno-0-892" name="__codelineno-0-892"></a>    <span class="n">parser_package</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-893"><a id="__codelineno-0-893" name="__codelineno-0-893"></a>        <span class="s2">&quot;--output-dir&quot;</span><span class="p">,</span>
+</span><span id="__span-0-894"><a id="__codelineno-0-894" name="__codelineno-0-894"></a>        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-895"><a id="__codelineno-0-895" name="__codelineno-0-895"></a>        <span class="n">help</span><span class="o">=</span><span class="p">(</span>
+</span><span id="__span-0-896"><a id="__codelineno-0-896" name="__codelineno-0-896"></a>            <span class="s2">&quot;Parent directory for package output &quot;</span>
+</span><span id="__span-0-897"><a id="__codelineno-0-897" name="__codelineno-0-897"></a>            <span class="s2">&quot;(default: from config or ./packages)&quot;</span>
+</span><span id="__span-0-898"><a id="__codelineno-0-898" name="__codelineno-0-898"></a>        <span class="p">),</span>
+</span><span id="__span-0-899"><a id="__codelineno-0-899" name="__codelineno-0-899"></a>    <span class="p">)</span>
+</span><span id="__span-0-900"><a id="__codelineno-0-900" name="__codelineno-0-900"></a>    <span class="n">parser_package</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-901"><a id="__codelineno-0-901" name="__codelineno-0-901"></a>        <span class="s2">&quot;--clean-source&quot;</span><span class="p">,</span>
+</span><span id="__span-0-902"><a id="__codelineno-0-902" name="__codelineno-0-902"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+</span><span id="__span-0-903"><a id="__codelineno-0-903" name="__codelineno-0-903"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Remove the build directory after packaging&quot;</span><span class="p">,</span>
+</span><span id="__span-0-904"><a id="__codelineno-0-904" name="__codelineno-0-904"></a>    <span class="p">)</span>
+</span><span id="__span-0-905"><a id="__codelineno-0-905" name="__codelineno-0-905"></a>    <span class="n">parser_package</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-906"><a id="__codelineno-0-906" name="__codelineno-0-906"></a>        <span class="s2">&quot;-v&quot;</span><span class="p">,</span>
+</span><span id="__span-0-907"><a id="__codelineno-0-907" name="__codelineno-0-907"></a>        <span class="s2">&quot;--verbose&quot;</span><span class="p">,</span>
+</span><span id="__span-0-908"><a id="__codelineno-0-908" name="__codelineno-0-908"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+</span><span id="__span-0-909"><a id="__codelineno-0-909" name="__codelineno-0-909"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show progress and high-level status updates&quot;</span><span class="p">,</span>
+</span><span id="__span-0-910"><a id="__codelineno-0-910" name="__codelineno-0-910"></a>    <span class="p">)</span>
+</span><span id="__span-0-911"><a id="__codelineno-0-911" name="__codelineno-0-911"></a>    <span class="n">parser_package</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-912"><a id="__codelineno-0-912" name="__codelineno-0-912"></a>        <span class="s2">&quot;-d&quot;</span><span class="p">,</span>
+</span><span id="__span-0-913"><a id="__codelineno-0-913" name="__codelineno-0-913"></a>        <span class="s2">&quot;--debug&quot;</span><span class="p">,</span>
+</span><span id="__span-0-914"><a id="__codelineno-0-914" name="__codelineno-0-914"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+</span><span id="__span-0-915"><a id="__codelineno-0-915" name="__codelineno-0-915"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show detailed debugging output (implies --verbose)&quot;</span><span class="p">,</span>
+</span><span id="__span-0-916"><a id="__codelineno-0-916" name="__codelineno-0-916"></a>    <span class="p">)</span>
+</span><span id="__span-0-917"><a id="__codelineno-0-917" name="__codelineno-0-917"></a>    <span class="n">parser_package</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">cmd_package</span><span class="p">)</span>
+</span><span id="__span-0-918"><a id="__codelineno-0-918" name="__codelineno-0-918"></a>
+</span><span id="__span-0-919"><a id="__codelineno-0-919" name="__codelineno-0-919"></a>    <span class="c1"># &#39;init&#39; command</span>
+</span><span id="__span-0-920"><a id="__codelineno-0-920" name="__codelineno-0-920"></a>    <span class="n">parser_init</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span>
+</span><span id="__span-0-921"><a id="__codelineno-0-921" name="__codelineno-0-921"></a>        <span class="s2">&quot;init&quot;</span><span class="p">,</span>
+</span><span id="__span-0-922"><a id="__codelineno-0-922" name="__codelineno-0-922"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Initialize a new NAPT project&quot;</span><span class="p">,</span>
+</span><span id="__span-0-923"><a id="__codelineno-0-923" name="__codelineno-0-923"></a>        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+</span><span id="__span-0-924"><a id="__codelineno-0-924" name="__codelineno-0-924"></a>            <span class="s2">&quot;Create a new NAPT project structure with default configuration.</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-925"><a id="__codelineno-0-925" name="__codelineno-0-925"></a>            <span class="s2">&quot;Creates:</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-926"><a id="__codelineno-0-926" name="__codelineno-0-926"></a>            <span class="s2">&quot;  - recipes/              Directory for recipe YAML files</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-927"><a id="__codelineno-0-927" name="__codelineno-0-927"></a>            <span class="s2">&quot;  - defaults/org.yaml     Organization defaults template</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-928"><a id="__codelineno-0-928" name="__codelineno-0-928"></a>            <span class="s2">&quot;  - defaults/vendors/     Directory for vendor-specific defaults</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-929"><a id="__codelineno-0-929" name="__codelineno-0-929"></a>            <span class="s2">&quot;Examples:</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-930"><a id="__codelineno-0-930" name="__codelineno-0-930"></a>            <span class="s2">&quot;  napt init</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-931"><a id="__codelineno-0-931" name="__codelineno-0-931"></a>            <span class="s2">&quot;  napt init ./my-project</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-932"><a id="__codelineno-0-932" name="__codelineno-0-932"></a>            <span class="s2">&quot;  napt init --force</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-933"><a id="__codelineno-0-933" name="__codelineno-0-933"></a>            <span class="s2">&quot;See docs for more examples and workflows.&quot;</span>
+</span><span id="__span-0-934"><a id="__codelineno-0-934" name="__codelineno-0-934"></a>        <span class="p">),</span>
+</span><span id="__span-0-935"><a id="__codelineno-0-935" name="__codelineno-0-935"></a>        <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">RawDescriptionHelpFormatter</span><span class="p">,</span>
+</span><span id="__span-0-936"><a id="__codelineno-0-936" name="__codelineno-0-936"></a>    <span class="p">)</span>
+</span><span id="__span-0-937"><a id="__codelineno-0-937" name="__codelineno-0-937"></a>    <span class="n">parser_init</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-938"><a id="__codelineno-0-938" name="__codelineno-0-938"></a>        <span class="s2">&quot;directory&quot;</span><span class="p">,</span>
+</span><span id="__span-0-939"><a id="__codelineno-0-939" name="__codelineno-0-939"></a>        <span class="n">nargs</span><span class="o">=</span><span class="s2">&quot;?&quot;</span><span class="p">,</span>
+</span><span id="__span-0-940"><a id="__codelineno-0-940" name="__codelineno-0-940"></a>        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">,</span>
+</span><span id="__span-0-941"><a id="__codelineno-0-941" name="__codelineno-0-941"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Directory to initialize (default: current directory)&quot;</span><span class="p">,</span>
+</span><span id="__span-0-942"><a id="__codelineno-0-942" name="__codelineno-0-942"></a>    <span class="p">)</span>
+</span><span id="__span-0-943"><a id="__codelineno-0-943" name="__codelineno-0-943"></a>    <span class="n">parser_init</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-944"><a id="__codelineno-0-944" name="__codelineno-0-944"></a>        <span class="s2">&quot;--force&quot;</span><span class="p">,</span>
+</span><span id="__span-0-945"><a id="__codelineno-0-945" name="__codelineno-0-945"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+</span><span id="__span-0-946"><a id="__codelineno-0-946" name="__codelineno-0-946"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Backup and overwrite existing configuration files&quot;</span><span class="p">,</span>
+</span><span id="__span-0-947"><a id="__codelineno-0-947" name="__codelineno-0-947"></a>    <span class="p">)</span>
+</span><span id="__span-0-948"><a id="__codelineno-0-948" name="__codelineno-0-948"></a>    <span class="n">parser_init</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-949"><a id="__codelineno-0-949" name="__codelineno-0-949"></a>        <span class="s2">&quot;-v&quot;</span><span class="p">,</span>
+</span><span id="__span-0-950"><a id="__codelineno-0-950" name="__codelineno-0-950"></a>        <span class="s2">&quot;--verbose&quot;</span><span class="p">,</span>
+</span><span id="__span-0-951"><a id="__codelineno-0-951" name="__codelineno-0-951"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+</span><span id="__span-0-952"><a id="__codelineno-0-952" name="__codelineno-0-952"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show detailed initialization steps&quot;</span><span class="p">,</span>
+</span><span id="__span-0-953"><a id="__codelineno-0-953" name="__codelineno-0-953"></a>    <span class="p">)</span>
+</span><span id="__span-0-954"><a id="__codelineno-0-954" name="__codelineno-0-954"></a>    <span class="n">parser_init</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-955"><a id="__codelineno-0-955" name="__codelineno-0-955"></a>        <span class="s2">&quot;-d&quot;</span><span class="p">,</span>
+</span><span id="__span-0-956"><a id="__codelineno-0-956" name="__codelineno-0-956"></a>        <span class="s2">&quot;--debug&quot;</span><span class="p">,</span>
+</span><span id="__span-0-957"><a id="__codelineno-0-957" name="__codelineno-0-957"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+</span><span id="__span-0-958"><a id="__codelineno-0-958" name="__codelineno-0-958"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show detailed debugging output (implies --verbose)&quot;</span><span class="p">,</span>
+</span><span id="__span-0-959"><a id="__codelineno-0-959" name="__codelineno-0-959"></a>    <span class="p">)</span>
+</span><span id="__span-0-960"><a id="__codelineno-0-960" name="__codelineno-0-960"></a>    <span class="n">parser_init</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">cmd_init</span><span class="p">)</span>
+</span><span id="__span-0-961"><a id="__codelineno-0-961" name="__codelineno-0-961"></a>
+</span><span id="__span-0-962"><a id="__codelineno-0-962" name="__codelineno-0-962"></a>    <span class="c1"># &#39;upload&#39; command</span>
+</span><span id="__span-0-963"><a id="__codelineno-0-963" name="__codelineno-0-963"></a>    <span class="n">parser_upload</span> <span class="o">=</span> <span class="n">subparsers</span><span class="o">.</span><span class="n">add_parser</span><span class="p">(</span>
+</span><span id="__span-0-964"><a id="__codelineno-0-964" name="__codelineno-0-964"></a>        <span class="s2">&quot;upload&quot;</span><span class="p">,</span>
+</span><span id="__span-0-965"><a id="__codelineno-0-965" name="__codelineno-0-965"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Upload .intunewin package to Microsoft Intune&quot;</span><span class="p">,</span>
+</span><span id="__span-0-966"><a id="__codelineno-0-966" name="__codelineno-0-966"></a>        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+</span><span id="__span-0-967"><a id="__codelineno-0-967" name="__codelineno-0-967"></a>            <span class="s2">&quot;Upload the most recent .intunewin package for a recipe to &quot;</span>
+</span><span id="__span-0-968"><a id="__codelineno-0-968" name="__codelineno-0-968"></a>            <span class="s2">&quot;Microsoft Intune via the Graph API.</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-969"><a id="__codelineno-0-969" name="__codelineno-0-969"></a>            <span class="s2">&quot;Authentication is automatic — tried in this order:</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-970"><a id="__codelineno-0-970" name="__codelineno-0-970"></a>            <span class="s2">&quot;  1. AZURE_CLIENT_ID + AZURE_CLIENT_SECRET + AZURE_TENANT_ID env vars</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-971"><a id="__codelineno-0-971" name="__codelineno-0-971"></a>            <span class="s2">&quot;  2. Managed identity (Azure VMs, GitHub Actions OIDC)</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-972"><a id="__codelineno-0-972" name="__codelineno-0-972"></a>            <span class="s2">&quot;  3. Device code flow (browser login — set AZURE_CLIENT_ID + AZURE_TENANT_ID)</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-973"><a id="__codelineno-0-973" name="__codelineno-0-973"></a>            <span class="s2">&quot;Examples:</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-974"><a id="__codelineno-0-974" name="__codelineno-0-974"></a>            <span class="s2">&quot;  napt upload recipes/Google/chrome.yaml</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-975"><a id="__codelineno-0-975" name="__codelineno-0-975"></a>            <span class="s2">&quot;  napt upload recipes/Google/chrome.yaml --tenant-id &lt;id&gt;</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-976"><a id="__codelineno-0-976" name="__codelineno-0-976"></a>            <span class="s2">&quot;  napt upload recipes/Google/chrome.yaml --verbose</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+</span><span id="__span-0-977"><a id="__codelineno-0-977" name="__codelineno-0-977"></a>            <span class="s2">&quot;See docs for auth setup and full configuration guide.&quot;</span>
+</span><span id="__span-0-978"><a id="__codelineno-0-978" name="__codelineno-0-978"></a>        <span class="p">),</span>
+</span><span id="__span-0-979"><a id="__codelineno-0-979" name="__codelineno-0-979"></a>        <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">RawDescriptionHelpFormatter</span><span class="p">,</span>
+</span><span id="__span-0-980"><a id="__codelineno-0-980" name="__codelineno-0-980"></a>    <span class="p">)</span>
+</span><span id="__span-0-981"><a id="__codelineno-0-981" name="__codelineno-0-981"></a>    <span class="n">parser_upload</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-982"><a id="__codelineno-0-982" name="__codelineno-0-982"></a>        <span class="s2">&quot;recipe&quot;</span><span class="p">,</span>
+</span><span id="__span-0-983"><a id="__codelineno-0-983" name="__codelineno-0-983"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to the recipe YAML file&quot;</span><span class="p">,</span>
+</span><span id="__span-0-984"><a id="__codelineno-0-984" name="__codelineno-0-984"></a>    <span class="p">)</span>
+</span><span id="__span-0-985"><a id="__codelineno-0-985" name="__codelineno-0-985"></a>    <span class="n">parser_upload</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-986"><a id="__codelineno-0-986" name="__codelineno-0-986"></a>        <span class="s2">&quot;--tenant-id&quot;</span><span class="p">,</span>
+</span><span id="__span-0-987"><a id="__codelineno-0-987" name="__codelineno-0-987"></a>        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-988"><a id="__codelineno-0-988" name="__codelineno-0-988"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Azure AD tenant ID (overrides defaults/org.yaml)&quot;</span><span class="p">,</span>
+</span><span id="__span-0-989"><a id="__codelineno-0-989" name="__codelineno-0-989"></a>    <span class="p">)</span>
+</span><span id="__span-0-990"><a id="__codelineno-0-990" name="__codelineno-0-990"></a>    <span class="n">parser_upload</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-991"><a id="__codelineno-0-991" name="__codelineno-0-991"></a>        <span class="s2">&quot;-v&quot;</span><span class="p">,</span>
+</span><span id="__span-0-992"><a id="__codelineno-0-992" name="__codelineno-0-992"></a>        <span class="s2">&quot;--verbose&quot;</span><span class="p">,</span>
+</span><span id="__span-0-993"><a id="__codelineno-0-993" name="__codelineno-0-993"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+</span><span id="__span-0-994"><a id="__codelineno-0-994" name="__codelineno-0-994"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show progress and high-level status updates&quot;</span><span class="p">,</span>
+</span><span id="__span-0-995"><a id="__codelineno-0-995" name="__codelineno-0-995"></a>    <span class="p">)</span>
+</span><span id="__span-0-996"><a id="__codelineno-0-996" name="__codelineno-0-996"></a>    <span class="n">parser_upload</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+</span><span id="__span-0-997"><a id="__codelineno-0-997" name="__codelineno-0-997"></a>        <span class="s2">&quot;-d&quot;</span><span class="p">,</span>
+</span><span id="__span-0-998"><a id="__codelineno-0-998" name="__codelineno-0-998"></a>        <span class="s2">&quot;--debug&quot;</span><span class="p">,</span>
+</span><span id="__span-0-999"><a id="__codelineno-0-999" name="__codelineno-0-999"></a>        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span>
+</span><span id="__span-0-1000"><a id="__codelineno-0-1000" name="__codelineno-0-1000"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show detailed debugging output (implies --verbose)&quot;</span><span class="p">,</span>
+</span><span id="__span-0-1001"><a id="__codelineno-0-1001" name="__codelineno-0-1001"></a>    <span class="p">)</span>
+</span><span id="__span-0-1002"><a id="__codelineno-0-1002" name="__codelineno-0-1002"></a>    <span class="n">parser_upload</span><span class="o">.</span><span class="n">set_defaults</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">cmd_upload</span><span class="p">)</span>
 </span><span id="__span-0-1003"><a id="__codelineno-0-1003" name="__codelineno-0-1003"></a>
-</span><span id="__span-0-1004"><a id="__codelineno-0-1004" name="__codelineno-0-1004"></a>    <span class="c1"># Call the appropriate command handler</span>
-</span><span id="__span-0-1005"><a id="__codelineno-0-1005" name="__codelineno-0-1005"></a>    <span class="n">exit_code</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">func</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
-</span><span id="__span-0-1006"><a id="__codelineno-0-1006" name="__codelineno-0-1006"></a>    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">exit_code</span><span class="p">)</span>
+</span><span id="__span-0-1004"><a id="__codelineno-0-1004" name="__codelineno-0-1004"></a>    <span class="c1"># Parse and dispatch</span>
+</span><span id="__span-0-1005"><a id="__codelineno-0-1005" name="__codelineno-0-1005"></a>    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+</span><span id="__span-0-1006"><a id="__codelineno-0-1006" name="__codelineno-0-1006"></a>
+</span><span id="__span-0-1007"><a id="__codelineno-0-1007" name="__codelineno-0-1007"></a>    <span class="c1"># Call the appropriate command handler</span>
+</span><span id="__span-0-1008"><a id="__codelineno-0-1008" name="__codelineno-0-1008"></a>    <span class="n">exit_code</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">func</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+</span><span id="__span-0-1009"><a id="__codelineno-0-1009" name="__codelineno-0-1009"></a>    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">exit_code</span><span class="p">)</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>

@@ -3416,12 +3416,17 @@ logic that differs from the standard pipeline.</p>
 <strong>Required:</strong> No
 <strong>Default:</strong> <code>"both"</code>
 <strong>Allowed values:</strong> <code>"both"</code>, <code>"app_only"</code>, <code>"update_only"</code></p>
-<p>Specifies which Intune app entries to create during build. The <strong>detection script</strong> is always
-generated. This setting controls <strong>requirements script</strong> generation only:</p>
+<p>Controls which Intune Win32 app entries are created during <code>napt build</code> and
+<code>napt upload</code>. The detection script is always generated. This setting
+controls requirements script generation and how many app entries are uploaded:</p>
 <ul>
-<li><code>"both"</code> (default): Generate detection and requirements scripts (App + Update entries)</li>
-<li><code>"app_only"</code>: Generate only the detection script (App entry only)</li>
-<li><code>"update_only"</code>: Generate detection and requirements scripts (Update entry only)</li>
+<li><code>"both"</code> (default): Generate detection and requirements scripts;
+  <code>napt upload</code> creates an install entry (detection only) and an update entry
+  (detection + requirements)</li>
+<li><code>"app_only"</code>: Generate detection script only;
+  <code>napt upload</code> creates the install entry only</li>
+<li><code>"update_only"</code>: Generate detection and requirements scripts;
+  <code>napt upload</code> creates the update entry only</li>
 </ul>
 <p><strong>Example:</strong>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">intune</span><span class="p">:</span>

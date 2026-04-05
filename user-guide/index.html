@@ -2894,15 +2894,21 @@ Graph API. Run <code>napt package</code> before uploading.</p>
 <li><strong>Locate Package</strong> - Scans <code>packages/{app_id}/</code> for the versioned subdirectory
    created by <code>napt package</code> and reads <code>Invoke-AppDeployToolkit.intunewin</code> from it</li>
 <li><strong>Authenticate</strong> - Tries three credential methods in order (see <a href="#authentication">Authentication</a> below)</li>
-<li><strong>Parse Package Metadata</strong> - Reads encryption metadata from <code>Detection.xml</code> inside the <code>.intunewin</code> ZIP</li>
-<li><strong>Create App Record</strong> - POSTs to Graph API to create a new Win32 LOB app in Intune.
-   App metadata (display name, install commands, detection/requirements scripts, architecture)
-   is assembled from the recipe config and the scripts in the package directory</li>
-<li><strong>Upload Encrypted Payload</strong> - Extracts the encrypted payload from the <code>.intunewin</code> ZIP
-   and uploads it to Azure Blob Storage in 6 MiB chunks</li>
-<li><strong>Commit</strong> - Finalizes the upload by committing the content version with encryption metadata</li>
+<li><strong>Parse Package Metadata</strong> - Reads encryption metadata from <code>Detection.xml</code> inside the <code>.intunewin</code> ZIP
+4–6. <strong>Create, Upload, Commit (install entry)</strong> - Creates the Win32 app record
+   using the base app name and detection script only, uploads the encrypted
+   payload to Azure Blob Storage, and commits the content version.
+   Skipped when <code>build_types</code> is <code>"update_only"</code>
+7–9. <strong>Create, Upload, Commit (update entry)</strong> - Creates a second Win32 app
+   record using <code>update_name_prefix + name</code> and detection + requirements scripts,
+   uploads the same encrypted payload, and commits.
+   Skipped when <code>build_types</code> is <code>"app_only"</code>.
+   When <code>build_types</code> is <code>"both"</code> (default), this runs after the install entry
+   is fully committed</li>
 </ol>
-<p><strong>Output</strong>: Intune app ID, app name, version, and package path</p>
+<p><strong>Output</strong>: Intune Win32 App ID (install entry), Intune Win32 Update ID (update
+entry), app name, version, and package path. Each ID is omitted when its
+corresponding entry is not created</p>
 <h4 id="authentication">Authentication</h4>
 <p><code>napt upload</code> requires a NAPT app registration in Microsoft Entra ID.
 See <a href="#app-registration-setup">App Registration Setup</a> below.
