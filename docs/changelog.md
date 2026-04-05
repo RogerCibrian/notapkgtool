@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`napt upload` now creates two Intune Win32 app entries when `build_types`
+    is `"both"`** - Previously only one entry was created regardless of
+    `build_types`. The install entry (detection script only, base app name) and
+    the update entry (detection + requirements scripts, prefixed with
+    `update_name_prefix`) are now each created, uploaded, and committed in
+    sequence. Single-entry behavior for `"app_only"` and `"update_only"` is
+    unchanged
+
 ### Added
 
 - **MSIX installer support** - NAPT now supports `.msix` installers as a third

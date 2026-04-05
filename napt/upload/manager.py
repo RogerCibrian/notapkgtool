@@ -165,6 +165,7 @@ def _build_app_metadata(
     recipe_path: Path,
     version: str,
     package_path: Path,
+    build_types: str,
 ) -> dict[str, Any]:
     """Build the Win32LobApp JSON payload for the Graph API.
 
@@ -179,6 +180,8 @@ def _build_app_metadata(
         version: Application version string (from package directory name).
         package_path: Path to the .intunewin file
             (e.g., packages/napt-chrome/144.0.7559.110/Invoke-AppDeployToolkit.intunewin).
+        build_types: Either "app_only" (install entry, detection script only) or
+            "update_only" (update entry, detection + requirements scripts).
 
     Returns:
         Dict ready to POST to the Graph API mobileApps endpoint.
@@ -186,7 +189,7 @@ def _build_app_metadata(
     Raises:
         ConfigError: If the build manifest is missing, the architecture field
             is absent or unrecognized, the detection script is missing, or the
-            requirements script is missing when build_types requires it.
+            requirements script is missing when build_types is "update_only".
             Run 'napt build' and 'napt package' to recreate the package.
 
     """
@@ -194,7 +197,12 @@ def _build_app_metadata(
     package_dir = package_path.parent
     intune: dict[str, Any] = config.get("intune", {})
 
-    display_name: str = config["name"]
+    base_name: str = config["name"]
+    if build_types == "update_only":
+        prefix: str = intune.get("update_name_prefix", "[Update] ")
+        display_name = f"{prefix}{base_name}"
+    else:
+        display_name = base_name
     # Publisher: recipe intune.publisher override, then vendor directory name
     publisher: str = intune.get("publisher") or recipe_path.parent.name
     description: str = intune.get("description", "")
@@ -223,8 +231,6 @@ def _build_app_metadata(
         )
     allowed_architectures: str | None = _ARCH_MAP[arch_raw]
 
-    build_types: str = intune.get("build_types", "both")
-
     # Detection script (always required)
     detection_scripts = sorted(package_dir.glob("*-Detection.ps1"))
     if not detection_scripts:
@@ -249,13 +255,14 @@ def _build_app_metadata(
         }
     ]
 
-    # Requirements script (for build_types that include update detection)
-    if build_types in ("both", "update_only"):
+    # Requirements script (update entries only)
+    if build_types == "update_only":
         req_scripts = sorted(package_dir.glob("*-Requirements.ps1"))
         if not req_scripts:
             raise ConfigError(
                 f"Requirements script not found in {package_dir} "
-                f"(build_types is '{build_types}'). "
+                "(when build_types is "
+                "'both' or 'update_only'). "
                 "Run 'napt package' to recreate the package."
             )
         req_content = base64.b64encode(req_scripts[0].read_bytes()).decode()
@@ -353,12 +360,78 @@ def _build_app_metadata(
     return payload
 
 
+def _upload_single_app(
+    access_token: str,
+    app_metadata: dict[str, Any],
+    package_path: Path,
+    intunewin_metadata: Any,
+    step_create: int,
+    step_upload: int,
+    step_commit: int,
+    total_steps: int,
+) -> str:
+    """Create, upload, and commit one Intune Win32 app entry.
+
+    Executes the full Graph API upload flow for a single app entry: creates
+    the app record and content version, uploads the encrypted payload to Azure
+    Blob Storage, and commits the content version.
+
+    Args:
+        access_token: Azure AD bearer token for Graph API calls.
+        app_metadata: Win32LobApp JSON payload from _build_app_metadata.
+        package_path: Path to the .intunewin file.
+        intunewin_metadata: Parsed encryption metadata from parse_intunewin.
+        step_create: Step number to display when creating the app record.
+        step_upload: Step number to display when uploading to Blob Storage.
+        step_commit: Step number to display when committing.
+        total_steps: Total step count for progress display.
+
+    Returns:
+        The Graph API object ID of the created Intune Win32 app.
+
+    """
+    logger = get_global_logger()
+    display_name: str = app_metadata["displayName"]
+
+    logger.step(
+        step_create, total_steps, f"Creating app record for '{display_name}'..."
+    )
+    intune_app_id = create_win32_app(access_token, app_metadata)
+    logger.info("UPLOAD", f"Created Intune app: {intune_app_id}")
+
+    cv_id = create_content_version(access_token, intune_app_id)
+    logger.verbose("UPLOAD", f"Content version: {cv_id}")
+
+    file_id, sas_uri = create_content_version_file(
+        access_token, intune_app_id, cv_id, intunewin_metadata
+    )
+    logger.verbose("UPLOAD", f"File entry: {file_id}")
+
+    logger.step(step_upload, total_steps, "Uploading to Azure Blob Storage...")
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        payload_path = extract_encrypted_payload(package_path, Path(tmp_dir))
+        upload_to_azure_blob(sas_uri, payload_path)
+
+    logger.step(step_commit, total_steps, "Committing content version...")
+    commit_content_version_file(
+        access_token, intune_app_id, cv_id, file_id, intunewin_metadata
+    )
+    commit_content_version(access_token, intune_app_id, cv_id)
+
+    return intune_app_id
+
+
 def upload_package(recipe_path: Path) -> UploadResult:
     """Upload a packaged app to Microsoft Intune via the Graph API.
 
     Loads the recipe config, infers the .intunewin package path, authenticates
     using the available Azure credential, parses encryption metadata from the
     package, and executes the full Graph API upload flow.
+
+    When intune.build_types is "both" (the default), two Intune app entries are
+    created: an install entry (detection script only) and an update entry
+    (detection + requirements scripts). Each entry is created, uploaded, and
+    committed in sequence before moving to the next.
 
     The package directory is inferred as packages/{app.id}/{version}/.
     Run 'napt package' before calling this function.
@@ -373,8 +446,9 @@ def upload_package(recipe_path: Path) -> UploadResult:
         recipe_path: Path to the recipe YAML file.
 
     Returns:
-        Upload result including the Intune app ID, app name, version, and
-            package path.
+        Upload result including the Intune app ID(s), app name, version, and
+            package path. intune_app_id is None when build_types is "update_only";
+            intune_update_app_id is None when build_types is "app_only".
 
     Raises:
         ConfigError: If the package directory is not found, or detection/
@@ -385,13 +459,15 @@ def upload_package(recipe_path: Path) -> UploadResult:
         PackagingError: If the .intunewin file is malformed.
 
     Example:
-        Upload and print the resulting Intune app ID:
+        Upload and print the resulting Intune app IDs:
             ```python
             from pathlib import Path
             from napt.upload import upload_package
 
             result = upload_package(Path("recipes/Google/chrome.yaml"))
-            print(f"Intune app ID: {result.intune_app_id}")
+            print(f"Install app ID: {result.intune_app_id}")
+            if result.intune_update_app_id:
+                print(f"Update app ID: {result.intune_update_app_id}")
             ```
 
     """
@@ -400,49 +476,61 @@ def upload_package(recipe_path: Path) -> UploadResult:
     config = load_effective_config(recipe_path)
     app_id: str = config["id"]
     app_name: str = config["name"]
+    build_types: str = config.get("intune", {}).get("build_types", "both")
 
     logger.verbose("UPLOAD", f"Starting upload for '{app_name}' ({app_id})")
+    logger.verbose("UPLOAD", f"build_types: {build_types}")
 
     # Step 1: Locate the package directory
-    logger.step(1, 6, "Locating .intunewin package...")
+    total_steps = 9 if build_types == "both" else 6
+    logger.step(1, total_steps, "Locating .intunewin package...")
     package_path, version = _infer_package_dir(app_id)
     logger.verbose("UPLOAD", f"Package: {package_path}")
     logger.verbose("UPLOAD", f"Version: {version}")
 
     # Step 2: Authenticate
-    logger.step(2, 6, "Authenticating with Azure...")
+    logger.step(2, total_steps, "Authenticating with Azure...")
     access_token = get_access_token()
 
     # Step 3: Parse .intunewin metadata
-    logger.step(3, 6, "Parsing package metadata...")
+    logger.step(3, total_steps, "Parsing package metadata...")
     intunewin_metadata = parse_intunewin(package_path)
 
-    # Step 4: Create Intune app record and content version
-    logger.step(4, 6, f"Creating Intune app record for '{app_name}' {version}...")
-    app_metadata = _build_app_metadata(config, recipe_path, version, package_path)
-    intune_app_id = create_win32_app(access_token, app_metadata)
-    logger.info("UPLOAD", f"Created Intune app: {intune_app_id}")
+    intune_app_id: str | None = None
+    intune_update_app_id: str | None = None
 
-    cv_id = create_content_version(access_token, intune_app_id)
-    logger.verbose("UPLOAD", f"Content version: {cv_id}")
+    if build_types in ("app_only", "both"):
+        # Install entry: steps 4-6
+        install_metadata = _build_app_metadata(
+            config, recipe_path, version, package_path, "app_only"
+        )
+        intune_app_id = _upload_single_app(
+            access_token,
+            install_metadata,
+            package_path,
+            intunewin_metadata,
+            step_create=4,
+            step_upload=5,
+            step_commit=6,
+            total_steps=total_steps,
+        )
 
-    file_id, sas_uri = create_content_version_file(
-        access_token, intune_app_id, cv_id, intunewin_metadata
-    )
-    logger.verbose("UPLOAD", f"File entry: {file_id}")
-
-    # Step 5: Upload encrypted payload to Azure Blob Storage
-    logger.step(5, 6, "Uploading to Azure Blob Storage...")
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        payload_path = extract_encrypted_payload(package_path, Path(tmp_dir))
-        upload_to_azure_blob(sas_uri, payload_path)
-
-    # Step 6: Commit
-    logger.step(6, 6, "Committing content version...")
-    commit_content_version_file(
-        access_token, intune_app_id, cv_id, file_id, intunewin_metadata
-    )
-    commit_content_version(access_token, intune_app_id, cv_id)
+    if build_types in ("update_only", "both"):
+        # Update entry: steps 4-6 (single) or 7-9 (both)
+        step_offset = 6 if build_types == "both" else 3
+        update_metadata = _build_app_metadata(
+            config, recipe_path, version, package_path, "update_only"
+        )
+        intune_update_app_id = _upload_single_app(
+            access_token,
+            update_metadata,
+            package_path,
+            intunewin_metadata,
+            step_create=step_offset + 1,
+            step_upload=step_offset + 2,
+            step_commit=step_offset + 3,
+            total_steps=total_steps,
+        )
 
     logger.verbose("UPLOAD", "Upload complete")
 
@@ -451,6 +539,7 @@ def upload_package(recipe_path: Path) -> UploadResult:
         app_name=app_name,
         version=version,
         intune_app_id=intune_app_id,
+        intune_update_app_id=intune_update_app_id,
         package_path=package_path,
         status="success",
     )
