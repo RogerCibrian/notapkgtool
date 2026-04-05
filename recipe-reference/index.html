@@ -3323,10 +3323,13 @@ installer.</p>
 <p>When <code>true</code>, uses recipe <code>install</code> and <code>uninstall</code> scripts instead of the
 auto-generated MSIX commands.</p>
 <p><strong>MSIX auto-generation:</strong> For MSIX installers, NAPT auto-generates install and
-uninstall commands from manifest metadata:</p>
+uninstall commands from manifest metadata.
+The commands vary based on <code>intune.run_as_account</code>:</p>
 <ul>
-<li><strong>Install:</strong> <code>Add-AppxPackage -Path "$dirFiles\{filename}"</code></li>
-<li><strong>Uninstall:</strong> <code>Get-AppxPackage -Name "{identity_name}" | Remove-AppxPackage</code></li>
+<li><strong>Install (<code>system</code>, default):</strong> <code>Add-AppxProvisionedPackage -Online -PackagePath "$($adtSession.DirFiles)\{filename}" -SkipLicense</code></li>
+<li><strong>Uninstall (<code>system</code>, default):</strong> <code>Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq "{identity_name}" } | Remove-AppxProvisionedPackage -Online</code></li>
+<li><strong>Install (<code>user</code>):</strong> <code>Add-AppxPackage -Path "$($adtSession.DirFiles)\{filename}"</code></li>
+<li><strong>Uninstall (<code>user</code>):</strong> <code>Get-AppxPackage -Name "{identity_name}" | Remove-AppxPackage</code></li>
 </ul>
 <p>These commands are used unless <code>override_msix_commands: true</code> is set. If the
 recipe specifies <code>psadt.install</code> or <code>psadt.uninstall</code> without this flag, a
@@ -3338,16 +3341,15 @@ warning is logged and the recipe values are ignored.</p>
 <li><code>true</code> but neither <code>install</code> nor <code>uninstall</code> set: Error (nothing to override with)</li>
 <li>Non-MSIX installers: Flag is ignored</li>
 </ul>
-<p><strong>When to use:</strong> Apps that need license files (<code>Add-AppxProvisionedAppxPackage</code>),
-apps requiring custom provisioning, or uninstall logic that differs from the
-standard <code>Remove-AppxPackage</code> pipeline.</p>
+<p><strong>When to use:</strong> Apps that require a license file during provisioning or uninstall
+logic that differs from the standard pipeline.</p>
 <p><strong>Example:</strong>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">psadt</span><span class="p">:</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">override_msix_commands</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 </span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="no">Add-AppxProvisionedAppxPackage -Online -PackagePath &quot;$dirFiles\app.msix&quot; -LicensePath &quot;$dirFiles\license.xml&quot;</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="no">Add-AppxProvisionedPackage -Online -PackagePath &quot;$($adtSession.DirFiles)\app.msix&quot; -LicensePath &quot;$($adtSession.DirFiles)\license.xml&quot; -SkipLicense</span>
 </span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="no">Get-AppxProvisionedPackage -Online | Where-Object { $_.PackageName -like &quot;Vendor.App*&quot; } | Remove-AppxProvisionedPackage -Online</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="no">Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq &quot;Vendor.App&quot; } | Remove-AppxProvisionedPackage -Online</span>
 </span></code></pre></div></p>
 <h3 id="install">install</h3>
 <p><strong>Type:</strong> <code>string</code> (multiline)
@@ -3356,7 +3358,7 @@ standard <code>Remove-AppxPackage</code> pipeline.</p>
 <code>Invoke-AppDeployToolkit.ps1</code> in the installation section.</p>
 <p><strong>Available Variables:</strong></p>
 <ul>
-<li><code>$dirFiles</code>: Path to installer files directory (contains downloaded installer)</li>
+<li><code>$($adtSession.DirFiles)</code>: Path to installer files directory (contains downloaded installer)</li>
 <li><code>$discovered_version</code>: Version discovered by NAPT</li>
 <li>Standard PSADT variables: <code>$dirApp</code>, <code>$dirSupportFiles</code>, etc.</li>
 <li>All <code>app_vars</code> are available (e.g., <code>$AppName</code>, <code>$AppVersion</code>)</li>
@@ -3478,6 +3480,36 @@ Set to <code>false</code> to prevent self-service uninstall for this app.</p>
 <p>Execution account for the installer and detection/requirements scripts.
 Use <code>"system"</code> for most enterprise deployments.
 Use <code>"user"</code> for apps that must be installed in the user's profile context.</p>
+<p><strong>MSIX installers:</strong> This field also controls which AppX cmdlets are
+auto-generated and which package store is queried by detection and
+requirements scripts:</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Install cmdlet</th>
+<th>Detection</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>"system"</code> (default)</td>
+<td><code>Add-AppxProvisionedPackage</code> (all users)</td>
+<td><code>Get-AppxProvisionedPackage</code></td>
+</tr>
+<tr>
+<td><code>"user"</code></td>
+<td><code>Add-AppxPackage</code> (current user)</td>
+<td><code>Get-AppxPackage</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>RequireAdmin</code> default:</strong> For user-context installs, NAPT defaults
+<code>psadt.app_vars.RequireAdmin</code> to <code>false</code>.
+PSADT will error if <code>RequireAdmin</code> is <code>true</code> but the process is not running
+as an administrator.
+If your environment grants local admin to users and you want PSADT to enforce
+it, set <code>RequireAdmin: true</code> explicitly in <code>psadt.app_vars</code>.</p>
 <h3 id="device_restart_behavior">device_restart_behavior</h3>
 <p><strong>Type:</strong> <code>string</code>
 <strong>Required:</strong> No

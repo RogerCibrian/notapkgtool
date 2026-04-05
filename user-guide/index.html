@@ -2704,7 +2704,7 @@
 </li>
 <li><strong>Generate Deployment Script</strong> - Generates <code>Invoke-AppDeployToolkit.ps1</code> from template:<ul>
 <li>Substitutes PSADT variables (<code>$appVendor</code>, <code>$appName</code>, <code>$appVersion</code>, etc.) from recipe configuration</li>
-<li>Inserts install script from <code>psadt.install</code> field (for MSIX, auto-generates <code>Add-AppxPackage</code> / <code>Remove-AppxPackage</code> commands from manifest unless <code>override_msix_commands: true</code>)</li>
+<li>Inserts install script from <code>psadt.install</code> field (for MSIX, auto-generates install/uninstall commands from manifest based on <code>intune.run_as_account</code> unless <code>override_msix_commands: true</code>)</li>
 <li>Inserts uninstall script from <code>psadt.uninstall</code> field</li>
 <li>Sets dynamic values (AppScriptDate, discovered version, PSADT version)</li>
 <li>Preserves PSADT's structure and comments</li>
@@ -2713,7 +2713,7 @@
 <li><strong>Copy Installer</strong> - Copies downloaded installer file to <code>Files/</code> directory:<ul>
 <li>Source: <code>downloads/{installer_filename}</code></li>
 <li>Destination: <code>builds/{app_id}/{version}/Files/{installer_filename}</code></li>
-<li>Installer is accessible in scripts via <code>$dirFiles</code> variable</li>
+<li>Installer is accessible in scripts via <code>$($adtSession.DirFiles)</code> (PSADT 4.x)</li>
 </ul>
 </li>
 <li><strong>Apply Branding</strong> - Replaces PSADT default assets with custom branding (if configured):<ul>
@@ -2733,8 +2733,9 @@
 </ul>
 <p>For MSI and EXE installers, both scripts share the same logic for registry lookup, app name
 resolution, and installer-type filtering; they differ only in how they interpret the version
-comparison (see below). For MSIX installers, scripts use <code>Get-AppxPackage</code> for identity-based
-matching instead of registry scanning.</p>
+comparison (see below). For MSIX installers, scripts query the AppX package database by
+identity name instead of registry scanning; which store is queried depends on
+<code>intune.run_as_account</code> (see below).</p>
 <p><strong>How the scripts work:</strong></p>
 <ul>
 <li>
@@ -2792,9 +2793,13 @@ matching instead of registry scanning.</p>
 <li>
 <p><strong>MSIX detection (AppX package-based):</strong></p>
 <ul>
-<li>MSIX installers use a completely different detection mechanism: <code>Get-AppxPackage</code> queries
-  the Windows AppX package database by package identity name (from <code>AppxManifest.xml</code>)</li>
-<li>No registry scanning or <code>DisplayName</code> matching is used for MSIX</li>
+<li>MSIX installers query the Windows AppX package database by package identity name
+  (from <code>AppxManifest.xml</code>), not the registry</li>
+<li>Which store is queried depends on <code>intune.run_as_account</code>:<ul>
+<li><code>"system"</code> (default): <code>Get-AppxProvisionedPackage -Online</code> (provisioned/all-users store)</li>
+<li><code>"user"</code>: <code>Get-AppxPackage -Name</code> (per-user store)</li>
+</ul>
+</li>
 <li>Architecture is auto-detected from the MSIX manifest's <code>ProcessorArchitecture</code> attribute</li>
 <li>The <code>intune.detection.display_name</code>, <code>architecture</code>, and <code>override_msi_display_name</code>
   fields are not used for MSIX installers</li>
@@ -3139,7 +3144,7 @@ Authentication is automatic — no configuration required.</p>
 <li><strong>Top-level fields:</strong> <code>apiVersion</code> (required), <code>name</code> (required), <code>id</code> (required),
   <code>discovery</code> (required), <code>psadt</code> (required), <code>intune</code> (optional), <code>logging</code> (optional)</li>
 <li><strong>Discovery strategies:</strong> See <a href="#discovery-strategies">Discovery Strategies</a> section above for strategy selection and examples</li>
-<li><strong>PSADT scripts:</strong> Use <code>${discovered_version}</code> for auto-substituted version, <code>$dirFiles</code> for installer path</li>
+<li><strong>PSADT scripts:</strong> Use <code>${discovered_version}</code> for auto-substituted version, <code>$($adtSession.DirFiles)</code> for installer path (PSADT 4.x)</li>
 </ul>
 <h3 id="complete-documentation">Complete Documentation</h3>
 <p>For complete field documentation, all options, and detailed examples, see the <a href="../recipe-reference/">Recipe Reference</a> page.</p>
