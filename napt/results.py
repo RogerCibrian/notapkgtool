@@ -143,7 +143,10 @@ class UploadResult:
         app_id: Unique application identifier (from recipe).
         app_name: Application display name.
         version: Application version uploaded.
-        intune_app_id: Graph API object ID of the newly created Intune Win32 app.
+        intune_app_id: Graph API object ID of the install app entry.
+            None when build_types is "update_only".
+        intune_update_app_id: Graph API object ID of the update app entry.
+            None when build_types is "app_only".
         package_path: Path to the uploaded .intunewin file.
         status: Always "success" for successful uploads.
     """
@@ -151,9 +154,10 @@ class UploadResult:
     app_id: str
     app_name: str
     version: str
-    intune_app_id: str
     package_path: Path
     status: str
+    intune_app_id: str | None = None
+    intune_update_app_id: str | None = None
 
 
 @dataclass(frozen=True)

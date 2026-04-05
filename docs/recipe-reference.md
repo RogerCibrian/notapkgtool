@@ -472,12 +472,17 @@ intune:
 **Default:** `"both"`
 **Allowed values:** `"both"`, `"app_only"`, `"update_only"`
 
-Specifies which Intune app entries to create during build. The **detection script** is always
-generated. This setting controls **requirements script** generation only:
+Controls which Intune Win32 app entries are created during `napt build` and
+`napt upload`. The detection script is always generated. This setting
+controls requirements script generation and how many app entries are uploaded:
 
-- `"both"` (default): Generate detection and requirements scripts (App + Update entries)
-- `"app_only"`: Generate only the detection script (App entry only)
-- `"update_only"`: Generate detection and requirements scripts (Update entry only)
+- `"both"` (default): Generate detection and requirements scripts;
+  `napt upload` creates an install entry (detection only) and an update entry
+  (detection + requirements)
+- `"app_only"`: Generate detection script only;
+  `napt upload` creates the install entry only
+- `"update_only"`: Generate detection and requirements scripts;
+  `napt upload` creates the update entry only
 
 **Example:**
 ```yaml

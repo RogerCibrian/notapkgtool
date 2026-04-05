@@ -197,14 +197,20 @@ Graph API. Run `napt package` before uploading.
    created by `napt package` and reads `Invoke-AppDeployToolkit.intunewin` from it
 2. **Authenticate** - Tries three credential methods in order (see [Authentication](#authentication) below)
 3. **Parse Package Metadata** - Reads encryption metadata from `Detection.xml` inside the `.intunewin` ZIP
-4. **Create App Record** - POSTs to Graph API to create a new Win32 LOB app in Intune.
-   App metadata (display name, install commands, detection/requirements scripts, architecture)
-   is assembled from the recipe config and the scripts in the package directory
-5. **Upload Encrypted Payload** - Extracts the encrypted payload from the `.intunewin` ZIP
-   and uploads it to Azure Blob Storage in 6 MiB chunks
-6. **Commit** - Finalizes the upload by committing the content version with encryption metadata
+4–6. **Create, Upload, Commit (install entry)** - Creates the Win32 app record
+   using the base app name and detection script only, uploads the encrypted
+   payload to Azure Blob Storage, and commits the content version.
+   Skipped when `build_types` is `"update_only"`
+7–9. **Create, Upload, Commit (update entry)** - Creates a second Win32 app
+   record using `update_name_prefix + name` and detection + requirements scripts,
+   uploads the same encrypted payload, and commits.
+   Skipped when `build_types` is `"app_only"`.
+   When `build_types` is `"both"` (default), this runs after the install entry
+   is fully committed
 
-**Output**: Intune app ID, app name, version, and package path
+**Output**: Intune Win32 App ID (install entry), Intune Win32 Update ID (update
+entry), app name, version, and package path. Each ID is omitted when its
+corresponding entry is not created
 
 #### Authentication
 
