@@ -12,7 +12,7 @@ param(
 
 # <include _shared_functions.ps1>
 
-# <include _msix_shared.ps1>
+$NaptMsixSharedHelper
 
 # Version comparison function
 function Compare-Version {

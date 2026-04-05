@@ -17,16 +17,33 @@
 This module generates PowerShell detection and requirements scripts for
 MSIX packages deployed as Intune Win32 apps. Unlike MSI/EXE installers
 that use registry-based detection, MSIX scripts query the AppX package
-database via ``Get-AppxPackage``.
+database. The query used depends on ``install_scope``:
+
+- ``"system"`` (default): Queries ``Get-AppxProvisionedPackage -Online``
+  for provisioned (all-users) packages.
+- ``"user"``: Queries ``Get-AppxPackage -Name <identity_name>`` for
+  per-user packages.
+
+For system-scope scripts, ``Version`` and ``Architecture`` are parsed from
+``PackageName`` (the package full name) rather than read from object
+properties. The package full name format is
+``Name_Version_Architecture_ResourceId_PublisherId``, where underscore is
+the structural delimiter. The MSIX spec
+(https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/package-identity-overview)
+explicitly prohibits underscores in all five components, so splitting on
+``_`` is safe by design. Reading ``Architecture`` directly from the object
+returns an integer enum value (e.g. ``11`` for neutral) that requires a
+separate mapping step; parsing from ``PackageName`` yields the canonical
+string form directly.
 
 Detection Logic:
-    - Queries ``Get-AppxPackage -Name <identity_name>`` for the package
+    - Queries the appropriate AppX store for the package identity
     - Compares installed version against expected version
     - Supports exact match or minimum version comparison
     - Exits 0 if detected, 1 if not detected
 
 Requirements Logic:
-    - Queries ``Get-AppxPackage -Name <identity_name>`` for the package
+    - Queries the appropriate AppX store for the package identity
     - If installed version < target version: outputs "Required"
     - Otherwise: outputs nothing
     - Always exits 0 so Intune can evaluate STDOUT
@@ -80,8 +97,8 @@ class MSIXDetectionConfig:
     """Configuration for MSIX detection script generation.
 
     Attributes:
-        identity_name: Package identity name for ``Get-AppxPackage``
-            query (e.g., "com.tinyspeck.slackdesktop").
+        identity_name: Package identity name for AppX package query
+            (e.g., "com.tinyspeck.slackdesktop").
         app_name: Human-readable application name for logging and
             component identification.
         version: Expected version string to match.
@@ -91,6 +108,8 @@ class MSIXDetectionConfig:
         exact_match: If True, version must match exactly. If False,
             minimum version comparison (installed >= expected).
         app_id: Application ID (used for fallback identification).
+        install_scope: Whether to query per-user (``"user"``) or
+            provisioned all-users (``"system"``) package store.
 
     """
 
@@ -102,6 +121,7 @@ class MSIXDetectionConfig:
     log_rotation_mb: int = 3
     exact_match: bool = False
     app_id: str = ""
+    install_scope: Literal["system", "user"] = "system"
 
 
 @dataclass(frozen=True)
@@ -109,8 +129,8 @@ class MSIXRequirementsConfig:
     """Configuration for MSIX requirements script generation.
 
     Attributes:
-        identity_name: Package identity name for ``Get-AppxPackage``
-            query (e.g., "com.tinyspeck.slackdesktop").
+        identity_name: Package identity name for AppX package query
+            (e.g., "com.tinyspeck.slackdesktop").
         app_name: Human-readable application name for logging and
             component identification.
         version: Target version string (requirement met if
@@ -119,6 +139,8 @@ class MSIXRequirementsConfig:
         log_level: Minimum log level (INFO, WARNING, ERROR, DEBUG).
         log_rotation_mb: Maximum log file size in MB before rotation.
         app_id: Application ID (used for fallback identification).
+        install_scope: Whether to query per-user (``"user"``) or
+            provisioned all-users (``"system"``) package store.
 
     """
 
@@ -129,6 +151,7 @@ class MSIXRequirementsConfig:
     log_level: LogLevel = "INFO"
     log_rotation_mb: int = 3
     app_id: str = ""
+    install_scope: Literal["system", "user"] = "system"
 
 
 def generate_msix_detection_script(
@@ -171,7 +194,11 @@ def generate_msix_detection_script(
             ```
 
     """
-    from napt.build._ps_templates import _load_ps_template, substitute_ps_template
+    from napt.build._ps_templates import (
+        _TEMPLATES_DIR,
+        _load_ps_template,
+        substitute_ps_template,
+    )
     from napt.logging import get_global_logger
 
     logger = get_global_logger()
@@ -180,7 +207,11 @@ def generate_msix_detection_script(
         "DETECTION", f"Generating MSIX detection script: {output_path.name}"
     )
 
+    helper_name = f"_msix_shared_{config.install_scope}.ps1"
+    helper_content = (_TEMPLATES_DIR / helper_name).read_text(encoding="utf-8")
+
     template = _load_ps_template("msix_detection_script.ps1")
+    template = template.replace("$NaptMsixSharedHelper", helper_content)
     script_content = substitute_ps_template(
         template,
         {
@@ -249,7 +280,11 @@ def generate_msix_requirements_script(
             ```
 
     """
-    from napt.build._ps_templates import _load_ps_template, substitute_ps_template
+    from napt.build._ps_templates import (
+        _TEMPLATES_DIR,
+        _load_ps_template,
+        substitute_ps_template,
+    )
     from napt.logging import get_global_logger
 
     logger = get_global_logger()
@@ -259,7 +294,11 @@ def generate_msix_requirements_script(
         f"Generating MSIX requirements script: {output_path.name}",
     )
 
+    helper_name = f"_msix_shared_{config.install_scope}.ps1"
+    helper_content = (_TEMPLATES_DIR / helper_name).read_text(encoding="utf-8")
+
     template = _load_ps_template("msix_requirements_script.ps1")
+    template = template.replace("$NaptMsixSharedHelper", helper_content)
     script_content = substitute_ps_template(
         template,
         {

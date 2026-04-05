@@ -1,11 +1,13 @@
-# Retrieve installed AppX package by identity name
+# Retrieve a per-user installed AppX package by identity name.
 function Get-InstalledAppxPackage {
     param(
         [string]$PackageIdentityName
     )
 
     try {
-        $Package = Get-AppxPackage -Name $PackageIdentityName -ErrorAction Stop
+        $Package = Get-AppxPackage -Name $PackageIdentityName -ErrorAction Stop |
+            Sort-Object { [Version]$_.Version } -Descending |
+            Select-Object -First 1
         if ($Package) {
             Write-CMTraceLog -Message "[$NaptScriptType] Package found: $($Package.Name) (Version: $($Package.Version), Arch: $($Package.Architecture))" -Type "INFO"
             return $Package
