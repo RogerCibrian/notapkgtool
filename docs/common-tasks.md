@@ -287,9 +287,11 @@ discovery:
   download_url_path: "url"
 
 # No psadt.install or psadt.uninstall needed!
-# NAPT auto-generates from MSIX manifest:
-#   Install:   Add-AppxPackage -Path "$dirFiles\slack.msix"
-#   Uninstall: Get-AppxPackage -Name "com.tinyspeck.slackdesktop" | Remove-AppxPackage
+# NAPT auto-generates from MSIX manifest based on intune.run_as_account:
+#   system (default): Add-AppxProvisionedPackage -Online -PackagePath "..." -SkipLicense
+#                     Get-AppxProvisionedPackage -Online | Where-Object { ... } | Remove-AppxProvisionedPackage -Online
+#   user:             Add-AppxPackage -Path "$($adtSession.DirFiles)\slack.msix"
+#                     Get-AppxPackage -Name "com.tinyspeck.slackdesktop" | Remove-AppxPackage
 
 psadt:
   app_vars:
@@ -307,24 +309,38 @@ napt discover recipes/Slack/slack.yaml --verbose
 **What makes MSIX different:**
 
 - **No `psadt.install` / `psadt.uninstall` needed** - NAPT auto-generates
-  `Add-AppxPackage` and `Remove-AppxPackage` commands from the MSIX manifest
-- **No `intune.detection` needed** - Detection uses `Get-AppxPackage` with
-  the package identity name from the manifest (not registry scanning)
+  commands from the MSIX manifest based on `intune.run_as_account`
+- **No `intune.detection` needed** - Detection queries the AppX package
+  database by identity name (not registry scanning); the store queried
+  matches `intune.run_as_account`
 - **Architecture auto-detected** - Extracted from `ProcessorArchitecture` in
   the MSIX manifest
+- **`RequireAdmin` auto-defaulted** - Defaults to `false` for
+  `run_as_account: "user"` since per-user installs don't require elevation
+
+**Choosing install scope:**
+
+Use `intune.run_as_account` to control whether the install is provisioned for
+all users or installed for the current user only:
+
+```yaml
+intune:
+  run_as_account: "system"  # Default: provisioned (all users)
+  # run_as_account: "user"  # Per-user install
+```
 
 **Overriding auto-generated commands:**
 
-If the default commands are insufficient (e.g., provisioned installs needing
-license files), set `override_msix_commands: true`:
+Only needed for non-standard cases such as license files.
+Set `override_msix_commands: true`:
 
 ```yaml
 psadt:
   override_msix_commands: true
   install: |
-    Add-AppxProvisionedAppxPackage -Online -PackagePath "$dirFiles\app.msix" -LicensePath "$dirFiles\license.xml"
+    Add-AppxProvisionedPackage -Online -PackagePath "$($adtSession.DirFiles)\app.msix" -LicensePath "$($adtSession.DirFiles)\license.xml" -SkipLicense
   uninstall: |
-    Get-AppxProvisionedPackage -Online | Where-Object { $_.PackageName -like "Vendor.App*" } | Remove-AppxProvisionedPackage -Online
+    Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq "Vendor.App" } | Remove-AppxProvisionedPackage -Online
 ```
 
 ## Create a Recipe for a Fixed Download URL

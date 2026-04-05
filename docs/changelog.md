@@ -12,10 +12,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **MSIX installer support** - NAPT now supports `.msix` installers as a third
     installer type alongside MSI and EXE. MSIX metadata (display name, version,
     architecture, package identity) is extracted from `AppxManifest.xml` inside
-    the package. Detection scripts use `Get-AppxPackage` for identity-based
-    matching instead of registry scanning. Install and uninstall commands are
-    auto-generated from manifest metadata (`Add-AppxPackage` / `Remove-AppxPackage`)
-    unless overridden with `psadt.override_msix_commands: true`
+    the package. Detection and requirements scripts query the AppX package
+    database; install and uninstall commands are auto-generated from manifest
+    metadata unless overridden with `psadt.override_msix_commands: true`
+- **MSIX install scope** - `intune.run_as_account` now controls which AppX
+    cmdlets are auto-generated for MSIX installers. `"system"` (default) uses
+    `Add-AppxProvisionedPackage` / `Remove-AppxProvisionedPackage` for
+    all-users provisioned installs. `"user"` uses `Add-AppxPackage` /
+    `Remove-AppxPackage` for per-user installs. Detection and requirements
+    scripts automatically query the correct store (`Get-AppxProvisionedPackage`
+    vs `Get-AppxPackage`) based on the same setting
+- **Scope-based `RequireAdmin` default** - `psadt.app_vars.RequireAdmin`
+    now defaults to `false` when `intune.run_as_account` is `"user"`.
+    PSADT errors if `RequireAdmin` is `true` but the process lacks admin
+    rights. Override explicitly in `psadt.app_vars` if your environment
+    grants local admin to users
 - **`psadt.override_msix_commands` config key** - When `true`, uses recipe
     `psadt.install` and `psadt.uninstall` instead of the auto-generated MSIX
     commands. Required when the default `Add-AppxPackage` / `Remove-AppxPackage`

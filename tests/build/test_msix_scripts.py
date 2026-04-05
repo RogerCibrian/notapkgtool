@@ -37,6 +37,7 @@ class TestMSIXDetectionConfig:
         assert config.log_rotation_mb == 3
         assert config.exact_match is False
         assert config.app_id == ""
+        assert config.install_scope == "system"
 
     def test_custom_values(self):
         """Tests that custom values are stored correctly."""
@@ -47,12 +48,14 @@ class TestMSIXDetectionConfig:
             log_level="DEBUG",
             exact_match=True,
             app_id="napt-example",
+            install_scope="user",
         )
 
         assert config.identity_name == "com.example.app"
         assert config.log_level == "DEBUG"
         assert config.exact_match is True
         assert config.app_id == "napt-example"
+        assert config.install_scope == "user"
 
 
 class TestMSIXRequirementsConfig:
@@ -73,6 +76,18 @@ class TestMSIXRequirementsConfig:
         assert config.log_level == "INFO"
         assert config.log_rotation_mb == 3
         assert config.app_id == ""
+        assert config.install_scope == "system"
+
+    def test_custom_install_scope(self):
+        """Tests that install_scope is stored correctly."""
+        config = MSIXRequirementsConfig(
+            identity_name="com.example.app",
+            app_name="Example",
+            version="1.0.0.0",
+            install_scope="user",
+        )
+
+        assert config.install_scope == "user"
 
 
 class TestGenerateMSIXDetectionScript:
@@ -120,19 +135,37 @@ class TestGenerateMSIXDetectionScript:
 
         assert "4.49.81.0" in content
 
-    def test_script_uses_get_appxpackage(self, tmp_path):
-        """Tests that script uses Get-AppxPackage for detection."""
+    def test_system_scope_uses_provisioned_query(self, tmp_path):
+        """Tests that system scope generates Get-AppxProvisionedPackage detection."""
         config = MSIXDetectionConfig(
             identity_name="com.tinyspeck.slackdesktop",
             app_name="Slack",
             version="4.49.81.0",
+            install_scope="system",
         )
         output_path = tmp_path / "detection.ps1"
 
         generate_msix_detection_script(config, output_path)
         content = output_path.read_text(encoding="utf-8")
 
-        assert "Get-AppxPackage" in content
+        assert "Get-AppxProvisionedPackage" in content
+        assert "Get-AppxPackage -Name" not in content
+
+    def test_user_scope_uses_per_user_query(self, tmp_path):
+        """Tests that user scope generates Get-AppxPackage detection."""
+        config = MSIXDetectionConfig(
+            identity_name="com.tinyspeck.slackdesktop",
+            app_name="Slack",
+            version="4.49.81.0",
+            install_scope="user",
+        )
+        output_path = tmp_path / "detection.ps1"
+
+        generate_msix_detection_script(config, output_path)
+        content = output_path.read_text(encoding="utf-8")
+
+        assert "Get-AppxPackage -Name" in content
+        assert "Get-AppxProvisionedPackage" not in content
 
     def test_script_exact_match(self, tmp_path):
         """Tests that exact match flag is reflected in script."""
@@ -260,3 +293,35 @@ class TestGenerateMSIXRequirementsScript:
         # Should not call Get-UninstallKeys in the main logic
         main_logic = content.split("# Main requirements logic")[1]
         assert "Get-UninstallKeys" not in main_logic
+
+    def test_system_scope_uses_provisioned_query(self, tmp_path):
+        """Tests that system scope generates Get-AppxProvisionedPackage requirements."""
+        config = MSIXRequirementsConfig(
+            identity_name="com.tinyspeck.slackdesktop",
+            app_name="Slack",
+            version="4.49.81.0",
+            install_scope="system",
+        )
+        output_path = tmp_path / "requirements.ps1"
+
+        generate_msix_requirements_script(config, output_path)
+        content = output_path.read_text(encoding="utf-8")
+
+        assert "Get-AppxProvisionedPackage" in content
+        assert "Get-AppxPackage -Name" not in content
+
+    def test_user_scope_uses_per_user_query(self, tmp_path):
+        """Tests that user scope generates Get-AppxPackage requirements."""
+        config = MSIXRequirementsConfig(
+            identity_name="com.tinyspeck.slackdesktop",
+            app_name="Slack",
+            version="4.49.81.0",
+            install_scope="user",
+        )
+        output_path = tmp_path / "requirements.ps1"
+
+        generate_msix_requirements_script(config, output_path)
+        content = output_path.read_text(encoding="utf-8")
+
+        assert "Get-AppxPackage -Name" in content
+        assert "Get-AppxProvisionedPackage" not in content

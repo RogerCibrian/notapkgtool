@@ -679,6 +679,7 @@ def _generate_detection_script(
 
     if installer_ext == ".msix":
         assert msix_metadata is not None
+        run_as_account = config.get("intune", {}).get("run_as_account", "system")
         detection_config = MSIXDetectionConfig(
             identity_name=msix_metadata.identity_name,
             app_name=app_name,
@@ -688,6 +689,7 @@ def _generate_detection_script(
             log_rotation_mb=logging_settings.get("log_rotation_mb", 3),
             exact_match=detection_settings.get("exact_match", False),
             app_id=app_id,
+            install_scope=run_as_account,
         )
         generate_msix_detection_script(detection_config, detection_script_path)
     else:
@@ -772,6 +774,7 @@ def _generate_requirements_script(
 
     if installer_ext == ".msix":
         assert msix_metadata is not None
+        run_as_account = config.get("intune", {}).get("run_as_account", "system")
         requirements_config = MSIXRequirementsConfig(
             identity_name=msix_metadata.identity_name,
             app_name=app_name,
@@ -780,6 +783,7 @@ def _generate_requirements_script(
             log_level=logging_settings.get("log_level", "INFO"),
             log_rotation_mb=logging_settings.get("log_rotation_mb", 3),
             app_id=app_id,
+            install_scope=run_as_account,
         )
         generate_msix_requirements_script(
             requirements_config, requirements_script_path
@@ -882,10 +886,17 @@ def _apply_msix_commands(
 ) -> None:
     """Auto-generates MSIX install/uninstall commands or applies overrides.
 
-    For MSIX installers, generates ``Add-AppxPackage`` and
-    ``Remove-AppxPackage`` commands from manifest metadata. If the recipe
-    specifies ``psadt.install`` or ``psadt.uninstall``, those are ignored
-    unless ``psadt.override_msix_commands`` is set to true.
+    For MSIX installers, generates install/uninstall commands from manifest
+    metadata. The commands vary based on ``intune.run_as_account``:
+
+    - ``"system"`` (default): Uses ``Add-AppxProvisionedPackage`` for
+      all-users provisioned install and ``Remove-AppxProvisionedPackage``
+      for removal.
+    - ``"user"``: Uses ``Add-AppxPackage`` for per-user install and
+      ``Remove-AppxPackage`` for removal.
+
+    If the recipe specifies ``psadt.install`` or ``psadt.uninstall``, those
+    are ignored unless ``psadt.override_msix_commands`` is set to true.
 
     Args:
         config: Recipe configuration (mutated in place to inject
@@ -903,13 +914,26 @@ def _apply_msix_commands(
     recipe_install = psadt_config.get("install")
     recipe_uninstall = psadt_config.get("uninstall")
 
-    auto_install = (
-        f'Add-AppxPackage -Path "$dirFiles\\{installer_file.name}"'
-    )
-    auto_uninstall = (
-        f"Get-AppxPackage -Name "
-        f'"{msix_metadata.identity_name}" | Remove-AppxPackage'
-    )
+    run_as_account = config.get("intune", {}).get("run_as_account", "system")
+    if run_as_account == "user":
+        auto_install = (
+            f'Add-AppxPackage -Path "$($adtSession.DirFiles)\\{installer_file.name}"'
+        )
+        auto_uninstall = (
+            f'Get-AppxPackage -Name "{msix_metadata.identity_name}"'
+            f" | Remove-AppxPackage"
+        )
+    else:
+        auto_install = (
+            f"Add-AppxProvisionedPackage -Online"
+            f' -PackagePath "$($adtSession.DirFiles)\\{installer_file.name}"'
+            f" -SkipLicense"
+        )
+        auto_uninstall = (
+            f"Get-AppxProvisionedPackage -Online"
+            f' | Where-Object {{ $_.DisplayName -eq "{msix_metadata.identity_name}" }}'
+            f" | Remove-AppxProvisionedPackage -Online"
+        )
 
     if override_commands:
         if not recipe_install and not recipe_uninstall:
@@ -946,8 +970,8 @@ def _apply_msix_commands(
             "BUILD",
             "psadt.install is set but will be ignored for MSIX installers. "
             "MSIX manifest is used as the authoritative source for install "
-            "commands (Add-AppxPackage). Set override_msix_commands: true "
-            "to use psadt.install instead.",
+            "commands. Set override_msix_commands: true to use psadt.install "
+            "instead.",
         )
 
     if recipe_uninstall:
@@ -955,8 +979,8 @@ def _apply_msix_commands(
             "BUILD",
             "psadt.uninstall is set but will be ignored for MSIX installers. "
             "MSIX manifest is used as the authoritative source for uninstall "
-            "commands (Remove-AppxPackage). Set override_msix_commands: true "
-            "to use psadt.uninstall instead.",
+            "commands. Set override_msix_commands: true to use psadt.uninstall "
+            "instead.",
         )
 
     config["psadt"]["install"] = auto_install

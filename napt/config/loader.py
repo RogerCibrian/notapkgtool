@@ -262,23 +262,39 @@ def _resolve_known_paths(
 def _inject_dynamic_values(cfg: dict[str, Any]) -> None:
     """Injects dynamic fields that should be set at load/build time.
 
-    Currently injects psadt.app_vars.AppScriptDate with today's date
-    in YYYY-MM-DD format.
+    Injects the following fields if not already set by a config layer:
+
+    - ``psadt.app_vars.AppScriptDate``: Today's date (YYYY-MM-DD).
+    - ``psadt.app_vars.RequireAdmin``: Defaults to ``True`` for system-context
+      installs and ``False`` for user-context installs (``intune.run_as_account``).
+      User-context installs must not require admin or PSADT will error on
+      non-admin accounts. Override explicitly in the recipe if your environment
+      grants local admin to users and you want PSADT to enforce it.
 
     Args:
         cfg: The configuration dictionary to inject values into.
+
+    Note:
+        ``RequireAdmin`` is derived here rather than in ``DEFAULT_CONFIG``
+        because its correct default depends on ``intune.run_as_account``, and
+        after config layers are merged the two values are indistinguishable.
+        See the defaults centralization work item for the long-term fix.
     """
-    today_str = date.today().strftime("%Y-%m-%d")
     try:
         app_vars = cfg.setdefault("psadt", {}).setdefault("app_vars", {})
-        # Do not overwrite if explicitly set in recipe; only set if absent
+
+        today_str = date.today().strftime("%Y-%m-%d")
         app_vars.setdefault("AppScriptDate", today_str)
+
+        run_as_account = cfg.get("intune", {}).get("run_as_account", "system")
+        require_admin_default = run_as_account != "user"
+        app_vars.setdefault("RequireAdmin", require_admin_default)
     except Exception as err:
         # Be defensive but quiet; dynamic injection is best-effort
         from napt.logging import get_global_logger
 
         logger = get_global_logger()
-        logger.warning("CONFIG", f"Could not inject AppScriptDate: {err}")
+        logger.warning("CONFIG", f"Could not inject dynamic values: {err}")
 
 
 def _print_yaml_content(data: dict[str, Any], indent: int = 0) -> None:
