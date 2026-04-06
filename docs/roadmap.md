@@ -429,10 +429,11 @@ and [Recipe Reference - Intune Configuration](recipe-reference.md#intune-configu
 
 ---
 
-**v0.4.0** - Intune upload (`napt upload`), `napt init`, and four-layer configuration
-**v0.3.1** - PyPI rename to `napt` and automated publishing
-**v0.3.0** - Detection and requirements scripts, Win32 validation, architecture-aware detection
-**v0.2.0** - PSADT building, `.intunewin` packaging, and new discovery strategies
-**v0.1.0** - Core validation, discovery, and configuration system
+**0.5.0** - MSIX support, recipe schema flattening, and centralized config defaults
+**0.4.0** - Intune upload (`napt upload`), `napt init`, and four-layer configuration
+**0.3.1** - PyPI rename to `napt` and automated publishing
+**0.3.0** - Detection and requirements scripts, Win32 validation, architecture-aware detection
+**0.2.0** - PSADT building, `.intunewin` packaging, and new discovery strategies
+**0.1.0** - Core validation, discovery, and configuration system
 
 See [CHANGELOG.md](changelog.md) for detailed release history.

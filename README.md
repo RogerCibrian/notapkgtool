@@ -63,6 +63,11 @@ Recipes are YAML configuration files that define how to discover, download, and 
 - **[git.yaml](https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Git/git.yaml)** - api_github strategy for GitHub Releases
 - **[7zip-x64-msi.yaml](https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/7-Zip/7zip-x64-msi.yaml)** - web_scrape strategy for vendor download pages
 
+**Note:** The `recipes/` and `defaults/` directories in this repository are
+working examples used for development and testing.
+They are not included in the pip package.
+Run `napt init` to create your own workspace with a starter `org.yaml`.
+
 NAPT supports multiple discovery strategies (url_download, web_scrape, api_github, api_json) - see the [Discovery Strategies](https://rogercibrian.github.io/notapkgtool/user-guide/#discovery-strategies) guide for detailed configuration and more examples.
 
 ## Contributing
