@@ -196,65 +196,67 @@ class UrlDownloadStrategy:
             )
             file_path, sha256, headers = dl.file_path, dl.sha256, dl.headers
         except NotModifiedError:
-            # File unchanged (HTTP 304), use cached version
-            # Use convention-based path: derive filename from URL
+            # File unchanged (HTTP 304).
             logger.info("CACHE", "File not modified (HTTP 304), using cached version")
 
-            if not cache or "sha256" not in cache:
-                raise NetworkError(
-                    "Cache indicates file not modified, but missing SHA-256. "
-                    "Try running with --stateless to force re-download."
-                ) from None
-
-            # Derive file path from URL (convention-based, schema v2)
-            from urllib.parse import urlparse
-
-            filename = Path(urlparse(url).path).name
-            cached_file = output_dir / app_id / filename
-
-            if not cached_file.exists():
-                raise NetworkError(
-                    f"Cached file {cached_file} not found. "
-                    f"File may have been deleted. Try running with --stateless."
-                ) from None
-
-            # Extract version from cached file (auto-detect by extension)
-            if cached_file.suffix.lower() == ".msi":
-                logger.verbose(
-                    "DISCOVERY", "Auto-detected MSI file, extracting version"
-                )
-                try:
-                    metadata = extract_msi_metadata(cached_file)
-                    version, version_source = metadata.product_version, "url_download"
-                except Exception as err:
-                    raise NetworkError(
-                        f"Failed to extract MSI ProductVersion from cached "
-                        f"file {cached_file}: {err}"
-                    ) from err
-            else:
-                raise ConfigError(
-                    f"Cannot extract version from file type: {cached_file.suffix!r}. "
-                    f"url_download strategy currently supports MSI files only. "
-                    f"For other file types, use a version-first strategy (api_github, "
-                    f"api_json, web_scrape) or ensure the file is an MSI installer."
-                ) from None
-
-            # Return cached info with preserved headers (prevents overwriting ETag)
-            # When 304, no new headers received, so return cached values to
-            # preserve them
-            preserved_headers = {}
-            if cache.get("etag"):
-                preserved_headers["ETag"] = cache["etag"]
-            if cache.get("last_modified"):
-                preserved_headers["Last-Modified"] = cache["last_modified"]
-
-            return (
-                version,
-                version_source,
-                cached_file,
-                cache["sha256"],
-                preserved_headers,
+            cached_file_path = (
+                Path(cache["file_path"]) if cache and cache.get("file_path") else None
             )
+
+            if (
+                cache
+                and cache.get("sha256")
+                and cached_file_path is not None
+                and cached_file_path.exists()
+            ):
+                # Extract version from cached file (auto-detect by extension)
+                if cached_file_path.suffix.lower() == ".msi":
+                    logger.verbose(
+                        "DISCOVERY", "Auto-detected MSI file, extracting version"
+                    )
+                    try:
+                        metadata = extract_msi_metadata(cached_file_path)
+                        version, version_source = (
+                            metadata.product_version,
+                            "url_download",
+                        )
+                    except Exception as err:
+                        raise NetworkError(
+                            f"Failed to extract MSI ProductVersion from cached "
+                            f"file {cached_file_path}: {err}"
+                        ) from err
+                else:
+                    raise ConfigError(
+                        f"Cannot extract version from file type: "
+                        f"{cached_file_path.suffix!r}. "
+                        f"url_download strategy currently supports MSI files only. "
+                        f"For other file types, use a version-first strategy "
+                        f"(api_github, api_json, web_scrape) or ensure the file "
+                        f"is an MSI installer."
+                    ) from None
+
+                # Preserve cached headers (no new headers on 304)
+                preserved_headers = {}
+                if cache.get("etag"):
+                    preserved_headers["ETag"] = cache["etag"]
+                if cache.get("last_modified"):
+                    preserved_headers["Last-Modified"] = cache["last_modified"]
+
+                return (
+                    version,
+                    version_source,
+                    cached_file_path,
+                    cache["sha256"],
+                    preserved_headers,
+                )
+            else:
+                # Cache incomplete or file missing — force unconditional re-download
+                logger.warning(
+                    "CACHE",
+                    "Cache incomplete or cached file not found, forcing re-download",
+                )
+                dl = download_file(url, output_dir / app_id)
+                file_path, sha256, headers = dl.file_path, dl.sha256, dl.headers
         except Exception as err:
             if isinstance(err, (NetworkError, ConfigError)):
                 raise
