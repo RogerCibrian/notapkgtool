@@ -82,6 +82,7 @@ import argparse
 from importlib.metadata import version
 from pathlib import Path
 import sys
+from typing import Any
 
 from napt.build import build_package, create_intunewin
 from napt.config import load_effective_config
@@ -97,6 +98,34 @@ from napt.exceptions import (
 from napt.logging import get_logger, set_global_logger
 from napt.upload import upload_package
 from napt.validation import validate_recipe
+
+
+def _print_provenance(
+    config: dict[str, Any], provenance: dict[str, Any], prefix: str = ""
+) -> None:
+    """Prints provenance information showing which layer set each config value.
+
+    Args:
+        config: The merged configuration dictionary.
+        provenance: The provenance dictionary mirroring config structure.
+        prefix: Key path prefix for nested sections (used in recursion).
+    """
+    for key in sorted(provenance.keys()):
+        full_key = f"{prefix}{key}" if not prefix else f"{prefix}.{key}"
+        prov_value = provenance[key]
+
+        if isinstance(prov_value, dict):
+            # Recurse into nested sections
+            cfg_value = config.get(key, {})
+            if isinstance(cfg_value, dict):
+                _print_provenance(cfg_value, prov_value, full_key)
+        else:
+            # Leaf value — print provenance
+            cfg_value = config.get(key)
+            value_repr = repr(cfg_value)
+            if len(value_repr) > 60:
+                value_repr = value_repr[:57] + "..."
+            print(f"  {full_key}: {value_repr} ({prov_value})")
 
 
 def cmd_validate(args: argparse.Namespace) -> int:
@@ -153,6 +182,20 @@ def cmd_validate(args: argparse.Namespace) -> int:
         print()
 
     print("=" * 70)
+
+    # Show provenance in debug mode (useful for both valid and invalid recipes)
+    if args.debug:
+        try:
+            config = load_effective_config(recipe_path)
+            provenance = config.get("_provenance")
+            if provenance:
+                print()
+                print("CONFIGURATION PROVENANCE")
+                print("-" * 70)
+                _print_provenance(config, provenance)
+                print("-" * 70)
+        except Exception:
+            pass  # Best-effort; config may fail to load for invalid recipes
 
     if result.status == "valid":
         print()
