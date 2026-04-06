@@ -172,7 +172,7 @@ class UrlDownloadStrategy:
                 "url_download strategy requires 'discovery.url' in config"
             )
 
-        app_id = app_config.get("id", "")
+        app_id = app_config["id"]
 
         logger.verbose("DISCOVERY", "Strategy: url_download (file-first)")
         logger.verbose("DISCOVERY", f"Source URL: {url}")

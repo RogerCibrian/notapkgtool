@@ -58,7 +58,7 @@ class TestFindInstallerFile:
         installer = app_dir / "test-app.msi"
         installer.write_text("fake msi")
 
-        config = {"id": "test-app", "discovery": {}}
+        config = {"id": "test-app", "name": "Test App", "discovery": {}}
 
         result = _find_installer_file(downloads_dir, config)
 
@@ -72,7 +72,7 @@ class TestFindInstallerFile:
         installer = app_dir / "test-app-setup.exe"
         installer.write_text("fake exe")
 
-        config = {"id": "test-app", "discovery": {}}
+        config = {"id": "test-app", "name": "Test App", "discovery": {}}
 
         result = _find_installer_file(downloads_dir, config)
 
@@ -93,7 +93,7 @@ class TestFindInstallerFile:
         new = app_dir / "test-app-2.0.msi"
         new.write_text("new")
 
-        config = {"id": "test-app", "discovery": {}}
+        config = {"id": "test-app", "name": "Test App", "discovery": {}}
 
         result = _find_installer_file(downloads_dir, config)
 
@@ -105,7 +105,7 @@ class TestFindInstallerFile:
         app_dir = downloads_dir / "test-app"
         app_dir.mkdir(parents=True)
 
-        config = {"id": "test-app", "discovery": {}}
+        config = {"id": "test-app", "name": "Test App", "discovery": {}}
 
         from napt.exceptions import PackagingError
 

@@ -296,7 +296,7 @@ def _build_app_metadata(
 
     is_featured: bool = intune.get("is_featured", False)
     allow_available_uninstall: bool = intune.get("allow_available_uninstall", True)
-    device_restart_behavior: str = intune.get("device_restart_behavior", "allow")
+    device_restart_behavior: str = intune["device_restart_behavior"]
     max_run_time_minutes: int = intune.get("max_run_time_minutes", 60)
 
     payload: dict[str, Any] = {

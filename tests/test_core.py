@@ -65,7 +65,7 @@ class TestDiscoverRecipe:
         recipe_data = {"apiVersion": "napt/v1", "name": "Test", "id": "test"}
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
 
-        with pytest.raises(ConfigError, match="No 'discovery.strategy' defined"):
+        with pytest.raises(ConfigError, match="Missing required field: discovery"):
             discover_recipe(recipe_path, tmp_test_dir)
 
     def test_discover_recipe_missing_strategy_raises(
@@ -80,7 +80,7 @@ class TestDiscoverRecipe:
         }
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
 
-        with pytest.raises(ConfigError, match="No 'discovery.strategy' defined"):
+        with pytest.raises(ConfigError, match="strategy"):
             discover_recipe(recipe_path, tmp_test_dir)
 
     def test_discover_recipe_unknown_strategy_raises(

@@ -434,13 +434,13 @@ def load_effective_config(
     # 8) Inject dynamic values (e.g., AppScriptDate)
     _inject_dynamic_values(merged)
 
-    # Optionally attach context for debugging (commented out by default)
-    # merged["_load_context"] = LoadContext(
-    #     recipe_path=recipe_path,
-    #     defaults_root=defaults_root,
-    #     vendor_name=vendor_name,
-    #     org_defaults_path=org_defaults_path,
-    #     vendor_defaults_path=vendor_defaults_path,
-    # ).__dict__
+    # 9) Validate the merged config (errors raise, warnings are logged)
+    from napt.validation import validate_config
+
+    result = validate_config(merged, recipe_path=str(recipe_path))
+    if result.errors:
+        raise ConfigError(f"Invalid configuration: {'; '.join(result.errors)}")
+    for warning in result.warnings:
+        logger.warning("CONFIG", warning)
 
     return merged

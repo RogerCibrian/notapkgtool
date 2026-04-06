@@ -142,7 +142,7 @@ def _get_installer_version(
     from napt.logging import get_global_logger
 
     logger = get_global_logger()
-    app_id = config.get("id", "unknown")
+    app_id = config["id"]
 
     # MSI: version is authoritative from the installer — no fallback
     if installer_file.suffix.lower() == ".msi":
@@ -211,7 +211,7 @@ def _find_installer_file(
     from napt.logging import get_global_logger
 
     logger = get_global_logger()
-    app_id = config.get("id", "")
+    app_id = config["id"]
     url = config.get("discovery", {}).get("url", "")
 
     app_dir = downloads_dir / app_id
@@ -253,7 +253,7 @@ def _find_installer_file(
             logger.warning("BUILD", f"Could not check state file: {err}")
 
     # Strategy 3: Fallback - Search for installer matching app name/id
-    app_name = config.get("name", "").lower()
+    app_name = config["name"].lower()
 
     # Try to find installer matching app_id or app_name in filename
     if app_dir.exists():
@@ -1062,8 +1062,8 @@ def build_package(
     logger.step(1, 8, "Loading configuration...")
     config = load_effective_config(recipe_path)
 
-    app_id = config.get("id", "unknown-app")
-    app_name = config.get("name", "Unknown App")
+    app_id = config["id"]
+    app_name = config["name"]
 
     # Set defaults
     if downloads_dir is None:

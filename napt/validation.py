@@ -48,6 +48,7 @@ Example:
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -56,7 +57,7 @@ from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
 from napt.results import ValidationResult
 
-__all__ = ["validate_recipe"]
+__all__ = ["validate_config", "validate_recipe"]
 
 
 # Schema for the intune.detection subsection
@@ -399,91 +400,35 @@ def _validate_logging_section(
     _validate_section(logging_config, _LOGGING_FIELDS, "logging", errors, warnings)
 
 
-def validate_recipe(recipe_path: Path) -> ValidationResult:
-    """Validate a recipe file without downloading anything.
+def validate_config(
+    config: dict[str, Any],
+    recipe_path: str = "",
+) -> ValidationResult:
+    """Validates a merged configuration dict.
 
-    Validates recipe syntax, required fields, and configuration without
-    making network calls.
+    Checks required fields, types, strategy registration, and section-level
+    validation. Used by both ``validate_recipe`` (CLI) and
+    ``load_effective_config`` (pipeline commands) so that one set of rules
+    applies everywhere.
 
     Args:
-        recipe_path: Path to the recipe YAML file to validate.
+        config: The merged configuration dictionary to validate.
+        recipe_path: Optional path string for error context.
 
     Returns:
         Validation status, errors, warnings, and app count.
 
-    Example:
-        Validate a recipe and check results:
-            ```python
-            from pathlib import Path
-
-            result = validate_recipe(Path("recipes/app.yaml"))
-            if result.status == "valid":
-                print("Recipe is valid!")
-            else:
-                for error in result.errors:
-                    print(f"Error: {error}")
-            ```
-
     """
     logger = get_global_logger()
 
-    errors = []
-    warnings = []
-
-    logger.verbose("VALIDATION", f"Validating recipe: {recipe_path}")
-
-    # Check file exists
-    if not recipe_path.exists():
-        errors.append(f"Recipe file not found: {recipe_path}")
-        return ValidationResult(
-            status="invalid",
-            errors=errors,
-            warnings=warnings,
-            app_count=0,
-            recipe_path=str(recipe_path),
-        )
-
-    # Parse YAML
-    try:
-        with open(recipe_path, encoding="utf-8") as f:
-            recipe = yaml.safe_load(f)
-    except yaml.YAMLError as err:
-        errors.append(f"Invalid YAML syntax: {err}")
-        return ValidationResult(
-            status="invalid",
-            errors=errors,
-            warnings=warnings,
-            app_count=0,
-            recipe_path=str(recipe_path),
-        )
-    except Exception as err:
-        errors.append(f"Failed to read recipe file: {err}")
-        return ValidationResult(
-            status="invalid",
-            errors=errors,
-            warnings=warnings,
-            app_count=0,
-            recipe_path=str(recipe_path),
-        )
-
-    logger.verbose("VALIDATION", "YAML syntax is valid")
-
-    # Validate recipe is a dict
-    if not isinstance(recipe, dict):
-        errors.append("Recipe must be a YAML dictionary/mapping")
-        return ValidationResult(
-            status="invalid",
-            errors=errors,
-            warnings=warnings,
-            app_count=0,
-            recipe_path=str(recipe_path),
-        )
+    errors: list[str] = []
+    warnings: list[str] = []
 
     # Check apiVersion
-    if "apiVersion" not in recipe:
+    if "apiVersion" not in config:
         errors.append("Missing required field: apiVersion")
     else:
-        api_version = recipe["apiVersion"]
+        api_version = config["apiVersion"]
         if not isinstance(api_version, str):
             errors.append("apiVersion must be a string")
         elif api_version != "napt/v1":
@@ -495,24 +440,24 @@ def validate_recipe(recipe_path: Path) -> ValidationResult:
 
     # Check required top-level fields: name and id
     for field in ["name", "id"]:
-        if field not in recipe:
+        if field not in config:
             errors.append(f"Missing required field: {field}")
 
-    if "name" in recipe and not isinstance(recipe["name"], str):
+    if "name" in config and not isinstance(config["name"], str):
         errors.append("Field 'name' must be a string")
 
-    if "id" in recipe:
-        if not isinstance(recipe["id"], str):
+    if "id" in config:
+        if not isinstance(config["id"], str):
             errors.append("Field 'id' must be a string")
-        elif not recipe["id"]:
+        elif not config["id"]:
             errors.append("Field 'id' cannot be empty")
 
-    app_name = recipe.get("name", "unnamed")
+    app_name = config.get("name", "unnamed")
     logger.verbose("VALIDATION", f"Validating: {app_name}")
 
     # Validate discovery section
-    discovery = recipe.get("discovery")
-    if not discovery:
+    discovery = config.get("discovery")
+    if discovery is None:
         errors.append("Missing required field: discovery")
     elif not isinstance(discovery, dict):
         errors.append("Field 'discovery' must be a dictionary")
@@ -538,15 +483,15 @@ def validate_recipe(recipe_path: Path) -> ValidationResult:
                     # Validate strategy-specific configuration
                     if hasattr(strategy, "validate_config"):
                         try:
-                            config_errors = strategy.validate_config(recipe)
+                            config_errors = strategy.validate_config(config)
                             errors.extend(config_errors)
                         except Exception as err:
                             errors.append(f"Strategy validation failed: {err}")
 
     # Validate optional sections
-    _validate_psadt_section(recipe, errors)
-    _validate_intune_section(recipe, errors, warnings)
-    _validate_logging_section(recipe, errors, warnings)
+    _validate_psadt_section(config, errors)
+    _validate_intune_section(config, errors, warnings)
+    _validate_logging_section(config, errors, warnings)
 
     # Determine final status
     status = "valid" if len(errors) == 0 else "invalid"
@@ -562,5 +507,84 @@ def validate_recipe(recipe_path: Path) -> ValidationResult:
         errors=errors,
         warnings=warnings,
         app_count=app_count,
-        recipe_path=str(recipe_path),
+        recipe_path=recipe_path,
     )
+
+
+def validate_recipe(recipe_path: Path) -> ValidationResult:
+    """Loads, merges, and validates a recipe file.
+
+    Parses the YAML file, merges it through the config hierarchy, and
+    validates the merged result. This is the entry point for ``napt validate``.
+
+    Args:
+        recipe_path: Path to the recipe YAML file to validate.
+
+    Returns:
+        Validation status, errors, warnings, and app count.
+
+    Example:
+        Validate a recipe and check results:
+            ```python
+            from pathlib import Path
+
+            result = validate_recipe(Path("recipes/app.yaml"))
+            if result.status == "valid":
+                print("Recipe is valid!")
+            else:
+                for error in result.errors:
+                    print(f"Error: {error}")
+            ```
+
+    """
+    logger = get_global_logger()
+
+    recipe_path_str = str(recipe_path)
+
+    logger.verbose("VALIDATION", f"Validating recipe: {recipe_path}")
+
+    # Check file exists
+    if not recipe_path.exists():
+        return ValidationResult(
+            status="invalid",
+            errors=[f"Recipe file not found: {recipe_path}"],
+            warnings=[],
+            app_count=0,
+            recipe_path=recipe_path_str,
+        )
+
+    # Parse YAML
+    try:
+        with open(recipe_path, encoding="utf-8") as f:
+            recipe = yaml.safe_load(f)
+    except yaml.YAMLError as err:
+        return ValidationResult(
+            status="invalid",
+            errors=[f"Invalid YAML syntax: {err}"],
+            warnings=[],
+            app_count=0,
+            recipe_path=recipe_path_str,
+        )
+    except Exception as err:
+        return ValidationResult(
+            status="invalid",
+            errors=[f"Failed to read recipe file: {err}"],
+            warnings=[],
+            app_count=0,
+            recipe_path=recipe_path_str,
+        )
+
+    logger.verbose("VALIDATION", "YAML syntax is valid")
+
+    # Validate recipe is a dict
+    if not isinstance(recipe, dict):
+        return ValidationResult(
+            status="invalid",
+            errors=["Recipe must be a YAML dictionary/mapping"],
+            warnings=[],
+            app_count=0,
+            recipe_path=recipe_path_str,
+        )
+
+    # Validate the parsed config dict
+    return validate_config(recipe, recipe_path=recipe_path_str)

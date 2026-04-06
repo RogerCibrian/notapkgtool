@@ -21,7 +21,10 @@ def _fake_config(
     return {
         "id": app_id,
         "name": app_name,
-        "intune": {"build_types": build_types},
+        "intune": {
+            "build_types": build_types,
+            "device_restart_behavior": "basedOnReturnCode",
+        },
     }
 
 

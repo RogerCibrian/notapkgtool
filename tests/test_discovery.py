@@ -114,9 +114,10 @@ class TestUrlDownloadStrategy:
     def test_discover_version_download_failure_raises(self, tmp_test_dir):
         """Test that download failures raise NetworkError."""
         app_config = {
+            "id": "test-app",
             "discovery": {
                 "url": "https://example.com/installer.msi",
-            }
+            },
         }
 
         strategy = UrlDownloadStrategy()
@@ -132,10 +133,11 @@ class TestUrlDownloadStrategy:
     def test_discover_version_extraction_failure_raises(self, tmp_test_dir):
         """Test that version extraction failures raise NetworkError."""
         app_config = {
+            "id": "test-app",
             "discovery": {
                 "url": "https://example.com/installer.msi",
                 "version": {"type": "msi"},
-            }
+            },
         }
 
         strategy = UrlDownloadStrategy()

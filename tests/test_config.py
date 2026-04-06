@@ -41,7 +41,11 @@ class TestConfigLoading:
         org_path.write_text("apiVersion: napt/v1\npsadt:\n  release: '4.0.0'\n")
 
         recipe_path = recipes_dir / "test.yaml"
-        recipe_path.write_text("apiVersion: napt/v1\nname: Test\nid: test\n")
+        recipe_path.write_text(
+            "apiVersion: napt/v1\nname: Test\nid: test\n"
+            "discovery:\n  strategy: url_download\n"
+            "  url: https://example.com/app.msi\n"
+        )
 
         config = load_effective_config(recipe_path)
 
@@ -78,6 +82,9 @@ psadt:
 apiVersion: napt/v1
 name: Test
 id: test
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
 psadt:
   app_vars:
     AppName: "MyApp"
@@ -108,6 +115,9 @@ psadt:
 apiVersion: napt/v1
 name: Test
 id: test
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
 psadt:
   app_vars:
     AppSuccessExitCodes: [0]
@@ -135,6 +145,9 @@ psadt:
 apiVersion: napt/v1
 name: Test
 id: test
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
 psadt:
   release: "4.0.0"
 """)
@@ -176,6 +189,9 @@ intune:
 apiVersion: napt/v1
 name: Chrome
 id: napt-chrome
+discovery:
+  strategy: url_download
+  url: "https://example.com/chrome.msi"
 """)
 
         config = load_effective_config(recipe_path)
@@ -276,6 +292,9 @@ class TestCodeDefaults:
 apiVersion: napt/v1
 name: Test App
 id: test-app
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
 """)
 
         config = load_effective_config(recipe_path)
@@ -305,6 +324,9 @@ logging:
 apiVersion: napt/v1
 name: Test App
 id: test-app
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
 """)
 
         config = load_effective_config(recipe_path)
@@ -357,3 +379,102 @@ id: test-app
                 f"Key '{parent}.{key}' exists in DEFAULT_CONFIG but is not "
                 f"mentioned in ORG_YAML_TEMPLATE. Update the template."
             )
+
+
+class TestValidationInLoader:
+    """Tests that load_effective_config enforces validation."""
+
+    def test_missing_name_raises_config_error(self, tmp_test_dir):
+        """Tests that a recipe missing 'name' raises ConfigError."""
+        recipe_path = tmp_test_dir / "recipe.yaml"
+        recipe_path.write_text(
+            "apiVersion: napt/v1\nid: test\n"
+            "discovery:\n  strategy: url_download\n"
+            "  url: https://example.com/app.msi\n"
+        )
+
+        with pytest.raises(ConfigError, match="name"):
+            load_effective_config(recipe_path)
+
+    def test_missing_id_raises_config_error(self, tmp_test_dir):
+        """Tests that a recipe missing 'id' raises ConfigError."""
+        recipe_path = tmp_test_dir / "recipe.yaml"
+        recipe_path.write_text(
+            "apiVersion: napt/v1\nname: Test\n"
+            "discovery:\n  strategy: url_download\n"
+            "  url: https://example.com/app.msi\n"
+        )
+
+        with pytest.raises(ConfigError, match="id"):
+            load_effective_config(recipe_path)
+
+    def test_missing_discovery_raises_config_error(self, tmp_test_dir):
+        """Tests that a recipe missing 'discovery' raises ConfigError."""
+        recipe_path = tmp_test_dir / "recipe.yaml"
+        recipe_path.write_text("apiVersion: napt/v1\nname: Test\nid: test\n")
+
+        with pytest.raises(ConfigError, match="discovery"):
+            load_effective_config(recipe_path)
+
+    def test_invalid_strategy_raises_config_error(self, tmp_test_dir):
+        """Tests that an unknown strategy raises ConfigError."""
+        recipe_path = tmp_test_dir / "recipe.yaml"
+        recipe_path.write_text(
+            "apiVersion: napt/v1\nname: Test\nid: test\n"
+            "discovery:\n  strategy: nonexistent\n"
+        )
+
+        with pytest.raises(ConfigError):
+            load_effective_config(recipe_path)
+
+    def test_valid_recipe_returns_config_with_required_fields(
+        self, create_yaml_file, sample_recipe_data
+    ):
+        """Tests that a valid recipe returns config with required fields accessible."""
+        recipe_path = create_yaml_file("recipe.yaml", sample_recipe_data)
+
+        config = load_effective_config(recipe_path)
+
+        assert config["name"] == "Test App"
+        assert config["id"] == "test-app"
+        assert config["discovery"]["strategy"] == "url_download"
+
+    def test_device_restart_behavior_default_is_based_on_return_code(
+        self, create_yaml_file, sample_recipe_data
+    ):
+        """Tests that device_restart_behavior defaults to basedOnReturnCode."""
+        recipe_path = create_yaml_file("recipe.yaml", sample_recipe_data)
+
+        config = load_effective_config(recipe_path)
+
+        assert config["intune"]["device_restart_behavior"] == "basedOnReturnCode"
+
+    def test_warnings_do_not_raise(self, tmp_test_dir):
+        """Tests that warnings (unknown fields) do not cause ConfigError."""
+        recipe_path = tmp_test_dir / "recipe.yaml"
+        recipe_path.write_text(
+            "apiVersion: napt/v1\nname: Test\nid: test\n"
+            "discovery:\n  strategy: url_download\n"
+            "  url: https://example.com/app.msi\n"
+            "intune:\n  typo_field: value\n"
+        )
+
+        config = load_effective_config(recipe_path)
+
+        assert config["name"] == "Test"
+
+    def test_validate_config_and_validate_recipe_agree(self, tmp_test_dir):
+        """Tests that validate_config and validate_recipe report the same errors."""
+        from napt.validation import validate_recipe
+
+        recipe_path = tmp_test_dir / "recipe.yaml"
+        recipe_path.write_text(
+            "apiVersion: napt/v1\nid: test\n"
+            "discovery:\n  strategy: url_download\n"
+            "  url: https://example.com/app.msi\n"
+        )
+
+        recipe_result = validate_recipe(recipe_path)
+
+        assert recipe_result.status == "invalid"
+        assert any("name" in err for err in recipe_result.errors)
