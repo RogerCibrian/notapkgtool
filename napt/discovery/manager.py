@@ -77,41 +77,6 @@ from napt.state import load_state, save_state
 from napt.versioning import is_newer
 
 
-def derive_file_path_from_url(url: str, output_dir: Path, app_id: str) -> Path:
-    """Derives the expected local file path for a download URL.
-
-    Ensures version-first strategies can locate cached files without
-    downloading by following the same naming convention as the download
-    module (app-scoped subdirectory).
-
-    Args:
-        url: Download URL.
-        output_dir: Base downloads directory.
-        app_id: Application identifier used to scope the subdirectory.
-
-    Returns:
-        Expected path to the file under output_dir/app_id/.
-
-    Example:
-        Get expected file path for a download URL:
-            ```python
-            from pathlib import Path
-
-            path = derive_file_path_from_url(
-                "https://example.com/app.msi",
-                Path("./downloads"),
-                "my-app",
-            )
-            # Returns: Path('./downloads/my-app/app.msi')
-            ```
-
-    """
-    from urllib.parse import urlparse
-
-    filename = Path(urlparse(url).path).name
-    return output_dir / app_id / filename
-
-
 def discover_recipe(
     recipe_path: Path,
     output_dir: Path | None = None,
@@ -266,28 +231,29 @@ def discover_recipe(
         if not is_newer(
             version_info.version, cache.get("known_version") if cache else None
         ):
-            # Derive file path from URL using same logic as download_file
-            file_path = derive_file_path_from_url(
-                version_info.download_url, output_dir, app_id
+            cached_file_path = (
+                Path(cache["file_path"]) if cache and cache.get("file_path") else None
             )
 
-            if file_path.exists():
+            if cached_file_path is not None and cached_file_path.exists():
                 # Fast path: version unchanged, file exists, skip download!
                 logger.info(
                     "CACHE",
                     f"Version {version_info.version} unchanged, using cached file",
                 )
                 logger.step(4, 4, "Using cached file...")
+                file_path = cached_file_path
                 sha256 = cache.get("sha256")
                 version = version_info.version
                 version_source = version_info.source
                 headers = {}  # No download occurred, no headers
             else:
-                # File was deleted, re-download
-                logger.warning(
-                    "CACHE",
-                    f"Cached file {file_path} not found, re-downloading",
-                )
+                # File missing or no cached path — re-download
+                if cached_file_path is not None:
+                    logger.warning(
+                        "CACHE",
+                        f"Cached file {cached_file_path} not found, re-downloading",
+                    )
                 logger.step(4, 4, "Downloading installer...")
                 dl = download_file(
                     version_info.download_url,
@@ -350,6 +316,7 @@ def discover_recipe(
                 last_modified if last_modified else None
             ),  # Only useful for url_download
             "sha256": sha256,
+            "file_path": str(file_path),  # Actual filename (may differ from URL)
         }
 
         # Optional fields

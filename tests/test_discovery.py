@@ -309,8 +309,8 @@ class TestCacheAndETagSupport:
         assert file_path == tmp_test_dir / "test-app" / "installer.msi"
         assert file_path.exists()
 
-    def test_cache_with_missing_file_raises(self, tmp_test_dir):
-        """Test that cache with missing file raises helpful error."""
+    def test_cache_with_missing_file_redownloads(self, tmp_test_dir):
+        """Test that 304 with a missing cached file forces a re-download."""
         app_config = {
             "id": "test-app",
             "discovery": {
@@ -321,7 +321,7 @@ class TestCacheAndETagSupport:
 
         strategy = UrlDownloadStrategy()
 
-        # Cache points to non-existent file
+        # Cache points to a file that no longer exists on disk
         cache = {
             "version": "1.0.0",
             "etag": 'W/"abc123"',
@@ -329,14 +329,83 @@ class TestCacheAndETagSupport:
             "sha256": "cached_sha",
         }
 
+        fake_msi = b"re-downloaded MSI content"
+
         with requests_mock.Mocker() as m:
-            # Mock 304 response
-            m.get("https://example.com/installer.msi", status_code=304)
+            # First request (conditional with ETag) returns 304
+            # Second request (forced unconditional re-download) returns 200
+            m.get(
+                "https://example.com/installer.msi",
+                [
+                    {"status_code": 304},
+                    {
+                        "content": fake_msi,
+                        "headers": {"Content-Length": str(len(fake_msi))},
+                    },
+                ],
+            )
 
-            from napt.exceptions import NetworkError
+            with patch(
+                "napt.discovery.url_download.extract_msi_metadata"
+            ) as mock_extract:
+                mock_extract.return_value = MSIMetadata(
+                    product_name="", product_version="1.0.0", architecture="x64"
+                )
 
-            with pytest.raises(NetworkError, match="Cached file.*not found"):
-                strategy.discover_version(app_config, tmp_test_dir, cache=cache)
+                version, version_source, file_path, sha256, headers = (
+                    strategy.discover_version(app_config, tmp_test_dir, cache=cache)
+                )
+
+        assert version == "1.0.0"
+        assert file_path.exists()
+
+    def test_304_uses_cached_file_path_not_url(self, tmp_test_dir):
+        """Test that 304 uses cache's file_path, not the URL-derived filename.
+
+        Covers the bug where Content-Disposition gives a different filename
+        than the URL path. On the next run (304), we must use the stored path.
+        """
+        app_config = {
+            "id": "test-app",
+            "discovery": {
+                "url": "https://example.com/download?token=abc",
+            },
+        }
+
+        strategy = UrlDownloadStrategy()
+
+        # Simulate: original download had Content-Disposition filename
+        # that differs from the URL (no filename in URL path at all)
+        app_dir = tmp_test_dir / "test-app"
+        app_dir.mkdir()
+        cd_named_file = app_dir / "MyApp-Setup-2.1.0.msi"
+        cd_named_file.write_bytes(b"fake msi from cd header")
+
+        cache = {
+            "version": "2.1.0",
+            "etag": 'W/"xyz"',
+            "file_path": str(cd_named_file),
+            "sha256": "deadbeef" * 8,
+        }
+
+        with requests_mock.Mocker() as m:
+            m.get("https://example.com/download", status_code=304)
+
+            with patch(
+                "napt.discovery.url_download.extract_msi_metadata"
+            ) as mock_extract:
+                mock_extract.return_value = MSIMetadata(
+                    product_name="", product_version="2.1.0", architecture="x64"
+                )
+
+                version, version_source, file_path, sha256, headers = (
+                    strategy.discover_version(app_config, tmp_test_dir, cache=cache)
+                )
+
+        # Must use the CD-derived cached path, not "download.bin" from URL
+        assert file_path == cd_named_file
+        assert version == "2.1.0"
+        assert sha256 == "deadbeef" * 8
 
 
 class TestVersionFirstStrategies:

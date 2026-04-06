@@ -84,6 +84,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Cached installer filename now survives re-runs** - NAPT stores the actual
+    downloaded filename in state after each download. On subsequent runs,
+    cache hits use the stored path instead of re-deriving from the recipe URL.
+    Previously, if the server returned a `Content-Disposition` header or the
+    download URL redirected to a different path, the cached file could not be
+    found and the run would fail
+- **Incomplete or stale cache no longer requires `--stateless`** - If the
+    cache is missing fields or the cached file was deleted, NAPT automatically
+    forces a fresh download instead of failing with a confusing error message
 - **`intune.device_restart_behavior` default corrected to
     `"basedOnReturnCode"`** - Previously an inline fallback used `"allow"`
     instead of the value defined in `DEFAULT_CONFIG`

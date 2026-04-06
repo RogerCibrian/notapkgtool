@@ -139,7 +139,7 @@ class TestVersionFirstFastPath:
         # Mock HTML page for web_scrape
         html_content = '<a href="/app-v1.2.3-installer.msi">Download</a>'
 
-        # Mock state with matching version
+        # Mock state with matching version and stored file path
         state = {
             "metadata": {"napt_version": "0.1.0", "schema_version": "2"},
             "apps": {
@@ -147,6 +147,7 @@ class TestVersionFirstFastPath:
                     "url": "https://example.com/app-v1.2.3-installer.msi",
                     "known_version": "1.2.3",
                     "sha256": "abc123" * 8,
+                    "file_path": str(cached_file),
                 }
             },
         }
