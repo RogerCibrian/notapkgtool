@@ -177,6 +177,9 @@ from napt.exceptions import ConfigError, NetworkError
 
 from .base import register_strategy
 
+# Strategy-specific defaults for optional recipe fields.
+_DEFAULT_VERSION_FORMAT = "{0}"
+
 
 class WebScrapeStrategy:
     """Discovery strategy for web scraping download pages.
@@ -259,7 +262,7 @@ class WebScrapeStrategy:
                 "web_scrape strategy requires 'discovery.version_pattern' in config"
             )
 
-        version_format = source.get("version_format", "{0}")
+        version_format = source.get("version_format", _DEFAULT_VERSION_FORMAT)
 
         logger.verbose("DISCOVERY", "Strategy: web_scrape (version-first)")
         logger.verbose("DISCOVERY", f"Page URL: {page_url}")

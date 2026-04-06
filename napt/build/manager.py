@@ -142,7 +142,7 @@ def _get_installer_version(
     from napt.logging import get_global_logger
 
     logger = get_global_logger()
-    app_id = config.get("id", "unknown")
+    app_id = config["id"]
 
     # MSI: version is authoritative from the installer — no fallback
     if installer_file.suffix.lower() == ".msi":
@@ -211,7 +211,7 @@ def _find_installer_file(
     from napt.logging import get_global_logger
 
     logger = get_global_logger()
-    app_id = config.get("id", "")
+    app_id = config["id"]
     url = config.get("discovery", {}).get("url", "")
 
     app_dir = downloads_dir / app_id
@@ -253,7 +253,7 @@ def _find_installer_file(
             logger.warning("BUILD", f"Could not check state file: {err}")
 
     # Strategy 3: Fallback - Search for installer matching app name/id
-    app_name = config.get("name", "").lower()
+    app_name = config["name"].lower()
 
     # Try to find installer matching app_id or app_name in filename
     if app_dir.exists():
@@ -658,8 +658,8 @@ def _generate_detection_script(
 
     logger = get_global_logger()
 
-    detection_settings = config.get("intune", {}).get("detection", {})
-    logging_settings = config.get("logging", {})
+    detection_settings = config["intune"]["detection"]
+    logging_settings = config["logging"]
     installer_ext = installer_file.suffix.lower()
 
     app_name, architecture = _resolve_app_info(
@@ -679,15 +679,15 @@ def _generate_detection_script(
 
     if installer_ext == ".msix":
         assert msix_metadata is not None
-        run_as_account = config.get("intune", {}).get("run_as_account", "system")
+        run_as_account = config["intune"]["run_as_account"]
         detection_config = MSIXDetectionConfig(
             identity_name=msix_metadata.identity_name,
             app_name=app_name,
             version=version,
-            log_format=logging_settings.get("log_format", "cmtrace"),
-            log_level=logging_settings.get("log_level", "INFO"),
-            log_rotation_mb=logging_settings.get("log_rotation_mb", 3),
-            exact_match=detection_settings.get("exact_match", False),
+            log_format=logging_settings["log_format"],
+            log_level=logging_settings["log_level"],
+            log_rotation_mb=logging_settings["log_rotation_mb"],
+            exact_match=detection_settings["exact_match"],
             app_id=app_id,
             install_scope=run_as_account,
         )
@@ -697,10 +697,10 @@ def _generate_detection_script(
         detection_config = DetectionConfig(
             app_name=app_name,
             version=version,
-            log_format=logging_settings.get("log_format", "cmtrace"),
-            log_level=logging_settings.get("log_level", "INFO"),
-            log_rotation_mb=logging_settings.get("log_rotation_mb", 3),
-            exact_match=detection_settings.get("exact_match", False),
+            log_format=logging_settings["log_format"],
+            log_level=logging_settings["log_level"],
+            log_rotation_mb=logging_settings["log_rotation_mb"],
+            exact_match=detection_settings["exact_match"],
             app_id=app_id,
             is_msi_installer=(installer_ext == ".msi"),
             expected_architecture=architecture,
@@ -751,7 +751,7 @@ def _generate_requirements_script(
 
     logger = get_global_logger()
 
-    logging_settings = config.get("logging", {})
+    logging_settings = config["logging"]
     installer_ext = installer_file.suffix.lower()
 
     app_name, architecture = _resolve_app_info(
@@ -774,14 +774,14 @@ def _generate_requirements_script(
 
     if installer_ext == ".msix":
         assert msix_metadata is not None
-        run_as_account = config.get("intune", {}).get("run_as_account", "system")
+        run_as_account = config["intune"]["run_as_account"]
         requirements_config = MSIXRequirementsConfig(
             identity_name=msix_metadata.identity_name,
             app_name=app_name,
             version=version,
-            log_format=logging_settings.get("log_format", "cmtrace"),
-            log_level=logging_settings.get("log_level", "INFO"),
-            log_rotation_mb=logging_settings.get("log_rotation_mb", 3),
+            log_format=logging_settings["log_format"],
+            log_level=logging_settings["log_level"],
+            log_rotation_mb=logging_settings["log_rotation_mb"],
             app_id=app_id,
             install_scope=run_as_account,
         )
@@ -793,9 +793,9 @@ def _generate_requirements_script(
         requirements_config = RequirementsConfig(
             app_name=app_name,
             version=version,
-            log_format=logging_settings.get("log_format", "cmtrace"),
-            log_level=logging_settings.get("log_level", "INFO"),
-            log_rotation_mb=logging_settings.get("log_rotation_mb", 3),
+            log_format=logging_settings["log_format"],
+            log_level=logging_settings["log_level"],
+            log_rotation_mb=logging_settings["log_rotation_mb"],
             app_id=app_id,
             is_msi_installer=(installer_ext == ".msi"),
             expected_architecture=architecture,
@@ -909,12 +909,12 @@ def _apply_msix_commands(
         ConfigError: If ``override_msix_commands`` is true but no
             ``psadt.install`` or ``psadt.uninstall`` is provided.
     """
-    psadt_config = config.get("psadt", {})
+    psadt_config = config["psadt"]
     override_commands = psadt_config.get("override_msix_commands", False)
     recipe_install = psadt_config.get("install")
     recipe_uninstall = psadt_config.get("uninstall")
 
-    run_as_account = config.get("intune", {}).get("run_as_account", "system")
+    run_as_account = config["intune"]["run_as_account"]
     if run_as_account == "user":
         auto_install = (
             f'Add-AppxPackage -Path "$($adtSession.DirFiles)\\{installer_file.name}"'
@@ -1062,8 +1062,8 @@ def build_package(
     logger.step(1, 8, "Loading configuration...")
     config = load_effective_config(recipe_path)
 
-    app_id = config.get("id", "unknown-app")
-    app_name = config.get("name", "Unknown App")
+    app_id = config["id"]
+    app_name = config["name"]
 
     # Set defaults
     if downloads_dir is None:
@@ -1095,7 +1095,7 @@ def build_package(
         msix_metadata = extract_msix_metadata(installer_file)
         architecture = msix_metadata.architecture
     else:
-        detection_settings = config.get("intune", {}).get("detection", {})
+        detection_settings = config["intune"]["detection"]
         architecture = detection_settings.get("architecture") or ""
         if not architecture:
             raise ConfigError(
@@ -1148,7 +1148,7 @@ def build_package(
     _apply_branding(config, build_dir)
 
     # Get build_types configuration
-    build_types = config.get("intune", {}).get("build_types", "both")
+    build_types = config["intune"]["build_types"]
 
     detection_script_path = None
     requirements_script_path = None

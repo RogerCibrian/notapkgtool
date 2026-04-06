@@ -7,18 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-
-- **`napt upload` now creates two Intune Win32 app entries when `build_types`
-    is `"both"`** - Previously only one entry was created regardless of
-    `build_types`. The install entry (detection script only, base app name) and
-    the update entry (detection + requirements scripts, prefixed with
-    `update_name_prefix`) are now each created, uploaded, and committed in
-    sequence. Single-entry behavior for `"app_only"` and `"update_only"` is
-    unchanged
-
 ### Added
 
+- **Automatic recipe validation in pipeline commands** - `napt discover`,
+    `napt build`, and `napt upload` now validate the merged configuration
+    before proceeding. Invalid recipes produce clear error messages instead
+    of failing with unexpected errors mid-pipeline
+- **Configuration provenance in `napt validate --debug`** - Shows which
+    config layer (code default, org.yaml, vendor defaults, or recipe) set
+    each value. Helps debug unexpected configuration by tracing the full
+    merge history
+- **`intune.is_featured` config key** - Controls whether the app is featured
+    in Company Portal. Configurable at org, vendor, or recipe level.
+    Defaults to `false`
 - **MSIX installer support** - NAPT now supports `.msix` installers as a third
     installer type alongside MSI and EXE. MSIX metadata (display name, version,
     architecture, package identity) is extracted from `AppxManifest.xml` inside
@@ -83,6 +84,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`intune.device_restart_behavior` default corrected to
+    `"basedOnReturnCode"`** - Previously an inline fallback used `"allow"`
+    instead of the value defined in `DEFAULT_CONFIG`
+- **`napt upload` now creates two Intune Win32 app entries when `build_types`
+    is `"both"`** - Previously only one entry was created regardless of
+    `build_types`. The install entry (detection script only, base app name) and
+    the update entry (detection + requirements scripts, prefixed with
+    `update_name_prefix`) are now each created, uploaded, and committed in
+    sequence. Single-entry behavior for `"app_only"` and `"update_only"` is
+    unchanged
 - Version cache check now uses semantic comparison instead of string equality,
     so versions with a `v` prefix (e.g., `v1.2.3` vs `1.2.3`) are correctly
     recognized as matching and won't re-download unnecessarily

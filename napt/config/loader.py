@@ -147,7 +147,13 @@ def _load_yaml_file(p: Path) -> Any:
     return data
 
 
-def _deep_merge_dicts(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
+def _deep_merge_dicts(
+    base: dict[str, Any],
+    overlay: dict[str, Any],
+    *,
+    provenance: dict[str, Any] | None = None,
+    layer_name: str = "",
+) -> dict[str, Any]:
     """Deep-merges two dicts with "overlay wins" semantics.
 
     Merge behavior:
@@ -161,6 +167,11 @@ def _deep_merge_dicts(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str
     Args:
         base: The base dictionary.
         overlay: The overlay dictionary that takes precedence.
+        provenance: Optional dict that mirrors the config structure, tracking
+            which layer set each value. When provided, each scalar/list key
+            is recorded as ``provenance[key] = layer_name``.
+        layer_name: Name of the current layer (e.g., ``"code_default"``,
+            ``"org_yaml"``, ``"recipe"``). Only used when provenance is set.
 
     Returns:
         A new dictionary with the merged contents.
@@ -168,10 +179,18 @@ def _deep_merge_dicts(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str
     result: dict[str, Any] = dict(base)
     for k, v in overlay.items():
         if k in result and isinstance(result[k], dict) and isinstance(v, dict):
-            result[k] = _deep_merge_dicts(result[k], v)
+            # Recurse for nested dicts
+            sub_prov: dict[str, Any] | None = None
+            if provenance is not None:
+                sub_prov = provenance.setdefault(k, {})
+            result[k] = _deep_merge_dicts(
+                result[k], v, provenance=sub_prov, layer_name=layer_name
+            )
         else:
             # Replace lists and scalars entirely
             result[k] = v
+            if provenance is not None and layer_name:
+                provenance[k] = layer_name
     return result
 
 
@@ -259,26 +278,25 @@ def _resolve_known_paths(
         pass
 
 
-def _inject_dynamic_values(cfg: dict[str, Any]) -> None:
+def _inject_dynamic_values(
+    cfg: dict[str, Any],
+    provenance: dict[str, Any] | None = None,
+) -> None:
     """Injects dynamic fields that should be set at load/build time.
 
-    Injects the following fields if not already set by a config layer:
+    Injects the following fields:
 
-    - ``psadt.app_vars.AppScriptDate``: Today's date (YYYY-MM-DD).
-    - ``psadt.app_vars.RequireAdmin``: Defaults to ``True`` for system-context
-      installs and ``False`` for user-context installs (``intune.run_as_account``).
-      User-context installs must not require admin or PSADT will error on
-      non-admin accounts. Override explicitly in the recipe if your environment
-      grants local admin to users and you want PSADT to enforce it.
+    - ``psadt.app_vars.AppScriptDate``: Today's date (YYYY-MM-DD), unless
+      explicitly set by a config layer.
+    - ``psadt.app_vars.RequireAdmin``: Computed from
+      ``intune.run_as_account`` (system -> True, user -> False), unless
+      explicitly set by org.yaml, vendor defaults, or recipe.
 
     Args:
         cfg: The configuration dictionary to inject values into.
-
-    Note:
-        ``RequireAdmin`` is derived here rather than in ``DEFAULT_CONFIG``
-        because its correct default depends on ``intune.run_as_account``, and
-        after config layers are merged the two values are indistinguishable.
-        See the defaults centralization work item for the long-term fix.
+        provenance: Optional provenance dict tracking which layer set each
+            value. Used to detect whether ``RequireAdmin`` was explicitly
+            overridden by the user.
     """
     try:
         app_vars = cfg.setdefault("psadt", {}).setdefault("app_vars", {})
@@ -286,9 +304,22 @@ def _inject_dynamic_values(cfg: dict[str, Any]) -> None:
         today_str = date.today().strftime("%Y-%m-%d")
         app_vars.setdefault("AppScriptDate", today_str)
 
-        run_as_account = cfg.get("intune", {}).get("run_as_account", "system")
-        require_admin_default = run_as_account != "user"
-        app_vars.setdefault("RequireAdmin", require_admin_default)
+        # RequireAdmin: compute from run_as_account unless explicitly set
+        # by a user-controlled layer (org_yaml, vendor_yaml, or recipe).
+        run_as_account = cfg["intune"]["run_as_account"]
+        require_admin_source = None
+        if provenance is not None:
+            require_admin_source = (
+                provenance.get("psadt", {}).get("app_vars", {}).get("RequireAdmin")
+            )
+
+        user_layers = {"org_yaml", "vendor_yaml", "recipe"}
+        if require_admin_source in user_layers:
+            # User explicitly set RequireAdmin — respect their value
+            pass
+        else:
+            # Compute from run_as_account
+            app_vars["RequireAdmin"] = run_as_account != "user"
     except Exception as err:
         # Be defensive but quiet; dynamic injection is best-effort
         from napt.logging import get_global_logger
@@ -364,7 +395,19 @@ def load_effective_config(
 
     # Start with code defaults (always present baseline)
     merged = copy.deepcopy(DEFAULT_CONFIG)
+    provenance: dict[str, Any] = {}
     layers_merged = 1  # Code defaults count as first layer
+
+    # Initialize provenance: all DEFAULT_CONFIG keys start as "code_default"
+    def _init_provenance(cfg: dict[str, Any], prov: dict[str, Any]) -> None:
+        for k, v in cfg.items():
+            if isinstance(v, dict):
+                sub = prov.setdefault(k, {})
+                _init_provenance(v, sub)
+            else:
+                prov[k] = "code_default"
+
+    _init_provenance(DEFAULT_CONFIG, provenance)
 
     org_defaults_path: Path | None = None
     vendor_name: str | None = vendor
@@ -381,7 +424,12 @@ def load_effective_config(
             if isinstance(org_defaults, dict):
                 logger.debug("CONFIG", "--- Content from org.yaml ---")
                 _print_yaml_content(org_defaults)
-                merged = _deep_merge_dicts(merged, org_defaults)
+                merged = _deep_merge_dicts(
+                    merged,
+                    org_defaults,
+                    provenance=provenance,
+                    layer_name="org_yaml",
+                )
                 layers_merged += 1
 
         # 4) Determine vendor
@@ -402,7 +450,12 @@ def load_effective_config(
                 if isinstance(vendor_defaults, dict):
                     logger.debug("CONFIG", f"--- Content from {vendor_name}.yaml ---")
                     _print_yaml_content(vendor_defaults)
-                    merged = _deep_merge_dicts(merged, vendor_defaults)
+                    merged = _deep_merge_dicts(
+                        merged,
+                        vendor_defaults,
+                        provenance=provenance,
+                        layer_name="vendor_yaml",
+                    )
                     layers_merged += 1
 
     # Show recipe content
@@ -411,7 +464,9 @@ def load_effective_config(
     _print_yaml_content(recipe_obj)
 
     # 6) Merge recipe on top
-    merged = _deep_merge_dicts(merged, recipe_obj)
+    merged = _deep_merge_dicts(
+        merged, recipe_obj, provenance=provenance, layer_name="recipe"
+    )
     layers_merged += 1
 
     logger.verbose("CONFIG", f"Deep merging {layers_merged} layer(s)")
@@ -431,16 +486,19 @@ def load_effective_config(
     # 7) Resolve relative paths (branding paths relative to defaults_root)
     _resolve_known_paths(merged, recipe_dir, defaults_root)
 
-    # 8) Inject dynamic values (e.g., AppScriptDate)
-    _inject_dynamic_values(merged)
+    # 8) Inject dynamic values (e.g., AppScriptDate, RequireAdmin)
+    _inject_dynamic_values(merged, provenance)
 
-    # Optionally attach context for debugging (commented out by default)
-    # merged["_load_context"] = LoadContext(
-    #     recipe_path=recipe_path,
-    #     defaults_root=defaults_root,
-    #     vendor_name=vendor_name,
-    #     org_defaults_path=org_defaults_path,
-    #     vendor_defaults_path=vendor_defaults_path,
-    # ).__dict__
+    # Store provenance for downstream consumers
+    merged["_provenance"] = provenance
+
+    # 9) Validate the merged config (errors raise, warnings are logged)
+    from napt.validation import validate_config
+
+    result = validate_config(merged, recipe_path=str(recipe_path))
+    if result.errors:
+        raise ConfigError(f"Invalid configuration: {'; '.join(result.errors)}")
+    for warning in result.warnings:
+        logger.warning("CONFIG", warning)
 
     return merged

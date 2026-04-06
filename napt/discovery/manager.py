@@ -224,8 +224,8 @@ def discover_recipe(
 
     # 2. Extract app identity
     logger.step(2, 4, "Discovering version...")
-    app_name = config.get("name", "Unknown")
-    app_id = config.get("id", "unknown-id")
+    app_name = config["name"]
+    app_id = config["id"]
 
     # 3. Get the discovery strategy name
     discovery = config.get("discovery", {})

@@ -205,53 +205,68 @@ Description of what the field does and when to use it.
 
 **Field documentation order:** Type → Required → Default (if applicable) → Allowed values (if applicable) → Description → Examples (if helpful)
 
-### 3. Update Defaults (if needed)
+### 3. Categorize the new setting
 
-**Deciding where the default lives:**
+Every config value belongs to exactly one category. Use this flowchart:
 
-| Question | Yes | No |
-|----------|-----|----|
-| Would an org realistically set this the same way across all/most recipes? | → `DEFAULT_CONFIG` + `ORG_YAML_TEMPLATE` | → inline fallback in code |
-
-Examples:
-- `log_format: "cmtrace"` — an org-wide logging policy, goes in `DEFAULT_CONFIG`
-- `override_msi_display_name: false` — MSI-specific per-app behavior, stays inline
-
-Per-recipe optional fields with inline defaults should be documented in `recipe-reference.md`, not in `DEFAULT_CONFIG` or `ORG_YAML_TEMPLATE`. The config hierarchy (org → vendor → recipe) lets users override any field at any level, but `DEFAULT_CONFIG` and `ORG_YAML_TEMPLATE` should only expose settings that make sense as org-wide policy.
-
-If the field belongs in `DEFAULT_CONFIG`, update **both** dicts in `napt/config/defaults.py`:
-
-1. Add to `DEFAULT_CONFIG` dict (the authoritative code defaults):
-```python
-DEFAULT_CONFIG = {
-    "defaults": {
-        "section": {
-            "new_field": "default_value",
-        },
-    },
-}
+```
+Is this field set the same way across all/most recipes?
+  YES → Would an org admin configure it in org.yaml?
+    YES → Org-policy
+    NO  → Is it required for the feature to work?
+      YES → Recipe-required
+      NO  → Absent-means-skip
+  NO  → Is it specific to a discovery/build strategy?
+    YES → Strategy-specific
+    NO  → Does it depend on other config values?
+      YES → Computed/derived
+      NO  → Absent-means-skip
 ```
 
-2. Add to `ORG_YAML_TEMPLATE` (the commented template for `napt init`):
-```python
-ORG_YAML_TEMPLATE = """
-  # section:
-  #   new_field: "default_value"  # Comment explaining purpose
-"""
-```
+### 4. Follow the checklist for that category
 
-A test (`test_org_yaml_template_covers_all_sections`) validates that all sections in `DEFAULT_CONFIG` are mentioned in `ORG_YAML_TEMPLATE`.
+**Org-policy** (`run_as_account`, `log_format`, `build_types`):
+- [ ] Add to `DEFAULT_CONFIG` in `napt/config/defaults.py`
+- [ ] Add to `ORG_YAML_TEMPLATE` in `napt/config/defaults.py`
+- [ ] Add validation in `napt/validation.py`
+- [ ] Access with `config["section"]["key"]` (no fallback)
+- [ ] Document in `docs/recipe-reference.md`
 
-### 4. Verify Implementation
+A test (`test_org_yaml_template_covers_all_sections`) validates that all sections
+in `DEFAULT_CONFIG` are mentioned in `ORG_YAML_TEMPLATE`.
+
+**Strategy-specific** (`timeout`, `prerelease`, `method`):
+- [ ] Add module constant `_DEFAULT_X` at top of the strategy module
+- [ ] Access with `source.get("key", _DEFAULT_X)`
+- [ ] Add to strategy's `validate_config()` if required for that strategy
+- [ ] Document in `docs/recipe-reference.md`
+
+**Recipe-required** (`name`, `id`, `discovery.strategy`):
+- [ ] Add validation in `napt/validation.py` (error if missing)
+- [ ] Access with `config["key"]` (no fallback — KeyError = validation bug)
+- [ ] Document as required in `docs/recipe-reference.md`
+
+**Absent-means-skip** (`description`, `logo_path`, `notes`):
+- [ ] Access with `config.get("key")` or `if "key" in config:`
+- [ ] Add validation in `napt/validation.py` (type/value checks, not presence)
+- [ ] Document as optional in `docs/recipe-reference.md`
+
+**Computed/derived** (`RequireAdmin`, `AppScriptDate`):
+- [ ] Add logic to `_inject_dynamic_values` in `napt/config/loader.py`
+- [ ] Use provenance to detect explicit overrides vs defaults
+- [ ] Document the computed behavior in `docs/recipe-reference.md`
+
+### 5. Verify Implementation
 
 Check these files to ensure the field is actually used:
 - Search codebase: `grep -r "new_field" napt/`
 - Verify it's read from config in relevant modules
 - Check if field exists in defaults but isn't used (planned feature)
 
-### 5. Update Examples
+### 6. Update Examples
 
-Add field to example recipes in `docs/common-tasks.md` if it's commonly used, or note it as optional in relevant strategy examples.
+Add field to example recipes in `docs/common-tasks.md` if it's commonly used,
+or note it as optional in relevant strategy examples.
 
 **Important:** All documented fields should either:
 - Be validated in `validation.py` AND used in the code

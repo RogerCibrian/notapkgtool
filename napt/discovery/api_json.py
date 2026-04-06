@@ -180,6 +180,10 @@ from napt.exceptions import ConfigError, NetworkError
 
 from .base import register_strategy
 
+# Strategy-specific defaults for optional recipe fields.
+_DEFAULT_METHOD = "GET"
+_DEFAULT_TIMEOUT = 30
+
 
 class ApiJsonStrategy:
     """Discovery strategy for JSON API endpoints.
@@ -259,13 +263,13 @@ class ApiJsonStrategy:
             )
 
         # Optional configuration
-        method = source.get("method", "GET").upper()
+        method = source.get("method", _DEFAULT_METHOD).upper()
         if method not in ("GET", "POST"):
             raise ConfigError(f"Invalid method: {method!r}. Must be 'GET' or 'POST'")
 
         headers = source.get("headers", {})
         body = source.get("body", {})
-        timeout = source.get("timeout", 30)
+        timeout = source.get("timeout", _DEFAULT_TIMEOUT)
 
         logger.verbose("DISCOVERY", "Strategy: api_json (version-first)")
         logger.verbose("DISCOVERY", f"API URL: {api_url}")

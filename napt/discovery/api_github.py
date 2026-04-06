@@ -154,6 +154,10 @@ from napt.exceptions import ConfigError, NetworkError
 
 from .base import register_strategy
 
+# Strategy-specific defaults for optional recipe fields.
+_DEFAULT_VERSION_PATTERN = r"v?([0-9.]+)"
+_DEFAULT_PRERELEASE = False
+
 
 class ApiGithubStrategy:
     """Discovery strategy for GitHub releases.
@@ -229,8 +233,8 @@ class ApiGithubStrategy:
                 "api_github strategy requires 'discovery.asset_pattern' in config"
             )
 
-        version_pattern = source.get("version_pattern", r"v?([0-9.]+)")
-        prerelease = source.get("prerelease", False)
+        version_pattern = source.get("version_pattern", _DEFAULT_VERSION_PATTERN)
+        prerelease = source.get("prerelease", _DEFAULT_PRERELEASE)
         token = source.get("token")
 
         # Expand environment variables in token (e.g., ${GITHUB_TOKEN})

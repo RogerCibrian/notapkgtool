@@ -67,6 +67,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "AppProcessesToClose": [],
             "AppScriptVersion": "1.0.0",
             "AppScriptAuthor": "napt",
+            "RequireAdmin": True,
         },
     },
     # Intune/Win32 settings.
@@ -82,6 +83,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "Invoke-AppDeployToolkit.exe -DeploymentType Uninstall -DeployMode Silent"
         ),
         "allow_available_uninstall": True,
+        "is_featured": False,
         "run_as_account": "system",
         "device_restart_behavior": "basedOnReturnCode",
         "max_run_time_minutes": 60,
@@ -156,6 +158,9 @@ apiVersion: napt/v1
 #
 #   # Show "Uninstall" in Company Portal (Available assignments)
 #   allow_available_uninstall: true
+#
+#   # Feature app in Company Portal
+#   is_featured: false
 #
 #   # Run installer and detection/requirements scripts as "system" or "user"
 #   run_as_account: "system"
