@@ -2079,6 +2079,15 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="fixed">Fixed</h3>
 <ul>
+<li><strong>Cached installer filename now survives re-runs</strong> - NAPT stores the actual
+    downloaded filename in state after each download. On subsequent runs,
+    cache hits use the stored path instead of re-deriving from the recipe URL.
+    Previously, if the server returned a <code>Content-Disposition</code> header or the
+    download URL redirected to a different path, the cached file could not be
+    found and the run would fail</li>
+<li><strong>Incomplete or stale cache no longer requires <code>--stateless</code></strong> - If the
+    cache is missing fields or the cached file was deleted, NAPT automatically
+    forces a fresh download instead of failing with a confusing error message</li>
 <li><strong><code>intune.device_restart_behavior</code> default corrected to
     <code>"basedOnReturnCode"</code></strong> - Previously an inline fallback used <code>"allow"</code>
     instead of the value defined in <code>DEFAULT_CONFIG</code></li>
