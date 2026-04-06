@@ -1398,7 +1398,18 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Unreleased">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#050-2026-04-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.5.0 - 2026-04-05
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.5.0 - 2026-04-05">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1741,7 +1752,18 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Unreleased">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#050-2026-04-05" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.5.0 - 2026-04-05
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.5.0 - 2026-04-05">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2001,7 +2023,8 @@
 <p>All notable changes to NAPT (Not a Pkg Tool) will be documented in this file.</p>
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
-<h2 id="unreleased"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.4.0...HEAD">Unreleased</a></h2>
+<h2 id="unreleased"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.5.0...HEAD">Unreleased</a></h2>
+<h2 id="050-2026-04-05"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.4.0...0.5.0">0.5.0</a> - 2026-04-05</h2>
 <h3 id="added">Added</h3>
 <ul>
 <li><strong>Automatic recipe validation in pipeline commands</strong> - <code>napt discover</code>,
@@ -2012,31 +2035,18 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
     config layer (code default, org.yaml, vendor defaults, or recipe) set
     each value. Helps debug unexpected configuration by tracing the full
     merge history</li>
-<li><strong><code>intune.is_featured</code> config key</strong> - Controls whether the app is featured
-    in Company Portal. Configurable at org, vendor, or recipe level.
-    Defaults to <code>false</code></li>
-<li><strong>MSIX installer support</strong> - NAPT now supports <code>.msix</code> installers as a third
-    installer type alongside MSI and EXE. MSIX metadata (display name, version,
-    architecture, package identity) is extracted from <code>AppxManifest.xml</code> inside
-    the package. Detection and requirements scripts query the AppX package
-    database; install and uninstall commands are auto-generated from manifest
-    metadata unless overridden with <code>psadt.override_msix_commands: true</code></li>
-<li><strong>MSIX install scope</strong> - <code>intune.run_as_account</code> now controls which AppX
-    cmdlets are auto-generated for MSIX installers. <code>"system"</code> (default) uses
-    <code>Add-AppxProvisionedPackage</code> / <code>Remove-AppxProvisionedPackage</code> for
-    all-users provisioned installs. <code>"user"</code> uses <code>Add-AppxPackage</code> /
-    <code>Remove-AppxPackage</code> for per-user installs. Detection and requirements
-    scripts automatically query the correct store (<code>Get-AppxProvisionedPackage</code>
-    vs <code>Get-AppxPackage</code>) based on the same setting</li>
-<li><strong>Scope-based <code>RequireAdmin</code> default</strong> - <code>psadt.app_vars.RequireAdmin</code>
-    now defaults to <code>false</code> when <code>intune.run_as_account</code> is <code>"user"</code>.
-    PSADT errors if <code>RequireAdmin</code> is <code>true</code> but the process lacks admin
-    rights. Override explicitly in <code>psadt.app_vars</code> if your environment
-    grants local admin to users</li>
-<li><strong><code>psadt.override_msix_commands</code> config key</strong> - When <code>true</code>, uses recipe
-    <code>psadt.install</code> and <code>psadt.uninstall</code> instead of the auto-generated MSIX
-    commands. Required when the default <code>Add-AppxPackage</code> / <code>Remove-AppxPackage</code>
-    commands are insufficient (e.g., apps needing license files or provisioning)</li>
+<li><strong>MSIX installer support</strong> - NAPT now supports <code>.msix</code> installers alongside
+    MSI and EXE. Metadata (display name, version, architecture, package
+    identity) is extracted from <code>AppxManifest.xml</code> inside the package.
+    Detection and requirements scripts query the AppX package database; install
+    and uninstall commands are auto-generated from manifest metadata unless
+    overridden with <code>psadt.override_msix_commands: true</code>. Install scope is
+    controlled by <code>intune.run_as_account</code>: <code>"system"</code> (default) uses
+    provisioned cmdlets (<code>Add-AppxProvisionedPackage</code> /
+    <code>Remove-AppxProvisionedPackage</code>); <code>"user"</code> uses per-user cmdlets
+    (<code>Add-AppxPackage</code> / <code>Remove-AppxPackage</code>). Detection and requirements
+    scripts automatically query the correct store based on the same setting.
+    <code>psadt.app_vars.RequireAdmin</code> defaults to <code>false</code> when scope is <code>"user"</code></li>
 <li><strong><code>intunewin.release</code> config key</strong> - Pin <code>IntuneWinAppUtil.exe</code> to a specific
     release for reproducible builds (e.g., <code>release: "1.8.6"</code>). Defaults to
     <code>"latest"</code>, which resolves the current release via GitHub API. Each version
@@ -2044,14 +2054,13 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong><code>logging:</code> top-level section</strong> - New optional section for per-recipe logging
     configuration. Supports <code>log_format</code> (<code>cmtrace</code>, <code>text</code>), <code>log_level</code>
     (<code>verbose</code>, <code>debug</code>), and <code>log_rotation_mb</code></li>
-<li><strong>New <code>intune:</code> fields</strong> - <code>developer</code>, <code>owner</code>, <code>notes</code>, <code>logo_path</code>,
-    <code>minimum_supported_windows_release</code>, <code>install_command</code>, and
-    <code>uninstall_command</code> are now supported in the <code>intune:</code> section</li>
-<li><strong>Configurable upload settings</strong> - New <code>intune:</code> fields control Intune Graph
-    API upload behavior: <code>is_featured</code>, <code>allow_available_uninstall</code>,
-    <code>run_as_account</code>, <code>device_restart_behavior</code>, <code>max_run_time_minutes</code>,
-    <code>enforce_signature_check</code>, and <code>run_as_32_bit</code>. All fields are validated and
-    configurable at org, vendor, or recipe level</li>
+<li><strong>New <code>intune:</code> fields</strong> - Expanded metadata and upload behavior fields,
+    all configurable at org, vendor, or recipe level: <code>developer</code>, <code>owner</code>,
+    <code>notes</code>, <code>logo_path</code>, <code>minimum_supported_windows_release</code>,
+    <code>install_command</code>, <code>uninstall_command</code>, <code>is_featured</code> (Company Portal
+    featured app, defaults to <code>false</code>), <code>allow_available_uninstall</code>,
+    <code>device_restart_behavior</code>, <code>max_run_time_minutes</code>,
+    <code>enforce_signature_check</code>, and <code>run_as_32_bit</code></li>
 <li><strong>Sample recipe: <code>recipes/Microsoft/vscode.yaml</code></strong> - New example recipe for
     Visual Studio Code using the <code>api_json</code> strategy</li>
 </ul>
@@ -2098,9 +2107,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
     <code>update_name_prefix</code>) are now each created, uploaded, and committed in
     sequence. Single-entry behavior for <code>"app_only"</code> and <code>"update_only"</code> is
     unchanged</li>
-<li>Version cache check now uses semantic comparison instead of string equality,
-    so versions with a <code>v</code> prefix (e.g., <code>v1.2.3</code> vs <code>1.2.3</code>) are correctly
-    recognized as matching and won't re-download unnecessarily</li>
+<li><strong>Version cache uses semantic comparison</strong> - Versions with a <code>v</code> prefix
+    (e.g., <code>v1.2.3</code> vs <code>1.2.3</code>) are now correctly recognized as matching
+    and won't re-download unnecessarily</li>
 </ul>
 <h2 id="040-2026-03-08"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.3.1...0.4.0">0.4.0</a> - 2026-03-08</h2>
 <h3 id="added_1">Added</h3>
