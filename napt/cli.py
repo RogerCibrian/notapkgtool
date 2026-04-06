@@ -444,7 +444,7 @@ def cmd_package(args: argparse.Namespace) -> int:
         if args.output_dir
         else Path(config["directories"]["package"])
     )
-    tool_release = config.get("intunewin", {}).get("release", "latest")
+    tool_release = config["intunewin"]["release"]
 
     print(f"Creating .intunewin package from: {build_dir}")
     print(f"Output directory: {output_dir}")

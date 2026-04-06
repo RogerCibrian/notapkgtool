@@ -286,7 +286,7 @@ def _inject_dynamic_values(cfg: dict[str, Any]) -> None:
         today_str = date.today().strftime("%Y-%m-%d")
         app_vars.setdefault("AppScriptDate", today_str)
 
-        run_as_account = cfg.get("intune", {}).get("run_as_account", "system")
+        run_as_account = cfg["intune"]["run_as_account"]
         require_admin_default = run_as_account != "user"
         app_vars.setdefault("RequireAdmin", require_admin_default)
     except Exception as err:

@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import copy
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
 import pytest
 
+from napt.config.defaults import DEFAULT_CONFIG
+from napt.config.loader import _deep_merge_dicts
 from napt.exceptions import NetworkError
 from napt.upload.manager import upload_package
 from tests.upload.conftest import make_package_dir
@@ -18,14 +21,14 @@ def _fake_config(
     app_name: str = "Test App",
     build_types: str = "both",
 ) -> dict[str, Any]:
-    return {
-        "id": app_id,
-        "name": app_name,
-        "intune": {
-            "build_types": build_types,
-            "device_restart_behavior": "basedOnReturnCode",
+    return _deep_merge_dicts(
+        copy.deepcopy(DEFAULT_CONFIG),
+        {
+            "id": app_id,
+            "name": app_name,
+            "intune": {"build_types": build_types},
         },
-    }
+    )
 
 
 def _patch_graph(

@@ -244,11 +244,14 @@ class TestDynamicInjection:
 
         assert cfg["psadt"]["app_vars"]["RequireAdmin"] is True
 
-    def test_require_admin_defaults_true_when_no_run_as_account(self):
-        """Tests that RequireAdmin defaults to true when run_as_account is absent."""
+    def test_require_admin_defaults_true_for_default_run_as_account(self):
+        """Tests that RequireAdmin defaults to true with default run_as_account."""
         from napt.config.loader import _inject_dynamic_values
 
-        cfg = {"psadt": {"app_vars": {}}}
+        cfg = {
+            "psadt": {"app_vars": {}},
+            "intune": {"run_as_account": "system"},
+        }
         _inject_dynamic_values(cfg)
 
         assert cfg["psadt"]["app_vars"]["RequireAdmin"] is True

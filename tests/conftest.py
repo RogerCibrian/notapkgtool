@@ -12,11 +12,15 @@ Fixture Scopes
 
 from __future__ import annotations
 
+import copy
 from pathlib import Path
 from typing import Any
 
 import pytest
 import yaml
+
+from napt.config.defaults import DEFAULT_CONFIG
+from napt.config.loader import _deep_merge_dicts
 
 
 @pytest.fixture
@@ -71,6 +75,23 @@ def create_yaml_file(tmp_test_dir: Path):
         return path
 
     return _create
+
+
+@pytest.fixture
+def make_config():
+    """Creates a config dict with all DEFAULT_CONFIG keys, overridden by provided values.
+
+    Usage:
+        config = make_config({"id": "test-app", "name": "Test App"})
+    """
+
+    def _make(overrides: dict[str, Any] | None = None) -> dict[str, Any]:
+        base = copy.deepcopy(DEFAULT_CONFIG)
+        if overrides:
+            return _deep_merge_dicts(base, overrides)
+        return base
+
+    return _make
 
 
 # =============================================================================

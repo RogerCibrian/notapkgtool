@@ -195,16 +195,18 @@ def _build_app_metadata(
     """
     logger = get_global_logger()
     package_dir = package_path.parent
-    intune: dict[str, Any] = config.get("intune", {})
+    intune: dict[str, Any] = config["intune"]
 
     base_name: str = config["name"]
     if build_types == "update_only":
-        prefix: str = intune.get("update_name_prefix", "[Update] ")
+        prefix: str = intune["update_name_prefix"]
         display_name = f"{prefix}{base_name}"
     else:
         display_name = base_name
     # Publisher: recipe intune.publisher override, then vendor directory name
     publisher: str = intune.get("publisher") or recipe_path.parent.name
+
+    # --- Optional Intune metadata (absent-means-skip) ---
     description: str = intune.get("description", "")
     privacy_url: str = intune.get("privacy_url", "")
     info_url: str = intune.get("info_url", "")
@@ -241,9 +243,9 @@ def _build_app_metadata(
     detection_content = base64.b64encode(detection_scripts[0].read_bytes()).decode()
     logger.verbose("UPLOAD", f"Detection script: {detection_scripts[0].name}")
 
-    enforce_sig: bool = intune.get("enforce_signature_check", False)
-    run_as_32_bit: bool = intune.get("run_as_32_bit", False)
-    run_as_account: str = intune.get("run_as_account", "system")
+    enforce_sig: bool = intune["enforce_signature_check"]
+    run_as_32_bit: bool = intune["run_as_32_bit"]
+    run_as_account: str = intune["run_as_account"]
 
     rules: list[dict[str, Any]] = [
         {
@@ -282,22 +284,14 @@ def _build_app_metadata(
             }
         )
 
-    install_command: str = intune.get(
-        "install_command",
-        "Invoke-AppDeployToolkit.exe -DeploymentType Install -DeployMode Silent",
-    )
-    uninstall_command: str = intune.get(
-        "uninstall_command",
-        "Invoke-AppDeployToolkit.exe -DeploymentType Uninstall -DeployMode Silent",
-    )
-    minimum_windows_release: str = intune.get(
-        "minimum_supported_windows_release", "Windows10_21H2"
-    )
+    install_command: str = intune["install_command"]
+    uninstall_command: str = intune["uninstall_command"]
+    minimum_windows_release: str = intune["minimum_supported_windows_release"]
 
     is_featured: bool = intune.get("is_featured", False)
-    allow_available_uninstall: bool = intune.get("allow_available_uninstall", True)
+    allow_available_uninstall: bool = intune["allow_available_uninstall"]
     device_restart_behavior: str = intune["device_restart_behavior"]
-    max_run_time_minutes: int = intune.get("max_run_time_minutes", 60)
+    max_run_time_minutes: int = intune["max_run_time_minutes"]
 
     payload: dict[str, Any] = {
         "@odata.type": "#microsoft.graph.win32LobApp",
@@ -476,7 +470,7 @@ def upload_package(recipe_path: Path) -> UploadResult:
     config = load_effective_config(recipe_path)
     app_id: str = config["id"]
     app_name: str = config["name"]
-    build_types: str = config.get("intune", {}).get("build_types", "both")
+    build_types: str = config["intune"]["build_types"]
 
     logger.verbose("UPLOAD", f"Starting upload for '{app_name}' ({app_id})")
     logger.verbose("UPLOAD", f"build_types: {build_types}")
