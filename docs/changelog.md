@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-04-05
+
 ### Added
 
 - **Automatic recipe validation in pipeline commands** - `napt discover`,
@@ -17,31 +19,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     config layer (code default, org.yaml, vendor defaults, or recipe) set
     each value. Helps debug unexpected configuration by tracing the full
     merge history
-- **`intune.is_featured` config key** - Controls whether the app is featured
-    in Company Portal. Configurable at org, vendor, or recipe level.
-    Defaults to `false`
-- **MSIX installer support** - NAPT now supports `.msix` installers as a third
-    installer type alongside MSI and EXE. MSIX metadata (display name, version,
-    architecture, package identity) is extracted from `AppxManifest.xml` inside
-    the package. Detection and requirements scripts query the AppX package
-    database; install and uninstall commands are auto-generated from manifest
-    metadata unless overridden with `psadt.override_msix_commands: true`
-- **MSIX install scope** - `intune.run_as_account` now controls which AppX
-    cmdlets are auto-generated for MSIX installers. `"system"` (default) uses
-    `Add-AppxProvisionedPackage` / `Remove-AppxProvisionedPackage` for
-    all-users provisioned installs. `"user"` uses `Add-AppxPackage` /
-    `Remove-AppxPackage` for per-user installs. Detection and requirements
-    scripts automatically query the correct store (`Get-AppxProvisionedPackage`
-    vs `Get-AppxPackage`) based on the same setting
-- **Scope-based `RequireAdmin` default** - `psadt.app_vars.RequireAdmin`
-    now defaults to `false` when `intune.run_as_account` is `"user"`.
-    PSADT errors if `RequireAdmin` is `true` but the process lacks admin
-    rights. Override explicitly in `psadt.app_vars` if your environment
-    grants local admin to users
-- **`psadt.override_msix_commands` config key** - When `true`, uses recipe
-    `psadt.install` and `psadt.uninstall` instead of the auto-generated MSIX
-    commands. Required when the default `Add-AppxPackage` / `Remove-AppxPackage`
-    commands are insufficient (e.g., apps needing license files or provisioning)
+- **MSIX installer support** - NAPT now supports `.msix` installers alongside
+    MSI and EXE. Metadata (display name, version, architecture, package
+    identity) is extracted from `AppxManifest.xml` inside the package.
+    Detection and requirements scripts query the AppX package database; install
+    and uninstall commands are auto-generated from manifest metadata unless
+    overridden with `psadt.override_msix_commands: true`. Install scope is
+    controlled by `intune.run_as_account`: `"system"` (default) uses
+    provisioned cmdlets (`Add-AppxProvisionedPackage` /
+    `Remove-AppxProvisionedPackage`); `"user"` uses per-user cmdlets
+    (`Add-AppxPackage` / `Remove-AppxPackage`). Detection and requirements
+    scripts automatically query the correct store based on the same setting.
+    `psadt.app_vars.RequireAdmin` defaults to `false` when scope is `"user"`
 - **`intunewin.release` config key** - Pin `IntuneWinAppUtil.exe` to a specific
     release for reproducible builds (e.g., `release: "1.8.6"`). Defaults to
     `"latest"`, which resolves the current release via GitHub API. Each version
@@ -49,14 +38,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`logging:` top-level section** - New optional section for per-recipe logging
     configuration. Supports `log_format` (`cmtrace`, `text`), `log_level`
     (`verbose`, `debug`), and `log_rotation_mb`
-- **New `intune:` fields** - `developer`, `owner`, `notes`, `logo_path`,
-    `minimum_supported_windows_release`, `install_command`, and
-    `uninstall_command` are now supported in the `intune:` section
-- **Configurable upload settings** - New `intune:` fields control Intune Graph
-    API upload behavior: `is_featured`, `allow_available_uninstall`,
-    `run_as_account`, `device_restart_behavior`, `max_run_time_minutes`,
-    `enforce_signature_check`, and `run_as_32_bit`. All fields are validated and
-    configurable at org, vendor, or recipe level
+- **New `intune:` fields** - Expanded metadata and upload behavior fields,
+    all configurable at org, vendor, or recipe level: `developer`, `owner`,
+    `notes`, `logo_path`, `minimum_supported_windows_release`,
+    `install_command`, `uninstall_command`, `is_featured` (Company Portal
+    featured app, defaults to `false`), `allow_available_uninstall`,
+    `device_restart_behavior`, `max_run_time_minutes`,
+    `enforce_signature_check`, and `run_as_32_bit`
 - **Sample recipe: `recipes/Microsoft/vscode.yaml`** - New example recipe for
     Visual Studio Code using the `api_json` strategy
 
@@ -103,9 +91,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `update_name_prefix`) are now each created, uploaded, and committed in
     sequence. Single-entry behavior for `"app_only"` and `"update_only"` is
     unchanged
-- Version cache check now uses semantic comparison instead of string equality,
-    so versions with a `v` prefix (e.g., `v1.2.3` vs `1.2.3`) are correctly
-    recognized as matching and won't re-download unnecessarily
+- **Version cache uses semantic comparison** - Versions with a `v` prefix
+    (e.g., `v1.2.3` vs `1.2.3`) are now correctly recognized as matching
+    and won't re-download unnecessarily
 
 ## [0.4.0] - 2026-03-08
 
@@ -221,7 +209,8 @@ Initial internal release.
 - **Robust Downloads** - Retry logic, atomic writes, SHA-256 verification, and conditional requests
 
 
-[Unreleased]: https://github.com/RogerCibrian/notapkgtool/compare/0.4.0...HEAD
+[Unreleased]: https://github.com/RogerCibrian/notapkgtool/compare/0.5.0...HEAD
+[0.5.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.4.0...0.5.0
 [0.4.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.3.1...0.4.0
 [0.3.1]: https://github.com/RogerCibrian/notapkgtool/compare/0.3.0...0.3.1
 [0.3.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.2.0...0.3.0
