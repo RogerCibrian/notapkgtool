@@ -203,10 +203,8 @@ def _build_app_metadata(
         display_name = f"{prefix}{base_name}"
     else:
         display_name = base_name
-    # Publisher: recipe intune.publisher override, then vendor directory name
-    publisher: str = intune.get("publisher") or recipe_path.parent.name
-
     # --- Optional Intune metadata (absent-means-skip) ---
+    publisher: str = intune.get("publisher") or recipe_path.parent.name
     description: str = intune.get("description", "")
     privacy_url: str = intune.get("privacy_url", "")
     info_url: str = intune.get("info_url", "")
@@ -288,7 +286,7 @@ def _build_app_metadata(
     uninstall_command: str = intune["uninstall_command"]
     minimum_windows_release: str = intune["minimum_supported_windows_release"]
 
-    is_featured: bool = intune.get("is_featured", False)
+    is_featured: bool = intune["is_featured"]
     allow_available_uninstall: bool = intune["allow_available_uninstall"]
     device_restart_behavior: str = intune["device_restart_behavior"]
     max_run_time_minutes: int = intune["max_run_time_minutes"]

@@ -10,6 +10,8 @@ Tests configuration loading and merging including:
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from napt.config.defaults import DEFAULT_CONFIG, ORG_YAML_TEMPLATE
@@ -232,15 +234,19 @@ class TestDynamicInjection:
 
         assert cfg["psadt"]["app_vars"]["RequireAdmin"] is False
 
-    def test_require_admin_explicit_value_not_overridden(self):
-        """Tests that an explicit RequireAdmin value is not overridden by injection."""
+    def test_require_admin_explicit_recipe_value_not_overridden(self):
+        """Tests that an explicit RequireAdmin from recipe is not overridden."""
         from napt.config.loader import _inject_dynamic_values
 
         cfg = {
             "psadt": {"app_vars": {"RequireAdmin": True}},
             "intune": {"run_as_account": "user"},
         }
-        _inject_dynamic_values(cfg)
+        provenance = {
+            "psadt": {"app_vars": {"RequireAdmin": "recipe"}},
+            "intune": {"run_as_account": "code_default"},
+        }
+        _inject_dynamic_values(cfg, provenance)
 
         assert cfg["psadt"]["app_vars"]["RequireAdmin"] is True
 
@@ -481,3 +487,41 @@ class TestValidationInLoader:
 
         assert recipe_result.status == "invalid"
         assert any("name" in err for err in recipe_result.errors)
+
+    def test_all_required_fields_validated(self):
+        """Tests that every required field produces a validation error when missing."""
+        from napt.validation import validate_config
+
+        # A complete valid config to selectively remove fields from
+        valid_config: dict[str, Any] = {
+            "apiVersion": "napt/v1",
+            "name": "Test App",
+            "id": "test-app",
+            "discovery": {
+                "strategy": "url_download",
+                "url": "https://example.com/app.msi",
+            },
+        }
+
+        # Top-level required fields
+        for field in ["apiVersion", "name", "id", "discovery"]:
+            incomplete = dict(valid_config)
+            del incomplete[field]
+            result = validate_config(incomplete)
+            assert (
+                result.status == "invalid"
+            ), f"Removing '{field}' should produce a validation error"
+            assert any(
+                field in err for err in result.errors
+            ), f"Error message should mention '{field}'"
+
+        # Nested required: discovery.strategy
+        no_strategy = dict(valid_config)
+        no_strategy["discovery"] = {"url": "https://example.com/app.msi"}
+        result = validate_config(no_strategy)
+        assert (
+            result.status == "invalid"
+        ), "Removing 'discovery.strategy' should produce a validation error"
+        assert any(
+            "strategy" in err for err in result.errors
+        ), "Error message should mention 'strategy'"
