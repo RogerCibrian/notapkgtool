@@ -14,7 +14,7 @@
 
 - **Python:** 3.13.5
 - **Virtual environment:** `.venv/`
-- **Shell:** PowerShell 5.1
+- **Shell:** PowerShell 7
 
 **Run Python tools directly:**
 ```powershell
@@ -26,13 +26,13 @@
 
 **Integration tests** (`tests/integration/`) require network access and download real dependencies. They are marked `@pytest.mark.integration`. Run unit tests during development; run the full suite before opening a PR.
 
-**Never use `&&`** in PowerShell 5.1. Use `;` or separate commands.
-
 ---
 
 ## Code Quality
 
 Use **ruff** + **black**. Fix all errors before committing. Never ignore errors. Configuration is in `pyproject.toml`.
+
+**Auto-formatting:** A `PostToolUse` hook (`.claude/hooks/lint_edited.py`) runs `ruff --fix` and `black` on every edit to `napt/**/*.py` and `tests/**/*.py`. Don't manually run the formatters on individual files after an Edit/Write — they've already been applied. The commands below are for bulk reformats and the final pre-commit `ruff check` verification.
 
 ```powershell
 .venv\Scripts\python.exe -m ruff check --fix napt/ tests/
@@ -125,6 +125,8 @@ All `napt/**/*.py` files require before docstring:
 
 **File order:** Shebang (if needed) → License → Module docstring → Imports → Code
 
+**Auto-injection:** A `PreToolUse` hook (`.claude/hooks/check_license_header.py`) auto-prepends the header to `Write` calls on `napt/**/*.py` when it's missing. The hook is shebang-aware (inserts after the shebang line if present). No manual action needed.
+
 ---
 
 ## Exceptions
@@ -175,103 +177,7 @@ Update docs when code changes affect user-facing behavior.
 
 ## Recipe Schema Changes
 
-When adding new recipe fields or modifying the YAML schema:
-
-### 1. Update Validation
-
-Add field to schema in `napt/validation.py`:
-
-```python
-_INSTALLED_CHECK_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
-    "new_field": (str, ["value1", "value2"], "field description"),
-    # type, allowed_values (or None), description
-}
-```
-
-### 2. Document in recipe-reference.md
-
-Add field documentation following the standard format:
-
-```markdown
-#### field_name
-
-**Type:** `string`
-**Required:** No
-**Default:** `"default_value"`
-**Allowed values:** `"value1"`, `"value2"`
-
-Description of what the field does and when to use it.
-```
-
-**Field documentation order:** Type → Required → Default (if applicable) → Allowed values (if applicable) → Description → Examples (if helpful)
-
-### 3. Categorize the new setting
-
-Every config value belongs to exactly one category. Use this flowchart:
-
-```
-Is this field set the same way across all/most recipes?
-  YES → Would an org admin configure it in org.yaml?
-    YES → Org-policy
-    NO  → Is it required for the feature to work?
-      YES → Recipe-required
-      NO  → Absent-means-skip
-  NO  → Is it specific to a discovery/build strategy?
-    YES → Strategy-specific
-    NO  → Does it depend on other config values?
-      YES → Computed/derived
-      NO  → Absent-means-skip
-```
-
-### 4. Follow the checklist for that category
-
-**Org-policy** (`run_as_account`, `log_format`, `build_types`):
-- [ ] Add to `DEFAULT_CONFIG` in `napt/config/defaults.py`
-- [ ] Add to `ORG_YAML_TEMPLATE` in `napt/config/defaults.py`
-- [ ] Add validation in `napt/validation.py`
-- [ ] Access with `config["section"]["key"]` (no fallback)
-- [ ] Document in `docs/recipe-reference.md`
-
-A test (`test_org_yaml_template_covers_all_sections`) validates that all sections
-in `DEFAULT_CONFIG` are mentioned in `ORG_YAML_TEMPLATE`.
-
-**Strategy-specific** (`timeout`, `prerelease`, `method`):
-- [ ] Add module constant `_DEFAULT_X` at top of the strategy module
-- [ ] Access with `source.get("key", _DEFAULT_X)`
-- [ ] Add to strategy's `validate_config()` if required for that strategy
-- [ ] Document in `docs/recipe-reference.md`
-
-**Recipe-required** (`name`, `id`, `discovery.strategy`):
-- [ ] Add validation in `napt/validation.py` (error if missing)
-- [ ] Access with `config["key"]` (no fallback — KeyError = validation bug)
-- [ ] Document as required in `docs/recipe-reference.md`
-
-**Absent-means-skip** (`description`, `logo_path`, `notes`):
-- [ ] Access with `config.get("key")` or `if "key" in config:`
-- [ ] Add validation in `napt/validation.py` (type/value checks, not presence)
-- [ ] Document as optional in `docs/recipe-reference.md`
-
-**Computed/derived** (`RequireAdmin`, `AppScriptDate`):
-- [ ] Add logic to `_inject_dynamic_values` in `napt/config/loader.py`
-- [ ] Use provenance to detect explicit overrides vs defaults
-- [ ] Document the computed behavior in `docs/recipe-reference.md`
-
-### 5. Verify Implementation
-
-Check these files to ensure the field is actually used:
-- Search codebase: `grep -r "new_field" napt/`
-- Verify it's read from config in relevant modules
-- Check if field exists in defaults but isn't used (planned feature)
-
-### 6. Update Examples
-
-Add field to example recipes in `docs/common-tasks.md` if it's commonly used,
-or note it as optional in relevant strategy examples.
-
-**Important:** All documented fields should either:
-- Be validated in `validation.py` AND used in the code
-- Be clearly marked as planned/future functionality
-- Be removed if no longer needed
+When adding a new recipe field or modifying the YAML schema, run `/add-recipe-field <name>`. The skill walks validation (`napt/validation.py`), documentation (`docs/recipe-reference.md`), categorization (org-policy / strategy-specific / recipe-required / absent-means-skip / computed), and the per-category checklist.
 
 ---
 
@@ -285,62 +191,7 @@ See `docs/branching.md` for full workflow. PR template at `.github/PULL_REQUEST_
 
 **PRs:** Title in conventional commit format. Use `gh pr create` to create PRs from CLI. PR descriptions should describe what changed and why, not include setup instructions or how-to guides.
 
-### Release Workflow
-
-[Semver 2.0.0](https://semver.org/spec/v2.0.0.html), no "v" prefix.
-
-**Pre-release checklist:**
-- [ ] Version updated in `pyproject.toml`
-- [ ] Version updated in `napt/__init__.py`
-- [ ] `docs/changelog.md` updated following [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/)
-- [ ] `docs/changelog.md` has `[Unreleased]` section ready for next version
-- [ ] All tests passing
-- [ ] PR merged to main
-- [ ] Git tag created and pushed
-
-**Release steps:**
-1. Create PR `chore/prepare-release-X.Y.Z` updating versions and changelog
-2. Squash and merge
-3. Tag: `git tag -a X.Y.Z -m "Release X.Y.Z"` then `git push origin X.Y.Z`
-4. Create release: `gh release create X.Y.Z --title "NAPT X.Y.Z" --body "..."`
-
-### Release Notes Template
-
-**Title:** `NAPT {version}` (e.g., "NAPT 0.3.0")
-
-**Required sections (in order):**
-1. **Hero statement** - One sentence describing the release theme
-2. **⚠️ Breaking Changes** - With migration notes (omit if none)
-3. **✨ What's New** - Features from changelog, grouped by category
-4. **🐛 Bug Fixes** - Important fixes (omit if none)
-5. **🔗 Links** - Quick start, full changelog, documentation
-
-**Optional sections:**
-- **🚀 Quick Start** - Code examples for major new capabilities
-- **📦 What You Can Do Now** - Workflow checklist (for major releases)
-
-**Emoji categories for features:**
-- 🔨 Build & Packaging
-- 🔍 Discovery
-- 📋 Recipes/Configuration
-
-**Writing style:**
-- Use active voice and present tense
-- Be concise - summarize changelog, don't copy verbatim
-- Include code examples for major features
-- Highlight breaking changes clearly with migration instructions
-
-**What NOT to include:**
-- Internal refactorings (unless user-facing)
-- Trivial fixes (unless security/critical)
-- Work-in-progress features
-- Overly technical implementation details
-
-**Links to include:**
-- [Quick Start Guide](https://rogercibrian.github.io/notapkgtool/quick-start/)
-- [Full Changelog](https://rogercibrian.github.io/notapkgtool/changelog/)
-- [Documentation](https://rogercibrian.github.io/notapkgtool/)
-- [Sample Recipes](https://github.com/RogerCibrian/notapkgtool/tree/main/recipes)
+**Releases:** Run `/release X.Y.Z`. Phase 1 opens the release PR (version bumps in `pyproject.toml` + `napt/__init__.py`, changelog promotion). Phase 2 (after the PR is squash-merged) tags and publishes the GitHub release. The skill includes the release notes template ([Semver 2.0.0](https://semver.org/spec/v2.0.0.html), no `v` prefix).
 
 ---
 
@@ -372,49 +223,7 @@ Follow [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/). Focus on 
 
 ## Roadmap
 
-Update `docs/roadmap.md` when user mentions deferred features ("add to roadmap", "let's do this later").
-
-```markdown
-#### Feature Name
-
-**Status**: 💡 Idea
-**Complexity**: Low (few hours to 1 day)
-**Value**: High
-
-**Description**: One-paragraph description of what the feature does and
-why it matters. Wrap at 80 chars.
-
-**Benefits**:
-
-- Benefit 1
-- Benefit 2
-
-**Prerequisites**: (optional — external things that must exist before work starts)
-
-- Item 1
-
-**Dependencies**: (optional — NAPT features or technical blockers)
-
-- Item 1
-
-**Related**: Link or inline note (no bullet list)
-```
-
-**Field rules:**
-- Use `####` (H4) headings — no status emoji in the header
-- `**Status**`, `**Complexity**`, `**Value**` have no blank lines between them; blank line after the group
-- Complexity always includes a time estimate for active/idea entries: `Low (few hours to 1 day)`, `Medium (1-3 days)`, `High (3-5 days)`, `Very High (5-10 days)`. Omit the estimate for completed entries (e.g., just `High`)
-- `**Benefits**:` always has a blank line before the bullet list
-- `**Prerequisites**:` — things that must exist externally before starting (e.g., Azure CLI, stable schema)
-- `**Dependencies**:` — technical blockers or other NAPT features that must be built first
-- `**Related**:` — inline note or link, no bullet list
-- For completed entries use `**Changes**:` (what was done) or `**Notes**:` (implementation details) instead of Benefits
-
-Status progression: 💡 Idea → 🔬 Investigating → 📋 Ready → 🚧 In Progress → ✅ Completed
-
-**Categories:** Group by: User-Facing Features, Code Quality & Validation, Technical Enhancements.
-
-**Don't add:** Bug reports (use issues), small enhancements (just do them), vague ideas without clear value.
+When the user mentions deferred features ("add to roadmap", "let's do this later"), run `/roadmap`. The skill enforces the standard entry structure (Status / Complexity / Value / Description / Benefits / Prerequisites / Dependencies / Related), the status-progression vocabulary, and category placement (User-Facing Features / Code Quality & Validation / Technical Enhancements) in `docs/roadmap.md`.
 
 ---
 
