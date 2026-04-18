@@ -10,7 +10,7 @@ discovery:
   download_url_path: "download_url"
 
 # MSIX installers auto-generate install/uninstall commands from manifest:
-#   Install:   Add-AppxPackage -Path "$dirFiles\<filename>"
+#   Install:   Add-AppxPackage -Path "$($adtSession.DirFiles)\<filename>"
 #   Uninstall: Get-AppxPackage -Name "<identity_name>" | Remove-AppxPackage
 # Set psadt.override_msix_commands: true to use custom commands instead.
 

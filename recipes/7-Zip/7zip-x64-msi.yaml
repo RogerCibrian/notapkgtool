@@ -23,7 +23,7 @@ psadt:
   install: |
     # Install 7-Zip MSI with system-wide deployment
     # Note: Filename uses compact version (e.g., 7z2501-x64.msi for v25.01)
-    Start-ADTMsiProcess -Action Install -Path "$dirFiles\7z*-x64.msi" -Parameters "ALLUSERS=1"
+    Start-ADTMsiProcess -Action Install -FilePath "7z*-x64.msi" -ArgumentList "ALLUSERS=1"
   uninstall: |
     # Uninstall 7-Zip automatically (handles MSI ProductCode lookup)
     Uninstall-ADTApplication -Name "7-Zip"

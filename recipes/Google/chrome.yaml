@@ -13,7 +13,7 @@ psadt:
     AppVersion: "${discovered_version}"
   install: |
     # Install Chrome MSI with system-wide deployment
-    Start-ADTMsiProcess -Action Install -Path "$dirFiles\googlechromestandaloneenterprise64.msi" -Parameters "ALLUSERS=1"
+    Start-ADTMsiProcess -Action Install -FilePath "googlechromestandaloneenterprise64.msi" -ArgumentList "ALLUSERS=1"
   uninstall: |
     # Uninstall Chrome automatically (handles MSI ProductCode lookup)
     Uninstall-ADTApplication -Name "Google Chrome"
