@@ -23,7 +23,7 @@ psadt:
   install: |
     # Install 7-Zip EXE with system-wide deployment
     # Note: Filename uses compact version (e.g., 7z2501.exe for v25.01)
-    Start-ADTExecutable -Path "$dirFiles\7z*.exe" -Parameters "/S"
+    Start-ADTProcess -FilePath "7z*.exe" -ArgumentList "/S"
   uninstall: |
     # Uninstall 7-Zip automatically (handles registry lookup)
     Uninstall-ADTApplication -Name "7-Zip"
