@@ -1,10 +1,35 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python -m ruff check:*)",
-      "Bash(python -m pytest:*)",
-      "Bash(ruff check:*)",
-      "Bash(black:*)"
+      "Bash(.venv/Scripts/python.exe -m pytest:*)",
+      "Bash(.venv/Scripts/python.exe -m ruff check:*)",
+      "Bash(.venv/Scripts/python.exe -m black:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".venv/Scripts/python.exe .claude/hooks/check_license_header.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".venv/Scripts/python.exe .claude/hooks/lint_edited.py",
+            "timeout": 30
+          }
+        ]
+      }
     ]
   }
 }

@@ -113,6 +113,7 @@ from napt.exceptions import ConfigError
 @dataclass(frozen=True)
 class LoadContext:
     """Metadata describing how the config was resolved.
+
     Useful for debugging and logging.
     """
 

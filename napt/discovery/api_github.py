@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""GitHub API discovery strategy for NAPT.
+r"""GitHub API discovery strategy for NAPT.
 
 This is a VERSION-FIRST strategy that queries the GitHub API to get version
 and download URL WITHOUT downloading the installer. This enables fast version
@@ -160,7 +160,7 @@ _DEFAULT_PRERELEASE = False
 
 
 class ApiGithubStrategy:
-    """Discovery strategy for GitHub releases.
+    r"""Discovery strategy for GitHub releases.
 
     Configuration example:
         source:
@@ -176,12 +176,12 @@ class ApiGithubStrategy:
         self,
         app_config: dict[str, Any],
     ) -> RemoteVersion:
-        """Fetch latest release from GitHub API without downloading
-        (version-first path).
+        r"""Fetches latest release from GitHub API without downloading.
 
-        This method queries the GitHub API for the latest release and extracts
-        the version from the tag name and the download URL from matching assets.
-        If the version matches cached state, the download can be skipped entirely.
+        Version-first path: queries the GitHub API for the latest release and
+        extracts the version from the tag name and the download URL from
+        matching assets. If the version matches cached state, the download
+        can be skipped entirely.
 
         Args:
             app_config: App configuration containing discovery.repo and

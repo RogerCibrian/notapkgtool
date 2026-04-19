@@ -203,12 +203,11 @@ class ApiJsonStrategy:
         self,
         app_config: dict[str, Any],
     ) -> RemoteVersion:
-        """Query JSON API for version and download URL without downloading
-        (version-first path).
+        """Queries JSON API for version and download URL without downloading.
 
-        This method calls a JSON API, extracts version and download URL using
-        JSONPath expressions. If the version matches cached state, the download
-        can be skipped entirely.
+        Version-first path: calls a JSON API, extracts version and download URL
+        using JSONPath expressions. If the version matches cached state, the
+        download can be skipped entirely.
 
         Args:
             app_config: App configuration containing discovery.api_url,
