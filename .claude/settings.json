@@ -1,13 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python -m ruff check:*)",
-      "Bash(python -m pytest:*)",
-      "Bash(ruff check:*)",
-      "Bash(black:*)",
-      "Bash(.venv/Scripts/python.exe -m pytest *)",
-      "Bash(.venv/Scripts/python.exe -m ruff check *)",
-      "Bash(.venv/Scripts/python.exe -m black *)"
+      "Bash(.venv/Scripts/python.exe -m pytest:*)",
+      "Bash(.venv/Scripts/python.exe -m ruff check:*)",
+      "Bash(.venv/Scripts/python.exe -m black:*)"
     ]
   },
   "hooks": {

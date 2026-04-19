@@ -31,8 +31,8 @@ Report which phase you detected before proceeding.
 
 3. **Run lint and tests** sequentially:
    ```
-   .venv\Scripts\python.exe -m ruff check napt/ tests/
-   .venv\Scripts\python.exe -m pytest tests/ -q
+   .venv/Scripts/python.exe -m ruff check napt/ tests/
+   .venv/Scripts/python.exe -m pytest tests/ -q
    ```
    If anything fails, stop and report. Do not continue.
 

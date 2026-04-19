@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Web scraping discovery strategy for NAPT.
+r"""Web scraping discovery strategy for NAPT.
 
 This is a VERSION-FIRST strategy that scrapes vendor download pages to find
 download links and extract version information from those links. This enables
@@ -198,12 +198,12 @@ class WebScrapeStrategy:
         self,
         app_config: dict[str, Any],
     ) -> RemoteVersion:
-        """Scrape download page for version and URL without downloading
-        (version-first path).
+        r"""Scrapes download page for version and URL without downloading.
 
-        This method scrapes an HTML page, finds a download link using CSS selector
-        or regex, extracts the version from that link, and returns version info.
-        If the version matches cached state, the download can be skipped entirely.
+        Version-first path: scrapes an HTML page, finds a download link using a
+        CSS selector or regex, extracts the version from that link, and returns
+        version info. If the version matches cached state, the download can be
+        skipped entirely.
 
         Args:
             app_config: App configuration containing discovery.page_url,

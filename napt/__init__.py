@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""NAPT - Not a Pkg Tool
+"""Python-based CLI tool for Windows application packaging and Intune deployment.
 
-A Python-based CLI tool for automating Windows application packaging and
-deployment to Microsoft Intune using PSAppDeployToolkit (PSADT).
+Uses PSAppDeployToolkit (PSADT) to automate packaging and deployment to
+Microsoft Intune.
 
 NAPT provides:
 

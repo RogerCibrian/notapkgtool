@@ -3,7 +3,7 @@ name: ship
 description: Wrap up current work - lint, test, branch (if needed), update docs/changelog, commit, and create PR
 disable-model-invocation: true
 user-invocable: true
-allowed-tools: Bash(git *) Bash(*python* -m *) Bash(gh *) Read Edit Glob Grep
+allowed-tools: Bash(git *) Bash(*python* -m *) Bash(gh *) Read Edit Glob Grep Agent
 argument-hint: "commit type: feat|fix|refactor|docs|test|chore"
 ---
 
@@ -21,12 +21,11 @@ one-line summary of the changes.
 
 ## Step 2: Lint and format
 
-Run these sequentially using the platform's Python path (`.venv/Scripts/python.exe`
-on Windows, `.venv/bin/python` on macOS/Linux):
+Run these sequentially:
 ```
-python -m ruff check --fix napt/ tests/
-python -m black napt/ tests/
-python -m ruff check napt/ tests/
+.venv/Scripts/python.exe -m ruff check --fix napt/ tests/
+.venv/Scripts/python.exe -m black napt/ tests/
+.venv/Scripts/python.exe -m ruff check napt/ tests/
 ```
 
 If ruff or black made changes, tell the user what was fixed.
@@ -35,7 +34,7 @@ If any lint errors remain that --fix couldn't resolve, stop and report them.
 ## Step 3: Run tests
 
 ```
-python -m pytest tests/ -q
+.venv/Scripts/python.exe -m pytest tests/ -q
 ```
 
 Run the full test suite including integration tests. If tests fail, stop and
@@ -69,7 +68,39 @@ If user-facing changes exist:
 If changes are purely internal (refactor, test, chore with no user impact),
 skip changelog and doc updates. Tell the user you skipped this and why.
 
-## Step 6: Commit
+## Step 6: Run napt-reviewer
+
+Invoke the `napt-reviewer` subagent via the Agent tool to review the full
+branch delta against CLAUDE.md conventions, docs/changelog requirements, and
+project principles (including forward-looking consequences).
+
+- `subagent_type`: `napt-reviewer`
+- `description`: "Review branch against CLAUDE.md"
+- `prompt`: "Review the current branch against CLAUDE.md conventions. This
+  is a pre-commit review — uncommitted changes in the working tree are part
+  of what will ship. Use `git diff main` to capture the full delta including
+  uncommitted changes. Report findings with severity and a final verdict."
+
+**Echo the reviewer's full output verbatim** as your own text output before
+doing anything else. The subagent's output renders as a collapsed box in the
+terminal by default, so the user can't see findings without expanding it.
+Repeating the output as main-thread text makes it visible inline. Preserve
+the reviewer's severity grouping and final verdict line.
+
+Then, based on the findings:
+
+- **If the review is entirely clean** (no `[BLOCKING]`, no `[SUGGESTION]`,
+  no `[NIT]`, and verdict is `ship`), continue to Step 7 without prompting.
+- **If the reviewer returns any finding at any severity** — including
+  `[NIT]` — STOP and ask the user how to proceed. Do not auto-fix, do not
+  auto-commit, do not continue to Step 7. Ask the user per-finding or
+  collectively: "How would you like to proceed — address any of these before
+  committing, skip them, or override?" Wait for their direction.
+
+Never attempt to fix findings on the user's behalf without explicit
+instruction. The reviewer surfaces; the user decides — including on nits.
+
+## Step 7: Commit
 
 1. Stage all relevant changed files by name (not `git add -A`). Never stage
    .env, credentials, or secrets files.
@@ -81,7 +112,7 @@ skip changelog and doc updates. Tell the user you skipped this and why.
    from doc updates). Use your judgment.
 4. Commit.
 
-## Step 7: Push and create PR
+## Step 8: Push and create PR
 
 1. Push the branch: `git push -u origin <branch-name>`
 2. Create the PR using `gh pr create` with:
