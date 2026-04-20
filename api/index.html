@@ -1748,7 +1748,7 @@
 </ul>
 <h2 id="key-concepts">Key Concepts</h2>
 <ul>
-<li><strong>Discovery Strategies:</strong> Protocol-based, stateless, registered in global registry. Two paths: version-first (api_github, api_json, web_scrape) and file-first (url_download with ETag)</li>
+<li><strong>Discovery Strategies:</strong> Protocol-based, stateless, registered in global registry (api_github, api_json, web_scrape). All return a <code>RemoteVersion</code> from configuration alone. The orchestrator runs the result through <code>resolve_with_cache</code> to skip the download when the version is unchanged. <code>url_download</code> is a separate flow (not a registered strategy) because it must download the file to determine the version.</li>
 <li><strong>Configuration:</strong> 3-layer system (org → vendor → recipe) with deep merging</li>
 <li><strong>State Management:</strong> Tracks versions in <code>state/versions.json</code> for caching</li>
 <li><strong>Exceptions:</strong> All NAPT domain errors use custom exceptions inheriting from <code>NAPTError</code> (ConfigError, NetworkError, PackagingError) - allows catching all NAPT errors or specific types</li>
