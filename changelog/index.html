@@ -1398,6 +1398,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Unreleased">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1435,7 +1452,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#fixed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1552,7 +1569,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_1" class="md-nav__link">
+  <a href="#fixed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1602,7 +1619,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_2" class="md-nav__link">
+  <a href="#fixed_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1752,6 +1769,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Unreleased">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1789,7 +1823,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#fixed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1906,7 +1940,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_1" class="md-nav__link">
+  <a href="#fixed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1956,7 +1990,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_2" class="md-nav__link">
+  <a href="#fixed_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -2024,6 +2058,10 @@
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 <h2 id="unreleased"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.5.0...HEAD">Unreleased</a></h2>
+<h3 id="fixed">Fixed</h3>
+<ul>
+<li>Fixed crash when an MSIX manifest's <code>&lt;PublisherDisplayName/&gt;</code> element is present but contains no text. Publisher now defaults to an empty string in that case instead of triggering a downstream <code>TypeError</code>.</li>
+</ul>
 <h2 id="050-2026-04-05"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.4.0...0.5.0">0.5.0</a> - 2026-04-05</h2>
 <h3 id="added">Added</h3>
 <ul>
@@ -2086,7 +2124,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
     <code>directories.discover</code>, <code>directories.build</code>, and <code>directories.package</code>.
     Update <code>defaults/org.yaml</code> if you set these keys</li>
 </ul>
-<h3 id="fixed">Fixed</h3>
+<h3 id="fixed_1">Fixed</h3>
 <ul>
 <li><strong>Cached installer filename now survives re-runs</strong> - NAPT stores the actual
     downloaded filename in state after each download. On subsequent runs,
@@ -2183,7 +2221,7 @@ command that produces and the command that consumes the directory</li>
 <li><strong>BREAKING: Recipe Format Change</strong> - Changed recipe format from <code>apps:</code> array to <code>app:</code> single object. Recipes now define a single application per file instead of an array. This simplifies the schema and matches actual usage (only one app was ever processed per recipe).</li>
 <li><strong>Documentation Rendering</strong> - Fixed module docstrings to follow Google-style format with proper indentation for mkdocstrings</li>
 </ul>
-<h3 id="fixed_1">Fixed</h3>
+<h3 id="fixed_2">Fixed</h3>
 <ul>
 <li>Fixed ETag preservation bug causing alternating download/cached behavior in url_download strategy</li>
 <li>Fixed docstring formatting issues across multiple modules (missing blank lines, incorrect Args sections)</li>
@@ -2206,7 +2244,7 @@ command that produces and the command that consumes the directory</li>
 <li><strong>Recipe Format</strong> - PSADT <code>install</code>/<code>uninstall</code> blocks now generate PSAppDeployToolkit v4 scripts</li>
 <li><strong>Console Output</strong> - Replaced Unicode symbols with ASCII for Windows compatibility (<code>✓</code> → <code>[OK]</code>, etc.)</li>
 </ul>
-<h3 id="fixed_2">Fixed</h3>
+<h3 id="fixed_3">Fixed</h3>
 <ul>
 <li><strong>PSADT Template Handling</strong> - Correctly identifies and copies PSAppDeployToolkit_Template_v4.zip files</li>
 <li><strong>ETag Preservation</strong> - Fixed bug causing alternating download/cached behavior in url_download strategy</li>
