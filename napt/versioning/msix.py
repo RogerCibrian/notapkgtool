@@ -197,7 +197,7 @@ def extract_msix_metadata(file_path: str | Path) -> MSIXMetadata:
     publisher_node = properties.find(f"{{{_MANIFEST_NS}}}PublisherDisplayName")
 
     display_name = display_name_node.text if display_name_node is not None else ""
-    publisher = publisher_node.text if publisher_node is not None else ""
+    publisher = (publisher_node.text or "") if publisher_node is not None else ""
 
     if not display_name:
         raise PackagingError(f"Properties DisplayName not found in {msix_path.name}.")

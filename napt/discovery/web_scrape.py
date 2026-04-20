@@ -154,13 +154,13 @@ class WebScrapeStrategy:
         logger.verbose("DISCOVERY", f"Fetching page: {page_url}")
         try:
             response = requests.get(page_url, timeout=30)
-            response.raise_for_status()
-        except requests.exceptions.HTTPError as err:
-            raise NetworkError(
-                f"Failed to fetch page: {response.status_code} {response.reason}"
-            ) from err
         except requests.exceptions.RequestException as err:
             raise NetworkError(f"Failed to fetch page: {err}") from err
+
+        if not response.ok:
+            raise NetworkError(
+                f"Failed to fetch page: {response.status_code} {response.reason}"
+            )
 
         html_content = response.text
         logger.verbose("DISCOVERY", f"Page fetched ({len(html_content)} bytes)")
@@ -180,7 +180,7 @@ class WebScrapeStrategy:
 
             # Get href attribute
             href = element.get("href")
-            if not href:
+            if not isinstance(href, str) or not href:
                 raise ConfigError(
                     f"Element matched by {link_selector!r} has no href attribute"
                 )
@@ -216,6 +216,12 @@ class WebScrapeStrategy:
                 raise ConfigError(
                     f"Invalid link_pattern regex: {link_pattern!r}"
                 ) from err
+
+        else:
+            raise ConfigError(
+                "web_scrape strategy requires either 'discovery.link_selector' or "
+                "'discovery.link_pattern' in config"
+            )
 
         logger.verbose("DISCOVERY", f"Download URL: {download_url}")
 

@@ -184,13 +184,13 @@ class ApiJsonStrategy:
                     json=body,
                     timeout=timeout,
                 )
-            response.raise_for_status()
-        except requests.exceptions.HTTPError as err:
-            raise NetworkError(
-                f"API request failed: {response.status_code} {response.reason}"
-            ) from err
         except requests.exceptions.RequestException as err:
             raise NetworkError(f"Failed to call API: {err}") from err
+
+        if not response.ok:
+            raise NetworkError(
+                f"API request failed: {response.status_code} {response.reason}"
+            )
 
         logger.verbose("DISCOVERY", f"API response: {response.status_code} OK")
 

@@ -45,7 +45,7 @@ import json
 from pathlib import Path
 import re
 import shutil
-from typing import Any
+from typing import Any, cast
 
 from napt.build.msix_scripts import (
     MSIXDetectionConfig,
@@ -54,6 +54,7 @@ from napt.build.msix_scripts import (
     generate_msix_requirements_script,
 )
 from napt.build.registry_scripts import (
+    ArchitectureMode,
     DetectionConfig,
     RequirementsConfig,
     generate_detection_script,
@@ -467,7 +468,7 @@ def _resolve_app_info(
     version: str,
     msi_metadata: MSIMetadata | None,
     msix_metadata: MSIXMetadata | None = None,
-) -> tuple[str, str]:
+) -> tuple[str, ArchitectureMode]:
     """Resolve app name and architecture for script generation.
 
     Determines the correct display name and architecture from installer
@@ -549,7 +550,7 @@ def _resolve_app_info(
             "MSI installers.",
         )
 
-    expected_architecture: str = "any"
+    expected_architecture: ArchitectureMode = "any"
 
     if installer_ext == ".msi":
         assert msi_metadata is not None  # guaranteed by build_package
@@ -601,7 +602,9 @@ def _resolve_app_info(
         logger.verbose("BUILD", f"Using intune.detection.display_name: {app_name}")
 
         if detection_settings.get("architecture"):
-            expected_architecture = detection_settings["architecture"]
+            expected_architecture = cast(
+                ArchitectureMode, detection_settings["architecture"]
+            )
             logger.verbose(
                 "BUILD",
                 f"Using intune.detection.architecture: {expected_architecture}",
