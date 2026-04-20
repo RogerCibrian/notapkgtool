@@ -159,24 +159,21 @@ class ApiGithubStrategy:
 
         try:
             response = requests.get(api_url, headers=headers, timeout=30)
-            response.raise_for_status()
-        except requests.exceptions.HTTPError as err:
-            if response.status_code == 404:
-                raise NetworkError(
-                    f"Repository {repo!r} not found or has no releases"
-                ) from err
-            elif response.status_code == 403:
-                raise NetworkError(
-                    f"GitHub API rate limit exceeded. Consider using a token. "
-                    f"Status: {response.status_code}"
-                ) from err
-            else:
-                raise NetworkError(
-                    f"GitHub API request failed: {response.status_code} "
-                    f"{response.reason}"
-                ) from err
         except requests.exceptions.RequestException as err:
             raise NetworkError(f"Failed to fetch GitHub release: {err}") from err
+
+        if response.status_code == 404:
+            raise NetworkError(f"Repository {repo!r} not found or has no releases")
+        elif response.status_code == 403:
+            raise NetworkError(
+                f"GitHub API rate limit exceeded. Consider using a token. "
+                f"Status: {response.status_code}"
+            )
+        elif not response.ok:
+            raise NetworkError(
+                f"GitHub API request failed: {response.status_code} "
+                f"{response.reason}"
+            )
 
         release_data = response.json()
 

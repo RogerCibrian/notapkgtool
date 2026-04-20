@@ -2,6 +2,7 @@
   "permissions": {
     "allow": [
       "Bash(.venv/Scripts/python.exe -m pytest:*)",
+      "Bash(.venv/Scripts/python.exe -m pyright:*)",
       "Bash(.venv/Scripts/python.exe -m ruff check:*)",
       "Bash(.venv/Scripts/python.exe -m black:*)"
     ]

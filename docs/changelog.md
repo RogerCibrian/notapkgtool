@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed crash when an MSIX manifest's `<PublisherDisplayName/>` element is present but contains no text. Publisher now defaults to an empty string in that case instead of triggering a downstream `TypeError`.
+
 ## [0.5.0] - 2026-04-05
 
 ### Added

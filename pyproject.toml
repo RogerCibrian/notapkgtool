@@ -13,7 +13,6 @@ classifiers = [
     "Environment :: Console",
     "Intended Audience :: Information Technology",
     "Intended Audience :: System Administrators",
-    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
@@ -53,7 +52,8 @@ include = [
 ]
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.3.5"
+pytest = "^9.0.3"
+pyright = "^1.1.408"
 ruff = "^0.13.0"
 black = "^26.3.1"
 requests-mock = "^1.12.1"
@@ -61,6 +61,7 @@ mkdocs = "^1.6.1"
 mkdocs-material = "^9.6.23"
 mkdocstrings = "^0.30.1"
 mkdocstrings-python = "^1.18.2"
+griffe = "^1.14.0"  # pin to 1.x: mkdocstrings-python 1.x doesn't declare upper bound on griffe (https://github.com/mkdocstrings/python/issues), and griffe 2.x renamed/removed exports it relies on
 
 # -----------------------------
 # Formatting (Black)
@@ -97,6 +98,16 @@ convention = "google"
 known-first-party = ["napt"]
 combine-as-imports = true
 force-sort-within-sections = true
+
+# -----------------------------
+# Type Checking (Pyright)
+# -----------------------------
+[tool.pyright]
+include = ["napt"]
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.11"
+typeCheckingMode = "standard"
 
 # -----------------------------
 # Pytest

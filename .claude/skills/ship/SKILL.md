@@ -19,17 +19,19 @@ Run these in parallel:
 Tell the user what you found: branch name, number of files changed, and a
 one-line summary of the changes.
 
-## Step 2: Lint and format
+## Step 2: Lint, format, and type-check
 
 Run these sequentially:
 ```
 .venv/Scripts/python.exe -m ruff check --fix napt/ tests/
 .venv/Scripts/python.exe -m black napt/ tests/
 .venv/Scripts/python.exe -m ruff check napt/ tests/
+.venv/Scripts/python.exe -m pyright
 ```
 
 If ruff or black made changes, tell the user what was fixed.
 If any lint errors remain that --fix couldn't resolve, stop and report them.
+If pyright reports new errors compared to `main` (use `git diff main` context to judge whether they're pre-existing or introduced by this branch), stop and report them. Pre-existing errors should not block the ship.
 
 ## Step 3: Run tests
 

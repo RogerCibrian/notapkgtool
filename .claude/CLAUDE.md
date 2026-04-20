@@ -51,6 +51,22 @@ Use **ruff** + **black**. Fix all errors before committing. Never ignore errors.
 
 ---
 
+## Type Checking
+
+Use **pyright** for static type checking. Configuration is in `pyproject.toml` under `[tool.pyright]`. Run before committing when you've touched typed code:
+
+```powershell
+.venv\Scripts\python.exe -m pyright
+```
+
+Fix new errors before committing. Don't add `# type: ignore` to silence pyright unless the underlying error is genuinely unfixable (e.g., an upstream library bug); if used, leave a brief comment naming why.
+
+**`pythonVersion = "3.11"` is intentional.** Pyright type-checks against the *lowest* supported Python version (matches `requires-python = ">=3.11"`), not the dev-machine version. This catches bugs that would only surface on 3.11 but pass silently on 3.13+. Don't bump it without also bumping `requires-python`.
+
+**`pythonPlatform` is intentionally unset.** NAPT is declared `Operating System :: OS Independent`, so each developer's pyright run uses their own platform's stubs. If we ever discover unguarded platform-specific imports, switch to `pythonPlatform = "All"` to force `if sys.platform` guards.
+
+---
+
 ## Docstrings
 
 Use [Google Python Style Guide 3.8](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings) with:
