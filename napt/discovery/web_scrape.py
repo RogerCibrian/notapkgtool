@@ -12,154 +12,60 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-r"""Web scraping discovery strategy for NAPT.
+r"""Web scraping discovery strategy.
 
-This is a VERSION-FIRST strategy that scrapes vendor download pages to find
-download links and extract version information from those links. This enables
-version discovery for vendors that don't provide APIs or static URLs.
+Fetches a vendor download page, locates a download link, and extracts
+the version from that link's URL. Use this when a vendor has neither a
+JSON API nor a GitHub releases feed.
 
-Key Advantages:
-
-- Discovers versions from vendor download pages
-- Works for vendors without APIs or GitHub releases
-- Version-first caching (can skip downloads when version unchanged)
-- Supports both CSS selectors (recommended) and regex (fallback)
-- No dependency on HTML structure stability (with good selectors)
-- Handles relative and absolute URLs automatically
-
-Supported Link Finding:
-
-- CSS selectors: Modern, robust, recommended approach
-- Regex patterns: Fallback for edge cases or when CSS won't work
-
-Version Extraction:
-
-- Extract version from the discovered download URL using regex
-- Support for captured groups with formatting
-- Transform version numbers (e.g., "2501" -> "25.01")
-
-Use Cases:
-
-- Vendors with download pages listing multiple versions (7-Zip, etc.)
-- Legacy software without modern APIs
-- Small vendors with simple download pages
-- When GitHub releases and JSON APIs aren't available
-
-Recipe Configuration:
+Recipe Example (CSS selector — recommended):
     ```yaml
-    source:
+    discovery:
       strategy: web_scrape
       page_url: "https://www.7-zip.org/download.html"
-      link_selector: 'a[href$="-x64.msi"]'        # CSS (recommended)
-      version_pattern: "7z(\\d{2})(\\d{2})-x64"   # Extract from URL
-      version_format: "{0}.{1}"                    # Transform to "25.01"
+      link_selector: 'a[href$="-x64.msi"]'
+      version_pattern: "7z(\\d{2})(\\d{2})-x64"
+      version_format: "{0}.{1}"     # transforms ("25", "01") -> "25.01"
     ```
 
-Alternative with regex:
+Recipe Example (regex fallback):
     ```yaml
-    source:
+    discovery:
       strategy: web_scrape
-      page_url: "https://vendor.com/downloads"
+      page_url: "https://vendor.example.com/downloads"
       link_pattern: 'href="(/files/app-v[0-9.]+-x64\\.msi)"'
       version_pattern: "app-v([0-9.]+)-x64"
     ```
 
 Configuration Fields:
+    - **page_url** (required): URL of the page to scrape.
+    - **link_selector** (optional): CSS selector identifying the download
+        link's ``<a>`` element. Recommended over regex.
+    - **link_pattern** (optional): Regex with one capture group around
+        the link URL. Used when a CSS selector cannot pin the link down.
+        Exactly one of ``link_selector`` / ``link_pattern`` is required.
+    - **version_pattern** (required): Regex applied to the discovered
+        link URL to extract the version. Capture groups are pulled out
+        and combined with ``version_format``.
+    - **version_format** (optional, default ``"{0}"``): Python format
+        string referencing capture groups by index (``{0}``, ``{1}``,
+        ...). Use this when a single version field needs to be assembled
+        from multiple captures.
 
-- **page_url** (str, required): URL of the page to scrape for download links
-- **link_selector** (str, optional): CSS selector to find download link.
-    Recommended approach. Example: 'a[href$=".msi"]' finds links ending with .msi
-- **link_pattern** (str, optional): Regex pattern as fallback when CSS won't
-    work. Must have one capture group for the URL. Example: 'href="([^"]*\\.msi)"'
-- **version_pattern** (str, required): Regex pattern to extract version from
-    the discovered URL. Use capture groups to extract version parts. Example:
-    "app-(\\d+\\.\\d+)" or "7z(\\d{2})(\\d{2})"
-- **version_format** (str, optional): Python format string to combine captured
-    groups. Use {0}, {1}, etc. for groups. Example: "{0}.{1}" transforms
-    captures "25", "01" into "25.01". Defaults to "{0}" (first capture group
-    only).
-
-Error Handling:
-
-- ValueError: Missing or invalid configuration fields
-- RuntimeError: Page download failures, selector/pattern not found
-- Errors are chained with 'from err' for better debugging
-
-Finding CSS Selectors:
-
-    Use browser DevTools:
-
-    1. Open download page in Chrome/Edge/Firefox
-    2. Right-click download link -> Inspect
-    3. Right-click highlighted element -> Copy -> Copy selector
-    4. Simplify selector (e.g., 'a[href$=".msi"]' instead of complex nth-child)
-
-Common CSS Patterns:
-
-- 'a[href$=".msi"]' - Links ending with .msi
-- 'a[href*="x64"]' - Links containing "x64"
-- 'a.download' - Links with class="download"
-- 'a[href$="-x64.msi"]:first-of-type' - First matching link
-
-Example:
-    In a recipe YAML:
-        ```yaml
-        apps:
-          - name: "7-Zip"
-            id: "napt-7zip"
-            source:
-              strategy: web_scrape
-              page_url: "https://www.7-zip.org/download.html"
-              link_selector: 'a[href$="-x64.msi"]'
-              version_pattern: "7z(\\d{2})(\\d{2})-x64"
-              version_format: "{0}.{1}"
-        ```
-
-    From Python (version-first approach):
-        ```python
-        from napt.discovery.web_scrape import WebScrapeStrategy
-        from napt.download import download_file
-
-        strategy = WebScrapeStrategy()
-        app_config = {
-            "source": {
-                "page_url": "https://www.7-zip.org/download.html",
-                "link_selector": 'a[href$="-x64.msi"]',
-                "version_pattern": "7z(\\d{2})(\\d{2})-x64",
-                "version_format": "{0}.{1}",
-            }
-        }
-
-        # Get version WITHOUT downloading installer
-        version_info = strategy.get_version_info(app_config)
-        print(f"Latest version: {version_info.version}")
-
-        # Download only if needed
-        if need_to_download:
-            result = download_file(
-                version_info.download_url, Path("./downloads/my-app")
-            )
-            print(f"Downloaded to {result.file_path}")
-        ```
-
-    From Python (using core orchestration):
-        ```python
-        from pathlib import Path
-        from napt.discovery import discover_recipe
-
-        # Automatically uses version-first optimization
-        result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
-        print(f"Version {result.version} at {result.file_path}")
-        ```
+Finding a CSS Selector:
+    1. Open the download page in Chrome / Edge / Firefox.
+    2. Right-click the download link -> Inspect.
+    3. Right-click the highlighted element -> Copy -> Copy selector.
+    4. Simplify the result. Common shapes:
+        - ``a[href$=".msi"]`` (links ending in .msi)
+        - ``a[href*="x64"]`` (links containing "x64")
+        - ``a.download`` (links with ``class="download"``)
 
 Note:
-    - Version discovery via web scraping (no installer download required)
-    - Core orchestration automatically skips download if version unchanged
-    - CSS selectors are recommended (more robust than regex)
-    - Use browser DevTools to find selectors easily
-    - Selector should match exactly one link (first match is used)
-    - BeautifulSoup4 required for CSS selectors
-    - Regex fallback works without BeautifulSoup
+    The selector / pattern is expected to match exactly one link; the
+    first match is used. Relative URLs in the page are resolved against
+    ``page_url``. CSS selector support requires BeautifulSoup4; the
+    regex fallback does not.
 
 """
 
@@ -182,58 +88,30 @@ _DEFAULT_VERSION_FORMAT = "{0}"
 
 
 class WebScrapeStrategy:
-    """Discovery strategy for web scraping download pages.
+    """Discovery strategy for scraping vendor download pages."""
 
-    Configuration example:
-        ```yaml
-        source:
-          strategy: web_scrape
-          page_url: "https://vendor.com/download.html"
-          link_selector: 'a[href$=".msi"]'
-          version_pattern: "app-v([0-9.]+)"
-        ```
-    """
+    def discover(self, app_config: dict[str, Any]) -> RemoteVersion:
+        r"""Discovers version and download URL by scraping a vendor page.
 
-    def get_version_info(
-        self,
-        app_config: dict[str, Any],
-    ) -> RemoteVersion:
-        r"""Scrapes download page for version and URL without downloading.
-
-        Version-first path: scrapes an HTML page, finds a download link using a
-        CSS selector or regex, extracts the version from that link, and returns
-        version info. If the version matches cached state, the download can be
-        skipped entirely.
+        Fetches ``discovery.page_url``, locates a download link with
+        either ``link_selector`` (CSS) or ``link_pattern`` (regex),
+        and extracts the version from the matched link using
+        ``version_pattern``.
 
         Args:
-            app_config: App configuration containing discovery.page_url,
-                discovery.link_selector or discovery.link_pattern, and
-                discovery.version_pattern.
+            app_config: Merged recipe configuration dict containing
+                ``discovery.page_url``, exactly one of
+                ``discovery.link_selector`` or ``discovery.link_pattern``,
+                and ``discovery.version_pattern``.
 
         Returns:
-            Version info with version string, download URL, and
-                source name.
+            Discovered version, the matched link's URL, and
+            ``"web_scrape"`` as the source identifier.
 
         Raises:
-            ValueError: If required config fields are missing, invalid, or if
-                selectors/patterns don't match anything.
-            RuntimeError: If page download fails (chained with 'from err').
-
-        Example:
-            Scrape 7-Zip download page:
-                ```python
-                strategy = WebScrapeStrategy()
-                config = {
-                    "discovery": {
-                        "page_url": "https://www.7-zip.org/download.html",
-                        "link_selector": 'a[href$="-x64.msi"]',
-                        "version_pattern": "7z(\\d{2})(\\d{2})-x64",
-                        "version_format": "{0}.{1}"
-                    }
-                }
-                version_info = strategy.get_version_info(config)
-                # version_info.version returns: '25.01'
-                ```
+            ConfigError: On missing required configuration or when
+                a selector / pattern matches nothing.
+            NetworkError: On page fetch failure.
 
         """
         from napt.logging import get_global_logger

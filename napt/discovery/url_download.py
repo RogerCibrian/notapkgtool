@@ -12,106 +12,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""URL download discovery strategy for NAPT.
+"""url_download discovery flow.
 
-This is a FILE-FIRST strategy that downloads an installer from a fixed HTTP(S)
-URL and extracts version information from the downloaded file. Uses HTTP ETag
-conditional requests to avoid re-downloading unchanged files.
+This module is intentionally not a
+[DiscoveryStrategy][napt.discovery.base.DiscoveryStrategy]. The
+strategies in [napt.discovery.base][] produce a
+[RemoteVersion][napt.discovery.base.RemoteVersion] from configuration
+alone (version-first). ``url_download`` cannot do that — it has no
+remote endpoint to query for the version, so it must download the
+installer and extract the version from the file's metadata. The
+discovery orchestrator special-cases ``strategy: url_download`` and
+dispatches to
+[run_url_download][napt.discovery.url_download.run_url_download] directly.
 
-Key Advantages:
+Cache Strategy:
+    Uses HTTP conditional requests. If a previous run stored an ``ETag``
+    or ``Last-Modified`` header in state, those are sent as
+    ``If-None-Match`` / ``If-Modified-Since`` on the next request. A
+    server response of HTTP 304 reuses the cached file without a
+    re-download. This is a different mechanism than the version-first
+    strategies, which compare version strings (no HTTP round-trip
+    required to detect "no change" beyond the initial discovery query).
 
-- Works with any fixed URL (version not required in URL)
-- Extracts accurate version directly from installer metadata
-- Uses ETag-based conditional requests for efficiency (~500ms vs full download)
-- Simple and reliable for vendors with stable download URLs
-- Fallback strategy when version not available via API/URL pattern
+Supported File Types:
+    - ``.msi`` — version is read from the MSI ProductVersion property.
+    - Other extensions raise [ConfigError][napt.exceptions.ConfigError].
+        For non-MSI installers, use a version-first strategy.
 
-Supported Version Extraction:
-
-- **MSI files** (`.msi` extension): Automatically detected, extracts
-  ProductVersion property from MSI files
-- **Other file types**: Not supported. Use a version-first strategy
-  (api_github, api_json, web_scrape) or ensure file is an MSI installer.
-- **(Future)** EXE files: Auto-detect and extract FileVersion from PE headers
-
-Use Cases:
-
-- Google Chrome: Fixed enterprise MSI URL, version embedded in MSI
-- Mozilla Firefox: Fixed enterprise MSI URL, version embedded in MSI
-- Vendors with stable download URLs and embedded version metadata
-- When version not available via API, URL pattern, or GitHub tags
-
-Recipe Configuration:
-
-    source:
+Recipe Example:
+    ```yaml
+    discovery:
       strategy: url_download
-      url: "https://vendor.com/installer.msi"          # Required: download URL
-
-Configuration Fields:
-
-- **url** (str, required): HTTP(S) URL to download the installer from. The URL
-    should be stable and point to the latest version.
-
-**Version Extraction:** Automatically detected by file extension. MSI files
-    (`.msi` extension) have versions extracted from ProductVersion property.
-    Other file types are not supported for version extraction - use a
-    version-first strategy (api_github, api_json, web_scrape) instead.
-
-Error Handling:
-
-- ConfigError: Missing or invalid configuration fields
-- NetworkError: Download failures, version extraction errors
-- Errors are chained with 'from err' for better debugging
-
-Example:
-    In a recipe YAML:
-        ```yaml
-        apps:
-          - name: "My App"
-            id: "my-app"
-            source:
-              strategy: url_download
-              url: "https://example.com/myapp-setup.msi"
-        ```
-
-    From Python:
-    ```python
-    from pathlib import Path
-    from napt.discovery.url_download import UrlDownloadStrategy
-
-    strategy = UrlDownloadStrategy()
-    app_config = {
-        "source": {
-            "url": "https://example.com/app.msi",
-        }
-    }
-
-    # With cache for ETag optimization
-    cache = {"etag": 'W/"abc123"', "sha256": "..."}
-    discovered, file_path, sha256, headers = strategy.discover_version(
-        app_config, Path("./downloads"), cache=cache
-    )
-    print(f"Version {discovered.version} at {file_path}")
+      url: "https://vendor.example.com/installer.msi"
     ```
-
-From Python (using core orchestration):
-    ```python
-    from pathlib import Path
-    from napt.discovery import discover_recipe
-
-    # Automatically uses ETag optimization
-    result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
-    print(f"Version {result.version} at {result.file_path}")
-    ```
-
-Note:
-    - Must download file to extract version (architectural constraint)
-    - ETag optimization reduces bandwidth but still requires network round-trip
-    - Core orchestration automatically provides cached ETag if available
-    - Server must support ETag or Last-Modified headers for optimization
-    - If server doesn't support conditional requests, full download occurs every time
-    - Consider version-first strategies (web_scrape, api_github, api_json) for
-      better performance when version available via web scraping or API
 
 """
 
@@ -124,192 +57,215 @@ from napt.download import download_file
 from napt.exceptions import ConfigError, NetworkError, NotModifiedError
 from napt.versioning.msi import extract_msi_metadata
 
-from .base import register_strategy
+from .base import StrategyResult
 
 
-class UrlDownloadStrategy:
-    """Discovery strategy for static HTTP(S) URLs.
+def run_url_download(
+    app_config: dict[str, Any],
+    output_dir: Path,
+    cache: dict[str, Any] | None = None,
+) -> StrategyResult:
+    """Downloads a fixed URL and extracts the version from the resulting file.
 
-    Configuration example:
-        source:
-          strategy: url_download
-          url: "https://example.com/installer.msi"
+    Issues a conditional HTTP request when ``cache`` carries an ``ETag``
+    or ``Last-Modified``. On HTTP 304 the cached file is reused; otherwise
+    the fresh download is used. Either way, the version is extracted from
+    the file (MSI ProductVersion today).
+
+    Args:
+        app_config: Merged recipe configuration dict containing
+            ``discovery.url`` and ``id``.
+        output_dir: Base directory to download into. The file lands
+            in ``output_dir / app_id``.
+        cache: Cached state for this recipe (``etag``, ``last_modified``,
+            ``file_path``, ``sha256``), or ``None`` when no prior state
+            exists or stateless mode is on.
+
+    Returns:
+        Resolved version, file path, and download metadata. The
+        ``cached`` field is True when HTTP 304 was used to reuse the
+        previously downloaded file.
+
+    Raises:
+        ConfigError: If ``discovery.url`` is missing, or if the
+            downloaded file is not an MSI (version extraction is
+            not supported for other file types).
+        NetworkError: On download or version-extraction failures.
+
     """
+    from napt.logging import get_global_logger
 
-    def discover_version(
-        self,
-        app_config: dict[str, Any],
-        output_dir: Path,
-        cache: dict[str, Any] | None = None,
-    ) -> tuple[str, str, Path, str, dict]:
-        """Download from static URL and extract version from the file.
+    logger = get_global_logger()
+    source = app_config.get("discovery", {})
+    url = source.get("url")
+    if not url:
+        raise ConfigError("url_download strategy requires 'discovery.url' in config")
 
-        Args:
-            app_config: App configuration containing discovery.url.
-            output_dir: Directory to save the downloaded file.
-            cache: Cached state with etag, last_modified,
-                file_path, and sha256 for conditional requests. If provided
-                and file is unchanged (HTTP 304), the cached file is returned.
+    app_id = app_config["id"]
 
-        Returns:
-            A tuple (version_info, file_path, sha256, headers), where
-                version_info contains the discovered version information,
-                file_path is the Path to the downloaded file, sha256 is the
-                SHA-256 hash, and headers contains HTTP response headers.
+    logger.verbose("DISCOVERY", "Strategy: url_download (file-first)")
+    logger.verbose("DISCOVERY", f"Source URL: {url}")
 
-        Raises:
-            ConfigError: If required config fields are missing or invalid.
-            NetworkError: If download or version extraction fails.
+    etag = cache.get("etag") if cache else None
+    last_modified = cache.get("last_modified") if cache else None
+    if etag:
+        logger.verbose("DISCOVERY", f"Using cached ETag: {etag}")
+    if last_modified:
+        logger.verbose("DISCOVERY", f"Using cached Last-Modified: {last_modified}")
 
-        """
-        from napt.logging import get_global_logger
+    try:
+        dl = download_file(
+            url,
+            output_dir / app_id,
+            etag=etag,
+            last_modified=last_modified,
+        )
+    except NotModifiedError:
+        return _resolve_not_modified(url, cache, output_dir, app_id, logger)
+    except (NetworkError, ConfigError):
+        raise
+    except Exception as err:
+        raise NetworkError(f"Failed to download {url}: {err}") from err
 
-        logger = get_global_logger()
-        source = app_config.get("discovery", {})
-        url = source.get("url")
-        if not url:
-            raise ConfigError(
-                "url_download strategy requires 'discovery.url' in config"
-            )
-
-        app_id = app_config["id"]
-
-        logger.verbose("DISCOVERY", "Strategy: url_download (file-first)")
-        logger.verbose("DISCOVERY", f"Source URL: {url}")
-
-        # Extract ETag/Last-Modified from cache if available
-        etag = cache.get("etag") if cache else None
-        last_modified = cache.get("last_modified") if cache else None
-
-        if etag:
-            logger.verbose("DISCOVERY", f"Using cached ETag: {etag}")
-        if last_modified:
-            logger.verbose("DISCOVERY", f"Using cached Last-Modified: {last_modified}")
-
-        # Download the file (with conditional request if cache available)
-        try:
-            dl = download_file(
-                url,
-                output_dir / app_id,
-                etag=etag,
-                last_modified=last_modified,
-            )
-            file_path, sha256, headers = dl.file_path, dl.sha256, dl.headers
-        except NotModifiedError:
-            # File unchanged (HTTP 304).
-            logger.info("CACHE", "File not modified (HTTP 304), using cached version")
-
-            cached_file_path = (
-                Path(cache["file_path"]) if cache and cache.get("file_path") else None
-            )
-
-            if (
-                cache
-                and cache.get("sha256")
-                and cached_file_path is not None
-                and cached_file_path.exists()
-            ):
-                # Extract version from cached file (auto-detect by extension)
-                if cached_file_path.suffix.lower() == ".msi":
-                    logger.verbose(
-                        "DISCOVERY", "Auto-detected MSI file, extracting version"
-                    )
-                    try:
-                        metadata = extract_msi_metadata(cached_file_path)
-                        version, version_source = (
-                            metadata.product_version,
-                            "url_download",
-                        )
-                    except Exception as err:
-                        raise NetworkError(
-                            f"Failed to extract MSI ProductVersion from cached "
-                            f"file {cached_file_path}: {err}"
-                        ) from err
-                else:
-                    raise ConfigError(
-                        f"Cannot extract version from file type: "
-                        f"{cached_file_path.suffix!r}. "
-                        f"url_download strategy currently supports MSI files only. "
-                        f"For other file types, use a version-first strategy "
-                        f"(api_github, api_json, web_scrape) or ensure the file "
-                        f"is an MSI installer."
-                    ) from None
-
-                # Preserve cached headers (no new headers on 304)
-                preserved_headers = {}
-                if cache.get("etag"):
-                    preserved_headers["ETag"] = cache["etag"]
-                if cache.get("last_modified"):
-                    preserved_headers["Last-Modified"] = cache["last_modified"]
-
-                return (
-                    version,
-                    version_source,
-                    cached_file_path,
-                    cache["sha256"],
-                    preserved_headers,
-                )
-            else:
-                # Cache incomplete or file missing — force unconditional re-download
-                logger.warning(
-                    "CACHE",
-                    "Cache incomplete or cached file not found, forcing re-download",
-                )
-                dl = download_file(url, output_dir / app_id)
-                file_path, sha256, headers = dl.file_path, dl.sha256, dl.headers
-        except Exception as err:
-            if isinstance(err, (NetworkError, ConfigError)):
-                raise
-            raise NetworkError(f"Failed to download {url}: {err}") from err
-
-        # File was downloaded (not cached), extract version from it (auto-detect by extension)
-        if file_path.suffix.lower() == ".msi":
-            logger.verbose("DISCOVERY", "Auto-detected MSI file, extracting version")
-            try:
-                metadata = extract_msi_metadata(file_path)
-                version, version_source = metadata.product_version, "url_download"
-            except Exception as err:
-                raise NetworkError(
-                    f"Failed to extract MSI ProductVersion from {file_path}: {err}"
-                ) from err
-        else:
-            raise ConfigError(
-                f"Cannot extract version from file type: {file_path.suffix!r}. "
-                f"url_download strategy currently supports MSI files only. "
-                f"For other file types, use a version-first strategy (api_github, "
-                f"api_json, web_scrape) or ensure the file is an MSI installer."
-            )
-
-        return version, version_source, file_path, sha256, headers
-
-    def validate_config(self, app_config: dict[str, Any]) -> list[str]:
-        """Validate url_download strategy configuration.
-
-        Checks for required fields and correct types without making network calls.
-
-        Args:
-            app_config: The app configuration from the recipe.
-
-        Returns:
-            List of error messages (empty if valid).
-
-        """
-        errors = []
-        source = app_config.get("discovery", {})
-
-        # Check required fields
-        if "url" not in source:
-            errors.append("Missing required field: discovery.url")
-        elif not isinstance(source["url"], str):
-            errors.append("discovery.url must be a string")
-        elif not source["url"].strip():
-            errors.append("discovery.url cannot be empty")
-
-        # Version extraction is now auto-detected by file extension
-        # No version configuration validation needed
-
-        return errors
+    version = _extract_version(dl.file_path)
+    return StrategyResult(
+        version=version,
+        version_source="url_download",
+        file_path=dl.file_path,
+        sha256=dl.sha256,
+        headers=dl.headers,
+        download_url=url,
+        cached=False,
+    )
 
 
-# Register this strategy when the module is imported
-register_strategy("url_download", UrlDownloadStrategy)
+def validate_url_download_config(app_config: dict[str, Any]) -> list[str]:
+    """Validates url_download configuration fields.
+
+    Called by [napt.validation.validate_config][] to compose the
+    url_download field rules into the overall recipe validation.
+
+    Args:
+        app_config: Merged recipe configuration dict.
+
+    Returns:
+        Human-readable error messages. Empty when configuration is valid.
+
+    """
+    errors: list[str] = []
+    source = app_config.get("discovery", {})
+
+    if "url" not in source:
+        errors.append("Missing required field: discovery.url")
+    elif not isinstance(source["url"], str):
+        errors.append("discovery.url must be a string")
+    elif not source["url"].strip():
+        errors.append("discovery.url cannot be empty")
+
+    return errors
+
+
+def _resolve_not_modified(
+    url: str,
+    cache: dict[str, Any] | None,
+    output_dir: Path,
+    app_id: str,
+    logger: Any,
+) -> StrategyResult:
+    """Handles HTTP 304 by reusing the cached file or forcing re-download.
+
+    When the server reports the file is unchanged, this attempts to reuse
+    the cached file path. If the cache is incomplete or the file is gone
+    from disk, it falls back to an unconditional re-download.
+
+    Args:
+        url: Original download URL (used for re-download fallback).
+        cache: Cached state for this recipe, if any.
+        output_dir: Base directory to download into for the fallback path.
+        app_id: Recipe app id, used for the per-app subdirectory.
+        logger: Global logger instance, passed in to avoid repeated lookups.
+
+    Returns:
+        Resolved version, file path, and download metadata. The
+        ``cached`` field is True when the previously cached file was
+        reused; False when the fallback re-download was used.
+
+    Raises:
+        NetworkError: On re-download or version-extraction failure.
+        ConfigError: If the cached file is not an MSI.
+
+    """
+    logger.info("CACHE", "File not modified (HTTP 304), using cached version")
+
+    cached_path_str = cache.get("file_path") if cache else None
+    cached_sha = cache.get("sha256") if cache else None
+    cached_path = Path(cached_path_str) if cached_path_str else None
+
+    if cache and cached_sha and cached_path is not None and cached_path.exists():
+        version = _extract_version(cached_path)
+        preserved_headers: dict[str, str] = {}
+        if cache.get("etag"):
+            preserved_headers["ETag"] = cache["etag"]
+        if cache.get("last_modified"):
+            preserved_headers["Last-Modified"] = cache["last_modified"]
+        return StrategyResult(
+            version=version,
+            version_source="url_download",
+            file_path=cached_path,
+            sha256=cached_sha,
+            headers=preserved_headers,
+            download_url=url,
+            cached=True,
+        )
+
+    logger.warning(
+        "CACHE",
+        "Cache incomplete or cached file not found, forcing re-download",
+    )
+    dl = download_file(url, output_dir / app_id)
+    version = _extract_version(dl.file_path)
+    return StrategyResult(
+        version=version,
+        version_source="url_download",
+        file_path=dl.file_path,
+        sha256=dl.sha256,
+        headers=dl.headers,
+        download_url=url,
+        cached=False,
+    )
+
+
+def _extract_version(file_path: Path) -> str:
+    """Extracts a version string from an installer file's metadata.
+
+    Currently supports MSI files via
+    [extract_msi_metadata][napt.versioning.msi.extract_msi_metadata].
+    Other file types raise [ConfigError][napt.exceptions.ConfigError] —
+    use a version-first strategy for those instead.
+
+    Args:
+        file_path: Path to the downloaded installer file.
+
+    Returns:
+        Version string from the file's metadata.
+
+    Raises:
+        ConfigError: If ``file_path`` is not an MSI installer.
+        NetworkError: If MSI metadata extraction fails.
+
+    """
+    if file_path.suffix.lower() != ".msi":
+        raise ConfigError(
+            f"Cannot extract version from file type: {file_path.suffix!r}. "
+            f"url_download strategy currently supports MSI files only. "
+            f"For other file types, use a version-first strategy "
+            f"(api_github, api_json, web_scrape) or ensure the file "
+            f"is an MSI installer."
+        )
+
+    try:
+        return extract_msi_metadata(file_path).product_version
+    except Exception as err:
+        raise NetworkError(
+            f"Failed to extract MSI ProductVersion from {file_path}: {err}"
+        ) from err

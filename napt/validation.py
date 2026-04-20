@@ -474,17 +474,24 @@ def validate_config(
                     f"'{app_name}' uses strategy: {strategy_name}",
                 )
 
-                # Check if strategy exists
-                try:
-                    strategy = get_strategy(strategy_name)
-                except ConfigError as err:
-                    errors.append(f"discovery.strategy: {err}")
+                # Validate strategy-specific configuration
+                if strategy_name == "url_download":
+                    from napt.discovery.url_download import (
+                        validate_url_download_config,
+                    )
+
+                    try:
+                        errors.extend(validate_url_download_config(config))
+                    except Exception as err:
+                        errors.append(f"Strategy validation failed: {err}")
                 else:
-                    # Validate strategy-specific configuration
-                    if hasattr(strategy, "validate_config"):
+                    try:
+                        strategy = get_strategy(strategy_name)
+                    except ConfigError as err:
+                        errors.append(f"discovery.strategy: {err}")
+                    else:
                         try:
-                            config_errors = strategy.validate_config(config)
-                            errors.extend(config_errors)
+                            errors.extend(strategy.validate_config(config))
                         except Exception as err:
                             errors.append(f"Strategy validation failed: {err}")
 
