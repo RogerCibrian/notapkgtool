@@ -1,15 +1,7 @@
-"""
-Tests for napt.discovery module.
-
-Tests discovery strategies including:
-- Strategy registry
-- HTTP static strategy
-- Version extraction from downloaded files
-"""
+"""Tests for napt.discovery: strategy registry, strategies, url_download flow."""
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -18,7 +10,7 @@ import requests_mock
 from napt.discovery.api_github import ApiGithubStrategy
 from napt.discovery.api_json import ApiJsonStrategy
 from napt.discovery.base import RemoteVersion, get_strategy, register_strategy
-from napt.discovery.url_download import UrlDownloadStrategy
+from napt.discovery.url_download import run_url_download
 from napt.discovery.web_scrape import WebScrapeStrategy
 from napt.exceptions import ConfigError, NetworkError
 from napt.versioning.msi import MSIMetadata
@@ -27,54 +19,49 @@ from napt.versioning.msi import MSIMetadata
 class TestStrategyRegistry:
     """Tests for discovery strategy registration and lookup."""
 
-    def test_get_url_download_strategy(self):
-        """Test that url_download strategy can be retrieved."""
-        strategy = get_strategy("url_download")
-        assert isinstance(strategy, UrlDownloadStrategy)
-
     def test_get_api_github_strategy(self):
-        """Test that api_github strategy can be retrieved."""
+        """Tests that api_github strategy can be retrieved from the registry."""
         strategy = get_strategy("api_github")
         assert isinstance(strategy, ApiGithubStrategy)
 
     def test_get_unknown_strategy_raises(self):
-        """Test that unknown strategy name raises ValueError."""
-
+        """Tests that an unregistered strategy name raises ConfigError."""
         with pytest.raises(ConfigError, match="Unknown discovery strategy"):
             get_strategy("nonexistent_strategy")
 
+    def test_url_download_not_in_registry(self):
+        """Tests that url_download is intentionally not a registered strategy."""
+        with pytest.raises(ConfigError, match="Unknown discovery strategy"):
+            get_strategy("url_download")
+
     def test_register_custom_strategy(self):
-        """Test registering a custom strategy."""
+        """Tests that a custom strategy can be registered and retrieved."""
 
         class CustomStrategy:
-            def discover_version(self, app_config, output_dir):
-                return (
-                    RemoteVersion(version="1.0.0", source="custom"),
-                    Path("/fake/path"),
-                    "fakehash",
-                    {},  # HTTP headers
+            def discover(self, app_config):
+                return RemoteVersion(
+                    version="1.0.0",
+                    download_url="https://example.com/installer.msi",
+                    source="custom",
                 )
+
+            def validate_config(self, app_config):
+                return []
 
         register_strategy("custom_test", CustomStrategy)
         strategy = get_strategy("custom_test")
         assert isinstance(strategy, CustomStrategy)
 
 
-class TestUrlDownloadStrategy:
-    """Tests for URL download strategy."""
+class TestUrlDownloadFlow:
+    """Tests for the url_download flow (run_url_download)."""
 
-    def test_discover_version_with_msi(self, tmp_test_dir):
-        """Test discovering version from MSI file."""
+    def test_discovers_version_from_msi(self, tmp_test_dir):
+        """Tests that the version is extracted from a freshly downloaded MSI."""
         app_config = {
             "id": "test-app",
-            "discovery": {
-                "url": "https://example.com/installer.msi",
-            },
+            "discovery": {"url": "https://example.com/installer.msi"},
         }
-
-        strategy = UrlDownloadStrategy()
-
-        # Mock the download and MSI extraction
         fake_msi_content = b"fake MSI content"
 
         with requests_mock.Mocker() as m:
@@ -83,65 +70,44 @@ class TestUrlDownloadStrategy:
                 content=fake_msi_content,
                 headers={"Content-Length": str(len(fake_msi_content))},
             )
-
             with patch(
                 "napt.discovery.url_download.extract_msi_metadata"
             ) as mock_extract:
                 mock_extract.return_value = MSIMetadata(
                     product_name="", product_version="1.2.3", architecture="x64"
                 )
+                result = run_url_download(app_config, tmp_test_dir)
 
-                version, version_source, file_path, sha256, headers = (
-                    strategy.discover_version(app_config, tmp_test_dir)
-                )
+        assert result.version == "1.2.3"
+        assert result.version_source == "url_download"
+        assert result.file_path == tmp_test_dir / "test-app" / "installer.msi"
+        assert result.file_path.exists()
+        assert len(result.sha256) == 64
+        assert result.cached is False
+        assert result.download_url == "https://example.com/installer.msi"
 
-        assert version == "1.2.3"
-        assert version_source == "url_download"
-        assert file_path == tmp_test_dir / "test-app" / "installer.msi"
-        assert file_path.exists()
-        assert isinstance(sha256, str)
-        assert len(sha256) == 64  # SHA-256 hex length
-
-    def test_discover_version_missing_url_raises(self, tmp_test_dir):
-        """Test that missing URL raises ValueError."""
-        app_config = {"discovery": {}}
-
-        strategy = UrlDownloadStrategy()
-
+    def test_missing_url_raises(self, tmp_test_dir):
+        """Tests that a missing discovery.url raises ConfigError."""
         with pytest.raises(ConfigError, match="requires 'discovery.url'"):
-            strategy.discover_version(app_config, tmp_test_dir)
+            run_url_download({"discovery": {}}, tmp_test_dir)
 
-    def test_discover_version_download_failure_raises(self, tmp_test_dir):
-        """Test that download failures raise NetworkError."""
+    def test_download_failure_raises(self, tmp_test_dir):
+        """Tests that a non-2xx download response raises NetworkError."""
         app_config = {
             "id": "test-app",
-            "discovery": {
-                "url": "https://example.com/installer.msi",
-            },
+            "discovery": {"url": "https://example.com/installer.msi"},
         }
-
-        strategy = UrlDownloadStrategy()
-
         with requests_mock.Mocker() as m:
             m.get("https://example.com/installer.msi", status_code=404)
-
-            from napt.exceptions import NetworkError
-
             with pytest.raises(NetworkError, match="download failed"):
-                strategy.discover_version(app_config, tmp_test_dir)
+                run_url_download(app_config, tmp_test_dir)
 
-    def test_discover_version_extraction_failure_raises(self, tmp_test_dir):
-        """Test that version extraction failures raise NetworkError."""
+    def test_extraction_failure_raises(self, tmp_test_dir):
+        """Tests that MSI extraction failures raise NetworkError."""
         app_config = {
             "id": "test-app",
-            "discovery": {
-                "url": "https://example.com/installer.msi",
-                "version": {"type": "msi"},
-            },
+            "discovery": {"url": "https://example.com/installer.msi"},
         }
-
-        strategy = UrlDownloadStrategy()
-
         fake_content = b"not a real MSI"
         with requests_mock.Mocker() as m:
             m.get(
@@ -149,103 +115,65 @@ class TestUrlDownloadStrategy:
                 content=fake_content,
                 headers={"Content-Length": str(len(fake_content))},
             )
-
             with patch(
                 "napt.discovery.url_download.extract_msi_metadata"
             ) as mock_extract:
                 mock_extract.side_effect = NetworkError("Invalid MSI")
-
                 with pytest.raises(
                     NetworkError, match="Failed to extract MSI ProductVersion"
                 ):
-                    strategy.discover_version(app_config, tmp_test_dir)
+                    run_url_download(app_config, tmp_test_dir)
 
 
-# TestApiGithubStrategy removed - discover_version() method no longer exists
-# Strategy now only has get_version_info() which is tested in TestVersionFirstStrategies
-# Integration testing covered by TestVersionFirstFastPath in test_core.py
+class TestUrlDownloadCacheBehavior:
+    """Tests for url_download's HTTP-conditional cache handling."""
 
-
-# TestApiJsonStrategy removed - discover_version() method no longer exists
-# Strategy now only has get_version_info() which is tested in TestVersionFirstStrategies
-# Integration testing covered by TestVersionFirstFastPath in test_core.py
-
-
-class TestCacheAndETagSupport:
-    """Tests for cache parameter and ETag-based conditional downloads."""
-
-    def test_url_download_with_cache_not_modified(self, tmp_test_dir):
-        """Test url_download with cache when file not modified (HTTP 304)."""
-
+    def test_cache_not_modified_uses_cached_file(self, tmp_test_dir):
+        """Tests that HTTP 304 reuses the cached file and version."""
         app_config = {
             "id": "test-app",
-            "discovery": {
-                "url": "https://example.com/installer.msi",
-                "version": {"type": "msi"},
-            },
+            "discovery": {"url": "https://example.com/installer.msi"},
         }
-
-        strategy = UrlDownloadStrategy()
-
-        # Create a fake cached file in the app-scoped directory
         app_dir = tmp_test_dir / "test-app"
         app_dir.mkdir()
         cached_file = app_dir / "installer.msi"
         cached_file.write_bytes(b"fake cached msi")
-
         cache = {
-            "version": "1.0.0",
             "etag": 'W/"abc123"',
             "file_path": str(cached_file),
             "sha256": "cached_sha256",
         }
 
         with requests_mock.Mocker() as m:
-            # Mock 304 Not Modified response
             m.get("https://example.com/installer.msi", status_code=304)
-
             with patch(
                 "napt.discovery.url_download.extract_msi_metadata"
             ) as mock_extract:
                 mock_extract.return_value = MSIMetadata(
                     product_name="", product_version="1.0.0", architecture="x64"
                 )
+                result = run_url_download(app_config, tmp_test_dir, cache=cache)
 
-                version, version_source, file_path, sha256, headers = (
-                    strategy.discover_version(app_config, tmp_test_dir, cache=cache)
-                )
+        assert result.file_path == cached_file
+        assert result.sha256 == "cached_sha256"
+        assert result.version == "1.0.0"
+        assert result.cached is True
+        assert result.headers.get("ETag") == 'W/"abc123"'
 
-        # Should use cached file from app-scoped directory
-        assert file_path == cached_file
-        assert sha256 == "cached_sha256"
-        assert version == "1.0.0"
-
-    # test_api_github_with_cache_not_modified removed -
-    # discover_version() no longer exists
-
-    def test_url_download_with_cache_modified(self, tmp_test_dir):
-        """Test url_download downloads when file modified (HTTP 200)."""
+    def test_cache_modified_redownloads(self, tmp_test_dir):
+        """Tests that HTTP 200 downloads the new file."""
         app_config = {
             "id": "test-app",
-            "discovery": {
-                "url": "https://example.com/installer.msi",
-                "version": {"type": "msi"},
-            },
+            "discovery": {"url": "https://example.com/installer.msi"},
         }
-
-        strategy = UrlDownloadStrategy()
-
         cache = {
-            "version": "1.0.0",
             "etag": 'W/"old_etag"',
             "file_path": str(tmp_test_dir / "test-app" / "old_installer.msi"),
             "sha256": "old_sha256",
         }
-
         fake_msi = b"new fake MSI content"
 
         with requests_mock.Mocker() as m:
-            # Mock 200 response (file changed)
             m.get(
                 "https://example.com/installer.msi",
                 content=fake_msi,
@@ -254,36 +182,26 @@ class TestCacheAndETagSupport:
                     "ETag": 'W/"new_etag"',
                 },
             )
-
             with patch(
                 "napt.discovery.url_download.extract_msi_metadata"
             ) as mock_extract:
                 mock_extract.return_value = MSIMetadata(
                     product_name="", product_version="2.0.0", architecture="x64"
                 )
+                result = run_url_download(app_config, tmp_test_dir, cache=cache)
 
-                version, version_source, file_path, sha256, headers = (
-                    strategy.discover_version(app_config, tmp_test_dir, cache=cache)
-                )
+        assert result.file_path == tmp_test_dir / "test-app" / "installer.msi"
+        assert result.file_path.exists()
+        assert result.version == "2.0.0"
+        assert result.cached is False
+        assert len(result.sha256) == 64
 
-        # Should download new file into app-scoped directory
-        assert file_path == tmp_test_dir / "test-app" / "installer.msi"
-        assert file_path.exists()
-        assert version == "2.0.0"
-        assert len(sha256) == 64
-
-    def test_strategy_without_cache_works(self, tmp_test_dir):
-        """Test that strategies work without cache (backward compatible)."""
+    def test_no_cache_works(self, tmp_test_dir):
+        """Tests that url_download works without a cache argument."""
         app_config = {
             "id": "test-app",
-            "discovery": {
-                "url": "https://example.com/installer.msi",
-                "version": {"type": "msi"},
-            },
+            "discovery": {"url": "https://example.com/installer.msi"},
         }
-
-        strategy = UrlDownloadStrategy()
-
         fake_msi = b"fake MSI no cache"
 
         with requests_mock.Mocker() as m:
@@ -292,48 +210,32 @@ class TestCacheAndETagSupport:
                 content=fake_msi,
                 headers={"Content-Length": str(len(fake_msi))},
             )
-
             with patch(
                 "napt.discovery.url_download.extract_msi_metadata"
             ) as mock_extract:
                 mock_extract.return_value = MSIMetadata(
                     product_name="", product_version="1.0.0", architecture="x64"
                 )
+                result = run_url_download(app_config, tmp_test_dir)
 
-                # Call without cache parameter (None is default)
-                version, version_source, file_path, sha256, headers = (
-                    strategy.discover_version(app_config, tmp_test_dir)
-                )
-
-        assert version == "1.0.0"
-        assert file_path == tmp_test_dir / "test-app" / "installer.msi"
-        assert file_path.exists()
+        assert result.version == "1.0.0"
+        assert result.file_path == tmp_test_dir / "test-app" / "installer.msi"
+        assert result.file_path.exists()
 
     def test_cache_with_missing_file_redownloads(self, tmp_test_dir):
-        """Test that 304 with a missing cached file forces a re-download."""
+        """Tests that HTTP 304 with a missing cached file forces a re-download."""
         app_config = {
             "id": "test-app",
-            "discovery": {
-                "url": "https://example.com/installer.msi",
-                "version": {"type": "msi"},
-            },
+            "discovery": {"url": "https://example.com/installer.msi"},
         }
-
-        strategy = UrlDownloadStrategy()
-
-        # Cache points to a file that no longer exists on disk
         cache = {
-            "version": "1.0.0",
             "etag": 'W/"abc123"',
             "file_path": str(tmp_test_dir / "test-app" / "nonexistent.msi"),
             "sha256": "cached_sha",
         }
-
         fake_msi = b"re-downloaded MSI content"
 
         with requests_mock.Mocker() as m:
-            # First request (conditional with ETag) returns 304
-            # Second request (forced unconditional re-download) returns 200
             m.get(
                 "https://example.com/installer.msi",
                 [
@@ -344,45 +246,34 @@ class TestCacheAndETagSupport:
                     },
                 ],
             )
-
             with patch(
                 "napt.discovery.url_download.extract_msi_metadata"
             ) as mock_extract:
                 mock_extract.return_value = MSIMetadata(
                     product_name="", product_version="1.0.0", architecture="x64"
                 )
+                result = run_url_download(app_config, tmp_test_dir, cache=cache)
 
-                version, version_source, file_path, sha256, headers = (
-                    strategy.discover_version(app_config, tmp_test_dir, cache=cache)
-                )
-
-        assert version == "1.0.0"
-        assert file_path.exists()
+        assert result.version == "1.0.0"
+        assert result.file_path.exists()
+        assert result.cached is False
 
     def test_304_uses_cached_file_path_not_url(self, tmp_test_dir):
-        """Test that 304 uses cache's file_path, not the URL-derived filename.
+        """Tests that HTTP 304 reuses the stored file_path, not a URL-derived name.
 
-        Covers the bug where Content-Disposition gives a different filename
-        than the URL path. On the next run (304), we must use the stored path.
+        Guards against the bug where Content-Disposition gave the original
+        download a different filename than the URL path. On 304, the stored
+        path must be used so the file is found again.
         """
         app_config = {
             "id": "test-app",
-            "discovery": {
-                "url": "https://example.com/download?token=abc",
-            },
+            "discovery": {"url": "https://example.com/download?token=abc"},
         }
-
-        strategy = UrlDownloadStrategy()
-
-        # Simulate: original download had Content-Disposition filename
-        # that differs from the URL (no filename in URL path at all)
         app_dir = tmp_test_dir / "test-app"
         app_dir.mkdir()
         cd_named_file = app_dir / "MyApp-Setup-2.1.0.msi"
         cd_named_file.write_bytes(b"fake msi from cd header")
-
         cache = {
-            "version": "2.1.0",
             "etag": 'W/"xyz"',
             "file_path": str(cd_named_file),
             "sha256": "deadbeef" * 8,
@@ -390,29 +281,25 @@ class TestCacheAndETagSupport:
 
         with requests_mock.Mocker() as m:
             m.get("https://example.com/download", status_code=304)
-
             with patch(
                 "napt.discovery.url_download.extract_msi_metadata"
             ) as mock_extract:
                 mock_extract.return_value = MSIMetadata(
                     product_name="", product_version="2.1.0", architecture="x64"
                 )
+                result = run_url_download(app_config, tmp_test_dir, cache=cache)
 
-                version, version_source, file_path, sha256, headers = (
-                    strategy.discover_version(app_config, tmp_test_dir, cache=cache)
-                )
-
-        # Must use the CD-derived cached path, not "download.bin" from URL
-        assert file_path == cd_named_file
-        assert version == "2.1.0"
-        assert sha256 == "deadbeef" * 8
+        assert result.file_path == cd_named_file
+        assert result.version == "2.1.0"
+        assert result.sha256 == "deadbeef" * 8
+        assert result.cached is True
 
 
 class TestVersionFirstStrategies:
     """Tests for version-first strategies (web_scrape, api_github, api_json)."""
 
     def test_web_scrape_with_css_selector(self):
-        """Test web_scrape.get_version_info() with CSS selector."""
+        """Test web_scrape.discover() with CSS selector."""
         strategy = WebScrapeStrategy()
         app_config = {
             "discovery": {
@@ -438,7 +325,7 @@ class TestVersionFirstStrategies:
         with requests_mock.Mocker() as m:
             m.get("https://example.com/download.html", text=html_content)
 
-            version_info = strategy.get_version_info(app_config)
+            version_info = strategy.discover(app_config)
 
         assert isinstance(version_info, RemoteVersion)
         assert version_info.version == "25.01"
@@ -446,7 +333,7 @@ class TestVersionFirstStrategies:
         assert version_info.source == "web_scrape"
 
     def test_web_scrape_with_regex_pattern(self):
-        """Test web_scrape.get_version_info() with regex fallback."""
+        """Test web_scrape.discover() with regex fallback."""
         strategy = WebScrapeStrategy()
         app_config = {
             "discovery": {
@@ -461,7 +348,7 @@ class TestVersionFirstStrategies:
         with requests_mock.Mocker() as m:
             m.get("https://example.com/download.html", text=html_content)
 
-            version_info = strategy.get_version_info(app_config)
+            version_info = strategy.discover(app_config)
 
         assert isinstance(version_info, RemoteVersion)
         assert version_info.version == "1.2.3"
@@ -471,8 +358,8 @@ class TestVersionFirstStrategies:
         )
         assert version_info.source == "web_scrape"
 
-    def test_api_github_get_version_info(self):
-        """Test api_github.get_version_info() returns RemoteVersion without
+    def test_api_github_discover(self):
+        """Test api_github.discover() returns RemoteVersion without
         downloading."""
         strategy = ApiGithubStrategy()
         app_config = {
@@ -500,15 +387,15 @@ class TestVersionFirstStrategies:
                 json=release_data,
             )
 
-            version_info = strategy.get_version_info(app_config)
+            version_info = strategy.discover(app_config)
 
         assert isinstance(version_info, RemoteVersion)
         assert version_info.version == "1.2.3"
         assert "github.com" in version_info.download_url
         assert version_info.source == "api_github"
 
-    def test_api_json_get_version_info(self):
-        """Test api_json.get_version_info() returns RemoteVersion without downloading."""
+    def test_api_json_discover(self):
+        """Test api_json.discover() returns RemoteVersion without downloading."""
         strategy = ApiJsonStrategy()
         app_config = {
             "discovery": {
@@ -526,7 +413,7 @@ class TestVersionFirstStrategies:
         with requests_mock.Mocker() as m:
             m.get("https://api.example.com/latest", json=api_response)
 
-            version_info = strategy.get_version_info(app_config)
+            version_info = strategy.discover(app_config)
 
         assert isinstance(version_info, RemoteVersion)
         assert version_info.version == "1.2.3"
@@ -540,13 +427,13 @@ class TestVersionFirstStrategies:
 
 
 class TestWebScrapeStrategyErrors:
-    """Tests error handling in WebScrapeStrategy.get_version_info()."""
+    """Tests error handling in WebScrapeStrategy.discover()."""
 
     def test_missing_page_url_raises(self):
         """Tests that missing page_url raises ConfigError."""
         strategy = WebScrapeStrategy()
         with pytest.raises(ConfigError, match="requires 'discovery.page_url'"):
-            strategy.get_version_info(
+            strategy.discover(
                 {"discovery": {"link_selector": "a", "version_pattern": "."}}
             )
 
@@ -554,7 +441,7 @@ class TestWebScrapeStrategyErrors:
         """Tests that omitting both link_selector and link_pattern raises ConfigError."""
         strategy = WebScrapeStrategy()
         with pytest.raises(ConfigError, match="link_selector.*link_pattern"):
-            strategy.get_version_info(
+            strategy.discover(
                 {
                     "discovery": {
                         "page_url": "https://example.com",
@@ -567,7 +454,7 @@ class TestWebScrapeStrategyErrors:
         """Tests that missing version_pattern raises ConfigError."""
         strategy = WebScrapeStrategy()
         with pytest.raises(ConfigError, match="requires 'discovery.version_pattern'"):
-            strategy.get_version_info(
+            strategy.discover(
                 {
                     "discovery": {
                         "page_url": "https://example.com",
@@ -589,7 +476,7 @@ class TestWebScrapeStrategyErrors:
         with requests_mock.Mocker() as m:
             m.get("https://example.com/dl.html", status_code=503)
             with pytest.raises(NetworkError, match="Failed to fetch page"):
-                strategy.get_version_info(app_config)
+                strategy.discover(app_config)
 
     def test_css_selector_not_found_raises(self):
         """Tests that a CSS selector matching nothing raises ConfigError."""
@@ -607,7 +494,7 @@ class TestWebScrapeStrategyErrors:
                 text="<html><body>no links here</body></html>",
             )
             with pytest.raises(ConfigError, match="did not match any elements"):
-                strategy.get_version_info(app_config)
+                strategy.discover(app_config)
 
     def test_regex_link_pattern_not_found_raises(self):
         """Tests that a regex link_pattern matching nothing raises ConfigError."""
@@ -624,7 +511,7 @@ class TestWebScrapeStrategyErrors:
                 "https://example.com/dl.html", text="<html><body>nothing</body></html>"
             )
             with pytest.raises(ConfigError, match="did not match anything"):
-                strategy.get_version_info(app_config)
+                strategy.discover(app_config)
 
     def test_version_pattern_no_match_raises(self):
         """Tests that a version_pattern not matching the URL raises ConfigError."""
@@ -642,7 +529,7 @@ class TestWebScrapeStrategyErrors:
                 text='<a href="/files/installer.msi">Download</a>',
             )
             with pytest.raises(ConfigError, match="did not match"):
-                strategy.get_version_info(app_config)
+                strategy.discover(app_config)
 
     def test_version_format_with_multiple_groups(self):
         """Tests that version_format combines multiple capture groups correctly."""
@@ -660,7 +547,7 @@ class TestWebScrapeStrategyErrors:
                 "https://example.com/dl.html",
                 text='<a href="/app-v3.14.1-x64.msi">Download</a>',
             )
-            version_info = strategy.get_version_info(app_config)
+            version_info = strategy.discover(app_config)
         assert version_info.version == "3.14.1"
         assert version_info.source == "web_scrape"
 
@@ -746,27 +633,25 @@ class TestWebScrapeValidateConfig:
 
 
 class TestApiGithubStrategyErrors:
-    """Tests error handling in ApiGithubStrategy.get_version_info()."""
+    """Tests error handling in ApiGithubStrategy.discover()."""
 
     def test_missing_repo_raises(self):
         """Tests that missing repo raises ConfigError."""
         strategy = ApiGithubStrategy()
         with pytest.raises(ConfigError, match="requires 'discovery.repo'"):
-            strategy.get_version_info({"discovery": {"asset_pattern": ".*"}})
+            strategy.discover({"discovery": {"asset_pattern": ".*"}})
 
     def test_invalid_repo_format_raises(self):
         """Tests that repo without slash raises ConfigError."""
         strategy = ApiGithubStrategy()
         with pytest.raises(ConfigError, match="Invalid repo format"):
-            strategy.get_version_info(
-                {"discovery": {"repo": "noslash", "asset_pattern": ".*"}}
-            )
+            strategy.discover({"discovery": {"repo": "noslash", "asset_pattern": ".*"}})
 
     def test_missing_asset_pattern_raises(self):
         """Tests that missing asset_pattern raises ConfigError."""
         strategy = ApiGithubStrategy()
         with pytest.raises(ConfigError, match="requires 'discovery.asset_pattern'"):
-            strategy.get_version_info({"discovery": {"repo": "owner/repo"}})
+            strategy.discover({"discovery": {"repo": "owner/repo"}})
 
     def test_repo_not_found_raises(self):
         """Tests that a 404 API response raises NetworkError."""
@@ -778,7 +663,7 @@ class TestApiGithubStrategyErrors:
                 status_code=404,
             )
             with pytest.raises(NetworkError, match="not found"):
-                strategy.get_version_info(app_config)
+                strategy.discover(app_config)
 
     def test_rate_limited_raises(self):
         """Tests that a 403 API response raises NetworkError mentioning rate limit."""
@@ -790,7 +675,7 @@ class TestApiGithubStrategyErrors:
                 status_code=403,
             )
             with pytest.raises(NetworkError, match="rate limit"):
-                strategy.get_version_info(app_config)
+                strategy.discover(app_config)
 
     def test_prerelease_rejected_when_flag_false(self):
         """Tests that a prerelease latest release is rejected when prerelease=False."""
@@ -818,7 +703,7 @@ class TestApiGithubStrategyErrors:
                 json=release_data,
             )
             with pytest.raises(NetworkError, match="pre-release"):
-                strategy.get_version_info(app_config)
+                strategy.discover(app_config)
 
     def test_no_assets_raises(self):
         """Tests that a release with no assets raises NetworkError."""
@@ -831,7 +716,7 @@ class TestApiGithubStrategyErrors:
                 json=release_data,
             )
             with pytest.raises(NetworkError, match="has no assets"):
-                strategy.get_version_info(app_config)
+                strategy.discover(app_config)
 
     def test_no_matching_asset_raises(self):
         """Tests that no asset matching the pattern raises ConfigError."""
@@ -853,7 +738,7 @@ class TestApiGithubStrategyErrors:
                 json=release_data,
             )
             with pytest.raises(ConfigError, match="No assets matched"):
-                strategy.get_version_info(app_config)
+                strategy.discover(app_config)
 
     def test_named_version_capture_group(self):
         """Tests that a named 'version' capture group is used correctly."""
@@ -880,7 +765,7 @@ class TestApiGithubStrategyErrors:
                 "https://api.github.com/repos/owner/repo/releases/latest",
                 json=release_data,
             )
-            version_info = strategy.get_version_info(app_config)
+            version_info = strategy.discover(app_config)
         assert version_info.version == "3.5.0"
         assert version_info.source == "api_github"
 
@@ -937,13 +822,13 @@ class TestApiGithubValidateConfig:
 
 
 class TestApiJsonStrategyErrors:
-    """Tests error handling in ApiJsonStrategy.get_version_info()."""
+    """Tests error handling in ApiJsonStrategy.discover()."""
 
     def test_missing_api_url_raises(self):
         """Tests that missing api_url raises ConfigError."""
         strategy = ApiJsonStrategy()
         with pytest.raises(ConfigError, match="requires 'discovery.api_url'"):
-            strategy.get_version_info(
+            strategy.discover(
                 {
                     "discovery": {
                         "version_path": "version",
@@ -956,7 +841,7 @@ class TestApiJsonStrategyErrors:
         """Tests that missing version_path raises ConfigError."""
         strategy = ApiJsonStrategy()
         with pytest.raises(ConfigError, match="requires 'discovery.version_path'"):
-            strategy.get_version_info(
+            strategy.discover(
                 {
                     "discovery": {
                         "api_url": "https://api.example.com",
@@ -969,7 +854,7 @@ class TestApiJsonStrategyErrors:
         """Tests that missing download_url_path raises ConfigError."""
         strategy = ApiJsonStrategy()
         with pytest.raises(ConfigError, match="requires 'discovery.download_url_path'"):
-            strategy.get_version_info(
+            strategy.discover(
                 {
                     "discovery": {
                         "api_url": "https://api.example.com",
@@ -991,7 +876,7 @@ class TestApiJsonStrategyErrors:
         with requests_mock.Mocker() as m:
             m.get("https://api.example.com/latest", status_code=500)
             with pytest.raises(NetworkError, match="API request failed"):
-                strategy.get_version_info(app_config)
+                strategy.discover(app_config)
 
     def test_invalid_json_response_raises(self):
         """Tests that a non-JSON response raises NetworkError."""
@@ -1010,7 +895,7 @@ class TestApiJsonStrategyErrors:
                 status_code=200,
             )
             with pytest.raises(NetworkError, match="Invalid JSON"):
-                strategy.get_version_info(app_config)
+                strategy.discover(app_config)
 
     def test_version_path_not_found_raises(self):
         """Tests that a version_path that matches nothing raises ConfigError."""
@@ -1028,7 +913,7 @@ class TestApiJsonStrategyErrors:
                 json={"version": "1.0.0", "download_url": "https://example.com/f.msi"},
             )
             with pytest.raises(ConfigError, match="did not match"):
-                strategy.get_version_info(app_config)
+                strategy.discover(app_config)
 
     def test_post_method(self):
         """Tests that method=POST sends a POST request."""
@@ -1050,7 +935,7 @@ class TestApiJsonStrategyErrors:
                     "download_url": "https://example.com/v2.msi",
                 },
             )
-            version_info = strategy.get_version_info(app_config)
+            version_info = strategy.discover(app_config)
         assert version_info.version == "2.0.0"
         assert version_info.source == "api_json"
 
@@ -1074,7 +959,7 @@ class TestApiJsonStrategyErrors:
                     "download_url": "https://example.com/file.msi",
                 },
             )
-            version_info = strategy.get_version_info(app_config)
+            version_info = strategy.discover(app_config)
             assert m.last_request.headers.get("Authorization") == "secret123"
         assert version_info.version == "1.0.0"
 
@@ -1098,7 +983,7 @@ class TestApiJsonStrategyErrors:
                     }
                 },
             )
-            version_info = strategy.get_version_info(app_config)
+            version_info = strategy.discover(app_config)
         assert version_info.version == "3.1.4"
         assert "3.1.4" in version_info.download_url
 

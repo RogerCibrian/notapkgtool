@@ -12,57 +12,60 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Discovery strategy base protocol and registry for NAPT.
+"""Discovery strategy protocol, registry, and shared helpers.
 
-This module defines the foundational components for the discovery system:
+A *discovery strategy* answers a single question: "what is the latest
+version of this app, and where can it be downloaded from?" Strategies
+return that answer as a [RemoteVersion][napt.discovery.base.RemoteVersion]
+dataclass. They do not download files or touch the cache themselves;
+the orchestrator does.
 
-- DiscoveryStrategy protocol: Interface that all strategies must implement
-- Strategy registry: Global dict mapping strategy names to implementations
-- Registration and lookup functions: register_strategy() and get_strategy()
+Built-in strategies:
+    - api_github: queries the GitHub releases API for the latest tag.
+    - api_json: extracts version and download URL from a JSON endpoint.
+    - web_scrape: parses a vendor download page for both fields.
 
-The discovery system uses a strategy pattern to support multiple ways
-of obtaining application installers and their versions:
-
-- url_download: Direct download from a static URL (FILE-FIRST)
-- web_scrape: Scrape vendor download pages to find links and extract versions
-    (VERSION-FIRST)
-- api_github: Fetch from GitHub releases API (VERSION-FIRST)
-- api_json: Query JSON API endpoints for version and download URL (VERSION-FIRST)
+The fourth flow (``url_download``) is *not* a registered strategy. It
+downloads a fixed URL and extracts the version from the file itself,
+which is a different shape than the strategies in this module. The
+discovery orchestrator dispatches to that flow directly when a recipe
+uses ``strategy: url_download``.
 
 Design Philosophy:
-    - Strategies are Protocol classes (structural subtyping, not inheritance)
-    - Registration happens at module import time (strategies self-register)
-    - Registry is a simple dict (no complex dependency injection needed)
-    - Each strategy is stateless and can be instantiated on-demand
-
-Protocol Benefits:
-
-Using typing.Protocol instead of ABC allows:
-
-- Duck typing: Classes don't need explicit inheritance
-- Better IDE support: Type checkers verify interface compliance
-- Flexibility: Third-party code can add strategies without touching base
+    - Strategies are ``typing.Protocol`` types. Implementations are
+        matched structurally; no inheritance is required.
+    - Strategies are pure functions of configuration. They have no state,
+        no I/O of files, and no awareness of the cache.
+    - Registration is a side effect of importing each strategy module.
+    - The [resolve_with_cache][napt.discovery.base.resolve_with_cache]
+        helper turns a [RemoteVersion][napt.discovery.base.RemoteVersion]
+        into a [StrategyResult][napt.discovery.base.StrategyResult] by
+        checking the cache and downloading if needed. Strategies don't
+        call it themselves; the orchestrator does.
 
 Example:
-    Implementing a custom strategy:
+    Adding a new strategy to the codebase:
         ```python
-        from napt.discovery.base import register_strategy, DiscoveryStrategy
-        from pathlib import Path
-        from typing import Any
-        class MyCustomStrategy:
-            def discover_version(
-                self, app_config: dict[str, Any], output_dir: Path
-            ) -> tuple[str, str, Path, str, dict]:
-                # Implement your discovery logic here
-                ...
+        from napt.discovery.base import (
+            RemoteVersion, register_strategy,
+        )
 
-        # Register it (typically at module import)
-        register_strategy("my_custom", MyCustomStrategy)
+        class GitlabReleasesStrategy:
+            def discover(self, app_config):
+                # Query GitLab API and parse the response...
+                return RemoteVersion(
+                    version="1.2.3",
+                    download_url="https://gitlab.example.com/.../installer.msi",
+                    source="gitlab_releases",
+                )
 
-        # Now it can be used in recipes:
-        # discovery:
-        #   strategy: my_custom
-        #   ...
+            def validate_config(self, app_config):
+                errors = []
+                if "project" not in app_config.get("discovery", {}):
+                    errors.append("Missing required field: discovery.project")
+                return errors
+
+        register_strategy("gitlab_releases", GitlabReleasesStrategy)
         ```
 
 """
@@ -73,22 +76,27 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
+from napt.download import download_file
 from napt.exceptions import ConfigError
+from napt.logging import get_global_logger
+from napt.versioning import is_newer
 
 
 @dataclass(frozen=True)
 class RemoteVersion:
-    """Represents a version and download URL obtained from a remote source.
+    """Version and download URL discovered from a remote source.
 
-    Used by version-first strategies (web_scrape, api_github, api_json) that
-    can determine both the version and where to download the installer *without*
-    fetching the file first. This allows the core pipeline to skip the download
-    entirely when the version is unchanged.
+    Returned by every [DiscoveryStrategy][napt.discovery.base.DiscoveryStrategy]
+    implementation. The orchestrator passes this to
+    [resolve_with_cache][napt.discovery.base.resolve_with_cache] to decide
+    whether the file needs to be re-downloaded.
 
     Attributes:
-        version: Raw version string (e.g., "140.0.7339.128").
-        download_url: URL to download the installer.
-        source: Strategy name for logging (e.g., "web_scrape", "api_github").
+        version: Raw version string extracted from the remote source
+            (for example, ``"140.0.7339.128"``).
+        download_url: URL the installer can be fetched from.
+        source: Name of the strategy that produced this result, used
+            for logging and result reporting (for example, ``"api_github"``).
     """
 
     version: str
@@ -96,69 +104,81 @@ class RemoteVersion:
     source: str
 
 
+@dataclass(frozen=True)
+class StrategyResult:
+    """Resolved discovery result, ready to be saved to state.
+
+    Returned by both the version-first flow (via
+    [resolve_with_cache][napt.discovery.base.resolve_with_cache]) and the
+    url_download flow. Captures everything the orchestrator needs to
+    update the state cache and build a public
+    [DiscoverResult][napt.results.DiscoverResult].
+
+    Attributes:
+        version: Version string for the resolved file.
+        version_source: Strategy name that produced this version
+            (for example, ``"api_github"`` or ``"url_download"``).
+        file_path: Path to the resolved installer on disk. This is either
+            a freshly downloaded file or a previously cached file when the
+            cache was reused.
+        sha256: SHA-256 hex digest of the resolved file.
+        headers: HTTP response headers from the download. Empty when the
+            cache was reused without a network call. Used to persist
+            ``ETag`` / ``Last-Modified`` for the next conditional request.
+        download_url: URL the file came from. Stored in state so that
+            future runs know where to re-fetch from if needed.
+        cached: True when the file was reused from cache; False when it
+            was downloaded.
+    """
+
+    version: str
+    version_source: str
+    file_path: Path
+    sha256: str
+    headers: dict[str, str]
+    download_url: str
+    cached: bool
+
+
 class DiscoveryStrategy(Protocol):
     """Protocol for version discovery strategies.
 
-    Each strategy must implement discover_version() which downloads
-    and extracts version information based on the app config.
+    A strategy queries a remote source (API, web page, etc.) and returns
+    the latest version plus its download URL. Strategies do not download
+    files, touch the cache, or write to disk. Those concerns belong to
+    the orchestrator.
 
-    Strategies may optionally implement validate_config() to provide
-    strategy-specific configuration validation without network calls.
+    Implementations need only a ``discover`` and a ``validate_config``
+    method with the signatures below.
     """
 
-    def discover_version(
-        self, app_config: dict[str, Any], output_dir: Path
-    ) -> tuple[str, str, Path, str, dict]:
-        """Discover and download an application version.
+    def discover(self, app_config: dict[str, Any]) -> RemoteVersion:
+        """Discovers the latest version and its download URL.
 
         Args:
-            app_config: The merged recipe configuration dict.
-            output_dir: Directory to download the installer to.
+            app_config: Merged recipe configuration dict.
 
         Returns:
-            A tuple (version, version_source, file_path, sha256, headers), where
-                version is the extracted version string, version_source identifies
-                how the version was obtained (e.g., "url_download"), file_path is
-                the path to the downloaded file, sha256 is the SHA-256 hash,
-                and headers contains HTTP response headers for caching.
+            Latest version, the URL it can be downloaded from, and the
+            strategy's own name as the source identifier.
 
         Raises:
-            ValueError: On discovery or download failures.
-            RuntimeError: On discovery or download failures.
+            ConfigError: On missing or invalid required configuration.
+            NetworkError: On HTTP failures or version-extraction errors.
 
         """
         ...
 
     def validate_config(self, app_config: dict[str, Any]) -> list[str]:
-        """Validate strategy-specific configuration (optional).
+        """Validates strategy-specific configuration fields without network calls.
 
-        This method validates the app configuration for strategy-specific
-        requirements without making network calls or downloading files.
-        Useful for quick feedback during recipe development.
+        Implementations should check field presence, types, and format only.
 
         Args:
-            app_config: The merged recipe configuration dict.
+            app_config: Merged recipe configuration dict.
 
         Returns:
-            List of error messages. Empty list if configuration is valid.
-            Each error should be a human-readable description of the issue.
-
-        Example:
-            Check required fields:
-                ```python
-                def validate_config(self, app_config):
-                    errors = []
-                    source = app_config.get("discovery", {})
-                    if "url" not in source:
-                        errors.append("Missing required field: discovery.url")
-                    return errors
-                ```
-
-        Note:
-            This method is optional; strategies without it will skip validation.
-            Should NOT make network calls or download files. Should check field
-            presence, types, and format only. Used by 'napt validate' command
-            for fast recipe checking.
+            Human-readable error messages. Empty when configuration is valid.
 
         """
         ...
@@ -168,81 +188,46 @@ _STRATEGY_REGISTRY: dict[str, type[DiscoveryStrategy]] = {}
 
 
 def register_strategy(name: str, strategy_class: type[DiscoveryStrategy]) -> None:
-    """Register a discovery strategy by name in the global registry.
+    """Registers a discovery strategy by name in the global registry.
 
-    This function should be called when a strategy module is imported,
-    typically at module level. Registering the same name twice will
-    overwrite the previous registration (allows monkey-patching for tests).
+    Strategies call this at module import time so they're available when
+    the orchestrator looks them up. Registering the same name twice
+    overwrites the previous entry (intentional, to allow test
+    monkey-patching).
 
     Args:
-        name: Strategy name (e.g., "url_download"). This is the value
-            used in recipe YAML files under discovery.strategy. Names should be
-            lowercase with underscores for readability.
-        strategy_class: The strategy class to
-            register. Must implement the DiscoveryStrategy protocol (have a
-            discover_version method with the correct signature).
-
-    Example:
-        Register at module import time:
-            ```python
-            # In discovery/my_strategy.py
-            from .base import register_strategy
-
-            class MyStrategy:
-                def discover_version(self, app_config, output_dir):
-                    ...
-
-            register_strategy("my_strategy", MyStrategy)
-            ```
+        name: Strategy name. This is the value used in recipe YAML files
+            under ``discovery.strategy``. Use lowercase with underscores.
+        strategy_class: Class implementing
+            [DiscoveryStrategy][napt.discovery.base.DiscoveryStrategy].
+            Type checkers verify protocol compliance statically.
 
     Note:
-        No validation is performed at registration time. Type checkers will
-        verify protocol compliance at static analysis time. Runtime errors
-        occur at strategy instantiation or invocation.
+        ``url_download`` is intentionally not registered here. It runs
+        through a separate code path in the orchestrator because it
+        downloads the file before it can determine the version, which
+        does not fit the version-first contract.
 
     """
     _STRATEGY_REGISTRY[name] = strategy_class
 
 
 def get_strategy(name: str) -> DiscoveryStrategy:
-    """Get a discovery strategy instance by name from the global registry.
+    """Returns a discovery strategy instance by name from the registry.
 
-    The strategy is instantiated on-demand (strategies are stateless, so
-    a new instance is created for each call). The strategy module must
-    have been imported first for registration to occur.
+    Strategies are instantiated on-demand because they are stateless. The
+    strategy's module must already be imported for registration to have
+    happened.
 
     Args:
-        name: Strategy name (e.g., "url_download"). Must exactly match
-            a name registered via register_strategy(). Case-sensitive.
+        name: Registered strategy name. Case-sensitive.
 
     Returns:
-        A new instance of the requested strategy, ready
-            to use.
+        New instance of the requested strategy.
 
     Raises:
-        ConfigError: If the strategy name is not registered. The error message
-            includes a list of available strategies for troubleshooting.
-
-    Example:
-        Get and use a strategy:
-            ```python
-            from napt.discovery import get_strategy
-            strategy = get_strategy("url_download")
-            # Use strategy.discover_version(...)
-            ```
-
-        Handle unknown strategy:
-            ```python
-            try:
-                strategy = get_strategy("nonexistent")
-            except ConfigError as e:
-                print(f"Strategy not found: {e}")
-            ```
-
-    Note:
-        Strategies must be registered before they can be retrieved. The
-        url_download strategy is auto-registered when imported. New strategies
-        can be added by creating a module and registering.
+        ConfigError: If the name is not registered. The message lists
+            the available strategies for troubleshooting.
 
     """
     if name not in _STRATEGY_REGISTRY:
@@ -251,3 +236,80 @@ def get_strategy(name: str) -> DiscoveryStrategy:
             f"Unknown discovery strategy: {name!r}. Available: {available or '(none)'}"
         )
     return _STRATEGY_REGISTRY[name]()
+
+
+def resolve_with_cache(
+    info: RemoteVersion,
+    app_config: dict[str, Any],
+    output_dir: Path,
+    cache: dict[str, Any] | None,
+) -> StrategyResult:
+    """Resolves a [RemoteVersion][napt.discovery.base.RemoteVersion] to a [StrategyResult][napt.discovery.base.StrategyResult].
+
+    Implements the version-first fast path: when the discovered version
+    matches the cached version and the cached file still exists on disk,
+    the download is skipped entirely. Otherwise the file is downloaded
+    fresh from ``info.download_url``.
+
+    Args:
+        info: Version and download URL produced by a strategy's
+            [discover][napt.discovery.base.DiscoveryStrategy.discover] call.
+        app_config: Merged recipe configuration. Used to read ``id``
+            for the per-app download subdirectory.
+        output_dir: Base directory to download into. Files land in
+            ``output_dir / app_id``.
+        cache: Cached state for this recipe (``known_version``,
+            ``file_path``, ``sha256``), or ``None`` when no prior state
+            exists or stateless mode is on.
+
+    Returns:
+        Resolved version, file path, and download metadata. The
+        ``cached`` field indicates whether the download was skipped.
+
+    Raises:
+        NetworkError: On download failures.
+
+    """
+    logger = get_global_logger()
+    app_id = app_config["id"]
+
+    if cache and not is_newer(info.version, cache.get("known_version")):
+        cached_path_str = cache.get("file_path")
+        cached_sha = cache.get("sha256")
+        if cached_path_str and cached_sha:
+            cached_path = Path(cached_path_str)
+            if cached_path.exists():
+                logger.info(
+                    "CACHE",
+                    f"Version {info.version} unchanged, using cached file",
+                )
+                return StrategyResult(
+                    version=info.version,
+                    version_source=info.source,
+                    file_path=cached_path,
+                    sha256=cached_sha,
+                    headers={},
+                    download_url=info.download_url,
+                    cached=True,
+                )
+            logger.warning(
+                "CACHE",
+                f"Cached file {cached_path} not found, re-downloading",
+            )
+
+    if cache and cache.get("known_version"):
+        logger.info(
+            "DISCOVERY",
+            f"Version changed: {cache.get('known_version')} -> {info.version}",
+        )
+
+    dl = download_file(info.download_url, output_dir / app_id)
+    return StrategyResult(
+        version=info.version,
+        version_source=info.source,
+        file_path=dl.file_path,
+        sha256=dl.sha256,
+        headers=dl.headers,
+        download_url=info.download_url,
+        cached=False,
+    )

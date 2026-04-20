@@ -12,132 +12,43 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-r"""GitHub API discovery strategy for NAPT.
+r"""GitHub releases discovery strategy.
 
-This is a VERSION-FIRST strategy that queries the GitHub API to get version
-and download URL WITHOUT downloading the installer. This enables fast version
-checks and efficient caching.
+Queries the GitHub releases API for the latest tag and the download URL
+of a matching asset. The version comes from the release tag (parsed
+with a regex); the download URL comes from the first asset whose
+filename matches ``asset_pattern``.
 
-Key Advantages:
-
-- Fast version discovery (GitHub API call ~100ms)
-- Can skip downloads entirely when version unchanged
-- Direct access to latest releases via stable GitHub API
-- Version extraction from Git tags (semantic versioning friendly)
-- Asset pattern matching for multi-platform releases
-- Optional authentication for higher rate limits
-- No web scraping required
-- Ideal for CI/CD with scheduled checks
-
-Supported Version Extraction:
-
-- Tag-based: Extract version from release tag names
-    - Supports named capture groups: (?P<version>...)
-    - Default pattern strips "v" prefix: v1.2.3 -> 1.2.3
-    - Falls back to full tag if no pattern match
-
-Use Cases:
-
-- Open-source projects (Git, VS Code, Node.js, etc.)
-- Projects with GitHub releases (Firefox, Chrome alternatives)
-- Vendors who publish installers as release assets
-- Projects with semantic versioned tags
-- CI/CD pipelines with frequent version checks
-
-Recipe Configuration:
+Recipe Example:
     ```yaml
-    source:
-        strategy: api_github
-        repo: "git-for-windows/git"                    # Required: owner/repo
-        asset_pattern: "Git-.*-64-bit\\.exe$"          # Required: regex for asset
-        version_pattern: "v?([0-9.]+)"                 # Optional: version extraction
-        prerelease: false                              # Optional: include prereleases
-        token: "${GITHUB_TOKEN}"                       # Optional: auth token
+    discovery:
+      strategy: api_github
+      repo: "git-for-windows/git"            # required, "owner/name"
+      asset_pattern: "Git-.*-64-bit\\.exe$"  # required, regex on asset filename
+      version_pattern: "v?([0-9.]+)"         # optional, default strips "v"
+      prerelease: false                      # optional, default false
+      token: "${GITHUB_TOKEN}"               # optional, supports env expansion
     ```
 
 Configuration Fields:
-
-- **repo** (str, required): GitHub repository in "owner/name" format
-    (e.g., "git-for-windows/git")
-- **asset_pattern** (str, required): Regular expression to match asset
-    filename. If multiple assets match, the first match is used. Example:
-    ".*-x64\\.msi$" matches assets ending with "-x64.msi"
-- **version_pattern** (str, optional): Regular expression to extract version
-    from the release tag name. Use a named capture group (?P<version>...) or
-    the entire match. Default: "v?([0-9.]+)" strips optional "v" prefix.
-    Example: "release-([0-9.]+)" for tags like "release-1.2.3".
-    - **prerelease** (bool, optional): If True, include pre-release versions. If False
-      (default), only stable releases are considered. Uses GitHub's prerelease flag.
-    - **token** (str, optional): GitHub personal access token for authentication.
-      Increases rate limit from 60 to 5000 requests per hour. Can use environment
-      variable substitution: "${GITHUB_TOKEN}". No special permissions needed for
-      public repositories.
-
-Error Handling:
-
-- ValueError: Missing or invalid configuration fields
-- RuntimeError: API failures, no releases, no matching assets
-- Errors are chained with 'from err' for better debugging
-
-Rate Limits:
-
-- Unauthenticated: 60 requests/hour per IP
-- Authenticated: 5000 requests/hour per token
-- Tip: Use a token for production use or frequent checks
-
-Example:
-    In a recipe YAML:
-        ```yaml
-        apps:
-          - name: "Git for Windows"
-            id: "git"
-            source:
-              strategy: api_github
-              repo: "git-for-windows/git"
-              asset_pattern: "Git-.*-64-bit\\.exe$"
-        ```
-
-    From Python (version-first approach):
-        ```python
-        from napt.discovery.api_github import ApiGithubStrategy
-        from napt.download import download_file
-
-        strategy = ApiGithubStrategy()
-        app_config = {
-            "source": {
-                "repo": "git-for-windows/git",
-                "asset_pattern": ".*-64-bit\\.exe$",
-            }
-        }
-
-        # Get version WITHOUT downloading
-        version_info = strategy.get_version_info(app_config)
-        print(f"Latest version: {version_info.version}")
-
-        # Download only if needed
-        if need_to_download:
-            result = download_file(
-                version_info.download_url, Path("./downloads/my-app")
-            )
-            print(f"Downloaded to {result.file_path}")
-        ```
-
-    From Python (using core orchestration):
-        ```python
-        from pathlib import Path
-        from napt.discovery import discover_recipe
-
-        # Automatically uses version-first optimization
-        result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
-        print(f"Version {result.version} at {result.file_path}")
-        ```
+    - **repo** (required): GitHub repo as ``"owner/name"``.
+    - **asset_pattern** (required): Regex matched against asset filename.
+        First match wins. Case-sensitive by default; prefix with ``(?i)``
+        for case-insensitive matching.
+    - **version_pattern** (optional): Regex for extracting the version
+        from the release tag. Uses a named group ``(?P<version>...)`` or
+        capture group 1 if present, otherwise the full match. Default:
+        ``v?([0-9.]+)``.
+    - **prerelease** (optional, default false): When true, includes
+        pre-release versions; otherwise the latest release must be stable.
+    - **token** (optional): GitHub personal access token. Raises the API
+        rate limit from 60 to 5000 requests/hour. Supports ``${ENV_VAR}``
+        expansion. Public repos do not require any special permissions.
 
 Note:
-    Version discovery via API only (no download required).
-    Core orchestration automatically skips download if version unchanged.
-    The GitHub API is stable and well-documented. Releases are fetched in order
-    (latest first). Asset matching is case-sensitive by default (use (?i) for
-    case-insensitive). Consider url_download if you need a direct download URL instead.
+    GitHub returns the most recent release first. If no asset matches,
+    or the latest release is a pre-release while ``prerelease: false``,
+    discovery raises an error rather than walking back through history.
 
 """
 
@@ -160,55 +71,31 @@ _DEFAULT_PRERELEASE = False
 
 
 class ApiGithubStrategy:
-    r"""Discovery strategy for GitHub releases.
+    """Discovery strategy for GitHub releases."""
 
-    Configuration example:
-        source:
-          strategy: api_github
-          repo: "owner/repository"
-          asset_pattern: ".*\\.msi$"
-          version_pattern: "v?([0-9.]+)"
-          prerelease: false
-          token: "${GITHUB_TOKEN}"
-    """
+    def discover(self, app_config: dict[str, Any]) -> RemoteVersion:
+        r"""Discovers the latest GitHub release version and asset download URL.
 
-    def get_version_info(
-        self,
-        app_config: dict[str, Any],
-    ) -> RemoteVersion:
-        r"""Fetches latest release from GitHub API without downloading.
-
-        Version-first path: queries the GitHub API for the latest release and
-        extracts the version from the tag name and the download URL from
-        matching assets. If the version matches cached state, the download
-        can be skipped entirely.
+        Queries the GitHub releases API for the latest release of the
+        configured repository. Extracts the version from the release tag
+        (via ``version_pattern``) and the download URL from the first
+        asset matching ``asset_pattern``.
 
         Args:
-            app_config: App configuration containing discovery.repo and
-                optional fields.
+            app_config: Merged recipe configuration dict containing
+                ``discovery.repo`` and ``discovery.asset_pattern``,
+                plus optional ``version_pattern``, ``prerelease``, and
+                ``token`` fields.
 
         Returns:
-            Version info with version string, download URL, and
-                source name.
+            Latest version, the matched asset's download URL, and
+            ``"api_github"`` as the source identifier.
 
         Raises:
-            ValueError: If required config fields are missing, invalid, or if
-                no matching assets are found.
-            RuntimeError: If API call fails or release has no assets.
-
-        Example:
-            Get version from GitHub releases:
-                ```python
-                strategy = ApiGithubStrategy()
-                config = {
-                    "source": {
-                        "repo": "owner/repo",
-                        "asset_pattern": ".*\\.msi$"
-                    }
-                }
-                version_info = strategy.get_version_info(config)
-                # version_info.version returns: '1.0.0'
-                ```
+            ConfigError: On missing or malformed required configuration,
+                or when patterns do not match the release.
+            NetworkError: On API failure, missing assets, or rejected
+                pre-releases.
 
         """
         from napt.logging import get_global_logger

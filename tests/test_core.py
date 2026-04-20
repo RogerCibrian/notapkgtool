@@ -21,8 +21,9 @@ class TestDiscoverRecipe:
     """Tests for discover_recipe orchestration function."""
 
     def test_discover_recipe_success(self, tmp_test_dir, create_yaml_file):
-        """Test successful recipe check workflow."""
-        # Create a minimal recipe
+        """Tests the successful url_download discovery workflow end to end."""
+        from napt.discovery.base import StrategyResult
+
         recipe_data = {
             "apiVersion": "napt/v1",
             "name": "Test App",
@@ -34,19 +35,16 @@ class TestDiscoverRecipe:
         }
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
 
-        # Mock the discovery strategy (url_download - file-first)
-        with patch("napt.discovery.manager.get_strategy") as mock_get_strategy:
-            mock_strategy = mock_get_strategy.return_value
-            # Ensure it doesn't have get_version_info (file-first strategy)
-            del mock_strategy.get_version_info
-            mock_strategy.discover_version.return_value = (
-                "1.2.3",
-                "url_download",
-                tmp_test_dir / "test.msi",
-                "abc123" * 8,  # fake SHA-256
-                {"ETag": 'W/"test123"'},  # HTTP headers
+        with patch("napt.discovery.manager.run_url_download") as mock_run:
+            mock_run.return_value = StrategyResult(
+                version="1.2.3",
+                version_source="url_download",
+                file_path=tmp_test_dir / "test.msi",
+                sha256="abc123" * 8,
+                headers={"ETag": 'W/"test123"'},
+                download_url="https://example.com/test.msi",
+                cached=False,
             )
-
             result = discover_recipe(recipe_path, tmp_test_dir)
 
         assert result.app_name == "Test App"
@@ -55,8 +53,6 @@ class TestDiscoverRecipe:
         assert result.version == "1.2.3"
         assert result.version_source == "url_download"
         assert result.status == "success"
-        assert hasattr(result, "file_path")
-        assert hasattr(result, "sha256")
 
     def test_discover_recipe_missing_strategy_in_empty_recipe_raises(
         self, tmp_test_dir, create_yaml_file
@@ -161,7 +157,7 @@ class TestVersionFirstFastPath:
                 mock_load_state.return_value = state
 
                 with patch("napt.discovery.manager.save_state"):
-                    with patch("napt.discovery.manager.download_file") as mock_download:
+                    with patch("napt.discovery.base.download_file") as mock_download:
                         result = discover_recipe(
                             recipe_path, tmp_test_dir, state_file=Path("state.json")
                         )
@@ -219,7 +215,7 @@ class TestVersionFirstFastPath:
                 mock_load_state.return_value = state
 
                 with patch("napt.discovery.manager.save_state"):
-                    with patch("napt.discovery.manager.download_file") as mock_download:
+                    with patch("napt.discovery.base.download_file") as mock_download:
                         from napt.results import DownloadResult
 
                         mock_download.return_value = DownloadResult(

@@ -82,7 +82,7 @@ Result (dataclass)
 
 ## Key Concepts
 
-- **Discovery Strategies:** Protocol-based, stateless, registered in global registry. Two paths: version-first (api_github, api_json, web_scrape) and file-first (url_download with ETag)
+- **Discovery Strategies:** Protocol-based, stateless, registered in global registry (api_github, api_json, web_scrape). All return a `RemoteVersion` from configuration alone. The orchestrator runs the result through `resolve_with_cache` to skip the download when the version is unchanged. `url_download` is a separate flow (not a registered strategy) because it must download the file to determine the version.
 - **Configuration:** 3-layer system (org → vendor → recipe) with deep merging
 - **State Management:** Tracks versions in `state/versions.json` for caching
 - **Exceptions:** All NAPT domain errors use custom exceptions inheriting from `NAPTError` (ConfigError, NetworkError, PackagingError) - allows catching all NAPT errors or specific types

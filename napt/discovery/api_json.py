@@ -12,157 +12,57 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""JSON API discovery strategy for NAPT.
+"""JSON API discovery strategy.
 
-This is a VERSION-FIRST strategy that queries JSON API endpoints to get version
-and download URL WITHOUT downloading the installer. This enables fast version
-checks and efficient caching.
+Queries a JSON API endpoint for the latest version and download URL.
+Both fields are extracted from the response using JSONPath expressions.
 
-Key Advantages:
-
-- Fast version discovery (API call ~100ms)
-- Can skip downloads entirely when version unchanged
-- Direct API access for version and download URL
-- Support for complex JSON structures with JSONPath
-- Custom headers for authentication
-- Support for GET and POST requests
-- No file parsing required
-- Ideal for CI/CD with scheduled checks
-
-Supported Features:
-
-- JSONPath navigation for nested structures
-- Array indexing and filtering
-- Custom HTTP headers (Authorization, etc.)
-- POST requests with JSON body
-- Environment variable expansion in values
-
-Use Cases:
-
-- Vendors with JSON APIs (Microsoft, Mozilla, etc.)
-- Cloud services with version endpoints
-- CDNs that provide metadata APIs
-- Applications with update check APIs
-- APIs requiring authentication or custom headers
-- CI/CD pipelines with frequent version checks
-
-Recipe Configuration:
+Recipe Example:
     ```yaml
-    source:
-        strategy: api_json
-        api_url: "https://vendor.com/api/latest"
-        version_path: "version"                      # JSONPath to version
-        download_url_path: "download_url"            # JSONPath to URL
-        method: "GET"                                # Optional: GET or POST
-        headers:                                     # Optional: custom headers
+    discovery:
+      strategy: api_json
+      api_url: "https://vendor.example.com/api/latest"  # required
+      version_path: "version"                           # required, JSONPath
+      download_url_path: "download_url"                 # required, JSONPath
+      method: "GET"                                     # optional, GET or POST
+      headers:                                          # optional
         Authorization: "Bearer ${API_TOKEN}"
         Accept: "application/json"
-        body:                                        # Optional: POST body
+      body:                                             # optional, POST only
         platform: "windows"
         arch: "x64"
-        timeout: 30                                  # Optional: timeout in seconds
+      timeout: 30                                       # optional, seconds
+    ```
+
+    Nested response, with auth header:
+    ```yaml
+    discovery:
+      strategy: api_json
+      api_url: "https://vendor.example.com/api/releases"
+      version_path: "stable.version"
+      download_url_path: "stable.platforms.windows.x64"
+      headers:
+        Authorization: "Bearer ${API_TOKEN}"
     ```
 
 Configuration Fields:
-
-- **api_url** (str, required): API endpoint URL that returns JSON with version
-    and download information
-- **version_path** (str, required): JSONPath expression to extract version from
-    the API response. Examples: "version", "release.version", "data.version"
-- **download_url_path** (str, required): JSONPath expression to extract
-    download URL from the API response. Examples: "download_url", "assets.url",
-    "platforms.windows.x64"
-- **method** (str, optional): HTTP method to use. Either "GET" or "POST".
-    Default is "GET"
-- **headers** (dict, optional): Custom HTTP headers to send with the request.
-    Useful for authentication or setting Accept headers. Values support
-    environment variable expansion. Example: {"Authorization": "Bearer ${API_TOKEN}"}
-- **body** (dict, optional): Request body for POST requests. Sent as JSON.
-    Only used when method="POST". Example: {"platform": "windows", "arch": "x64"}
-    - **timeout** (int, optional): Request timeout in seconds. Default is 30.
-
-JSONPath Syntax:
-
-- Simple paths: "version", "release.version"
-- Array indexing: "data.version", "releases.version"
-- Nested paths: "data.latest.download.url", "response.assets.browser_download_url"
-
-Error Handling:
-
-- ValueError: Missing or invalid configuration, invalid JSONPath, path not found
-- RuntimeError: API failures, invalid JSON response
-- Errors are chained with 'from err' for better debugging
-
-Example:
-    In a recipe YAML (simple API):
-        ```yaml
-        apps:
-          - name: "My App"
-            id: "my-app"
-            source:
-              strategy: api_json
-              api_url: "https://api.vendor.com/latest"
-              version_path: "version"
-              download_url_path: "download_url"
-        ```
-
-    In a recipe YAML (nested structure):
-        ```yaml
-        apps:
-          - name: "My App"
-            id: "my-app"
-            source:
-              strategy: api_json
-              api_url: "https://api.vendor.com/releases"
-              version_path: "stable.version"
-              download_url_path: "stable.platforms.windows.x64"
-              headers:
-                Authorization: "Bearer ${API_TOKEN}"
-        ```
-
-    From Python (version-first approach):
-        ```python
-        from napt.discovery.api_json import ApiJsonStrategy
-        from napt.download import download_file
-
-        strategy = ApiJsonStrategy()
-        app_config = {
-            "source": {
-                "api_url": "https://api.vendor.com/latest",
-                "version_path": "version",
-                "download_url_path": "download_url",
-            }
-        }
-
-        # Get version WITHOUT downloading
-        version_info = strategy.get_version_info(app_config)
-        print(f"Latest version: {version_info.version}")
-
-        # Download only if needed
-        if need_to_download:
-            result = download_file(
-                version_info.download_url, Path("./downloads/my-app")
-            )
-            print(f"Downloaded to {result.file_path}")
-        ```
-
-    From Python (using core orchestration):
-        ```python
-        from pathlib import Path
-        from napt.discovery import discover_recipe
-
-        # Automatically uses version-first optimization
-        result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
-        print(f"Version {result.version} at {result.file_path}")
-        ```
+    - **api_url** (required): JSON endpoint URL.
+    - **version_path** (required): JSONPath expression locating the
+        version string in the response (e.g. ``"version"``,
+        ``"release.version"``).
+    - **download_url_path** (required): JSONPath expression locating
+        the installer download URL in the response.
+    - **method** (optional, default ``"GET"``): ``"GET"`` or ``"POST"``.
+    - **headers** (optional): HTTP headers to send. Values support
+        ``${ENV_VAR}`` expansion.
+    - **body** (optional): Dict sent as a JSON body. Only used when
+        ``method: POST``.
+    - **timeout** (optional, default 30): Request timeout in seconds.
 
 Note:
-    - Version discovery via API only (no download required)
-    - Core orchestration automatically skips download if version unchanged
-    - JSONPath uses jsonpath-ng library for robust parsing
-    - Environment variable expansion works in headers and other string values
-    - POST body is sent as JSON (Content-Type: application/json)
-    - Timeout defaults to 30 seconds to prevent hanging on slow APIs
+    JSONPath uses the ``jsonpath-ng`` library. Environment-variable
+    expansion (``${VAR}``) is applied to string values in ``headers``.
+    POST bodies are always sent as ``application/json``.
 
 """
 
@@ -186,56 +86,30 @@ _DEFAULT_TIMEOUT = 30
 
 
 class ApiJsonStrategy:
-    """Discovery strategy for JSON API endpoints.
+    """Discovery strategy for JSON API endpoints."""
 
-    Configuration example:
-        source:
-          strategy: api_json
-          api_url: "https://api.vendor.com/latest"
-          version_path: "version"
-          download_url_path: "download_url"
-          method: "GET"
-          headers:
-            Authorization: "Bearer ${API_TOKEN}"
-    """
+    def discover(self, app_config: dict[str, Any]) -> RemoteVersion:
+        """Discovers version and download URL from a JSON API endpoint.
 
-    def get_version_info(
-        self,
-        app_config: dict[str, Any],
-    ) -> RemoteVersion:
-        """Queries JSON API for version and download URL without downloading.
-
-        Version-first path: calls a JSON API, extracts version and download URL
-        using JSONPath expressions. If the version matches cached state, the
-        download can be skipped entirely.
+        Calls the configured ``api_url`` and extracts the version and
+        download URL using JSONPath expressions. The HTTP method,
+        headers, and body are configurable so the same strategy works
+        for GET and POST endpoints.
 
         Args:
-            app_config: App configuration containing discovery.api_url,
-                discovery.version_path, and discovery.download_url_path.
+            app_config: Merged recipe configuration dict containing
+                ``discovery.api_url``, ``discovery.version_path``, and
+                ``discovery.download_url_path``, plus optional
+                ``method``, ``headers``, and ``body`` fields.
 
         Returns:
-            Version info with version string, download URL, and
-                source name.
+            Discovered version, download URL, and ``"api_json"`` as
+            the source identifier.
 
         Raises:
-            ValueError: If required config fields are missing, invalid, or if
-                JSONPath expressions don't match anything in the response.
-            RuntimeError: If API call fails (chained with 'from err').
-
-        Example:
-            Get version info from JSON API:
-                ```python
-                strategy = ApiJsonStrategy()
-                config = {
-                    "discovery": {
-                        "api_url": "https://api.vendor.com/latest",
-                        "version_path": "version",
-                        "download_url_path": "download_url"
-                    }
-                }
-                version_info = strategy.get_version_info(config)
-                # version_info.version returns: '1.0.0'
-                ```
+            ConfigError: On missing required configuration or when
+                the JSONPath expressions do not match the response.
+            NetworkError: On API request failure.
 
         """
         from napt.logging import get_global_logger

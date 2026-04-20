@@ -12,69 +12,54 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Discovery pipeline orchestration for NAPT.
+"""Discovery pipeline orchestration.
 
-This module provides high-level orchestration for the discovery workflow,
-coordinating config loading, strategy selection, version checking, downloading,
-and state management.
+This module owns the top-level [discover_recipe][napt.discovery.manager.discover_recipe]
+entry point used by ``napt discover``. It loads the merged configuration,
+picks a flow based on the recipe's ``discovery.strategy`` value, persists
+state for the next run, and returns the public
+[DiscoverResult][napt.results.DiscoverResult].
 
-Two-Path Architecture:
+Two Flows:
+    Two flows feed into the same orchestration:
 
-The orchestration automatically selects the optimal path based on what each
-discovery strategy can do:
+    - **Version-first** (api_github, api_json, web_scrape and any other
+        registered [DiscoveryStrategy][napt.discovery.base.DiscoveryStrategy]):
+        the strategy returns a
+        [RemoteVersion][napt.discovery.base.RemoteVersion], and
+        [resolve_with_cache][napt.discovery.base.resolve_with_cache]
+        decides whether to skip the download (version unchanged + file
+        present) or fetch fresh.
+    - **url_download** (handled by
+        [run_url_download][napt.discovery.url_download.run_url_download]):
+        downloads the file with HTTP conditional headers (``ETag`` /
+        ``Last-Modified``) and extracts the version from the file's
+        metadata. Not a registered strategy because it cannot determine
+        the version without the file.
 
-- **Version-First Path** (web_scrape, api_github, api_json): These strategies
-    can check the version without downloading the file. NAPT compares the
-    discovered version to the cached version. If they match and the file
-    already exists, the download is skipped entirely. This makes update checks
-    very fast (~100-300ms) since no large installer files are downloaded.
-
-- **File-First Path** (url_download): This strategy requires downloading the
-    file to extract the version. NAPT uses HTTP ETag headers to check if the
-    file has changed. If the server responds with HTTP 304 (Not Modified),
-    the existing cached file is reused, avoiding unnecessary re-downloads.
-
-Design Principles:
-
-- Each function has a single, clear responsibility
-- Functions return structured data (dataclasses) for easy testing and extension
-- Error handling uses exceptions; CLI layer formats for user display
-- Discovery strategies are dynamically loaded via registry pattern
-- Configuration is immutable once loaded
-
-Example:
-    Basic version discovery:
-        ```python
-        from pathlib import Path
-        from napt.discovery import discover_recipe
-
-        result = discover_recipe(
-            recipe_path=Path("recipes/Google/chrome.yaml"),
-            output_dir=Path("./downloads"),
-        )
-
-        print(f"App: {result.app_name}")
-        print(f"Version: {result.version}")
-        print(f"SHA-256: {result.sha256}")
-
-        # Version-first strategies: may have skipped download if unchanged!
-        ```
+Both flows return a [StrategyResult][napt.discovery.base.StrategyResult],
+which this module unwraps into state-cache fields and the public result.
 
 """
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from napt import __version__
 from napt.config.loader import load_effective_config
-from napt.discovery.base import get_strategy
-from napt.download import download_file
+from napt.discovery.base import (
+    StrategyResult,
+    get_strategy,
+    resolve_with_cache,
+)
+from napt.discovery.url_download import run_url_download
 from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
 from napt.results import DiscoverResult
 from napt.state import load_state, save_state
-from napt.versioning import is_newer
 
 
 def discover_recipe(
@@ -83,270 +68,156 @@ def discover_recipe(
     state_file: Path | None = Path("state/versions.json"),
     stateless: bool = False,
 ) -> DiscoverResult:
-    """Discover the latest version by loading config and downloading installer.
+    """Discovers the latest version of an app and resolves its installer.
 
-    This is the main entry point for the 'napt discover' command. It orchestrates
-    the entire discovery workflow using a two-path architecture optimized for
-    version-first strategies.
-
-    The function uses duck typing to detect strategy capabilities:
-
-    VERSION-FIRST PATH (if strategy has get_version_info method):
-
-    1. Load effective configuration (org + vendor + recipe merged)
-    2. Call strategy.get_version_info() to discover version (no download)
-    3. Compare discovered version to cached known_version
-    4. If match and file exists -> skip download entirely (fast path!)
-    5. If changed or missing -> download installer via download_file()
-    6. Update state and return results
-
-    FILE-FIRST PATH (if strategy has only discover_version method):
-
-    1. Load effective configuration (org + vendor + recipe merged)
-    2. Call strategy.discover_version() with cached ETag
-    3. Strategy handles conditional request (HTTP 304 vs 200)
-    4. Extract version from downloaded file
-    5. Update state and return results
+    Loads the recipe configuration, dispatches to the appropriate
+    discovery flow (version-first registered strategy or ``url_download``),
+    persists the result to the state cache, and returns the public
+    discovery result.
 
     Args:
         recipe_path: Path to the recipe YAML file. Must exist and be
-            readable. The path is resolved to absolute form.
-        output_dir: Directory to download the installer to. Created if
-            it doesn't exist. The downloaded file will be named based on
-            Content-Disposition header or URL path.
-        state_file: Path to state file for version tracking
-            and ETag caching. Default is "state/versions.json". Set to None
-            to disable.
-        stateless: If True, disable state tracking (no caching,
-            always download). Default is False.
+            readable.
+        output_dir: Directory to download the installer into. When
+            omitted, falls back to ``directories.discover`` from the
+            merged configuration. Created if it does not exist.
+        state_file: Path to the state file used for caching. Defaults
+            to ``state/versions.json``. Set to ``None`` to disable
+            persistence (run still uses an in-memory cache).
+        stateless: When True, skips loading and saving state entirely.
+            Forces every run to behave as if no prior cache existed.
 
     Returns:
-        Discovery results and metadata including version, file path, and SHA-256 hash.
+        Public discovery result containing the resolved version,
+        file path, and SHA-256 hash.
 
     Raises:
-        ConfigError: On missing or invalid configuration fields (missing name or id,
-            missing 'discovery.strategy' field, unknown discovery strategy name),
-            YAML parse errors (from config loader), or if recipe file doesn't exist.
-        NetworkError: On download failures or version extraction errors.
-
-    Example:
-        Basic version discovery:
-            ```python
-            from pathlib import Path
-            result = discover_recipe(
-                Path("recipes/Google/chrome.yaml"),
-                Path("./downloads")
-            )
-            print(result.version)  # 141.0.7390.123
-            ```
-
-        Handling errors:
-            ```python
-            try:
-                result = discover_recipe(Path("invalid.yaml"), Path("."))
-            except ConfigError as e:
-                print(f"Config error: {e}")
-            except NetworkError as e:
-                print(f"Network error: {e}")
-            ```
-
-    Note:
-        The discovery strategy must be registered before calling this function.
-        Version-first strategies (web_scrape, api_github, api_json) can skip
-        downloads entirely when version unchanged (fast path optimization).
-        File-first strategy (url_download) uses ETag conditional requests.
-        Downloaded files are written atomically (.part then renamed). Progress
-        output goes to stdout via the download module. Strategy type detected
-        via duck typing (hasattr for get_version_info).
+        ConfigError: On missing or invalid configuration, including
+            an unknown ``discovery.strategy`` value.
+        NetworkError: On download or version-extraction failures from
+            either flow.
 
     """
     logger = get_global_logger()
 
-    # Load state file unless running in stateless mode
-    state = None
-    if not stateless and state_file:
-        try:
-            state = load_state(state_file)
-            logger.verbose("STATE", f"Loaded state from {state_file}")
-        except FileNotFoundError:
-            logger.verbose("STATE", f"State file not found, will create: {state_file}")
-            state = {
-                "metadata": {"napt_version": __version__, "schema_version": "2"},
-                "apps": {},
-            }
-        except Exception as err:
-            logger.warning("STATE", f"Failed to load state: {err}")
-            logger.verbose("STATE", "Continuing without state tracking")
-            state = None
+    state = _load_state(state_file, stateless, logger)
 
-    # 1. Load and merge configuration
     logger.step(1, 4, "Loading configuration...")
     config = load_effective_config(recipe_path)
-
-    # Resolve output_dir from config default when not provided by caller.
     if output_dir is None:
         output_dir = Path(config["directories"]["discover"])
 
-    # 2. Extract app identity
-    logger.step(2, 4, "Discovering version...")
     app_name = config["name"]
     app_id = config["id"]
 
-    # 3. Get the discovery strategy name
     discovery = config.get("discovery", {})
     strategy_name = discovery.get("strategy")
     if not strategy_name:
         raise ConfigError(f"No 'discovery.strategy' defined for app: {app_name}")
 
-    # 4. Get the strategy implementation
-    strategy = get_strategy(strategy_name)
+    cache = _get_cache_for_app(state, app_id, logger)
 
-    # Get cache for this recipe from state
-    cache = None
-    if state and app_id:
-        cache = state.get("apps", {}).get(app_id)
-        if cache:
-            logger.verbose("STATE", f"Using cache for {app_id}")
-            if cache.get("known_version"):
-                logger.verbose(
-                    "STATE", f"  Cached version: {cache.get('known_version')}"
-                )
-            if cache.get("etag"):
-                logger.verbose("STATE", f"  Cached ETag: {cache.get('etag')}")
-
-    # 5. Run discovery: version-first or file-first path
-    logger.step(3, 4, "Discovering version...")
-
-    # Check if strategy supports version-first (has get_version_info method)
-    download_url = None  # Track actual download URL for state file
-    if hasattr(strategy, "get_version_info"):
-        # VERSION-FIRST PATH (web_scrape, api_github, api_json)
-        # Get version without downloading
-        version_info = strategy.get_version_info(config)
-        download_url = version_info.download_url  # Save for state file
-
-        logger.info("DISCOVERY", f"Version discovered: {version_info.version}")
-
-        # Check if we can use cached file (version match + file exists)
-        if not is_newer(
-            version_info.version, cache.get("known_version") if cache else None
-        ):
-            cached_file_path = (
-                Path(cache["file_path"]) if cache and cache.get("file_path") else None
-            )
-
-            if cached_file_path is not None and cached_file_path.exists():
-                # Fast path: version unchanged, file exists, skip download!
-                logger.info(
-                    "CACHE",
-                    f"Version {version_info.version} unchanged, using cached file",
-                )
-                logger.step(4, 4, "Using cached file...")
-                file_path = cached_file_path
-                sha256 = cache.get("sha256")
-                version = version_info.version
-                version_source = version_info.source
-                headers = {}  # No download occurred, no headers
-            else:
-                # File missing or no cached path — re-download
-                if cached_file_path is not None:
-                    logger.warning(
-                        "CACHE",
-                        f"Cached file {cached_file_path} not found, re-downloading",
-                    )
-                logger.step(4, 4, "Downloading installer...")
-                dl = download_file(
-                    version_info.download_url,
-                    output_dir / app_id,
-                )
-                file_path, sha256, headers = dl.file_path, dl.sha256, dl.headers
-                version = version_info.version
-                version_source = version_info.source
-        else:
-            # Version changed or no cache, download new version
-            if cache:
-                logger.info(
-                    "DISCOVERY",
-                    (
-                        f"Version changed: {cache.get('known_version')} -> "
-                        f"{version_info.version}"
-                    ),
-                )
-            logger.step(4, 4, "Downloading installer...")
-            dl = download_file(
-                version_info.download_url,
-                output_dir / app_id,
-            )
-            file_path, sha256, headers = dl.file_path, dl.sha256, dl.headers
-            version = version_info.version
-            version_source = version_info.source
+    logger.step(2, 4, "Discovering version...")
+    if strategy_name == "url_download":
+        logger.step(3, 4, "Fetching installer...")
+        result = run_url_download(config, output_dir, cache=cache)
     else:
-        # FILE-FIRST PATH (url_download only)
-        # Must download to extract version (or use cached file via ETag)
-        logger.step(4, 4, "Fetching installer...")
-        version, version_source, file_path, sha256, headers = strategy.discover_version(
-            config, output_dir, cache=cache
-        )
-        download_url = str(config.get("discovery", {}).get("url", ""))
+        strategy = get_strategy(strategy_name)
+        info = strategy.discover(config)
+        logger.info("DISCOVERY", f"Version discovered: {info.version}")
+        logger.step(3, 4, "Resolving installer...")
+        result = resolve_with_cache(info, config, output_dir, cache)
 
-    # Update state with discovered information
-    if state and app_id and state_file:
-        from datetime import UTC, datetime
+    logger.step(4, 4, "Updating state...")
+    if state is not None and app_id and state_file:
+        _save_app_state(state, state_file, app_id, strategy_name, result, logger)
 
-        if "apps" not in state:
-            state["apps"] = {}
-
-        # Extract ETag and Last-Modified from headers for next run
-        etag = headers.get("ETag")
-        last_modified = headers.get("Last-Modified")
-
-        if etag:
-            logger.verbose("STATE", f"Saving ETag for next run: {etag}")
-        if last_modified:
-            logger.verbose(
-                "STATE", f"Saving Last-Modified for next run: {last_modified}"
-            )
-
-        # Build cache entry with new schema v2
-        cache_entry = {
-            "url": download_url
-            or "",  # Actual download URL (from version_info or discovery.url)
-            "etag": etag if etag else None,  # Only useful for url_download
-            "last_modified": (
-                last_modified if last_modified else None
-            ),  # Only useful for url_download
-            "sha256": sha256,
-            "file_path": str(file_path),  # Actual filename (may differ from URL)
-        }
-
-        # Optional fields
-        if version:
-            cache_entry["known_version"] = version
-        if strategy_name:
-            cache_entry["strategy"] = strategy_name
-
-        state["apps"][app_id] = cache_entry
-
-        state["metadata"] = {
-            "napt_version": __version__,
-            "last_updated": datetime.now(UTC).isoformat(),
-            "schema_version": "2",
-        }
-
-        try:
-            save_state(state, state_file)
-            logger.verbose("STATE", f"Updated state file: {state_file}")
-        except Exception as err:
-            logger.warning("STATE", f"Failed to save state: {err}")
-
-    # 6. Return results
     return DiscoverResult(
         app_name=app_name,
         app_id=app_id,
         strategy=strategy_name,
-        version=version,
-        version_source=version_source,
-        file_path=file_path,
-        sha256=sha256,
+        version=result.version,
+        version_source=result.version_source,
+        file_path=result.file_path,
+        sha256=result.sha256,
         status="success",
     )
+
+
+def _load_state(
+    state_file: Path | None, stateless: bool, logger: Any
+) -> dict[str, Any] | None:
+    """Loads the state file, or returns a fresh state dict if missing."""
+    if stateless or not state_file:
+        return None
+    try:
+        state = load_state(state_file)
+        logger.verbose("STATE", f"Loaded state from {state_file}")
+        return state
+    except FileNotFoundError:
+        logger.verbose("STATE", f"State file not found, will create: {state_file}")
+        return {
+            "metadata": {"napt_version": __version__, "schema_version": "2"},
+            "apps": {},
+        }
+    except Exception as err:
+        logger.warning("STATE", f"Failed to load state: {err}")
+        logger.verbose("STATE", "Continuing without state tracking")
+        return None
+
+
+def _get_cache_for_app(
+    state: dict[str, Any] | None, app_id: str, logger: Any
+) -> dict[str, Any] | None:
+    """Pulls the per-app cache entry from state, logging what we found."""
+    if not state or not app_id:
+        return None
+    cache = state.get("apps", {}).get(app_id)
+    if not cache:
+        return None
+    logger.verbose("STATE", f"Using cache for {app_id}")
+    if cache.get("known_version"):
+        logger.verbose("STATE", f"  Cached version: {cache.get('known_version')}")
+    if cache.get("etag"):
+        logger.verbose("STATE", f"  Cached ETag: {cache.get('etag')}")
+    return cache
+
+
+def _save_app_state(
+    state: dict[str, Any],
+    state_file: Path,
+    app_id: str,
+    strategy_name: str,
+    result: StrategyResult,
+    logger: Any,
+) -> None:
+    """Writes the resolved discovery result back to the state file."""
+    etag = result.headers.get("ETag")
+    last_modified = result.headers.get("Last-Modified")
+    if etag:
+        logger.verbose("STATE", f"Saving ETag for next run: {etag}")
+    if last_modified:
+        logger.verbose("STATE", f"Saving Last-Modified for next run: {last_modified}")
+
+    cache_entry: dict[str, Any] = {
+        "url": result.download_url,
+        "etag": etag,
+        "last_modified": last_modified,
+        "sha256": result.sha256,
+        "file_path": str(result.file_path),
+        "known_version": result.version,
+        "strategy": strategy_name,
+    }
+
+    state.setdefault("apps", {})[app_id] = cache_entry
+    state["metadata"] = {
+        "napt_version": __version__,
+        "last_updated": datetime.now(UTC).isoformat(),
+        "schema_version": "2",
+    }
+
+    try:
+        save_state(state, state_file)
+        logger.verbose("STATE", f"Updated state file: {state_file}")
+    except Exception as err:
+        logger.warning("STATE", f"Failed to save state: {err}")

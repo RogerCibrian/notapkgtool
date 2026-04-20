@@ -6,6 +6,13 @@
 
 **NAPT does not:** Git operations, PR creation, CI/CD workflow logic. Don't add `--create-pr` flags or git commands.
 
+**Audience — CLI tool, not a library:** NAPT is a CLI consumed via `napt <command>`. Write docstrings, examples, and architectural decisions for two audiences only:
+
+1. **CLI users** — interact via `napt <command>`; never import NAPT in their own code.
+2. **Contributors** — work inside this codebase.
+
+Don't write framing like "third-party extension API," "implementing custom strategies in your project," or "as a library user." Code is organized for internal clarity and CLI ergonomics, not for external Python consumers. Public Python entry points (e.g. `discover_recipe`, `validate_recipe`) exist for testing and scripting but are not a stability contract — don't add backwards-compat shims, plugin systems, or extension hooks aimed at downstream Python users.
+
 **No backward compatibility (pre-release):** Implement cleanest solutions directly. Remove deprecated code immediately. No migration paths or fallback logic. After v1.0.0, standard semver applies.
 
 ---
@@ -93,6 +100,10 @@ Don't repeat the class name (DiscoverResult) - mkdocstrings extracts it from the
 **Module docstrings:** Required for all modules. First line is summary, then blank line, then details.
 
 **Test docstrings:** Use `"""Tests that <condition>."""` format. Keep brief.
+
+**Cross-references:** Use Markdown reference links — `[Display Name][full.dotted.path]` — never Sphinx-style (`:class:`, `:func:`, `:meth:`, `:mod:`). Sphinx syntax renders as literal text in mkdocstrings. The short form `[Name][]` only works when `Name` is itself the full identifier; for project symbols always use the full dotted path. For stdlib types, don't link — wrap in double backticks (e.g. `` ``typing.Protocol`` ``).
+
+**No meta-commentary in docstrings or code.** Describe the subject, not the writing. Skip defensive denials ("this is internal, not a public API"), syntax explanations ("the reference above uses the short form because..."), and any sentence that explains how you wrote rather than what the thing is.
 
 **Validate rendering:**
 ```powershell

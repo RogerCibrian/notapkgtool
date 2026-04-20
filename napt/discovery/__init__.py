@@ -12,73 +12,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Discovery strategies for NAPT.
+"""Discovery package: registry, strategies, and orchestration.
 
-This package provides a pluggable strategy pattern for discovering application
-versions and downloading installers from various sources. Strategies are divided
-into two types: version-first (can determine version without downloading) and
-file-first (must download to extract version).
+Two flows feed into
+[discover_recipe][napt.discovery.manager.discover_recipe]:
 
-Strategy Pattern:
-    Discovery strategies implement one of two approaches:
+- **Registered strategies** (api_github, api_json, web_scrape) implement
+    [DiscoveryStrategy][napt.discovery.base.DiscoveryStrategy] — they
+    discover a version and its download URL without touching the file.
+    The orchestrator runs the result through
+    [resolve_with_cache][napt.discovery.base.resolve_with_cache] to
+    decide whether to skip the download.
+- **url_download** is a separate flow at
+    [run_url_download][napt.discovery.url_download.run_url_download]. It
+    downloads the file with HTTP conditional requests and extracts the
+    version from the file's metadata. It is not a registered strategy
+    because it cannot determine the version without the file.
 
-VERSION-FIRST (api_github, api_json, web_scrape):
-  - Implement get_version_info() -> RemoteVersion
-  - Can determine version and download URL without downloading installer
-  - Core orchestration checks version first, then decides whether to download
-  - Enables zero-bandwidth update checks when version unchanged
+The discovery orchestrator dispatches to one of the two flows based
+on the recipe's ``discovery.strategy`` value.
 
-FILE-FIRST (url_download):
-  - Implement discover_version() -> tuple[str, str, Path, str, dict]
-  - Must download installer to extract version from file metadata
-  - Uses HTTP ETag conditional requests for efficiency
-
-The strategy registry allows dynamic lookup based on the strategy name
-in the recipe configuration.
-
-Available Strategies:
-    url_download : UrlDownloadStrategy (FILE-FIRST)
-        Download from a fixed URL and extract version from the file itself.
-        Supports MSI ProductVersion extraction. Uses ETag caching.
-    api_github : ApiGithubStrategy (VERSION-FIRST)
-        Fetch from GitHub releases API and extract version from tags.
-        Fast API-based version checks (~100ms).
-    api_json : ApiJsonStrategy (VERSION-FIRST)
-        Query JSON API endpoints for version and download URL.
-        Fast API-based version checks (~100ms).
-    web_scrape : WebScrapeStrategy (VERSION-FIRST)
-        Scrape vendor download pages to find links and extract versions.
-        Works for vendors without APIs or static URLs.
-
-Example:
-    Register and use a custom strategy:
-
-        from napt.discovery import get_strategy
-        from pathlib import Path
-
-        # Get a strategy by name (auto-registered on import)
-        strategy = get_strategy("url_download")
-
-        # Use it to discover a version
-        app_config = {
-            "source": {
-                "strategy": "url_download",
-                "url": "https://example.com/app.msi",
-            }
-        }
-
-        version, source, file_path, sha256, headers = strategy.discover_version(
-            app_config, Path("./downloads")
-        )
-        print(f"Version: {version}")
+Built-in strategies:
+    - [api_github][napt.discovery.api_github.ApiGithubStrategy]:
+        queries the GitHub releases API for the latest tag.
+    - [api_json][napt.discovery.api_json.ApiJsonStrategy]:
+        extracts version and download URL from a JSON endpoint.
+    - [web_scrape][napt.discovery.web_scrape.WebScrapeStrategy]:
+        parses a vendor download page for both fields.
 
 """
 
-# Import strategy modules to trigger self-registration
 from . import (
     api_github,  # noqa: F401
     api_json,  # noqa: F401
-    url_download,  # noqa: F401
     web_scrape,  # noqa: F401
 )
 from .base import DiscoveryStrategy, get_strategy
