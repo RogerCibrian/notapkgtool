@@ -22,11 +22,12 @@ function Write-CMTraceLog {
         default { 1 }  # Default to INFO if unknown
     }
 
-    # Format time: HH:mm:ss.fff-offset (offset in minutes, e.g., -480 for -08:00)
+    # Format time: HH:mm:ss.fff+bias. ConfigMgr bias is UTC minus local time
+    # in minutes with an explicit sign (e.g., +480 for UTC-8, -120 for UTC+2).
     $Now = [DateTimeOffset](Get-Date)
     $TimeFormatted = $Now.ToString("HH:mm:ss.fff")
-    $OffsetMinutes = [int]$Now.Offset.TotalMinutes
-    $TimeWithOffset = "$TimeFormatted$OffsetMinutes"
+    $BiasMinutes = -[int]$Now.Offset.TotalMinutes
+    $TimeWithOffset = "$TimeFormatted$($BiasMinutes.ToString('+000;-000'))"
 
     # Format date: M-d-yyyy (single digit month/day when appropriate)
     $DateFormatted = $Now.ToString("M-d-yyyy")

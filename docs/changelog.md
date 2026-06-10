@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed system-scope MSIX detection and requirements scripts matching any
     installed package instead of only the target app, which could cause Intune
     to report the wrong install state
+- Fixed malformed timestamps in detection and requirements script logs when
+    the device is in a UTC+ timezone, which made CMTrace display incorrect
+    log times
 - Fixed crash when an MSIX manifest's `<PublisherDisplayName/>` element is present but contains no text. Publisher now defaults to an empty string in that case instead of triggering a downstream `TypeError`.
 
 ## [0.5.0] - 2026-04-05
