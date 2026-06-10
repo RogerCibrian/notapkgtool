@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     log times
 - Fixed detection and requirements scripts failing to detect installed apps
     whose registry version contains non-numeric text (e.g. `5.2 (64-bit)`)
+- Fixed generated detection and requirements scripts breaking when the app
+    name contains special characters such as quotes or dollar signs
 - Fixed crash when an MSIX manifest's `<PublisherDisplayName/>` element is present but contains no text. Publisher now defaults to an empty string in that case instead of triggering a downstream `TypeError`.
 
 ## [0.5.0] - 2026-04-05

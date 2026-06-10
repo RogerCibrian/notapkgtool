@@ -208,7 +208,11 @@ def generate_detection_script(config: DetectionConfig, output_path: Path) -> Pat
             ```
 
     """
-    from napt.build._ps_templates import _load_ps_template, substitute_ps_template
+    from napt.build._ps_templates import (
+        _load_ps_template,
+        escape_ps_string,
+        substitute_ps_template,
+    )
     from napt.logging import get_global_logger
 
     logger = get_global_logger()
@@ -219,8 +223,8 @@ def generate_detection_script(config: DetectionConfig, output_path: Path) -> Pat
     script_content = substitute_ps_template(
         template,
         {
-            "$NaptAppName": config.app_name,
-            "$NaptVersion": config.version,
+            "$NaptAppName": escape_ps_string(config.app_name),
+            "$NaptVersion": escape_ps_string(config.version),
             "$NaptExactMatch": "$True" if config.exact_match else "$False",
             "$NaptLogRotationMb": str(config.log_rotation_mb),
             "$NaptIsMsiInstaller": "$True" if config.is_msi_installer else "$False",
@@ -293,7 +297,11 @@ def generate_requirements_script(
             ```
 
     """
-    from napt.build._ps_templates import _load_ps_template, substitute_ps_template
+    from napt.build._ps_templates import (
+        _load_ps_template,
+        escape_ps_string,
+        substitute_ps_template,
+    )
     from napt.logging import get_global_logger
 
     logger = get_global_logger()
@@ -306,8 +314,8 @@ def generate_requirements_script(
     script_content = substitute_ps_template(
         template,
         {
-            "$NaptAppName": config.app_name,
-            "$NaptVersion": config.version,
+            "$NaptAppName": escape_ps_string(config.app_name),
+            "$NaptVersion": escape_ps_string(config.version),
             "$NaptLogRotationMb": str(config.log_rotation_mb),
             "$NaptIsMsiInstaller": "$True" if config.is_msi_installer else "$False",
             "$NaptExpectedArchitecture": config.expected_architecture,
