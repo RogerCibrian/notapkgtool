@@ -45,6 +45,59 @@ function Write-CMTraceLog {
     }
 }
 
+# Parse a version string into numeric parts. Each '.'- or '-'-separated
+# segment contributes its leading digits; segments without leading digits
+# count as 0, so prerelease identifiers are not ranked ("1.2.3-beta"
+# parses the same as "1.2.3.0").
+function ConvertTo-VersionParts {
+    param(
+        [string]$Version
+    )
+
+    $Parts = @()
+    $HasNonNumeric = $false
+
+    foreach ($Segment in ($Version -split '[.\-]')) {
+        if ($Segment -match '^(\d+)') {
+            $Parts += [int64]$Matches[1]
+            if ($Segment -ne $Matches[1]) { $HasNonNumeric = $true }
+        } else {
+            $Parts += [int64]0
+            $HasNonNumeric = $true
+        }
+    }
+
+    if ($HasNonNumeric) {
+        Write-CMTraceLog -Message "[$NaptScriptType] Version '$Version' contains non-numeric segments, comparing as '$($Parts -join '.')'" -Type "WARNING"
+    }
+
+    return ,$Parts
+}
+
+# Compare two version strings numerically. Returns -1 if Left < Right,
+# 0 if equal, 1 if Left > Right. Missing trailing parts count as 0.
+function Compare-VersionString {
+    param(
+        [string]$LeftVersion,
+        [string]$RightVersion
+    )
+
+    $LeftParts = ConvertTo-VersionParts -Version $LeftVersion
+    $RightParts = ConvertTo-VersionParts -Version $RightVersion
+
+    $MaxLength = [Math]::Max($LeftParts.Count, $RightParts.Count)
+
+    for ($i = 0; $i -lt $MaxLength; $i++) {
+        $LeftPart = if ($i -lt $LeftParts.Count) { $LeftParts[$i] } else { [int64]0 }
+        $RightPart = if ($i -lt $RightParts.Count) { $RightParts[$i] } else { [int64]0 }
+
+        if ($LeftPart -gt $RightPart) { return 1 }
+        if ($LeftPart -lt $RightPart) { return -1 }
+    }
+
+    return 0
+}
+
 # Determine log file location
 function Initialize-LogFile {
     $script:CurrentIdentity = [System.Security.Principal.WindowsIdentity]::GetCurrent()

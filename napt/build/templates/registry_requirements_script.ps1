@@ -13,34 +13,6 @@ param(
 
 # <include _shared_functions.ps1>
 
-# Version comparison function - returns true if Installed < Target
-function Compare-VersionLessThan {
-    param(
-        [string]$InstalledVersion,
-        [string]$TargetVersion
-    )
-
-    # Parse version parts
-    $InstalledParts = $InstalledVersion -split '[.\-]' | ForEach-Object { [int]$_ }
-    $TargetParts = $TargetVersion -split '[.\-]' | ForEach-Object { [int]$_ }
-
-    $MaxLength = [Math]::Max($InstalledParts.Count, $TargetParts.Count)
-
-    for ($i = 0; $i -lt $MaxLength; $i++) {
-        $InstalledPart = if ($i -lt $InstalledParts.Count) { $InstalledParts[$i] } else { 0 }
-        $TargetPart = if ($i -lt $TargetParts.Count) { $TargetParts[$i] } else { 0 }
-
-        if ($InstalledPart -lt $TargetPart) {
-            return $true
-        }
-        if ($InstalledPart -gt $TargetPart) {
-            return $false
-        }
-    }
-
-    return $false  # Versions are equal, so not less than
-}
-
 # Main requirements logic
 Initialize-LogFile
 
@@ -108,7 +80,7 @@ foreach ($KeyInfo in $AllKeys) {
             Write-CMTraceLog -Message "[Requirements] Match found: $DisplayName (Found: $(if ($InstalledVersion) { $InstalledVersion } else { 'None' }), Type: $(if ($IsMSIEntry) { 'MSI' } else { 'Non-MSI' }), Arch: $($KeyInfo.View), Path: $RegKeyPath)" -Type "INFO"
 
             if ($InstalledVersion) {
-                if (Compare-VersionLessThan -InstalledVersion $InstalledVersion -TargetVersion $TargetVersion) {
+                if ((Compare-VersionString -LeftVersion $InstalledVersion -RightVersion $TargetVersion) -lt 0) {
                     Write-CMTraceLog -Message "[Requirements] Version check passed: $InstalledVersion < $TargetVersion" -Type "INFO"
                     $FoundOlderVersion = $true
                     break

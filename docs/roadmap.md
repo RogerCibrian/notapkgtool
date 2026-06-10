@@ -33,6 +33,7 @@ This roadmap is a living document showing potential future directions for NAPT. 
 | PowerShell Validation | 💡 Idea | Code Quality | High | High |
 | Recipe Linting & Best Practices | 💡 Idea | Code Quality | High | Medium |
 | Unrecognized Config Field Warnings | ✅ Completed | Code Quality | Low | Medium |
+| Prerelease Version Ranking in Detection Scripts | 💡 Idea | Code Quality | Medium | Low |
 | Typed Config with Dataclasses | 💡 Idea | Code Quality | Medium | Medium |
 | EXE Version Extraction | 💡 Idea | Technical | High | Medium |
 | Parallel Package Building | 💡 Idea | Technical | Medium | Medium |
@@ -43,8 +44,8 @@ This roadmap is a living document showing potential future directions for NAPT. 
 
 - ✅ **Completed**: 3
 - 🔬 **Investigating**: 1
-- 💡 **Ideas**: 12
-- **Total**: 16 features
+- 💡 **Ideas**: 13
+- **Total**: 17 features
 
 ---
 
@@ -217,6 +218,32 @@ style guide enforcement.
 - Warns on deprecated patterns or old v3 functions
 - Suggests improvements (e.g., use Uninstall-ADTApplication)
 - Warns about unknown fields (e.g., deprecated keys from old schema versions)
+
+#### Prerelease Version Ranking in Detection Scripts
+
+**Status**: 💡 Idea
+**Complexity**: Medium (1-3 days)
+**Value**: Low
+
+**Description**: Rank prerelease identifiers (beta, alpha, rc) when comparing
+versions in detection and requirements scripts.
+`Compare-VersionString` in `_shared_functions.ps1` strips non-numeric
+decoration, so `1.2.3-beta` currently compares equal to `1.2.3`.
+Semver-style ordering would treat prereleases as older than the release.
+
+**Benefits**:
+
+- Correct upgrade behavior when a prerelease of the target version is
+    installed (currently treated as already up to date)
+- More accurate version logging in CMTrace output
+
+**Prerequisites**:
+
+- Evidence that deployed apps actually publish prerelease `DisplayVersion`
+    strings (Windows uninstall metadata rarely follows semver)
+
+**Related**: First iteration shipped with non-numeric segments counted as 0
+and a CMTrace warning when decoration is stripped
 
 #### Typed Config with Dataclasses
 
