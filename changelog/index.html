@@ -2060,6 +2060,16 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.5.0...HEAD">Unreleased</a></h2>
 <h3 id="fixed">Fixed</h3>
 <ul>
+<li>Fixed system-scope MSIX detection and requirements scripts matching any
+    installed package instead of only the target app, which could cause Intune
+    to report the wrong install state</li>
+<li>Fixed malformed timestamps in detection and requirements script logs when
+    the device is in a UTC+ timezone, which made CMTrace display incorrect
+    log times</li>
+<li>Fixed detection and requirements scripts failing to detect installed apps
+    whose registry version contains non-numeric text (e.g. <code>5.2 (64-bit)</code>)</li>
+<li>Fixed generated detection and requirements scripts breaking when the app
+    name contains special characters such as quotes or dollar signs</li>
 <li>Fixed crash when an MSIX manifest's <code>&lt;PublisherDisplayName/&gt;</code> element is present but contains no text. Publisher now defaults to an empty string in that case instead of triggering a downstream <code>TypeError</code>.</li>
 </ul>
 <h2 id="050-2026-04-05"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.4.0...0.5.0">0.5.0</a> - 2026-04-05</h2>

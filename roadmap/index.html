@@ -1592,6 +1592,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#prerelease-version-ranking-in-detection-scripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerelease Version Ranking in Detection Scripts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#typed-config-with-dataclasses" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1990,6 +2001,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#prerelease-version-ranking-in-detection-scripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerelease Version Ranking in Detection Scripts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#typed-config-with-dataclasses" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2264,6 +2286,13 @@
 <td>Medium</td>
 </tr>
 <tr>
+<td>Prerelease Version Ranking in Detection Scripts</td>
+<td>💡 Idea</td>
+<td>Code Quality</td>
+<td>Medium</td>
+<td>Low</td>
+</tr>
+<tr>
 <td>Typed Config with Dataclasses</td>
 <td>💡 Idea</td>
 <td>Code Quality</td>
@@ -2304,8 +2333,8 @@
 <ul>
 <li>✅ <strong>Completed</strong>: 3</li>
 <li>🔬 <strong>Investigating</strong>: 1</li>
-<li>💡 <strong>Ideas</strong>: 12</li>
-<li><strong>Total</strong>: 16 features</li>
+<li>💡 <strong>Ideas</strong>: 13</li>
+<li><strong>Total</strong>: 17 features</li>
 </ul>
 <hr />
 <h2 id="active-work">Active Work</h2>
@@ -2450,6 +2479,28 @@ style guide enforcement.</p>
 <li>Suggests improvements (e.g., use Uninstall-ADTApplication)</li>
 <li>Warns about unknown fields (e.g., deprecated keys from old schema versions)</li>
 </ul>
+<h4 id="prerelease-version-ranking-in-detection-scripts">Prerelease Version Ranking in Detection Scripts</h4>
+<p><strong>Status</strong>: 💡 Idea
+<strong>Complexity</strong>: Medium (1-3 days)
+<strong>Value</strong>: Low</p>
+<p><strong>Description</strong>: Rank prerelease identifiers (beta, alpha, rc) when comparing
+versions in detection and requirements scripts.
+<code>Compare-VersionString</code> in <code>_shared_functions.ps1</code> strips non-numeric
+decoration, so <code>1.2.3-beta</code> currently compares equal to <code>1.2.3</code>.
+Semver-style ordering would treat prereleases as older than the release.</p>
+<p><strong>Benefits</strong>:</p>
+<ul>
+<li>Correct upgrade behavior when a prerelease of the target version is
+    installed (currently treated as already up to date)</li>
+<li>More accurate version logging in CMTrace output</li>
+</ul>
+<p><strong>Prerequisites</strong>:</p>
+<ul>
+<li>Evidence that deployed apps actually publish prerelease <code>DisplayVersion</code>
+    strings (Windows uninstall metadata rarely follows semver)</li>
+</ul>
+<p><strong>Related</strong>: First iteration shipped with non-numeric segments counted as 0
+and a CMTrace warning when decoration is stripped</p>
 <h4 id="typed-config-with-dataclasses">Typed Config with Dataclasses</h4>
 <p><strong>Status</strong>: 💡 Idea
 <strong>Complexity</strong>: Medium (1-3 days)
