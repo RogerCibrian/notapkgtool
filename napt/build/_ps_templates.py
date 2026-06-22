@@ -56,6 +56,27 @@ def _load_ps_template(name: str) -> str:
     return _INCLUDE_RE.sub(_resolve_include, content)
 
 
+def escape_ps_string(value: str) -> str:
+    """Escapes a value for embedding inside a double-quoted PowerShell string.
+
+    Backticks, double quotes, and dollar signs are prefixed with PowerShell's
+    backtick escape character so the value reads as literal text instead of
+    terminating the string or interpolating variables. App names in particular
+    come from vendor-controlled MSI ProductName metadata and can contain any
+    of these characters.
+
+    Args:
+        value: Raw string destined for a double-quoted PowerShell string.
+
+    Returns:
+        Escaped string safe to pass to substitute_ps_template() for
+        placeholders that appear inside double quotes.
+    """
+    return (
+        value.replace("`", "``").replace('"', '`"').replace("$", "`$")
+    )
+
+
 def substitute_ps_template(template: str, substitutions: dict[str, str]) -> str:
     """Substitutes $Napt* variables in a PowerShell template string.
 

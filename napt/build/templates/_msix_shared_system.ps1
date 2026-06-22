@@ -6,7 +6,7 @@ function Get-InstalledAppxPackage {
 
     try {
         $Provisioned = Get-AppxProvisionedPackage -Online -ErrorAction Stop |
-            Where-Object { $_.PackageName -like "$PackageIdentityName_*" } |
+            Where-Object { $_.PackageName -like "${PackageIdentityName}_*" } |
             Sort-Object { [Version]($_.PackageName -split '_')[1] } -Descending |
             Select-Object -First 1
         if ($Provisioned) {

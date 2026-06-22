@@ -197,6 +197,7 @@ def generate_msix_detection_script(
     from napt.build._ps_templates import (
         _TEMPLATES_DIR,
         _load_ps_template,
+        escape_ps_string,
         substitute_ps_template,
     )
     from napt.logging import get_global_logger
@@ -215,9 +216,9 @@ def generate_msix_detection_script(
     script_content = substitute_ps_template(
         template,
         {
-            "$NaptPackageIdentityName": config.identity_name,
-            "$NaptAppName": config.app_name,
-            "$NaptVersion": config.version,
+            "$NaptPackageIdentityName": escape_ps_string(config.identity_name),
+            "$NaptAppName": escape_ps_string(config.app_name),
+            "$NaptVersion": escape_ps_string(config.version),
             "$NaptExactMatch": "$True" if config.exact_match else "$False",
             "$NaptLogRotationMb": str(config.log_rotation_mb),
             "$NaptScriptType": "Detection",
@@ -283,6 +284,7 @@ def generate_msix_requirements_script(
     from napt.build._ps_templates import (
         _TEMPLATES_DIR,
         _load_ps_template,
+        escape_ps_string,
         substitute_ps_template,
     )
     from napt.logging import get_global_logger
@@ -302,9 +304,9 @@ def generate_msix_requirements_script(
     script_content = substitute_ps_template(
         template,
         {
-            "$NaptPackageIdentityName": config.identity_name,
-            "$NaptAppName": config.app_name,
-            "$NaptVersion": config.version,
+            "$NaptPackageIdentityName": escape_ps_string(config.identity_name),
+            "$NaptAppName": escape_ps_string(config.app_name),
+            "$NaptVersion": escape_ps_string(config.version),
             "$NaptLogRotationMb": str(config.log_rotation_mb),
             "$NaptScriptType": "Requirements",
             "$NaptLogBaseName": "NAPTRequirements",

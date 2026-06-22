@@ -14,39 +14,6 @@ param(
 
 $NaptMsixSharedHelper
 
-# Version comparison function
-function Compare-Version {
-    param(
-        [string]$InstalledVersion,
-        [string]$ExpectedVersion,
-        [bool]$ExactMatch
-    )
-
-    if ($ExactMatch) {
-        return $InstalledVersion -eq $ExpectedVersion
-    }
-
-    # Minimum version comparison (installed >= expected)
-    $InstalledParts = $InstalledVersion -split '[.\-]' | ForEach-Object { [int]$_ }
-    $ExpectedParts = $ExpectedVersion -split '[.\-]' | ForEach-Object { [int]$_ }
-
-    $MaxLength = [Math]::Max($InstalledParts.Count, $ExpectedParts.Count)
-
-    for ($i = 0; $i -lt $MaxLength; $i++) {
-        $InstalledPart = if ($i -lt $InstalledParts.Count) { $InstalledParts[$i] } else { 0 }
-        $ExpectedPart = if ($i -lt $ExpectedParts.Count) { $ExpectedParts[$i] } else { 0 }
-
-        if ($InstalledPart -gt $ExpectedPart) {
-            return $true
-        }
-        if ($InstalledPart -lt $ExpectedPart) {
-            return $false
-        }
-    }
-
-    return $true  # Versions are equal
-}
-
 # Main detection logic
 Initialize-LogFile
 
@@ -65,7 +32,12 @@ if ($Package) {
     Write-CMTraceLog -Message "[Detection] Match found: $($Package.Name) (Found: $InstalledVersion, Arch: $($Package.Architecture))" -Type "INFO"
 
     if ($InstalledVersion) {
-        if (Compare-Version -InstalledVersion $InstalledVersion -ExpectedVersion $ExpectedVersion -ExactMatch $ExactMatch) {
+        $VersionSatisfied = if ($ExactMatch) {
+            $InstalledVersion -eq $ExpectedVersion
+        } else {
+            (Compare-VersionString -LeftVersion $InstalledVersion -RightVersion $ExpectedVersion) -ge 0
+        }
+        if ($VersionSatisfied) {
             Write-CMTraceLog -Message "[Detection] Version check passed: $InstalledVersion $(if ($ExactMatch) { '=' } else { '>=' }) $ExpectedVersion" -Type "INFO"
             Write-CMTraceLog -Message "[Result] Detected: $NaptAppName (Found: $InstalledVersion, Expected: $(if ($ExactMatch) { '=' } else { '>=' }) $ExpectedVersion, Mode: $(if ($ExactMatch) { 'Exact' } else { 'Minimum' }))" -Type "INFO"
             Write-Output "Installed"

@@ -13,34 +13,6 @@ param(
 
 $NaptMsixSharedHelper
 
-# Version comparison function - returns true if Installed < Target
-function Compare-VersionLessThan {
-    param(
-        [string]$InstalledVersion,
-        [string]$TargetVersion
-    )
-
-    # Parse version parts
-    $InstalledParts = $InstalledVersion -split '[.\-]' | ForEach-Object { [int]$_ }
-    $TargetParts = $TargetVersion -split '[.\-]' | ForEach-Object { [int]$_ }
-
-    $MaxLength = [Math]::Max($InstalledParts.Count, $TargetParts.Count)
-
-    for ($i = 0; $i -lt $MaxLength; $i++) {
-        $InstalledPart = if ($i -lt $InstalledParts.Count) { $InstalledParts[$i] } else { 0 }
-        $TargetPart = if ($i -lt $TargetParts.Count) { $TargetParts[$i] } else { 0 }
-
-        if ($InstalledPart -lt $TargetPart) {
-            return $true
-        }
-        if ($InstalledPart -gt $TargetPart) {
-            return $false
-        }
-    }
-
-    return $false  # Versions are equal, so not less than
-}
-
 # Main requirements logic
 Initialize-LogFile
 
@@ -59,7 +31,7 @@ if ($Package) {
     Write-CMTraceLog -Message "[Requirements] Match found: $($Package.Name) (Found: $InstalledVersion, Arch: $($Package.Architecture))" -Type "INFO"
 
     if ($InstalledVersion) {
-        if (Compare-VersionLessThan -InstalledVersion $InstalledVersion -TargetVersion $TargetVersion) {
+        if ((Compare-VersionString -LeftVersion $InstalledVersion -RightVersion $TargetVersion) -lt 0) {
             Write-CMTraceLog -Message "[Requirements] Version check passed: $InstalledVersion < $TargetVersion" -Type "INFO"
             Write-CMTraceLog -Message "[Result] Update Required: $NaptAppName (Found: $InstalledVersion, Expected: < $TargetVersion)" -Type "INFO"
             Write-Output "Required"

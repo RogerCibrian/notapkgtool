@@ -141,7 +141,7 @@ class TestGenerateRequirementsScript:
         # Check for Required output logic
         assert 'Write-Output "Required"' in content
         # Check for version comparison function
-        assert "Compare-VersionLessThan" in content
+        assert "Compare-VersionString" in content
         # Check that script always exits 0
         assert "exit 0" in content
 
