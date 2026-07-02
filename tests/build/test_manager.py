@@ -18,11 +18,13 @@ import json
 
 import pytest
 
+from napt.build.icons import IconExtraction
 from napt.build.manager import (
     _apply_branding,
     _copy_installer,
     _copy_psadt_template,
     _create_build_directory,
+    _extract_app_icon,
     _find_installer_file,
     _write_build_manifest,
 )
@@ -393,3 +395,115 @@ class TestWriteBuildManifest:
         # Manifest should be in version_dir, not in packagefiles/
         assert result.parent == version_dir
         assert result.parent.name == "1.0.0"
+
+
+class TestExtractAppIcon:
+    """Tests for the _extract_app_icon build hook."""
+
+    @staticmethod
+    def _fail_if_called(installer_path):
+        raise AssertionError("extract_icon_png should not have been called")
+
+    def _config(self, make_config, tmp_path):
+        return make_config(
+            {
+                "id": "test-app",
+                "name": "Test App",
+                "directories": {"icons": str(tmp_path / "icons")},
+            }
+        )
+
+    def test_logo_path_set_skips_extraction(
+        self, make_config, tmp_path, monkeypatch, capsys
+    ):
+        """Tests that extraction is skipped when intune.logo_path is set."""
+        import napt.build.manager as manager_module
+
+        monkeypatch.setattr(
+            manager_module, "extract_icon_png", self._fail_if_called
+        )
+        config = self._config(make_config, tmp_path)
+        config["intune"]["logo_path"] = str(tmp_path / "logo.png")
+
+        _extract_app_icon(config, tmp_path / "app.msi", "test-app")
+
+        assert "intune.logo_path is set" in capsys.readouterr().out
+
+    def test_existing_icon_file_skips_extraction(
+        self, make_config, tmp_path, monkeypatch, capsys
+    ):
+        """Tests that an existing icon file is never overwritten."""
+        import napt.build.manager as manager_module
+
+        monkeypatch.setattr(
+            manager_module, "extract_icon_png", self._fail_if_called
+        )
+        config = self._config(make_config, tmp_path)
+        icon_path = tmp_path / "icons" / "test-app.png"
+        icon_path.parent.mkdir(parents=True)
+        icon_path.write_bytes(b"curated icon")
+
+        _extract_app_icon(config, tmp_path / "app.msi", "test-app")
+
+        assert "already exists" in capsys.readouterr().out
+        assert icon_path.read_bytes() == b"curated icon"
+
+    def test_success_writes_icon_file(
+        self, make_config, tmp_path, monkeypatch, capsys
+    ):
+        """Tests that a successful extraction writes the icon file."""
+        import napt.build.manager as manager_module
+
+        monkeypatch.setattr(
+            manager_module,
+            "extract_icon_png",
+            lambda path: IconExtraction(b"png bytes", 256, "MSI Icon table"),
+        )
+        config = self._config(make_config, tmp_path)
+
+        _extract_app_icon(config, tmp_path / "app.msi", "test-app")
+
+        icon_path = tmp_path / "icons" / "test-app.png"
+        assert icon_path.read_bytes() == b"png bytes"
+        assert "Extracted app icon (256px)" in capsys.readouterr().out
+
+    def test_failure_warns_with_remedies(
+        self, make_config, tmp_path, monkeypatch, capsys
+    ):
+        """Tests that a failed extraction warns with actionable remedies."""
+        import napt.build.manager as manager_module
+
+        monkeypatch.setattr(
+            manager_module,
+            "extract_icon_png",
+            lambda path: IconExtraction(None, None, "no Icon table in MSI"),
+        )
+        config = self._config(make_config, tmp_path)
+
+        _extract_app_icon(config, tmp_path / "app.msi", "test-app")
+
+        output = capsys.readouterr().out
+        assert "no Icon table in MSI" in output
+        assert "test-app.png" in output
+        assert "intune.logo_path" in output
+        icon_path = tmp_path / "icons" / "test-app.png"
+        assert not icon_path.exists()
+
+    def test_write_error_warns_without_raising(
+        self, make_config, tmp_path, monkeypatch, capsys
+    ):
+        """Tests that a filesystem error while writing warns, not raises."""
+        import napt.build.manager as manager_module
+
+        monkeypatch.setattr(
+            manager_module,
+            "extract_icon_png",
+            lambda path: IconExtraction(b"png bytes", 256, "MSI Icon table"),
+        )
+        config = self._config(make_config, tmp_path)
+        # Occupy the icons directory path with a file so mkdir fails
+        (tmp_path / "icons").write_bytes(b"not a directory")
+
+        _extract_app_icon(config, tmp_path / "app.msi", "test-app")
+
+        assert "Could not write app icon" in capsys.readouterr().out

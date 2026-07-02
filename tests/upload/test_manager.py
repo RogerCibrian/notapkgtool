@@ -2,17 +2,18 @@
 
 from __future__ import annotations
 
+import base64
 import copy
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from napt.config.defaults import DEFAULT_CONFIG
 from napt.config.loader import _deep_merge_dicts
 from napt.exceptions import NetworkError
-from napt.upload.manager import upload_package
+from napt.upload.manager import _resolve_large_icon, upload_package
 from tests.upload.conftest import make_package_dir
 
 
@@ -199,3 +200,150 @@ def test_upload_package_propagates_network_error(
     ):
         with pytest.raises(NetworkError, match="Graph API down"):
             upload_package(recipe_path)
+
+
+class TestResolveLargeIcon:
+    """Tests for _resolve_large_icon resolution order."""
+
+    def test_logo_path_png(self, tmp_path, monkeypatch):
+        """Tests that an existing logo_path PNG wins with the right MIME."""
+        monkeypatch.chdir(tmp_path)
+        logo = tmp_path / "logo.png"
+        logo.write_bytes(b"png data")
+        config = _fake_config()
+        config["intune"]["logo_path"] = str(logo)
+
+        result = _resolve_large_icon(config)
+
+        assert result == {
+            "type": "image/png",
+            "value": base64.b64encode(b"png data").decode(),
+        }
+
+    def test_logo_path_jpg_mime(self, tmp_path, monkeypatch):
+        """Tests that a .jpg logo_path gets the image/jpeg MIME type."""
+        monkeypatch.chdir(tmp_path)
+        logo = tmp_path / "logo.jpg"
+        logo.write_bytes(b"jpg data")
+        config = _fake_config()
+        config["intune"]["logo_path"] = str(logo)
+
+        result = _resolve_large_icon(config)
+
+        assert result is not None
+        assert result["type"] == "image/jpeg"
+
+    def test_missing_logo_path_falls_back_to_extracted(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """Tests that a missing logo_path falls back to the extracted icon."""
+        monkeypatch.chdir(tmp_path)
+        icon_path = tmp_path / "icons" / "test-app.png"
+        icon_path.parent.mkdir(parents=True)
+        icon_path.write_bytes(b"extracted png")
+        config = _fake_config()
+        config["intune"]["logo_path"] = str(tmp_path / "nope.png")
+
+        result = _resolve_large_icon(config)
+
+        assert result == {
+            "type": "image/png",
+            "value": base64.b64encode(b"extracted png").decode(),
+        }
+        assert "Logo file not found" in capsys.readouterr().out
+
+    def test_unsupported_logo_type_falls_back(self, tmp_path, monkeypatch, capsys):
+        """Tests that an unsupported logo_path file type warns and falls back."""
+        monkeypatch.chdir(tmp_path)
+        logo = tmp_path / "logo.gif"
+        logo.write_bytes(b"gif data")
+        icon_path = tmp_path / "icons" / "test-app.png"
+        icon_path.parent.mkdir(parents=True)
+        icon_path.write_bytes(b"extracted png")
+        config = _fake_config()
+        config["intune"]["logo_path"] = str(logo)
+
+        result = _resolve_large_icon(config)
+
+        assert result is not None
+        assert result["type"] == "image/png"
+        assert "Unsupported logo file type" in capsys.readouterr().out
+
+    def test_extracted_icon_used_when_no_logo_path(self, tmp_path, monkeypatch):
+        """Tests that the extracted icon is used when logo_path is unset."""
+        monkeypatch.chdir(tmp_path)
+        icon_path = tmp_path / "icons" / "test-app.png"
+        icon_path.parent.mkdir(parents=True)
+        icon_path.write_bytes(b"extracted png")
+
+        result = _resolve_large_icon(_fake_config())
+
+        assert result == {
+            "type": "image/png",
+            "value": base64.b64encode(b"extracted png").decode(),
+        }
+
+    def test_no_icon_warns_and_returns_none(self, tmp_path, monkeypatch, capsys):
+        """Tests that no available icon warns once with actionable remedies."""
+        monkeypatch.chdir(tmp_path)
+
+        result = _resolve_large_icon(_fake_config())
+
+        output = capsys.readouterr().out
+        assert result is None
+        assert "No app icon found for 'test-app'" in output
+        assert "napt build" in output
+        assert "intune.logo_path" in output
+
+
+def test_upload_package_both_shares_icon_across_entries(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that both app entries get the same largeIcon payload."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path)
+    icon_path = tmp_path / "icons" / "test-app.png"
+    icon_path.parent.mkdir(parents=True)
+    icon_path.write_bytes(b"extracted png")
+
+    recipe_path = tmp_path / "recipes" / "Vendor" / "test-app.yaml"
+    recipe_path.parent.mkdir(parents=True)
+    recipe_path.touch()
+
+    patches = _patch_graph()
+    create_app_mock = MagicMock(side_effect=patches["create_win32_app"])
+
+    with (
+        patch(
+            "napt.upload.manager.load_effective_config",
+            return_value=_fake_config(build_types="both"),
+        ),
+        patch("napt.upload.manager.get_access_token", return_value="fake-token"),
+        patch("napt.upload.manager.parse_intunewin", return_value=fake_metadata),
+        patch(
+            "napt.upload.manager.extract_encrypted_payload",
+            return_value=tmp_path / "payload",
+        ),
+        patch("napt.upload.manager.create_win32_app", create_app_mock),
+        patch(
+            "napt.upload.manager.create_content_version",
+            side_effect=patches["create_content_version"],
+        ),
+        patch(
+            "napt.upload.manager.create_content_version_file",
+            side_effect=patches["create_content_version_file"],
+        ),
+        patch("napt.upload.manager.upload_to_azure_blob"),
+        patch("napt.upload.manager.commit_content_version_file"),
+        patch("napt.upload.manager.commit_content_version"),
+    ):
+        upload_package(recipe_path)
+
+    expected_icon = {
+        "type": "image/png",
+        "value": base64.b64encode(b"extracted png").decode(),
+    }
+    assert create_app_mock.call_count == 2
+    for call in create_app_mock.call_args_list:
+        payload = call.args[1]
+        assert payload["largeIcon"] == expected_icon

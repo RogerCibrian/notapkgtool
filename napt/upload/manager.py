@@ -160,12 +160,72 @@ def _infer_package_dir(app_id: str) -> tuple[Path, str]:
     return intunewin_files[0], version_dir.name
 
 
+def _resolve_large_icon(config: dict[str, Any]) -> dict[str, Any] | None:
+    """Resolves the largeIcon content for an app's Intune entries.
+
+    Resolution order: intune.logo_path (explicit, always wins), then the
+    icon extracted at build time to ``{directories.icons}/{id}.png``, then
+    no icon with a warning.
+
+    Args:
+        config: Effective configuration dict from load_effective_config.
+
+    Returns:
+        A mimeContent dict for the payload's largeIcon field, or None when
+            no icon is available.
+    """
+    logger = get_global_logger()
+    intune: dict[str, Any] = config["intune"]
+    icon_path = Path(config["directories"]["icons"]) / f"{config['id']}.png"
+
+    mime_types = {
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+    }
+    logo_path_str: str = intune.get("logo_path", "")
+    if logo_path_str:
+        logo_path = Path(logo_path_str)
+        mime_type = mime_types.get(logo_path.suffix.lower())
+        if not logo_path.exists():
+            logger.warning(
+                "UPLOAD",
+                f"Logo file not found: {logo_path}. "
+                f"Falling back to the extracted icon.",
+            )
+        elif mime_type is None:
+            logger.warning(
+                "UPLOAD",
+                f"Unsupported logo file type '{logo_path.suffix}' for "
+                f"{logo_path.name}; use .png or .jpg. Falling back to the "
+                f"extracted icon.",
+            )
+        else:
+            icon_value = base64.b64encode(logo_path.read_bytes()).decode()
+            logger.verbose("UPLOAD", f"App icon: {logo_path.name} (intune.logo_path)")
+            return {"type": mime_type, "value": icon_value}
+
+    if icon_path.exists():
+        icon_value = base64.b64encode(icon_path.read_bytes()).decode()
+        logger.verbose("UPLOAD", f"App icon: {icon_path} (extracted at build time)")
+        return {"type": "image/png", "value": icon_value}
+
+    logger.warning(
+        "UPLOAD",
+        f"No app icon found for '{config['id']}'. The Intune app entry will "
+        f"have no logo. Run 'napt build' to extract one, place a PNG at "
+        f"{icon_path}, or set intune.logo_path.",
+    )
+    return None
+
+
 def _build_app_metadata(
     config: dict[str, Any],
     recipe_path: Path,
     version: str,
     package_path: Path,
     build_types: str,
+    large_icon: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the Win32LobApp JSON payload for the Graph API.
 
@@ -182,6 +242,9 @@ def _build_app_metadata(
             (e.g., packages/napt-chrome/144.0.7559.110/Invoke-AppDeployToolkit.intunewin).
         build_types: Either "app_only" (install entry, detection script only) or
             "update_only" (update entry, detection + requirements scripts).
+        large_icon: Resolved largeIcon mimeContent from
+            [_resolve_large_icon][napt.upload.manager._resolve_large_icon],
+            or None to omit the icon.
 
     Returns:
         Dict ready to POST to the Graph API mobileApps endpoint.
@@ -326,24 +389,9 @@ def _build_app_metadata(
     if intune.get("notes"):
         payload["notes"] = intune["notes"]
 
-    # Optional: app icon (largeIcon)
-    logo_path_str: str = intune.get("logo_path", "")
-    if logo_path_str:
-        logo_path = Path(logo_path_str)
-        if logo_path.exists():
-            suffix = logo_path.suffix.lower()
-            mime_types = {
-                ".png": "image/png",
-                ".jpg": "image/jpeg",
-                ".jpeg": "image/jpeg",
-                ".gif": "image/gif",
-            }
-            mime_type = mime_types.get(suffix, "image/png")
-            icon_value = base64.b64encode(logo_path.read_bytes()).decode()
-            payload["largeIcon"] = {"type": mime_type, "value": icon_value}
-            logger.verbose("UPLOAD", f"App icon: {logo_path.name}")
-        else:
-            logger.warning("UPLOAD", f"Logo file not found: {logo_path}, skipping icon")
+    # Optional: app icon (largeIcon), resolved once per upload
+    if large_icon is not None:
+        payload["largeIcon"] = large_icon
 
     # TODO: categories require a lookup against GET /deviceAppManagement/
     # mobileAppCategories to resolve names to IDs before the POST.
@@ -473,6 +521,9 @@ def upload_package(recipe_path: Path) -> UploadResult:
     logger.verbose("UPLOAD", f"Starting upload for '{app_name}' ({app_id})")
     logger.verbose("UPLOAD", f"build_types: {build_types}")
 
+    # Resolve the app icon once; it is shared by the install and update entries
+    large_icon = _resolve_large_icon(config)
+
     # Step 1: Locate the package directory
     total_steps = 9 if build_types == "both" else 6
     logger.step(1, total_steps, "Locating .intunewin package...")
@@ -494,7 +545,7 @@ def upload_package(recipe_path: Path) -> UploadResult:
     if build_types in ("app_only", "both"):
         # Install entry: steps 4-6
         install_metadata = _build_app_metadata(
-            config, recipe_path, version, package_path, "app_only"
+            config, recipe_path, version, package_path, "app_only", large_icon
         )
         intune_app_id = _upload_single_app(
             access_token,
@@ -511,7 +562,7 @@ def upload_package(recipe_path: Path) -> UploadResult:
         # Update entry: steps 4-6 (single) or 7-9 (both)
         step_offset = 6 if build_types == "both" else 3
         update_metadata = _build_app_metadata(
-            config, recipe_path, version, package_path, "update_only"
+            config, recipe_path, version, package_path, "update_only", large_icon
         )
         intune_update_app_id = _upload_single_app(
             access_token,
