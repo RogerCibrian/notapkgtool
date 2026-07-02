@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Automatic app icon extraction** - `napt build` extracts the app icon
+    from MSI, EXE, and MSIX installers to `icons/{id}.png`, and
+    `napt upload` sends it as the app logo in Intune and the Company
+    Portal. Only PNG-encoded frames of at least 128px are used, preferring
+    the size closest to Intune's recommended 256px. Drop a custom PNG at
+    `icons/{id}.png` to override (NAPT never overwrites existing files),
+    or set `intune.logo_path` to disable extraction for a recipe
+
+### Changed
+
+- **`intune.logo_path` file types restricted to PNG and JPEG** - Other
+    file types now warn and fall back to the extracted icon instead of
+    uploading with a guessed MIME type
+
+### Fixed
+
+- Fixed `intune.logo_path` relative paths resolving from the current
+    working directory instead of the recipe file's location as documented
+
 ## [0.5.1] - 2026-06-22
 
 ### Fixed

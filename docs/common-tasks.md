@@ -653,6 +653,38 @@ intune:
 See [recipe-reference.md](recipe-reference.md#intune-configuration) for all
 allowed values.
 
+### Set a custom app icon
+
+`napt build` extracts an icon from the installer to `icons/{id}.png`
+automatically, and `napt upload` sends it to Intune.
+Most apps need no configuration.
+
+When extraction finds no usable icon (the build prints a warning), or you
+want a different image, you have two options:
+
+**Option 1: Drop a PNG into the icons directory (recommended)**
+
+```bash
+# The file name must match the recipe id
+cp my-better-icon.png icons/napt-7zip-x64-msi.png
+```
+
+NAPT never overwrites an existing file in `icons/`, so your curated icon
+survives future builds.
+Delete the file and rebuild to force re-extraction.
+
+**Option 2: Set logo_path in the recipe**
+
+```yaml
+intune:
+  # Relative paths resolve from the recipe file's location
+  logo_path: "assets/7zip-logo.png"
+```
+
+`logo_path` always wins over the icons directory and disables extraction
+for that recipe.
+Use a 256x256 PNG for best results in Company Portal.
+
 ## Update Existing Recipes
 
 When a recipe needs changes (new version format, different download URL, etc.).

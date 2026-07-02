@@ -675,8 +675,12 @@ Link to more information about the app. Shown in the Intune portal.
 **Required:** No
 **Default:** None
 
-Path to a PNG or JPEG icon file to use as the app icon in Intune and the Company Portal.
+Path to a PNG or JPEG (`.png`, `.jpg`, `.jpeg`) icon file to use as the app icon in Intune and the Company Portal.
 Relative paths are resolved from the recipe file's location.
+
+When `logo_path` is not set, `napt build` extracts an icon from the installer into `icons/{id}.png` and `napt upload` uses that file automatically.
+Setting `logo_path` always wins and disables extraction.
+See [App icons](user-guide.md#app-icons) for the extraction rules.
 
 ### developer
 
