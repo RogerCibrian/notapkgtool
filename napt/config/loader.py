@@ -252,10 +252,12 @@ def _resolve_known_paths(
     """Resolves relative path fields inside the merged config.
 
     We keep this explicit and conservative to avoid unexpected rewrites.
-    Currently handles cfg["psadt"]["brand_pack"]["path"].
+    Currently handles cfg["psadt"]["brand_pack"]["path"] and
+    cfg["intune"]["logo_path"].
 
     Brand pack paths are resolved relative to defaults_root (if available),
-    otherwise relative to recipe_dir as fallback. Modifies cfg in place.
+    otherwise relative to recipe_dir as fallback. Logo paths are resolved
+    relative to recipe_dir. Modifies cfg in place.
 
     Args:
         cfg: The merged configuration dictionary.
@@ -277,6 +279,14 @@ def _resolve_known_paths(
     except KeyError:
         # Field missing; nothing to resolve
         pass
+
+    intune = cfg.get("intune")
+    if isinstance(intune, dict):
+        raw_logo = intune.get("logo_path")
+        if isinstance(raw_logo, str) and raw_logo:
+            p = Path(raw_logo)
+            if not p.is_absolute():
+                intune["logo_path"] = str((recipe_dir / p).resolve())
 
 
 def _inject_dynamic_values(
