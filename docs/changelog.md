@@ -16,15 +16,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     the size closest to Intune's recommended 256px. Drop a custom PNG at
     `icons/{id}.png` to override (NAPT never overwrites existing files),
     or set `intune.logo_path` to disable extraction for a recipe
+- **`{{installer_filename}}` recipe variable** - Substituted at build time
+    in `psadt.install`, `psadt.uninstall`, and `psadt.app_vars` with the
+    exact filename of the downloaded installer in the package's Files
+    directory. Replaces wildcard paths, which PSADT does not support
+- **Unrecognized variable warning** - `napt build` warns when an install
+    or uninstall script contains a `{{snake_case}}` token that is not a
+    supported NAPT variable
 
 ### Changed
 
+- **BREAKING: Recipe variable syntax** - NAPT build-time variables now use
+    `{{...}}` instead of `${...}`. Replace `${discovered_version}` with
+    `{{discovered_version}}` in recipes. `${...}` now exclusively means
+    environment variables, which work only in `discovery.token` and
+    `discovery.headers`
 - **`intune.logo_path` file types restricted to PNG and JPEG** - Other
     file types now warn and fall back to the extracted icon instead of
     uploading with a guessed MIME type
 
 ### Fixed
 
+- Fixed the version variable never being substituted in `psadt.install`
+    and `psadt.uninstall` scripts, where it reached PowerShell as literal
+    `${...}` syntax and silently expanded to an empty string at deploy time
+- Fixed 7-Zip recipes failing at deploy time because PSADT resolves
+    `-FilePath` literally and does not expand wildcards; the recipes now
+    use `{{installer_filename}}`
 - Fixed `intune.logo_path` relative paths resolving from the current
     working directory instead of the recipe file's location as documented
 

@@ -306,9 +306,9 @@ psadt:
   release: "latest"                      # Optional: PSADT release version
   app_vars:                              # Optional: PSADT application variables
     AppName: "Application Name"
-    AppVersion: "${discovered_version}"  # Use for auto-substitution
+    AppVersion: "{{discovered_version}}" # Substituted at build time
   install: |                             # Required: PowerShell installation script
-    Start-ADTMsiProcess -Action Install -Path "$dirFiles\installer.msi" -Parameters "ALLUSERS=1"
+    Start-ADTMsiProcess -Action Install -FilePath "{{installer_filename}}" -ArgumentList "ALLUSERS=1"
   uninstall: |                           # Required: PowerShell uninstallation script
     Uninstall-ADTApplication -Name "Application Name"
 ```
@@ -337,16 +337,20 @@ PSADT application variables set in the generated `Invoke-AppDeployToolkit.ps1` f
 **Common Variables:**
 
 - `AppName`: Display name shown in PSADT dialogs
-- `AppVersion`: Application version (use `${discovered_version}` for auto-substitution)
+- `AppVersion`: Application version (use `{{discovered_version}}` for auto-substitution)
 - `AppVendor`: Vendor name (typically set in vendor defaults)
 - `AppArch`: Architecture (`x64`, `x86`, or `All`)
 - `AppLang`: Application language
 
-**Special Variable:** `${discovered_version}` is automatically substituted with the version
-discovered by NAPT. Use this in `AppVersion` to ensure the version matches the downloaded
-installer.
+**Build-time variables:** NAPT substitutes `{{discovered_version}}` (the version
+discovered by NAPT) and `{{installer_filename}}` (the exact filename of the downloaded
+installer) in all `app_vars` values.
+Use `{{discovered_version}}` in `AppVersion` to ensure the version matches the
+downloaded installer.
 
-**Environment Variable Substitution:** All values support `${VARIABLE_NAME}` syntax.
+For org-wide values such as `AppVendor`, set them once in `defaults/org.yaml`
+(or a vendor file) instead of repeating them per recipe — the configuration
+layers are deep-merged into every recipe.
 
 ### override_msix_commands
 
@@ -399,12 +403,17 @@ psadt:
 PowerShell script executed during installation. Inserted into the generated
 `Invoke-AppDeployToolkit.ps1` in the installation section.
 
-**Available Variables:**
+**Build-time variables** (substituted by NAPT when the script is generated —
+these are not PowerShell variables):
 
-- `$($adtSession.DirFiles)`: Path to installer files directory (contains downloaded installer)
-- `$discovered_version`: Version discovered by NAPT
-- Standard PSADT variables: `$dirApp`, `$dirSupportFiles`, etc.
-- All `app_vars` are available (e.g., `$AppName`, `$AppVersion`)
+- `{{discovered_version}}`: Version discovered by NAPT
+- `{{installer_filename}}`: Exact filename of the downloaded installer in the
+  package's `Files` directory
+
+**PowerShell variables** (available at deploy time):
+
+- `$($adtSession.DirFiles)`: Path to the installer files directory
+- `$adtSession.AppName`, `$adtSession.AppVersion`, etc.: Values from `app_vars`
 
 **Commonly Used PSADT Functions:**
 
@@ -412,10 +421,14 @@ PowerShell script executed during installation. Inserted into the generated
 - `Start-ADTMsiProcess`: Install MSI files with parameters
 - `Uninstall-ADTApplication`: Uninstall applications by name
 
+**Note:** PSADT resolves a relative `-FilePath` against the `Files` directory
+and does not expand wildcards.
+Use `{{installer_filename}}` instead of a wildcard pattern.
+
 **Example:**
 ```yaml
 install: |
-  Start-ADTMsiProcess -Action Install -Path "$dirFiles\installer.msi" -Parameters "ALLUSERS=1 /qn"
+  Start-ADTMsiProcess -Action Install -FilePath "{{installer_filename}}" -ArgumentList "ALLUSERS=1"
 ```
 
 ### uninstall
@@ -749,9 +762,11 @@ generated script filenames.
 characters removed). Script filenames follow the pattern:
 `{DisplayName}_{Version}-Detection.ps1` and `{DisplayName}_{Version}-Requirements.ps1`.
 
-**Template Variable Support:** `${discovered_version}` is automatically substituted with the
+**Template Variable Support:** `{{discovered_version}}` is automatically substituted with the
 discovered version. Use this when the registry DisplayName includes the version number (e.g.,
 "7-Zip 25.01 (x64)").
+This is the only build-time variable supported here; `{{installer_filename}}` never appears
+in a registry DisplayName.
 
 **Wildcard Support:** When `display_name` contains wildcards (`*` or `?`), scripts use
 PowerShell's `-like` operator instead of exact `-eq` matching:
@@ -772,7 +787,7 @@ intune:
 ```yaml
 intune:
   detection:
-    display_name: "7-Zip ${discovered_version} (x64)"  # Matches "7-Zip 25.01 (x64)"
+    display_name: "7-Zip {{discovered_version}} (x64)"  # Matches "7-Zip 25.01 (x64)"
 ```
 
 **Example with wildcard (for MSI with override):**
@@ -947,30 +962,45 @@ it does not exist and verifying write access). If that fails (e.g., permissions)
 to `C:\ProgramData\NAPT\` (system) or `%LOCALAPPDATA%\NAPT\` (user). If both fail, a warning is
 written to stderr and the script runs without a log file.
 
-## Environment Variable Substitution
+## Variable Substitution
 
-NAPT supports environment variable substitution throughout recipe files using `${VARIABLE_NAME}`
-syntax.
+Recipes use two distinct substitution mechanisms with different syntax.
 
-### Where It Works
+### NAPT build-time variables: `{{...}}`
 
-- **Discovery configuration:** API tokens, authentication headers
-- **PSADT app_vars:** Any variable value
-- **Special variable:** `${discovered_version}` is automatically substituted with the discovered
-  version
+NAPT substitutes these while generating the package (they are not PowerShell
+variables):
+
+| Variable | Value | Supported fields |
+|----------|-------|------------------|
+| `{{discovered_version}}` | Version discovered by NAPT | `psadt.app_vars`, `psadt.install`, `psadt.uninstall`, `intune.detection.display_name` |
+| `{{installer_filename}}` | Exact filename of the downloaded installer | `psadt.app_vars`, `psadt.install`, `psadt.uninstall` |
+
+`napt build` logs a warning if an install or uninstall script contains a
+`{{snake_case}}` token that is not a supported variable.
+
+### Environment variables: `${VARIABLE_NAME}`
+
+Environment variable substitution exists for secrets that must not be committed
+to YAML.
+It works **only** in `discovery.token` and `discovery.headers`.
+
+For non-secret org-wide values (e.g., `AppVendor`), use the configuration layers
+(`defaults/org.yaml`, `defaults/vendors/{Vendor}.yaml`) instead.
 
 ### Syntax
 
 ```yaml
 discovery:
-  token: "${GITHUB_TOKEN}"
+  token: "${GITHUB_TOKEN}"               # Environment variable (secrets only)
   headers:
-    Authorization: "Bearer ${API_TOKEN}"
+    Authorization: "Bearer ${API_TOKEN}" # Environment variable (secrets only)
 
 psadt:
   app_vars:
-    AppVersion: "${discovered_version}"  # NAPT auto-substitution
-    AppVendor: "${ORG_NAME}"             # Environment variable
+    AppVersion: "{{discovered_version}}" # NAPT build-time substitution
+  install: |
+    Start-ADTProcess -FilePath "{{installer_filename}}" -ArgumentList "/S"
 ```
 
 ### Setting Environment Variables
@@ -1015,9 +1045,9 @@ intune:
 psadt:
   app_vars:
     AppName: "Example Application"
-    AppVersion: "${discovered_version}"
+    AppVersion: "{{discovered_version}}"
   install: |
-    Start-ADTProcess -Path "$dirFiles\*.exe" -Parameters "/S"
+    Start-ADTProcess -FilePath "{{installer_filename}}" -ArgumentList "/S"
   uninstall: |
     Uninstall-ADTApplication -Name "Example Application"
 ```

@@ -18,12 +18,13 @@ intune:
 psadt:
   app_vars:
     AppName: "7-Zip"
-    AppVersion: "${discovered_version}"
+    AppVersion: "{{discovered_version}}"
     AppVendor: "Igor Pavlov"
   install: |
     # Install 7-Zip EXE with system-wide deployment
-    # Note: Filename uses compact version (e.g., 7z2501.exe for v25.01)
-    Start-ADTProcess -FilePath "7z*.exe" -ArgumentList "/S"
+    # Note: NAPT substitutes the exact downloaded filename at build time
+    # (PSADT resolves -FilePath literally; wildcards are not supported)
+    Start-ADTProcess -FilePath "{{installer_filename}}" -ArgumentList "/S"
   uninstall: |
     # Uninstall 7-Zip automatically (handles registry lookup)
     Uninstall-ADTApplication -Name "7-Zip"

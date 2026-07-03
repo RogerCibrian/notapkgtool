@@ -22,11 +22,11 @@ intune:
 psadt:
   app_vars:
     AppName: "Visual Studio Code"
-    AppVersion: "${discovered_version}"
+    AppVersion: "{{discovered_version}}"
     AppVendor: "Microsoft"
   install: |
     # VS Code system installer - silent install for all users
-    Start-ADTProcess -FilePath "VSCodeSetup-x64-${discovered_version}.exe" -ArgumentList "/VERYSILENT /NORESTART /MERGETASKS=!runcode,addcontextmenufiles,addcontextmenufolders,associatewithfiles,addtopath"
+    Start-ADTProcess -FilePath "VSCodeSetup-x64-{{discovered_version}}.exe" -ArgumentList "/VERYSILENT /NORESTART /MERGETASKS=!runcode,addcontextmenufiles,addcontextmenufolders,associatewithfiles,addtopath"
   uninstall: |
     # VS Code uninstall via registry (Inno Setup uninstaller)
     Uninstall-ADTApplication -Name "Microsoft Visual Studio Code"

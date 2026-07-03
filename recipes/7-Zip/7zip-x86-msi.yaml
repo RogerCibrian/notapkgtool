@@ -18,12 +18,13 @@ intune:
 psadt:
   app_vars:
     AppName: "7-Zip"
-    AppVersion: "${discovered_version}"
+    AppVersion: "{{discovered_version}}"
     AppVendor: "Igor Pavlov"
   install: |
     # Install 7-Zip MSI with system-wide deployment
-    # Note: Filename uses compact version (e.g., 7z2501.msi for v25.01)
-    Start-ADTMsiProcess -Action Install -FilePath "7z*.msi" -ArgumentList "ALLUSERS=1"
+    # Note: NAPT substitutes the exact downloaded filename at build time
+    # (PSADT resolves -FilePath literally; wildcards are not supported)
+    Start-ADTMsiProcess -Action Install -FilePath "{{installer_filename}}" -ArgumentList "ALLUSERS=1"
   uninstall: |
     # Uninstall 7-Zip automatically (handles MSI ProductCode lookup)
     Uninstall-ADTApplication -Name "7-Zip"

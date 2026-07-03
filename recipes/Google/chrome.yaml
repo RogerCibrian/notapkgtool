@@ -10,7 +10,7 @@ discovery:
 psadt:
   app_vars:
     AppName: "Google Chrome"
-    AppVersion: "${discovered_version}"
+    AppVersion: "{{discovered_version}}"
   install: |
     # Install Chrome MSI with system-wide deployment
     Start-ADTMsiProcess -Action Install -FilePath "googlechromestandaloneenterprise64.msi" -ArgumentList "ALLUSERS=1"

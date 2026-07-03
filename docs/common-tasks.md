@@ -127,9 +127,9 @@ intune:
 psadt:
   app_vars:
     AppName: "Git for Windows"
-    AppVersion: "${discovered_version}"
+    AppVersion: "{{discovered_version}}"
   install: |
-    Start-ADTProcess -Path "$dirFiles\Git-${discovered_version}-64-bit.exe" -Parameters "/VERYSILENT /NORESTART"
+    Start-ADTProcess -FilePath "Git-{{discovered_version}}-64-bit.exe" -ArgumentList "/VERYSILENT /NORESTART"
   uninstall: |
     Uninstall-ADTApplication -Name "Git"
 ```
@@ -182,9 +182,9 @@ intune:
 psadt:
   app_vars:
     AppName: "7-Zip"
-    AppVersion: "${discovered_version}"
+    AppVersion: "{{discovered_version}}"
   install: |
-    Start-ADTMsiProcess -Action Install -Path "$dirFiles\7z*-x64.msi" -Parameters "ALLUSERS=1"
+    Start-ADTMsiProcess -Action Install -FilePath "{{installer_filename}}" -ArgumentList "ALLUSERS=1"
   uninstall: |
     Uninstall-ADTApplication -Name "7-Zip"
 ```
@@ -232,9 +232,9 @@ discovery:
 psadt:
   app_vars:
     AppName: "Application Name"
-    AppVersion: "${discovered_version}"
+    AppVersion: "{{discovered_version}}"
   install: |
-    Start-ADTProcess -Path "$dirFiles\app-installer.exe" -Parameters "/S"
+    Start-ADTProcess -FilePath "{{installer_filename}}" -ArgumentList "/S"
   uninstall: |
     Uninstall-ADTApplication -Name "Application Name"
 ```
@@ -296,7 +296,7 @@ discovery:
 psadt:
   app_vars:
     AppName: "Slack"
-    AppVersion: "${discovered_version}"
+    AppVersion: "{{discovered_version}}"
 ```
 
 2. Validate and test:
@@ -365,9 +365,9 @@ discovery:
 psadt:
   app_vars:
     AppName: "Google Chrome"
-    AppVersion: "${discovered_version}"
+    AppVersion: "{{discovered_version}}"
   install: |
-    Start-ADTMsiProcess -Action Install -Path "$dirFiles\googlechromestandaloneenterprise64.msi" -Parameters "ALLUSERS=1"
+    Start-ADTMsiProcess -Action Install -FilePath "googlechromestandaloneenterprise64.msi" -ArgumentList "ALLUSERS=1"
   uninstall: |
     Uninstall-ADTApplication -Name "Google Chrome"
 ```

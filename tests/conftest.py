@@ -52,7 +52,7 @@ def sample_recipe_data() -> dict[str, Any]:
         "psadt": {
             "app_vars": {
                 "AppName": "Test App",
-                "AppVersion": "${discovered_version}",
+                "AppVersion": "{{discovered_version}}",
             },
         },
     }
