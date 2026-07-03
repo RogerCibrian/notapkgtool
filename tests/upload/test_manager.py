@@ -295,6 +295,72 @@ class TestResolveLargeIcon:
         assert "napt build" in output
         assert "intune.logo_path" in output
 
+    def test_broken_logo_path_without_extracted_icon_warns_accurately(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """Tests that a broken logo_path with no extracted icon says so."""
+        monkeypatch.chdir(tmp_path)
+        config = _fake_config()
+        config["intune"]["logo_path"] = str(tmp_path / "nope.png")
+
+        result = _resolve_large_icon(config)
+
+        output = capsys.readouterr().out
+        assert result is None
+        assert "Logo file not found" in output
+        assert "will have no logo" in output
+        assert "fix intune.logo_path" in output
+        # No misleading fallback claim and no duplicate generic warning
+        assert "Falling back" not in output
+        assert "No app icon found" not in output
+
+    def test_oversized_logo_path_warns_and_skips(self, tmp_path, monkeypatch, capsys):
+        """Tests that a logo_path file over the size limit is skipped."""
+        from napt.build.icons import MAX_ICON_BYTES
+
+        monkeypatch.chdir(tmp_path)
+        logo = tmp_path / "logo.png"
+        logo.write_bytes(b"x" * (MAX_ICON_BYTES + 1))
+        config = _fake_config()
+        config["intune"]["logo_path"] = str(logo)
+
+        result = _resolve_large_icon(config)
+
+        output = capsys.readouterr().out
+        assert result is None
+        assert "icon size limit" in output
+
+    def test_oversized_extracted_icon_warns_and_returns_none(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """Tests that an oversized curated icon warns instead of uploading."""
+        from napt.build.icons import MAX_ICON_BYTES
+
+        monkeypatch.chdir(tmp_path)
+        icon_path = tmp_path / "icons" / "test-app.png"
+        icon_path.parent.mkdir(parents=True)
+        icon_path.write_bytes(b"x" * (MAX_ICON_BYTES + 1))
+
+        result = _resolve_large_icon(_fake_config())
+
+        output = capsys.readouterr().out
+        assert result is None
+        assert "icon size limit" in output
+
+    def test_unreadable_extracted_icon_warns_and_returns_none(
+        self, tmp_path, monkeypatch, capsys
+    ):
+        """Tests that an unreadable icon file warns instead of crashing."""
+        monkeypatch.chdir(tmp_path)
+        # A directory at the icon path passes exists() but fails read_bytes()
+        (tmp_path / "icons" / "test-app.png").mkdir(parents=True)
+
+        result = _resolve_large_icon(_fake_config())
+
+        output = capsys.readouterr().out
+        assert result is None
+        assert "Could not read icon file" in output
+
 
 def test_upload_package_both_shares_icon_across_entries(
     tmp_path: Path, monkeypatch, fake_metadata

@@ -39,6 +39,7 @@ from pathlib import Path
 import tempfile
 from typing import Any
 
+from napt.build.icons import MAX_ICON_BYTES
 from napt.config import load_effective_config
 from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
@@ -160,12 +161,41 @@ def _infer_package_dir(app_id: str) -> tuple[Path, str]:
     return intunewin_files[0], version_dir.name
 
 
+def _load_icon_bytes(path: Path, logger: Any) -> bytes | None:
+    """Reads an icon file, warning instead of raising on failure.
+
+    Args:
+        path: Icon file to read.
+        logger: Logger for warnings.
+
+    Returns:
+        The file bytes, or None if the file is unreadable or larger than
+            Intune's icon size limit.
+    """
+    try:
+        data = path.read_bytes()
+    except OSError as err:
+        logger.warning("UPLOAD", f"Could not read icon file {path}: {err}.")
+        return None
+    if len(data) > MAX_ICON_BYTES:
+        logger.warning(
+            "UPLOAD",
+            f"Icon file {path} is {len(data) // 1000}KB, over Intune's "
+            f"{MAX_ICON_BYTES // 1000}KB icon size limit. Replace it with a "
+            f"smaller image (256x256 PNG recommended).",
+        )
+        return None
+    return data
+
+
 def _resolve_large_icon(config: dict[str, Any]) -> dict[str, Any] | None:
     """Resolves the largeIcon content for an app's Intune entries.
 
     Resolution order: intune.logo_path (explicit, always wins), then the
     icon extracted at build time to ``{directories.icons}/{id}.png``, then
-    no icon with a warning.
+    no icon with a warning. Unreadable and oversized icon files warn and
+    are skipped; a broken logo_path only falls back when an extracted icon
+    actually exists.
 
     Args:
         config: Effective configuration dict from load_effective_config.
@@ -187,35 +217,47 @@ def _resolve_large_icon(config: dict[str, Any]) -> dict[str, Any] | None:
     if logo_path_str:
         logo_path = Path(logo_path_str)
         mime_type = mime_types.get(logo_path.suffix.lower())
+        # Build skips extraction when logo_path is set, so an extracted
+        # icon only exists here if it predates the logo_path setting.
+        fallback = (
+            "Falling back to the extracted icon"
+            if icon_path.exists()
+            else "The Intune app entry will have no logo; fix intune.logo_path, "
+            "or unset it and run 'napt build' to extract an icon"
+        )
         if not logo_path.exists():
-            logger.warning(
-                "UPLOAD",
-                f"Logo file not found: {logo_path}. "
-                f"Falling back to the extracted icon.",
-            )
+            logger.warning("UPLOAD", f"Logo file not found: {logo_path}. {fallback}.")
         elif mime_type is None:
             logger.warning(
                 "UPLOAD",
                 f"Unsupported logo file type '{logo_path.suffix}' for "
-                f"{logo_path.name}; use .png or .jpg. Falling back to the "
-                f"extracted icon.",
+                f"{logo_path.name}; use .png or .jpg. {fallback}.",
             )
         else:
-            icon_value = base64.b64encode(logo_path.read_bytes()).decode()
-            logger.verbose("UPLOAD", f"App icon: {logo_path.name} (intune.logo_path)")
-            return {"type": mime_type, "value": icon_value}
+            logo_bytes = _load_icon_bytes(logo_path, logger)
+            if logo_bytes is not None:
+                logger.verbose(
+                    "UPLOAD", f"App icon: {logo_path.name} (intune.logo_path)"
+                )
+                return {
+                    "type": mime_type,
+                    "value": base64.b64encode(logo_bytes).decode(),
+                }
 
     if icon_path.exists():
-        icon_value = base64.b64encode(icon_path.read_bytes()).decode()
+        icon_bytes = _load_icon_bytes(icon_path, logger)
+        if icon_bytes is None:
+            return None
         logger.verbose("UPLOAD", f"App icon: {icon_path} (extracted at build time)")
-        return {"type": "image/png", "value": icon_value}
+        return {"type": "image/png", "value": base64.b64encode(icon_bytes).decode()}
 
-    logger.warning(
-        "UPLOAD",
-        f"No app icon found for '{config['id']}'. The Intune app entry will "
-        f"have no logo. Run 'napt build' to extract one, place a PNG at "
-        f"{icon_path}, or set intune.logo_path.",
-    )
+    if not logo_path_str:
+        logger.warning(
+            "UPLOAD",
+            f"No app icon found for '{config['id']}'. The Intune app entry "
+            f"will have no logo. Run 'napt build' to extract one, place a PNG "
+            f"at {icon_path}, or set intune.logo_path.",
+        )
     return None
 
 
