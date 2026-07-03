@@ -1004,6 +1004,11 @@ def _extract_app_icon(
     drop curated replacements into the icons directory; NAPT never
     overwrites them).
 
+    A failed extraction is recorded in a ``{app_id}.no-icon`` marker so
+    expensive MSI extraction is not repeated every build. The marker
+    invalidates itself when the installer file changes and is removed on a
+    successful extraction.
+
     Args:
         config: Merged effective configuration.
         installer_file: Path to the downloaded installer.
@@ -1018,13 +1023,37 @@ def _extract_app_icon(
         logger.info("BUILD", "Skipping icon extraction: intune.logo_path is set")
         return
 
-    icon_path = Path(config["directories"]["icons"]) / f"{app_id}.png"
+    icons_dir = Path(config["directories"]["icons"])
+    icon_path = icons_dir / f"{app_id}.png"
     if icon_path.exists():
         logger.info("BUILD", f"Skipping icon extraction: {icon_path} already exists")
         return
 
+    marker_path = icons_dir / f"{app_id}.no-icon"
+    stat = installer_file.stat()
+    fingerprint = f"{installer_file.name}|{stat.st_size}|{stat.st_mtime_ns}"
+    if marker_path.exists():
+        try:
+            marker_matches = (
+                marker_path.read_text(encoding="utf-8").strip() == fingerprint
+            )
+        except OSError:
+            marker_matches = False
+        if marker_matches:
+            logger.info(
+                "BUILD",
+                "Skipping icon extraction: no icon was found in this "
+                "installer previously",
+            )
+            return
+
     result = extract_icon_png(installer_file)
     if result.png is None:
+        try:
+            icons_dir.mkdir(parents=True, exist_ok=True)
+            marker_path.write_text(fingerprint, encoding="utf-8")
+        except OSError:
+            pass
         logger.warning(
             "BUILD",
             f"No app icon extracted from {installer_file.name}: {result.detail}. "
@@ -1037,6 +1066,7 @@ def _extract_app_icon(
     try:
         icon_path.parent.mkdir(parents=True, exist_ok=True)
         icon_path.write_bytes(result.png)
+        marker_path.unlink(missing_ok=True)
     except OSError as err:
         logger.warning("BUILD", f"Could not write app icon to {icon_path}: {err}")
         return
