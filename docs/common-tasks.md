@@ -662,18 +662,7 @@ Most apps need no configuration.
 When extraction finds no usable icon (the build prints a warning), or you
 want a different image, you have two options:
 
-**Option 1: Drop a PNG into the icons directory (recommended)**
-
-```bash
-# The file name must match the recipe id
-cp my-better-icon.png icons/napt-7zip-x64-msi.png
-```
-
-NAPT never overwrites an existing file in `icons/`, so your curated icon
-survives future builds.
-Delete the file and rebuild to force re-extraction.
-
-**Option 2: Set logo_path in the recipe**
+**Option 1: Set logo_path in the recipe (recommended)**
 
 ```yaml
 intune:
@@ -681,9 +670,24 @@ intune:
   logo_path: "assets/7zip-logo.png"
 ```
 
+The icon file lives in the recipe repo, so the fix travels to every
+machine.
 `logo_path` always wins over the icons directory and disables extraction
 for that recipe.
-Use a 256x256 PNG for best results in Company Portal.
+Use a 256x256 PNG or JPEG under 700KB for best results in Company Portal.
+
+**Option 2: Drop a PNG into the icons directory**
+
+```bash
+# The file name must match the recipe id
+cp my-better-icon.png icons/napt-7zip-x64-msi.png
+```
+
+NAPT never overwrites an existing file in `icons/`, so your curated icon
+survives future builds on this machine.
+The icons directory is a machine-local output (gitignored), so this fix
+does not travel with the repo.
+Delete the file and rebuild to force re-extraction.
 
 ## Update Existing Recipes
 

@@ -183,16 +183,22 @@ Extraction rules:
 - Among qualifying frames, the one closest to Intune's recommended 256px
   is selected
 - If no qualifying frame exists, the build prints a warning and continues
-  without an icon
+  without an icon.
+  The failure is recorded in an `icons/{id}.no-icon` marker so expensive
+  MSI extraction is not repeated on every build; the marker invalidates
+  itself when the installer changes
 
-The icons directory is also the place for curated icons:
+Like `downloads/` and `builds/`, the icons directory is a machine-local
+output directory (gitignored); each machine extracts its own icons at
+build time:
 
 - **NAPT never overwrites an existing icon file.** To replace an
-  extracted icon with a better one, drop your PNG at `icons/{id}.png`
+  extracted icon on this machine, drop your PNG at `icons/{id}.png`
 - To force re-extraction (for example after a vendor rebrand), delete the
   file and rebuild
-- Setting `intune.logo_path` in the recipe skips extraction entirely and
-  always wins at upload
+- To pin a curated icon that travels with the recipe repo, set
+  `intune.logo_path` instead — it skips extraction entirely and always
+  wins at upload
 
 Icon resolution order at upload: `intune.logo_path` (if set), then
 `icons/{id}.png`, then no icon with a warning.

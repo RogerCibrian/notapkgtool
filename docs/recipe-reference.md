@@ -676,7 +676,9 @@ Link to more information about the app. Shown in the Intune portal.
 **Default:** None
 
 Path to a PNG or JPEG (`.png`, `.jpg`, `.jpeg`) icon file to use as the app icon in Intune and the Company Portal.
+The file must be under 700KB (Intune rejects icons over 750KB).
 Relative paths are resolved from the recipe file's location.
+When set in `defaults/org.yaml` (or a vendor file) and no file exists at the recipe-relative location, the path resolves from the `defaults/` directory instead, so an org-wide logo can live next to `org.yaml`.
 
 When `logo_path` is not set, `napt build` extracts an icon from the installer into `icons/{id}.png` and `napt upload` uses that file automatically.
 Setting `logo_path` always wins and disables extraction.
