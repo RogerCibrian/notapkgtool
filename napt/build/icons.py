@@ -295,7 +295,8 @@ def _no_frame_detail(largest_px: int, where: str) -> str:
     if largest_px:
         return (
             f"largest icon frame {where} is {largest_px}px "
-            f"(PNG-encoded frames of at least {MIN_ICON_PX}px are required)"
+            f"(PNG-encoded frames of at least {MIN_ICON_PX}px and at most "
+            f"{MAX_ICON_BYTES // 1000}KB are required)"
         )
     return f"no icon frames found {where}"
 
@@ -507,8 +508,9 @@ def _extract_from_msi(msi_path: Path) -> IconExtraction:
     """Extracts an icon from an MSI, trying the Icon table then the contents.
 
     Tier A reads the MSI Icon table (preferring the ARPPRODUCTICON row).
-    If that yields no qualifying frame, tier B performs an administrative
-    extract of the MSI and scans the contained executables.
+    If that yields no qualifying frame — including when the Icon table
+    backend itself fails — tier B performs an administrative extract of
+    the MSI and scans the contained executables.
 
     Args:
         msi_path: Path to the .msi file.
@@ -519,7 +521,13 @@ def _extract_from_msi(msi_path: Path) -> IconExtraction:
     """
     logger = _get_logger()
     tier_a_detail = "no Icon table in MSI"
-    arp_icon, blobs = _msi_icon_blobs(msi_path)
+    arp_icon = ""
+    blobs: dict[str, bytes] = {}
+    try:
+        arp_icon, blobs = _msi_icon_blobs(msi_path)
+    except (PackagingError, NotImplementedError) as err:
+        logger.debug("BUILD", f"Icon table read failed: {err!r}")
+        tier_a_detail = f"Icon table read failed ({err})"
     largest = 0
     for name, blob in _iter_icon_candidates(blobs, arp_icon):
         selected, blob_largest = _best_frame_from_blob(blob)
@@ -792,14 +800,16 @@ def _msi_cab_icons(msi_path: Path) -> IconExtraction:
         try:
             if sys.platform.startswith("win"):
                 logger.debug("BUILD", "Administrative extract via msiexec /a...")
+                # msiexec requires TARGETDIR="value" quoting when the path
+                # contains spaces; a list argument would be re-quoted as one
+                # token ("TARGETDIR=C:\..."), which msiexec rejects. Pass a
+                # command string so the quotes reach msiexec verbatim.
+                command = (
+                    f'msiexec /a "{msi_path.resolve()}" /qn '
+                    f'TARGETDIR="{extract_dir.resolve()}"'
+                )
                 subprocess.run(
-                    [
-                        "msiexec",
-                        "/a",
-                        str(msi_path.resolve()),
-                        "/qn",
-                        f"TARGETDIR={extract_dir.resolve()}",
-                    ],
+                    command,
                     check=True,
                     capture_output=True,
                     timeout=120,

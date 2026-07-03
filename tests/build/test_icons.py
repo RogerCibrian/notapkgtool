@@ -12,6 +12,7 @@ tmp_path; no binary files are checked in.
 from __future__ import annotations
 
 from pathlib import Path
+import re
 import struct
 import subprocess
 from unittest import mock
@@ -575,13 +576,14 @@ class TestMsiCabIcons:
     """Tests for the tier B administrative-extract fallback (mocked)."""
 
     @staticmethod
-    def _extract_side_effect(exes: dict[str, bytes], target_prefix: str):
+    def _msiexec_side_effect(exes: dict[str, bytes]):
         def side_effect(cmd, **kwargs):
-            target = next(
-                (arg for arg in cmd if str(arg).startswith(target_prefix)), None
-            )
-            assert target is not None
-            target_dir = Path(str(target).removeprefix(target_prefix))
+            # The msiexec invocation is a command string with quoted
+            # TARGETDIR (required for paths containing spaces).
+            assert isinstance(cmd, str)
+            match = re.search(r'TARGETDIR="([^"]+)"', cmd)
+            assert match is not None
+            target_dir = Path(match.group(1))
             for relative, data in exes.items():
                 destination = target_dir / relative
                 destination.parent.mkdir(parents=True, exist_ok=True)
@@ -589,9 +591,6 @@ class TestMsiCabIcons:
             return subprocess.CompletedProcess(cmd, 0, stdout=b"", stderr=b"")
 
         return side_effect
-
-    def _msiexec_side_effect(self, exes: dict[str, bytes]):
-        return self._extract_side_effect(exes, "TARGETDIR=")
 
     def test_best_frame_across_executables_wins(self, tmp_path, monkeypatch):
         """Tests that the policy is applied across all extracted EXEs."""
@@ -812,6 +811,43 @@ class TestExtractIconPng:
         )
         result = extract_icon_png(tmp_path / "x.msi")
         assert result is tier_b_result
+
+    def test_msi_tier_a_error_still_tries_tier_b(self, tmp_path, monkeypatch):
+        """Tests that a failing Icon table backend still falls through to tier B."""
+        import napt.build.icons as icons_module
+
+        from napt.exceptions import PackagingError
+
+        def boom(path):
+            raise PackagingError("PowerShell MSI icon export timed out")
+
+        monkeypatch.setattr(icons_module, "_msi_icon_blobs", boom)
+        tier_b_result = IconExtraction(_png(256), 256, "PE icon resource inside")
+        monkeypatch.setattr(
+            icons_module, "_msi_cab_icons", lambda path: tier_b_result
+        )
+        result = extract_icon_png(tmp_path / "x.msi")
+        assert result is tier_b_result
+
+    def test_msi_both_tiers_fail_combines_details(self, tmp_path, monkeypatch):
+        """Tests that a tier A backend error appears in the combined detail."""
+        import napt.build.icons as icons_module
+
+        from napt.exceptions import PackagingError
+
+        def boom(path):
+            raise PackagingError("export timed out")
+
+        monkeypatch.setattr(icons_module, "_msi_icon_blobs", boom)
+        monkeypatch.setattr(
+            icons_module,
+            "_msi_cab_icons",
+            lambda path: IconExtraction(None, None, "no executables"),
+        )
+        result = extract_icon_png(tmp_path / "x.msi")
+        assert result.png is None
+        assert "export timed out" in result.detail
+        assert "no executables" in result.detail
 
     def test_internal_exception_is_swallowed(self, tmp_path, monkeypatch):
         """Tests that an unexpected exception becomes a failure result."""
