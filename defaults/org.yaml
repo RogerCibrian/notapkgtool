@@ -69,3 +69,5 @@ directories:
   discover: "downloads"
   build: "builds"
   package: "packages"
+  # App icons extracted by build and uploaded by upload
+  icons: "icons"

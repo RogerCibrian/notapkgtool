@@ -47,6 +47,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "discover": "downloads",
         "build": "builds",
         "package": "packages",
+        "icons": "icons",
     },
     # PSADT (PowerShell App Deployment Toolkit) settings.
     # Merged with recipe psadt: section via the config loader.
@@ -192,6 +193,8 @@ apiVersion: napt/v1
 #   discover: "downloads"
 #   build: "builds"
 #   package: "packages"
+#   # App icons extracted by build and uploaded by upload
+#   icons: "icons"
 
 # intunewin:
 #   # IntuneWinAppUtil.exe release: "latest" or specific version (e.g., "1.8.6")

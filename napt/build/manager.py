@@ -47,6 +47,7 @@ import re
 import shutil
 from typing import Any, cast
 
+from napt.build.icons import extract_icon_png
 from napt.build.msix_scripts import (
     MSIXDetectionConfig,
     MSIXRequirementsConfig,
@@ -992,6 +993,87 @@ def _apply_msix_commands(
     logger.verbose("BUILD", f"Auto-generated MSIX uninstall: {auto_uninstall}")
 
 
+def _extract_app_icon(
+    config: dict[str, Any], installer_file: Path, app_id: str
+) -> None:
+    """Extracts the app icon from the installer into the icons directory.
+
+    Best-effort side task that never raises: a failed extraction warns and
+    the build continues. Skipped when intune.logo_path is set (the explicit
+    icon wins at upload) or when the icon file already exists (users may
+    drop curated replacements into the icons directory; NAPT never
+    overwrites them).
+
+    A failed extraction is recorded in a ``{app_id}.no-icon`` marker so
+    expensive MSI extraction is not repeated every build. The marker
+    invalidates itself when the installer file changes and is removed on a
+    successful extraction.
+
+    Args:
+        config: Merged effective configuration.
+        installer_file: Path to the downloaded installer.
+        app_id: Recipe id; the icon is written to
+            ``{directories.icons}/{app_id}.png``.
+    """
+    from napt.logging import get_global_logger
+
+    logger = get_global_logger()
+
+    if config["intune"].get("logo_path"):
+        logger.info("BUILD", "Skipping icon extraction: intune.logo_path is set")
+        return
+
+    icons_dir = Path(config["directories"]["icons"])
+    icon_path = icons_dir / f"{app_id}.png"
+    if icon_path.exists():
+        logger.info("BUILD", f"Skipping icon extraction: {icon_path} already exists")
+        return
+
+    marker_path = icons_dir / f"{app_id}.no-icon"
+    stat = installer_file.stat()
+    fingerprint = f"{installer_file.name}|{stat.st_size}|{stat.st_mtime_ns}"
+    if marker_path.exists():
+        try:
+            marker_matches = (
+                marker_path.read_text(encoding="utf-8").strip() == fingerprint
+            )
+        except OSError:
+            marker_matches = False
+        if marker_matches:
+            logger.info(
+                "BUILD",
+                "Skipping icon extraction: no icon was found in this "
+                "installer previously",
+            )
+            return
+
+    result = extract_icon_png(installer_file)
+    if result.png is None:
+        try:
+            icons_dir.mkdir(parents=True, exist_ok=True)
+            marker_path.write_text(fingerprint, encoding="utf-8")
+        except OSError:
+            pass
+        logger.warning(
+            "BUILD",
+            f"No app icon extracted from {installer_file.name}: {result.detail}. "
+            f"The Intune app entry will be created without a logo. Place a PNG "
+            f"at {icon_path} or set intune.logo_path to provide an icon "
+            f"manually.",
+        )
+        return
+
+    try:
+        icon_path.parent.mkdir(parents=True, exist_ok=True)
+        icon_path.write_bytes(result.png)
+        marker_path.unlink(missing_ok=True)
+    except OSError as err:
+        logger.warning("BUILD", f"Could not write app icon to {icon_path}: {err}")
+        return
+    logger.info("BUILD", f"Extracted app icon ({result.width}px): {icon_path}")
+    logger.verbose("BUILD", f"Icon source: {result.detail}")
+
+
 def build_package(
     recipe_path: Path,
     downloads_dir: Path | None = None,
@@ -1106,6 +1188,9 @@ def build_package(
                 "installers. Set intune.detection.architecture in the "
                 "recipe. Allowed values: x86, x64, arm64, any"
             )
+
+    # Extract the app icon for Intune (best-effort; warns instead of failing)
+    _extract_app_icon(config, installer_file, app_id)
 
     # Get PSADT release
     logger.step(4, 8, "Getting PSADT release...")

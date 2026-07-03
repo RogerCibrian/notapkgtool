@@ -355,6 +355,7 @@ discovery:
         assert "release" in DEFAULT_CONFIG["psadt"]
         assert "app_vars" in DEFAULT_CONFIG["psadt"]
         assert "build" in DEFAULT_CONFIG["directories"]
+        assert "icons" in DEFAULT_CONFIG["directories"]
         assert "build_types" in DEFAULT_CONFIG["intune"]
         assert "log_format" in DEFAULT_CONFIG["logging"]
 
@@ -377,6 +378,7 @@ discovery:
             ("psadt", "brand_pack"),
             ("psadt", "app_vars"),
             ("directories", "build"),
+            ("directories", "icons"),
             ("intune", "build_types"),
             ("intune", "detection"),
             ("logging", "log_format"),
@@ -388,6 +390,90 @@ discovery:
                 f"Key '{parent}.{key}' exists in DEFAULT_CONFIG but is not "
                 f"mentioned in ORG_YAML_TEMPLATE. Update the template."
             )
+
+
+class TestLogoPathResolution:
+    """Tests for intune.logo_path resolution in _resolve_known_paths."""
+
+    @staticmethod
+    def _write_recipe(recipes_dir, logo_path_line: str = "") -> Any:
+        recipe_path = recipes_dir / "test.yaml"
+        intune_section = (
+            f"intune:\n  logo_path: {logo_path_line}\n" if (logo_path_line) else ""
+        )
+        recipe_path.write_text(
+            "apiVersion: napt/v1\nname: Test\nid: test\n"
+            "discovery:\n  strategy: url_download\n"
+            "  url: https://example.com/app.msi\n" + intune_section
+        )
+        return recipe_path
+
+    def test_relative_logo_path_resolves_against_recipe_dir(self, tmp_test_dir):
+        """Tests that a relative logo_path resolves against the recipe dir."""
+        recipes_dir = tmp_test_dir / "recipes"
+        recipes_dir.mkdir()
+        recipe_path = self._write_recipe(recipes_dir, "assets/logo.png")
+
+        config = load_effective_config(recipe_path)
+
+        expected = str((recipes_dir / "assets" / "logo.png").resolve())
+        assert config["intune"]["logo_path"] == expected
+
+    def test_absolute_logo_path_is_unchanged(self, tmp_test_dir):
+        """Tests that an absolute logo_path is left untouched."""
+        recipes_dir = tmp_test_dir / "recipes"
+        recipes_dir.mkdir()
+        absolute = str((tmp_test_dir / "elsewhere" / "logo.png").resolve())
+        recipe_path = self._write_recipe(recipes_dir, f"'{absolute}'")
+
+        config = load_effective_config(recipe_path)
+
+        assert config["intune"]["logo_path"] == absolute
+
+    def test_unset_logo_path_stays_unset(self, tmp_test_dir):
+        """Tests that a recipe without logo_path gets no logo_path value."""
+        recipes_dir = tmp_test_dir / "recipes"
+        recipes_dir.mkdir()
+        recipe_path = self._write_recipe(recipes_dir)
+
+        config = load_effective_config(recipe_path)
+
+        assert not config["intune"].get("logo_path")
+
+    def test_org_level_logo_path_resolves_against_defaults_root(self, tmp_test_dir):
+        """Tests that an org-set logo_path resolves next to org.yaml."""
+        defaults_dir = tmp_test_dir / "defaults"
+        defaults_dir.mkdir()
+        (defaults_dir / "org.yaml").write_text(
+            "apiVersion: napt/v1\nintune:\n  logo_path: assets/org-logo.png\n"
+        )
+        org_logo = defaults_dir / "assets" / "org-logo.png"
+        org_logo.parent.mkdir()
+        org_logo.write_bytes(b"png")
+        recipes_dir = tmp_test_dir / "recipes"
+        recipes_dir.mkdir()
+        recipe_path = self._write_recipe(recipes_dir)
+
+        config = load_effective_config(recipe_path)
+
+        assert config["intune"]["logo_path"] == str(org_logo.resolve())
+
+    def test_recipe_relative_logo_path_wins_over_defaults_root(self, tmp_test_dir):
+        """Tests that a recipe-relative logo file wins when both exist."""
+        defaults_dir = tmp_test_dir / "defaults"
+        defaults_dir.mkdir()
+        (defaults_dir / "org.yaml").write_text("apiVersion: napt/v1\n")
+        for base in (tmp_test_dir, tmp_test_dir / "recipes"):
+            logo = base / "assets" / "logo.png"
+            logo.parent.mkdir(parents=True)
+            logo.write_bytes(b"png")
+        recipes_dir = tmp_test_dir / "recipes"
+        recipe_path = self._write_recipe(recipes_dir, "assets/logo.png")
+
+        config = load_effective_config(recipe_path)
+
+        expected = str((recipes_dir / "assets" / "logo.png").resolve())
+        assert config["intune"]["logo_path"] == expected
 
 
 class TestValidationInLoader:

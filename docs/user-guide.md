@@ -157,6 +157,52 @@ builds/napt-chrome/144.0.7559.110/
 
 **Configuration:** See [Recipe Reference - Intune Configuration](recipe-reference.md#intune-configuration) for `intune.detection` and `intune.build_types` options.
 
+### App icons
+
+During `napt build`, NAPT extracts the app's icon from the installer and
+saves it to `{directories.icons}/{id}.png` (default `icons/`).
+`napt upload` sends that file as the app's logo in Intune and the Company
+Portal.
+
+Extraction sources per installer type:
+
+- **MSI** - The Icon table (preferring the row named by `ARPPRODUCTICON`).
+  If the MSI has no usable Icon table entry, NAPT performs an
+  administrative extract (`msiexec /a`) and scans the contained
+  executables for icons
+- **EXE** - The executable's own icon resources
+- **MSIX** - Logo assets declared in `AppxManifest.xml`, including scale
+  and targetsize variants
+
+Extraction rules:
+
+- Only icon frames that are already PNG-encoded are used; NAPT does not
+  re-encode or upscale images
+- Frames must be at least 128px wide and at most 700KB (Intune rejects
+  icons over 750KB)
+- Among qualifying frames, the one closest to Intune's recommended 256px
+  is selected
+- If no qualifying frame exists, the build prints a warning and continues
+  without an icon.
+  The failure is recorded in an `icons/{id}.no-icon` marker so expensive
+  MSI extraction is not repeated on every build; the marker invalidates
+  itself when the installer changes
+
+Like `downloads/` and `builds/`, the icons directory is a machine-local
+output directory (gitignored); each machine extracts its own icons at
+build time:
+
+- **NAPT never overwrites an existing icon file.** To replace an
+  extracted icon on this machine, drop your PNG at `icons/{id}.png`
+- To force re-extraction (for example after a vendor rebrand), delete the
+  file and rebuild
+- To pin a curated icon that travels with the recipe repo, set
+  `intune.logo_path` instead — it skips extraction entirely and always
+  wins at upload
+
+Icon resolution order at upload: `intune.logo_path` (if set), then
+`icons/{id}.png`, then no icon with a warning.
+
 ### Package Process (`napt package`)
 
 The package process creates a `.intunewin` file from a PSADT build for the
@@ -607,6 +653,10 @@ Note that input and output share a config key across adjacent commands —
 `directories.discover`, so the output of one is automatically
 the input of the next without extra configuration.
 
+One additional directory has no CLI flag: `directories.icons` (default
+`icons`) holds app icons written by `napt build` and read by `napt upload`.
+See [App icons](#app-icons).
+
 To change the defaults org-wide, add to `defaults/org.yaml`:
 
 ```yaml
@@ -614,6 +664,7 @@ directories:
   discover: "cache/downloads"   # used by both discover and build
   build: "artifacts/builds"     # used by both build and package
   package: "artifacts/packages"
+  icons: "artifacts/icons"      # written by build, read by upload
 ```
 
 Any CLI flag still overrides the config value for that single run:
