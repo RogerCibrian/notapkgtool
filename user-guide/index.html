@@ -595,6 +595,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#app-icons" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        App icons
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#package-process-napt-package" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2117,6 +2128,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#app-icons" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        App icons
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#package-process-napt-package" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2854,6 +2876,49 @@ identity name instead of registry scanning; which store is queried depends on
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  └── Google-Chrome-144.0.7559.110-Requirements.ps1 # Requirements script (if generated)
 </span></code></pre></div>
 <p><strong>Configuration:</strong> See <a href="../recipe-reference/#intune-configuration">Recipe Reference - Intune Configuration</a> for <code>intune.detection</code> and <code>intune.build_types</code> options.</p>
+<h3 id="app-icons">App icons</h3>
+<p>During <code>napt build</code>, NAPT extracts the app's icon from the installer and
+saves it to <code>{directories.icons}/{id}.png</code> (default <code>icons/</code>).
+<code>napt upload</code> sends that file as the app's logo in Intune and the Company
+Portal.</p>
+<p>Extraction sources per installer type:</p>
+<ul>
+<li><strong>MSI</strong> - The Icon table (preferring the row named by <code>ARPPRODUCTICON</code>).
+  If the MSI has no usable Icon table entry, NAPT performs an
+  administrative extract (<code>msiexec /a</code>) and scans the contained
+  executables for icons</li>
+<li><strong>EXE</strong> - The executable's own icon resources</li>
+<li><strong>MSIX</strong> - Logo assets declared in <code>AppxManifest.xml</code>, including scale
+  and targetsize variants</li>
+</ul>
+<p>Extraction rules:</p>
+<ul>
+<li>Only icon frames that are already PNG-encoded are used; NAPT does not
+  re-encode or upscale images</li>
+<li>Frames must be at least 128px wide and at most 700KB (Intune rejects
+  icons over 750KB)</li>
+<li>Among qualifying frames, the one closest to Intune's recommended 256px
+  is selected</li>
+<li>If no qualifying frame exists, the build prints a warning and continues
+  without an icon.
+  The failure is recorded in an <code>icons/{id}.no-icon</code> marker so expensive
+  MSI extraction is not repeated on every build; the marker invalidates
+  itself when the installer changes</li>
+</ul>
+<p>Like <code>downloads/</code> and <code>builds/</code>, the icons directory is a machine-local
+output directory (gitignored); each machine extracts its own icons at
+build time:</p>
+<ul>
+<li><strong>NAPT never overwrites an existing icon file.</strong> To replace an
+  extracted icon on this machine, drop your PNG at <code>icons/{id}.png</code></li>
+<li>To force re-extraction (for example after a vendor rebrand), delete the
+  file and rebuild</li>
+<li>To pin a curated icon that travels with the recipe repo, set
+  <code>intune.logo_path</code> instead — it skips extraction entirely and always
+  wins at upload</li>
+</ul>
+<p>Icon resolution order at upload: <code>intune.logo_path</code> (if set), then
+<code>icons/{id}.png</code>, then no icon with a warning.</p>
 <h3 id="package-process-napt-package">Package Process (<code>napt package</code>)</h3>
 <p>The package process creates a <code>.intunewin</code> file from a PSADT build for the
 recipe's app:</p>
@@ -3315,11 +3380,15 @@ to its own:</p>
 <code>discover --output-dir</code> and <code>build --downloads-dir</code> both read from
 <code>directories.discover</code>, so the output of one is automatically
 the input of the next without extra configuration.</p>
+<p>One additional directory has no CLI flag: <code>directories.icons</code> (default
+<code>icons</code>) holds app icons written by <code>napt build</code> and read by <code>napt upload</code>.
+See <a href="#app-icons">App icons</a>.</p>
 <p>To change the defaults org-wide, add to <code>defaults/org.yaml</code>:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nt">directories</span><span class="p">:</span>
 </span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span><span class="nt">discover</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;cache/downloads&quot;</span><span class="w">   </span><span class="c1"># used by both discover and build</span>
 </span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">  </span><span class="nt">build</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;artifacts/builds&quot;</span><span class="w">     </span><span class="c1"># used by both build and package</span>
 </span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">  </span><span class="nt">package</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;artifacts/packages&quot;</span>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">  </span><span class="nt">icons</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;artifacts/icons&quot;</span><span class="w">      </span><span class="c1"># written by build, read by upload</span>
 </span></code></pre></div>
 <p>Any CLI flag still overrides the config value for that single run:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Uses config default (or built-in if not configured)</span>
