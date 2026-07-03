@@ -481,7 +481,7 @@ discovery:             # Discovery configuration
 psadt:                 # PSADT configuration
   app_vars:
     AppName: "Application Name"
-    AppVersion: "${discovered_version}"
+    AppVersion: "{{discovered_version}}"
   install: |           # Installation script
     # PowerShell code here
   uninstall: |         # Uninstallation script
@@ -498,7 +498,7 @@ intune:                # Optional: Intune-specific settings
 - **Top-level fields:** `apiVersion` (required), `name` (required), `id` (required),
   `discovery` (required), `psadt` (required), `intune` (optional), `logging` (optional)
 - **Discovery strategies:** See [Discovery Strategies](#discovery-strategies) section above for strategy selection and examples
-- **PSADT scripts:** Use `${discovered_version}` for auto-substituted version, `$($adtSession.DirFiles)` for installer path (PSADT 4.x)
+- **PSADT scripts:** NAPT substitutes `{{discovered_version}}` and `{{installer_filename}}` at build time (these are not PowerShell variables); `${UPPERCASE}` env vars work only in `discovery.token`/`discovery.headers`; use `$($adtSession.DirFiles)` for the files directory path (PSADT 4.x)
 
 ### Complete Documentation
 

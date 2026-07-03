@@ -35,7 +35,9 @@ Example:
             template_path=Path("cache/psadt/4.1.7/Invoke-AppDeployToolkit.ps1"),
             config=recipe_config,
             version="141.0.7390.123",
-            psadt_version="4.1.7"
+            psadt_version="4.1.7",
+            architecture="x64",
+            installer_filename="installer.msi",
         )
 
         Path("builds/app/version/Invoke-AppDeployToolkit.ps1").write_text(script)
@@ -88,8 +90,69 @@ def _format_powershell_value(value: Any) -> str:
         return f"'{str(value)}'"
 
 
+# Leftover {{snake_case}} tokens after substitution; digit-led sequences like
+# the .NET format-string escape "{{0}}" intentionally don't match.
+_UNRECOGNIZED_TOKEN_RE = re.compile(r"\{\{[a-z][a-z0-9_]*\}\}")
+
+# Single source for supported tokens; _substitute_variables zips values to
+# these in order, and the unrecognized-token warning lists them.
+_NAPT_VARIABLES = ("{{discovered_version}}", "{{installer_filename}}")
+
+
+def _substitute_variables(text: str, version: str, installer_filename: str) -> str:
+    """Substitutes NAPT build-time variables in recipe-provided text.
+
+    Replaces {{discovered_version}} with the discovered application version
+    and {{installer_filename}} with the exact filename of the installer
+    copied into the package's Files directory.
+
+    Args:
+        text: Recipe-provided text that may contain variable tokens.
+        version: Discovered application version.
+        installer_filename: Installer filename in the Files directory.
+
+    Returns:
+        Text with all supported variable tokens replaced.
+    """
+    # str.replace, not re.sub: filenames may contain regex-special characters
+    for token, value in zip(_NAPT_VARIABLES, (version, installer_filename)):
+        text = text.replace(token, value)
+    return text
+
+
+def _warn_unrecognized_tokens(code: str, block_name: str) -> None:
+    """Warns about unrecognized variable tokens left after substitution.
+
+    Called after [_substitute_variables][napt.build.template._substitute_variables]
+    has run, so any remaining {{snake_case}} token is not a supported NAPT
+    variable. Unrecognized tokens pass through to the generated PowerShell
+    script verbatim.
+
+    Args:
+        code: Recipe-provided text after substitution.
+        block_name: Recipe field name for the warning message (e.g.,
+            "psadt.install").
+    """
+    from napt.logging import get_global_logger
+
+    tokens = sorted(set(_UNRECOGNIZED_TOKEN_RE.findall(code)))
+    if tokens:
+        logger = get_global_logger()
+        logger.warning(
+            "BUILD",
+            f"{block_name} contains unrecognized variable(s): "
+            f"{', '.join(tokens)}. Supported NAPT variables: "
+            f"{', '.join(_NAPT_VARIABLES)}. Unrecognized tokens are left "
+            "as-is in the generated script.",
+        )
+
+
 def _build_adtsession_vars(
-    config: dict[str, Any], version: str, psadt_version: str, architecture: str
+    config: dict[str, Any],
+    version: str,
+    psadt_version: str,
+    architecture: str,
+    installer_filename: str,
 ) -> dict[str, Any]:
     """Build the $adtSession hashtable variables from configuration.
 
@@ -101,6 +164,7 @@ def _build_adtsession_vars(
         psadt_version: PSADT version being used.
         architecture: Resolved installer architecture (e.g., "x64", "x86",
             "arm64", "any"). "any" is skipped — AppArch is left unset.
+        installer_filename: Installer filename in the Files directory.
 
     Returns:
         Dictionary of variable name -> value mappings.
@@ -108,7 +172,8 @@ def _build_adtsession_vars(
     Note:
         psadt.app_vars is the already-deep-merged result from code defaults,
         org.yaml, vendor.yaml, and the recipe. No manual merge needed here.
-        Special handling for ${discovered_version} placeholder.
+        String values get {{discovered_version}} and {{installer_filename}}
+        substituted.
         Auto-generates AppScriptDate if not set.
         AppArch is set automatically from architecture (skipped for "any").
         DeployAppScriptVersion is always set to psadt_version.
@@ -116,10 +181,12 @@ def _build_adtsession_vars(
     # psadt.app_vars is already fully merged by the config loader
     merged_vars = dict(config.get("psadt", {}).get("app_vars", {}))
 
-    # Replace ${discovered_version} placeholder
     for key, value in merged_vars.items():
-        if isinstance(value, str) and "${discovered_version}" in value:
-            merged_vars[key] = value.replace("${discovered_version}", version)
+        if isinstance(value, str):
+            merged_vars[key] = _substitute_variables(
+                value, version, installer_filename
+            )
+            _warn_unrecognized_tokens(merged_vars[key], f"psadt.app_vars.{key}")
 
     # Add auto-generated fields
     merged_vars.setdefault("AppScriptDate", date.today().strftime("%Y-%m-%d"))
@@ -229,12 +296,15 @@ def generate_invoke_script(
     version: str,
     psadt_version: str,
     architecture: str,
+    installer_filename: str,
 ) -> str:
     """Generate Invoke-AppDeployToolkit.ps1 from PSADT template and config.
 
     Reads the PSADT template, replaces the $adtSession hashtable with
     values from the configuration, and inserts recipe-specific install/
-    uninstall code.
+    uninstall code. NAPT variables ({{discovered_version}},
+    {{installer_filename}}) are substituted in app_vars values and in the
+    install/uninstall code blocks.
 
     Args:
         template_path: Path to PSADT's Invoke-AppDeployToolkit.ps1 template.
@@ -244,6 +314,8 @@ def generate_invoke_script(
         architecture: Resolved installer architecture (e.g., "x64", "x86",
             "arm64", "any"). Sets AppArch in the $adtSession hashtable;
             "any" leaves AppArch unset.
+        installer_filename: Exact filename of the installer copied into the
+            package's Files directory.
 
     Returns:
         Generated PowerShell script text.
@@ -262,6 +334,7 @@ def generate_invoke_script(
                 "141.0.7390.123",
                 "4.1.7",
                 "x64",
+                "installer.msi",
             )
             ```
     """
@@ -278,7 +351,9 @@ def generate_invoke_script(
 
     # Build $adtSession variables
     logger.verbose("BUILD", "Building $adtSession variables...")
-    session_vars = _build_adtsession_vars(config, version, psadt_version, architecture)
+    session_vars = _build_adtsession_vars(
+        config, version, psadt_version, architecture, installer_filename
+    )
 
     logger.debug("BUILD", "--- $adtSession Variables ---")
     for key, value in session_vars.items():
@@ -295,8 +370,14 @@ def generate_invoke_script(
 
     if install_code:
         logger.verbose("BUILD", "Inserting install code from recipe")
+        install_code = _substitute_variables(install_code, version, installer_filename)
+        _warn_unrecognized_tokens(install_code, "psadt.install")
     if uninstall_code:
         logger.verbose("BUILD", "Inserting uninstall code from recipe")
+        uninstall_code = _substitute_variables(
+            uninstall_code, version, installer_filename
+        )
+        _warn_unrecognized_tokens(uninstall_code, "psadt.uninstall")
 
     script = _insert_recipe_code(script, install_code, uninstall_code)
 

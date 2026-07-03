@@ -17,6 +17,9 @@ from napt.build.template import (
     _format_powershell_value,
     _insert_recipe_code,
     _replace_session_block,
+    _substitute_variables,
+    _warn_unrecognized_tokens,
+    generate_invoke_script,
 )
 
 
@@ -83,7 +86,7 @@ class TestBuildAdtSessionVars:
             },
         }
 
-        result = _build_adtsession_vars(config, "1.0.0", "4.1.7", "x64")
+        result = _build_adtsession_vars(config, "1.0.0", "4.1.7", "x64", "app.msi")
 
         assert result["AppLang"] == "EN"
         assert result["AppRevision"] == "01"
@@ -91,16 +94,51 @@ class TestBuildAdtSessionVars:
         assert result["AppName"] == "Test App"
 
     def test_discovered_version_substitution(self):
-        """Test ${discovered_version} placeholder replacement."""
+        """Tests that {{discovered_version}} is replaced in app_vars."""
         config = {
             "psadt": {
-                "app_vars": {"AppVersion": "${discovered_version}"},
+                "app_vars": {"AppVersion": "{{discovered_version}}"},
             },
         }
 
-        result = _build_adtsession_vars(config, "2.3.4", "4.1.7", "x64")
+        result = _build_adtsession_vars(config, "2.3.4", "4.1.7", "x64", "app.msi")
 
         assert result["AppVersion"] == "2.3.4"
+
+    def test_installer_filename_substitution(self):
+        """Tests that {{installer_filename}} is replaced in app_vars."""
+        config = {
+            "psadt": {
+                "app_vars": {"AppScriptAuthor": "Installer: {{installer_filename}}"},
+            },
+        }
+
+        result = _build_adtsession_vars(
+            config, "2.3.4", "4.1.7", "x64", "7z2501-x64.msi"
+        )
+
+        assert result["AppScriptAuthor"] == "Installer: 7z2501-x64.msi"
+
+    def test_unknown_token_in_app_vars_warns(self, capsys):
+        """Tests that a typo'd token in an app_vars value triggers a warning."""
+        from napt.logging import get_global_logger, get_logger, set_global_logger
+
+        config = {
+            "psadt": {
+                "app_vars": {"AppVersion": "{{discoverd_version}}"},
+            },
+        }
+
+        previous = get_global_logger()
+        set_global_logger(get_logger(verbose=True))
+        try:
+            _build_adtsession_vars(config, "1.0", "4.1.7", "x64", "app.msi")
+        finally:
+            set_global_logger(previous)
+
+        captured = capsys.readouterr()
+        assert "{{discoverd_version}}" in captured.out
+        assert "psadt.app_vars.AppVersion" in captured.out
 
     def test_auto_generated_fields(self):
         """Test auto-generated fields like AppScriptDate."""
@@ -108,7 +146,7 @@ class TestBuildAdtSessionVars:
 
         config = {"psadt": {"app_vars": {}}}
 
-        result = _build_adtsession_vars(config, "1.0.0", "4.1.7", "x64")
+        result = _build_adtsession_vars(config, "1.0.0", "4.1.7", "x64", "app.msi")
 
         assert "AppScriptDate" in result
         assert result["AppScriptDate"] == date.today().strftime("%Y-%m-%d")
@@ -210,3 +248,177 @@ Write-Host 'Done'
         result = _insert_recipe_code(script, None, None)
 
         assert result == script
+
+
+class TestSubstituteVariables:
+    """Tests for NAPT build-time variable substitution."""
+
+    def test_substitutes_discovered_version(self):
+        """Tests that {{discovered_version}} is replaced."""
+        result = _substitute_variables(
+            "Git-{{discovered_version}}-64-bit.exe", "2.47.1", "git.exe"
+        )
+
+        assert result == "Git-2.47.1-64-bit.exe"
+
+    def test_substitutes_installer_filename(self):
+        """Tests that {{installer_filename}} is replaced."""
+        result = _substitute_variables(
+            'FilePath "{{installer_filename}}"', "25.01", "7z2501-x64.msi"
+        )
+
+        assert result == 'FilePath "7z2501-x64.msi"'
+
+    def test_substitutes_both_tokens_multiple_occurrences(self):
+        """Tests that both tokens are replaced at every occurrence."""
+        text = (
+            "{{installer_filename}} v{{discovered_version}} "
+            "({{discovered_version}}) from {{installer_filename}}"
+        )
+
+        result = _substitute_variables(text, "1.2", "app.exe")
+
+        assert result == "app.exe v1.2 (1.2) from app.exe"
+
+    def test_text_without_tokens_unchanged(self):
+        """Tests that text without tokens passes through unchanged."""
+        text = 'Start-ADTProcess -FilePath "setup.exe" -ArgumentList "/S"'
+
+        assert _substitute_variables(text, "1.0", "setup.exe") == text
+
+    def test_filename_with_special_characters(self):
+        """Tests that regex-special characters in filenames stay literal."""
+        result = _substitute_variables(
+            "{{installer_filename}}", "25.01", "7z25.01 (x64)$+.msi"
+        )
+
+        assert result == "7z25.01 (x64)$+.msi"
+
+
+class TestWarnUnrecognizedTokens:
+    """Tests for the unrecognized-token warning."""
+
+    @pytest.fixture(autouse=True)
+    def _verbose_logger(self, capsys):
+        """Installs a visible logger and restores the default afterward."""
+        from napt.logging import get_global_logger, get_logger, set_global_logger
+
+        previous = get_global_logger()
+        set_global_logger(get_logger(verbose=True))
+        yield
+        set_global_logger(previous)
+
+    def test_warns_for_unknown_token(self, capsys):
+        """Tests that an unknown {{snake_case}} token triggers a warning."""
+        _warn_unrecognized_tokens('FilePath "{{my_var}}"', "psadt.install")
+
+        captured = capsys.readouterr()
+        assert "{{my_var}}" in captured.out
+        assert "psadt.install" in captured.out
+
+    def test_warning_names_uninstall_block(self, capsys):
+        """Tests that the warning names the uninstall block."""
+        _warn_unrecognized_tokens("{{other}}", "psadt.uninstall")
+
+        captured = capsys.readouterr()
+        assert "psadt.uninstall" in captured.out
+
+    def test_no_warning_for_env_var_syntax(self, capsys):
+        """Tests that ${...} env-var and PowerShell syntax is ignored."""
+        code = '${GITHUB_TOKEN} and ${env:ProgramFiles} and "$($adtSession.DirFiles)"'
+
+        _warn_unrecognized_tokens(code, "psadt.install")
+
+        assert capsys.readouterr().out == ""
+
+    def test_no_warning_for_format_string_escape(self, capsys):
+        """Tests that .NET format-string escapes like {{0}} are ignored."""
+        _warn_unrecognized_tokens('"{{0}}" -f $value', "psadt.install")
+
+        assert capsys.readouterr().out == ""
+
+    def test_no_warning_for_clean_code(self, capsys):
+        """Tests that code without leftover tokens stays silent."""
+        _warn_unrecognized_tokens('FilePath "setup.exe"', "psadt.install")
+
+        assert capsys.readouterr().out == ""
+
+
+class TestGenerateInvokeScript:
+    """Tests for end-to-end script generation."""
+
+    TEMPLATE = """$adtSession = @{
+    AppName = ''
+    AppVersion = ''
+}
+
+function Install-ADTDeployment {
+    ## <Perform Installation tasks here>
+}
+
+function Uninstall-ADTDeployment {
+    ## <Perform Uninstallation tasks here>
+}
+"""
+
+    def _write_template(self, tmp_path):
+        template_path = tmp_path / "Invoke-AppDeployToolkit.ps1"
+        template_path.write_text(self.TEMPLATE, encoding="utf-8")
+        return template_path
+
+    def test_substitutes_variables_in_install_and_uninstall(self, tmp_path):
+        """Tests that both variables are substituted in recipe code blocks."""
+        config = {
+            "psadt": {
+                "app_vars": {"AppName": "Test", "AppVersion": "{{discovered_version}}"},
+                "install": 'Start-ADTMsiProcess -FilePath "{{installer_filename}}"',
+                "uninstall": 'Write-Host "Removing v{{discovered_version}}"',
+            },
+        }
+
+        result = generate_invoke_script(
+            self._write_template(tmp_path), config, "25.01", "4.1.7", "x64",
+            "7z2501-x64.msi",
+        )
+
+        assert 'FilePath "7z2501-x64.msi"' in result
+        assert 'Write-Host "Removing v25.01"' in result
+        assert "AppVersion = '25.01'" in result
+        assert "{{discovered_version}}" not in result
+        assert "{{installer_filename}}" not in result
+
+    def test_none_code_blocks_still_generate(self, tmp_path):
+        """Tests that missing install/uninstall blocks don't break generation."""
+        config = {"psadt": {"app_vars": {"AppName": "Test"}}}
+
+        result = generate_invoke_script(
+            self._write_template(tmp_path), config, "1.0", "4.1.7", "any", "app.msix"
+        )
+
+        assert "AppName = 'Test'" in result
+        assert "## <Perform Installation tasks here>" in result
+
+    def test_unknown_token_warning_fires(self, tmp_path, capsys):
+        """Tests that generation warns about unrecognized tokens."""
+        from napt.logging import get_global_logger, get_logger, set_global_logger
+
+        previous = get_global_logger()
+        set_global_logger(get_logger(verbose=True))
+        try:
+            config = {
+                "psadt": {
+                    "app_vars": {"AppName": "Test"},
+                    "install": 'FilePath "{{my_var}}"',
+                },
+            }
+
+            generate_invoke_script(
+                self._write_template(tmp_path), config, "1.0", "4.1.7", "x64",
+                "app.msi",
+            )
+        finally:
+            set_global_logger(previous)
+
+        captured = capsys.readouterr()
+        assert "{{my_var}}" in captured.out
+        assert "psadt.install" in captured.out

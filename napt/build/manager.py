@@ -481,7 +481,7 @@ def _resolve_app_info(
         installer_file: Path to the installer file.
         config: Recipe configuration.
         version: Extracted version string (used for
-            ${discovered_version} substitution).
+            {{discovered_version}} substitution).
         msi_metadata: Pre-extracted MSI metadata (non-None for MSI
             installers).
         msix_metadata: Pre-extracted MSIX metadata (non-None for MSIX
@@ -564,8 +564,7 @@ def _resolve_app_info(
                     "override_msi_display_name."
                 )
             app_name = detection_settings["display_name"]
-            if "${discovered_version}" in app_name:
-                app_name = app_name.replace("${discovered_version}", version)
+            app_name = app_name.replace("{{discovered_version}}", version)
             logger.verbose("BUILD", f"Using display_name (override): {app_name}")
         else:
             if not msi_metadata.product_name:
@@ -598,8 +597,7 @@ def _resolve_app_info(
 
     elif detection_settings.get("display_name"):
         app_name = detection_settings["display_name"]
-        if "${discovered_version}" in app_name:
-            app_name = app_name.replace("${discovered_version}", version)
+        app_name = app_name.replace("{{discovered_version}}", version)
         logger.verbose("BUILD", f"Using intune.detection.display_name: {app_name}")
 
         if detection_settings.get("architecture"):
@@ -1220,7 +1218,8 @@ def build_package(
 
     template_path = psadt_cache_dir / "Invoke-AppDeployToolkit.ps1"
     invoke_script = generate_invoke_script(
-        template_path, config, version, psadt_version, architecture
+        template_path, config, version, psadt_version, architecture,
+        installer_file.name,
     )
 
     # Write generated script

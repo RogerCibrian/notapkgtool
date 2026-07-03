@@ -17,4 +17,4 @@ discovery:
 psadt:
   app_vars:
     AppName: "Slack"
-    AppVersion: "${discovered_version}"
+    AppVersion: "{{discovered_version}}"

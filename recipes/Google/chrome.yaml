@@ -10,10 +10,10 @@ discovery:
 psadt:
   app_vars:
     AppName: "Google Chrome"
-    AppVersion: "${discovered_version}"
+    AppVersion: "{{discovered_version}}"
   install: |
     # Install Chrome MSI with system-wide deployment
-    Start-ADTMsiProcess -Action Install -FilePath "googlechromestandaloneenterprise64.msi" -ArgumentList "ALLUSERS=1"
+    Start-ADTMsiProcess -Action Install -FilePath "{{installer_filename}}" -ArgumentList "ALLUSERS=1"
   uninstall: |
     # Uninstall Chrome automatically (handles MSI ProductCode lookup)
     Uninstall-ADTApplication -Name "Google Chrome"
