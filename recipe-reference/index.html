@@ -1309,22 +1309,33 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#environment-variable-substitution" class="md-nav__link">
+  <a href="#variable-substitution" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Environment Variable Substitution
+        Variable Substitution
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Environment Variable Substitution">
+    <nav class="md-nav" aria-label="Variable Substitution">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#where-it-works" class="md-nav__link">
+  <a href="#napt-build-time-variables" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Where It Works
+        NAPT build-time variables: {{...}}
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#environment-variables-variable_name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment variables: ${VARIABLE_NAME}
       
     </span>
   </a>
@@ -2978,22 +2989,33 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#environment-variable-substitution" class="md-nav__link">
+  <a href="#variable-substitution" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Environment Variable Substitution
+        Variable Substitution
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Environment Variable Substitution">
+    <nav class="md-nav" aria-label="Variable Substitution">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#where-it-works" class="md-nav__link">
+  <a href="#napt-build-time-variables" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Where It Works
+        NAPT build-time variables: {{...}}
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#environment-variables-variable_name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment variables: ${VARIABLE_NAME}
       
     </span>
   </a>
@@ -3282,9 +3304,9 @@ version from URL using regex pattern, formats version using <code>version_format
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">release</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;latest&quot;</span><span class="w">                      </span><span class="c1"># Optional: PSADT release version</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span><span class="w">                              </span><span class="c1"># Optional: PSADT application variables</span>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nt">AppName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Application</span><span class="nv"> </span><span class="s">Name&quot;</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${discovered_version}&quot;</span><span class="w">  </span><span class="c1"># Use for auto-substitution</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{discovered_version}}&quot;</span><span class="w"> </span><span class="c1"># Substituted at build time</span>
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">                             </span><span class="c1"># Required: PowerShell installation script</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="no">Start-ADTMsiProcess -Action Install -Path &quot;$dirFiles\installer.msi&quot; -Parameters &quot;ALLUSERS=1&quot;</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="no">Start-ADTMsiProcess -Action Install -FilePath &quot;{{installer_filename}}&quot; -ArgumentList &quot;ALLUSERS=1&quot;</span>
 </span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">                           </span><span class="c1"># Required: PowerShell uninstallation script</span>
 </span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">    </span><span class="no">Uninstall-ADTApplication -Name &quot;Application Name&quot;</span>
 </span></code></pre></div>
@@ -3306,15 +3328,19 @@ version from URL using regex pattern, formats version using <code>version_format
 <p><strong>Common Variables:</strong></p>
 <ul>
 <li><code>AppName</code>: Display name shown in PSADT dialogs</li>
-<li><code>AppVersion</code>: Application version (use <code>${discovered_version}</code> for auto-substitution)</li>
+<li><code>AppVersion</code>: Application version (use <code>{{discovered_version}}</code> for auto-substitution)</li>
 <li><code>AppVendor</code>: Vendor name (typically set in vendor defaults)</li>
 <li><code>AppArch</code>: Architecture (<code>x64</code>, <code>x86</code>, or <code>All</code>)</li>
 <li><code>AppLang</code>: Application language</li>
 </ul>
-<p><strong>Special Variable:</strong> <code>${discovered_version}</code> is automatically substituted with the version
-discovered by NAPT. Use this in <code>AppVersion</code> to ensure the version matches the downloaded
-installer.</p>
-<p><strong>Environment Variable Substitution:</strong> All values support <code>${VARIABLE_NAME}</code> syntax.</p>
+<p><strong>Build-time variables:</strong> NAPT substitutes <code>{{discovered_version}}</code> (the version
+discovered by NAPT) and <code>{{installer_filename}}</code> (the exact filename of the downloaded
+installer) in all <code>app_vars</code> values.
+Use <code>{{discovered_version}}</code> in <code>AppVersion</code> to ensure the version matches the
+downloaded installer.</p>
+<p>For org-wide values such as <code>AppVendor</code>, set them once in <code>defaults/org.yaml</code>
+(or a vendor file) instead of repeating them per recipe — the configuration
+layers are deep-merged into every recipe.</p>
 <h3 id="override_msix_commands">override_msix_commands</h3>
 <p><strong>Type:</strong> <code>boolean</code>
 <strong>Required:</strong> No
@@ -3356,12 +3382,17 @@ logic that differs from the standard pipeline.</p>
 <strong>Required:</strong> Yes (MSI/EXE); auto-generated for MSIX unless overridden</p>
 <p>PowerShell script executed during installation. Inserted into the generated
 <code>Invoke-AppDeployToolkit.ps1</code> in the installation section.</p>
-<p><strong>Available Variables:</strong></p>
+<p><strong>Build-time variables</strong> (substituted by NAPT when the script is generated —
+these are not PowerShell variables):</p>
 <ul>
-<li><code>$($adtSession.DirFiles)</code>: Path to installer files directory (contains downloaded installer)</li>
-<li><code>$discovered_version</code>: Version discovered by NAPT</li>
-<li>Standard PSADT variables: <code>$dirApp</code>, <code>$dirSupportFiles</code>, etc.</li>
-<li>All <code>app_vars</code> are available (e.g., <code>$AppName</code>, <code>$AppVersion</code>)</li>
+<li><code>{{discovered_version}}</code>: Version discovered by NAPT</li>
+<li><code>{{installer_filename}}</code>: Exact filename of the downloaded installer in the
+  package's <code>Files</code> directory</li>
+</ul>
+<p><strong>PowerShell variables</strong> (available at deploy time):</p>
+<ul>
+<li><code>$($adtSession.DirFiles)</code>: Path to the installer files directory</li>
+<li><code>$adtSession.AppName</code>, <code>$adtSession.AppVersion</code>, etc.: Values from <code>app_vars</code></li>
 </ul>
 <p><strong>Commonly Used PSADT Functions:</strong></p>
 <ul>
@@ -3369,9 +3400,12 @@ logic that differs from the standard pipeline.</p>
 <li><code>Start-ADTMsiProcess</code>: Install MSI files with parameters</li>
 <li><code>Uninstall-ADTApplication</code>: Uninstall applications by name</li>
 </ul>
+<p><strong>Note:</strong> PSADT resolves a relative <code>-FilePath</code> against the <code>Files</code> directory
+and does not expand wildcards.
+Use <code>{{installer_filename}}</code> instead of a wildcard pattern.</p>
 <p><strong>Example:</strong>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="no">Start-ADTMsiProcess -Action Install -Path &quot;$dirFiles\installer.msi&quot; -Parameters &quot;ALLUSERS=1 /qn&quot;</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="no">Start-ADTMsiProcess -Action Install -FilePath &quot;{{installer_filename}}&quot; -ArgumentList &quot;ALLUSERS=1&quot;</span>
 </span></code></pre></div></p>
 <h3 id="uninstall">uninstall</h3>
 <p><strong>Type:</strong> <code>string</code> (multiline)
@@ -3651,9 +3685,11 @@ generated script filenames.</p>
 <p><strong>Note:</strong> The value is sanitized for use in Windows filenames (spaces become hyphens, invalid
 characters removed). Script filenames follow the pattern:
 <code>{DisplayName}_{Version}-Detection.ps1</code> and <code>{DisplayName}_{Version}-Requirements.ps1</code>.</p>
-<p><strong>Template Variable Support:</strong> <code>${discovered_version}</code> is automatically substituted with the
+<p><strong>Template Variable Support:</strong> <code>{{discovered_version}}</code> is automatically substituted with the
 discovered version. Use this when the registry DisplayName includes the version number (e.g.,
-"7-Zip 25.01 (x64)").</p>
+"7-Zip 25.01 (x64)").
+This is the only build-time variable supported here; <code>{{installer_filename}}</code> never appears
+in a registry DisplayName.</p>
 <p><strong>Wildcard Support:</strong> When <code>display_name</code> contains wildcards (<code>*</code> or <code>?</code>), scripts use
 PowerShell's <code>-like</code> operator instead of exact <code>-eq</code> matching:</p>
 <table>
@@ -3685,7 +3721,7 @@ PowerShell's <code>-like</code> operator instead of exact <code>-eq</code> match
 <p><strong>Example with version in DisplayName:</strong>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nt">intune</span><span class="p">:</span>
 </span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span><span class="nt">detection</span><span class="p">:</span>
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;7-Zip</span><span class="nv"> </span><span class="s">${discovered_version}</span><span class="nv"> </span><span class="s">(x64)&quot;</span><span class="w">  </span><span class="c1"># Matches &quot;7-Zip 25.01 (x64)&quot;</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;7-Zip</span><span class="nv"> </span><span class="s">{{discovered_version}}</span><span class="nv"> </span><span class="s">(x64)&quot;</span><span class="w">  </span><span class="c1"># Matches &quot;7-Zip 25.01 (x64)&quot;</span>
 </span></code></pre></div></p>
 <p><strong>Example with wildcard (for MSI with override):</strong>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nt">intune</span><span class="p">:</span>
@@ -3852,26 +3888,51 @@ the User Guide for how scripts work and how to configure them in Intune.</p>
 it does not exist and verifying write access). If that fails (e.g., permissions), they fall back
 to <code>C:\ProgramData\NAPT\</code> (system) or <code>%LOCALAPPDATA%\NAPT\</code> (user). If both fail, a warning is
 written to stderr and the script runs without a log file.</p>
-<h2 id="environment-variable-substitution">Environment Variable Substitution</h2>
-<p>NAPT supports environment variable substitution throughout recipe files using <code>${VARIABLE_NAME}</code>
-syntax.</p>
-<h3 id="where-it-works">Where It Works</h3>
-<ul>
-<li><strong>Discovery configuration:</strong> API tokens, authentication headers</li>
-<li><strong>PSADT app_vars:</strong> Any variable value</li>
-<li><strong>Special variable:</strong> <code>${discovered_version}</code> is automatically substituted with the discovered
-  version</li>
-</ul>
+<h2 id="variable-substitution">Variable Substitution</h2>
+<p>Recipes use two distinct substitution mechanisms with different syntax.</p>
+<h3 id="napt-build-time-variables">NAPT build-time variables: <code>{{...}}</code></h3>
+<p>NAPT substitutes these while generating the package (they are not PowerShell
+variables):</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Value</th>
+<th>Supported fields</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>{{discovered_version}}</code></td>
+<td>Version discovered by NAPT</td>
+<td><code>psadt.app_vars</code>, <code>psadt.install</code>, <code>psadt.uninstall</code>, <code>intune.detection.display_name</code></td>
+</tr>
+<tr>
+<td><code>{{installer_filename}}</code></td>
+<td>Exact filename of the downloaded installer</td>
+<td><code>psadt.app_vars</code>, <code>psadt.install</code>, <code>psadt.uninstall</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>napt build</code> logs a warning if an <code>app_vars</code> value or an install/uninstall
+script contains a <code>{{snake_case}}</code> token that is not a supported variable.</p>
+<h3 id="environment-variables-variable_name">Environment variables: <code>${VARIABLE_NAME}</code></h3>
+<p>Environment variable substitution exists for secrets that must not be committed
+to YAML.
+It works <strong>only</strong> in <code>discovery.token</code> and <code>discovery.headers</code>.</p>
+<p>For non-secret org-wide values (e.g., <code>AppVendor</code>), use the configuration layers
+(<code>defaults/org.yaml</code>, <code>defaults/vendors/{Vendor}.yaml</code>) instead.</p>
 <h3 id="syntax">Syntax</h3>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="nt">discovery</span><span class="p">:</span>
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${GITHUB_TOKEN}&quot;</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${GITHUB_TOKEN}&quot;</span><span class="w">               </span><span class="c1"># Environment variable (secrets only)</span>
 </span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">  </span><span class="nt">headers</span><span class="p">:</span>
-</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">    </span><span class="nt">Authorization</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Bearer</span><span class="nv"> </span><span class="s">${API_TOKEN}&quot;</span>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">    </span><span class="nt">Authorization</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Bearer</span><span class="nv"> </span><span class="s">${API_TOKEN}&quot;</span><span class="w"> </span><span class="c1"># Environment variable (secrets only)</span>
 </span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>
 </span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="nt">psadt</span><span class="p">:</span>
 </span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
-</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="w">    </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${discovered_version}&quot;</span><span class="w">  </span><span class="c1"># NAPT auto-substitution</span>
-</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a><span class="w">    </span><span class="nt">AppVendor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${ORG_NAME}&quot;</span><span class="w">             </span><span class="c1"># Environment variable</span>
+</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="w">    </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{discovered_version}}&quot;</span><span class="w"> </span><span class="c1"># NAPT build-time substitution</span>
+</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a><span class="w">  </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-20-10"><a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a><span class="w">    </span><span class="no">Start-ADTProcess -FilePath &quot;{{installer_filename}}&quot; -ArgumentList &quot;/S&quot;</span>
 </span></code></pre></div>
 <h3 id="setting-environment-variables">Setting Environment Variables</h3>
 <p><strong>Windows (PowerShell):</strong>
@@ -3905,9 +3966,9 @@ Azure DevOps, etc.).</p>
 </span><span id="__span-24-17"><a id="__codelineno-24-17" name="__codelineno-24-17" href="#__codelineno-24-17"></a><span class="nt">psadt</span><span class="p">:</span>
 </span><span id="__span-24-18"><a id="__codelineno-24-18" name="__codelineno-24-18" href="#__codelineno-24-18"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
 </span><span id="__span-24-19"><a id="__codelineno-24-19" name="__codelineno-24-19" href="#__codelineno-24-19"></a><span class="w">    </span><span class="nt">AppName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Example</span><span class="nv"> </span><span class="s">Application&quot;</span>
-</span><span id="__span-24-20"><a id="__codelineno-24-20" name="__codelineno-24-20" href="#__codelineno-24-20"></a><span class="w">    </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${discovered_version}&quot;</span>
+</span><span id="__span-24-20"><a id="__codelineno-24-20" name="__codelineno-24-20" href="#__codelineno-24-20"></a><span class="w">    </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{discovered_version}}&quot;</span>
 </span><span id="__span-24-21"><a id="__codelineno-24-21" name="__codelineno-24-21" href="#__codelineno-24-21"></a><span class="w">  </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-24-22"><a id="__codelineno-24-22" name="__codelineno-24-22" href="#__codelineno-24-22"></a><span class="w">    </span><span class="no">Start-ADTProcess -Path &quot;$dirFiles\*.exe&quot; -Parameters &quot;/S&quot;</span>
+</span><span id="__span-24-22"><a id="__codelineno-24-22" name="__codelineno-24-22" href="#__codelineno-24-22"></a><span class="w">    </span><span class="no">Start-ADTProcess -FilePath &quot;{{installer_filename}}&quot; -ArgumentList &quot;/S&quot;</span>
 </span><span id="__span-24-23"><a id="__codelineno-24-23" name="__codelineno-24-23" href="#__codelineno-24-23"></a><span class="w">  </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
 </span><span id="__span-24-24"><a id="__codelineno-24-24" name="__codelineno-24-24" href="#__codelineno-24-24"></a><span class="w">    </span><span class="no">Uninstall-ADTApplication -Name &quot;Example Application&quot;</span>
 </span></code></pre></div>

@@ -2167,15 +2167,33 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
     the size closest to Intune's recommended 256px. Drop a custom PNG at
     <code>icons/{id}.png</code> to override (NAPT never overwrites existing files),
     or set <code>intune.logo_path</code> to disable extraction for a recipe</li>
+<li><strong><code>{{installer_filename}}</code> recipe variable</strong> - Substituted at build time
+    in <code>psadt.install</code>, <code>psadt.uninstall</code>, and <code>psadt.app_vars</code> with the
+    exact filename of the downloaded installer in the package's Files
+    directory. Replaces wildcard paths, which PSADT does not support</li>
+<li><strong>Unrecognized variable warning</strong> - <code>napt build</code> warns when an
+    <code>app_vars</code> value or an install/uninstall script contains a
+    <code>{{snake_case}}</code> token that is not a supported NAPT variable</li>
 </ul>
 <h3 id="changed">Changed</h3>
 <ul>
+<li><strong>BREAKING: Recipe variable syntax</strong> - NAPT build-time variables now use
+    <code>{{...}}</code> instead of <code>${...}</code>. Replace <code>${discovered_version}</code> with
+    <code>{{discovered_version}}</code> in recipes. <code>${...}</code> now exclusively means
+    environment variables, which work only in <code>discovery.token</code> and
+    <code>discovery.headers</code></li>
 <li><strong><code>intune.logo_path</code> file types restricted to PNG and JPEG</strong> - Other
     file types now warn and fall back to the extracted icon instead of
     uploading with a guessed MIME type</li>
 </ul>
 <h3 id="fixed">Fixed</h3>
 <ul>
+<li>Fixed the version variable never being substituted in <code>psadt.install</code>
+    and <code>psadt.uninstall</code> scripts, where it reached PowerShell as literal
+    <code>${...}</code> syntax and silently expanded to an empty string at deploy time</li>
+<li>Fixed 7-Zip recipes failing at deploy time because PSADT resolves
+    <code>-FilePath</code> literally and does not expand wildcards; the recipes now
+    use <code>{{installer_filename}}</code></li>
 <li>Fixed <code>intune.logo_path</code> relative paths resolving from the current
     working directory instead of the recipe file's location as documented</li>
 </ul>

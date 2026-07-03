@@ -3199,7 +3199,7 @@ Authentication is automatic — no configuration required.</p>
 </span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="nt">psadt</span><span class="p">:</span><span class="w">                 </span><span class="c1"># PSADT configuration</span>
 </span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
 </span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="w">    </span><span class="nt">AppName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Application</span><span class="nv"> </span><span class="s">Name&quot;</span>
-</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="w">    </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${discovered_version}&quot;</span>
+</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="w">    </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{discovered_version}}&quot;</span>
 </span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="w">  </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">           </span><span class="c1"># Installation script</span>
 </span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="w">    </span><span class="no"># PowerShell code here</span>
 </span><span id="__span-11-15"><a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="w">  </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span><span class="w">         </span><span class="c1"># Uninstallation script</span>
@@ -3215,7 +3215,7 @@ Authentication is automatic — no configuration required.</p>
 <li><strong>Top-level fields:</strong> <code>apiVersion</code> (required), <code>name</code> (required), <code>id</code> (required),
   <code>discovery</code> (required), <code>psadt</code> (required), <code>intune</code> (optional), <code>logging</code> (optional)</li>
 <li><strong>Discovery strategies:</strong> See <a href="#discovery-strategies">Discovery Strategies</a> section above for strategy selection and examples</li>
-<li><strong>PSADT scripts:</strong> Use <code>${discovered_version}</code> for auto-substituted version, <code>$($adtSession.DirFiles)</code> for installer path (PSADT 4.x)</li>
+<li><strong>PSADT scripts:</strong> NAPT substitutes <code>{{discovered_version}}</code> and <code>{{installer_filename}}</code> at build time (these are not PowerShell variables); <code>${UPPERCASE}</code> env vars work only in <code>discovery.token</code>/<code>discovery.headers</code>; use <code>$($adtSession.DirFiles)</code> for the files directory path (PSADT 4.x)</li>
 </ul>
 <h3 id="complete-documentation">Complete Documentation</h3>
 <p>For complete field documentation, all options, and detailed examples, see the <a href="../recipe-reference/">Recipe Reference</a> page.</p>
