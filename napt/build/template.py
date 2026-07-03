@@ -94,7 +94,9 @@ def _format_powershell_value(value: Any) -> str:
 # the .NET format-string escape "{{0}}" intentionally don't match.
 _UNRECOGNIZED_TOKEN_RE = re.compile(r"\{\{[a-z][a-z0-9_]*\}\}")
 
-_SUPPORTED_VARIABLES = "{{discovered_version}}, {{installer_filename}}"
+# Single source for supported tokens; _substitute_variables zips values to
+# these in order, and the unrecognized-token warning lists them.
+_NAPT_VARIABLES = ("{{discovered_version}}", "{{installer_filename}}")
 
 
 def _substitute_variables(text: str, version: str, installer_filename: str) -> str:
@@ -113,8 +115,9 @@ def _substitute_variables(text: str, version: str, installer_filename: str) -> s
         Text with all supported variable tokens replaced.
     """
     # str.replace, not re.sub: filenames may contain regex-special characters
-    text = text.replace("{{discovered_version}}", version)
-    return text.replace("{{installer_filename}}", installer_filename)
+    for token, value in zip(_NAPT_VARIABLES, (version, installer_filename)):
+        text = text.replace(token, value)
+    return text
 
 
 def _warn_unrecognized_tokens(code: str, block_name: str) -> None:
@@ -126,7 +129,7 @@ def _warn_unrecognized_tokens(code: str, block_name: str) -> None:
     script verbatim.
 
     Args:
-        code: Install or uninstall code after substitution.
+        code: Recipe-provided text after substitution.
         block_name: Recipe field name for the warning message (e.g.,
             "psadt.install").
     """
@@ -139,8 +142,8 @@ def _warn_unrecognized_tokens(code: str, block_name: str) -> None:
             "BUILD",
             f"{block_name} contains unrecognized variable(s): "
             f"{', '.join(tokens)}. Supported NAPT variables: "
-            f"{_SUPPORTED_VARIABLES}. Unrecognized tokens are left as-is "
-            "in the generated script.",
+            f"{', '.join(_NAPT_VARIABLES)}. Unrecognized tokens are left "
+            "as-is in the generated script.",
         )
 
 
@@ -183,6 +186,7 @@ def _build_adtsession_vars(
             merged_vars[key] = _substitute_variables(
                 value, version, installer_filename
             )
+            _warn_unrecognized_tokens(merged_vars[key], f"psadt.app_vars.{key}")
 
     # Add auto-generated fields
     merged_vars.setdefault("AppScriptDate", date.today().strftime("%Y-%m-%d"))

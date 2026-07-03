@@ -367,7 +367,7 @@ psadt:
     AppName: "Google Chrome"
     AppVersion: "{{discovered_version}}"
   install: |
-    Start-ADTMsiProcess -Action Install -FilePath "googlechromestandaloneenterprise64.msi" -ArgumentList "ALLUSERS=1"
+    Start-ADTMsiProcess -Action Install -FilePath "{{installer_filename}}" -ArgumentList "ALLUSERS=1"
   uninstall: |
     Uninstall-ADTApplication -Name "Google Chrome"
 ```

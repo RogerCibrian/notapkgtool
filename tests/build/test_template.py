@@ -119,6 +119,27 @@ class TestBuildAdtSessionVars:
 
         assert result["AppScriptAuthor"] == "Installer: 7z2501-x64.msi"
 
+    def test_unknown_token_in_app_vars_warns(self, capsys):
+        """Tests that a typo'd token in an app_vars value triggers a warning."""
+        from napt.logging import get_global_logger, get_logger, set_global_logger
+
+        config = {
+            "psadt": {
+                "app_vars": {"AppVersion": "{{discoverd_version}}"},
+            },
+        }
+
+        previous = get_global_logger()
+        set_global_logger(get_logger(verbose=True))
+        try:
+            _build_adtsession_vars(config, "1.0", "4.1.7", "x64", "app.msi")
+        finally:
+            set_global_logger(previous)
+
+        captured = capsys.readouterr()
+        assert "{{discoverd_version}}" in captured.out
+        assert "psadt.app_vars.AppVersion" in captured.out
+
     def test_auto_generated_fields(self):
         """Test auto-generated fields like AppScriptDate."""
         from datetime import date

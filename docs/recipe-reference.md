@@ -976,8 +976,8 @@ variables):
 | `{{discovered_version}}` | Version discovered by NAPT | `psadt.app_vars`, `psadt.install`, `psadt.uninstall`, `intune.detection.display_name` |
 | `{{installer_filename}}` | Exact filename of the downloaded installer | `psadt.app_vars`, `psadt.install`, `psadt.uninstall` |
 
-`napt build` logs a warning if an install or uninstall script contains a
-`{{snake_case}}` token that is not a supported variable.
+`napt build` logs a warning if an `app_vars` value or an install/uninstall
+script contains a `{{snake_case}}` token that is not a supported variable.
 
 ### Environment variables: `${VARIABLE_NAME}`
 

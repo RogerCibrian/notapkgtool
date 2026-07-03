@@ -20,9 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     in `psadt.install`, `psadt.uninstall`, and `psadt.app_vars` with the
     exact filename of the downloaded installer in the package's Files
     directory. Replaces wildcard paths, which PSADT does not support
-- **Unrecognized variable warning** - `napt build` warns when an install
-    or uninstall script contains a `{{snake_case}}` token that is not a
-    supported NAPT variable
+- **Unrecognized variable warning** - `napt build` warns when an
+    `app_vars` value or an install/uninstall script contains a
+    `{{snake_case}}` token that is not a supported NAPT variable
 
 ### Changed
 
