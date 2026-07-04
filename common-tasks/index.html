@@ -2413,14 +2413,24 @@
 </span><span id="__span-12-20"><a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
 </span><span id="__span-12-21"><a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a><span class="w">    </span><span class="nt">AppName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;7-Zip&quot;</span>
 </span><span id="__span-12-22"><a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a><span class="w">    </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{discovered_version}}&quot;</span>
-</span><span id="__span-12-23"><a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a><span class="w">  </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-12-24"><a id="__codelineno-12-24" name="__codelineno-12-24" href="#__codelineno-12-24"></a><span class="w">    </span><span class="no">Start-ADTMsiProcess -Action Install -FilePath &quot;{{installer_filename}}&quot; -ArgumentList &quot;ALLUSERS=1&quot;</span>
-</span><span id="__span-12-25"><a id="__codelineno-12-25" name="__codelineno-12-25" href="#__codelineno-12-25"></a><span class="w">  </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-12-26"><a id="__codelineno-12-26" name="__codelineno-12-26" href="#__codelineno-12-26"></a><span class="w">    </span><span class="no">Uninstall-ADTApplication -Name &quot;7-Zip&quot;</span>
 </span></code></pre></div>
-<ol>
-<li>Validate and test:</li>
-</ol>
+<p><strong>Install/uninstall commands are auto-generated for MSI:</strong></p>
+<ul>
+<li><strong>No <code>psadt.install</code> / <code>psadt.uninstall</code> needed</strong> - NAPT generates
+  <code>Start-ADTMsiProcess -Action Install</code> with the exact downloaded filename
+  (plus <code>ALLUSERS=1</code> for system deployments) and
+  <code>Uninstall-ADTApplication</code> matching the MSI's ProductName exactly</li>
+<li><strong>Uninstall survives ProductCode changes</strong> - Matching is by name, not
+  ProductCode, and the name is re-extracted from each downloaded MSI</li>
+<li>
+<p><strong>Custom commands</strong> - Set <code>psadt.override_msi_commands: true</code> and provide
+  your own <code>install</code>/<code>uninstall</code> (e.g., for MST transforms or extra MSI
+  properties)</p>
+</li>
+<li>
+<p>Validate and test:</p>
+</li>
+</ul>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>napt<span class="w"> </span>validate<span class="w"> </span>recipes/7-Zip/7zip.yaml
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/7-Zip/7zip.yaml<span class="w"> </span>--verbose
 </span></code></pre></div>
@@ -2571,10 +2581,6 @@ Set <code>override_msix_commands: true</code>:</p>
 </span><span id="__span-22-12"><a id="__codelineno-22-12" name="__codelineno-22-12" href="#__codelineno-22-12"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
 </span><span id="__span-22-13"><a id="__codelineno-22-13" name="__codelineno-22-13" href="#__codelineno-22-13"></a><span class="w">    </span><span class="nt">AppName</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Google</span><span class="nv"> </span><span class="s">Chrome&quot;</span>
 </span><span id="__span-22-14"><a id="__codelineno-22-14" name="__codelineno-22-14" href="#__codelineno-22-14"></a><span class="w">    </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{discovered_version}}&quot;</span>
-</span><span id="__span-22-15"><a id="__codelineno-22-15" name="__codelineno-22-15" href="#__codelineno-22-15"></a><span class="w">  </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-22-16"><a id="__codelineno-22-16" name="__codelineno-22-16" href="#__codelineno-22-16"></a><span class="w">    </span><span class="no">Start-ADTMsiProcess -Action Install -FilePath &quot;{{installer_filename}}&quot; -ArgumentList &quot;ALLUSERS=1&quot;</span>
-</span><span id="__span-22-17"><a id="__codelineno-22-17" name="__codelineno-22-17" href="#__codelineno-22-17"></a><span class="w">  </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-22-18"><a id="__codelineno-22-18" name="__codelineno-22-18" href="#__codelineno-22-18"></a><span class="w">    </span><span class="no">Uninstall-ADTApplication -Name &quot;Google Chrome&quot;</span>
 </span></code></pre></div>
 <ol>
 <li>Validate and test:</li>
@@ -2586,9 +2592,8 @@ Set <code>override_msix_commands: true</code>:</p>
 <ul>
 <li><code>url</code>: Direct download URL (must be stable, not version-specific)</li>
 <li><code>app_vars</code>: Application name, architecture, and other PSADT variables</li>
-<li><code>install</code>/<code>uninstall</code>: PowerShell deployment scripts</li>
 </ul>
-<p><strong>Note:</strong> MSI files (<code>.msi</code> extension) are automatically detected and versions are extracted from the MSI ProductVersion property. No additional version configuration needed.</p>
+<p><strong>Note:</strong> MSI files (<code>.msi</code> extension) are automatically detected and versions are extracted from the MSI ProductVersion property. Install/uninstall commands are auto-generated from the MSI (set <code>psadt.override_msi_commands: true</code> for custom commands). No additional configuration needed.</p>
 <h2 id="handle-authentication-tokens">Handle Authentication Tokens</h2>
 <p>Many APIs require authentication. Here's how to handle tokens securely.</p>
 <h3 id="environment-variables-recommended">Environment Variables (Recommended)</h3>

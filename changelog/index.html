@@ -2160,13 +2160,25 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.5.1...HEAD">Unreleased</a></h2>
 <h3 id="added">Added</h3>
 <ul>
-<li><strong>Automatic app icon extraction</strong> - <code>napt build</code> extracts the app icon
+<li>
+<p><strong>Auto-generated MSI install/uninstall commands</strong> - <code>napt build</code> now
+    generates install (<code>Start-ADTMsiProcess</code>, with <code>ALLUSERS=1</code> appended
+    for system deployments) and uninstall (<code>Uninstall-ADTApplication</code> by
+    exact ProductName) commands for MSI installers, so MSI recipes no
+    longer need <code>psadt.install</code> or <code>psadt.uninstall</code>. Uninstall matches by
+    name, not ProductCode, so it keeps working when vendors change the
+    ProductCode between versions. Set <code>psadt.override_msi_commands: true</code>
+    to use recipe commands instead</p>
+</li>
+<li>
+<p><strong>Automatic app icon extraction</strong> - <code>napt build</code> extracts the app icon
     from MSI, EXE, and MSIX installers to <code>icons/{id}.png</code>, and
     <code>napt upload</code> sends it as the app logo in Intune and the Company
     Portal. Only PNG-encoded frames of at least 128px are used, preferring
     the size closest to Intune's recommended 256px. Drop a custom PNG at
     <code>icons/{id}.png</code> to override (NAPT never overwrites existing files),
-    or set <code>intune.logo_path</code> to disable extraction for a recipe</li>
+    or set <code>intune.logo_path</code> to disable extraction for a recipe</p>
+</li>
 <li><strong><code>{{installer_filename}}</code> recipe variable</strong> - Substituted at build time
     in <code>psadt.install</code>, <code>psadt.uninstall</code>, and <code>psadt.app_vars</code> with the
     exact filename of the downloaded installer in the package's Files

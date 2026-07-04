@@ -2726,7 +2726,7 @@
 </li>
 <li><strong>Generate Deployment Script</strong> - Generates <code>Invoke-AppDeployToolkit.ps1</code> from template:<ul>
 <li>Substitutes PSADT variables (<code>$appVendor</code>, <code>$appName</code>, <code>$appVersion</code>, etc.) from recipe configuration</li>
-<li>Inserts install script from <code>psadt.install</code> field (for MSIX, auto-generates install/uninstall commands from manifest based on <code>intune.run_as_account</code> unless <code>override_msix_commands: true</code>)</li>
+<li>Inserts install script from <code>psadt.install</code> field (for MSI, auto-generates install/uninstall commands from the MSI metadata — exact filename and ProductName — unless <code>override_msi_commands: true</code>; for MSIX, auto-generates them from the manifest based on <code>intune.run_as_account</code> unless <code>override_msix_commands: true</code>)</li>
 <li>Inserts uninstall script from <code>psadt.uninstall</code> field</li>
 <li>Sets dynamic values (AppScriptDate, discovered version, PSADT version)</li>
 <li>Preserves PSADT's structure and comments</li>
