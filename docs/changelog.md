@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-04
+
 ### Added
 
 - **Auto-generated MSI install/uninstall commands** - `napt build` now
@@ -273,7 +275,8 @@ Initial internal release.
 - **Robust Downloads** - Retry logic, atomic writes, SHA-256 verification, and conditional requests
 
 
-[Unreleased]: https://github.com/RogerCibrian/notapkgtool/compare/0.5.1...HEAD
+[Unreleased]: https://github.com/RogerCibrian/notapkgtool/compare/0.6.0...HEAD
+[0.6.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.5.1...0.6.0
 [0.5.1]: https://github.com/RogerCibrian/notapkgtool/compare/0.5.0...0.5.1
 [0.5.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.4.0...0.5.0
 [0.4.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.3.1...0.4.0
