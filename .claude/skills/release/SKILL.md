@@ -3,7 +3,7 @@ name: release
 description: Prepare and ship a NAPT release. Phase 1 opens the release PR (version bumps + changelog promotion). Phase 2 (after merge) tags and publishes the GitHub release. Detects phase automatically.
 disable-model-invocation: true
 user-invocable: true
-allowed-tools: Bash(git *) Bash(*python* -m *) Bash(gh *) Read Edit Glob Grep
+allowed-tools: Bash(git *) Bash(*python* -m *) Bash(gh *) Read Edit Write Glob Grep
 argument-hint: "version: X.Y.Z"
 ---
 
@@ -13,17 +13,18 @@ You are preparing a NAPT release. Semver (no `v` prefix). Follow every step in o
 
 The user passes the target version as `X.Y.Z`. If absent, ask before proceeding.
 
-Phase detection keys off `origin/main`, not your current checkout — Phase 1 forks the
-release branch from `origin/main` regardless of what you have checked out, so the branch
-you are standing on never affects the release. Check state:
+Phase detection keys off `origin/main`, not your current checkout — both phases operate
+on `origin/main` regardless of what you have checked out, so the branch you are standing
+on never affects the release. Check state:
 - `git fetch origin` — refresh remote refs first.
 - `git tag -l X.Y.Z` — does the tag already exist? If yes, stop — release already published.
-- `git log -1 --format=%s origin/main` — last commit subject on main.
+- `git show origin/main:pyproject.toml` — read `version` under `[project]`.
 
-**Phase 2 (tag and publish):** Tag does not exist and `origin/main`'s last commit subject is
-`chore: Prepare release X.Y.Z` (the release PR was just squash-merged).
-**Phase 1 (open release PR):** Tag does not exist and `origin/main`'s last commit is anything
-else.
+**Phase 2 (tag and publish):** Tag does not exist and the pyproject version on
+`origin/main` is already `X.Y.Z` (the release PR was squash-merged). This detection holds
+even if unrelated commits landed on main after the merge — Phase 2 locates the exact
+release commit to tag.
+**Phase 1 (open release PR):** Tag does not exist and the version is anything else.
 
 Report which phase you detected before proceeding.
 
@@ -36,7 +37,12 @@ bump and changelog promotion — nothing from an unrelated feature branch can le
 1. **Verify clean working tree.** Run `git status`. If there are uncommitted changes, stop
    and ask the user how to handle them — switching branches would carry or lose them.
 
-2. **Create the release branch from latest main.** You already ran `git fetch origin` in
+2. **Check `[Unreleased]` has content.** Read it from the release base, not your checkout:
+   `git show origin/main:docs/changelog.md`. If the `[Unreleased]` section is empty, stop —
+   there is nothing to release. Checking before creating the branch means an abort here
+   leaves nothing behind.
+
+3. **Create the release branch from latest main.** You already ran `git fetch origin` in
    Step 1.
    - Guard: `git rev-parse --verify chore/prepare-release-X.Y.Z` and
      `git ls-remote --exit-code --heads origin chore/prepare-release-X.Y.Z`. If either
@@ -46,8 +52,6 @@ bump and changelog promotion — nothing from an unrelated feature branch can le
 
    This forks from the current tip of `origin/main` no matter which branch was checked out,
    so all remaining steps operate on a clean release base.
-
-3. **Check `[Unreleased]` has content.** Read `docs/changelog.md`. If the `[Unreleased]` section is empty, stop — there is nothing to release.
 
 4. **Run lint and tests** sequentially:
    ```
@@ -108,17 +112,28 @@ bump and changelog promotion — nothing from an unrelated feature branch can le
 
 ## Phase 2: Tag and publish
 
-1. **Pull latest main:** `git pull origin main`
+Phase 2 never touches your checkout — no pull, no checkout, no branch switch. Everything
+reads from `origin/main` (already fetched in Step 1) and the tag is created directly on
+the release commit, so it works from whatever branch you happen to be standing on.
 
-2. **Verify version files.** Read `pyproject.toml` and `napt/__init__.py` to confirm both show X.Y.Z. If not, stop and report.
+1. **Locate the release commit.** Find the squash-merge of the release PR:
+   `git log origin/main --format="%H %s" -20` and take the most recent commit whose
+   subject starts with `chore: Prepare release X.Y.Z`. If none is found, stop and report —
+   the merge subject may have been edited at merge time; ask the user which commit to tag.
 
-3. **Tag and push the tag:**
+2. **Verify version files at that commit.** `git show <sha>:pyproject.toml` and
+   `git show <sha>:napt/__init__.py` must both show X.Y.Z. If not, stop and report.
+
+3. **Tag the release commit and push the tag:**
    ```
-   git tag -a X.Y.Z -m "Release X.Y.Z"
+   git tag -a X.Y.Z <sha> -m "Release X.Y.Z"
    git push origin X.Y.Z
    ```
+   Tagging `<sha>` directly — not HEAD, not the tip of main — keeps the tag exact even if
+   other commits landed on main after the release PR merged.
 
-4. **Build release notes** following the template below. Read the `[X.Y.Z]` section of `docs/changelog.md` for source content.
+4. **Build release notes** following the template below. Read the `[X.Y.Z]` section from
+   `git show <sha>:docs/changelog.md` for source content.
 
 5. **Create the GitHub release.** `gh release create` has no `--body` flag — write the
    notes to a file and pass it with `-F` (this also avoids heredoc quoting pitfalls).

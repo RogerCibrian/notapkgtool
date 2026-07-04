@@ -15,9 +15,14 @@ Run these in parallel:
 - `git branch --show-current` to check if on a feature branch or main
 - `git status` to see what's changed (never use -uall)
 - `git diff --stat` to understand scope of changes
+- `git log main..HEAD --oneline` to see commits already on the branch
 
 Tell the user what you found: branch name, number of files changed, and a
 one-line summary of the changes.
+
+If the working tree is clean and `git log main..HEAD` is empty (nothing
+uncommitted and no commits ahead of main), there is nothing to ship — report
+that and stop.
 
 ## Step 2: Lint, format, and type-check
 
@@ -69,6 +74,13 @@ If user-facing changes exist:
 
 If changes are purely internal (refactor, test, chore with no user impact),
 skip changelog and doc updates. Tell the user you skipped this and why.
+
+If any file under `docs/` was added or edited — by you in this step or
+already in the diff — validate that the site builds:
+```
+.venv/Scripts/python.exe -m mkdocs build --strict
+```
+If the build fails, fix the docs before continuing.
 
 ## Step 6: Run napt-reviewer
 
