@@ -307,9 +307,9 @@ psadt:
   app_vars:                              # Optional: PSADT application variables
     AppName: "Application Name"
     AppVersion: "{{discovered_version}}" # Substituted at build time
-  install: |                             # Required: PowerShell installation script
-    Start-ADTMsiProcess -Action Install -FilePath "{{installer_filename}}" -ArgumentList "ALLUSERS=1"
-  uninstall: |                           # Required: PowerShell uninstallation script
+  install: |                             # Required for EXE; auto-generated for MSI/MSIX
+    Start-ADTProcess -FilePath "{{installer_filename}}" -ArgumentList "/S"
+  uninstall: |                           # Required for EXE; auto-generated for MSI/MSIX
     Uninstall-ADTApplication -Name "Application Name"
 ```
 
@@ -351,6 +351,53 @@ downloaded installer.
 For org-wide values such as `AppVendor`, set them once in `defaults/org.yaml`
 (or a vendor file) instead of repeating them per recipe — the configuration
 layers are deep-merged into every recipe.
+
+### override_msi_commands
+
+**Type:** `boolean`
+**Required:** No
+**Default:** `false`
+**Applies to:** MSI installers only
+
+When `true`, uses recipe `install` and `uninstall` scripts instead of the
+auto-generated MSI commands.
+
+**MSI auto-generation:** For MSI installers, NAPT auto-generates install and
+uninstall commands from the downloaded MSI's metadata:
+
+- **Install (`intune.run_as_account: system`, default):** `Start-ADTMsiProcess -Action Install -FilePath "{filename}" -AdditionalArgumentList "ALLUSERS=1"`
+- **Install (`user`):** `Start-ADTMsiProcess -Action Install -FilePath "{filename}"`
+- **Uninstall:** `Uninstall-ADTApplication -Name '{ProductName}' -NameMatch 'Exact' -ApplicationType 'MSI'`
+
+PSADT's configuration supplies the silent-install arguments (`/qn REBOOT=ReallySuppress`)
+and verbose MSI logging automatically; `-AdditionalArgumentList` appends `ALLUSERS=1`
+to those defaults to force a per-machine installation.
+Uninstall matches the MSI ProductName exactly (extracted at build time), not the
+ProductCode, so it keeps working when vendors change the ProductCode between versions.
+
+These commands are used unless `override_msi_commands: true` is set. If the
+recipe specifies `psadt.install` or `psadt.uninstall` without this flag, a
+warning is logged and the recipe values are ignored.
+
+**Behavior:**
+
+- `false` (default): Auto-generated commands are used; recipe `install`/`uninstall` are ignored with a warning if set
+- `true`: Recipe `install` and/or `uninstall` are used; auto-generated commands fill in any that are missing
+- `true` but neither `install` nor `uninstall` set: Error (nothing to override with)
+- Non-MSI installers: Flag is ignored
+
+**When to use:** Apps that need MST transforms, extra MSI properties, or uninstall
+logic that differs from the standard pipeline.
+
+**Example:**
+```yaml
+psadt:
+  override_msi_commands: true
+  install: |
+    Start-ADTMsiProcess -Action Install -FilePath "{{installer_filename}}" -Transforms "custom.mst" -AdditionalArgumentList "ALLUSERS=1 DISABLE_UPDATES=1"
+  uninstall: |
+    Uninstall-ADTApplication -Name "Legacy App Name"
+```
 
 ### override_msix_commands
 
@@ -398,7 +445,7 @@ psadt:
 ### install
 
 **Type:** `string` (multiline)
-**Required:** Yes (MSI/EXE); auto-generated for MSIX unless overridden
+**Required:** Yes (EXE); auto-generated for MSI and MSIX unless overridden
 
 PowerShell script executed during installation. Inserted into the generated
 `Invoke-AppDeployToolkit.ps1` in the installation section.
@@ -425,20 +472,20 @@ these are not PowerShell variables):
 and does not expand wildcards.
 Use `{{installer_filename}}` instead of a wildcard pattern.
 
-**Example:**
+**Example (EXE installer):**
 ```yaml
 install: |
-  Start-ADTMsiProcess -Action Install -FilePath "{{installer_filename}}" -ArgumentList "ALLUSERS=1"
+  Start-ADTProcess -FilePath "{{installer_filename}}" -ArgumentList "/S"
 ```
 
 ### uninstall
 
 **Type:** `string` (multiline)
-**Required:** Yes (MSI/EXE); auto-generated for MSIX unless overridden
+**Required:** Yes (EXE); auto-generated for MSI and MSIX unless overridden
 
 PowerShell script executed during uninstallation. Same available variables as `install`.
 
-**Example:**
+**Example (EXE installer):**
 ```yaml
 uninstall: |
   Uninstall-ADTApplication -Name "Application Name"

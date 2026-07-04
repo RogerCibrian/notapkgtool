@@ -397,6 +397,67 @@ discovery:
         assert str(recipe) in result.recipe_path
 
 
+class TestPsadtValidation:
+    """Tests for psadt: section validation."""
+
+    def test_override_msi_commands_must_be_bool(self, tmp_path):
+        """Tests that a non-boolean override_msi_commands is detected."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text("""
+apiVersion: napt/v1
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+psadt:
+  override_msi_commands: "yes"
+""")
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("override_msi_commands" in err for err in result.errors)
+
+    def test_override_msi_commands_bool_is_valid(self, tmp_path):
+        """Tests that a boolean override_msi_commands passes validation."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text("""
+apiVersion: napt/v1
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+psadt:
+  override_msi_commands: true
+""")
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "valid"
+        assert len(result.errors) == 0
+
+    def test_override_msix_commands_must_be_bool(self, tmp_path):
+        """Tests that a non-boolean override_msix_commands is detected."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text("""
+apiVersion: napt/v1
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msix"
+psadt:
+  override_msix_commands: 1
+""")
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("override_msix_commands" in err for err in result.errors)
+
+
 class TestIntuneValidation:
     """Tests for intune: section validation."""
 

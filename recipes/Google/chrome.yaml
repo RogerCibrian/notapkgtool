@@ -7,13 +7,12 @@ discovery:
   strategy: url_download
   url: "https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi"
 
+# MSI installers auto-generate install/uninstall commands at build time:
+#   Install:   Start-ADTMsiProcess -Action Install -FilePath "<filename>" ...
+#   Uninstall: Uninstall-ADTApplication -Name "<ProductName>" (exact match)
+# Set psadt.override_msi_commands: true to use custom commands instead.
+
 psadt:
   app_vars:
     AppName: "Google Chrome"
     AppVersion: "{{discovered_version}}"
-  install: |
-    # Install Chrome MSI with system-wide deployment
-    Start-ADTMsiProcess -Action Install -FilePath "{{installer_filename}}" -ArgumentList "ALLUSERS=1"
-  uninstall: |
-    # Uninstall Chrome automatically (handles MSI ProductCode lookup)
-    Uninstall-ADTApplication -Name "Google Chrome"

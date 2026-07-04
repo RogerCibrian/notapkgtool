@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Auto-generated MSI install/uninstall commands** - `napt build` now
+    generates install (`Start-ADTMsiProcess`, with `ALLUSERS=1` appended
+    for system deployments) and uninstall (`Uninstall-ADTApplication` by
+    exact ProductName) commands for MSI installers, so MSI recipes no
+    longer need `psadt.install` or `psadt.uninstall`. Uninstall matches by
+    name, not ProductCode, so it keeps working when vendors change the
+    ProductCode between versions. Set `psadt.override_msi_commands: true`
+    to use recipe commands instead
+
 - **Automatic app icon extraction** - `napt build` extracts the app icon
     from MSI, EXE, and MSIX installers to `icons/{id}.png`, and
     `napt upload` sends it as the app logo in Intune and the Company

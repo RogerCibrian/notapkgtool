@@ -952,7 +952,7 @@ def _apply_msix_commands(
             )
         else:
             config["psadt"]["install"] = auto_install
-            logger.verbose("BUILD", f"Auto-generated MSIX install: {auto_install}")
+            logger.info("BUILD", f"Auto-generated MSIX install: {auto_install}")
 
         if recipe_uninstall:
             logger.verbose(
@@ -961,9 +961,7 @@ def _apply_msix_commands(
             )
         else:
             config["psadt"]["uninstall"] = auto_uninstall
-            logger.verbose(
-                "BUILD", f"Auto-generated MSIX uninstall: {auto_uninstall}"
-            )
+            logger.info("BUILD", f"Auto-generated MSIX uninstall: {auto_uninstall}")
         return
 
     # No override flag — auto-generate and warn if recipe code is set
@@ -987,8 +985,132 @@ def _apply_msix_commands(
 
     config["psadt"]["install"] = auto_install
     config["psadt"]["uninstall"] = auto_uninstall
-    logger.verbose("BUILD", f"Auto-generated MSIX install: {auto_install}")
-    logger.verbose("BUILD", f"Auto-generated MSIX uninstall: {auto_uninstall}")
+    logger.info("BUILD", f"Auto-generated MSIX install: {auto_install}")
+    logger.info("BUILD", f"Auto-generated MSIX uninstall: {auto_uninstall}")
+
+
+def _apply_msi_commands(
+    config: dict[str, Any],
+    msi_metadata: MSIMetadata,
+    installer_file: Path,
+    logger: Any,
+) -> None:
+    """Auto-generates MSI install/uninstall commands or applies overrides.
+
+    For MSI installers, generates:
+
+    - Install: ``Start-ADTMsiProcess -Action Install`` with the exact
+      installer filename. PSADT's configuration supplies the silent-install
+      arguments and verbose logging. When ``intune.run_as_account`` is
+      ``"system"``, ``ALLUSERS=1`` is appended via ``-AdditionalArgumentList``
+      to force a per-machine installation.
+    - Uninstall: ``Uninstall-ADTApplication`` matching the MSI ProductName
+      exactly, restricted to MSI applications. Name-based matching is used
+      instead of ProductCode so uninstall keeps working when vendors change
+      the ProductCode between versions.
+
+    If the recipe specifies ``psadt.install`` or ``psadt.uninstall``, those
+    are ignored unless ``psadt.override_msi_commands`` is set to true.
+
+    Args:
+        config: Recipe configuration (mutated in place to inject
+            auto-generated commands).
+        msi_metadata: Pre-extracted MSI metadata.
+        installer_file: Path to the MSI installer file.
+        logger: Logger instance.
+
+    Raises:
+        ConfigError: If ``override_msi_commands`` is true but no
+            ``psadt.install`` or ``psadt.uninstall`` is provided, or if the
+            MSI has no ProductName when the uninstall command must be
+            auto-generated.
+
+    Note:
+        The ProductName check only fires when the uninstall command is
+        actually auto-generated, so override recipes that supply their own
+        uninstall still build against MSIs lacking ProductName.
+    """
+    psadt_config = config["psadt"]
+    override_commands = psadt_config.get("override_msi_commands", False)
+    recipe_install = psadt_config.get("install")
+    recipe_uninstall = psadt_config.get("uninstall")
+
+    auto_install = (
+        f'Start-ADTMsiProcess -Action Install -FilePath "{installer_file.name}"'
+    )
+    if config["intune"]["run_as_account"] == "system":
+        auto_install += ' -AdditionalArgumentList "ALLUSERS=1"'
+
+    def auto_uninstall() -> str:
+        if not msi_metadata.product_name:
+            raise ConfigError(
+                "MSI ProductName property not found. Cannot auto-generate "
+                "the uninstall command. Set override_msi_commands: true and "
+                "provide psadt.uninstall, or ensure the MSI file contains "
+                "ProductName."
+            )
+        # Escape for the single-quoted PowerShell string (same rule as
+        # template._format_powershell_value)
+        escaped_name = msi_metadata.product_name.replace("'", "''")
+        return (
+            f"Uninstall-ADTApplication -Name '{escaped_name}'"
+            " -NameMatch 'Exact' -ApplicationType 'MSI'"
+        )
+
+    if override_commands:
+        if not recipe_install and not recipe_uninstall:
+            raise ConfigError(
+                "psadt.override_msi_commands is true but neither "
+                "psadt.install nor psadt.uninstall is set. Set "
+                "psadt.install and/or psadt.uninstall when using "
+                "override_msi_commands."
+            )
+        if recipe_install:
+            logger.verbose(
+                "BUILD",
+                "Using recipe psadt.install (override_msi_commands)",
+            )
+        else:
+            config["psadt"]["install"] = auto_install
+            logger.info("BUILD", f"Auto-generated MSI install: {auto_install}")
+
+        if recipe_uninstall:
+            logger.verbose(
+                "BUILD",
+                "Using recipe psadt.uninstall (override_msi_commands)",
+            )
+        else:
+            config["psadt"]["uninstall"] = auto_uninstall()
+            logger.info(
+                "BUILD",
+                f"Auto-generated MSI uninstall: {config['psadt']['uninstall']}",
+            )
+        return
+
+    # No override flag — auto-generate and warn if recipe code is set
+    if recipe_install:
+        logger.warning(
+            "BUILD",
+            "psadt.install is set but will be ignored for MSI installers. "
+            "Install commands are auto-generated from the MSI. Set "
+            "override_msi_commands: true to use psadt.install instead.",
+        )
+
+    if recipe_uninstall:
+        logger.warning(
+            "BUILD",
+            "psadt.uninstall is set but will be ignored for MSI installers. "
+            "Uninstall commands are auto-generated from the MSI. Set "
+            "override_msi_commands: true to use psadt.uninstall instead.",
+        )
+
+    config["psadt"]["install"] = auto_install
+    config["psadt"]["uninstall"] = auto_uninstall()
+    logger.info("BUILD", f"Auto-generated MSI install: {auto_install}")
+    logger.info(
+        "BUILD",
+        f"Auto-generated MSI uninstall: {config['psadt']['uninstall']}",
+    )
 
 
 def _extract_app_icon(
@@ -1208,10 +1330,13 @@ def build_package(
     # Copy PSADT files
     _copy_psadt_template(psadt_cache_dir, build_dir)
 
-    # Auto-generate MSIX install/uninstall commands (or warn if overridden)
+    # Auto-generate install/uninstall commands (or warn if overridden)
     if installer_ext == ".msix":
         assert msix_metadata is not None
         _apply_msix_commands(config, msix_metadata, installer_file, logger)
+    elif installer_ext == ".msi":
+        assert msi_metadata is not None
+        _apply_msi_commands(config, msi_metadata, installer_file, logger)
 
     # Generate Invoke-AppDeployToolkit.ps1
     from .template import generate_invoke_script

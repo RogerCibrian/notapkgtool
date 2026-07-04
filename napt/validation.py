@@ -298,7 +298,8 @@ def _validate_psadt_section(
 ) -> None:
     """Validate the top-level psadt: section.
 
-    Checks that app_vars only contains known, user-settable keys.
+    Checks that app_vars only contains known, user-settable keys and that
+    the override_msi_commands/override_msix_commands flags are booleans.
 
     Args:
         recipe: The full recipe dictionary.
@@ -316,6 +317,10 @@ def _validate_psadt_section(
     app_vars = psadt.get("app_vars")
     if app_vars is not None:
         _validate_psadt_app_vars(app_vars, "psadt.app_vars", errors)
+
+    override_msi = psadt.get("override_msi_commands")
+    if override_msi is not None and not isinstance(override_msi, bool):
+        errors.append("psadt.override_msi_commands: Must be a boolean (true/false)")
 
     override_msix = psadt.get("override_msix_commands")
     if override_msix is not None and not isinstance(override_msix, bool):

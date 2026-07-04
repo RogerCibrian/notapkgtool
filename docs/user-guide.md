@@ -42,7 +42,7 @@ The build process creates a complete PSADT package from the recipe and downloade
     - `Invoke-AppDeployToolkit.ps1` - Template script (will be overwritten)
 7. **Generate Deployment Script** - Generates `Invoke-AppDeployToolkit.ps1` from template:
     - Substitutes PSADT variables (`$appVendor`, `$appName`, `$appVersion`, etc.) from recipe configuration
-    - Inserts install script from `psadt.install` field (for MSIX, auto-generates install/uninstall commands from manifest based on `intune.run_as_account` unless `override_msix_commands: true`)
+    - Inserts install script from `psadt.install` field (for MSI, auto-generates install/uninstall commands from the MSI metadata — exact filename and ProductName — unless `override_msi_commands: true`; for MSIX, auto-generates them from the manifest based on `intune.run_as_account` unless `override_msix_commands: true`)
     - Inserts uninstall script from `psadt.uninstall` field
     - Sets dynamic values (AppScriptDate, discovered version, PSADT version)
     - Preserves PSADT's structure and comments

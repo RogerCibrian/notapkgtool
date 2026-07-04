@@ -183,11 +183,19 @@ psadt:
   app_vars:
     AppName: "7-Zip"
     AppVersion: "{{discovered_version}}"
-  install: |
-    Start-ADTMsiProcess -Action Install -FilePath "{{installer_filename}}" -ArgumentList "ALLUSERS=1"
-  uninstall: |
-    Uninstall-ADTApplication -Name "7-Zip"
 ```
+
+**Install/uninstall commands are auto-generated for MSI:**
+
+- **No `psadt.install` / `psadt.uninstall` needed** - NAPT generates
+  `Start-ADTMsiProcess -Action Install` with the exact downloaded filename
+  (plus `ALLUSERS=1` for system deployments) and
+  `Uninstall-ADTApplication` matching the MSI's ProductName exactly
+- **Uninstall survives ProductCode changes** - Matching is by name, not
+  ProductCode, and the name is re-extracted from each downloaded MSI
+- **Custom commands** - Set `psadt.override_msi_commands: true` and provide
+  your own `install`/`uninstall` (e.g., for MST transforms or extra MSI
+  properties)
 
 2. Validate and test:
 
@@ -366,10 +374,6 @@ psadt:
   app_vars:
     AppName: "Google Chrome"
     AppVersion: "{{discovered_version}}"
-  install: |
-    Start-ADTMsiProcess -Action Install -FilePath "{{installer_filename}}" -ArgumentList "ALLUSERS=1"
-  uninstall: |
-    Uninstall-ADTApplication -Name "Google Chrome"
 ```
 
 2. Validate and test:
@@ -383,9 +387,8 @@ napt discover recipes/Google/chrome.yaml --verbose
 
 - `url`: Direct download URL (must be stable, not version-specific)
 - `app_vars`: Application name, architecture, and other PSADT variables
-- `install`/`uninstall`: PowerShell deployment scripts
 
-**Note:** MSI files (`.msi` extension) are automatically detected and versions are extracted from the MSI ProductVersion property. No additional version configuration needed.
+**Note:** MSI files (`.msi` extension) are automatically detected and versions are extracted from the MSI ProductVersion property. Install/uninstall commands are auto-generated from the MSI (set `psadt.override_msi_commands: true` for custom commands). No additional configuration needed.
 
 ## Handle Authentication Tokens
 
