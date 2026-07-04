@@ -485,7 +485,7 @@ install: |
 
 PowerShell script executed during uninstallation. Same available variables as `install`.
 
-**Example:**
+**Example (EXE installer):**
 ```yaml
 uninstall: |
   Uninstall-ADTApplication -Name "Application Name"
