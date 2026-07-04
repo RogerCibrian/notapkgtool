@@ -13,33 +13,51 @@ You are preparing a NAPT release. Semver (no `v` prefix). Follow every step in o
 
 The user passes the target version as `X.Y.Z`. If absent, ask before proceeding.
 
-Check current state to decide which phase to run:
+Phase detection keys off `origin/main`, not your current checkout — Phase 1 forks the
+release branch from `origin/main` regardless of what you have checked out, so the branch
+you are standing on never affects the release. Check state:
+- `git fetch origin` — refresh remote refs first.
 - `git tag -l X.Y.Z` — does the tag already exist? If yes, stop — release already published.
-- `git branch --show-current` — current branch
-- `git log -1 --format=%s` — last commit subject
+- `git log -1 --format=%s origin/main` — last commit subject on main.
 
-**Phase 1 (open release PR):** Tag does not exist; we are on `main` or any non-release branch.
-**Phase 2 (tag and publish):** Tag does not exist; we are on `main` and the last commit subject is `chore: Prepare release X.Y.Z` (i.e., the release PR was just squash-merged).
+**Phase 2 (tag and publish):** Tag does not exist and `origin/main`'s last commit subject is
+`chore: Prepare release X.Y.Z` (the release PR was just squash-merged).
+**Phase 1 (open release PR):** Tag does not exist and `origin/main`'s last commit is anything
+else.
 
 Report which phase you detected before proceeding.
 
 ## Phase 1: Open the release PR
 
-1. **Verify clean state.** Run `git status`. If unstaged changes unrelated to the release exist, stop and ask the user how to handle them.
+The release must be cut from a clean `main`, never from whatever branch you happen to be
+on. Forking the branch from `origin/main` guarantees the PR diff contains only the version
+bump and changelog promotion — nothing from an unrelated feature branch can leak in.
 
-2. **Check `[Unreleased]` has content.** Read `docs/changelog.md`. If the `[Unreleased]` section is empty, stop — there is nothing to release.
+1. **Verify clean working tree.** Run `git status`. If there are uncommitted changes, stop
+   and ask the user how to handle them — switching branches would carry or lose them.
 
-3. **Run lint and tests** sequentially:
+2. **Create the release branch from latest main.** You already ran `git fetch origin` in
+   Step 1.
+   - Guard: `git rev-parse --verify chore/prepare-release-X.Y.Z` and
+     `git ls-remote --exit-code --heads origin chore/prepare-release-X.Y.Z`. If either
+     succeeds (the branch already exists locally or on the remote), stop and report — a
+     prior Phase 1 run is in flight; don't clobber it.
+   - `git checkout -b chore/prepare-release-X.Y.Z origin/main`
+
+   This forks from the current tip of `origin/main` no matter which branch was checked out,
+   so all remaining steps operate on a clean release base.
+
+3. **Check `[Unreleased]` has content.** Read `docs/changelog.md`. If the `[Unreleased]` section is empty, stop — there is nothing to release.
+
+4. **Run lint and tests** sequentially:
    ```
    .venv/Scripts/python.exe -m ruff check napt/ tests/
    .venv/Scripts/python.exe -m pytest tests/ -q
    ```
    If anything fails, stop and report. Do not continue.
 
-4. **Create branch:** `git checkout -b chore/prepare-release-X.Y.Z`
-
 5. **Bump version in two places** — both must match exactly:
-   - `pyproject.toml` → `version = "X.Y.Z"` under `[tool.poetry]`
+   - `pyproject.toml` → `version = "X.Y.Z"` under `[project]`
    - `napt/__init__.py` → `__version__ = "X.Y.Z"`
 
 6. **Promote changelog** in `docs/changelog.md`:
@@ -102,12 +120,13 @@ Report which phase you detected before proceeding.
 
 4. **Build release notes** following the template below. Read the `[X.Y.Z]` section of `docs/changelog.md` for source content.
 
-5. **Create the GitHub release:**
+5. **Create the GitHub release.** `gh release create` has no `--body` flag — write the
+   notes to a file and pass it with `-F` (this also avoids heredoc quoting pitfalls).
+   `--verify-tag` aborts if the tag isn't already on the remote, which it always is by
+   this step.
    ```
-   gh release create X.Y.Z --title "NAPT X.Y.Z" --body "$(cat <<'EOF'
-   <release notes here>
-   EOF
-   )"
+   # Write the notes to a temp file first (e.g. via the Write tool), then:
+   gh release create X.Y.Z --title "NAPT X.Y.Z" --verify-tag --latest -F <notes-file>
    ```
 
 6. **Report the release URL.**
