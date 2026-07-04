@@ -15,16 +15,13 @@ intune:
     display_name: "7-Zip * (x64 edition)"
     override_msi_display_name: true
 
+# MSI installers auto-generate install/uninstall commands at build time:
+#   Install:   Start-ADTMsiProcess -Action Install -FilePath "<filename>" ...
+#   Uninstall: Uninstall-ADTApplication -Name "<ProductName>" (exact match)
+# Set psadt.override_msi_commands: true to use custom commands instead.
+
 psadt:
   app_vars:
     AppName: "7-Zip"
     AppVersion: "{{discovered_version}}"
     AppVendor: "Igor Pavlov"
-  install: |
-    # Install 7-Zip MSI with system-wide deployment
-    # Note: NAPT substitutes the exact downloaded filename at build time
-    # (PSADT resolves -FilePath literally; wildcards are not supported)
-    Start-ADTMsiProcess -Action Install -FilePath "{{installer_filename}}" -ArgumentList "ALLUSERS=1"
-  uninstall: |
-    # Uninstall 7-Zip automatically (handles MSI ProductCode lookup)
-    Uninstall-ADTApplication -Name "7-Zip"
