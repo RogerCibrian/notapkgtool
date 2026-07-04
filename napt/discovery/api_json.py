@@ -173,17 +173,13 @@ class ApiJsonStrategy:
         # Make API request
         logger.verbose("DISCOVERY", f"Calling API: {method} {api_url}")
         try:
-            if method == "GET":
-                response = requests.get(
-                    api_url, headers=expanded_headers, timeout=timeout
-                )
-            else:  # POST
-                response = requests.post(
-                    api_url,
-                    headers=expanded_headers,
-                    json=body,
-                    timeout=timeout,
-                )
+            response = requests.request(
+                method,
+                api_url,
+                headers=expanded_headers,
+                json=body if method == "POST" else None,
+                timeout=timeout,
+            )
         except requests.exceptions.RequestException as err:
             raise NetworkError(f"Failed to call API: {err}") from err
 
