@@ -12,47 +12,70 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""State tracking and version management for NAPT.
+"""State persistence for NAPT.
 
-This module provides state persistence for tracking discovered application
-versions, ETags, and file metadata between runs. This enables:
+This package holds two kinds of state with opposite philosophies:
 
-- Efficient conditional downloads (HTTP 304 Not Modified)
-- Version change detection
-- Bandwidth optimization for scheduled workflows
+- **Discovery cache** ([napt.state.cache][]): A disposable optimization
+    file (default ``cache/discovery.json``) tracking discovered versions,
+    ETags, and download metadata between runs. It enables conditional
+    downloads (HTTP 304) and version-change detection. Deleting it costs
+    one full re-download per app and nothing else.
+- **Deployment state** ([napt.state.deployment][]): Authoritative per-app
+    records (``state/deployment/<recipe-id>.json``) of what NAPT has
+    published to Intune and what is awaiting publication. Not regenerable.
+    Serialized deterministically so unchanged state produces byte-identical
+    files and clean diffs.
 
-The state file is a JSON file that stores:
-
-- Discovered versions from vendors
-- HTTP ETags and Last-Modified headers for conditional requests
-- File paths and SHA-256 hashes for cached installers
-- Last checked timestamps for monitoring
-
-State tracking is enabled by default and can be disabled with --stateless flag.
+Cache tracking is enabled by default and can be disabled with the
+--stateless flag, which also disables deployment state writes.
 
 Example:
-    Basic usage:
+    Reading the discovery cache:
         ```python
         from pathlib import Path
-        from napt.state import load_state, save_state
+        from napt.state import load_cache
 
-        state = load_state(Path("state/versions.json"))
+        data = load_cache(Path("cache/discovery.json"))
+        entry = data.get("apps", {}).get("napt-chrome")
+        ```
 
-        app_id = "napt-chrome"
-        cache = state.get("apps", {}).get(app_id)
+    Reading deployment state:
+        ```python
+        from pathlib import Path
+        from napt.state import deployment_state_path, load_deployment_state
 
-        state["apps"][app_id] = {
-            "url": "https://dl.google.com/chrome.msi",
-            "etag": 'W/"abc123"',
-            "sha256": "abc123...",
-            "known_version": "130.0.0"
-        }
-
-        save_state(state, Path("state/versions.json"))
+        path = deployment_state_path(Path("state/deployment"), "napt-chrome")
+        state = load_deployment_state(path)
+        pending = state.get("pending")
         ```
 
 """
 
-from .tracker import StateTracker, load_state, save_state
+from .cache import (
+    DiscoveryCache,
+    cache_file_path,
+    create_default_cache,
+    load_cache,
+    save_cache,
+)
+from .deployment import (
+    create_default_deployment_state,
+    deployment_state_path,
+    load_deployment_state,
+    record_pending,
+    save_deployment_state,
+)
 
-__all__ = ["StateTracker", "load_state", "save_state"]
+__all__ = [
+    "DiscoveryCache",
+    "cache_file_path",
+    "create_default_cache",
+    "create_default_deployment_state",
+    "deployment_state_path",
+    "load_cache",
+    "load_deployment_state",
+    "record_pending",
+    "save_cache",
+    "save_deployment_state",
+]

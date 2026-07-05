@@ -183,7 +183,7 @@ test_downloads/
 
 # NAPT build and cache directories
 # - builds/: PSADT package builds (napt build output)
-# - cache/: Cached PSADT releases and tools
+# - cache/: Discovery cache, cached PSADT releases and tools (disposable)
 # - packages/: .intunewin packages (napt package output)
 # - icons/: App icons extracted at build time (napt build output)
 builds/
@@ -191,10 +191,9 @@ cache/
 packages/
 icons/
 
-# NAPT state files (machine-managed, regenerate from discovery)
-state/versions.json
-state/*.json
-!state/.gitignore
+# NAPT deployment state from local testing
+/state/
+!/state/.gitignore
 
 .DS_Store
 

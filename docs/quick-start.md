@@ -115,6 +115,7 @@ This creates:
 - `recipes/` - Directory for your recipe files
 - `defaults/org.yaml` - Organization-wide configuration (commented template)
 - `defaults/vendors/` - Directory for vendor-specific defaults
+- `state/deployment/` - Per-app deployment state files
 
 ### Validate a Recipe
 

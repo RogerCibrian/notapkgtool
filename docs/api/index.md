@@ -39,8 +39,9 @@ napt/
 ├── psadt/                   # PSADT release management
 │   └── release.py              # PSADT release download and caching
 │
-├── state/                   # Version tracking and caching
-│   └── tracker.py              # State file management
+├── state/                   # State persistence
+│   ├── cache.py                # Discovery cache (disposable optimization)
+│   └── deployment.py           # Per-app deployment state (authoritative)
 │
 ├── upload/                  # Intune upload pipeline
 │   ├── manager.py              # Upload orchestration
@@ -64,7 +65,9 @@ Recipe YAML
     ↓
 [discovery/] Discover version and download
     ↓
-[state/tracker.py] Update version cache
+[state/cache.py] Update discovery cache
+    ↓
+[state/deployment.py] Record pending release
     ↓
 [build/manager.py] Build PSADT package
     ↓
@@ -84,7 +87,7 @@ Result (dataclass)
 
 - **Discovery Strategies:** Protocol-based, stateless, registered in global registry (api_github, api_json, web_scrape). All return a `RemoteVersion` from configuration alone. The orchestrator runs the result through `resolve_with_cache` to skip the download when the version is unchanged. `url_download` is a separate flow (not a registered strategy) because it must download the file to determine the version.
 - **Configuration:** 3-layer system (org → vendor → recipe) with deep merging
-- **State Management:** Tracks versions in `state/versions.json` for caching
+- **State Management:** Two kinds with opposite philosophies — the disposable discovery cache (`cache/discovery.json`) for download optimization, and authoritative per-app deployment state (`state/deployment/<id>.json`) recording what is published and pending
 - **Exceptions:** All NAPT domain errors use custom exceptions inheriting from `NAPTError` (ConfigError, NetworkError, PackagingError) - allows catching all NAPT errors or specific types
 - **Return Types:** Frozen dataclasses from `results.py` for public API functions only (type-safe, immutable returns)
 

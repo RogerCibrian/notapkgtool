@@ -1,4 +1,4 @@
-# This directory stores state files for NAPT version tracking
-# State files are machine-managed and regenerated from discovery
-# They are gitignored by default but can be version controlled for audit trails
-
+# This directory holds per-app deployment state (state/deployment/<id>.json):
+# authoritative records of what NAPT has published to Intune and what is
+# awaiting publication. Ignored here to keep local test artifacts out of
+# NAPT's own repository.

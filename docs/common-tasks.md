@@ -712,11 +712,11 @@ When a recipe needs changes (new version format, different download URL, etc.).
    napt discover recipes/Vendor/app.yaml --verbose
    ```
 
-4. **If version format changed, clear state:**
+4. **If version format changed, clear the cache:**
    ```bash
-   # Delete state entry for this app
-   # Or delete entire state file to start fresh
-   rm state/versions.json
+   # Delete cache entry for this app
+   # Or delete the entire discovery cache to start fresh
+   rm cache/discovery.json
    ```
 
 5. **Test full workflow:**
@@ -799,25 +799,28 @@ Common issues and solutions when `napt discover` fails.
 
 4. Use `--verbose` to see HTTP request/response details
 
-### Issue: "State file corrupted"
+### Issue: "Discovery cache corrupted"
 
-**Problem:** `state/versions.json` has invalid JSON or is corrupted.
+**Problem:** `cache/discovery.json` has invalid JSON or is corrupted.
 
 **Solution:**
 
-NAPT automatically handles corruption:
+NAPT automatically handles cache corruption:
 
-1. Creates backup of corrupted file: `state/versions.json.backup`
+1. Creates backup of corrupted file: `cache/discovery.json.backup`
 
-2. Creates a fresh state file automatically
+2. Creates a fresh cache file automatically
 
 3. Reports the issue with an error message
 
-The state file is already fixed - just run your command again. Alternatively, use `--stateless` to bypass state tracking temporarily:
+The cache is already fixed - just run your command again. Alternatively, use `--stateless` to bypass state tracking temporarily:
 
 ```bash
 napt discover recipes/app.yaml --stateless
 ```
+
+**Note:** Deployment state files (`state/deployment/`) are authoritative and are never auto-replaced.
+If one is corrupted, fix the JSON or restore the file from a backup.
 
 ## What's Next?
 

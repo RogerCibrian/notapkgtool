@@ -12,14 +12,15 @@ The discovery process finds the latest version and downloads the installer:
 
 1. **Load Configuration** - Merges organization defaults, vendor defaults, and recipe configuration
 2. **Check Version** - Uses the configured discovery strategy to check for new versions
-3. **Compare with Cache** - Compares discovered version to cached `known_version` in state file
+3. **Compare with Cache** - Compares discovered version to cached `known_version` in the discovery cache
 4. **Skip or Download**:
     - If version unchanged and file exists → Skip download 
     - If version changed or file missing → Download installer
 5. **Extract Version** - Extracts version from installer (MSI ProductVersion) or uses discovered version
-6. **Update State** - Updates `state/versions.json` with new version, file path, SHA-256 hash, and ETag (if download occurred). 
+6. **Update Cache** - Updates `cache/discovery.json` with new version, file path, SHA-256 hash, and ETag (if download occurred)
+7. **Record Pending Release** - Updates `state/deployment/{app_id}.json` with the discovered release as the pending publication candidate when it differs from the deployed version. The pending slot holds one candidate and the newest discovery wins.
 
-**Output**: Downloaded installer in `downloads/` directory, updated state file
+**Output**: Downloaded installer in `downloads/` directory, updated discovery cache, updated deployment state
 
 ### Build Process (`napt build`)
 
@@ -27,7 +28,7 @@ The build process creates a complete PSADT package from the recipe and downloade
 
 1. **Load Configuration** - Merges configuration layers (org → vendor → recipe)
 2. **Find Installer** - Locates installer in `downloads/` directory (tries URL filename, then app name/id, then most recent). Supports `.msi`, `.exe`, and `.msix` files
-3. **Extract Version** - Extracts version from installer file (MSI from ProductVersion, MSIX from AppxManifest.xml), otherwise uses state file version
+3. **Extract Version** - Extracts version from installer file (MSI from ProductVersion, MSIX from AppxManifest.xml), otherwise uses discovery cache version
 4. **Get PSADT Release** - Downloads/caches PSADT Template_v4 from GitHub if not already cached
 5. **Create Build Directory** - Creates versioned directory using discovered app version: `builds/{app_id}/{version}/`
 6. **Copy PSADT Template** - Copies entire PSADT template structure (unmodified) from cache:
@@ -355,8 +356,12 @@ packages/
           ├── Google-Chrome-142.0.7444.163-Detection.ps1    # Copied by napt package
           └── Google-Chrome-142.0.7444.163-Requirements.ps1 # Copied by napt package
 
+cache/
+  └── discovery.json                       # Discovery cache (disposable)
+
 state/
-  └── versions.json                        # Version tracking
+  └── deployment/
+      └── napt-chrome.json                 # Deployment state (authoritative)
 ```
 
 ## Commands Reference
@@ -365,7 +370,7 @@ state/
 
 ### napt init
 
-Initializes a new NAPT project with the recommended directory structure. Creates `recipes/`, `defaults/org.yaml`, and `defaults/vendors/`. Existing files are preserved by default; use `--force` to backup and overwrite.
+Initializes a new NAPT project with the recommended directory structure. Creates `recipes/`, `defaults/org.yaml`, `defaults/vendors/`, and `state/deployment/`. Existing files are preserved by default; use `--force` to backup and overwrite.
 
 ```bash
 napt init [DIRECTORY] [OPTIONS]
@@ -508,9 +513,19 @@ For practical workflows and copy-paste examples, see [Common Tasks](common-tasks
 
 ## State Management & Caching
 
-NAPT automatically tracks discovered versions and optimizes subsequent runs by avoiding unnecessary downloads. This version-based caching is critical for CI/CD with frequent scheduled checks, providing fast feedback when applications haven't changed.
+NAPT keeps two kinds of state with different purposes:
 
-### How It Works
+- **Discovery cache** (`cache/discovery.json`) - A disposable optimization file tracking discovered versions, ETags, and download metadata.
+Deleting it costs one full re-download per app and nothing else.
+Safe to gitignore.
+- **Deployment state** (`state/deployment/<app_id>.json`) - Authoritative per-app records of what NAPT has published to Intune (`deployed`) and what is awaiting publication (`pending`).
+Not regenerable.
+Written deterministically (sorted keys, no timestamps), so unchanged state produces byte-identical files and clean diffs — commit these files to version control if you want an auditable record or a PR-based review workflow.
+
+### Discovery Cache
+
+The discovery cache avoids unnecessary downloads.
+This version-based caching is critical for CI/CD with frequent scheduled checks, providing fast feedback when applications haven't changed.
 
 NAPT uses two caching approaches depending on the discovery strategy:
 
@@ -535,34 +550,49 @@ flowchart TD
     FileExists2 -->|Yes| SkipDownload2([✓ Skip Download<br/>Use cached file])
     FileExists2 -->|No| Download2
     
-    Download1 --> UpdateState[Update state.json]
-    Download2 --> UpdateState
-    SkipDownload1 --> UpdateState
-    SkipDownload2 --> UpdateState
-    UpdateState --> Ready([✓ Ready for napt build])
+    Download1 --> UpdateCache[Update discovery cache]
+    Download2 --> UpdateCache
+    SkipDownload1 --> UpdateCache
+    SkipDownload2 --> UpdateCache
+    UpdateCache --> Pending[Record pending release]
+    Pending --> Ready([✓ Ready for napt build])
 ```
 
 **Performance:** Version-first strategies (api_github, api_json, web_scrape) check versions before downloading (~100-300ms) and skip downloads entirely if unchanged. File-first strategy (url_download) uses HTTP conditional requests (~500ms) with ETag caching.
 
-**Note:** State is updated after every discovery run, even when skipping downloads. This updates the `last_updated` timestamp and confirms the cached version is still current.
+**Note:** The cache is updated after every discovery run, even when skipping downloads. This updates the `last_updated` timestamp and confirms the cached version is still current.
+
+### Deployment State
+
+Each app gets its own file, `state/deployment/<app_id>.json`, so concurrent changes to different apps never conflict and each file's diff is scoped to one app.
+A file holds four sections:
+
+- `deployed` - The version currently published to Intune, with its SHA-256 hash and Intune app IDs. Null until the first upload.
+- `pending` - The discovered release awaiting publication (version, SHA-256 hash, download URL). A single slot: a newer discovery replaces an unpublished candidate (newest wins), and discovering the already-deployed release clears it. Identity is the SHA-256 hash, so a vendor re-release of the same version with a different binary counts as new.
+- `rings` - Which version currently holds each deployment ring (used by upcoming promotion features).
+- `retained` - Superseded versions kept in Intune for rollback (used by upcoming promotion features).
+
+`napt discover` records the pending candidate.
+Later pipeline stages consume it.
 
 ### Default Behavior (Stateful)
 
 ```bash
-# State tracking enabled by default
+# Cache and deployment state tracking enabled by default
 napt discover recipes/Google/chrome.yaml
 
-# Creates/updates: state/versions.json
+# Creates/updates: cache/discovery.json
+# Creates/updates: state/deployment/napt-chrome.json
 ```
 
 ### Stateless Mode
 
 ```bash
-# Disable state tracking for one-off checks
+# Disable the discovery cache and deployment state writes for one-off checks
 napt discover recipes/Google/chrome.yaml --stateless
 
-# Always downloads, no caching
-# Useful for CI/CD clean builds
+# Always downloads, no caching, records nothing
+# Useful for ad-hoc checks that should leave no trace
 ```
 
 ## Configuration Layers
@@ -643,6 +673,8 @@ to its own:
 | Command | Flag | Purpose | Config key | Built-in default |
 |---------|------|---------|-----------|-----------------|
 | `napt discover` | `--output-dir` | Where to save downloaded installers | `directories.discover` | `downloads` |
+| `napt discover` | `--cache-file` | Discovery cache file (`<dir>/discovery.json`) | `directories.cache` | `cache` |
+| `napt discover` | `--state-dir` | Per-app deployment state (`<dir>/deployment/`) | `directories.state` | `state` |
 | `napt build` | `--downloads-dir` | Where to find the installer | `directories.discover` | `downloads` |
 | `napt build` | `--output-dir` | Where to save builds | `directories.build` | `builds` |
 | `napt package` | `--builds-dir` | Where to find the build | `directories.build` | `builds` |
@@ -661,10 +693,12 @@ To change the defaults org-wide, add to `defaults/org.yaml`:
 
 ```yaml
 directories:
-  discover: "cache/downloads"   # used by both discover and build
-  build: "artifacts/builds"     # used by both build and package
+  discover: "artifacts/downloads"  # used by both discover and build
+  build: "artifacts/builds"        # used by both build and package
   package: "artifacts/packages"
-  icons: "artifacts/icons"      # written by build, read by upload
+  icons: "artifacts/icons"         # written by build, read by upload
+  cache: "artifacts/cache"         # discovery cache (disposable)
+  state: "deployment-state"        # per-app deployment state (authoritative)
 ```
 
 Any CLI flag still overrides the config value for that single run:
@@ -745,9 +779,9 @@ Organize recipes by vendor: `recipes/<Vendor>/<app>.yaml`. NAPT automatically de
 
 ### State Management
 
-**Production:** Keep state tracking enabled (default), use version control for state files, run on schedule to detect updates, use `--verbose` in CI/CD.
+**Production:** Keep state tracking enabled (default), use version control for deployment state files, run on schedule to detect updates, use `--verbose` in CI/CD.
 
-**Development:** Use `--stateless` for testing, `--debug` for troubleshooting, delete state file to force re-discovery.
+**Development:** Use `--stateless` for testing, `--debug` for troubleshooting, delete the discovery cache to force re-discovery.
 
 ### Scripting
 
@@ -771,11 +805,11 @@ sudo apt-get install msitools  # Debian/Ubuntu
 brew install msitools           # macOS
 ```
 
-**Problem**: State file corrupted
+**Problem**: Discovery cache corrupted
 
 ```bash
 # NAPT automatically creates backup
-# Backup saved to: state/versions.json.backup
+# Backup saved to: cache/discovery.json.backup
 
 # Force re-download
 napt discover recipes/app.yaml --stateless

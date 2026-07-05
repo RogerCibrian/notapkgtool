@@ -17,7 +17,8 @@
 This module owns the top-level [discover_recipe][napt.discovery.manager.discover_recipe]
 entry point used by ``napt discover``. It loads the merged configuration,
 picks a flow based on the recipe's ``discovery.strategy`` value, persists
-state for the next run, and returns the public
+the discovery cache for the next run, records the release as a pending
+publication candidate in deployment state, and returns the public
 [DiscoverResult][napt.results.DiscoverResult].
 
 Two Flows:
@@ -59,21 +60,31 @@ from napt.discovery.url_download import run_url_download
 from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
 from napt.results import DiscoverResult
-from napt.state import load_state, save_state
+from napt.state import (
+    cache_file_path,
+    deployment_state_path,
+    load_cache,
+    load_deployment_state,
+    record_pending,
+    save_cache,
+    save_deployment_state,
+)
 
 
 def discover_recipe(
     recipe_path: Path,
     output_dir: Path | None = None,
-    state_file: Path | None = Path("state/versions.json"),
+    cache_file: Path | None = None,
+    state_dir: Path | None = None,
     stateless: bool = False,
 ) -> DiscoverResult:
     """Discovers the latest version of an app and resolves its installer.
 
     Loads the recipe configuration, dispatches to the appropriate
     discovery flow (version-first registered strategy or ``url_download``),
-    persists the result to the state cache, and returns the public
-    discovery result.
+    persists the result to the discovery cache, records the release as the
+    pending publication candidate in deployment state when it differs from
+    the deployed version, and returns the public discovery result.
 
     Args:
         recipe_path: Path to the recipe YAML file. Must exist and be
@@ -81,11 +92,15 @@ def discover_recipe(
         output_dir: Directory to download the installer into. When
             omitted, falls back to ``directories.discover`` from the
             merged configuration. Created if it does not exist.
-        state_file: Path to the state file used for caching. Defaults
-            to ``state/versions.json``. Set to ``None`` to disable
-            persistence (run still uses an in-memory cache).
-        stateless: When True, skips loading and saving state entirely.
-            Forces every run to behave as if no prior cache existed.
+        cache_file: Path to the discovery cache file. When omitted,
+            falls back to ``<directories.cache>/discovery.json`` from
+            the merged configuration.
+        state_dir: Directory holding per-app deployment state files.
+            When omitted, falls back to ``<directories.state>/deployment``
+            from the merged configuration.
+        stateless: When True, skips loading and saving the discovery
+            cache and deployment state entirely. Forces every run to
+            behave as if no prior cache existed.
 
     Returns:
         Public discovery result containing the resolved version,
@@ -96,16 +111,21 @@ def discover_recipe(
             an unknown ``discovery.strategy`` value.
         NetworkError: On download or version-extraction failures from
             either flow.
+        PackagingError: On a corrupted deployment state file.
 
     """
     logger = get_global_logger()
-
-    state = _load_state(state_file, stateless, logger)
 
     logger.step(1, 4, "Loading configuration...")
     config = load_effective_config(recipe_path)
     if output_dir is None:
         output_dir = Path(config["directories"]["discover"])
+    if cache_file is None:
+        cache_file = cache_file_path(config)
+    if state_dir is None:
+        state_dir = Path(config["directories"]["state"]) / "deployment"
+
+    cache_data = _load_cache(cache_file, stateless, logger)
 
     app_name = config["name"]
     app_id = config["id"]
@@ -115,7 +135,7 @@ def discover_recipe(
     if not strategy_name:
         raise ConfigError(f"No 'discovery.strategy' defined for app: {app_name}")
 
-    cache = _get_cache_for_app(state, app_id, logger)
+    cache = _get_cache_for_app(cache_data, app_id, logger)
 
     logger.step(2, 4, "Discovering version...")
     if strategy_name == "url_download":
@@ -129,8 +149,12 @@ def discover_recipe(
         result = resolve_with_cache(info, config, output_dir, cache)
 
     logger.step(4, 4, "Updating state...")
-    if state is not None and app_id and state_file:
-        _save_app_state(state, state_file, app_id, strategy_name, result, logger)
+    if not stateless and app_id:
+        if cache_data is not None:
+            _save_app_cache(
+                cache_data, cache_file, app_id, strategy_name, result, logger
+            )
+        _record_pending_release(state_dir, app_id, result, logger)
 
     return DiscoverResult(
         app_name=app_name,
@@ -144,25 +168,25 @@ def discover_recipe(
     )
 
 
-def _load_state(
-    state_file: Path | None, stateless: bool, logger: Any
+def _load_cache(
+    cache_file: Path | None, stateless: bool, logger: Any
 ) -> dict[str, Any] | None:
-    """Loads the state file, or returns a fresh state dict if missing."""
-    if stateless or not state_file:
+    """Loads the discovery cache, or returns a fresh cache dict if missing."""
+    if stateless or not cache_file:
         return None
     try:
-        state = load_state(state_file)
-        logger.verbose("STATE", f"Loaded state from {state_file}")
-        return state
+        cache_data = load_cache(cache_file)
+        logger.verbose("STATE", f"Loaded discovery cache from {cache_file}")
+        return cache_data
     except FileNotFoundError:
-        logger.verbose("STATE", f"State file not found, will create: {state_file}")
+        logger.verbose("STATE", f"Cache file not found, will create: {cache_file}")
         return {
             "metadata": {"napt_version": __version__, "schema_version": "2"},
             "apps": {},
         }
     except Exception as err:
-        logger.warning("STATE", f"Failed to load state: {err}")
-        logger.verbose("STATE", "Continuing without state tracking")
+        logger.warning("STATE", f"Failed to load discovery cache: {err}")
+        logger.verbose("STATE", "Continuing without cache tracking")
         return None
 
 
@@ -183,15 +207,15 @@ def _get_cache_for_app(
     return cache
 
 
-def _save_app_state(
-    state: dict[str, Any],
-    state_file: Path,
+def _save_app_cache(
+    cache_data: dict[str, Any],
+    cache_file: Path,
     app_id: str,
     strategy_name: str,
     result: StrategyResult,
     logger: Any,
 ) -> None:
-    """Writes the resolved discovery result back to the state file."""
+    """Writes the resolved discovery result back to the discovery cache."""
     etag = result.headers.get("ETag")
     last_modified = result.headers.get("Last-Modified")
     if etag:
@@ -209,15 +233,54 @@ def _save_app_state(
         "strategy": strategy_name,
     }
 
-    state.setdefault("apps", {})[app_id] = cache_entry
-    state["metadata"] = {
+    cache_data.setdefault("apps", {})[app_id] = cache_entry
+    cache_data["metadata"] = {
         "napt_version": __version__,
         "last_updated": datetime.now(UTC).isoformat(),
         "schema_version": "2",
     }
 
     try:
-        save_state(state, state_file)
-        logger.verbose("STATE", f"Updated state file: {state_file}")
+        save_cache(cache_data, cache_file)
+        logger.verbose("STATE", f"Updated discovery cache: {cache_file}")
     except Exception as err:
-        logger.warning("STATE", f"Failed to save state: {err}")
+        logger.warning("STATE", f"Failed to save discovery cache: {err}")
+
+
+def _record_pending_release(
+    state_dir: Path,
+    app_id: str,
+    result: StrategyResult,
+    logger: Any,
+) -> None:
+    """Records the discovered release as the app's pending candidate."""
+    state_path = deployment_state_path(state_dir, app_id)
+    state = load_deployment_state(state_path)
+
+    action = record_pending(
+        state,
+        version=result.version,
+        sha256=result.sha256,
+        url=result.download_url,
+    )
+
+    if action is None:
+        logger.verbose("STATE", "Pending release unchanged")
+        return
+
+    save_deployment_state(state, state_path)
+    if action == "cleared":
+        logger.info(
+            "STATE",
+            "Pending release cleared (vendor serves the deployed version)",
+        )
+    elif action == "replaced":
+        logger.info(
+            "STATE",
+            f"Pending release replaced with {result.version} (newest wins)",
+        )
+    else:
+        logger.info(
+            "STATE",
+            f"Recorded pending release {result.version} in {state_path}",
+        )

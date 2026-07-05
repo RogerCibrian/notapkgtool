@@ -12,49 +12,52 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""State tracking implementation for NAPT.
+"""Discovery cache persistence for NAPT.
 
-This module implements the state persistence layer for tracking discovered
-application versions, ETags, and download metadata between runs.
+This module implements the discovery cache: a disposable optimization file
+(default ``cache/discovery.json``) that tracks discovered versions, ETags,
+and download metadata between runs. Deleting it costs one full re-download
+per app and nothing else — the filesystem and deployment state remain the
+source of truth.
 
-The state file supports two optimization approaches:
+The cache supports two optimization approaches:
 
 - VERSION-FIRST (url_pattern, api_github, api_json): Uses known_version for comparison
 - FILE-FIRST (url_download): Uses etag/last_modified for HTTP conditional requests
 
 Key Features:
 
-- JSON-based state storage (fast parsing, standard library)
+- JSON-based cache storage (fast parsing, standard library)
 - Automatic ETag/Last-Modified tracking for conditional requests
 - Version change detection for version-first strategies
 - Robust error handling (corrupted files, missing data)
-- Auto-creation of state files and directories
+- Auto-creation of cache files and directories
 
 Example:
-    High-level API with StateTracker:
+    High-level API with DiscoveryCache:
         ```python
         from pathlib import Path
-        from napt.state import StateTracker
+        from napt.state import DiscoveryCache
 
-        tracker = StateTracker(Path("state/versions.json"))
-        tracker.load()
+        cache = DiscoveryCache(Path("cache/discovery.json"))
+        cache.load()
 
-        # Get cache for conditional requests
-        cache = tracker.get_cache("napt-chrome")
+        # Get entry for conditional requests
+        entry = cache.get_cache("napt-chrome")
 
         # Update after discovery
-        tracker.update_cache("napt-chrome", version="130.0.0", ...)
-        tracker.save()
+        cache.update_cache("napt-chrome", version="130.0.0", ...)
+        cache.save()
         ```
 
     Low-level API with functions:
         ```python
         from pathlib import Path
-        from napt.state import load_state, save_state
+        from napt.state import load_cache, save_cache
 
-        state = load_state(Path("state/versions.json"))
-        # ... modify state dict ...
-        save_state(state, Path("state/versions.json"))
+        data = load_cache(Path("cache/discovery.json"))
+        # ... modify cache dict ...
+        save_cache(data, Path("cache/discovery.json"))
         ```
 
 """
@@ -70,81 +73,94 @@ from napt import __version__
 from napt.exceptions import PackagingError
 
 
-class StateTracker:
-    """Manages application state tracking with automatic persistence.
+def cache_file_path(config: dict[str, Any]) -> Path:
+    """Returns the discovery cache file path from merged configuration.
+
+    Args:
+        config: Merged configuration containing ``directories.cache``.
+
+    Returns:
+        Path to the discovery cache file (``<directories.cache>/discovery.json``).
+
+    """
+    return Path(config["directories"]["cache"]) / "discovery.json"
+
+
+class DiscoveryCache:
+    """Manages the discovery cache with automatic persistence.
 
     This class provides a high-level interface for loading, querying, and
-    updating the state file. It handles file I/O, error recovery, and
+    updating the cache file. It handles file I/O, error recovery, and
     provides convenience methods for common operations.
 
     Attributes:
-        state_file: Path to the JSON state file.
-        state: In-memory state dictionary.
+        cache_file: Path to the JSON cache file.
+        data: In-memory cache dictionary.
 
     Example:
         Basic usage:
             ```python
             from pathlib import Path
 
-            tracker = StateTracker(Path("state/versions.json"))
-            tracker.load()
-            cache = tracker.get_cache("napt-chrome")
-            tracker.update_cache(
+            cache = DiscoveryCache(Path("cache/discovery.json"))
+            cache.load()
+            entry = cache.get_cache("napt-chrome")
+            cache.update_cache(
                 "napt-chrome",
                 url="https://...",
                 sha256="...",
                 known_version="130.0.0"
             )
-            tracker.save()
+            cache.save()
             ```
 
     """
 
-    def __init__(self, state_file: Path):
-        """Initialize state tracker.
+    def __init__(self, cache_file: Path):
+        """Initialize discovery cache.
 
         Args:
-            state_file: Path to JSON state file. Created if doesn't exist.
+            cache_file: Path to JSON cache file. Created if doesn't exist.
 
         """
-        self.state_file = state_file
-        self.state: dict[str, Any] = {}
+        self.cache_file = cache_file
+        self.data: dict[str, Any] = {}
 
     def load(self) -> dict[str, Any]:
-        """Load state from file.
+        """Load cache from file.
 
-        Creates default state structure if file doesn't exist.
+        Creates default cache structure if file doesn't exist.
         Handles corrupted files by creating backup and starting fresh.
 
         Returns:
-            Loaded state dictionary.
+            Loaded cache dictionary.
 
         Raises:
             OSError: If file permissions prevent reading.
 
         """
         try:
-            self.state = load_state(self.state_file)
+            self.data = load_cache(self.cache_file)
         except FileNotFoundError:
-            # First run, create default state
-            self.state = create_default_state()
-            self.state_file.parent.mkdir(parents=True, exist_ok=True)
+            # First run, create default cache
+            self.data = create_default_cache()
+            self.cache_file.parent.mkdir(parents=True, exist_ok=True)
             self.save()
         except json.JSONDecodeError as err:
             # Corrupted file, backup and create new
-            backup = self.state_file.with_suffix(".json.backup")
-            self.state_file.rename(backup)
-            self.state = create_default_state()
+            backup = self.cache_file.with_suffix(".json.backup")
+            self.cache_file.rename(backup)
+            self.data = create_default_cache()
             self.save()
             raise PackagingError(
-                f"Corrupted state file backed up to {backup}. "
-                f"Created fresh state file."
+                f"Corrupted cache file backed up to {backup}. "
+                f"Created fresh cache file."
             ) from err
 
-        return self.state
+        return self.data
 
     def save(self) -> None:
-        """Save current state to file.
+        """Save current cache to file.
 
         Updates metadata.last_updated timestamp automatically.
         Creates parent directories if needed.
@@ -154,13 +170,13 @@ class StateTracker:
 
         """
         # Update metadata
-        self.state.setdefault("metadata", {})
-        self.state["metadata"]["last_updated"] = datetime.now(UTC).isoformat()
+        self.data.setdefault("metadata", {})
+        self.data["metadata"]["last_updated"] = datetime.now(UTC).isoformat()
 
         # Ensure parent directory exists
-        self.state_file.parent.mkdir(parents=True, exist_ok=True)
+        self.cache_file.parent.mkdir(parents=True, exist_ok=True)
 
-        save_state(self.state, self.state_file)
+        save_cache(self.data, self.cache_file)
 
     def get_cache(self, recipe_id: str) -> dict[str, Any] | None:
         """Get cached information for a recipe.
@@ -174,14 +190,14 @@ class StateTracker:
         Example:
             Retrieve cached information:
                 ```python
-                cache = tracker.get_cache("napt-chrome")
-                if cache:
-                    etag = cache.get('etag')
-                    known_version = cache.get('known_version')
+                entry = cache.get_cache("napt-chrome")
+                if entry:
+                    etag = entry.get('etag')
+                    known_version = entry.get('known_version')
                 ```
 
         """
-        return self.state.get("apps", {}).get(recipe_id)
+        return self.data.get("apps", {}).get(recipe_id)
 
     def update_cache(
         self,
@@ -214,7 +230,7 @@ class StateTracker:
         Example:
             Update cache entry:
                 ```python
-                tracker.update_cache(
+                cache.update_cache(
                     "napt-chrome",
                     url="https://dl.google.com/chrome.msi",
                     sha256="abc123...",
@@ -234,11 +250,12 @@ class StateTracker:
             - File-first: etag/last_modified are PRIMARY cache keys,
                 known_version informational
 
-            Filesystem is the source of truth; state is for optimization only.
+            The cache is for optimization only; the filesystem and
+            deployment state are the source of truth.
 
         """
-        if "apps" not in self.state:
-            self.state["apps"] = {}
+        if "apps" not in self.data:
+            self.data["apps"] = {}
 
         cache_entry = {
             "url": url,
@@ -253,7 +270,7 @@ class StateTracker:
         if strategy is not None:
             cache_entry["strategy"] = strategy
 
-        self.state["apps"][recipe_id] = cache_entry
+        self.data["apps"][recipe_id] = cache_entry
 
     def has_version_changed(self, recipe_id: str, new_version: str) -> bool:
         """Check if discovered version differs from cached known_version.
@@ -268,7 +285,7 @@ class StateTracker:
         Example:
             Check if version has changed:
                 ```python
-                if tracker.has_version_changed("napt-chrome", "130.0.0"):
+                if cache.has_version_changed("napt-chrome", "130.0.0"):
                     print("New version available!")
                 ```
 
@@ -277,24 +294,24 @@ class StateTracker:
             Real version should be extracted from filesystem during build.
 
         """
-        cache = self.get_cache(recipe_id)
-        if not cache:
+        entry = self.get_cache(recipe_id)
+        if not entry:
             return True  # No cache, treat as changed
 
-        return cache.get("known_version") != new_version
+        return entry.get("known_version") != new_version
 
 
-def create_default_state() -> dict[str, Any]:
-    """Create a default empty state structure.
+def create_default_cache() -> dict[str, Any]:
+    """Create a default empty cache structure.
 
     Returns:
-        Empty state with metadata section.
+        Empty cache with metadata section.
 
     Example:
-        Create default state structure:
+        Create default cache structure:
             ```python
-            state = create_default_state()
-            state["apps"] = {}
+            data = create_default_cache()
+            data["apps"] = {}
             ```
 
     """
@@ -308,54 +325,54 @@ def create_default_state() -> dict[str, Any]:
     }
 
 
-def load_state(state_file: Path) -> dict[str, Any]:
-    """Load state from JSON file.
+def load_cache(cache_file: Path) -> dict[str, Any]:
+    """Load cache from JSON file.
 
     Args:
-        state_file: Path to JSON state file.
+        cache_file: Path to JSON cache file.
 
     Returns:
-        Loaded state dictionary.
+        Loaded cache dictionary.
 
     Raises:
-        FileNotFoundError: If state file doesn't exist.
+        FileNotFoundError: If cache file doesn't exist.
         json.JSONDecodeError: If file contains invalid JSON.
         OSError: If file cannot be read due to permissions.
 
     Example:
-        Load state from file:
+        Load cache from file:
             ```python
             from pathlib import Path
 
-            state = load_state(Path("state/versions.json"))
-            apps = state.get("apps", {})
+            data = load_cache(Path("cache/discovery.json"))
+            apps = data.get("apps", {})
             ```
 
     """
-    with open(state_file, encoding="utf-8") as f:
+    with open(cache_file, encoding="utf-8") as f:
         return json.load(f)
 
 
-def save_state(state: dict[str, Any], state_file: Path) -> None:
-    """Save state to JSON file with pretty-printing.
+def save_cache(data: dict[str, Any], cache_file: Path) -> None:
+    """Save cache to JSON file with pretty-printing.
 
     Creates parent directories if needed. Uses 2-space indentation
     and sorted keys for consistent diffs in version control.
 
     Args:
-        state: State dictionary to save.
-        state_file: Path to JSON state file.
+        data: Cache dictionary to save.
+        cache_file: Path to JSON cache file.
 
     Raises:
         OSError: If file cannot be written due to permissions.
 
     Example:
-        Save state to file:
+        Save cache to file:
             ```python
             from pathlib import Path
 
-            state = {"metadata": {}, "apps": {}}
-            save_state(state, Path("state/versions.json"))
+            data = {"metadata": {}, "apps": {}}
+            save_cache(data, Path("cache/discovery.json"))
             ```
 
     Note:
@@ -364,8 +381,8 @@ def save_state(state: dict[str, Any], state_file: Path) -> None:
         - Adds trailing newline for git compatibility
 
     """
-    state_file.parent.mkdir(parents=True, exist_ok=True)
+    cache_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(state_file, "w", encoding="utf-8") as f:
-        json.dump(state, f, indent=2, sort_keys=True)
+    with open(cache_file, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, sort_keys=True)
         f.write("\n")  # Trailing newline for git
