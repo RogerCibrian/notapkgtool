@@ -867,10 +867,21 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#how-it-works" class="md-nav__link">
+  <a href="#discovery-cache" class="md-nav__link">
     <span class="md-ellipsis">
       
-        How It Works
+        Discovery Cache
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deployment-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deployment State
       
     </span>
   </a>
@@ -2400,10 +2411,21 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#how-it-works" class="md-nav__link">
+  <a href="#discovery-cache" class="md-nav__link">
     <span class="md-ellipsis">
       
-        How It Works
+        Discovery Cache
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deployment-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deployment State
       
     </span>
   </a>
@@ -2694,22 +2716,23 @@
 <ol>
 <li><strong>Load Configuration</strong> - Merges organization defaults, vendor defaults, and recipe configuration</li>
 <li><strong>Check Version</strong> - Uses the configured discovery strategy to check for new versions</li>
-<li><strong>Compare with Cache</strong> - Compares discovered version to cached <code>known_version</code> in state file</li>
+<li><strong>Compare with Cache</strong> - Compares discovered version to cached <code>known_version</code> in the discovery cache</li>
 <li><strong>Skip or Download</strong>:<ul>
 <li>If version unchanged and file exists → Skip download </li>
 <li>If version changed or file missing → Download installer</li>
 </ul>
 </li>
 <li><strong>Extract Version</strong> - Extracts version from installer (MSI ProductVersion) or uses discovered version</li>
-<li><strong>Update State</strong> - Updates <code>state/versions.json</code> with new version, file path, SHA-256 hash, and ETag (if download occurred). </li>
+<li><strong>Update Cache</strong> - Updates <code>cache/discovery.json</code> with new version, file path, SHA-256 hash, and ETag (if download occurred)</li>
+<li><strong>Record Pending Release</strong> - Updates <code>state/deployment/{app_id}.json</code> with the discovered release as the pending publication candidate when it differs from the deployed version. The pending slot holds one candidate and the newest discovery wins.</li>
 </ol>
-<p><strong>Output</strong>: Downloaded installer in <code>downloads/</code> directory, updated state file</p>
+<p><strong>Output</strong>: Downloaded installer in <code>downloads/</code> directory, updated discovery cache, updated deployment state</p>
 <h3 id="build-process-napt-build">Build Process (<code>napt build</code>)</h3>
 <p>The build process creates a complete PSADT package from the recipe and downloaded installer:</p>
 <ol>
 <li><strong>Load Configuration</strong> - Merges configuration layers (org → vendor → recipe)</li>
 <li><strong>Find Installer</strong> - Locates installer in <code>downloads/</code> directory (tries URL filename, then app name/id, then most recent). Supports <code>.msi</code>, <code>.exe</code>, and <code>.msix</code> files</li>
-<li><strong>Extract Version</strong> - Extracts version from installer file (MSI from ProductVersion, MSIX from AppxManifest.xml), otherwise uses state file version</li>
+<li><strong>Extract Version</strong> - Extracts version from installer file (MSI from ProductVersion, MSIX from AppxManifest.xml), otherwise uses discovery cache version</li>
 <li><strong>Get PSADT Release</strong> - Downloads/caches PSADT Template_v4 from GitHub if not already cached</li>
 <li><strong>Create Build Directory</strong> - Creates versioned directory using discovered app version: <code>builds/{app_id}/{version}/</code></li>
 <li><strong>Copy PSADT Template</strong> - Copies entire PSADT template structure (unmodified) from cache:<ul>
@@ -3067,15 +3090,19 @@ Set all three environment variables as pipeline secrets:</p>
 </span><span id="__span-4-25"><a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a>          ├── Google-Chrome-142.0.7444.163-Detection.ps1    # Copied by napt package
 </span><span id="__span-4-26"><a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a>          └── Google-Chrome-142.0.7444.163-Requirements.ps1 # Copied by napt package
 </span><span id="__span-4-27"><a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a>
-</span><span id="__span-4-28"><a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a>state/
-</span><span id="__span-4-29"><a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a>  └── versions.json                        # Version tracking
+</span><span id="__span-4-28"><a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a>cache/
+</span><span id="__span-4-29"><a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a>  └── discovery.json                       # Discovery cache (disposable)
+</span><span id="__span-4-30"><a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a>
+</span><span id="__span-4-31"><a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a>state/
+</span><span id="__span-4-32"><a id="__codelineno-4-32" name="__codelineno-4-32" href="#__codelineno-4-32"></a>  └── deployment/
+</span><span id="__span-4-33"><a id="__codelineno-4-33" name="__codelineno-4-33" href="#__codelineno-4-33"></a>      └── napt-chrome.json                 # Deployment state (authoritative)
 </span></code></pre></div>
 <h2 id="commands-reference">Commands Reference</h2>
 <blockquote>
 <p><strong>💡 Tip:</strong> All commands support <code>--help</code> (or <code>-h</code>) to show detailed usage, options, and examples. Try <code>napt discover --help</code> to see what's available.</p>
 </blockquote>
 <h3 id="napt-init">napt init</h3>
-<p>Initializes a new NAPT project with the recommended directory structure. Creates <code>recipes/</code>, <code>defaults/org.yaml</code>, and <code>defaults/vendors/</code>. Existing files are preserved by default; use <code>--force</code> to backup and overwrite.</p>
+<p>Initializes a new NAPT project with the recommended directory structure. Creates <code>recipes/</code>, <code>defaults/org.yaml</code>, <code>defaults/vendors/</code>, and <code>state/deployment/</code>. Existing files are preserved by default; use <code>--force</code> to backup and overwrite.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>napt<span class="w"> </span>init<span class="w"> </span><span class="o">[</span>DIRECTORY<span class="o">]</span><span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </span></code></pre></div>
 <h3 id="napt-validate">napt validate</h3>
@@ -3221,8 +3248,18 @@ Authentication is automatic — no configuration required.</p>
 <p>For complete field documentation, all options, and detailed examples, see the <a href="../recipe-reference/">Recipe Reference</a> page.</p>
 <p>For practical workflows and copy-paste examples, see <a href="../common-tasks/">Common Tasks</a>.</p>
 <h2 id="state-management-caching">State Management &amp; Caching</h2>
-<p>NAPT automatically tracks discovered versions and optimizes subsequent runs by avoiding unnecessary downloads. This version-based caching is critical for CI/CD with frequent scheduled checks, providing fast feedback when applications haven't changed.</p>
-<h3 id="how-it-works">How It Works</h3>
+<p>NAPT keeps two kinds of state with different purposes:</p>
+<ul>
+<li><strong>Discovery cache</strong> (<code>cache/discovery.json</code>) - A disposable optimization file tracking discovered versions, ETags, and download metadata.
+Deleting it costs one full re-download per app and nothing else.
+Safe to gitignore.</li>
+<li><strong>Deployment state</strong> (<code>state/deployment/&lt;app_id&gt;.json</code>) - Authoritative per-app records of what NAPT has published to Intune (<code>deployed</code>) and what is awaiting publication (<code>pending</code>).
+Not regenerable.
+Written deterministically (sorted keys, no timestamps), so unchanged state produces byte-identical files and clean diffs — commit these files to version control if you want an auditable record or a PR-based review workflow.</li>
+</ul>
+<h3 id="discovery-cache">Discovery Cache</h3>
+<p>The discovery cache avoids unnecessary downloads.
+This version-based caching is critical for CI/CD with frequent scheduled checks, providing fast feedback when applications haven't changed.</p>
 <p>NAPT uses two caching approaches depending on the discovery strategy:</p>
 <pre class="mermaid"><code>flowchart TD
     Start([napt discover]) --&gt; Strategy{Strategy Type?}
@@ -3244,25 +3281,38 @@ Authentication is automatic — no configuration required.</p>
     FileExists2 --&gt;|Yes| SkipDownload2([✓ Skip Download&lt;br/&gt;Use cached file])
     FileExists2 --&gt;|No| Download2
 
-    Download1 --&gt; UpdateState[Update state.json]
-    Download2 --&gt; UpdateState
-    SkipDownload1 --&gt; UpdateState
-    SkipDownload2 --&gt; UpdateState
-    UpdateState --&gt; Ready([✓ Ready for napt build])</code></pre>
+    Download1 --&gt; UpdateCache[Update discovery cache]
+    Download2 --&gt; UpdateCache
+    SkipDownload1 --&gt; UpdateCache
+    SkipDownload2 --&gt; UpdateCache
+    UpdateCache --&gt; Pending[Record pending release]
+    Pending --&gt; Ready([✓ Ready for napt build])</code></pre>
 <p><strong>Performance:</strong> Version-first strategies (api_github, api_json, web_scrape) check versions before downloading (~100-300ms) and skip downloads entirely if unchanged. File-first strategy (url_download) uses HTTP conditional requests (~500ms) with ETag caching.</p>
-<p><strong>Note:</strong> State is updated after every discovery run, even when skipping downloads. This updates the <code>last_updated</code> timestamp and confirms the cached version is still current.</p>
+<p><strong>Note:</strong> The cache is updated after every discovery run, even when skipping downloads. This updates the <code>last_updated</code> timestamp and confirms the cached version is still current.</p>
+<h3 id="deployment-state">Deployment State</h3>
+<p>Each app gets its own file, <code>state/deployment/&lt;app_id&gt;.json</code>, so concurrent changes to different apps never conflict and each file's diff is scoped to one app.
+A file holds four sections:</p>
+<ul>
+<li><code>deployed</code> - The version currently published to Intune, with its SHA-256 hash and Intune app IDs. Null until the first upload.</li>
+<li><code>pending</code> - The discovered release awaiting publication (version, SHA-256 hash, download URL). A single slot: a newer discovery replaces an unpublished candidate (newest wins), and discovering the already-deployed release clears it. Identity is the SHA-256 hash, so a vendor re-release of the same version with a different binary counts as new.</li>
+<li><code>rings</code> - Which version currently holds each deployment ring (used by upcoming promotion features).</li>
+<li><code>retained</code> - Superseded versions kept in Intune for rollback (used by upcoming promotion features).</li>
+</ul>
+<p><code>napt discover</code> records the pending candidate.
+Later pipeline stages consume it.</p>
 <h3 id="default-behavior-stateful">Default Behavior (Stateful)</h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># State tracking enabled by default</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Cache and deployment state tracking enabled by default</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1"># Creates/updates: state/versions.json</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1"># Creates/updates: cache/discovery.json</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="c1"># Creates/updates: state/deployment/napt-chrome.json</span>
 </span></code></pre></div>
 <h3 id="stateless-mode">Stateless Mode</h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Disable state tracking for one-off checks</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Disable the discovery cache and deployment state writes for one-off checks</span>
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span>--stateless
 </span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># Always downloads, no caching</span>
-</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="c1"># Useful for CI/CD clean builds</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># Always downloads, no caching, records nothing</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="c1"># Useful for ad-hoc checks that should leave no trace</span>
 </span></code></pre></div>
 <h2 id="configuration-layers">Configuration Layers</h2>
 <p>NAPT uses a layered configuration system that promotes DRY (Don't Repeat Yourself) principles.
@@ -3347,6 +3397,20 @@ to its own:</p>
 <td><code>downloads</code></td>
 </tr>
 <tr>
+<td><code>napt discover</code></td>
+<td><code>--cache-file</code></td>
+<td>Discovery cache file (<code>&lt;dir&gt;/discovery.json</code>)</td>
+<td><code>directories.cache</code></td>
+<td><code>cache</code></td>
+</tr>
+<tr>
+<td><code>napt discover</code></td>
+<td><code>--state-dir</code></td>
+<td>Per-app deployment state (<code>&lt;dir&gt;/deployment/</code>)</td>
+<td><code>directories.state</code></td>
+<td><code>state</code></td>
+</tr>
+<tr>
 <td><code>napt build</code></td>
 <td><code>--downloads-dir</code></td>
 <td>Where to find the installer</td>
@@ -3385,10 +3449,12 @@ the input of the next without extra configuration.</p>
 See <a href="#app-icons">App icons</a>.</p>
 <p>To change the defaults org-wide, add to <code>defaults/org.yaml</code>:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nt">directories</span><span class="p">:</span>
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span><span class="nt">discover</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;cache/downloads&quot;</span><span class="w">   </span><span class="c1"># used by both discover and build</span>
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">  </span><span class="nt">build</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;artifacts/builds&quot;</span><span class="w">     </span><span class="c1"># used by both build and package</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span><span class="nt">discover</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;artifacts/downloads&quot;</span><span class="w">  </span><span class="c1"># used by both discover and build</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">  </span><span class="nt">build</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;artifacts/builds&quot;</span><span class="w">        </span><span class="c1"># used by both build and package</span>
 </span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">  </span><span class="nt">package</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;artifacts/packages&quot;</span>
-</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">  </span><span class="nt">icons</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;artifacts/icons&quot;</span><span class="w">      </span><span class="c1"># written by build, read by upload</span>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">  </span><span class="nt">icons</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;artifacts/icons&quot;</span><span class="w">         </span><span class="c1"># written by build, read by upload</span>
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="w">  </span><span class="nt">cache</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;artifacts/cache&quot;</span><span class="w">         </span><span class="c1"># discovery cache (disposable)</span>
+</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="w">  </span><span class="nt">state</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;deployment-state&quot;</span><span class="w">        </span><span class="c1"># per-app deployment state (authoritative)</span>
 </span></code></pre></div>
 <p>Any CLI flag still overrides the config value for that single run:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Uses config default (or built-in if not configured)</span>
@@ -3467,8 +3533,8 @@ its own subdirectory, so switching versions just downloads once and caches both.
 <h3 id="recipe-organization">Recipe Organization</h3>
 <p>Organize recipes by vendor: <code>recipes/&lt;Vendor&gt;/&lt;app&gt;.yaml</code>. NAPT automatically detects vendor from directory structure and loads <code>defaults/vendors/&lt;Vendor&gt;.yaml</code> if it exists.</p>
 <h3 id="state-management">State Management</h3>
-<p><strong>Production:</strong> Keep state tracking enabled (default), use version control for state files, run on schedule to detect updates, use <code>--verbose</code> in CI/CD.</p>
-<p><strong>Development:</strong> Use <code>--stateless</code> for testing, <code>--debug</code> for troubleshooting, delete state file to force re-discovery.</p>
+<p><strong>Production:</strong> Keep state tracking enabled (default), use version control for deployment state files, run on schedule to detect updates, use <code>--verbose</code> in CI/CD.</p>
+<p><strong>Development:</strong> Use <code>--stateless</code> for testing, <code>--debug</code> for troubleshooting, delete the discovery cache to force re-discovery.</p>
 <h3 id="scripting">Scripting</h3>
 <p>All commands return standard exit codes (<code>0</code> = success, <code>1</code> = error), making them easy to use in automation scripts:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="k">if</span><span class="w"> </span>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="p">;</span><span class="w"> </span><span class="k">then</span>
@@ -3482,9 +3548,9 @@ its own subdirectory, so switching versions just downloads once and caches both.
 </span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>msitools<span class="w">  </span><span class="c1"># Debian/Ubuntu</span>
 </span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>brew<span class="w"> </span>install<span class="w"> </span>msitools<span class="w">           </span><span class="c1"># macOS</span>
 </span></code></pre></div>
-<p><strong>Problem</strong>: State file corrupted</p>
+<p><strong>Problem</strong>: Discovery cache corrupted</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="c1"># NAPT automatically creates backup</span>
-</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="c1"># Backup saved to: state/versions.json.backup</span>
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="c1"># Backup saved to: cache/discovery.json.backup</span>
 </span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>
 </span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="c1"># Force re-download</span>
 </span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/app.yaml<span class="w"> </span>--stateless

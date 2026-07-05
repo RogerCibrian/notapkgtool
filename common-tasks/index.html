@@ -921,10 +921,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#issue-state-file-corrupted" class="md-nav__link">
+  <a href="#issue-discovery-cache-corrupted" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Issue: "State file corrupted"
+        Issue: "Discovery cache corrupted"
       
     </span>
   </a>
@@ -2213,10 +2213,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#issue-state-file-corrupted" class="md-nav__link">
+  <a href="#issue-discovery-cache-corrupted" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Issue: "State file corrupted"
+        Issue: "Discovery cache corrupted"
       
     </span>
   </a>
@@ -2861,10 +2861,10 @@ Delete the file and rebuild to force re-extraction.</p>
 </span></code></pre></div></p>
 </li>
 <li>
-<p><strong>If version format changed, clear state:</strong>
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-50-1"><a id="__codelineno-50-1" name="__codelineno-50-1" href="#__codelineno-50-1"></a><span class="c1"># Delete state entry for this app</span>
-</span><span id="__span-50-2"><a id="__codelineno-50-2" name="__codelineno-50-2" href="#__codelineno-50-2"></a><span class="c1"># Or delete entire state file to start fresh</span>
-</span><span id="__span-50-3"><a id="__codelineno-50-3" name="__codelineno-50-3" href="#__codelineno-50-3"></a>rm<span class="w"> </span>state/versions.json
+<p><strong>If version format changed, clear the cache:</strong>
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-50-1"><a id="__codelineno-50-1" name="__codelineno-50-1" href="#__codelineno-50-1"></a><span class="c1"># Delete cache entry for this app</span>
+</span><span id="__span-50-2"><a id="__codelineno-50-2" name="__codelineno-50-2" href="#__codelineno-50-2"></a><span class="c1"># Or delete the entire discovery cache to start fresh</span>
+</span><span id="__span-50-3"><a id="__codelineno-50-3" name="__codelineno-50-3" href="#__codelineno-50-3"></a>rm<span class="w"> </span>cache/discovery.json
 </span></code></pre></div></p>
 </li>
 <li>
@@ -2947,24 +2947,26 @@ Delete the file and rebuild to force re-extraction.</p>
 <p>Use <code>--verbose</code> to see HTTP request/response details</p>
 </li>
 </ol>
-<h3 id="issue-state-file-corrupted">Issue: "State file corrupted"</h3>
-<p><strong>Problem:</strong> <code>state/versions.json</code> has invalid JSON or is corrupted.</p>
+<h3 id="issue-discovery-cache-corrupted">Issue: "Discovery cache corrupted"</h3>
+<p><strong>Problem:</strong> <code>cache/discovery.json</code> has invalid JSON or is corrupted.</p>
 <p><strong>Solution:</strong></p>
-<p>NAPT automatically handles corruption:</p>
+<p>NAPT automatically handles cache corruption:</p>
 <ol>
 <li>
-<p>Creates backup of corrupted file: <code>state/versions.json.backup</code></p>
+<p>Creates backup of corrupted file: <code>cache/discovery.json.backup</code></p>
 </li>
 <li>
-<p>Creates a fresh state file automatically</p>
+<p>Creates a fresh cache file automatically</p>
 </li>
 <li>
 <p>Reports the issue with an error message</p>
 </li>
 </ol>
-<p>The state file is already fixed - just run your command again. Alternatively, use <code>--stateless</code> to bypass state tracking temporarily:</p>
+<p>The cache is already fixed - just run your command again. Alternatively, use <code>--stateless</code> to bypass state tracking temporarily:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-56-1"><a id="__codelineno-56-1" name="__codelineno-56-1" href="#__codelineno-56-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/app.yaml<span class="w"> </span>--stateless
 </span></code></pre></div>
+<p><strong>Note:</strong> Deployment state files (<code>state/deployment/</code>) are authoritative and are never auto-replaced.
+If one is corrupted, fix the JSON or restore the file from a backup.</p>
 <h2 id="whats-next">What's Next?</h2>
 <ul>
 <li><strong><a href="../user-guide/">User Guide</a></strong> - Deep dive into discovery strategies, state management, and configuration</li>
