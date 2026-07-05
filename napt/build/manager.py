@@ -119,20 +119,20 @@ def sanitize_filename(name: str, app_id: str = "") -> str:
 
 
 def _get_installer_version(
-    installer_file: Path, config: dict[str, Any], state_file: Path | None = None
+    installer_file: Path, config: dict[str, Any], cache_file: Path | None = None
 ) -> str:
     """Get version for the installer file.
 
     Priority:
         1. Auto-detect MSI files (`.msi` extension) and extract version
         2. Auto-detect MSIX files (`.msix` extension) and extract version
-        3. Fall back to known_version from state file
+        3. Fall back to known_version from the discovery cache
         4. If all else fails, raise an error
 
     Args:
         installer_file: Path to the installer file.
         config: Recipe configuration.
-        state_file: Path to state file for fallback version lookup.
+        cache_file: Path to discovery cache for fallback version lookup.
 
     Returns:
         Extracted version string.
@@ -165,42 +165,42 @@ def _get_installer_version(
         logger.verbose("BUILD", f"Extracted version: {metadata.version}")
         return metadata.version
 
-    # Non-MSI/MSIX: fall back to state file
-    if state_file and state_file.exists():
-        from napt.state import load_state
+    # Non-MSI/MSIX: fall back to discovery cache
+    if cache_file and cache_file.exists():
+        from napt.state import load_cache
 
-        logger.verbose("BUILD", "Using version from state file")
-        state = load_state(state_file)
-        app_state = state.get("apps", {}).get(app_id, {})
-        known_version = app_state.get("known_version")
+        logger.verbose("BUILD", "Using version from discovery cache")
+        cache_data = load_cache(cache_file)
+        app_entry = cache_data.get("apps", {}).get(app_id, {})
+        known_version = app_entry.get("known_version")
 
         if known_version:
-            logger.verbose("BUILD", f"Using version from state: {known_version}")
+            logger.verbose("BUILD", f"Using version from cache: {known_version}")
             return known_version
 
     # No version found - provide error
     raise ConfigError(
         f"Could not determine version for {app_id}. Either:\n"
         f"  - Use an MSI or MSIX installer (auto-detected from file extension)\n"
-        f"  - Run 'napt discover' first to populate state file with version"
+        f"  - Run 'napt discover' first to populate the discovery cache"
     )
 
 
 def _find_installer_file(
-    downloads_dir: Path, config: dict[str, Any], state_file: Path | None = None
+    downloads_dir: Path, config: dict[str, Any], cache_file: Path | None = None
 ) -> Path:
     """Find the installer file in the downloads directory.
 
     Uses multiple strategies to locate the installer:
     1. URL from recipe (for url_download strategy)
-    2. URL from state file (for web_scrape, api_github, api_json strategies)
+    2. URL from discovery cache (for web_scrape, api_github, api_json strategies)
     3. Filename matching by app name/id
     4. Most recent installer (last resort)
 
     Args:
         downloads_dir: Downloads directory to search.
         config: Recipe configuration.
-        state_file: Optional state file to check for cached URL.
+        cache_file: Optional discovery cache to check for cached URL.
 
     Returns:
         Path to the installer file.
@@ -231,28 +231,28 @@ def _find_installer_file(
                 )
                 return installer_path
 
-    # Strategy 2: Extract filename from state file URL (for web_scrape, etc.)
-    if state_file and state_file.exists():
+    # Strategy 2: Extract filename from discovery cache URL (for web_scrape, etc.)
+    if cache_file and cache_file.exists():
         try:
-            from napt.state import load_state
+            from napt.state import load_cache
 
-            state = load_state(state_file)
-            app_state = state.get("apps", {}).get(app_id, {})
-            state_url = app_state.get("url", "")
+            cache_data = load_cache(cache_file)
+            app_entry = cache_data.get("apps", {}).get(app_id, {})
+            cached_url = app_entry.get("url", "")
 
-            if state_url:
-                parsed = urlparse(state_url)
+            if cached_url:
+                parsed = urlparse(cached_url)
                 filename = Path(parsed.path).name
                 if filename:
                     installer_path = app_dir / filename
 
                     if installer_path.exists():
                         logger.verbose(
-                            "BUILD", f"Found installer from state URL: {installer_path}"
+                            "BUILD", f"Found installer from cache URL: {installer_path}"
                         )
                         return installer_path
         except Exception as err:
-            logger.warning("BUILD", f"Could not check state file: {err}")
+            logger.warning("BUILD", f"Could not check discovery cache: {err}")
 
     # Strategy 3: Fallback - Search for installer matching app name/id
     app_name = config["name"].lower()
@@ -1279,12 +1279,12 @@ def build_package(
 
     # Find installer file
     logger.step(2, 8, "Finding installer...")
-    state_file = Path("state/versions.json")  # Default state file location
-    installer_file = _find_installer_file(downloads_dir, config, state_file)
+    cache_file = Path(config["directories"]["cache"]) / "discovery.json"
+    installer_file = _find_installer_file(downloads_dir, config, cache_file)
 
-    # Extract version from installer or state (filesystem + state are truth)
+    # Extract version from installer or cache (filesystem is truth)
     logger.step(3, 8, "Determining version...")
-    version = _get_installer_version(installer_file, config, state_file)
+    version = _get_installer_version(installer_file, config, cache_file)
 
     logger.info("BUILD", f"Building {app_name} v{version}")
 

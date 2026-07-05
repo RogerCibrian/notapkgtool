@@ -214,19 +214,24 @@ def cmd_discover(args: argparse.Namespace) -> int:
     and downloading the installer. This command validates the recipe YAML,
     uses the configured discovery strategy to find the latest version,
     downloads the installer (or uses cached version via ETag), extracts
-    version information, and updates the state file with caching info.
+    version information, updates the discovery cache, and records the
+    release as a pending publication candidate in deployment state when it
+    differs from the deployed version.
 
     Args:
         args: Parsed command-line arguments containing
-            recipe path, output directory, state file path, and flags.
+            recipe path, output directory, cache file path, deployment
+            state directory, and flags.
 
     Returns:
         Exit code (0 for success, 1 for failure).
 
     Note:
         Downloads installer file to output_dir (or uses cached version).
-        Updates state file with version and ETag information. Prints progress
-        and results to stdout. Prints errors with optional traceback if verbose/debug.
+        Updates the discovery cache with version and ETag information and
+        the app's deployment state file with the pending release. Prints
+        progress and results to stdout. Prints errors with optional
+        traceback if verbose/debug.
 
     """
     # Configure global logger
@@ -249,7 +254,8 @@ def cmd_discover(args: argparse.Namespace) -> int:
         result = discover_recipe(
             recipe_path,
             output_dir,
-            state_file=args.state_file if not args.stateless else None,
+            cache_file=args.cache_file,
+            state_dir=args.state_dir,
             stateless=args.stateless,
         )
     except (ConfigError, NetworkError, PackagingError) as err:
@@ -627,7 +633,8 @@ def cmd_init(args: argparse.Namespace) -> int:
 
     Initializes a new NAPT project by creating the directory structure and
     default configuration files. This command creates the recipes/ directory,
-    defaults/ directory with org.yaml template, and defaults/vendors/ directory.
+    defaults/ directory with org.yaml template, defaults/vendors/ directory,
+    and state/deployment/ directory for per-app deployment state.
 
     Args:
         args: Parsed command-line arguments containing
@@ -677,6 +684,16 @@ def cmd_init(args: argparse.Namespace) -> int:
     else:
         skipped.append("defaults/vendors/")
         logger.verbose("INIT", "Skipped: defaults/vendors/ (already exists)")
+
+    # Create state/deployment/ directory
+    deployment_dir = target_dir / "state" / "deployment"
+    if not deployment_dir.exists():
+        deployment_dir.mkdir(parents=True)
+        created.append("state/deployment/")
+        logger.verbose("INIT", "Created: state/deployment/")
+    else:
+        skipped.append("state/deployment/")
+        logger.verbose("INIT", "Skipped: state/deployment/ (already exists)")
 
     # Step 2: Create configuration files
     logger.step(2, 2, "Creating configuration files...")
@@ -824,18 +841,30 @@ def main() -> None:
         help="Directory to save downloaded files (default: from config or ./downloads)",
     )
     parser_discover.add_argument(
-        "--state-file",
+        "--cache-file",
         type=Path,
-        default=Path("state/versions.json"),
+        default=None,
         help=(
-            "State file for version tracking and ETag caching "
-            "(default: state/versions.json)"
+            "Discovery cache file for version tracking and ETag caching "
+            "(default: cache/discovery.json from directories.cache)"
+        ),
+    )
+    parser_discover.add_argument(
+        "--state-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Directory for per-app deployment state files "
+            "(default: state/deployment from directories.state)"
         ),
     )
     parser_discover.add_argument(
         "--stateless",
         action="store_true",
-        help="Disable state tracking (no caching, always download full files)",
+        help=(
+            "Disable the discovery cache and deployment state writes "
+            "(always download full files, record nothing)"
+        ),
     )
     parser_discover.add_argument(
         "-v",
@@ -968,7 +997,8 @@ def main() -> None:
             "Creates:\n"
             "  - recipes/              Directory for recipe YAML files\n"
             "  - defaults/org.yaml     Organization defaults template\n"
-            "  - defaults/vendors/     Directory for vendor-specific defaults\n\n"
+            "  - defaults/vendors/     Directory for vendor-specific defaults\n"
+            "  - state/deployment/     Per-app deployment state files\n\n"
             "Examples:\n"
             "  napt init\n"
             "  napt init ./my-project\n"

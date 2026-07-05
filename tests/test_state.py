@@ -1,10 +1,12 @@
 """
 Tests for napt.state module.
 
-Tests state management including:
-- Loading and saving state files
+Tests state persistence including:
+- Loading and saving discovery cache files
 - Cache operations
-- State file creation and error handling
+- Cache file creation and error handling
+- Deployment state loading, saving, and determinism
+- Pending release recording (newest wins)
 """
 
 from __future__ import annotations
@@ -13,28 +15,37 @@ import json
 
 import pytest
 
-from napt.exceptions import PackagingError
-from napt.state import StateTracker, load_state, save_state
-from napt.state.tracker import create_default_state
+from napt.exceptions import ConfigError, PackagingError
+from napt.state import (
+    DiscoveryCache,
+    create_default_deployment_state,
+    deployment_state_path,
+    load_cache,
+    load_deployment_state,
+    record_pending,
+    save_cache,
+    save_deployment_state,
+)
+from napt.state.cache import create_default_cache
 
 
-class TestStateFileOperations:
-    """Tests for loading and saving state files."""
+class TestCacheFileOperations:
+    """Tests for loading and saving discovery cache files."""
 
-    def test_create_default_state(self):
-        """Test creating default empty state structure."""
-        state = create_default_state()
+    def test_create_default_cache(self):
+        """Tests that the default cache structure is empty with metadata."""
+        data = create_default_cache()
 
-        assert "metadata" in state
-        assert "apps" in state
-        assert state["metadata"]["schema_version"] == "2"
-        assert isinstance(state["apps"], dict)
-        assert len(state["apps"]) == 0
+        assert "metadata" in data
+        assert "apps" in data
+        assert data["metadata"]["schema_version"] == "2"
+        assert isinstance(data["apps"], dict)
+        assert len(data["apps"]) == 0
 
-    def test_save_and_load_state(self, tmp_path):
-        """Test round-trip save and load."""
-        state_file = tmp_path / "test_state.json"
-        state = {
+    def test_save_and_load_cache(self, tmp_path):
+        """Tests round-trip save and load."""
+        cache_file = tmp_path / "discovery.json"
+        data = {
             "metadata": {"napt_version": "0.1.0"},
             "apps": {
                 "test-app": {
@@ -47,80 +58,80 @@ class TestStateFileOperations:
         }
 
         # Save
-        save_state(state, state_file)
-        assert state_file.exists()
+        save_cache(data, cache_file)
+        assert cache_file.exists()
 
         # Load
-        loaded = load_state(state_file)
+        loaded = load_cache(cache_file)
         assert loaded["apps"]["test-app"]["known_version"] == "1.2.3"
         assert loaded["apps"]["test-app"]["etag"] == 'W/"abc123"'
         assert loaded["apps"]["test-app"]["url"] == "https://vendor.com/app.msi"
 
     def test_load_missing_file_raises(self, tmp_path):
-        """Test that loading nonexistent file raises FileNotFoundError."""
-        state_file = tmp_path / "nonexistent.json"
+        """Tests that loading nonexistent file raises FileNotFoundError."""
+        cache_file = tmp_path / "nonexistent.json"
 
         with pytest.raises(FileNotFoundError):
-            load_state(state_file)
+            load_cache(cache_file)
 
     def test_load_invalid_json_raises(self, tmp_path):
-        """Test that loading invalid JSON raises JSONDecodeError."""
-        state_file = tmp_path / "invalid.json"
-        state_file.write_text("This is not JSON", encoding="utf-8")
+        """Tests that loading invalid JSON raises JSONDecodeError."""
+        cache_file = tmp_path / "invalid.json"
+        cache_file.write_text("This is not JSON", encoding="utf-8")
 
         with pytest.raises(json.JSONDecodeError):
-            load_state(state_file)
+            load_cache(cache_file)
 
     def test_save_creates_parent_directory(self, tmp_path):
-        """Test that save creates parent directories if needed."""
-        state_file = tmp_path / "nested" / "dir" / "state.json"
-        state = create_default_state()
+        """Tests that save creates parent directories if needed."""
+        cache_file = tmp_path / "nested" / "dir" / "discovery.json"
+        data = create_default_cache()
 
-        save_state(state, state_file)
+        save_cache(data, cache_file)
 
-        assert state_file.exists()
-        assert state_file.parent.exists()
+        assert cache_file.exists()
+        assert cache_file.parent.exists()
 
     def test_save_pretty_prints_json(self, tmp_path):
-        """Test that saved JSON is pretty-printed."""
-        state_file = tmp_path / "state.json"
-        state = {"metadata": {}, "apps": {"test": {"version": "1.0"}}}
+        """Tests that saved JSON is pretty-printed."""
+        cache_file = tmp_path / "discovery.json"
+        data = {"metadata": {}, "apps": {"test": {"version": "1.0"}}}
 
-        save_state(state, state_file)
+        save_cache(data, cache_file)
 
-        content = state_file.read_text(encoding="utf-8")
+        content = cache_file.read_text(encoding="utf-8")
         # Should have indentation (pretty-printed)
         assert "  " in content
         # Should have trailing newline
         assert content.endswith("\n")
 
 
-class TestStateTracker:
-    """Tests for StateTracker class."""
+class TestDiscoveryCache:
+    """Tests for DiscoveryCache class."""
 
     def test_init(self, tmp_path):
-        """Test StateTracker initialization."""
-        state_file = tmp_path / "state.json"
-        tracker = StateTracker(state_file)
+        """Tests DiscoveryCache initialization."""
+        cache_file = tmp_path / "discovery.json"
+        cache = DiscoveryCache(cache_file)
 
-        assert tracker.state_file == state_file
-        assert isinstance(tracker.state, dict)
+        assert cache.cache_file == cache_file
+        assert isinstance(cache.data, dict)
 
     def test_load_creates_default_if_missing(self, tmp_path):
-        """Test that load creates default state if file doesn't exist."""
-        state_file = tmp_path / "new_state.json"
-        tracker = StateTracker(state_file)
+        """Tests that load creates default cache if file doesn't exist."""
+        cache_file = tmp_path / "new_discovery.json"
+        cache = DiscoveryCache(cache_file)
 
-        state = tracker.load()
+        data = cache.load()
 
-        assert state_file.exists()
-        assert "metadata" in state
-        assert "apps" in state
+        assert cache_file.exists()
+        assert "metadata" in data
+        assert "apps" in data
 
     def test_load_existing_file(self, tmp_path):
-        """Test loading existing state file."""
-        state_file = tmp_path / "state.json"
-        initial_state = {
+        """Tests loading existing cache file."""
+        cache_file = tmp_path / "discovery.json"
+        initial_data = {
             "metadata": {"napt_version": "0.1.0"},
             "apps": {
                 "test-app": {
@@ -130,49 +141,49 @@ class TestStateTracker:
                 }
             },
         }
-        save_state(initial_state, state_file)
+        save_cache(initial_data, cache_file)
 
-        tracker = StateTracker(state_file)
-        state = tracker.load()
+        cache = DiscoveryCache(cache_file)
+        data = cache.load()
 
-        assert state["apps"]["test-app"]["known_version"] == "1.2.3"
+        assert data["apps"]["test-app"]["known_version"] == "1.2.3"
 
     def test_load_corrupted_file_creates_backup(self, tmp_path):
-        """Test that corrupted file is backed up and replaced."""
-        state_file = tmp_path / "state.json"
-        state_file.write_text("corrupted JSON{{{", encoding="utf-8")
+        """Tests that corrupted file is backed up and replaced."""
+        cache_file = tmp_path / "discovery.json"
+        cache_file.write_text("corrupted JSON{{{", encoding="utf-8")
 
-        tracker = StateTracker(state_file)
+        cache = DiscoveryCache(cache_file)
 
-        with pytest.raises(PackagingError, match="Corrupted state file"):
-            tracker.load()
+        with pytest.raises(PackagingError, match="Corrupted cache file"):
+            cache.load()
 
         # Should create backup
-        backup_file = tmp_path / "state.json.backup"
+        backup_file = tmp_path / "discovery.json.backup"
         assert backup_file.exists()
         assert backup_file.read_text(encoding="utf-8") == "corrupted JSON{{{"
 
-        # Should create new clean state file
-        assert state_file.exists()
-        new_state = load_state(state_file)
-        assert "apps" in new_state
+        # Should create new clean cache file
+        assert cache_file.exists()
+        new_data = load_cache(cache_file)
+        assert "apps" in new_data
 
     def test_save_updates_timestamp(self, tmp_path):
-        """Test that save updates last_updated timestamp."""
-        state_file = tmp_path / "state.json"
-        tracker = StateTracker(state_file)
-        tracker.state = create_default_state()
+        """Tests that save updates last_updated timestamp."""
+        cache_file = tmp_path / "discovery.json"
+        cache = DiscoveryCache(cache_file)
+        cache.data = create_default_cache()
 
-        tracker.save()
+        cache.save()
 
-        loaded = load_state(state_file)
+        loaded = load_cache(cache_file)
         assert "last_updated" in loaded["metadata"]
 
     def test_get_cache_existing(self, tmp_path):
-        """Test getting cache for existing recipe."""
-        state_file = tmp_path / "state.json"
-        tracker = StateTracker(state_file)
-        tracker.state = {
+        """Tests getting cache entry for existing recipe."""
+        cache_file = tmp_path / "discovery.json"
+        cache = DiscoveryCache(cache_file)
+        cache.data = {
             "metadata": {},
             "apps": {
                 "test-app": {
@@ -184,30 +195,30 @@ class TestStateTracker:
             },
         }
 
-        cache = tracker.get_cache("test-app")
+        entry = cache.get_cache("test-app")
 
-        assert cache is not None
-        assert cache["known_version"] == "1.2.3"
-        assert cache["etag"] == 'W/"abc123"'
-        assert cache["url"] == "https://vendor.com/app.msi"
+        assert entry is not None
+        assert entry["known_version"] == "1.2.3"
+        assert entry["etag"] == 'W/"abc123"'
+        assert entry["url"] == "https://vendor.com/app.msi"
 
     def test_get_cache_missing(self, tmp_path):
-        """Test getting cache for non-existent recipe returns None."""
-        state_file = tmp_path / "state.json"
-        tracker = StateTracker(state_file)
-        tracker.state = {"metadata": {}, "apps": {}}
+        """Tests getting cache entry for non-existent recipe returns None."""
+        cache_file = tmp_path / "discovery.json"
+        cache = DiscoveryCache(cache_file)
+        cache.data = {"metadata": {}, "apps": {}}
 
-        cache = tracker.get_cache("nonexistent-app")
+        entry = cache.get_cache("nonexistent-app")
 
-        assert cache is None
+        assert entry is None
 
     def test_update_cache(self, tmp_path):
-        """Test updating cache for a recipe."""
-        state_file = tmp_path / "state.json"
-        tracker = StateTracker(state_file)
-        tracker.state = create_default_state()
+        """Tests updating cache entry for a recipe."""
+        cache_file = tmp_path / "discovery.json"
+        cache = DiscoveryCache(cache_file)
+        cache.data = create_default_cache()
 
-        tracker.update_cache(
+        cache.update_cache(
             recipe_id="test-app",
             url="https://vendor.com/file.msi",
             sha256="abc123",
@@ -217,41 +228,233 @@ class TestStateTracker:
             strategy="url_download",
         )
 
-        cache = tracker.get_cache("test-app")
-        assert cache["known_version"] == "2.0.0"
-        assert cache["url"] == "https://vendor.com/file.msi"
-        assert cache["etag"] == 'W/"xyz789"'
-        assert cache["last_modified"] == "Mon, 28 Oct 2024 10:00:00 GMT"
-        assert cache["sha256"] == "abc123"
-        assert cache["strategy"] == "url_download"
+        entry = cache.get_cache("test-app")
+        assert entry["known_version"] == "2.0.0"
+        assert entry["url"] == "https://vendor.com/file.msi"
+        assert entry["etag"] == 'W/"xyz789"'
+        assert entry["last_modified"] == "Mon, 28 Oct 2024 10:00:00 GMT"
+        assert entry["sha256"] == "abc123"
+        assert entry["strategy"] == "url_download"
 
     def test_has_version_changed_true(self, tmp_path):
-        """Test version change detection when version differs."""
-        state_file = tmp_path / "state.json"
-        tracker = StateTracker(state_file)
-        tracker.state = {
+        """Tests version change detection when version differs."""
+        cache_file = tmp_path / "discovery.json"
+        cache = DiscoveryCache(cache_file)
+        cache.data = {
             "metadata": {},
             "apps": {"test-app": {"known_version": "1.0.0"}},
         }
 
-        assert tracker.has_version_changed("test-app", "2.0.0") is True
+        assert cache.has_version_changed("test-app", "2.0.0") is True
 
     def test_has_version_changed_false(self, tmp_path):
-        """Test version change detection when version same."""
-        state_file = tmp_path / "state.json"
-        tracker = StateTracker(state_file)
-        tracker.state = {
+        """Tests version change detection when version same."""
+        cache_file = tmp_path / "discovery.json"
+        cache = DiscoveryCache(cache_file)
+        cache.data = {
             "metadata": {},
             "apps": {"test-app": {"known_version": "1.0.0"}},
         }
 
-        assert tracker.has_version_changed("test-app", "1.0.0") is False
+        assert cache.has_version_changed("test-app", "1.0.0") is False
 
     def test_has_version_changed_no_cache(self, tmp_path):
-        """Test version change detection with no cached version."""
-        state_file = tmp_path / "state.json"
-        tracker = StateTracker(state_file)
-        tracker.state = {"metadata": {}, "apps": {}}
+        """Tests version change detection with no cached version."""
+        cache_file = tmp_path / "discovery.json"
+        cache = DiscoveryCache(cache_file)
+        cache.data = {"metadata": {}, "apps": {}}
 
         # No cache means version changed
-        assert tracker.has_version_changed("test-app", "1.0.0") is True
+        assert cache.has_version_changed("test-app", "1.0.0") is True
+
+
+class TestDeploymentStateFiles:
+    """Tests for per-app deployment state persistence."""
+
+    def test_deployment_state_path(self, tmp_path):
+        """Tests that the state path is derived from the recipe id."""
+        path = deployment_state_path(tmp_path / "deployment", "napt-chrome")
+
+        assert path == tmp_path / "deployment" / "napt-chrome.json"
+
+    def test_create_default_deployment_state(self):
+        """Tests that the default structure has all empty sections."""
+        state = create_default_deployment_state()
+
+        assert state["deployed"] is None
+        assert state["pending"] is None
+        assert state["rings"] == {}
+        assert state["retained"] == []
+
+    def test_load_missing_file_returns_default(self, tmp_path):
+        """Tests that a missing file loads as default state without creating it."""
+        state_path = tmp_path / "deployment" / "napt-chrome.json"
+
+        state = load_deployment_state(state_path)
+
+        assert state == create_default_deployment_state()
+        assert not state_path.exists()
+
+    def test_save_and_load_round_trip(self, tmp_path):
+        """Tests round-trip save and load."""
+        state_path = tmp_path / "deployment" / "napt-chrome.json"
+        state = create_default_deployment_state()
+        state["pending"] = {
+            "version": "130.0.0",
+            "sha256": "abc123",
+            "url": "https://dl.google.com/chrome.msi",
+        }
+
+        save_deployment_state(state, state_path)
+        loaded = load_deployment_state(state_path)
+
+        assert loaded == state
+
+    def test_load_corrupted_file_raises_config_error(self, tmp_path):
+        """Tests that a corrupted file raises instead of being replaced."""
+        state_path = tmp_path / "napt-chrome.json"
+        state_path.write_text("not JSON{{{", encoding="utf-8")
+
+        with pytest.raises(ConfigError, match="Corrupted deployment state"):
+            load_deployment_state(state_path)
+
+        # The corrupted file must be left untouched (never silently replaced).
+        assert state_path.read_text(encoding="utf-8") == "not JSON{{{"
+
+    def test_save_is_deterministic(self, tmp_path):
+        """Tests that logically identical state produces byte-identical files."""
+        path_a = tmp_path / "a.json"
+        path_b = tmp_path / "b.json"
+
+        state_a = create_default_deployment_state()
+        state_a["pending"] = {
+            "version": "1.0.0",
+            "sha256": "abc",
+            "url": "https://vendor.com/app.msi",
+        }
+        # Same logical content, different key insertion order.
+        state_b = {
+            "retained": [],
+            "rings": {},
+            "pending": {
+                "url": "https://vendor.com/app.msi",
+                "sha256": "abc",
+                "version": "1.0.0",
+            },
+            "deployed": None,
+        }
+
+        save_deployment_state(state_a, path_a)
+        save_deployment_state(state_b, path_b)
+
+        assert path_a.read_bytes() == path_b.read_bytes()
+
+    def test_save_twice_is_byte_identical(self, tmp_path):
+        """Tests that re-saving unchanged state does not alter the file."""
+        state_path = tmp_path / "napt-chrome.json"
+        state = create_default_deployment_state()
+        state["pending"] = {"version": "1.0.0", "sha256": "abc", "url": "https://x"}
+
+        save_deployment_state(state, state_path)
+        first = state_path.read_bytes()
+        save_deployment_state(state, state_path)
+
+        assert state_path.read_bytes() == first
+
+
+class TestRecordPending:
+    """Tests for pending release recording (single slot, newest wins)."""
+
+    def test_first_discovery_is_recorded(self):
+        """Tests that a release is recorded when nothing is deployed or pending."""
+        state = create_default_deployment_state()
+
+        action = record_pending(
+            state, version="1.0.0", sha256="aaa", url="https://vendor.com/1.msi"
+        )
+
+        assert action == "recorded"
+        assert state["pending"] == {
+            "version": "1.0.0",
+            "sha256": "aaa",
+            "url": "https://vendor.com/1.msi",
+        }
+
+    def test_rerun_with_same_release_is_noop(self):
+        """Tests that re-discovering the pending release changes nothing."""
+        state = create_default_deployment_state()
+        record_pending(state, version="1.0.0", sha256="aaa", url="https://x/1.msi")
+
+        action = record_pending(
+            state, version="1.0.0", sha256="aaa", url="https://x/1.msi"
+        )
+
+        assert action is None
+        assert state["pending"]["version"] == "1.0.0"
+
+    def test_newer_release_replaces_pending(self):
+        """Tests that a newer discovery replaces an unpublished candidate."""
+        state = create_default_deployment_state()
+        record_pending(state, version="1.0.0", sha256="aaa", url="https://x/1.msi")
+
+        action = record_pending(
+            state, version="2.0.0", sha256="bbb", url="https://x/2.msi"
+        )
+
+        assert action == "replaced"
+        assert state["pending"] == {
+            "version": "2.0.0",
+            "sha256": "bbb",
+            "url": "https://x/2.msi",
+        }
+
+    def test_deployed_release_is_not_recorded(self):
+        """Tests that discovering the deployed release records nothing."""
+        state = create_default_deployment_state()
+        state["deployed"] = {"version": "1.0.0", "sha256": "aaa"}
+
+        action = record_pending(
+            state, version="1.0.0", sha256="aaa", url="https://x/1.msi"
+        )
+
+        assert action is None
+        assert state["pending"] is None
+
+    def test_rollback_to_deployed_clears_pending(self):
+        """Tests that pending is cleared when the vendor serves the deployed release."""
+        state = create_default_deployment_state()
+        state["deployed"] = {"version": "1.0.0", "sha256": "aaa"}
+        record_pending(state, version="2.0.0", sha256="bbb", url="https://x/2.msi")
+
+        action = record_pending(
+            state, version="1.0.0", sha256="aaa", url="https://x/1.msi"
+        )
+
+        assert action == "cleared"
+        assert state["pending"] is None
+
+    def test_same_version_different_binary_is_new(self):
+        """Tests that identity is the hash, not the version string."""
+        state = create_default_deployment_state()
+        state["deployed"] = {"version": "1.0.0", "sha256": "aaa"}
+
+        action = record_pending(
+            state, version="1.0.0", sha256="zzz", url="https://x/1.msi"
+        )
+
+        assert action == "recorded"
+        assert state["pending"]["sha256"] == "zzz"
+
+    def test_newer_release_supersedes_pending_over_deployed(self):
+        """Tests the full flow: deployed, pending, then an even newer release."""
+        state = create_default_deployment_state()
+        state["deployed"] = {"version": "1.0.0", "sha256": "aaa"}
+        record_pending(state, version="2.0.0", sha256="bbb", url="https://x/2.msi")
+
+        action = record_pending(
+            state, version="3.0.0", sha256="ccc", url="https://x/3.msi"
+        )
+
+        assert action == "replaced"
+        assert state["pending"]["version"] == "3.0.0"
+        assert state["deployed"]["version"] == "1.0.0"

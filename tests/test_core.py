@@ -153,13 +153,16 @@ class TestVersionFirstFastPath:
         with requests_mock.Mocker() as m:
             m.get("https://example.com/download.html", text=html_content)
 
-            with patch("napt.discovery.manager.load_state") as mock_load_state:
-                mock_load_state.return_value = state
+            with patch("napt.discovery.manager.load_cache") as mock_load_cache:
+                mock_load_cache.return_value = state
 
-                with patch("napt.discovery.manager.save_state"):
+                with patch("napt.discovery.manager.save_cache"):
                     with patch("napt.discovery.base.download_file") as mock_download:
                         result = discover_recipe(
-                            recipe_path, tmp_test_dir, state_file=Path("state.json")
+                            recipe_path,
+                            tmp_test_dir,
+                            cache_file=Path("state.json"),
+                            state_dir=tmp_test_dir / "state",
                         )
 
                         # Verify download was NOT called (fast path)
@@ -211,10 +214,10 @@ class TestVersionFirstFastPath:
         with requests_mock.Mocker() as m:
             m.get("https://example.com/download.html", text=html_content)
 
-            with patch("napt.discovery.manager.load_state") as mock_load_state:
-                mock_load_state.return_value = state
+            with patch("napt.discovery.manager.load_cache") as mock_load_cache:
+                mock_load_cache.return_value = state
 
-                with patch("napt.discovery.manager.save_state"):
+                with patch("napt.discovery.manager.save_cache"):
                     with patch("napt.discovery.base.download_file") as mock_download:
                         from napt.results import DownloadResult
 
@@ -225,7 +228,10 @@ class TestVersionFirstFastPath:
                         )
 
                         result = discover_recipe(
-                            recipe_path, tmp_test_dir, state_file=Path("state.json")
+                            recipe_path,
+                            tmp_test_dir,
+                            cache_file=Path("state.json"),
+                            state_dir=tmp_test_dir / "state",
                         )
 
                         # Verify download WAS called (version changed)
@@ -284,12 +290,15 @@ class TestVersionFirstFastPath:
                 headers={"Content-Length": str(len(fake_content))},
             )
 
-            with patch("napt.discovery.manager.load_state") as mock_load_state:
-                mock_load_state.return_value = state
+            with patch("napt.discovery.manager.load_cache") as mock_load_cache:
+                mock_load_cache.return_value = state
 
-                with patch("napt.discovery.manager.save_state"):
+                with patch("napt.discovery.manager.save_cache"):
                     result = discover_recipe(
-                        recipe_path, tmp_test_dir, state_file=Path("state.json")
+                        recipe_path,
+                        tmp_test_dir,
+                        cache_file=Path("state.json"),
+                        state_dir=tmp_test_dir / "state",
                     )
 
         # Verify result and that file was downloaded into app-scoped subdirectory

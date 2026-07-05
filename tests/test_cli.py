@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import os
-from pathlib import Path
 import time
 from unittest.mock import MagicMock, patch
 
@@ -131,7 +130,8 @@ class TestCmdDiscover:
             _args(
                 recipe=str(tmp_path / "nonexistent.yaml"),
                 output_dir=None,
-                state_file=Path("state/versions.json"),
+                cache_file=None,
+                state_dir=None,
                 stateless=False,
             )
         )
@@ -157,7 +157,8 @@ class TestCmdDiscover:
                 _args(
                     recipe=str(recipe),
                     output_dir=None,
-                    state_file=Path("state/versions.json"),
+                    cache_file=None,
+                    state_dir=None,
                     stateless=False,
                 )
             )
@@ -176,7 +177,8 @@ class TestCmdDiscover:
                 _args(
                     recipe=str(recipe),
                     output_dir=None,
-                    state_file=Path("state/versions.json"),
+                    cache_file=None,
+                    state_dir=None,
                     stateless=False,
                 )
             )
@@ -193,15 +195,16 @@ class TestCmdDiscover:
                     _args(
                         recipe=str(recipe),
                         output_dir=None,
-                        state_file=Path("state/versions.json"),
+                        cache_file=None,
+                        state_dir=None,
                         stateless=False,
                     )
                 )
                 == 1
             )
 
-    def test_stateless_passes_none_state_file(self, tmp_path):
-        """Tests that --stateless causes state_file=None to be passed."""
+    def test_stateless_flag_passed_through(self, tmp_path):
+        """Tests that --stateless is passed to discover_recipe."""
         recipe = tmp_path / "recipe.yaml"
         recipe.touch()
         mock_result = _mock_result(
@@ -219,12 +222,15 @@ class TestCmdDiscover:
                 _args(
                     recipe=str(recipe),
                     output_dir=None,
-                    state_file=Path("state/versions.json"),
+                    cache_file=None,
+                    state_dir=None,
                     stateless=True,
                 )
             )
         _, kwargs = mock.call_args
-        assert kwargs["state_file"] is None
+        assert kwargs["stateless"] is True
+        assert kwargs["cache_file"] is None
+        assert kwargs["state_dir"] is None
 
     def test_output_dir_passed_through(self, tmp_path):
         """Tests that --output-dir is resolved and passed to discover_recipe."""
@@ -246,7 +252,8 @@ class TestCmdDiscover:
                 _args(
                     recipe=str(recipe),
                     output_dir=str(custom_output),
-                    state_file=Path("state/versions.json"),
+                    cache_file=None,
+                    state_dir=None,
                     stateless=False,
                 )
             )

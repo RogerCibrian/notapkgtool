@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Deployment state files** - `napt discover` records each discovered
+    release in `state/deployment/{id}.json` as a pending publication
+    candidate. One file per app; the newest discovery wins
+
+### Changed
+
+- **BREAKING: Discovery cache moved** - `state/versions.json` is now
+    `cache/discovery.json`, and `napt discover --state-file` was renamed
+    to `--cache-file`. Delete the old file; the cache rebuilds on the
+    next run
+    - New `directories.cache` and `directories.state` settings
+    - `--stateless` also skips deployment state writes
+    - `napt init` additionally creates `state/deployment/`
+
 ## [0.6.0] - 2026-07-04
 
 ### Added
