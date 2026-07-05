@@ -26,7 +26,7 @@ This roadmap is a living document showing potential future directions for NAPT. 
 | Recipe Schema Redesign | ✅ Completed | User-Facing | High | High |
 | Microsoft Intune Upload | ✅ Completed | User-Facing | High | Very High |
 | `napt auth setup` Command | 💡 Idea | User-Facing | Low | High |
-| Deployment Wave Management | 🔬 Investigating | User-Facing | Very High | High |
+| Deployment Wave Management | 🚧 In Progress | User-Facing | Very High | High |
 | Pre/Post Install/Uninstall Script Support | 💡 Idea | User-Facing | Low | Medium |
 | Enhanced CLI Help Menu | 💡 Idea | User-Facing | Low | Medium |
 | Intune App Categorization & Scope Tags | 💡 Idea | User-Facing | Medium | Medium |
@@ -43,7 +43,7 @@ This roadmap is a living document showing potential future directions for NAPT. 
 **Summary:**
 
 - ✅ **Completed**: 3
-- 🔬 **Investigating**: 1
+- 🚧 **In Progress**: 1
 - 💡 **Ideas**: 13
 - **Total**: 17 features
 
@@ -51,30 +51,76 @@ This roadmap is a living document showing potential future directions for NAPT. 
 
 ## Active Work
 
-### Investigating 🔬
+### In Progress 🚧
 
 #### Deployment Wave Management
 
-**Status**: 🔬 Investigating
+**Status**: 🚧 In Progress
 **Complexity**: Very High (5-10 days)
 **Value**: High
 
-**Description**: Phased deployment with rings (Pilot → Production) and gradual
-rollout.
+**Description**: Ring-based promotion of published apps via a new
+`napt promote` command with Terraform-style `plan`/`apply` subcommands.
+Apps upload unassigned; promotion advances the newest version through an
+ordered list of rings (Microsoft Entra ID group assignments), replacing
+whatever version each ring currently holds.
+
+Agreed design:
+
+- **Ring model**: A ring is a named set of groups plus `promote_after_days`.
+  Each ring holds at most one version of an app's Update entry — the newest
+  version that has reached it.
+  The install entry gets static assignments (set once); rings control update
+  velocity only.
+- **Plan/apply split**: `napt promote plan` is a pure function of
+  (deployment state, config, clock) and writes a reviewable
+  `state/plan.json`; `napt promote apply` executes it with per-entry
+  validate-then-act, making both safe to re-run.
+- **State split**: The discovery cache moves to `cache/discovery.json`
+  (disposable).
+  Authoritative per-app deployment state lives in
+  `state/deployment/<recipe-id>.json` (deployed, pending, rings, retained),
+  serialized deterministically for clean diffs.
+- **Identity and ownership**: Uploads stamp `napt/v1 id=<recipe>
+  sha256=<hash>` into the Intune notes field; `recipe_id + sha256` is the
+  identity key.
+  The `intune.notes` recipe field is removed — the field is reserved for
+  NAPT.
+- **Approval binding**: Upload verifies the installer hash against the
+  approved pending entry, so what a reviewer approved is byte-for-byte what
+  ships.
+- **Idempotent upload**: Reconcile-before-act — adopt an existing stamped
+  app instead of creating a duplicate.
+- **Newest wins**: The pending slot holds one candidate; a newer discovery
+  replaces an unpublished one.
+- **Retention**: Displaced versions are kept per `retain_versions` (default
+  1) for instant rollback, then deleted; only stamped apps are ever touched.
+- **Drift**: Manual admin changes are warned about, never reverted.
+- **GitOps-friendly, not git-aware**: Deterministic state files, detailed
+  exit codes, and reference CI workflows in docs; NAPT itself performs no
+  git or PR operations.
 
 **Benefits**:
 
 - Enables controlled, staged deployments to reduce risk
 - Supports ring-based deployment (Pilot, UAT, Production)
-- Allows gradual rollout with percentage-based scheduling
 - Provides rollback capabilities for failed deployments
+- Lets orgs gate publishes and promotions through PR review when state files
+  are committed to git
 - Useful for organizations requiring careful change management
 
 **Dependencies**:
 
-- Requires Intune upload implementation first
-- Requires Graph API for assignment groups
-- May need separate monitoring/alerting
+- Requires Graph API assignment endpoints and `Group.Read.All` for group
+  name resolution
+- Delivered across eight PRs: state split, upload provenance and hash gate,
+  idempotent upload, deployment config and assignment client, `promote plan`
+  and `napt status`, `promote apply` with retention, drift detection, GitOps
+  docs and schema versioning
+
+**Related**: Health-gated promotion (block on install failure rates) and
+native Intune supersedence are deliberate follow-ups, not part of this
+iteration.
 
 ---
 
