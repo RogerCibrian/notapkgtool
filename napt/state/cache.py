@@ -73,6 +73,19 @@ from napt import __version__
 from napt.exceptions import PackagingError
 
 
+def cache_file_path(config: dict[str, Any]) -> Path:
+    """Returns the discovery cache file path from merged configuration.
+
+    Args:
+        config: Merged configuration containing ``directories.cache``.
+
+    Returns:
+        Path to the discovery cache file (``<directories.cache>/discovery.json``).
+
+    """
+    return Path(config["directories"]["cache"]) / "discovery.json"
+
+
 class DiscoveryCache:
     """Manages the discovery cache with automatic persistence.
 

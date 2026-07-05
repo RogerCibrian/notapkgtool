@@ -61,6 +61,7 @@ from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
 from napt.results import DiscoverResult
 from napt.state import (
+    cache_file_path,
     deployment_state_path,
     load_cache,
     load_deployment_state,
@@ -107,10 +108,10 @@ def discover_recipe(
 
     Raises:
         ConfigError: On missing or invalid configuration, including
-            an unknown ``discovery.strategy`` value or a corrupted
-            deployment state file.
+            an unknown ``discovery.strategy`` value.
         NetworkError: On download or version-extraction failures from
             either flow.
+        PackagingError: On a corrupted deployment state file.
 
     """
     logger = get_global_logger()
@@ -120,7 +121,7 @@ def discover_recipe(
     if output_dir is None:
         output_dir = Path(config["directories"]["discover"])
     if cache_file is None:
-        cache_file = Path(config["directories"]["cache"]) / "discovery.json"
+        cache_file = cache_file_path(config)
     if state_dir is None:
         state_dir = Path(config["directories"]["state"]) / "deployment"
 
@@ -252,13 +253,7 @@ def _record_pending_release(
     result: StrategyResult,
     logger: Any,
 ) -> None:
-    """Records the discovered release in the app's deployment state.
-
-    Updates the pending publication candidate when the discovered release
-    differs from the deployed version (single slot, newest wins). Unlike
-    the discovery cache, deployment state failures are not swallowed —
-    a corrupted authoritative file must surface to the caller.
-    """
+    """Records the discovered release as the app's pending candidate."""
     state_path = deployment_state_path(state_dir, app_id)
     state = load_deployment_state(state_path)
 

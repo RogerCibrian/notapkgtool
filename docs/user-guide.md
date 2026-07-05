@@ -673,6 +673,8 @@ to its own:
 | Command | Flag | Purpose | Config key | Built-in default |
 |---------|------|---------|-----------|-----------------|
 | `napt discover` | `--output-dir` | Where to save downloaded installers | `directories.discover` | `downloads` |
+| `napt discover` | `--cache-file` | Discovery cache file (`<dir>/discovery.json`) | `directories.cache` | `cache` |
+| `napt discover` | `--state-dir` | Per-app deployment state (`<dir>/deployment/`) | `directories.state` | `state` |
 | `napt build` | `--downloads-dir` | Where to find the installer | `directories.discover` | `downloads` |
 | `napt build` | `--output-dir` | Where to save builds | `directories.build` | `builds` |
 | `napt package` | `--builds-dir` | Where to find the build | `directories.build` | `builds` |
@@ -691,10 +693,12 @@ To change the defaults org-wide, add to `defaults/org.yaml`:
 
 ```yaml
 directories:
-  discover: "cache/downloads"   # used by both discover and build
-  build: "artifacts/builds"     # used by both build and package
+  discover: "artifacts/downloads"  # used by both discover and build
+  build: "artifacts/builds"        # used by both build and package
   package: "artifacts/packages"
-  icons: "artifacts/icons"      # written by build, read by upload
+  icons: "artifacts/icons"         # written by build, read by upload
+  cache: "artifacts/cache"         # discovery cache (disposable)
+  state: "deployment-state"        # per-app deployment state (authoritative)
 ```
 
 Any CLI flag still overrides the config value for that single run:

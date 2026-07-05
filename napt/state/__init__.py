@@ -52,7 +52,13 @@ Example:
 
 """
 
-from .cache import DiscoveryCache, create_default_cache, load_cache, save_cache
+from .cache import (
+    DiscoveryCache,
+    cache_file_path,
+    create_default_cache,
+    load_cache,
+    save_cache,
+)
 from .deployment import (
     create_default_deployment_state,
     deployment_state_path,
@@ -63,6 +69,7 @@ from .deployment import (
 
 __all__ = [
     "DiscoveryCache",
+    "cache_file_path",
     "create_default_cache",
     "create_default_deployment_state",
     "deployment_state_path",

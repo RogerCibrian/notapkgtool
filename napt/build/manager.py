@@ -1261,6 +1261,7 @@ def build_package(
         "update_only" generates detection and requirements.
     """
     from napt.logging import get_global_logger
+    from napt.state import cache_file_path
 
     logger = get_global_logger()
     # Load configuration
@@ -1279,7 +1280,7 @@ def build_package(
 
     # Find installer file
     logger.step(2, 8, "Finding installer...")
-    cache_file = Path(config["directories"]["cache"]) / "discovery.json"
+    cache_file = cache_file_path(config)
     installer_file = _find_installer_file(downloads_dir, config, cache_file)
 
     # Extract version from installer or cache (filesystem is truth)
