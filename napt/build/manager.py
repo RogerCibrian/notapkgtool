@@ -41,6 +41,7 @@ Example:
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -810,6 +811,23 @@ def _generate_requirements_script(
     return requirements_script_path
 
 
+def _sha256_file(path: Path) -> str:
+    """Computes the SHA-256 hex digest of a file with chunked reads.
+
+    Args:
+        path: File to hash.
+
+    Returns:
+        SHA-256 hex digest string.
+
+    """
+    sha = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            sha.update(chunk)
+    return sha.hexdigest()
+
+
 def _write_build_manifest(
     build_dir: Path,
     app_id: str,
@@ -817,6 +835,7 @@ def _write_build_manifest(
     version: str,
     build_types: str,
     architecture: str,
+    installer_sha256: str,
     detection_script_path: Path | None,
     requirements_script_path: Path | None,
 ) -> Path:
@@ -835,6 +854,8 @@ def _write_build_manifest(
         architecture: Resolved installer architecture ("x86", "x64", "arm64", "any").
             Auto-detected from MSI Template for MSI installers; from recipe config
             for non-MSI installers.
+        installer_sha256: SHA-256 hex digest of the source installer file,
+            carried through so 'napt upload' can verify provenance.
         detection_script_path: Path to detection script, or None if not generated.
         requirements_script_path: Path to requirements script, or None if not generated.
 
@@ -856,6 +877,7 @@ def _write_build_manifest(
         "version": version,
         "win32_build_types": build_types,
         "architecture": architecture,
+        "installer_sha256": installer_sha256,
     }
 
     # Add script paths (relative to version directory for portability)
@@ -1393,6 +1415,7 @@ def build_package(
         version=version,
         build_types=build_types,
         architecture=architecture,
+        installer_sha256=_sha256_file(installer_file),
         detection_script_path=detection_script_path,
         requirements_script_path=requirements_script_path,
     )

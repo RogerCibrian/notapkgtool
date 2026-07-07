@@ -241,7 +241,11 @@ The upload process publishes a packaged app to Microsoft Intune via the
 Graph API. Run `napt package` before uploading.
 
 1. **Locate Package** - Scans `packages/{app_id}/` for the versioned subdirectory
-   created by `napt package` and reads `Invoke-AppDeployToolkit.intunewin` from it
+   created by `napt package` and reads `Invoke-AppDeployToolkit.intunewin` from it.
+   Verifies the package's installer hash (from the build manifest) against the
+   pending release in the app's deployment state — a mismatch aborts the upload,
+   so what was recorded at discovery is byte-for-byte what ships.
+   When no pending release is recorded, the upload proceeds with a warning
 2. **Authenticate** - Tries three credential methods in order (see [Authentication](#authentication) below)
 3. **Parse Package Metadata** - Reads encryption metadata from `Detection.xml` inside the `.intunewin` ZIP
 4–6. **Create, Upload, Commit (install entry)** - Creates the Win32 app record
@@ -254,6 +258,13 @@ Graph API. Run `napt package` before uploading.
    Skipped when `build_types` is `"app_only"`.
    When `build_types` is `"both"` (default), this runs after the install entry
    is fully committed
+
+Each created app entry carries a provenance stamp in its Intune notes field:
+`napt/v1 id=<recipe-id> sha256=<installer-hash>`.
+The stamp marks the app as NAPT-managed and ties it to the exact binary it was
+built from; the notes field is reserved for NAPT and is not recipe-configurable.
+On success, the app's deployment state records the published version, hash,
+and both Intune app IDs, and a matching pending slot is cleared.
 
 **Output**: Intune Win32 App ID (install entry), Intune Win32 Update ID (update
 entry), app name, version, and package path. Each ID is omitted when its

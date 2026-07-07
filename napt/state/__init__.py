@@ -63,6 +63,7 @@ from .deployment import (
     create_default_deployment_state,
     deployment_state_path,
     load_deployment_state,
+    record_deployed,
     record_pending,
     save_deployment_state,
 )
@@ -75,6 +76,7 @@ __all__ = [
     "deployment_state_path",
     "load_cache",
     "load_deployment_state",
+    "record_deployed",
     "record_pending",
     "save_cache",
     "save_deployment_state",

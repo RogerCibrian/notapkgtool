@@ -12,9 +12,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Deployment state files** - `napt discover` records each discovered
     release in `state/deployment/{id}.json` as a pending publication
     candidate. One file per app; the newest discovery wins
+- **Upload provenance** - `napt upload` stamps each Intune app entry's
+    notes field with `napt/v1 id=<recipe-id> sha256=<hash>` and records
+    the published version, hash, and Intune app IDs in deployment state
+- **Installer hash verification** - `napt upload` refuses to publish a
+    package whose installer hash does not match the pending release
+    recorded at discovery, so what was approved is exactly what ships
 
 ### Changed
 
+- **BREAKING: `intune.notes` removed** - The Intune notes field is
+    reserved for NAPT's provenance stamp. Move any notes content to
+    `intune.description` or `intune.owner`
 - **BREAKING: Discovery cache moved** - `state/versions.json` is now
     `cache/discovery.json`, and `napt discover --state-file` was renamed
     to `--cache-file`. Delete the old file; the cache rebuilds on the

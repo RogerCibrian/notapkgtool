@@ -279,6 +279,7 @@ class TestWriteBuildManifest:
             version="1.0.0",
             build_types="both",
             architecture="x64",
+            installer_sha256="a" * 64,
             detection_script_path=detection_path,
             requirements_script_path=requirements_path,
         )
@@ -293,6 +294,7 @@ class TestWriteBuildManifest:
         assert manifest["version"] == "1.0.0"
         assert manifest["win32_build_types"] == "both"
         assert manifest["architecture"] == "x64"
+        assert manifest["installer_sha256"] == "a" * 64
         assert manifest["detection_script_path"] == "Test-App_1.0.0-Detection.ps1"
         assert manifest["requirements_script_path"] == "Test-App_1.0.0-Requirements.ps1"
 
@@ -312,6 +314,7 @@ class TestWriteBuildManifest:
             version="1.0.0",
             build_types="app_only",
             architecture="x64",
+            installer_sha256="a" * 64,
             detection_script_path=detection_path,
             requirements_script_path=None,  # No requirements script for app_only
         )
@@ -340,6 +343,7 @@ class TestWriteBuildManifest:
             version="1.0.0",
             build_types="update_only",
             architecture="x64",
+            installer_sha256="a" * 64,
             detection_script_path=detection_path,  # Detection always generated
             requirements_script_path=requirements_path,
         )
@@ -366,6 +370,7 @@ class TestWriteBuildManifest:
             version="131.0.0",
             build_types="app_only",
             architecture="x64",
+            installer_sha256="a" * 64,
             detection_script_path=detection_path,
             requirements_script_path=None,
         )
@@ -392,6 +397,7 @@ class TestWriteBuildManifest:
             version="1.0.0",
             build_types="both",
             architecture="x64",
+            installer_sha256="a" * 64,
             detection_script_path=None,
             requirements_script_path=None,
         )

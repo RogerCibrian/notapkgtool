@@ -22,6 +22,7 @@ from napt.state import (
     deployment_state_path,
     load_cache,
     load_deployment_state,
+    record_deployed,
     record_pending,
     save_cache,
     save_deployment_state,
@@ -458,3 +459,66 @@ class TestRecordPending:
         assert action == "replaced"
         assert state["pending"]["version"] == "3.0.0"
         assert state["deployed"]["version"] == "1.0.0"
+
+
+class TestRecordDeployed:
+    """Tests for deployed release recording."""
+
+    def test_records_deployed_and_clears_matching_pending(self):
+        """Tests that publishing the pending release clears the slot."""
+        state = create_default_deployment_state()
+        record_pending(state, version="2.0.0", sha256="bbb", url="https://x/2.msi")
+
+        record_deployed(
+            state,
+            version="2.0.0",
+            sha256="bbb",
+            intune_app_id="app-1",
+            intune_update_app_id="update-1",
+        )
+
+        assert state["deployed"] == {
+            "version": "2.0.0",
+            "sha256": "bbb",
+            "intune_app_id": "app-1",
+            "intune_update_app_id": "update-1",
+        }
+        assert state["pending"] is None
+
+    def test_preserves_newer_pending(self):
+        """Tests that a pending release with a different hash is kept."""
+        state = create_default_deployment_state()
+        record_pending(state, version="3.0.0", sha256="ccc", url="https://x/3.msi")
+
+        record_deployed(
+            state,
+            version="2.0.0",
+            sha256="bbb",
+            intune_app_id="app-1",
+            intune_update_app_id=None,
+        )
+
+        assert state["deployed"]["version"] == "2.0.0"
+        assert state["pending"]["version"] == "3.0.0"
+
+    def test_replaces_previous_deployed(self):
+        """Tests that a new publication replaces the deployed section."""
+        state = create_default_deployment_state()
+        record_deployed(
+            state,
+            version="1.0.0",
+            sha256="aaa",
+            intune_app_id="a",
+            intune_update_app_id="b",
+        )
+
+        record_deployed(
+            state,
+            version="2.0.0",
+            sha256="bbb",
+            intune_app_id="c",
+            intune_update_app_id="d",
+        )
+
+        assert state["deployed"]["version"] == "2.0.0"
+        assert state["deployed"]["intune_app_id"] == "c"

@@ -41,9 +41,15 @@ from typing import Any
 
 from napt.build.icons import MAX_ICON_BYTES
 from napt.config import load_effective_config
-from napt.exceptions import ConfigError
+from napt.exceptions import ConfigError, PackagingError
 from napt.logging import get_global_logger
 from napt.results import UploadResult
+from napt.state import (
+    deployment_state_path,
+    load_deployment_state,
+    record_deployed,
+    save_deployment_state,
+)
 from napt.upload.auth import get_access_token
 from napt.upload.graph import (
     commit_content_version,
@@ -261,12 +267,59 @@ def _resolve_large_icon(config: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
+def _read_build_manifest(package_dir: Path) -> dict[str, Any]:
+    """Reads and validates the build manifest from a package directory.
+
+    Args:
+        package_dir: Versioned package directory containing
+            build-manifest.json (copied there by 'napt package').
+
+    Returns:
+        The parsed build manifest.
+
+    Raises:
+        ConfigError: If the manifest is missing, or its architecture or
+            installer_sha256 fields are absent or unrecognized. Run
+            'napt build' and 'napt package' to recreate the package.
+
+    """
+    manifest_path = package_dir / "build-manifest.json"
+    if not manifest_path.exists():
+        raise ConfigError(
+            f"Build manifest not found in {package_dir}. "
+            "Run 'napt package' to recreate the package."
+        )
+    manifest: dict[str, Any] = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    arch_raw: str = manifest.get("architecture") or ""
+    if not arch_raw:
+        raise ConfigError(
+            f"Architecture not found in build manifest {manifest_path}. "
+            "Run 'napt build' and 'napt package' to recreate the package."
+        )
+    if arch_raw not in _ARCH_MAP:
+        raise ConfigError(
+            f"Unrecognized architecture '{arch_raw}' in build manifest. "
+            f"Expected one of: {', '.join(_ARCH_MAP)}. "
+            "Run 'napt build' and 'napt package' to recreate the package."
+        )
+
+    if not manifest.get("installer_sha256"):
+        raise ConfigError(
+            f"installer_sha256 not found in build manifest {manifest_path}. "
+            "Run 'napt build' and 'napt package' to recreate the package."
+        )
+
+    return manifest
+
+
 def _build_app_metadata(
     config: dict[str, Any],
     recipe_path: Path,
     version: str,
     package_path: Path,
     build_types: str,
+    manifest: dict[str, Any],
     large_icon: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the Win32LobApp JSON payload for the Graph API.
@@ -276,6 +329,11 @@ def _build_app_metadata(
     Scripts are read from the package directory (copied there by 'napt package'),
     so this function does not access the builds directory.
 
+    The payload's notes field carries the NAPT provenance stamp
+    (``napt/v1 id=<recipe-id> sha256=<installer-hash>``), which marks the
+    app as NAPT-managed and ties it to the exact binary it was built from.
+    The field is reserved for NAPT and is not recipe-configurable.
+
     Args:
         config: Effective configuration dict from load_effective_config.
         recipe_path: Path to the recipe file (used to infer vendor/publisher).
@@ -284,6 +342,8 @@ def _build_app_metadata(
             (e.g., packages/napt-chrome/144.0.7559.110/Invoke-AppDeployToolkit.intunewin).
         build_types: Either "app_only" (install entry, detection script only) or
             "update_only" (update entry, detection + requirements scripts).
+        manifest: Parsed build manifest from
+            [_read_build_manifest][napt.upload.manager._read_build_manifest].
         large_icon: Resolved largeIcon mimeContent from
             [_resolve_large_icon][napt.upload.manager._resolve_large_icon],
             or None to omit the icon.
@@ -292,10 +352,9 @@ def _build_app_metadata(
         Dict ready to POST to the Graph API mobileApps endpoint.
 
     Raises:
-        ConfigError: If the build manifest is missing, the architecture field
-            is absent or unrecognized, the detection script is missing, or the
-            requirements script is missing when build_types is "update_only".
-            Run 'napt build' and 'napt package' to recreate the package.
+        ConfigError: If the detection script is missing, or the requirements
+            script is missing when build_types is "update_only". Run
+            'napt build' and 'napt package' to recreate the package.
 
     """
     logger = get_global_logger()
@@ -314,27 +373,7 @@ def _build_app_metadata(
     privacy_url: str = intune.get("privacy_url", "")
     info_url: str = intune.get("info_url", "")
 
-    # Read architecture from build manifest (written by napt build)
-    manifest_path = package_dir / "build-manifest.json"
-    if not manifest_path.exists():
-        raise ConfigError(
-            f"Build manifest not found in {package_dir}. "
-            "Run 'napt package' to recreate the package."
-        )
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    arch_raw: str = manifest.get("architecture") or ""
-    if not arch_raw:
-        raise ConfigError(
-            f"Architecture not found in build manifest {manifest_path}. "
-            "Run 'napt build' and 'napt package' to recreate the package."
-        )
-    if arch_raw not in _ARCH_MAP:
-        raise ConfigError(
-            f"Unrecognized architecture '{arch_raw}' in build manifest. "
-            f"Expected one of: {', '.join(_ARCH_MAP)}. "
-            "Run 'napt build' and 'napt package' to recreate the package."
-        )
-    allowed_architectures: str | None = _ARCH_MAP[arch_raw]
+    allowed_architectures: str | None = _ARCH_MAP[manifest["architecture"]]
 
     # Detection script (always required)
     detection_scripts = sorted(package_dir.glob("*-Detection.ps1"))
@@ -423,13 +462,17 @@ def _build_app_metadata(
         "uninstallCommandLine": uninstall_command,
     }
 
-    # Optional fields: developer, owner, notes
+    # Optional fields: developer, owner
     if intune.get("developer"):
         payload["developer"] = intune["developer"]
     if intune.get("owner"):
         payload["owner"] = intune["owner"]
-    if intune.get("notes"):
-        payload["notes"] = intune["notes"]
+
+    # Provenance stamp: marks the app as NAPT-managed and ties it to the
+    # exact binary it was built from. The notes field is reserved for NAPT.
+    payload["notes"] = (
+        f"napt/v1 id={config['id']} sha256={manifest['installer_sha256']}"
+    )
 
     # Optional: app icon (largeIcon), resolved once per upload
     if large_icon is not None:
@@ -524,6 +567,14 @@ def upload_package(recipe_path: Path) -> UploadResult:
     - CI/CD: set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID
     - Azure-hosted runners: assign a managed identity to the resource
 
+    Before any Graph call, the package's installer hash (from the build
+    manifest) is verified against the pending release recorded in the app's
+    deployment state, so what was recorded at discovery is byte-for-byte
+    what ships. A hash mismatch aborts the upload. When no pending release
+    is recorded, the upload proceeds with a warning. On success, the
+    deployment state records the published version, hash, and Intune app
+    IDs, and a matching pending slot is cleared.
+
     Args:
         recipe_path: Path to the recipe YAML file.
 
@@ -538,7 +589,9 @@ def upload_package(recipe_path: Path) -> UploadResult:
             Run 'napt package' to create or recreate the package.
         AuthError: If all Azure credential methods fail.
         NetworkError: If Graph API or Azure Blob Storage calls fail.
-        PackagingError: If the .intunewin file is malformed.
+        PackagingError: If the .intunewin file is malformed, or the
+            package's installer hash does not match the pending release
+            in deployment state.
 
     Example:
         Upload and print the resulting Intune app IDs:
@@ -573,6 +626,38 @@ def upload_package(recipe_path: Path) -> UploadResult:
     logger.verbose("UPLOAD", f"Package: {package_path}")
     logger.verbose("UPLOAD", f"Version: {version}")
 
+    manifest = _read_build_manifest(package_path.parent)
+    installer_sha256: str = manifest["installer_sha256"]
+
+    # Verify provenance against deployment state before any Graph call:
+    # what was recorded at discovery must be byte-for-byte what ships.
+    state_path = deployment_state_path(
+        Path(config["directories"]["state"]) / "deployment", app_id
+    )
+    state = load_deployment_state(state_path)
+    pending = state.get("pending")
+    if pending:
+        if pending.get("sha256") != installer_sha256:
+            raise PackagingError(
+                f"Installer hash mismatch for '{app_id}': the package was "
+                f"built from a different binary than the pending release "
+                f"recorded in {state_path}.\n"
+                f"  pending:  {pending.get('version')} "
+                f"(sha256 {pending.get('sha256')})\n"
+                f"  package:  {version} (sha256 {installer_sha256})\n"
+                "Re-run 'napt discover', 'napt build', and 'napt package' "
+                "so the package matches the recorded release."
+            )
+        logger.info(
+            "UPLOAD", f"Package matches pending release (sha256 {installer_sha256})"
+        )
+    else:
+        logger.warning(
+            "UPLOAD",
+            f"No pending release recorded for '{app_id}'; uploading "
+            "without provenance verification.",
+        )
+
     # Step 2: Authenticate
     logger.step(2, total_steps, "Authenticating with Azure...")
     access_token = get_access_token()
@@ -587,7 +672,7 @@ def upload_package(recipe_path: Path) -> UploadResult:
     if build_types in ("app_only", "both"):
         # Install entry: steps 4-6
         install_metadata = _build_app_metadata(
-            config, recipe_path, version, package_path, "app_only", large_icon
+            config, recipe_path, version, package_path, "app_only", manifest, large_icon
         )
         intune_app_id = _upload_single_app(
             access_token,
@@ -604,7 +689,13 @@ def upload_package(recipe_path: Path) -> UploadResult:
         # Update entry: steps 4-6 (single) or 7-9 (both)
         step_offset = 6 if build_types == "both" else 3
         update_metadata = _build_app_metadata(
-            config, recipe_path, version, package_path, "update_only", large_icon
+            config,
+            recipe_path,
+            version,
+            package_path,
+            "update_only",
+            manifest,
+            large_icon,
         )
         intune_update_app_id = _upload_single_app(
             access_token,
@@ -616,6 +707,18 @@ def upload_package(recipe_path: Path) -> UploadResult:
             step_commit=step_offset + 3,
             total_steps=total_steps,
         )
+
+    # Record the publication in deployment state: deployed version, hash,
+    # and Intune app IDs; a matching pending slot is cleared.
+    record_deployed(
+        state,
+        version=version,
+        sha256=installer_sha256,
+        intune_app_id=intune_app_id,
+        intune_update_app_id=intune_update_app_id,
+    )
+    save_deployment_state(state, state_path)
+    logger.info("STATE", f"Recorded deployed release {version} in {state_path}")
 
     logger.verbose("UPLOAD", "Upload complete")
 
