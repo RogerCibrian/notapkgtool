@@ -236,7 +236,9 @@ apiVersion: napt/v1
 #     - name: "production"
 #       groups: ["sg-intune-all-workstations"]
 #
-#   # Install entry assignment (used by upcoming napt promote).
+#   # Install entry assignment, applied by napt promote.
+#   # "All Users" and "All Devices" are Intune's built-in targets, not
+#   # Entra ID groups. No install assignment happens unless configured.
 #   install:
 #     intent: "available"  # available or required
 #     groups: ["All Users"]

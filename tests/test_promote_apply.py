@@ -95,7 +95,7 @@ def _write_state(
     if retained:
         state["retained"] = retained
     if install_assigned:
-        state["install_assigned"] = install_assigned
+        state["install_assigned"] = {"version": "prev", "sha256": install_assigned}
     path = deployment_state_path(tmp_path / "state" / "deployment", app_id)
     save_deployment_state(state, path)
     return path
@@ -417,9 +417,21 @@ class TestApplyInstallActions:
         assert len(summary["applied"]) == 1
         call = mocks["assign_app"].call_args
         assert call.args[1] == "install-new"
-        assert call.args[2][0]["intent"] == "available"
+        # "All Users" is Intune's built-in virtual target, not a group
+        assert call.args[2] == [
+            {
+                "@odata.type": "#microsoft.graph.mobileAppAssignment",
+                "intent": "available",
+                "target": {
+                    "@odata.type": (
+                        "#microsoft.graph.allLicensedUsersAssignmentTarget"
+                    ),
+                },
+            }
+        ]
+        mocks["resolve_group_id"].assert_not_called()
         state = load_deployment_state(state_path)
-        assert state["install_assigned"] == "b" * 64
+        assert state["install_assigned"] == {"version": "2.0.0", "sha256": "b" * 64}
 
     def test_displaces_previous_install_assignment(self, tmp_path):
         """Tests that the previous release's install entry loses the groups."""
@@ -430,8 +442,7 @@ class TestApplyInstallActions:
             "id": "x",
             "intent": "available",
             "target": {
-                "@odata.type": "#microsoft.graph.groupAssignmentTarget",
-                "groupId": "gid-All Users",
+                "@odata.type": "#microsoft.graph.allLicensedUsersAssignmentTarget",
             },
         }
 

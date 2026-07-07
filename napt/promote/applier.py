@@ -59,8 +59,9 @@ from napt.state import (
 )
 from napt.upload.auth import get_access_token
 from napt.upload.graph import (
+    VIRTUAL_TARGETS,
     assign_app,
-    build_group_assignment,
+    build_assignment,
     delete_mobile_app,
     get_app_assignments,
     list_mobile_apps,
@@ -116,55 +117,61 @@ def _strip_assignment(assignment: dict[str, Any]) -> dict[str, Any]:
     return cleaned
 
 
-def _targeted_group_id(assignment: dict[str, Any]) -> str | None:
-    """Returns the group ID an assignment targets, or None for other targets."""
-    target = assignment.get("target") or {}
-    return target.get("groupId")
+def _target_key(target: dict[str, Any] | None) -> tuple[str, str]:
+    """Returns a comparable identity for an assignment target."""
+    target = target or {}
+    return (target.get("@odata.type", ""), target.get("groupId", ""))
 
 
-def _add_group_assignments(
+def _add_assignments(
     access_token: str,
     app_id: str,
-    group_ids: list[str],
+    targets: list[dict[str, Any]],
     intent: str,
 ) -> None:
-    """Adds group assignments to an app, preserving everything else.
+    """Adds assignments for the given targets, preserving everything else.
 
-    Existing assignments that target the same groups are replaced (the
-    intent may have changed); all other assignments — admin-made groups,
-    all-devices/all-users targets, exclusions — pass through untouched.
+    Existing assignments with the same targets are replaced (the intent
+    may have changed); all other assignments — admin-made groups, other
+    virtual targets, exclusions — pass through untouched.
 
     Args:
         access_token: Bearer token for Graph API.
         app_id: Graph API object ID of the app.
-        group_ids: Entra ID group object IDs to assign.
-        intent: Assignment intent for the added groups.
+        targets: Resolved assignment target dicts.
+        intent: Assignment intent for the added targets.
 
     """
+    keys = {_target_key(t) for t in targets}
     current = get_app_assignments(access_token, app_id)
     kept = [
-        _strip_assignment(a) for a in current if _targeted_group_id(a) not in group_ids
+        _strip_assignment(a)
+        for a in current
+        if _target_key(a.get("target")) not in keys
     ]
-    added = [build_group_assignment(gid, intent) for gid in group_ids]
+    added = [build_assignment(t, intent) for t in targets]
     assign_app(access_token, app_id, kept + added)
 
 
-def _remove_group_assignments(
+def _remove_assignments(
     access_token: str,
     app_id: str,
-    group_ids: list[str],
+    targets: list[dict[str, Any]],
 ) -> None:
-    """Removes specific group assignments from an app, preserving the rest.
+    """Removes assignments for the given targets, preserving the rest.
 
     Args:
         access_token: Bearer token for Graph API.
         app_id: Graph API object ID of the app.
-        group_ids: Entra ID group object IDs to unassign.
+        targets: Resolved assignment target dicts to unassign.
 
     """
+    keys = {_target_key(t) for t in targets}
     current = get_app_assignments(access_token, app_id)
     kept = [
-        _strip_assignment(a) for a in current if _targeted_group_id(a) not in group_ids
+        _strip_assignment(a)
+        for a in current
+        if _target_key(a.get("target")) not in keys
     ]
     if len(kept) != len(current):
         assign_app(access_token, app_id, kept)
@@ -209,14 +216,27 @@ class _ApplyRun:
             deployment_state_path(self.deployment_dir, app_id),
         )
 
-    def resolve_groups(self, groups: list[str]) -> list[str]:
-        """Resolves group names/IDs to object IDs with a per-run cache."""
-        ids = []
+    def resolve_targets(self, groups: list[str]) -> list[dict[str, Any]]:
+        """Resolves group names/IDs to assignment targets with a per-run cache.
+
+        The reserved names "All Users" and "All Devices" map to Intune's
+        built-in virtual targets; anything else resolves to an Entra ID
+        group target.
+        """
+        targets: list[dict[str, Any]] = []
         for group in groups:
+            if group in VIRTUAL_TARGETS:
+                targets.append(dict(VIRTUAL_TARGETS[group]))
+                continue
             if group not in self._group_ids:
                 self._group_ids[group] = resolve_group_id(self.access_token, group)
-            ids.append(self._group_ids[group])
-        return ids
+            targets.append(
+                {
+                    "@odata.type": "#microsoft.graph.groupAssignmentTarget",
+                    "groupId": self._group_ids[group],
+                }
+            )
+        return targets
 
     def skip(self, action: dict[str, Any], reason: str) -> None:
         """Records a skipped action and warns."""
@@ -314,8 +334,8 @@ def _apply_ring_action(run: _ApplyRun, action: dict[str, Any]) -> bool:
         run.skip(action, "no stamped update entry found in the tenant")
         return False
 
-    group_ids = run.resolve_groups(action["groups"])
-    _add_group_assignments(run.access_token, update_app["id"], group_ids, _RING_INTENT)
+    targets = run.resolve_targets(action["groups"])
+    _add_assignments(run.access_token, update_app["id"], targets, _RING_INTENT)
 
     # Displace the previous holder of this ring (an older release's app).
     previous = rings_state.get(ring)
@@ -324,7 +344,7 @@ def _apply_ring_action(run: _ApplyRun, action: dict[str, Any]) -> bool:
             run.existing_apps, app_id, ENTRY_UPDATE, previous["sha256"]
         )
         if previous_app is not None:
-            _remove_group_assignments(run.access_token, previous_app["id"], group_ids)
+            _remove_assignments(run.access_token, previous_app["id"], targets)
         else:
             get_global_logger().warning(
                 "PROMOTE",
@@ -368,7 +388,8 @@ def _apply_install_action(run: _ApplyRun, action: dict[str, Any]) -> bool:
     if deployed.get("sha256") != sha256:
         run.skip(action, "stale action - the deployed release has changed")
         return False
-    if state.get("install_assigned") == sha256:
+    previous = state.get("install_assigned") or {}
+    if previous.get("sha256") == sha256:
         run.skip(action, "already applied")
         return False
 
@@ -377,23 +398,26 @@ def _apply_install_action(run: _ApplyRun, action: dict[str, Any]) -> bool:
         run.skip(action, "no stamped install entry found in the tenant")
         return False
 
-    group_ids = run.resolve_groups(action["groups"])
-    _add_group_assignments(
-        run.access_token, install_app["id"], group_ids, action["intent"]
-    )
+    targets = run.resolve_targets(action["groups"])
+    _add_assignments(run.access_token, install_app["id"], targets, action["intent"])
 
     # Displace the previous release's install assignment.
-    previous_sha = state.get("install_assigned")
+    previous_sha = previous.get("sha256")
     if previous_sha and previous_sha != sha256:
         previous_app = find_stamped_app(
             run.existing_apps, app_id, ENTRY_INSTALL, previous_sha
         )
         if previous_app is not None:
-            _remove_group_assignments(run.access_token, previous_app["id"], group_ids)
+            _remove_assignments(run.access_token, previous_app["id"], targets)
         if not _holds_any_ring(state, previous_sha):
-            _retire_release(run, app_id, "?", previous_sha)
+            _retire_release(
+                run, app_id, previous.get("version", "unknown"), previous_sha
+            )
 
-    state["install_assigned"] = sha256
+    state["install_assigned"] = {
+        "version": action["version"],
+        "sha256": sha256,
+    }
     run.save_state(app_id)
     run.applied.append(action)
     return True

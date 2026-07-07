@@ -1026,6 +1026,12 @@ Display names are resolved via the Graph API, which requires the
 `Group.Read.All` application permission (see
 [App Registration Setup](user-guide.md#app-registration-setup)).
 
+Two names are reserved for Intune's built-in targets: `"All Users"` and
+`"All Devices"` assign the corresponding virtual group instead of looking
+up an Entra ID group.
+The reserved names always win — a real Entra ID group that shares one of
+these display names must be referenced by its object ID.
+
 ### require_pending
 
 **Type:** `boolean`
@@ -1063,6 +1069,9 @@ required installs).
 
 Assignment for the install entry (net-new installs).
 `intent` is `"available"` (Company Portal) or `"required"`.
+No install assignment happens unless groups are configured; a common
+org-wide choice is `groups: ["All Users"]` for Company Portal
+self-service.
 The assignment is planned by `napt promote plan` and executed once per
 release by `napt promote apply`.
 

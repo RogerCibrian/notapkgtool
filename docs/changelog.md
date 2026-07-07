@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Built-in assignment targets** - `"All Users"` and `"All Devices"` in
+    deployment group lists assign Intune's virtual targets instead of
+    Entra ID groups. A real group sharing one of these display names must
+    be referenced by its object ID
 - **`napt promote apply`** - Executes a promotion plan against Intune:
     assigns install entries, enters and advances releases through rings,
     unassigns displaced releases, and retires them per

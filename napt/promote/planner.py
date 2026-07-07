@@ -130,14 +130,15 @@ def _plan_app_actions(
     sha256: str = deployed["sha256"]
 
     # Install entry: assigned once per release, when groups are configured.
-    # install_assigned records the sha256 of the release whose install
+    # install_assigned records the release (version + sha256) whose install
     # entry currently carries the assignment, so a new release plans a
     # fresh assignment (and apply displaces the old one).
     install_cfg: dict[str, Any] = deployment["install"]
+    install_assigned = state.get("install_assigned") or {}
     if (
         deployed.get("intune_app_id")
         and install_cfg["groups"]
-        and state.get("install_assigned") != sha256
+        and install_assigned.get("sha256") != sha256
     ):
         actions.append(
             {

@@ -68,7 +68,9 @@ from napt.exceptions import AuthError, ConfigError, NetworkError
 from napt.upload.intunewin import IntunewinMetadata
 
 __all__ = [
+    "VIRTUAL_TARGETS",
     "assign_app",
+    "build_assignment",
     "build_group_assignment",
     "create_win32_app",
     "create_content_version",
@@ -263,6 +265,33 @@ def get_app_assignments(access_token: str, app_id: str) -> list[dict]:
     return body.get("value", [])
 
 
+# Intune's built-in virtual assignment targets, reserved by these exact
+# names in deployment group lists. A real Entra ID group that happens to
+# share one of these display names must be referenced by object ID.
+VIRTUAL_TARGETS: dict[str, dict] = {
+    "All Users": {"@odata.type": "#microsoft.graph.allLicensedUsersAssignmentTarget"},
+    "All Devices": {"@odata.type": "#microsoft.graph.allDevicesAssignmentTarget"},
+}
+
+
+def build_assignment(target: dict, intent: str) -> dict:
+    """Build a mobileAppAssignment payload for a resolved target.
+
+    Args:
+        target: An assignment target dict (group or virtual target).
+        intent: Assignment intent, "available" or "required".
+
+    Returns:
+        A mobileAppAssignment dict for use with assign_app.
+
+    """
+    return {
+        "@odata.type": "#microsoft.graph.mobileAppAssignment",
+        "intent": intent,
+        "target": target,
+    }
+
+
 def build_group_assignment(group_id: str, intent: str) -> dict:
     """Build a mobileAppAssignment payload targeting one Entra ID group.
 
@@ -274,14 +303,13 @@ def build_group_assignment(group_id: str, intent: str) -> dict:
         A mobileAppAssignment dict for use with assign_app.
 
     """
-    return {
-        "@odata.type": "#microsoft.graph.mobileAppAssignment",
-        "intent": intent,
-        "target": {
+    return build_assignment(
+        {
             "@odata.type": "#microsoft.graph.groupAssignmentTarget",
             "groupId": group_id,
         },
-    }
+        intent,
+    )
 
 
 def assign_app(access_token: str, app_id: str, assignments: list[dict]) -> None:

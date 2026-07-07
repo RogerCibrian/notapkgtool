@@ -73,6 +73,12 @@ directories:
   icons: "icons"
 
 deployment:
+  # Install entry: available to everyone in Company Portal.
+  # "All Users" is Intune's built-in target, not an Entra ID group.
+  install:
+    intent: "available"
+    groups: ["All Users"]
+
   # Update promotion rings (ring 0 -> 1 -> 2). Groups are Entra ID
   # display names, resolved to object IDs at apply time.
   rings:
