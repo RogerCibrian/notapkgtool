@@ -673,6 +673,54 @@ For a legitimate manual upload under this policy, run `napt discover` first,
 or add a pending entry (version, sha256, url) to
 `state/deployment/<id>.json`.
 
+### Promote updates through rings
+
+Roll updates out gradually: pilot devices first, everyone else after the
+release has proven itself.
+
+1. **Define rings once in `defaults/org.yaml`** (groups are Entra ID
+   display names or object IDs):
+
+   ```yaml
+   deployment:
+     rings:
+       - name: "pilot"
+         groups: ["Pilot Devices"]
+         promote_after_days: 2
+       - name: "production"
+         groups: ["Production Devices"]
+     install:
+       intent: "available"
+       groups: ["All Users"]
+   ```
+
+2. **Plan** — compute what is eligible (read-only):
+
+   ```bash
+   napt promote plan
+   ```
+
+   A newly uploaded release enters the first ring; a release that has held
+   its ring for `promote_after_days` advances to the next.
+   Eligible actions are written to `state/plan.json`; review the file, or
+   commit it and gate the apply on a pull request.
+
+3. **Apply** — execute the plan against Intune:
+
+   ```bash
+   napt promote apply
+   ```
+
+   Ring groups are assigned to the release's `[Update]` entry as required
+   installs; the displaced older release is unassigned and retired per
+   `deployment.retain_versions`.
+   Run `napt status` to see where every app stands.
+
+Run plan and apply on a schedule and promotion becomes automatic: each
+release baked long enough moves one ring further on the next run.
+A ring without `promote_after_days` is a manual gate — releases hold it
+until you change the configuration.
+
 ### Set a custom app icon
 
 `napt build` extracts an icon from the installer to `icons/{id}.png`

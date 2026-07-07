@@ -952,6 +952,20 @@ deployment:
         assert len(groups_errors) == 1
         assert "Must be list" in groups_errors[0]
 
+    def test_virtual_targets_valid(self, tmp_path):
+        """Tests that Intune's built-in targets pass validation."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(_DEPLOYMENT_RECIPE_HEADER + """
+deployment:
+  install:
+    intent: "available"
+    groups: ["All Users", "All Devices"]
+""")
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "valid"
+
     def test_non_string_group_error(self, tmp_path):
         """Tests that a non-string group entry is detected."""
         recipe = tmp_path / "recipe.yaml"

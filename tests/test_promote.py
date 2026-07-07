@@ -85,7 +85,7 @@ def _write_state(
     app_id: str = "test-app",
     deployed: dict[str, Any] | None = None,
     rings: dict[str, Any] | None = None,
-    install_assigned: bool = False,
+    install_assigned: str | None = None,
 ) -> Path:
     """Writes a deployment state file and returns the deployment dir."""
     deployment_dir = tmp_path / "state" / "deployment"
@@ -94,7 +94,7 @@ def _write_state(
     if rings:
         state["rings"] = rings
     if install_assigned:
-        state["install_assigned"] = True
+        state["install_assigned"] = {"version": "prev", "sha256": install_assigned}
     save_deployment_state(state, deployment_state_path(deployment_dir, app_id))
     return deployment_dir
 
@@ -161,8 +161,33 @@ class TestPlanPromotions:
             }
         ]
 
-        state_dir = _write_state(tmp_path, deployed=_deployed(), install_assigned=True)
+        state_dir = _write_state(
+            tmp_path, deployed=_deployed(), install_assigned="a" * 64
+        )
         assert plan_promotions(recipe, state_dir=state_dir, now=NOW) == []
+
+    def test_no_install_groups_plans_no_install_assignment(self, tmp_path):
+        """Tests that NAPT assigns nothing unless groups are configured."""
+        recipe = _write_recipe(tmp_path)  # no deployment section at all
+        state_dir = _write_state(tmp_path, deployed=_deployed())
+
+        actions = plan_promotions(recipe, state_dir=state_dir, now=NOW)
+
+        assert actions == []
+
+    def test_new_release_replans_install_assignment(self, tmp_path):
+        """Tests that a new release plans install assignment again."""
+        recipe = _write_recipe(tmp_path, install_groups=["All Users"])
+        state_dir = _write_state(
+            tmp_path,
+            deployed=_deployed(version="2.0.0", sha256="b" * 64),
+            install_assigned="a" * 64,  # previous release's assignment
+        )
+
+        actions = plan_promotions(recipe, state_dir=state_dir, now=NOW)
+
+        assert [a["type"] for a in actions] == ["assign_install"]
+        assert actions[0]["sha256"] == "b" * 64
 
     def test_baking_release_does_not_advance(self, tmp_path):
         """Tests that a release still baking holds its ring."""

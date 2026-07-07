@@ -15,6 +15,7 @@ from napt.cli import (
     cmd_discover,
     cmd_init,
     cmd_package,
+    cmd_promote_apply,
     cmd_promote_plan,
     cmd_status,
     cmd_upload,
@@ -843,3 +844,79 @@ class TestCmdStatus:
 
         assert code == 0
         assert "No deployment state found" in capsys.readouterr().out
+
+
+# =============================================================================
+# cmd_promote_apply
+# =============================================================================
+
+
+class TestCmdPromoteApply:
+    """Tests for cmd_promote_apply handler."""
+
+    def test_applied_actions_print_and_return_zero(self, tmp_path, capsys):
+        """Tests that applied and skipped actions are summarized."""
+        summary = {
+            "applied": [
+                {
+                    "type": "enter_ring",
+                    "app_id": "test-app",
+                    "version": "1.0.0",
+                    "sha256": "a" * 64,
+                    "ring": "pilot",
+                    "groups": ["sg-pilot"],
+                }
+            ],
+            "skipped": [
+                {
+                    "action": {
+                        "type": "assign_install",
+                        "app_id": "other-app",
+                        "version": "1.0.0",
+                        "sha256": "b" * 64,
+                        "intent": "available",
+                        "groups": ["All Users"],
+                    },
+                    "reason": "already applied",
+                }
+            ],
+        }
+        with patch("napt.cli.apply_plan", return_value=summary):
+            code = cmd_promote_apply(
+                _args(recipes="recipes", state_dir=tmp_path, plan_file=None)
+            )
+        assert code == 0
+        out = capsys.readouterr().out
+        assert "[OK]" in out
+        assert "[SKIP]" in out
+        assert "already applied" in out
+        assert "Applied 1 action(s), skipped 1." in out
+
+    def test_nothing_to_apply_returns_zero(self, tmp_path, capsys):
+        """Tests that an empty summary reports cleanly."""
+        with patch("napt.cli.apply_plan", return_value={"applied": [], "skipped": []}):
+            code = cmd_promote_apply(
+                _args(recipes="recipes", state_dir=tmp_path, plan_file=None)
+            )
+        assert code == 0
+        assert "Nothing to apply" in capsys.readouterr().out
+
+    def test_auth_error_returns_one(self, tmp_path, capsys):
+        """Tests that AuthError is caught and returns 1."""
+        with patch("napt.cli.apply_plan", side_effect=AuthError("no creds")):
+            code = cmd_promote_apply(
+                _args(recipes="recipes", state_dir=tmp_path, plan_file=None)
+            )
+        assert code == 1
+        assert "Authentication error" in capsys.readouterr().out
+
+    def test_state_error_returns_one(self, tmp_path, capsys):
+        """Tests that StateError is caught and returns 1."""
+        from napt.exceptions import StateError
+
+        with patch("napt.cli.apply_plan", side_effect=StateError("bad plan")):
+            code = cmd_promote_apply(
+                _args(recipes="recipes", state_dir=tmp_path, plan_file=None)
+            )
+        assert code == 1
+        assert "bad plan" in capsys.readouterr().out

@@ -1026,6 +1026,12 @@ Display names are resolved via the Graph API, which requires the
 `Group.Read.All` application permission (see
 [App Registration Setup](user-guide.md#app-registration-setup)).
 
+Two names are reserved for Intune's built-in targets: `"All Users"` and
+`"All Devices"` assign the corresponding virtual group instead of looking
+up an Entra ID group.
+The reserved names always win — a real Entra ID group that shares one of
+these display names must be referenced by its object ID.
+
 ### require_pending
 
 **Type:** `boolean`
@@ -1051,8 +1057,9 @@ Each ring requires a unique `name` and a non-empty `groups` list;
 `promote_after_days` (optional) sets how many days a version holds the ring
 before becoming eligible for the next one.
 
-**Note:** `napt promote plan` evaluates rings to plan promotions;
-assignments are executed by the upcoming `napt promote apply`.
+Rings are evaluated by `napt promote plan` and executed by
+`napt promote apply` (ring groups are assigned to the `[Update]` entry as
+required installs).
 
 ### install
 
@@ -1062,9 +1069,11 @@ assignments are executed by the upcoming `napt promote apply`.
 
 Assignment for the install entry (net-new installs).
 `intent` is `"available"` (Company Portal) or `"required"`.
-
-**Note:** `napt promote plan` plans the install assignment; it is executed
-by the upcoming `napt promote apply`.
+No install assignment happens unless groups are configured; a common
+org-wide choice is `groups: ["All Users"]` for Company Portal
+self-service.
+The assignment is planned by `napt promote plan` and executed once per
+release by `napt promote apply`.
 
 ### retain_versions
 
@@ -1074,8 +1083,7 @@ by the upcoming `napt promote apply`.
 
 How many superseded versions stay in Intune for rollback before deletion.
 `0` deletes a version as soon as it holds no rings.
-
-**Note:** Consumed by the upcoming `napt promote apply`; no effect yet.
+Enforced by `napt promote apply`; only NAPT-stamped apps are ever deleted.
 
 ## Variable Substitution
 

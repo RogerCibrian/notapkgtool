@@ -25,6 +25,7 @@ deployed release into the next ring once it has held its current ring for
 the ring's ``promote_after_days``.
 """
 
+from .applier import apply_plan, load_plan_file
 from .planner import (
     plan_path_for,
     plan_promotions,
@@ -33,6 +34,8 @@ from .planner import (
 )
 
 __all__ = [
+    "apply_plan",
+    "load_plan_file",
     "plan_path_for",
     "plan_promotions",
     "resolve_state_dir",

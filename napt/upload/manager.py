@@ -63,7 +63,12 @@ from napt.upload.graph import (
     upload_to_azure_blob,
 )
 from napt.upload.intunewin import extract_encrypted_payload, parse_intunewin
-from napt.upload.stamp import ENTRY_INSTALL, ENTRY_UPDATE, build_stamp, parse_stamp
+from napt.upload.stamp import (
+    ENTRY_INSTALL,
+    ENTRY_UPDATE,
+    build_stamp,
+    find_stamped_app,
+)
 
 __all__ = ["upload_package"]
 
@@ -489,36 +494,6 @@ def _build_app_metadata(
     return payload
 
 
-def _find_stamped_app(
-    apps: list[dict[str, Any]],
-    recipe_id: str,
-    entry: str,
-    sha256: str,
-) -> dict[str, Any] | None:
-    """Finds the app whose provenance stamp matches a publish instance.
-
-    Args:
-        apps: Mobile app dicts from list_mobile_apps.
-        recipe_id: Recipe identifier to match.
-        entry: Entry type to match ("install" or "update").
-        sha256: Installer hash to match.
-
-    Returns:
-        The matching app dict, or None when no stamped app matches.
-
-    """
-    for app in apps:
-        stamp = parse_stamp(app.get("notes"))
-        if (
-            stamp
-            and stamp["id"] == recipe_id
-            and stamp["entry"] == entry
-            and stamp["sha256"] == sha256
-        ):
-            return app
-    return None
-
-
 def _upload_app_content(
     access_token: str,
     intune_app_id: str,
@@ -615,7 +590,7 @@ def _upload_single_app(
     logger = get_global_logger()
     display_name: str = app_metadata["displayName"]
 
-    match = _find_stamped_app(existing_apps, recipe_id, entry, installer_sha256)
+    match = find_stamped_app(existing_apps, recipe_id, entry, installer_sha256)
     patch_metadata_after_content = False
     if match is not None:
         intune_app_id: str = match["id"]
