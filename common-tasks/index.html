@@ -848,6 +848,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#fix-a-broken-published-app" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fix a broken published app
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2140,6 +2151,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#fix-a-broken-published-app" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fix a broken published app
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2841,38 +2863,76 @@ survives future builds on this machine.
 The icons directory is a machine-local output (gitignored), so this fix
 does not travel with the repo.
 Delete the file and rebuild to force re-extraction.</p>
+<h3 id="fix-a-broken-published-app">Fix a broken published app</h3>
+<p>You published an app, installs are failing — a bad install command, wrong
+detection settings, a missing PSADT step.
+You fixed the recipe, and now Intune needs to match.</p>
+<p><strong>The fix: delete the broken app and publish fresh.</strong></p>
+<p>Intune throttles retries after repeated failures (the Global Retry
+Schedule), and republishing content to the same app does not reliably
+reset it.
+A fresh app object gets a clean evaluation on every device:</p>
+<ol>
+<li>Delete the broken app entries (install and <code>[Update]</code>) in the Intune
+   portal.
+   Deleting first matters: NAPT recognizes its own apps by their
+   provenance stamp, so re-running upload against the existing broken app
+   would adopt it instead of creating a new one.</li>
+<li>Rebuild and upload:
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-47-1"><a id="__codelineno-47-1" name="__codelineno-47-1" href="#__codelineno-47-1"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Vendor/app.yaml
+</span><span id="__span-47-2"><a id="__codelineno-47-2" name="__codelineno-47-2" href="#__codelineno-47-2"></a>napt<span class="w"> </span>package<span class="w"> </span>recipes/Vendor/app.yaml
+</span><span id="__span-47-3"><a id="__codelineno-47-3" name="__codelineno-47-3" href="#__codelineno-47-3"></a>napt<span class="w"> </span>upload<span class="w"> </span>recipes/Vendor/app.yaml
+</span></code></pre></div>
+   Upload finds no stamped apps, creates fresh entries, and records the
+   new app IDs in deployment state automatically.</li>
+<li>Recreate the assignments the old app had.</li>
+</ol>
+<p>If the vendor has shipped a newer version since the broken publish, you
+can also just run the normal pipeline — the new release creates new app
+entries anyway, and the broken version's entries can be deleted.</p>
+<p><strong>Exception: no device has attempted the install yet.</strong></p>
+<p>If you caught the problem before any assignment took effect — the app is
+still unassigned, or you spotted a wrong command during portal review —
+there is no retry throttling to escape, and an in-place fix is faster:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-48-1"><a id="__codelineno-48-1" name="__codelineno-48-1" href="#__codelineno-48-1"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Vendor/app.yaml
+</span><span id="__span-48-2"><a id="__codelineno-48-2" name="__codelineno-48-2" href="#__codelineno-48-2"></a>napt<span class="w"> </span>package<span class="w"> </span>recipes/Vendor/app.yaml
+</span><span id="__span-48-3"><a id="__codelineno-48-3" name="__codelineno-48-3" href="#__codelineno-48-3"></a>napt<span class="w"> </span>upload<span class="w"> </span>recipes/Vendor/app.yaml<span class="w"> </span>--force
+</span></code></pre></div>
+<p><code>--force</code> updates the existing app entries in place — metadata and a fresh
+content version together — and keeps the app IDs.
+It never creates duplicates.</p>
 <h2 id="update-existing-recipes">Update Existing Recipes</h2>
 <p>When a recipe needs changes (new version format, different download URL, etc.).</p>
 <ol>
 <li>
 <p><strong>Edit the recipe file:</strong>
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-47-1"><a id="__codelineno-47-1" name="__codelineno-47-1" href="#__codelineno-47-1"></a><span class="c1"># Edit the YAML file</span>
-</span><span id="__span-47-2"><a id="__codelineno-47-2" name="__codelineno-47-2" href="#__codelineno-47-2"></a>code<span class="w"> </span>recipes/Vendor/app.yaml
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-49-1"><a id="__codelineno-49-1" name="__codelineno-49-1" href="#__codelineno-49-1"></a><span class="c1"># Edit the YAML file</span>
+</span><span id="__span-49-2"><a id="__codelineno-49-2" name="__codelineno-49-2" href="#__codelineno-49-2"></a>code<span class="w"> </span>recipes/Vendor/app.yaml
 </span></code></pre></div></p>
 </li>
 <li>
 <p><strong>Validate changes:</strong>
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-48-1"><a id="__codelineno-48-1" name="__codelineno-48-1" href="#__codelineno-48-1"></a>napt<span class="w"> </span>validate<span class="w"> </span>recipes/Vendor/app.yaml
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-50-1"><a id="__codelineno-50-1" name="__codelineno-50-1" href="#__codelineno-50-1"></a>napt<span class="w"> </span>validate<span class="w"> </span>recipes/Vendor/app.yaml
 </span></code></pre></div></p>
 </li>
 <li>
 <p><strong>Test discovery:</strong>
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-49-1"><a id="__codelineno-49-1" name="__codelineno-49-1" href="#__codelineno-49-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Vendor/app.yaml<span class="w"> </span>--verbose
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-51-1"><a id="__codelineno-51-1" name="__codelineno-51-1" href="#__codelineno-51-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Vendor/app.yaml<span class="w"> </span>--verbose
 </span></code></pre></div></p>
 </li>
 <li>
 <p><strong>If version format changed, clear the cache:</strong>
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-50-1"><a id="__codelineno-50-1" name="__codelineno-50-1" href="#__codelineno-50-1"></a><span class="c1"># Delete cache entry for this app</span>
-</span><span id="__span-50-2"><a id="__codelineno-50-2" name="__codelineno-50-2" href="#__codelineno-50-2"></a><span class="c1"># Or delete the entire discovery cache to start fresh</span>
-</span><span id="__span-50-3"><a id="__codelineno-50-3" name="__codelineno-50-3" href="#__codelineno-50-3"></a>rm<span class="w"> </span>cache/discovery.json
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-52-1"><a id="__codelineno-52-1" name="__codelineno-52-1" href="#__codelineno-52-1"></a><span class="c1"># Delete cache entry for this app</span>
+</span><span id="__span-52-2"><a id="__codelineno-52-2" name="__codelineno-52-2" href="#__codelineno-52-2"></a><span class="c1"># Or delete the entire discovery cache to start fresh</span>
+</span><span id="__span-52-3"><a id="__codelineno-52-3" name="__codelineno-52-3" href="#__codelineno-52-3"></a>rm<span class="w"> </span>cache/discovery.json
 </span></code></pre></div></p>
 </li>
 <li>
 <p><strong>Test full workflow:</strong>
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-51-1"><a id="__codelineno-51-1" name="__codelineno-51-1" href="#__codelineno-51-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Vendor/app.yaml
-</span><span id="__span-51-2"><a id="__codelineno-51-2" name="__codelineno-51-2" href="#__codelineno-51-2"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Vendor/app.yaml
-</span><span id="__span-51-3"><a id="__codelineno-51-3" name="__codelineno-51-3" href="#__codelineno-51-3"></a>napt<span class="w"> </span>package<span class="w"> </span>recipes/Vendor/app.yaml
-</span><span id="__span-51-4"><a id="__codelineno-51-4" name="__codelineno-51-4" href="#__codelineno-51-4"></a>napt<span class="w"> </span>upload<span class="w"> </span>recipes/Vendor/app.yaml
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-53-1"><a id="__codelineno-53-1" name="__codelineno-53-1" href="#__codelineno-53-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Vendor/app.yaml
+</span><span id="__span-53-2"><a id="__codelineno-53-2" name="__codelineno-53-2" href="#__codelineno-53-2"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Vendor/app.yaml
+</span><span id="__span-53-3"><a id="__codelineno-53-3" name="__codelineno-53-3" href="#__codelineno-53-3"></a>napt<span class="w"> </span>package<span class="w"> </span>recipes/Vendor/app.yaml
+</span><span id="__span-53-4"><a id="__codelineno-53-4" name="__codelineno-53-4" href="#__codelineno-53-4"></a>napt<span class="w"> </span>upload<span class="w"> </span>recipes/Vendor/app.yaml
 </span></code></pre></div></p>
 </li>
 </ol>
@@ -2898,7 +2958,7 @@ Delete the file and rebuild to force re-extraction.</p>
 <ol>
 <li>Use <code>--debug</code> to see what NAPT is trying to parse:</li>
 </ol>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-52-1"><a id="__codelineno-52-1" name="__codelineno-52-1" href="#__codelineno-52-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/App/app.yaml<span class="w"> </span>--debug
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-54-1"><a id="__codelineno-54-1" name="__codelineno-54-1" href="#__codelineno-54-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/App/app.yaml<span class="w"> </span>--debug
 </span></code></pre></div>
 <ol>
 <li>
@@ -2917,17 +2977,17 @@ Delete the file and rebuild to force re-extraction.</p>
 <ol>
 <li>Create a GitHub personal access token</li>
 <li>Add to recipe:
-   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-53-1"><a id="__codelineno-53-1" name="__codelineno-53-1" href="#__codelineno-53-1"></a><span class="nt">discovery</span><span class="p">:</span>
-</span><span id="__span-53-2"><a id="__codelineno-53-2" name="__codelineno-53-2" href="#__codelineno-53-2"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
-</span><span id="__span-53-3"><a id="__codelineno-53-3" name="__codelineno-53-3" href="#__codelineno-53-3"></a><span class="w">  </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;owner/repo&quot;</span>
-</span><span id="__span-53-4"><a id="__codelineno-53-4" name="__codelineno-53-4" href="#__codelineno-53-4"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${GITHUB_TOKEN}&quot;</span>
+   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-55-1"><a id="__codelineno-55-1" name="__codelineno-55-1" href="#__codelineno-55-1"></a><span class="nt">discovery</span><span class="p">:</span>
+</span><span id="__span-55-2"><a id="__codelineno-55-2" name="__codelineno-55-2" href="#__codelineno-55-2"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
+</span><span id="__span-55-3"><a id="__codelineno-55-3" name="__codelineno-55-3" href="#__codelineno-55-3"></a><span class="w">  </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;owner/repo&quot;</span>
+</span><span id="__span-55-4"><a id="__codelineno-55-4" name="__codelineno-55-4" href="#__codelineno-55-4"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;${GITHUB_TOKEN}&quot;</span>
 </span></code></pre></div></li>
 <li>Set environment variable:
-   <div class="language-powershell highlight"><pre><span></span><code><span id="__span-54-1"><a id="__codelineno-54-1" name="__codelineno-54-1" href="#__codelineno-54-1"></a><span class="c"># Set environment variable on Windows:</span>
-</span><span id="__span-54-2"><a id="__codelineno-54-2" name="__codelineno-54-2" href="#__codelineno-54-2"></a><span class="nv">$env:GITHUB_TOKEN</span><span class="p">=</span><span class="s2">&quot;ghp_your_token_here&quot;</span>
+   <div class="language-powershell highlight"><pre><span></span><code><span id="__span-56-1"><a id="__codelineno-56-1" name="__codelineno-56-1" href="#__codelineno-56-1"></a><span class="c"># Set environment variable on Windows:</span>
+</span><span id="__span-56-2"><a id="__codelineno-56-2" name="__codelineno-56-2" href="#__codelineno-56-2"></a><span class="nv">$env:GITHUB_TOKEN</span><span class="p">=</span><span class="s2">&quot;ghp_your_token_here&quot;</span>
 </span></code></pre></div>
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-55-1"><a id="__codelineno-55-1" name="__codelineno-55-1" href="#__codelineno-55-1"></a><span class="c1"># Set environment variable on Linux/macOS:</span>
-</span><span id="__span-55-2"><a id="__codelineno-55-2" name="__codelineno-55-2" href="#__codelineno-55-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GITHUB_TOKEN</span><span class="o">=</span><span class="s2">&quot;ghp_your_token_here&quot;</span>
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-57-1"><a id="__codelineno-57-1" name="__codelineno-57-1" href="#__codelineno-57-1"></a><span class="c1"># Set environment variable on Linux/macOS:</span>
+</span><span id="__span-57-2"><a id="__codelineno-57-2" name="__codelineno-57-2" href="#__codelineno-57-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GITHUB_TOKEN</span><span class="o">=</span><span class="s2">&quot;ghp_your_token_here&quot;</span>
 </span></code></pre></div></li>
 </ol>
 <h3 id="issue-download-failed-or-network-error">Issue: "Download failed" or "Network error"</h3>
@@ -2963,7 +3023,7 @@ Delete the file and rebuild to force re-extraction.</p>
 </li>
 </ol>
 <p>The cache is already fixed - just run your command again. Alternatively, use <code>--stateless</code> to bypass state tracking temporarily:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-56-1"><a id="__codelineno-56-1" name="__codelineno-56-1" href="#__codelineno-56-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/app.yaml<span class="w"> </span>--stateless
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-58-1"><a id="__codelineno-58-1" name="__codelineno-58-1" href="#__codelineno-58-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/app.yaml<span class="w"> </span>--stateless
 </span></code></pre></div>
 <p><strong>Note:</strong> Deployment state files (<code>state/deployment/</code>) are authoritative and are never auto-replaced.
 If one is corrupted, fix the JSON or restore the file from a backup.</p>

@@ -2365,8 +2365,8 @@ whatever version each ring currently holds.</p>
   <code>state/deployment/&lt;recipe-id&gt;.json</code> (deployed, pending, rings, retained),
   serialized deterministically for clean diffs.</li>
 <li><strong>Identity and ownership</strong>: Uploads stamp <code>napt/v1 id=&lt;recipe&gt;
-  sha256=&lt;hash&gt;</code> into the Intune notes field; <code>recipe_id + sha256</code> is the
-  identity key.
+  entry=&lt;install|update&gt; sha256=&lt;hash&gt;</code> into the Intune notes field;
+  <code>recipe_id + sha256</code> is the identity key.
   The <code>intune.notes</code> recipe field is removed — the field is reserved for
   NAPT.</li>
 <li><strong>Approval binding</strong>: Upload verifies the installer hash against the
@@ -2397,9 +2397,9 @@ whatever version each ring currently holds.</p>
 <li>Requires Graph API assignment endpoints and <code>Group.Read.All</code> for group
   name resolution</li>
 <li>Delivered across eight PRs: state split (shipped), upload provenance and
-  hash gate (shipped), idempotent upload, deployment config and assignment
-  client, <code>promote plan</code> and <code>napt status</code>, <code>promote apply</code> with retention,
-  drift detection, GitOps docs and schema versioning</li>
+  hash gate (shipped), idempotent upload (shipped), deployment config and
+  assignment client, <code>promote plan</code> and <code>napt status</code>, <code>promote apply</code> with
+  retention, drift detection, GitOps docs and schema versioning</li>
 </ul>
 <p><strong>Related</strong>: Health-gated promotion (block on install failure rates) and
 native Intune supersedence are deliberate follow-ups, not part of this

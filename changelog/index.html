@@ -2241,9 +2241,15 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong>Deployment state files</strong> - <code>napt discover</code> records each discovered
     release in <code>state/deployment/{id}.json</code> as a pending publication
     candidate. One file per app; the newest discovery wins</li>
+<li><strong>Idempotent upload</strong> - Re-running <code>napt upload</code> adopts the existing
+    NAPT-stamped Intune apps for a release instead of creating duplicates,
+    and resumes the content upload when a previous run crashed mid-publish.
+    Pass <code>--force</code> to re-send metadata and content to the existing apps
+    (e.g., after changing PSADT commands without a new installer release)</li>
 <li><strong>Upload provenance</strong> - <code>napt upload</code> stamps each Intune app entry's
-    notes field with <code>napt/v1 id=&lt;recipe-id&gt; sha256=&lt;hash&gt;</code> and records
-    the published version, hash, and Intune app IDs in deployment state</li>
+    notes field with <code>napt/v1 id=&lt;recipe-id&gt; entry=&lt;install|update&gt;
+    sha256=&lt;hash&gt;</code> and records the published version, hash, and Intune
+    app IDs in deployment state</li>
 <li><strong>Installer hash verification</strong> - <code>napt upload</code> refuses to publish a
     package whose installer hash does not match the pending release
     recorded at discovery, so what was approved is exactly what ships</li>

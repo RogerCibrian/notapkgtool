@@ -2999,11 +2999,23 @@ Graph API. Run <code>napt package</code> before uploading.</p>
    is fully committed</li>
 </ol>
 <p>Each created app entry carries a provenance stamp in its Intune notes field:
-<code>napt/v1 id=&lt;recipe-id&gt; sha256=&lt;installer-hash&gt;</code>.
+<code>napt/v1 id=&lt;recipe-id&gt; entry=&lt;install|update&gt; sha256=&lt;installer-hash&gt;</code>.
 The stamp marks the app as NAPT-managed and ties it to the exact binary it was
 built from; the notes field is reserved for NAPT and is not recipe-configurable.
 On success, the app's deployment state records the published version, hash,
 and both Intune app IDs, and a matching pending slot is cleared.</p>
+<p>Re-running an upload is safe.
+Before creating anything, NAPT lists the tenant's apps and looks for stamps
+matching this release: a fully published match is adopted as-is, a match whose
+content was never committed (a crashed previous run) gets a fresh content
+upload, and only missing entries are created.
+Apps without a NAPT stamp are never touched.</p>
+<p>Adoption keeps the matched app exactly as it is — it does not re-send
+metadata or package content, since the match key is the installer binary.
+If you changed the recipe or package without a new installer release
+(PSADT commands, detection settings, icon), pass <code>--force</code> to update the
+matched apps' metadata and upload a fresh content version.
+<code>--force</code> never creates duplicates.</p>
 <p><strong>Output</strong>: Intune Win32 App ID (install entry), Intune Win32 Update ID (update
 entry), app name, version, and package path. Each ID is omitted when its
 corresponding entry is not created</p>
