@@ -113,10 +113,10 @@ Agreed design:
 
 - Requires Graph API assignment endpoints and `Group.Read.All` for group
   name resolution
-- Delivered across eight PRs: state split, upload provenance and hash gate,
-  idempotent upload, deployment config and assignment client, `promote plan`
-  and `napt status`, `promote apply` with retention, drift detection, GitOps
-  docs and schema versioning
+- Delivered across eight PRs: state split (shipped), upload provenance and
+  hash gate (shipped), idempotent upload, deployment config and assignment
+  client, `promote plan` and `napt status`, `promote apply` with retention,
+  drift detection, GitOps docs and schema versioning
 
 **Related**: Health-gated promotion (block on install failure rates) and
 native Intune supersedence are deliberate follow-ups, not part of this

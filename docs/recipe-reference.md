@@ -517,7 +517,6 @@ intune:
   logo_path: "brand-packs/logos/app.png"             # Optional: path to app icon
   developer: "Developer Name"                        # Optional: developer field
   owner: "IT Team"                                   # Optional: business owner field
-  notes: "Free-text notes shown in Intune portal"    # Optional: notes field
   detection:                                         # Optional: detection configuration
     display_name: "Application Name"
     architecture: "x64"
@@ -759,14 +758,6 @@ Developer or maintainer name. Shown in the Intune portal's app details.
 **Default:** None
 
 Business owner of the application. Shown in the Intune portal's app details.
-
-### notes
-
-**Type:** `string`
-**Required:** No
-**Default:** None
-
-Free-text notes shown in the Intune portal. Useful for internal documentation.
 
 ### detection
 

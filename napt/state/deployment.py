@@ -201,3 +201,38 @@ def record_pending(
         "url": url,
     }
     return "replaced" if pending else "recorded"
+
+
+def record_deployed(
+    state: dict[str, Any],
+    version: str,
+    sha256: str,
+    intune_app_id: str | None,
+    intune_update_app_id: str | None,
+) -> None:
+    """Records a successful publication as the deployed release.
+
+    Replaces the ``deployed`` section and clears the pending slot when the
+    pending candidate is the release that was just published. A pending
+    candidate with a different hash (a newer discovery) is left in place.
+
+    Args:
+        state: Deployment state dictionary to update in place.
+        version: Published version string.
+        sha256: SHA-256 hash of the published release's installer.
+        intune_app_id: Graph API object ID of the install entry, or None
+            when build_types is "update_only".
+        intune_update_app_id: Graph API object ID of the update entry, or
+            None when build_types is "app_only".
+
+    """
+    state["deployed"] = {
+        "version": version,
+        "sha256": sha256,
+        "intune_app_id": intune_app_id,
+        "intune_update_app_id": intune_update_app_id,
+    }
+
+    pending = state.get("pending")
+    if pending and pending.get("sha256") == sha256:
+        state["pending"] = None

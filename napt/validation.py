@@ -98,7 +98,6 @@ _INTUNE_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
     "logo_path": (str, None, "path to app icon file"),
     "developer": (str, None, "app developer or maintainer"),
     "owner": (str, None, "business owner of the app"),
-    "notes": (str, None, "free-text notes shown in Intune portal"),
     "detection": (dict, None, "detection configuration"),
 }
 

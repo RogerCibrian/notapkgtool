@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+from contextlib import ExitStack
 import copy
 from pathlib import Path
 from typing import Any
@@ -12,7 +13,13 @@ import pytest
 
 from napt.config.defaults import DEFAULT_CONFIG
 from napt.config.loader import _deep_merge_dicts
-from napt.exceptions import NetworkError
+from napt.exceptions import NetworkError, PackagingError
+from napt.state import (
+    create_default_deployment_state,
+    deployment_state_path,
+    load_deployment_state,
+    save_deployment_state,
+)
 from napt.upload.manager import _resolve_large_icon, upload_package
 from tests.upload.conftest import make_package_dir
 
@@ -413,3 +420,160 @@ def test_upload_package_both_shares_icon_across_entries(
     for call in create_app_mock.call_args_list:
         payload = call.args[1]
         assert payload["largeIcon"] == expected_icon
+
+
+# =============================================================================
+# Provenance stamp, hash gate, and deployment state recording
+# =============================================================================
+
+
+def _run_upload(
+    tmp_path: Path,
+    fake_metadata: Any,
+    build_types: str = "both",
+) -> tuple[Any, MagicMock]:
+    """Run upload_package with all Graph calls mocked.
+
+    Returns:
+        A tuple of (UploadResult, create_win32_app mock).
+
+    """
+    recipe_path = tmp_path / "recipes" / "Vendor" / "test-app.yaml"
+    if not recipe_path.exists():
+        recipe_path.parent.mkdir(parents=True)
+        recipe_path.touch()
+
+    patches = _patch_graph()
+    create_app_mock = MagicMock(side_effect=patches["create_win32_app"])
+
+    with ExitStack() as stack:
+        stack.enter_context(
+            patch(
+                "napt.upload.manager.load_effective_config",
+                return_value=_fake_config(build_types=build_types),
+            )
+        )
+        stack.enter_context(
+            patch("napt.upload.manager.get_access_token", return_value="fake-token")
+        )
+        stack.enter_context(
+            patch("napt.upload.manager.parse_intunewin", return_value=fake_metadata)
+        )
+        stack.enter_context(
+            patch(
+                "napt.upload.manager.extract_encrypted_payload",
+                return_value=tmp_path / "payload",
+            )
+        )
+        stack.enter_context(
+            patch("napt.upload.manager.create_win32_app", create_app_mock)
+        )
+        stack.enter_context(
+            patch(
+                "napt.upload.manager.create_content_version",
+                side_effect=patches["create_content_version"],
+            )
+        )
+        stack.enter_context(
+            patch(
+                "napt.upload.manager.create_content_version_file",
+                side_effect=patches["create_content_version_file"],
+            )
+        )
+        stack.enter_context(patch("napt.upload.manager.upload_to_azure_blob"))
+        stack.enter_context(patch("napt.upload.manager.commit_content_version_file"))
+        stack.enter_context(patch("napt.upload.manager.commit_content_version"))
+        result = upload_package(recipe_path)
+
+    return result, create_app_mock
+
+
+def _seed_pending(tmp_path: Path, sha256: str, version: str = "1.0.0") -> Path:
+    """Writes a deployment state file with a pending release for test-app."""
+    state_path = deployment_state_path(tmp_path / "state" / "deployment", "test-app")
+    state = create_default_deployment_state()
+    state["pending"] = {
+        "version": version,
+        "sha256": sha256,
+        "url": "https://vendor.com/app.msi",
+    }
+    save_deployment_state(state, state_path)
+    return state_path
+
+
+def test_upload_stamps_provenance_notes(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that both app entries carry the napt/v1 provenance stamp."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path, installer_sha256="c" * 64)
+
+    _, create_app_mock = _run_upload(tmp_path, fake_metadata)
+
+    expected = f"napt/v1 id=test-app sha256={'c' * 64}"
+    assert create_app_mock.call_count == 2
+    for call in create_app_mock.call_args_list:
+        assert call.args[1]["notes"] == expected
+
+
+def test_upload_hash_mismatch_aborts_before_graph(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that a pending/package hash mismatch aborts before any Graph call."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path, installer_sha256="a" * 64)
+    _seed_pending(tmp_path, sha256="b" * 64, version="2.0.0")
+
+    with pytest.raises(PackagingError, match="hash mismatch"):
+        _run_upload(tmp_path, fake_metadata)
+
+
+def test_upload_matching_pending_records_deployed(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that a matching pending release transitions to deployed."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path, installer_sha256="a" * 64)
+    state_path = _seed_pending(tmp_path, sha256="a" * 64)
+
+    _run_upload(tmp_path, fake_metadata)
+
+    state = load_deployment_state(state_path)
+    assert state["pending"] is None
+    assert state["deployed"] == {
+        "version": "1.0.0",
+        "sha256": "a" * 64,
+        "intune_app_id": "intune-app-123",
+        "intune_update_app_id": "intune-update-456",
+    }
+
+
+def test_upload_without_pending_warns_and_records(
+    tmp_path: Path, monkeypatch, fake_metadata, capsys
+) -> None:
+    """Tests that upload without a pending release warns but still records."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path, installer_sha256="a" * 64)
+
+    _run_upload(tmp_path, fake_metadata)
+
+    assert "No pending release recorded" in capsys.readouterr().out
+    state_path = deployment_state_path(tmp_path / "state" / "deployment", "test-app")
+    state = load_deployment_state(state_path)
+    assert state["deployed"]["intune_app_id"] == "intune-app-123"
+    assert state["pending"] is None
+
+
+def test_upload_app_only_records_null_update_id(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that app_only records a null update entry ID in deployed state."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path, installer_sha256="a" * 64)
+
+    _run_upload(tmp_path, fake_metadata, build_types="app_only")
+
+    state_path = deployment_state_path(tmp_path / "state" / "deployment", "test-app")
+    state = load_deployment_state(state_path)
+    assert state["deployed"]["intune_app_id"] == "intune-app-123"
+    assert state["deployed"]["intune_update_app_id"] is None

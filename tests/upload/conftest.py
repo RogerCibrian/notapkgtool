@@ -55,6 +55,7 @@ def make_package_dir(
     tmp_path: Path,
     app_id: str = "test-app",
     version: str = "1.0.0",
+    installer_sha256: str = "a" * 64,
 ) -> Path:
     """Create a minimal fake package directory for upload tests.
 
@@ -62,6 +63,7 @@ def make_package_dir(
         tmp_path: Base directory (typically pytest's tmp_path).
         app_id: App identifier used in the directory path.
         version: Version string used in the directory path.
+        installer_sha256: Installer hash written to the build manifest.
 
     Returns:
         Path to the version directory (packages/{app_id}/{version}/).
@@ -71,7 +73,8 @@ def make_package_dir(
     pkg_dir.mkdir(parents=True)
     (pkg_dir / "Invoke-AppDeployToolkit.intunewin").write_bytes(make_intunewin_bytes())
     (pkg_dir / "build-manifest.json").write_text(
-        json.dumps({"architecture": "x64"}), encoding="utf-8"
+        json.dumps({"architecture": "x64", "installer_sha256": installer_sha256}),
+        encoding="utf-8",
     )
     (pkg_dir / f"{app_id}-Detection.ps1").write_text("# detection", encoding="utf-8")
     (pkg_dir / f"{app_id}-Requirements.ps1").write_text(
