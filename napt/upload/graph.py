@@ -65,6 +65,9 @@ __all__ = [
     "create_win32_app",
     "create_content_version",
     "create_content_version_file",
+    "get_mobile_app",
+    "list_mobile_apps",
+    "update_win32_app",
     "upload_to_azure_blob",
     "commit_content_version_file",
     "commit_content_version",
@@ -177,6 +180,58 @@ def _poll(
     )
 
 
+def list_mobile_apps(access_token: str) -> list[dict]:
+    """List all mobile apps in the tenant with id, displayName, and notes.
+
+    Follows @odata.nextLink pagination until the collection is exhausted.
+
+    Args:
+        access_token: Bearer token for Graph API.
+
+    Returns:
+        A list of app dicts, each with at least "id", "displayName", and
+            "notes" keys.
+
+    Raises:
+        AuthError: On 401 or 403.
+        NetworkError: On 5xx or connection error.
+
+    """
+    url: str | None = (
+        f"{GRAPH_BASE}/deviceAppManagement/mobileApps" "?$select=id,displayName,notes"
+    )
+    apps: list[dict] = []
+    while url:
+        resp = requests.get(url, headers=_auth_headers(access_token), timeout=30)
+        body = _check_response(resp, "list_mobile_apps")
+        apps.extend(body.get("value", []))
+        url = body.get("@odata.nextLink")
+    return apps
+
+
+def get_mobile_app(access_token: str, app_id: str) -> dict:
+    """Get one mobile app's full object by Graph API ID.
+
+    Used to read subtype fields that $select on the collection cannot
+    reliably return, such as win32LobApp.committedContentVersion.
+
+    Args:
+        access_token: Bearer token for Graph API.
+        app_id: Graph API object ID of the app.
+
+    Returns:
+        The full app object dict.
+
+    Raises:
+        AuthError: On 401 or 403.
+        NetworkError: On 5xx or connection error.
+
+    """
+    url = f"{GRAPH_BASE}/deviceAppManagement/mobileApps/{app_id}"
+    resp = requests.get(url, headers=_auth_headers(access_token), timeout=30)
+    return _check_response(resp, "get_mobile_app")
+
+
 def create_win32_app(access_token: str, app_metadata: dict) -> str:
     """Create a new Win32 LOB app record in Intune.
 
@@ -200,6 +255,27 @@ def create_win32_app(access_token: str, app_metadata: dict) -> str:
     )
     body = _check_response(resp, "create_win32_app")
     return body["id"]
+
+
+def update_win32_app(access_token: str, app_id: str, app_metadata: dict) -> None:
+    """Update an existing Win32 LOB app record's metadata in Intune.
+
+    Args:
+        access_token: Bearer token for Graph API.
+        app_id: Graph API object ID of the app to update.
+        app_metadata: Win32LobApp JSON payload to apply.
+
+    Raises:
+        AuthError: On 401 or 403.
+        ConfigError: On 400 (invalid metadata).
+        NetworkError: On 5xx or connection error.
+
+    """
+    url = f"{GRAPH_BASE}/deviceAppManagement/mobileApps/{app_id}"
+    resp = requests.patch(
+        url, headers=_json_headers(access_token), json=app_metadata, timeout=30
+    )
+    _check_response(resp, "update_win32_app")
 
 
 def create_content_version(access_token: str, app_id: str) -> str:

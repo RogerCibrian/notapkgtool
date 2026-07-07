@@ -503,7 +503,7 @@ class TestCmdUpload:
 
     def test_missing_recipe_returns_one(self, tmp_path, capsys):
         """Tests that a missing recipe file exits with code 1."""
-        code = cmd_upload(_args(recipe=str(tmp_path / "nonexistent.yaml")))
+        code = cmd_upload(_args(recipe=str(tmp_path / "nonexistent.yaml"), force=False))
         assert code == 1
 
     def test_success_prints_results_returns_zero(self, tmp_path, capsys):
@@ -519,7 +519,7 @@ class TestCmdUpload:
             status="success",
         )
         with patch("napt.cli.upload_package", return_value=mock_result):
-            code = cmd_upload(_args(recipe=str(recipe)))
+            code = cmd_upload(_args(recipe=str(recipe), force=False))
         assert code == 0
         out = capsys.readouterr().out
         assert "[SUCCESS]" in out
@@ -534,7 +534,7 @@ class TestCmdUpload:
             "napt.cli.upload_package",
             side_effect=AuthError("credential chain exhausted"),
         ):
-            code = cmd_upload(_args(recipe=str(recipe)))
+            code = cmd_upload(_args(recipe=str(recipe), force=False))
         assert code == 1
         out = capsys.readouterr().out
         assert "Authentication error" in out
@@ -545,14 +545,14 @@ class TestCmdUpload:
         recipe = tmp_path / "recipe.yaml"
         recipe.touch()
         with patch("napt.cli.upload_package", side_effect=ConfigError("bad")):
-            assert cmd_upload(_args(recipe=str(recipe))) == 1
+            assert cmd_upload(_args(recipe=str(recipe), force=False)) == 1
 
     def test_network_error_returns_one(self, tmp_path):
         """Tests that NetworkError returns 1."""
         recipe = tmp_path / "recipe.yaml"
         recipe.touch()
         with patch("napt.cli.upload_package", side_effect=NetworkError("net")):
-            assert cmd_upload(_args(recipe=str(recipe))) == 1
+            assert cmd_upload(_args(recipe=str(recipe), force=False)) == 1
 
 
 # =============================================================================

@@ -82,8 +82,8 @@ Agreed design:
   `state/deployment/<recipe-id>.json` (deployed, pending, rings, retained),
   serialized deterministically for clean diffs.
 - **Identity and ownership**: Uploads stamp `napt/v1 id=<recipe>
-  sha256=<hash>` into the Intune notes field; `recipe_id + sha256` is the
-  identity key.
+  entry=<install|update> sha256=<hash>` into the Intune notes field;
+  `recipe_id + sha256` is the identity key.
   The `intune.notes` recipe field is removed — the field is reserved for
   NAPT.
 - **Approval binding**: Upload verifies the installer hash against the
@@ -114,9 +114,9 @@ Agreed design:
 - Requires Graph API assignment endpoints and `Group.Read.All` for group
   name resolution
 - Delivered across eight PRs: state split (shipped), upload provenance and
-  hash gate (shipped), idempotent upload, deployment config and assignment
-  client, `promote plan` and `napt status`, `promote apply` with retention,
-  drift detection, GitOps docs and schema versioning
+  hash gate (shipped), idempotent upload (shipped), deployment config and
+  assignment client, `promote plan` and `napt status`, `promote apply` with
+  retention, drift detection, GitOps docs and schema versioning
 
 **Related**: Health-gated promotion (block on install failure rates) and
 native Intune supersedence are deliberate follow-ups, not part of this

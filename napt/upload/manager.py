@@ -57,9 +57,13 @@ from napt.upload.graph import (
     create_content_version,
     create_content_version_file,
     create_win32_app,
+    get_mobile_app,
+    list_mobile_apps,
+    update_win32_app,
     upload_to_azure_blob,
 )
 from napt.upload.intunewin import extract_encrypted_payload, parse_intunewin
+from napt.upload.stamp import ENTRY_INSTALL, ENTRY_UPDATE, build_stamp, parse_stamp
 
 __all__ = ["upload_package"]
 
@@ -330,9 +334,10 @@ def _build_app_metadata(
     so this function does not access the builds directory.
 
     The payload's notes field carries the NAPT provenance stamp
-    (``napt/v1 id=<recipe-id> sha256=<installer-hash>``), which marks the
-    app as NAPT-managed and ties it to the exact binary it was built from.
-    The field is reserved for NAPT and is not recipe-configurable.
+    (``napt/v1 id=<recipe-id> entry=<install|update> sha256=<installer-hash>``),
+    which marks the app as NAPT-managed and ties it to the exact binary it
+    was built from. The field is reserved for NAPT and is not
+    recipe-configurable.
 
     Args:
         config: Effective configuration dict from load_effective_config.
@@ -470,9 +475,8 @@ def _build_app_metadata(
 
     # Provenance stamp: marks the app as NAPT-managed and ties it to the
     # exact binary it was built from. The notes field is reserved for NAPT.
-    payload["notes"] = (
-        f"napt/v1 id={config['id']} sha256={manifest['installer_sha256']}"
-    )
+    entry = ENTRY_UPDATE if build_types == "update_only" else ENTRY_INSTALL
+    payload["notes"] = build_stamp(config["id"], entry, manifest["installer_sha256"])
 
     # Optional: app icon (largeIcon), resolved once per upload
     if large_icon is not None:
@@ -485,44 +489,58 @@ def _build_app_metadata(
     return payload
 
 
-def _upload_single_app(
+def _find_stamped_app(
+    apps: list[dict[str, Any]],
+    recipe_id: str,
+    entry: str,
+    sha256: str,
+) -> dict[str, Any] | None:
+    """Finds the app whose provenance stamp matches a publish instance.
+
+    Args:
+        apps: Mobile app dicts from list_mobile_apps.
+        recipe_id: Recipe identifier to match.
+        entry: Entry type to match ("install" or "update").
+        sha256: Installer hash to match.
+
+    Returns:
+        The matching app dict, or None when no stamped app matches.
+
+    """
+    for app in apps:
+        stamp = parse_stamp(app.get("notes"))
+        if (
+            stamp
+            and stamp["id"] == recipe_id
+            and stamp["entry"] == entry
+            and stamp["sha256"] == sha256
+        ):
+            return app
+    return None
+
+
+def _upload_app_content(
     access_token: str,
-    app_metadata: dict[str, Any],
+    intune_app_id: str,
     package_path: Path,
     intunewin_metadata: Any,
-    step_create: int,
     step_upload: int,
     step_commit: int,
     total_steps: int,
-) -> str:
-    """Create, upload, and commit one Intune Win32 app entry.
-
-    Executes the full Graph API upload flow for a single app entry: creates
-    the app record and content version, uploads the encrypted payload to Azure
-    Blob Storage, and commits the content version.
+) -> None:
+    """Uploads and commits the encrypted payload for one app record.
 
     Args:
         access_token: Azure AD bearer token for Graph API calls.
-        app_metadata: Win32LobApp JSON payload from _build_app_metadata.
+        intune_app_id: Graph API object ID of the app record.
         package_path: Path to the .intunewin file.
         intunewin_metadata: Parsed encryption metadata from parse_intunewin.
-        step_create: Step number to display when creating the app record.
         step_upload: Step number to display when uploading to Blob Storage.
         step_commit: Step number to display when committing.
         total_steps: Total step count for progress display.
 
-    Returns:
-        The Graph API object ID of the created Intune Win32 app.
-
     """
     logger = get_global_logger()
-    display_name: str = app_metadata["displayName"]
-
-    logger.step(
-        step_create, total_steps, f"Creating app record for '{display_name}'..."
-    )
-    intune_app_id = create_win32_app(access_token, app_metadata)
-    logger.info("UPLOAD", f"Created Intune app: {intune_app_id}")
 
     cv_id = create_content_version(access_token, intune_app_id)
     logger.verbose("UPLOAD", f"Content version: {cv_id}")
@@ -543,10 +561,125 @@ def _upload_single_app(
     )
     commit_content_version(access_token, intune_app_id, cv_id)
 
+
+def _upload_single_app(
+    access_token: str,
+    app_metadata: dict[str, Any],
+    package_path: Path,
+    intunewin_metadata: Any,
+    existing_apps: list[dict[str, Any]],
+    recipe_id: str,
+    entry: str,
+    installer_sha256: str,
+    step_create: int,
+    step_upload: int,
+    step_commit: int,
+    total_steps: int,
+    force: bool = False,
+) -> str:
+    """Publish one Intune Win32 app entry, reusing an existing stamped app.
+
+    Reconcile-before-act: when a NAPT-stamped app already matches this
+    publish instance (recipe id, entry type, installer hash), the app is
+    adopted instead of duplicated — skipped entirely if its content is
+    committed, or resumed with a fresh content upload if a previous run
+    crashed between app creation and commit. Otherwise the app record is
+    created and its content uploaded and committed.
+
+    Adoption does not re-send app metadata or content: a matched app keeps
+    whatever it already has, even if the recipe or package changed since it
+    was published (the match key is the installer binary, not the package).
+    Pass force=True to upload a fresh content version and then update the
+    matched app's metadata instead of adopting.
+
+    Args:
+        access_token: Azure AD bearer token for Graph API calls.
+        app_metadata: Win32LobApp JSON payload from _build_app_metadata.
+        package_path: Path to the .intunewin file.
+        intunewin_metadata: Parsed encryption metadata from parse_intunewin.
+        existing_apps: Mobile app dicts from list_mobile_apps.
+        recipe_id: Recipe identifier for stamp matching.
+        entry: Entry type for stamp matching ("install" or "update").
+        installer_sha256: Installer hash for stamp matching.
+        step_create: Step number to display when creating the app record.
+        step_upload: Step number to display when uploading to Blob Storage.
+        step_commit: Step number to display when committing.
+        total_steps: Total step count for progress display.
+        force: When True, a matched app gets its metadata updated and a
+            fresh content version uploaded instead of being adopted as-is.
+
+    Returns:
+        The Graph API object ID of the created or adopted Intune Win32 app.
+
+    """
+    logger = get_global_logger()
+    display_name: str = app_metadata["displayName"]
+
+    match = _find_stamped_app(existing_apps, recipe_id, entry, installer_sha256)
+    patch_metadata_after_content = False
+    if match is not None:
+        intune_app_id: str = match["id"]
+        if force:
+            logger.step(
+                step_create,
+                total_steps,
+                f"Re-uploading existing app record for '{display_name}'...",
+            )
+            # The metadata PATCH must come after the content upload: Intune
+            # rejects a contentVersions POST that closely follows an app
+            # PATCH with HTTP 412 ConditionNotMet (stale internal ETag).
+            patch_metadata_after_content = True
+        else:
+            full_app = get_mobile_app(access_token, intune_app_id)
+            if full_app.get("committedContentVersion"):
+                logger.step(
+                    step_create,
+                    total_steps,
+                    f"Adopting existing app record for '{display_name}'...",
+                )
+                logger.info(
+                    "UPLOAD",
+                    f"Adopted Intune app: {intune_app_id} (content already committed)",
+                )
+                return intune_app_id
+
+            logger.step(
+                step_create,
+                total_steps,
+                f"Resuming upload for existing app record '{display_name}'...",
+            )
+            logger.info(
+                "UPLOAD",
+                f"Reusing Intune app: {intune_app_id} (content was never committed)",
+            )
+    else:
+        logger.step(
+            step_create, total_steps, f"Creating app record for '{display_name}'..."
+        )
+        intune_app_id = create_win32_app(access_token, app_metadata)
+        logger.info("UPLOAD", f"Created Intune app: {intune_app_id}")
+
+    _upload_app_content(
+        access_token,
+        intune_app_id,
+        package_path,
+        intunewin_metadata,
+        step_upload,
+        step_commit,
+        total_steps,
+    )
+
+    if patch_metadata_after_content:
+        update_win32_app(access_token, intune_app_id, app_metadata)
+        logger.info(
+            "UPLOAD",
+            f"Updated Intune app metadata: {intune_app_id} (--force)",
+        )
+
     return intune_app_id
 
 
-def upload_package(recipe_path: Path) -> UploadResult:
+def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
     """Upload a packaged app to Microsoft Intune via the Graph API.
 
     Loads the recipe config, infers the .intunewin package path, authenticates
@@ -575,8 +708,19 @@ def upload_package(recipe_path: Path) -> UploadResult:
     deployment state records the published version, hash, and Intune app
     IDs, and a matching pending slot is cleared.
 
+    Re-running an upload is safe: existing NAPT-stamped apps matching this
+    publish instance (recipe id, entry type, installer hash) are adopted —
+    or their interrupted content upload resumed — instead of duplicated.
+    Adoption keeps the app as it is; it does not re-send metadata or
+    content. Pass force=True to update matched apps' metadata and upload a
+    fresh content version (e.g., after changing PSADT commands or detection
+    settings without a new installer release).
+
     Args:
         recipe_path: Path to the recipe YAML file.
+        force: When True, matched stamped apps are re-uploaded (metadata
+            and content) instead of adopted as-is. Never creates
+            duplicates.
 
     Returns:
         Upload result including the Intune app ID(s), app name, version, and
@@ -666,6 +810,11 @@ def upload_package(recipe_path: Path) -> UploadResult:
     logger.step(3, total_steps, "Parsing package metadata...")
     intunewin_metadata = parse_intunewin(package_path)
 
+    # Reconcile-before-act: list existing apps once so stamped apps from a
+    # previous (possibly crashed) run are adopted instead of duplicated.
+    existing_apps = list_mobile_apps(access_token)
+    logger.verbose("UPLOAD", f"Tenant has {len(existing_apps)} mobile apps")
+
     intune_app_id: str | None = None
     intune_update_app_id: str | None = None
 
@@ -679,10 +828,15 @@ def upload_package(recipe_path: Path) -> UploadResult:
             install_metadata,
             package_path,
             intunewin_metadata,
+            existing_apps,
+            recipe_id=app_id,
+            entry=ENTRY_INSTALL,
+            installer_sha256=installer_sha256,
             step_create=4,
             step_upload=5,
             step_commit=6,
             total_steps=total_steps,
+            force=force,
         )
 
     if build_types in ("update_only", "both"):
@@ -702,10 +856,15 @@ def upload_package(recipe_path: Path) -> UploadResult:
             update_metadata,
             package_path,
             intunewin_metadata,
+            existing_apps,
+            recipe_id=app_id,
+            entry=ENTRY_UPDATE,
+            installer_sha256=installer_sha256,
             step_create=step_offset + 1,
             step_upload=step_offset + 2,
             step_commit=step_offset + 3,
             total_steps=total_steps,
+            force=force,
         )
 
     # Record the publication in deployment state: deployed version, hash,

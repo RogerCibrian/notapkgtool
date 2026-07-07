@@ -559,6 +559,8 @@ def cmd_upload(args: argparse.Namespace) -> int:
 
     Note:
         Run 'napt package' before this command to create the .intunewin file.
+        Re-running an upload adopts existing NAPT-stamped apps instead of
+        creating duplicates; --force re-sends metadata and content to them.
         Developers: set AZURE_CLIENT_ID and AZURE_TENANT_ID, then complete
         the device code flow when prompted.
         Set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID for CI/CD.
@@ -578,7 +580,7 @@ def cmd_upload(args: argparse.Namespace) -> int:
     print()
 
     try:
-        result = upload_package(recipe_path)
+        result = upload_package(recipe_path, force=args.force)
     except ConfigError as err:
         print(f"Error: {err}")
         if args.verbose or args.debug:
@@ -1059,6 +1061,15 @@ def main() -> None:
         "--tenant-id",
         default=None,
         help="Azure AD tenant ID (overrides defaults/org.yaml)",
+    )
+    parser_upload.add_argument(
+        "--force",
+        action="store_true",
+        help=(
+            "Re-upload metadata and content to existing NAPT-managed apps "
+            "for this release instead of adopting them as-is "
+            "(never creates duplicates)"
+        ),
     )
     parser_upload.add_argument(
         "-v",

@@ -16,6 +16,8 @@ from napt.upload.graph import (
     create_content_version,
     create_content_version_file,
     create_win32_app,
+    get_mobile_app,
+    list_mobile_apps,
     upload_to_azure_blob,
 )
 
@@ -205,3 +207,40 @@ def test_commit_content_version_500_raises_network_error() -> None:
         m.patch(_APP_URL, json={}, status_code=500)
         with pytest.raises(NetworkError):
             commit_content_version(TOKEN, APP_ID, CV_ID)
+
+
+# --- list_mobile_apps / get_mobile_app ---
+
+
+def test_list_mobile_apps_single_page() -> None:
+    """Tests that a single page of apps is returned."""
+    apps = [{"id": "1", "displayName": "A", "notes": None}]
+    with req_mock.Mocker() as m:
+        m.get(_APPS_URL, json={"value": apps})
+        result = list_mobile_apps(TOKEN)
+
+    assert result == apps
+
+
+def test_list_mobile_apps_follows_pagination() -> None:
+    """Tests that @odata.nextLink pages are followed and merged."""
+    page1 = {
+        "value": [{"id": "1"}],
+        "@odata.nextLink": f"{_APPS_URL}?$skiptoken=abc",
+    }
+    page2 = {"value": [{"id": "2"}]}
+    with req_mock.Mocker() as m:
+        m.get(_APPS_URL, [{"json": page1}, {"json": page2}])
+        result = list_mobile_apps(TOKEN)
+
+    assert [a["id"] for a in result] == ["1", "2"]
+
+
+def test_get_mobile_app_returns_full_object() -> None:
+    """Tests that get_mobile_app returns the app body."""
+    body = {"id": APP_ID, "committedContentVersion": "1"}
+    with req_mock.Mocker() as m:
+        m.get(_APP_URL, json=body)
+        result = get_mobile_app(TOKEN, APP_ID)
+
+    assert result == body

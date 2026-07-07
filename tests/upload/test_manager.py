@@ -74,6 +74,7 @@ def test_upload_package_both_creates_two_apps(
         ),
         patch("napt.upload.manager.get_access_token", return_value="fake-token"),
         patch("napt.upload.manager.parse_intunewin", return_value=fake_metadata),
+        patch("napt.upload.manager.list_mobile_apps", return_value=[]),
         patch(
             "napt.upload.manager.extract_encrypted_payload",
             return_value=tmp_path / "payload",
@@ -122,6 +123,7 @@ def test_upload_package_app_only_creates_one_app(
         ),
         patch("napt.upload.manager.get_access_token", return_value="fake-token"),
         patch("napt.upload.manager.parse_intunewin", return_value=fake_metadata),
+        patch("napt.upload.manager.list_mobile_apps", return_value=[]),
         patch(
             "napt.upload.manager.extract_encrypted_payload",
             return_value=tmp_path / "payload",
@@ -161,6 +163,7 @@ def test_upload_package_update_only_creates_one_app(
         ),
         patch("napt.upload.manager.get_access_token", return_value="fake-token"),
         patch("napt.upload.manager.parse_intunewin", return_value=fake_metadata),
+        patch("napt.upload.manager.list_mobile_apps", return_value=[]),
         patch(
             "napt.upload.manager.extract_encrypted_payload",
             return_value=tmp_path / "payload",
@@ -200,6 +203,7 @@ def test_upload_package_propagates_network_error(
         ),
         patch("napt.upload.manager.get_access_token", return_value="fake-token"),
         patch("napt.upload.manager.parse_intunewin", return_value=fake_metadata),
+        patch("napt.upload.manager.list_mobile_apps", return_value=[]),
         patch(
             "napt.upload.manager.create_win32_app",
             side_effect=NetworkError("Graph API down"),
@@ -393,6 +397,7 @@ def test_upload_package_both_shares_icon_across_entries(
         ),
         patch("napt.upload.manager.get_access_token", return_value="fake-token"),
         patch("napt.upload.manager.parse_intunewin", return_value=fake_metadata),
+        patch("napt.upload.manager.list_mobile_apps", return_value=[]),
         patch(
             "napt.upload.manager.extract_encrypted_payload",
             return_value=tmp_path / "payload",
@@ -431,11 +436,24 @@ def _run_upload(
     tmp_path: Path,
     fake_metadata: Any,
     build_types: str = "both",
-) -> tuple[Any, MagicMock]:
+    existing_apps: list[dict[str, Any]] | None = None,
+    full_app: dict[str, Any] | None = None,
+    force: bool = False,
+) -> tuple[Any, dict[str, MagicMock]]:
     """Run upload_package with all Graph calls mocked.
 
+    Args:
+        tmp_path: Test directory (cwd for the run).
+        fake_metadata: IntunewinMetadata fixture value.
+        build_types: build_types config value for the run.
+        existing_apps: Return value for list_mobile_apps (default empty).
+        full_app: Return value for get_mobile_app (used when a stamped
+            app matches).
+        force: Passed through to upload_package.
+
     Returns:
-        A tuple of (UploadResult, create_win32_app mock).
+        A tuple of (UploadResult, mocks) where mocks holds the
+            "create_app", "create_cv", and "update_app" MagicMocks.
 
     """
     recipe_path = tmp_path / "recipes" / "Vendor" / "test-app.yaml"
@@ -444,7 +462,13 @@ def _run_upload(
         recipe_path.touch()
 
     patches = _patch_graph()
-    create_app_mock = MagicMock(side_effect=patches["create_win32_app"])
+    mocks = {
+        "create_app": MagicMock(side_effect=patches["create_win32_app"]),
+        "create_cv": MagicMock(side_effect=patches["create_content_version"]),
+        "update_app": MagicMock(),
+    }
+    create_app_mock = mocks["create_app"]
+    create_cv_mock = mocks["create_cv"]
 
     with ExitStack() as stack:
         stack.enter_context(
@@ -461,6 +485,18 @@ def _run_upload(
         )
         stack.enter_context(
             patch(
+                "napt.upload.manager.list_mobile_apps",
+                return_value=existing_apps or [],
+            )
+        )
+        stack.enter_context(
+            patch(
+                "napt.upload.manager.get_mobile_app",
+                return_value=full_app or {},
+            )
+        )
+        stack.enter_context(
+            patch(
                 "napt.upload.manager.extract_encrypted_payload",
                 return_value=tmp_path / "payload",
             )
@@ -469,10 +505,7 @@ def _run_upload(
             patch("napt.upload.manager.create_win32_app", create_app_mock)
         )
         stack.enter_context(
-            patch(
-                "napt.upload.manager.create_content_version",
-                side_effect=patches["create_content_version"],
-            )
+            patch("napt.upload.manager.create_content_version", create_cv_mock)
         )
         stack.enter_context(
             patch(
@@ -480,12 +513,15 @@ def _run_upload(
                 side_effect=patches["create_content_version_file"],
             )
         )
+        stack.enter_context(
+            patch("napt.upload.manager.update_win32_app", mocks["update_app"])
+        )
         stack.enter_context(patch("napt.upload.manager.upload_to_azure_blob"))
         stack.enter_context(patch("napt.upload.manager.commit_content_version_file"))
         stack.enter_context(patch("napt.upload.manager.commit_content_version"))
-        result = upload_package(recipe_path)
+        result = upload_package(recipe_path, force=force)
 
-    return result, create_app_mock
+    return result, mocks
 
 
 def _seed_pending(tmp_path: Path, sha256: str, version: str = "1.0.0") -> Path:
@@ -504,16 +540,18 @@ def _seed_pending(tmp_path: Path, sha256: str, version: str = "1.0.0") -> Path:
 def test_upload_stamps_provenance_notes(
     tmp_path: Path, monkeypatch, fake_metadata
 ) -> None:
-    """Tests that both app entries carry the napt/v1 provenance stamp."""
+    """Tests that both app entries carry entry-specific napt/v1 stamps."""
     monkeypatch.chdir(tmp_path)
     make_package_dir(tmp_path, installer_sha256="c" * 64)
 
-    _, create_app_mock = _run_upload(tmp_path, fake_metadata)
+    _, mocks = _run_upload(tmp_path, fake_metadata)
 
-    expected = f"napt/v1 id=test-app sha256={'c' * 64}"
+    create_app_mock = mocks["create_app"]
     assert create_app_mock.call_count == 2
-    for call in create_app_mock.call_args_list:
-        assert call.args[1]["notes"] == expected
+    install_notes = create_app_mock.call_args_list[0].args[1]["notes"]
+    update_notes = create_app_mock.call_args_list[1].args[1]["notes"]
+    assert install_notes == f"napt/v1 id=test-app entry=install sha256={'c' * 64}"
+    assert update_notes == f"napt/v1 id=test-app entry=update sha256={'c' * 64}"
 
 
 def test_upload_hash_mismatch_aborts_before_graph(
@@ -577,3 +615,147 @@ def test_upload_app_only_records_null_update_id(
     state = load_deployment_state(state_path)
     assert state["deployed"]["intune_app_id"] == "intune-app-123"
     assert state["deployed"]["intune_update_app_id"] is None
+
+
+# =============================================================================
+# Reconcile-before-act (idempotent upload)
+# =============================================================================
+
+
+def _stamped_apps(sha256: str) -> list[dict[str, Any]]:
+    """Returns fake list_mobile_apps output with both entries stamped."""
+    return [
+        {
+            "id": "existing-install",
+            "displayName": "Test App",
+            "notes": f"napt/v1 id=test-app entry=install sha256={sha256}",
+        },
+        {
+            "id": "existing-update",
+            "displayName": "[Update] Test App",
+            "notes": f"napt/v1 id=test-app entry=update sha256={sha256}",
+        },
+        {
+            "id": "unrelated",
+            "displayName": "Hand-made app",
+            "notes": "made by an admin",
+        },
+    ]
+
+
+def test_upload_adopts_committed_stamped_apps(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that committed stamped apps are adopted without any creation."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path, installer_sha256="a" * 64)
+
+    result, mocks = _run_upload(
+        tmp_path,
+        fake_metadata,
+        existing_apps=_stamped_apps("a" * 64),
+        full_app={"committedContentVersion": "1"},
+    )
+
+    mocks["create_app"].assert_not_called()
+    mocks["create_cv"].assert_not_called()
+    assert result.intune_app_id == "existing-install"
+    assert result.intune_update_app_id == "existing-update"
+
+    # Adoption still records the deployed release in state
+    state_path = deployment_state_path(tmp_path / "state" / "deployment", "test-app")
+    state = load_deployment_state(state_path)
+    assert state["deployed"]["intune_app_id"] == "existing-install"
+
+
+def test_upload_resumes_uncommitted_stamped_app(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that an uncommitted stamped app gets content without recreation."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path, installer_sha256="a" * 64)
+
+    result, mocks = _run_upload(
+        tmp_path,
+        fake_metadata,
+        existing_apps=_stamped_apps("a" * 64),
+        full_app={"committedContentVersion": None},
+    )
+
+    mocks["create_app"].assert_not_called()
+    assert mocks["create_cv"].call_count == 2  # content uploaded to both entries
+    assert result.intune_app_id == "existing-install"
+    assert result.intune_update_app_id == "existing-update"
+
+
+def test_upload_different_hash_creates_new_apps(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that stamped apps for a different binary are not adopted."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path, installer_sha256="a" * 64)
+
+    result, mocks = _run_upload(
+        tmp_path,
+        fake_metadata,
+        existing_apps=_stamped_apps("f" * 64),  # older release's apps
+    )
+
+    assert mocks["create_app"].call_count == 2
+    assert result.intune_app_id == "intune-app-123"
+    assert result.intune_update_app_id == "intune-update-456"
+
+
+def test_upload_partial_match_creates_only_missing_entry(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that only the missing entry is created when one already exists."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path, installer_sha256="a" * 64)
+    install_only = [_stamped_apps("a" * 64)[0]]
+
+    result, mocks = _run_upload(
+        tmp_path,
+        fake_metadata,
+        existing_apps=install_only,
+        full_app={"committedContentVersion": "1"},
+    )
+
+    assert mocks["create_app"].call_count == 1
+    assert result.intune_app_id == "existing-install"
+    assert result.intune_update_app_id == "intune-app-123"
+
+
+def test_upload_force_reuploads_matched_apps(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that --force updates metadata and content instead of adopting."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path, installer_sha256="a" * 64)
+
+    result, mocks = _run_upload(
+        tmp_path,
+        fake_metadata,
+        existing_apps=_stamped_apps("a" * 64),
+        force=True,
+    )
+
+    mocks["create_app"].assert_not_called()
+    assert mocks["update_app"].call_count == 2
+    assert mocks["create_cv"].call_count == 2  # fresh content for both entries
+    assert result.intune_app_id == "existing-install"
+    assert result.intune_update_app_id == "existing-update"
+
+
+def test_upload_force_without_match_creates_normally(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that --force with no matched apps behaves like a normal upload."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path, installer_sha256="a" * 64)
+
+    result, mocks = _run_upload(tmp_path, fake_metadata, force=True)
+
+    assert mocks["create_app"].call_count == 2
+    mocks["update_app"].assert_not_called()
+    assert result.intune_app_id == "intune-app-123"
