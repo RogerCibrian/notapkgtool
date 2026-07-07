@@ -25,6 +25,8 @@ Commands:
     build: Build PSADT package from recipe
     package: Create .intunewin package for Intune (recipe-based)
     upload: Upload .intunewin package to Microsoft Intune
+    promote: Plan (and later apply) deployment ring promotion
+    status: Show deployment state across all apps
 
 Example:
     Validate recipe syntax:
@@ -94,8 +96,16 @@ from napt.exceptions import (
     NAPTError,
     NetworkError,
     PackagingError,
+    StateError,
 )
 from napt.logging import get_logger, set_global_logger
+from napt.promote import (
+    plan_path_for,
+    plan_promotions,
+    resolve_state_dir,
+    write_plan_file,
+)
+from napt.state import summarize_deployment_states
 from napt.upload import upload_package
 from napt.validation import validate_recipe
 
@@ -630,6 +640,161 @@ def cmd_upload(args: argparse.Namespace) -> int:
     return 0
 
 
+def _describe_action(action: dict[str, Any]) -> str:
+    """Formats one planned promotion action as a summary line.
+
+    Args:
+        action: A planned action dict from plan_promotions.
+
+    Returns:
+        A one-line ASCII description for console output.
+    """
+    groups = ", ".join(action["groups"])
+    if action["type"] == "assign_install":
+        return (
+            f"{action['app_id']}: assign install entry "
+            f"({action['intent']}) -> {groups}"
+        )
+    if action["type"] == "enter_ring":
+        return (
+            f"{action['app_id']}: {action['version']} enters ring "
+            f"'{action['ring']}' -> {groups}"
+        )
+    return (
+        f"{action['app_id']}: {action['version']} advances "
+        f"'{action['from_ring']}' -> '{action['ring']}' -> {groups}"
+    )
+
+
+def cmd_promote_plan(args: argparse.Namespace) -> int:
+    """Handler for 'napt promote plan' command.
+
+    Computes promotion actions for all recipes (or one recipe) as a pure
+    function of deployment state, configuration, and the clock, and
+    writes the plan file when there is work. Read-only with respect to
+    Intune and deployment state; the plan file is the only output. A
+    stale plan file is removed when no actions are eligible.
+
+    Args:
+        args: Parsed command-line arguments containing the recipes path,
+            state directory, and flags.
+
+    Returns:
+        Exit code (0 for success — with or without planned actions,
+        1 for failure).
+
+    """
+    logger = get_logger(verbose=args.verbose, debug=args.debug)
+    set_global_logger(logger)
+
+    recipes = Path(args.recipes)
+
+    print(f"Planning promotions for: {recipes}")
+    print()
+
+    try:
+        state_dir = (
+            Path(args.state_dir)
+            if args.state_dir is not None
+            else resolve_state_dir(recipes)
+        )
+        plan_path = plan_path_for(state_dir)
+        actions = plan_promotions(recipes, state_dir=state_dir / "deployment")
+        write_plan_file(actions, plan_path)
+    except (ConfigError, StateError) as err:
+        print(f"Error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+    except NAPTError as err:
+        print(f"Error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+
+    print("=" * 70)
+    print("PROMOTION PLAN")
+    print("=" * 70)
+    if actions:
+        for action in actions:
+            print(f"  {_describe_action(action)}")
+        print("=" * 70)
+        print()
+        print(f"[OK] Plan written: {plan_path} ({len(actions)} action(s))")
+    else:
+        print("  No promotions eligible.")
+        print("=" * 70)
+        print()
+        print("[OK] Nothing to promote. No plan file needed.")
+
+    return 0
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    """Handler for 'napt status' command.
+
+    Aggregates all per-app deployment state files into one view: the
+    deployed version, pending release, and which version holds each ring.
+
+    Args:
+        args: Parsed command-line arguments containing the state
+            directory, output format, and flags.
+
+    Returns:
+        Exit code (0 for success, 1 for failure).
+
+    """
+    logger = get_logger(verbose=args.verbose, debug=args.debug)
+    set_global_logger(logger)
+
+    deployment_dir = Path(args.state_dir) / "deployment"
+
+    try:
+        rows = summarize_deployment_states(deployment_dir)
+    except (ConfigError, StateError) as err:
+        print(f"Error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+
+    if args.format == "json":
+        import json
+
+        print(json.dumps(rows, indent=2, sort_keys=True))
+        return 0
+
+    if not rows:
+        print(f"No deployment state found in {deployment_dir}")
+        return 0
+
+    headers = ("App", "Deployed", "Pending", "Rings")
+    table = [
+        (
+            row["app_id"],
+            row["deployed"] or "-",
+            row["pending"] or "-",
+            ", ".join(f"{name}={ver}" for name, ver in row["rings"].items()) or "-",
+        )
+        for row in rows
+    ]
+    widths = [
+        max(len(headers[col]), *(len(line[col]) for line in table))
+        for col in range(len(headers))
+    ]
+    print("  ".join(h.ljust(widths[i]) for i, h in enumerate(headers)))
+    print("  ".join("-" * w for w in widths))
+    for line in table:
+        print("  ".join(cell.ljust(widths[i]) for i, cell in enumerate(line)))
+
+    return 0
+
+
 def cmd_init(args: argparse.Namespace) -> int:
     """Handler for 'napt init' command.
 
@@ -1084,6 +1249,105 @@ def main() -> None:
         help="Show detailed debugging output (implies --verbose)",
     )
     parser_upload.set_defaults(func=cmd_upload)
+
+    # 'promote' command with subcommands
+    parser_promote = subparsers.add_parser(
+        "promote",
+        help="Plan deployment ring promotion",
+        description=(
+            "Plan (and later apply) ring-based promotion of published apps.\n\n"
+            "Examples:\n"
+            "  napt promote plan\n"
+            "  napt promote plan recipes/Google/chrome.yaml\n"
+            "  napt promote plan --state-dir state\n\n"
+            "See docs for the promotion model and workflows."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    promote_sub = parser_promote.add_subparsers(
+        dest="subcommand",
+        help="Promotion subcommands",
+        required=True,
+    )
+    parser_promote_plan = promote_sub.add_parser(
+        "plan",
+        help="Compute eligible promotions and write the plan file",
+        description=(
+            "Compute which releases enter or advance deployment rings, and "
+            "write state/plan.json when there is work. Read-only: neither "
+            "Intune nor deployment state is modified. A stale plan file is "
+            "removed when nothing is eligible."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser_promote_plan.add_argument(
+        "recipes",
+        nargs="?",
+        default="recipes",
+        help="Recipe file or directory to plan for (default: recipes/)",
+    )
+    parser_promote_plan.add_argument(
+        "--state-dir",
+        type=Path,
+        default=None,
+        help=(
+            "State directory holding deployment/ and plan.json "
+            "(default: directories.state from config)"
+        ),
+    )
+    parser_promote_plan.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Show progress and high-level status updates",
+    )
+    parser_promote_plan.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="Show detailed debugging output (implies --verbose)",
+    )
+    parser_promote_plan.set_defaults(func=cmd_promote_plan)
+
+    # 'status' command
+    parser_status = subparsers.add_parser(
+        "status",
+        help="Show deployment state across all apps",
+        description=(
+            "Aggregate per-app deployment state into one view: deployed "
+            "version, pending release, and ring positions.\n\n"
+            "Examples:\n"
+            "  napt status\n"
+            "  napt status --format json\n\n"
+            "See docs for more examples and workflows."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser_status.add_argument(
+        "--state-dir",
+        type=Path,
+        default=Path("state"),
+        help="State directory holding deployment/ (default: state)",
+    )
+    parser_status.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format (default: text)",
+    )
+    parser_status.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Show progress and high-level status updates",
+    )
+    parser_status.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="Show detailed debugging output (implies --verbose)",
+    )
+    parser_status.set_defaults(func=cmd_status)
 
     # Parse and dispatch
     args = parser.parse_args()

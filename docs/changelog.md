@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`napt promote plan`** - Computes which releases enter or advance the
+    configured deployment rings (plus first-time install-entry
+    assignments) and writes a reviewable `state/plan.json`. The plan file
+    exists exactly when there is work — a run that finds nothing removes
+    a stale plan — so its git status drives review workflows. Read-only;
+    applying plans arrives with `napt promote apply`
+- **`napt status`** - Shows deployed version, pending release, and ring
+    positions across all apps; `--format json` for scripting
+
 - **Deployment configuration** - New `deployment:` recipe section:
     `require_pending` makes `napt upload` fail unless the release was
     recorded at discovery (for review-gated publish workflows);

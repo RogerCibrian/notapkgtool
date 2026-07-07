@@ -67,7 +67,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from napt.exceptions import PackagingError
+from napt.exceptions import StateError
 
 
 def deployment_state_path(state_dir: Path, recipe_id: str) -> Path:
@@ -115,7 +115,7 @@ def load_deployment_state(state_path: Path) -> dict[str, Any]:
         Deployment state dictionary.
 
     Raises:
-        PackagingError: If the file exists but contains invalid JSON.
+        StateError: If the file exists but contains invalid JSON.
             Deployment state is authoritative, so a corrupted file is
             never silently replaced.
 
@@ -126,7 +126,7 @@ def load_deployment_state(state_path: Path) -> dict[str, Any]:
     except FileNotFoundError:
         return create_default_deployment_state()
     except json.JSONDecodeError as err:
-        raise PackagingError(
+        raise StateError(
             f"Corrupted deployment state file: {state_path}. "
             "Deployment state is authoritative and is not auto-replaced. "
             "Fix the JSON or restore the file from a backup."
@@ -236,3 +236,40 @@ def record_deployed(
     pending = state.get("pending")
     if pending and pending.get("sha256") == sha256:
         state["pending"] = None
+
+
+def summarize_deployment_states(deployment_dir: Path) -> list[dict[str, Any]]:
+    """Summarizes all per-app deployment state files in a directory.
+
+    Args:
+        deployment_dir: Directory holding per-app deployment state files.
+
+    Returns:
+        One summary dict per app, sorted by app id, each with the app id,
+            deployed version, pending version, and a ring-to-version map.
+            Empty when the directory does not exist or holds no state.
+
+    Raises:
+        StateError: On a corrupted deployment state file.
+
+    """
+    if not deployment_dir.is_dir():
+        return []
+
+    rows: list[dict[str, Any]] = []
+    for path in sorted(deployment_dir.glob("*.json")):
+        state = load_deployment_state(path)
+        deployed = state.get("deployed") or {}
+        pending = state.get("pending") or {}
+        rings = state.get("rings") or {}
+        rows.append(
+            {
+                "app_id": path.stem,
+                "deployed": deployed.get("version"),
+                "pending": pending.get("version"),
+                "rings": {
+                    name: entry.get("version") for name, entry in sorted(rings.items())
+                },
+            }
+        )
+    return rows

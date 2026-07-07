@@ -440,6 +440,27 @@ napt package recipes/Google/chrome.yaml [OPTIONS]
 napt package recipes/Google/chrome.yaml --version 130.0.6723.116
 ```
 
+### napt promote
+
+Plans ring-based promotion of published apps. `promote plan` computes which
+releases enter or advance deployment rings (per `deployment.rings`) and
+writes `state/plan.json` when there is work; a stale plan file is removed
+when nothing is eligible. Read-only: neither Intune nor deployment state is
+modified. Applying plans arrives with `napt promote apply`.
+
+```bash
+napt promote plan [RECIPE_OR_DIR] [OPTIONS]
+```
+
+### napt status
+
+Shows deployment state across all apps: deployed version, pending release,
+and which version holds each ring. `--format json` for scripting.
+
+```bash
+napt status [OPTIONS]
+```
+
 ### napt upload
 
 Uploads the `.intunewin` package to Microsoft Intune via the Graph API.
@@ -602,6 +623,19 @@ A file holds four sections:
 
 `napt discover` records the pending candidate.
 Later pipeline stages consume it.
+
+### Promotion plan file
+
+`napt promote plan` evaluates ring eligibility as a pure function of
+deployment state, configuration, and the clock, and writes the result to
+`state/plan.json`.
+The plan file exists exactly when there are eligible actions: a plan run
+that finds nothing removes a stale plan file.
+Its git status is therefore the CI signal that a promotion review is
+needed — no special exit codes (`napt` always exits 0 on success, 1 on
+error).
+Plan output is deterministic, so re-running plan against unchanged state
+produces a byte-identical file.
 
 ### Default Behavior (Stateful)
 

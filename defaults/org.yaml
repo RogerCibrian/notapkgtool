@@ -71,3 +71,16 @@ directories:
   package: "packages"
   # App icons extracted by build and uploaded by upload
   icons: "icons"
+
+deployment:
+  # Update promotion rings (ring 0 -> 1 -> 2). Groups are Entra ID
+  # display names, resolved to object IDs at apply time.
+  rings:
+    - name: "pilot"           # Ring 0
+      groups: ["Pilot Devices"]
+      promote_after_days: 2
+    - name: "broad"           # Ring 1
+      groups: ["Broad Devices"]
+      promote_after_days: 5
+    - name: "production"      # Ring 2 (terminal - never auto-advances)
+      groups: ["Production Devices"]

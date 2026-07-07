@@ -163,6 +163,7 @@ All `napt/**/*.py` files require before docstring:
 | `ConfigError` | Recipe/YAML errors, missing fields, invalid config |
 | `NetworkError` | HTTP failures, API errors, download issues |
 | `PackagingError` | PSADT errors, MSI extraction, build failures |
+| `StateError` | Corrupted or invalid persisted state (`state/`, `cache/`) |
 
 **Public API / user-facing:** Use custom exceptions. **Private helpers / bugs:** Use built-in.
 

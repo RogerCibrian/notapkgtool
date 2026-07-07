@@ -70,7 +70,7 @@ from pathlib import Path
 from typing import Any
 
 from napt import __version__
-from napt.exceptions import PackagingError
+from napt.exceptions import StateError
 
 
 def cache_file_path(config: dict[str, Any]) -> Path:
@@ -152,7 +152,7 @@ class DiscoveryCache:
             self.cache_file.rename(backup)
             self.data = create_default_cache()
             self.save()
-            raise PackagingError(
+            raise StateError(
                 f"Corrupted cache file backed up to {backup}. "
                 f"Created fresh cache file."
             ) from err

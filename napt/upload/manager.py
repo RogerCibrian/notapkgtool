@@ -738,6 +738,7 @@ def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
             package's installer hash does not match the pending release
             in deployment state, or no pending release is recorded while
             deployment.require_pending is enabled.
+        StateError: On a corrupted deployment state file.
 
     Example:
         Upload and print the resulting Intune app IDs:
