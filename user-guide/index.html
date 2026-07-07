@@ -2980,7 +2980,11 @@ packaging a new version removes the previous one automatically.</p>
 Graph API. Run <code>napt package</code> before uploading.</p>
 <ol>
 <li><strong>Locate Package</strong> - Scans <code>packages/{app_id}/</code> for the versioned subdirectory
-   created by <code>napt package</code> and reads <code>Invoke-AppDeployToolkit.intunewin</code> from it</li>
+   created by <code>napt package</code> and reads <code>Invoke-AppDeployToolkit.intunewin</code> from it.
+   Verifies the package's installer hash (from the build manifest) against the
+   pending release in the app's deployment state — a mismatch aborts the upload,
+   so what was recorded at discovery is byte-for-byte what ships.
+   When no pending release is recorded, the upload proceeds with a warning</li>
 <li><strong>Authenticate</strong> - Tries three credential methods in order (see <a href="#authentication">Authentication</a> below)</li>
 <li><strong>Parse Package Metadata</strong> - Reads encryption metadata from <code>Detection.xml</code> inside the <code>.intunewin</code> ZIP
 4–6. <strong>Create, Upload, Commit (install entry)</strong> - Creates the Win32 app record
@@ -2994,6 +2998,12 @@ Graph API. Run <code>napt package</code> before uploading.</p>
    When <code>build_types</code> is <code>"both"</code> (default), this runs after the install entry
    is fully committed</li>
 </ol>
+<p>Each created app entry carries a provenance stamp in its Intune notes field:
+<code>napt/v1 id=&lt;recipe-id&gt; sha256=&lt;installer-hash&gt;</code>.
+The stamp marks the app as NAPT-managed and ties it to the exact binary it was
+built from; the notes field is reserved for NAPT and is not recipe-configurable.
+On success, the app's deployment state records the published version, hash,
+and both Intune app IDs, and a matching pending slot is cleared.</p>
 <p><strong>Output</strong>: Intune Win32 App ID (install entry), Intune Win32 Update ID (update
 entry), app name, version, and package path. Each ID is omitted when its
 corresponding entry is not created</p>
