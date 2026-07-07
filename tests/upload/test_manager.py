@@ -28,8 +28,9 @@ def _fake_config(
     app_id: str = "test-app",
     app_name: str = "Test App",
     build_types: str = "both",
+    overrides: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return _deep_merge_dicts(
+    config = _deep_merge_dicts(
         copy.deepcopy(DEFAULT_CONFIG),
         {
             "id": app_id,
@@ -37,6 +38,9 @@ def _fake_config(
             "intune": {"build_types": build_types},
         },
     )
+    if overrides:
+        config = _deep_merge_dicts(config, overrides)
+    return config
 
 
 def _patch_graph(
@@ -439,6 +443,7 @@ def _run_upload(
     existing_apps: list[dict[str, Any]] | None = None,
     full_app: dict[str, Any] | None = None,
     force: bool = False,
+    config_overrides: dict[str, Any] | None = None,
 ) -> tuple[Any, dict[str, MagicMock]]:
     """Run upload_package with all Graph calls mocked.
 
@@ -450,6 +455,7 @@ def _run_upload(
         full_app: Return value for get_mobile_app (used when a stamped
             app matches).
         force: Passed through to upload_package.
+        config_overrides: Extra config merged over the fake defaults.
 
     Returns:
         A tuple of (UploadResult, mocks) where mocks holds the
@@ -474,7 +480,9 @@ def _run_upload(
         stack.enter_context(
             patch(
                 "napt.upload.manager.load_effective_config",
-                return_value=_fake_config(build_types=build_types),
+                return_value=_fake_config(
+                    build_types=build_types, overrides=config_overrides
+                ),
             )
         )
         stack.enter_context(
@@ -759,3 +767,35 @@ def test_upload_force_without_match_creates_normally(
     assert mocks["create_app"].call_count == 2
     mocks["update_app"].assert_not_called()
     assert result.intune_app_id == "intune-app-123"
+
+
+def test_upload_require_pending_blocks_without_pending(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that require_pending fails the upload when nothing is pending."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path, installer_sha256="a" * 64)
+
+    with pytest.raises(PackagingError, match="require_pending"):
+        _run_upload(
+            tmp_path,
+            fake_metadata,
+            config_overrides={"deployment": {"require_pending": True}},
+        )
+
+
+def test_upload_require_pending_passes_with_matching_pending(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that require_pending allows upload of the recorded release."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path, installer_sha256="a" * 64)
+    _seed_pending(tmp_path, sha256="a" * 64)
+
+    result, _ = _run_upload(
+        tmp_path,
+        fake_metadata,
+        config_overrides={"deployment": {"require_pending": True}},
+    )
+
+    assert result.status == "success"

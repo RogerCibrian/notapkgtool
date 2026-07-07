@@ -818,3 +818,176 @@ logging: "not a dict"
 
         assert result.status == "invalid"
         assert any("logging" in err and "dictionary" in err for err in result.errors)
+
+
+_DEPLOYMENT_RECIPE_HEADER = """
+apiVersion: napt/v1
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+"""
+
+
+class TestDeploymentValidation:
+    """Tests for deployment: section validation."""
+
+    def test_valid_deployment_section(self, tmp_path):
+        """Tests that a full valid deployment config passes validation."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(_DEPLOYMENT_RECIPE_HEADER + """
+deployment:
+  require_pending: true
+  retain_versions: 2
+  rings:
+    - name: "pilot"
+      groups: ["sg-pilot"]
+      promote_after_days: 2
+    - name: "production"
+      groups: ["sg-prod-a", "sg-prod-b"]
+  install:
+    intent: "available"
+    groups: ["All Users"]
+""")
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "valid"
+        assert len(result.errors) == 0
+
+    def test_ring_missing_name_error(self, tmp_path):
+        """Tests that a ring without a name is detected."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(_DEPLOYMENT_RECIPE_HEADER + """
+deployment:
+  rings:
+    - groups: ["sg-pilot"]
+""")
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("rings[0]" in err and "name" in err for err in result.errors)
+
+    def test_ring_missing_groups_error(self, tmp_path):
+        """Tests that a ring without groups is detected."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(_DEPLOYMENT_RECIPE_HEADER + """
+deployment:
+  rings:
+    - name: "pilot"
+""")
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("rings[0]" in err and "groups" in err for err in result.errors)
+
+    def test_duplicate_ring_name_error(self, tmp_path):
+        """Tests that duplicate ring names are detected."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(_DEPLOYMENT_RECIPE_HEADER + """
+deployment:
+  rings:
+    - name: "pilot"
+      groups: ["sg-a"]
+    - name: "pilot"
+      groups: ["sg-b"]
+""")
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("Duplicate ring name" in err for err in result.errors)
+
+    def test_negative_promote_after_days_error(self, tmp_path):
+        """Tests that a negative promote_after_days is detected."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(_DEPLOYMENT_RECIPE_HEADER + """
+deployment:
+  rings:
+    - name: "pilot"
+      groups: ["sg-a"]
+      promote_after_days: -1
+""")
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("promote_after_days" in err for err in result.errors)
+
+    def test_invalid_install_intent_error(self, tmp_path):
+        """Tests that an unknown install intent is detected."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(_DEPLOYMENT_RECIPE_HEADER + """
+deployment:
+  install:
+    intent: "mandatory"
+    groups: ["All Users"]
+""")
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any(
+            "deployment.install.intent" in err and "Invalid value" in err
+            for err in result.errors
+        )
+
+    def test_wrong_typed_ring_field_reports_one_error(self, tmp_path):
+        """Tests that a wrong-typed ring field produces exactly one error."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(_DEPLOYMENT_RECIPE_HEADER + """
+deployment:
+  rings:
+    - name: "pilot"
+      groups: "sg-a"
+""")
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        groups_errors = [e for e in result.errors if "groups" in e]
+        assert len(groups_errors) == 1
+        assert "Must be list" in groups_errors[0]
+
+    def test_non_string_group_error(self, tmp_path):
+        """Tests that a non-string group entry is detected."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(_DEPLOYMENT_RECIPE_HEADER + """
+deployment:
+  install:
+    groups: ["ok", 42]
+""")
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("groups[1]" in err for err in result.errors)
+
+    def test_negative_retain_versions_error(self, tmp_path):
+        """Tests that a negative retain_versions is detected."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(_DEPLOYMENT_RECIPE_HEADER + """
+deployment:
+  retain_versions: -1
+""")
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("retain_versions" in err for err in result.errors)
+
+    def test_unknown_deployment_field_warns(self, tmp_path):
+        """Tests that an unknown deployment field produces a warning."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(_DEPLOYMENT_RECIPE_HEADER + """
+deployment:
+  bake_days: 3
+""")
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "valid"
+        assert any("Unknown field 'bake_days'" in w for w in result.warnings)

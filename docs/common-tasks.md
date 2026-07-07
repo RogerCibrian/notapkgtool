@@ -656,6 +656,23 @@ intune:
 See [recipe-reference.md](recipe-reference.md#intune-configuration) for all
 allowed values.
 
+### Require recorded releases before upload
+
+For review-gated publish workflows, make `napt upload` refuse anything that
+was not recorded at discovery.
+Set once in `defaults/org.yaml`:
+
+```yaml
+deployment:
+  require_pending: true
+```
+
+With this enabled, an upload fails unless the app's deployment state has a
+pending release matching the package's installer hash.
+For a legitimate manual upload under this policy, run `napt discover` first,
+or add a pending entry (version, sha256, url) to
+`state/deployment/<id>.json`.
+
 ### Set a custom app icon
 
 `napt build` extracts an icon from the installer to `icons/{id}.png`

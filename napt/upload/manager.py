@@ -704,9 +704,10 @@ def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
     manifest) is verified against the pending release recorded in the app's
     deployment state, so what was recorded at discovery is byte-for-byte
     what ships. A hash mismatch aborts the upload. When no pending release
-    is recorded, the upload proceeds with a warning. On success, the
-    deployment state records the published version, hash, and Intune app
-    IDs, and a matching pending slot is cleared.
+    is recorded, the upload proceeds with a warning — or fails when
+    deployment.require_pending is enabled. On success, the deployment
+    state records the published version, hash, and Intune app IDs, and a
+    matching pending slot is cleared.
 
     Re-running an upload is safe: existing NAPT-stamped apps matching this
     publish instance (recipe id, entry type, installer hash) are adopted —
@@ -733,9 +734,10 @@ def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
             Run 'napt package' to create or recreate the package.
         AuthError: If all Azure credential methods fail.
         NetworkError: If Graph API or Azure Blob Storage calls fail.
-        PackagingError: If the .intunewin file is malformed, or the
+        PackagingError: If the .intunewin file is malformed, the
             package's installer hash does not match the pending release
-            in deployment state.
+            in deployment state, or no pending release is recorded while
+            deployment.require_pending is enabled.
 
     Example:
         Upload and print the resulting Intune app IDs:
@@ -794,6 +796,13 @@ def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
             )
         logger.info(
             "UPLOAD", f"Package matches pending release (sha256 {installer_sha256})"
+        )
+    elif config["deployment"]["require_pending"]:
+        raise PackagingError(
+            f"No pending release recorded for '{app_id}' and "
+            "deployment.require_pending is enabled.\n"
+            "Run 'napt discover' to record the release, or add a pending "
+            f"entry (version, sha256, url) to {state_path}."
         )
     else:
         logger.warning(
