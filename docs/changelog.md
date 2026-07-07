@@ -12,9 +12,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Deployment state files** - `napt discover` records each discovered
     release in `state/deployment/{id}.json` as a pending publication
     candidate. One file per app; the newest discovery wins
+- **Idempotent upload** - Re-running `napt upload` adopts the existing
+    NAPT-stamped Intune apps for a release instead of creating duplicates,
+    and resumes the content upload when a previous run crashed mid-publish.
+    Pass `--force` to re-send metadata and content to the existing apps
+    (e.g., after changing PSADT commands without a new installer release)
 - **Upload provenance** - `napt upload` stamps each Intune app entry's
-    notes field with `napt/v1 id=<recipe-id> sha256=<hash>` and records
-    the published version, hash, and Intune app IDs in deployment state
+    notes field with `napt/v1 id=<recipe-id> entry=<install|update>
+    sha256=<hash>` and records the published version, hash, and Intune
+    app IDs in deployment state
 - **Installer hash verification** - `napt upload` refuses to publish a
     package whose installer hash does not match the pending release
     recorded at discovery, so what was approved is exactly what ships
