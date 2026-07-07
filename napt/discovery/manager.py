@@ -111,7 +111,7 @@ def discover_recipe(
             an unknown ``discovery.strategy`` value.
         NetworkError: On download or version-extraction failures from
             either flow.
-        PackagingError: On a corrupted deployment state file.
+        StateError: On a corrupted deployment state file.
 
     """
     logger = get_global_logger()

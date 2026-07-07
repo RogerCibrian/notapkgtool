@@ -47,11 +47,16 @@ from pathlib import Path
 from typing import Any
 
 from napt.config import load_effective_config
-from napt.exceptions import ConfigError
+from napt.exceptions import ConfigError, StateError
 from napt.logging import get_global_logger
 from napt.state import deployment_state_path, load_deployment_state
 
-__all__ = ["plan_path_for", "plan_promotions", "write_plan_file"]
+__all__ = [
+    "plan_path_for",
+    "plan_promotions",
+    "resolve_state_dir",
+    "write_plan_file",
+]
 
 # Deterministic ordering of action types within one app's actions.
 _ACTION_ORDER = {"assign_install": 0, "enter_ring": 1, "advance_ring": 2}
@@ -81,13 +86,13 @@ def _parse_entered_at(value: str, context: str) -> datetime:
         The parsed timezone-aware datetime.
 
     Raises:
-        ConfigError: If the timestamp cannot be parsed.
+        StateError: If the timestamp cannot be parsed.
 
     """
     try:
         parsed = datetime.fromisoformat(value)
     except (TypeError, ValueError) as err:
-        raise ConfigError(
+        raise StateError(
             f"{context}: invalid entered_at timestamp {value!r} in "
             "deployment state. Fix the JSON or restore the file from a backup."
         ) from err
@@ -226,6 +231,29 @@ def _collect_recipe_paths(recipes: Path) -> list[Path]:
     raise ConfigError(f"Recipe path not found: {recipes}")
 
 
+def resolve_state_dir(recipes: Path) -> Path:
+    """Resolves the configured state directory for a plan run.
+
+    ``directories.state`` is org policy — consistent across a project —
+    so the first recipe's effective configuration determines it for a
+    fleet-wide run.
+
+    Args:
+        recipes: A recipe YAML file, or a directory scanned recursively.
+
+    Returns:
+        The configured state directory.
+
+    Raises:
+        ConfigError: If the recipes path is invalid or the first recipe
+            cannot be loaded.
+
+    """
+    first = _collect_recipe_paths(recipes)[0]
+    config = load_effective_config(first)
+    return Path(config["directories"]["state"])
+
+
 def plan_promotions(
     recipes: Path,
     state_dir: Path | None = None,
@@ -249,9 +277,9 @@ def plan_promotions(
         Action dicts sorted by app id and action type.
 
     Raises:
-        ConfigError: On invalid recipes, an invalid recipes path, or a
-            corrupted ring timestamp.
-        PackagingError: On a corrupted deployment state file.
+        ConfigError: On invalid recipes or an invalid recipes path.
+        StateError: On a corrupted deployment state file or an invalid
+            ring timestamp.
 
     """
     logger = get_global_logger()

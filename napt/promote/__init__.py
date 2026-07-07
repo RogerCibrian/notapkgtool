@@ -25,6 +25,16 @@ deployed release into the next ring once it has held its current ring for
 the ring's ``promote_after_days``.
 """
 
-from .planner import plan_path_for, plan_promotions, write_plan_file
+from .planner import (
+    plan_path_for,
+    plan_promotions,
+    resolve_state_dir,
+    write_plan_file,
+)
 
-__all__ = ["plan_path_for", "plan_promotions", "write_plan_file"]
+__all__ = [
+    "plan_path_for",
+    "plan_promotions",
+    "resolve_state_dir",
+    "write_plan_file",
+]

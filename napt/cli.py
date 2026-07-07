@@ -96,9 +96,15 @@ from napt.exceptions import (
     NAPTError,
     NetworkError,
     PackagingError,
+    StateError,
 )
 from napt.logging import get_logger, set_global_logger
-from napt.promote import plan_path_for, plan_promotions, write_plan_file
+from napt.promote import (
+    plan_path_for,
+    plan_promotions,
+    resolve_state_dir,
+    write_plan_file,
+)
 from napt.state import summarize_deployment_states
 from napt.upload import upload_package
 from napt.validation import validate_recipe
@@ -635,7 +641,14 @@ def cmd_upload(args: argparse.Namespace) -> int:
 
 
 def _describe_action(action: dict[str, Any]) -> str:
-    """Formats one planned promotion action as a summary line."""
+    """Formats one planned promotion action as a summary line.
+
+    Args:
+        action: A planned action dict from plan_promotions.
+
+    Returns:
+        A one-line ASCII description for console output.
+    """
     groups = ", ".join(action["groups"])
     if action["type"] == "assign_install":
         return (
@@ -675,16 +688,20 @@ def cmd_promote_plan(args: argparse.Namespace) -> int:
     set_global_logger(logger)
 
     recipes = Path(args.recipes)
-    state_dir = Path(args.state_dir)
-    plan_path = plan_path_for(state_dir)
 
     print(f"Planning promotions for: {recipes}")
     print()
 
     try:
+        state_dir = (
+            Path(args.state_dir)
+            if args.state_dir is not None
+            else resolve_state_dir(recipes)
+        )
+        plan_path = plan_path_for(state_dir)
         actions = plan_promotions(recipes, state_dir=state_dir / "deployment")
         write_plan_file(actions, plan_path)
-    except (ConfigError, PackagingError) as err:
+    except (ConfigError, StateError) as err:
         print(f"Error: {err}")
         if args.verbose or args.debug:
             import traceback
@@ -738,7 +755,7 @@ def cmd_status(args: argparse.Namespace) -> int:
 
     try:
         rows = summarize_deployment_states(deployment_dir)
-    except (ConfigError, PackagingError) as err:
+    except (ConfigError, StateError) as err:
         print(f"Error: {err}")
         if args.verbose or args.debug:
             import traceback
@@ -1272,8 +1289,11 @@ def main() -> None:
     parser_promote_plan.add_argument(
         "--state-dir",
         type=Path,
-        default=Path("state"),
-        help=("State directory holding deployment/ and plan.json " "(default: state)"),
+        default=None,
+        help=(
+            "State directory holding deployment/ and plan.json "
+            "(default: directories.state from config)"
+        ),
     )
     parser_promote_plan.add_argument(
         "-v",

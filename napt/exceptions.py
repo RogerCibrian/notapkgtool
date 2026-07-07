@@ -50,6 +50,7 @@ __all__ = [
     "ConfigError",
     "NetworkError",
     "PackagingError",
+    "StateError",
     "AuthError",
     "NotModifiedError",
 ]
@@ -146,6 +147,37 @@ class PackagingError(NAPTError):
                 build_package(Path("recipe.yaml"), Path("./builds"))
             except PackagingError as e:
                 print(f"Packaging error: {e}")
+            ```
+    """
+
+    pass
+
+
+class StateError(NAPTError):
+    """Raised for persisted-state integrity errors.
+
+    This exception is raised when NAPT's own persisted state — deployment
+    state files under ``state/`` or the discovery cache under ``cache/`` —
+    is unreadable or invalid:
+
+    - Corrupted deployment state files (invalid JSON)
+    - Invalid deployment state fields (e.g., an unparseable ring
+        ``entered_at`` timestamp)
+    - Corrupted discovery cache files (invalid JSON)
+
+    Deployment state is authoritative and never auto-replaced; the error
+    message says how to recover. The discovery cache is disposable and is
+    backed up and recreated before this error is raised.
+
+    Example:
+        Catching state errors:
+            ```python
+            from napt.exceptions import StateError
+
+            try:
+                state = load_deployment_state(path)
+            except StateError as e:
+                print(f"State error: {e}")
             ```
     """
 

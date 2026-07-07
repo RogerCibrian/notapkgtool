@@ -10,8 +10,13 @@ from typing import Any
 import pytest
 import yaml
 
-from napt.exceptions import ConfigError
-from napt.promote import plan_path_for, plan_promotions, write_plan_file
+from napt.exceptions import ConfigError, StateError
+from napt.promote import (
+    plan_path_for,
+    plan_promotions,
+    resolve_state_dir,
+    write_plan_file,
+)
 from napt.state import (
     create_default_deployment_state,
     deployment_state_path,
@@ -19,6 +24,22 @@ from napt.state import (
 )
 
 NOW = datetime(2026, 7, 8, 12, 0, 0, tzinfo=UTC)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_project(tmp_path, monkeypatch):
+    """Makes each test a self-contained NAPT project.
+
+    pytest's basetemp lives inside the repo (.pytest-tmp), so the config
+    loader's upward walk from a test recipe would otherwise find the
+    repo's own defaults/org.yaml (which configures real deployment
+    rings). A minimal org.yaml in tmp_path stops the walk there.
+    """
+    monkeypatch.chdir(tmp_path)
+    org = tmp_path / "defaults" / "org.yaml"
+    org.parent.mkdir(parents=True, exist_ok=True)
+    org.write_text("apiVersion: napt/v1\n", encoding="utf-8")
+
 
 _RINGS = [
     {"name": "pilot", "groups": ["sg-pilot"], "promote_after_days": 2},
@@ -290,13 +311,51 @@ class TestPlanPromotions:
             },
         )
 
-        with pytest.raises(ConfigError, match="entered_at"):
+        with pytest.raises(StateError, match="entered_at"):
             plan_promotions(recipe, state_dir=state_dir, now=NOW)
 
     def test_missing_recipes_path_raises(self, tmp_path):
         """Tests that a nonexistent recipes path raises ConfigError."""
         with pytest.raises(ConfigError, match="not found"):
             plan_promotions(tmp_path / "nope", state_dir=tmp_path, now=NOW)
+
+    def test_omitted_state_dir_uses_recipe_config(self, tmp_path, monkeypatch):
+        """Tests that directories.state from config applies without a flag."""
+        monkeypatch.chdir(tmp_path)
+        recipe = _write_recipe(tmp_path, rings=_RINGS)
+        # Point the recipe's directories.state at a custom location
+        data = yaml.safe_load(recipe.read_text(encoding="utf-8"))
+        data["directories"] = {"state": "customstate"}
+        recipe.write_text(yaml.dump(data), encoding="utf-8")
+
+        deployment_dir = tmp_path / "customstate" / "deployment"
+        state = create_default_deployment_state()
+        state["deployed"] = _deployed()
+        save_deployment_state(state, deployment_state_path(deployment_dir, "test-app"))
+
+        actions = plan_promotions(recipe, state_dir=None, now=NOW)
+
+        assert len(actions) == 1
+        assert actions[0]["type"] == "enter_ring"
+
+
+class TestResolveStateDir:
+    """Tests for state directory resolution from configuration."""
+
+    def test_resolves_configured_state_dir(self, tmp_path):
+        """Tests that directories.state is read from the first recipe."""
+        recipe = _write_recipe(tmp_path)
+        data = yaml.safe_load(recipe.read_text(encoding="utf-8"))
+        data["directories"] = {"state": "customstate"}
+        recipe.write_text(yaml.dump(data), encoding="utf-8")
+
+        assert resolve_state_dir(recipe) == Path("customstate")
+
+    def test_default_state_dir(self, tmp_path):
+        """Tests that the built-in default resolves to state."""
+        recipe = _write_recipe(tmp_path)
+
+        assert resolve_state_dir(recipe) == Path("state")
 
 
 class TestWritePlanFile:

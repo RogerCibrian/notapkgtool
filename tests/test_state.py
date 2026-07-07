@@ -15,7 +15,7 @@ import json
 
 import pytest
 
-from napt.exceptions import PackagingError
+from napt.exceptions import StateError
 from napt.state import (
     DiscoveryCache,
     create_default_deployment_state,
@@ -157,7 +157,7 @@ class TestDiscoveryCache:
 
         cache = DiscoveryCache(cache_file)
 
-        with pytest.raises(PackagingError, match="Corrupted cache file"):
+        with pytest.raises(StateError, match="Corrupted cache file"):
             cache.load()
 
         # Should create backup
@@ -317,7 +317,7 @@ class TestDeploymentStateFiles:
         state_path = tmp_path / "napt-chrome.json"
         state_path.write_text("not JSON{{{", encoding="utf-8")
 
-        with pytest.raises(PackagingError, match="Corrupted deployment state"):
+        with pytest.raises(StateError, match="Corrupted deployment state"):
             load_deployment_state(state_path)
 
         # The corrupted file must be left untouched (never silently replaced).

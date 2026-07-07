@@ -67,7 +67,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from napt.exceptions import PackagingError
+from napt.exceptions import StateError
 
 
 def deployment_state_path(state_dir: Path, recipe_id: str) -> Path:
@@ -115,7 +115,7 @@ def load_deployment_state(state_path: Path) -> dict[str, Any]:
         Deployment state dictionary.
 
     Raises:
-        PackagingError: If the file exists but contains invalid JSON.
+        StateError: If the file exists but contains invalid JSON.
             Deployment state is authoritative, so a corrupted file is
             never silently replaced.
 
@@ -126,7 +126,7 @@ def load_deployment_state(state_path: Path) -> dict[str, Any]:
     except FileNotFoundError:
         return create_default_deployment_state()
     except json.JSONDecodeError as err:
-        raise PackagingError(
+        raise StateError(
             f"Corrupted deployment state file: {state_path}. "
             "Deployment state is authoritative and is not auto-replaced. "
             "Fix the JSON or restore the file from a backup."
@@ -250,7 +250,7 @@ def summarize_deployment_states(deployment_dir: Path) -> list[dict[str, Any]]:
             Empty when the directory does not exist or holds no state.
 
     Raises:
-        PackagingError: On a corrupted deployment state file.
+        StateError: On a corrupted deployment state file.
 
     """
     if not deployment_dir.is_dir():
