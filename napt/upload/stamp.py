@@ -68,6 +68,36 @@ def build_stamp(recipe_id: str, entry: str, sha256: str) -> str:
     return stamp
 
 
+def find_stamped_app(
+    apps: list[dict],
+    recipe_id: str,
+    entry: str,
+    sha256: str,
+) -> dict | None:
+    """Finds the app whose provenance stamp matches a publish instance.
+
+    Args:
+        apps: Mobile app dicts (with "notes") from list_mobile_apps.
+        recipe_id: Recipe identifier to match.
+        entry: Entry type to match ("install" or "update").
+        sha256: Installer hash to match.
+
+    Returns:
+        The matching app dict, or None when no stamped app matches.
+
+    """
+    for app in apps:
+        stamp = parse_stamp(app.get("notes"))
+        if (
+            stamp
+            and stamp["id"] == recipe_id
+            and stamp["entry"] == entry
+            and stamp["sha256"] == sha256
+        ):
+            return app
+    return None
+
+
 def parse_stamp(notes: str | None) -> dict[str, str] | None:
     """Parses a provenance stamp from an Intune notes field value.
 

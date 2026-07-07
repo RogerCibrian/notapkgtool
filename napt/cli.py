@@ -25,7 +25,7 @@ Commands:
     build: Build PSADT package from recipe
     package: Create .intunewin package for Intune (recipe-based)
     upload: Upload .intunewin package to Microsoft Intune
-    promote: Plan (and later apply) deployment ring promotion
+    promote: Plan and apply deployment ring promotion
     status: Show deployment state across all apps
 
 Example:
@@ -100,6 +100,7 @@ from napt.exceptions import (
 )
 from napt.logging import get_logger, set_global_logger
 from napt.promote import (
+    apply_plan,
     plan_path_for,
     plan_promotions,
     resolve_state_dir,
@@ -734,6 +735,85 @@ def cmd_promote_plan(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_promote_apply(args: argparse.Namespace) -> int:
+    """Handler for 'napt promote apply' command.
+
+    Executes a promotion plan against Intune: assigns install entries,
+    enters and advances releases through rings, displaces superseded
+    releases, and retires them per the retention policy. Consumes the
+    plan file when one exists; otherwise plans fresh and applies
+    immediately. Stale or already-applied actions are skipped with a
+    warning, so re-running after a partial failure is safe.
+
+    Args:
+        args: Parsed command-line arguments containing the recipes path,
+            state directory, plan file, and flags.
+
+    Returns:
+        Exit code (0 for success — including nothing to apply,
+        1 for failure).
+
+    """
+    logger = get_logger(verbose=args.verbose, debug=args.debug)
+    set_global_logger(logger)
+
+    recipes = Path(args.recipes)
+
+    print(f"Applying promotions for: {recipes}")
+    print()
+
+    try:
+        state_dir = (
+            Path(args.state_dir)
+            if args.state_dir is not None
+            else resolve_state_dir(recipes)
+        )
+        summary = apply_plan(
+            recipes,
+            state_dir=state_dir,
+            plan_file=args.plan_file,
+        )
+    except AuthError as err:
+        print(f"Authentication error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+    except (ConfigError, NetworkError, StateError) as err:
+        print(f"Error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+    except NAPTError as err:
+        print(f"Error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+
+    applied = summary["applied"]
+    skipped = summary["skipped"]
+
+    print("=" * 70)
+    print("PROMOTION APPLY")
+    print("=" * 70)
+    if not applied and not skipped:
+        print("  Nothing to apply.")
+    for action in applied:
+        print(f"  [OK] {_describe_action(action)}")
+    for entry in skipped:
+        print(f"  [SKIP] {_describe_action(entry['action'])} ({entry['reason']})")
+    print("=" * 70)
+    print()
+    print(f"[SUCCESS] Applied {len(applied)} action(s), " f"skipped {len(skipped)}.")
+
+    return 0
+
+
 def cmd_status(args: argparse.Namespace) -> int:
     """Handler for 'napt status' command.
 
@@ -1253,13 +1333,13 @@ def main() -> None:
     # 'promote' command with subcommands
     parser_promote = subparsers.add_parser(
         "promote",
-        help="Plan deployment ring promotion",
+        help="Plan and apply deployment ring promotion",
         description=(
-            "Plan (and later apply) ring-based promotion of published apps.\n\n"
+            "Plan and apply ring-based promotion of published apps.\n\n"
             "Examples:\n"
             "  napt promote plan\n"
-            "  napt promote plan recipes/Google/chrome.yaml\n"
-            "  napt promote plan --state-dir state\n\n"
+            "  napt promote apply\n"
+            "  napt promote plan recipes/Google/chrome.yaml\n\n"
             "See docs for the promotion model and workflows."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -1308,6 +1388,54 @@ def main() -> None:
         help="Show detailed debugging output (implies --verbose)",
     )
     parser_promote_plan.set_defaults(func=cmd_promote_plan)
+
+    parser_promote_apply = promote_sub.add_parser(
+        "apply",
+        help="Execute a promotion plan against Intune",
+        description=(
+            "Execute promotion actions: assign install entries, enter and "
+            "advance rings, displace superseded releases, and retire them "
+            "per deployment.retain_versions. Consumes state/plan.json when "
+            "it exists; otherwise plans fresh and applies immediately. "
+            "Stale or already-applied actions are skipped, so re-running "
+            "is safe."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser_promote_apply.add_argument(
+        "recipes",
+        nargs="?",
+        default="recipes",
+        help="Recipe file or directory to apply for (default: recipes/)",
+    )
+    parser_promote_apply.add_argument(
+        "--state-dir",
+        type=Path,
+        default=None,
+        help=(
+            "State directory holding deployment/ and plan.json "
+            "(default: directories.state from config)"
+        ),
+    )
+    parser_promote_apply.add_argument(
+        "--plan-file",
+        type=Path,
+        default=None,
+        help="Plan file to execute (default: <state-dir>/plan.json if present)",
+    )
+    parser_promote_apply.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Show progress and high-level status updates",
+    )
+    parser_promote_apply.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="Show detailed debugging output (implies --verbose)",
+    )
+    parser_promote_apply.set_defaults(func=cmd_promote_apply)
 
     # 'status' command
     parser_status = subparsers.add_parser(

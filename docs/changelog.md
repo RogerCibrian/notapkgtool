@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`napt promote apply`** - Executes a promotion plan against Intune:
+    assigns install entries, enters and advances releases through rings,
+    unassigns displaced releases, and retires them per
+    `deployment.retain_versions` (only NAPT-stamped apps are ever
+    deleted). Consumes `state/plan.json` when present, plans fresh
+    otherwise. Stale or already-applied actions are skipped, so
+    re-running after a partial failure is safe. Admin-made assignments
+    are always preserved
+
 - **`napt promote plan`** - Computes which releases enter or advance the
     configured deployment rings (plus first-time install-entry
     assignments) and writes a reviewable `state/plan.json`. The plan file

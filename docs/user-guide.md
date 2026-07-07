@@ -442,14 +442,23 @@ napt package recipes/Google/chrome.yaml --version 130.0.6723.116
 
 ### napt promote
 
-Plans ring-based promotion of published apps. `promote plan` computes which
-releases enter or advance deployment rings (per `deployment.rings`) and
-writes `state/plan.json` when there is work; a stale plan file is removed
-when nothing is eligible. Read-only: neither Intune nor deployment state is
-modified. Applying plans arrives with `napt promote apply`.
+Plans and applies ring-based promotion of published apps. `promote plan`
+computes which releases enter or advance deployment rings (per
+`deployment.rings`) and writes `state/plan.json` when there is work; a
+stale plan file is removed when nothing is eligible. Read-only.
+
+`promote apply` executes the plan against Intune: assigns install entries,
+enters and advances rings, unassigns displaced releases, and retires them
+per `deployment.retain_versions`. It consumes `state/plan.json` when one
+exists (removing it after a fully successful run) and plans fresh
+otherwise. Stale or already-applied actions are skipped with a warning, so
+re-running after a partial failure is safe. Assignments NAPT does not
+manage — admin-made groups, all-device targets, exclusions — are always
+preserved.
 
 ```bash
 napt promote plan [RECIPE_OR_DIR] [OPTIONS]
+napt promote apply [RECIPE_OR_DIR] [OPTIONS]
 ```
 
 ### napt status
@@ -618,8 +627,8 @@ A file holds four sections:
 
 - `deployed` - The version currently published to Intune, with its SHA-256 hash and Intune app IDs. Null until the first upload.
 - `pending` - The discovered release awaiting publication (version, SHA-256 hash, download URL). A single slot: a newer discovery replaces an unpublished candidate (newest wins), and discovering the already-deployed release clears it. Identity is the SHA-256 hash, so a vendor re-release of the same version with a different binary counts as new.
-- `rings` - Which version currently holds each deployment ring (used by upcoming promotion features).
-- `retained` - Superseded versions kept in Intune for rollback (used by upcoming promotion features).
+- `rings` - Which version currently holds each deployment ring, with the timestamp it entered (written by `napt promote apply`).
+- `retained` - Superseded versions kept in Intune for rollback per `deployment.retain_versions` (written by `napt promote apply`).
 
 `napt discover` records the pending candidate.
 Later pipeline stages consume it.
@@ -636,6 +645,9 @@ needed — no special exit codes (`napt` always exits 0 on success, 1 on
 error).
 Plan output is deterministic, so re-running plan against unchanged state
 produces a byte-identical file.
+`napt promote apply` executes the plan as an allowlist — entries that no
+longer validate against current state are skipped, never improvised — and
+removes the file after a fully successful run.
 
 ### Default Behavior (Stateful)
 
@@ -737,6 +749,8 @@ to its own:
 | `napt discover` | `--output-dir` | Where to save downloaded installers | `directories.discover` | `downloads` |
 | `napt discover` | `--cache-file` | Discovery cache file (`<dir>/discovery.json`) | `directories.cache` | `cache` |
 | `napt discover` | `--state-dir` | Per-app deployment state (`<dir>/deployment/`) | `directories.state` | `state` |
+| `napt promote` | `--state-dir` | Deployment state and plan.json | `directories.state` | `state` |
+| `napt status` | `--state-dir` | Deployment state to summarize (no config lookup) | - | `state` |
 | `napt build` | `--downloads-dir` | Where to find the installer | `directories.discover` | `downloads` |
 | `napt build` | `--output-dir` | Where to save builds | `directories.build` | `builds` |
 | `napt package` | `--builds-dir` | Where to find the build | `directories.build` | `builds` |

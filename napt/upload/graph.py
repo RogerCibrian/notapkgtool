@@ -73,6 +73,7 @@ __all__ = [
     "create_win32_app",
     "create_content_version",
     "create_content_version_file",
+    "delete_mobile_app",
     "get_app_assignments",
     "get_mobile_app",
     "list_mobile_apps",
@@ -336,6 +337,28 @@ def list_mobile_apps(access_token: str) -> list[dict]:
         apps.extend(body.get("value", []))
         url = body.get("@odata.nextLink")
     return apps
+
+
+def delete_mobile_app(access_token: str, app_id: str) -> None:
+    """Delete a mobile app from Intune.
+
+    A 404 is tolerated — the app being already gone is the desired end
+    state, so retried deletions stay idempotent.
+
+    Args:
+        access_token: Bearer token for Graph API.
+        app_id: Graph API object ID of the app to delete.
+
+    Raises:
+        AuthError: On 401 or 403.
+        NetworkError: On 5xx or connection error.
+
+    """
+    url = f"{GRAPH_BASE}/deviceAppManagement/mobileApps/{app_id}"
+    resp = requests.delete(url, headers=_auth_headers(access_token), timeout=30)
+    if resp.status_code == 404:
+        return
+    _check_response(resp, "delete_mobile_app")
 
 
 def get_mobile_app(access_token: str, app_id: str) -> dict:
