@@ -692,6 +692,54 @@ The icons directory is a machine-local output (gitignored), so this fix
 does not travel with the repo.
 Delete the file and rebuild to force re-extraction.
 
+### Fix a broken published app
+
+You published an app, installs are failing — a bad install command, wrong
+detection settings, a missing PSADT step.
+You fixed the recipe, and now Intune needs to match.
+
+**The fix: delete the broken app and publish fresh.**
+
+Intune throttles retries after repeated failures (the Global Retry
+Schedule), and republishing content to the same app does not reliably
+reset it.
+A fresh app object gets a clean evaluation on every device:
+
+1. Delete the broken app entries (install and `[Update]`) in the Intune
+   portal.
+   Deleting first matters: NAPT recognizes its own apps by their
+   provenance stamp, so re-running upload against the existing broken app
+   would adopt it instead of creating a new one.
+2. Rebuild and upload:
+   ```bash
+   napt build recipes/Vendor/app.yaml
+   napt package recipes/Vendor/app.yaml
+   napt upload recipes/Vendor/app.yaml
+   ```
+   Upload finds no stamped apps, creates fresh entries, and records the
+   new app IDs in deployment state automatically.
+3. Recreate the assignments the old app had.
+
+If the vendor has shipped a newer version since the broken publish, you
+can also just run the normal pipeline — the new release creates new app
+entries anyway, and the broken version's entries can be deleted.
+
+**Exception: no device has attempted the install yet.**
+
+If you caught the problem before any assignment took effect — the app is
+still unassigned, or you spotted a wrong command during portal review —
+there is no retry throttling to escape, and an in-place fix is faster:
+
+```bash
+napt build recipes/Vendor/app.yaml
+napt package recipes/Vendor/app.yaml
+napt upload recipes/Vendor/app.yaml --force
+```
+
+`--force` updates the existing app entries in place — metadata and a fresh
+content version together — and keeps the app IDs.
+It never creates duplicates.
+
 ## Update Existing Recipes
 
 When a recipe needs changes (new version format, different download URL, etc.).
