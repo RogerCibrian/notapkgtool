@@ -589,8 +589,8 @@ def _upload_single_app(
     Adoption does not re-send app metadata or content: a matched app keeps
     whatever it already has, even if the recipe or package changed since it
     was published (the match key is the installer binary, not the package).
-    Pass force=True to update the matched app's metadata and upload a fresh
-    content version instead of adopting.
+    Pass force=True to upload a fresh content version and then update the
+    matched app's metadata instead of adopting.
 
     Args:
         access_token: Azure AD bearer token for Graph API calls.
@@ -616,6 +616,7 @@ def _upload_single_app(
     display_name: str = app_metadata["displayName"]
 
     match = _find_stamped_app(existing_apps, recipe_id, entry, installer_sha256)
+    patch_metadata_after_content = False
     if match is not None:
         intune_app_id: str = match["id"]
         if force:
@@ -624,11 +625,10 @@ def _upload_single_app(
                 total_steps,
                 f"Re-uploading existing app record for '{display_name}'...",
             )
-            update_win32_app(access_token, intune_app_id, app_metadata)
-            logger.info(
-                "UPLOAD",
-                f"Updated Intune app metadata: {intune_app_id} (--force)",
-            )
+            # The metadata PATCH must come after the content upload: Intune
+            # rejects a contentVersions POST that closely follows an app
+            # PATCH with HTTP 412 ConditionNotMet (stale internal ETag).
+            patch_metadata_after_content = True
         else:
             full_app = get_mobile_app(access_token, intune_app_id)
             if full_app.get("committedContentVersion"):
@@ -668,6 +668,13 @@ def _upload_single_app(
         step_commit,
         total_steps,
     )
+
+    if patch_metadata_after_content:
+        update_win32_app(access_token, intune_app_id, app_metadata)
+        logger.info(
+            "UPLOAD",
+            f"Updated Intune app metadata: {intune_app_id} (--force)",
+        )
 
     return intune_app_id
 
