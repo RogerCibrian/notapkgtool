@@ -2984,7 +2984,8 @@ Graph API. Run <code>napt package</code> before uploading.</p>
    Verifies the package's installer hash (from the build manifest) against the
    pending release in the app's deployment state — a mismatch aborts the upload,
    so what was recorded at discovery is byte-for-byte what ships.
-   When no pending release is recorded, the upload proceeds with a warning</li>
+   When no pending release is recorded, the upload proceeds with a warning,
+   or fails when <code>deployment.require_pending</code> is enabled</li>
 <li><strong>Authenticate</strong> - Tries three credential methods in order (see <a href="#authentication">Authentication</a> below)</li>
 <li><strong>Parse Package Metadata</strong> - Reads encryption metadata from <code>Detection.xml</code> inside the <code>.intunewin</code> ZIP
 4–6. <strong>Create, Upload, Commit (install entry)</strong> - Creates the Win32 app record
@@ -3056,7 +3057,9 @@ variables:</p>
 <li>Go to <strong>API permissions</strong> → <strong>Add a permission</strong> →
    <strong>Microsoft Graph</strong> → <strong>Application permissions</strong></li>
 <li>Search for and add <code>DeviceManagementApps.ReadWrite.All</code></li>
-<li>Also add the <strong>Delegated</strong> version of <code>DeviceManagementApps.ReadWrite.All</code>
+<li>Also add <code>Group.Read.All</code> (application permission) — used to resolve
+   Entra ID group names in <code>deployment:</code> configuration to object IDs</li>
+<li>Also add the <strong>Delegated</strong> versions of both permissions
    (for interactive device code auth)</li>
 <li>Click <strong>Grant admin consent</strong></li>
 <li>Go to <strong>Authentication</strong> → <strong>Advanced settings</strong> →

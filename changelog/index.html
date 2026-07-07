@@ -2238,9 +2238,19 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.6.0...HEAD">Unreleased</a></h2>
 <h3 id="added">Added</h3>
 <ul>
-<li><strong>Deployment state files</strong> - <code>napt discover</code> records each discovered
+<li>
+<p><strong>Deployment configuration</strong> - New <code>deployment:</code> recipe section:
+    <code>require_pending</code> makes <code>napt upload</code> fail unless the release was
+    recorded at discovery (for review-gated publish workflows);
+    <code>rings</code>, <code>install</code>, and <code>retain_versions</code> define update promotion
+    policy for the upcoming <code>napt promote</code> command. Group name resolution
+    requires the <code>Group.Read.All</code> application permission</p>
+</li>
+<li>
+<p><strong>Deployment state files</strong> - <code>napt discover</code> records each discovered
     release in <code>state/deployment/{id}.json</code> as a pending publication
-    candidate. One file per app; the newest discovery wins</li>
+    candidate. One file per app; the newest discovery wins</p>
+</li>
 <li><strong>Idempotent upload</strong> - Re-running <code>napt upload</code> adopts the existing
     NAPT-stamped Intune apps for a release instead of creating duplicates,
     and resumes the content upload when a previous run crashed mid-publish.
