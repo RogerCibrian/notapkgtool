@@ -11,13 +11,17 @@ import requests_mock as req_mock
 from napt.exceptions import ConfigError, NetworkError
 from napt.upload.graph import (
     GRAPH_BASE,
+    assign_app,
+    build_group_assignment,
     commit_content_version,
     commit_content_version_file,
     create_content_version,
     create_content_version_file,
     create_win32_app,
+    get_app_assignments,
     get_mobile_app,
     list_mobile_apps,
+    resolve_group_id,
     upload_to_azure_blob,
 )
 
@@ -244,3 +248,83 @@ def test_get_mobile_app_returns_full_object() -> None:
         result = get_mobile_app(TOKEN, APP_ID)
 
     assert result == body
+
+
+# --- resolve_group_id / assignments ---
+
+GROUP_ID = "12345678-abcd-4bed-b834-2a9ef5879619"
+_GROUPS_URL = f"{GRAPH_BASE}/groups"
+_ASSIGNMENTS_URL = f"{_APP_URL}/assignments"
+_ASSIGN_URL = f"{_APP_URL}/assign"
+
+
+def test_resolve_group_id_guid_passes_through() -> None:
+    """Tests that an object ID is returned without a Graph call."""
+    assert resolve_group_id(TOKEN, GROUP_ID) == GROUP_ID
+
+
+def test_resolve_group_id_looks_up_name() -> None:
+    """Tests that a single displayName match resolves to its object ID."""
+    with req_mock.Mocker() as m:
+        m.get(_GROUPS_URL, json={"value": [{"id": GROUP_ID, "displayName": "Pilot"}]})
+        assert resolve_group_id(TOKEN, "Pilot") == GROUP_ID
+
+
+def test_resolve_group_id_no_match_raises() -> None:
+    """Tests that an unknown group name raises ConfigError."""
+    with req_mock.Mocker() as m:
+        m.get(_GROUPS_URL, json={"value": []})
+        with pytest.raises(ConfigError, match="No Entra ID group found"):
+            resolve_group_id(TOKEN, "Nope")
+
+
+def test_resolve_group_id_ambiguous_raises() -> None:
+    """Tests that multiple matches raise ConfigError."""
+    with req_mock.Mocker() as m:
+        m.get(
+            _GROUPS_URL,
+            json={"value": [{"id": "a"}, {"id": "b"}]},
+        )
+        with pytest.raises(ConfigError, match="Multiple Entra ID groups"):
+            resolve_group_id(TOKEN, "Pilot")
+
+
+def test_resolve_group_id_escapes_quotes() -> None:
+    """Tests that single quotes in group names are escaped in the filter."""
+    with req_mock.Mocker() as m:
+        m.get(_GROUPS_URL, json={"value": [{"id": GROUP_ID}]})
+        resolve_group_id(TOKEN, "O'Brien's Group")
+        # OData escapes each ' as '' in the filter expression
+        assert "O''Brien''s" in m.request_history[0].url
+
+
+def test_get_app_assignments_returns_value() -> None:
+    """Tests that assignments are returned from the value array."""
+    assignments = [{"id": "a1", "intent": "required"}]
+    with req_mock.Mocker() as m:
+        m.get(_ASSIGNMENTS_URL, json={"value": assignments})
+        assert get_app_assignments(TOKEN, APP_ID) == assignments
+
+
+def test_assign_app_posts_full_set() -> None:
+    """Tests that assign_app posts the complete assignment list."""
+    assignments = [build_group_assignment(GROUP_ID, "required")]
+    with req_mock.Mocker() as m:
+        m.post(_ASSIGN_URL, status_code=200)
+        assign_app(TOKEN, APP_ID, assignments)
+        body = m.request_history[0].json()
+    assert body == {"mobileAppAssignments": assignments}
+
+
+def test_build_group_assignment_shape() -> None:
+    """Tests the mobileAppAssignment payload structure."""
+    result = build_group_assignment(GROUP_ID, "available")
+
+    assert result == {
+        "@odata.type": "#microsoft.graph.mobileAppAssignment",
+        "intent": "available",
+        "target": {
+            "@odata.type": "#microsoft.graph.groupAssignmentTarget",
+            "groupId": GROUP_ID,
+        },
+    }

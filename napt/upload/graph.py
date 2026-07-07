@@ -23,6 +23,11 @@ Implements the full upload flow for a Win32 LOB app:
     5. Commit the uploaded file with encryption metadata (POST commit + polling)
     6. Set the committed content version on the app (PATCH mobileApps)
 
+Also provides app queries used for reconciliation (list_mobile_apps,
+get_mobile_app, update_win32_app) and group-based assignment plumbing
+(resolve_group_id, get_app_assignments, build_group_assignment,
+assign_app) used by deployment promotion.
+
 All functions take an access_token as the first argument. Obtain one via
 napt.upload.auth.get_access_token().
 
@@ -54,6 +59,7 @@ from __future__ import annotations
 
 import base64
 from pathlib import Path
+import re
 import time
 
 import requests
@@ -62,11 +68,15 @@ from napt.exceptions import AuthError, ConfigError, NetworkError
 from napt.upload.intunewin import IntunewinMetadata
 
 __all__ = [
+    "assign_app",
+    "build_group_assignment",
     "create_win32_app",
     "create_content_version",
     "create_content_version_file",
+    "get_app_assignments",
     "get_mobile_app",
     "list_mobile_apps",
+    "resolve_group_id",
     "update_win32_app",
     "upload_to_azure_blob",
     "commit_content_version_file",
@@ -178,6 +188,125 @@ def _poll(
         f"{context}: timed out after {POLL_MAX_SECONDS}s "
         f"waiting for state '{success_state}'"
     )
+
+
+_GUID_RE = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}" r"-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+)
+
+
+def resolve_group_id(access_token: str, group: str) -> str:
+    """Resolve an Entra ID group name or object ID to an object ID.
+
+    Values that already look like object IDs (GUIDs) pass through without
+    a Graph call. Names are looked up by exact displayName match, which
+    requires the Group.Read.All application permission.
+
+    Args:
+        access_token: Bearer token for Graph API.
+        group: Group displayName or object ID (GUID).
+
+    Returns:
+        The group's object ID.
+
+    Raises:
+        AuthError: On 401 or 403 (check Group.Read.All permission).
+        ConfigError: If no group or more than one group matches the name.
+        NetworkError: On 5xx or connection error.
+
+    """
+    if _GUID_RE.match(group):
+        return group
+
+    escaped = group.replace("'", "''")
+    url = (
+        f"{GRAPH_BASE}/groups"
+        f"?$filter=displayName eq '{escaped}'&$select=id,displayName"
+    )
+    resp = requests.get(url, headers=_auth_headers(access_token), timeout=30)
+    body = _check_response(resp, "resolve_group_id")
+    matches: list[dict] = body.get("value", [])
+
+    if not matches:
+        raise ConfigError(
+            f"No Entra ID group found with displayName '{group}'. "
+            "Check the name, or use the group's object ID instead."
+        )
+    if len(matches) > 1:
+        ids = ", ".join(m["id"] for m in matches)
+        raise ConfigError(
+            f"Multiple Entra ID groups share the displayName '{group}' "
+            f"({ids}). Use the object ID of the intended group instead."
+        )
+    return matches[0]["id"]
+
+
+def get_app_assignments(access_token: str, app_id: str) -> list[dict]:
+    """Get the current assignments of a mobile app.
+
+    Args:
+        access_token: Bearer token for Graph API.
+        app_id: Graph API object ID of the app.
+
+    Returns:
+        A list of mobileAppAssignment dicts (empty when unassigned).
+
+    Raises:
+        AuthError: On 401 or 403.
+        NetworkError: On 5xx or connection error.
+
+    """
+    url = f"{GRAPH_BASE}/deviceAppManagement/mobileApps/{app_id}/assignments"
+    resp = requests.get(url, headers=_auth_headers(access_token), timeout=30)
+    body = _check_response(resp, "get_app_assignments")
+    return body.get("value", [])
+
+
+def build_group_assignment(group_id: str, intent: str) -> dict:
+    """Build a mobileAppAssignment payload targeting one Entra ID group.
+
+    Args:
+        group_id: Object ID of the target group.
+        intent: Assignment intent, "available" or "required".
+
+    Returns:
+        A mobileAppAssignment dict for use with assign_app.
+
+    """
+    return {
+        "@odata.type": "#microsoft.graph.mobileAppAssignment",
+        "intent": intent,
+        "target": {
+            "@odata.type": "#microsoft.graph.groupAssignmentTarget",
+            "groupId": group_id,
+        },
+    }
+
+
+def assign_app(access_token: str, app_id: str, assignments: list[dict]) -> None:
+    """Set a mobile app's assignments.
+
+    The assign action replaces the app's entire assignment set. Callers
+    that intend to preserve existing assignments must read them first with
+    get_app_assignments and include them in the new list.
+
+    Args:
+        access_token: Bearer token for Graph API.
+        app_id: Graph API object ID of the app.
+        assignments: Complete list of mobileAppAssignment dicts to apply.
+
+    Raises:
+        AuthError: On 401 or 403.
+        ConfigError: On 400 (invalid assignment payload).
+        NetworkError: On 5xx or connection error.
+
+    """
+    url = f"{GRAPH_BASE}/deviceAppManagement/mobileApps/{app_id}/assign"
+    body = {"mobileAppAssignments": assignments}
+    resp = requests.post(
+        url, headers=_json_headers(access_token), json=body, timeout=30
+    )
+    _check_response(resp, "assign_app")
 
 
 def list_mobile_apps(access_token: str) -> list[dict]:

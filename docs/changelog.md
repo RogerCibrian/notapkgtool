@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Deployment configuration** - New `deployment:` recipe section:
+    `require_pending` makes `napt upload` fail unless the release was
+    recorded at discovery (for review-gated publish workflows);
+    `rings`, `install`, and `retain_versions` define update promotion
+    policy for the upcoming `napt promote` command. Group name resolution
+    requires the `Group.Read.All` application permission
+
 - **Deployment state files** - `napt discover` records each discovered
     release in `state/deployment/{id}.json` as a pending publication
     candidate. One file per app; the newest discovery wins

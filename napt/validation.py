@@ -108,6 +108,27 @@ _LOGGING_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
     "log_rotation_mb": (int, None, "log rotation size in MB"),
 }
 
+# Schema for the deployment: section
+_DEPLOYMENT_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
+    "rings": (list, None, "deployment rings for update promotion"),
+    "install": (dict, None, "install entry assignment"),
+    "retain_versions": (int, None, "superseded versions kept for rollback"),
+    "require_pending": (bool, None, "require a recorded pending release"),
+}
+
+# Schema for the deployment.install subsection
+_DEPLOYMENT_INSTALL_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
+    "intent": (str, ["available", "required"], "assignment intent"),
+    "groups": (list, None, "Entra ID groups for the install entry"),
+}
+
+# Schema for one deployment.rings entry
+_DEPLOYMENT_RING_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
+    "name": (str, None, "ring name"),
+    "groups": (list, None, "Entra ID groups assigned by this ring"),
+    "promote_after_days": (int, None, "days before eligible for the next ring"),
+}
+
 # Allowed keys for psadt.app_vars.
 # NAPT-managed keys (AppArch, DeployAppScriptVersion, DeployAppScriptFriendlyName,
 # DeployAppScriptParameters) are excluded — setting them in recipes is an error.
@@ -404,6 +425,106 @@ def _validate_logging_section(
     _validate_section(logging_config, _LOGGING_FIELDS, "logging", errors, warnings)
 
 
+def _validate_group_list(
+    groups: list,
+    field_path: str,
+    errors: list[str],
+) -> None:
+    """Validate the entries of an Entra ID group list.
+
+    Callers are responsible for the list type check (via
+    [_validate_section][napt.validation._validate_section]); this only
+    checks the entries.
+
+    Args:
+        groups: The groups list to check.
+        field_path: Full path to the field for error messages.
+        errors: List to append errors to.
+
+    """
+    for index, group in enumerate(groups):
+        if not isinstance(group, str) or not group:
+            errors.append(f"{field_path}[{index}]: Must be a non-empty string")
+
+
+def _validate_deployment_section(
+    recipe: dict,
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    """Validate the top-level deployment: section.
+
+    Validates ring entries, the install subsection, retention, and the
+    require_pending flag.
+
+    Args:
+        recipe: The full recipe dictionary.
+        errors: List to append errors to.
+        warnings: List to append warnings to.
+
+    """
+    deployment = recipe.get("deployment")
+    if deployment is None:
+        return
+
+    if not isinstance(deployment, dict):
+        errors.append("deployment: Must be a dictionary")
+        return
+
+    _validate_section(deployment, _DEPLOYMENT_FIELDS, "deployment", errors, warnings)
+
+    rings = deployment.get("rings")
+    if isinstance(rings, list):
+        ring_names: set[str] = set()
+        for index, ring in enumerate(rings):
+            ring_path = f"deployment.rings[{index}]"
+            if not isinstance(ring, dict):
+                errors.append(f"{ring_path}: Must be a dictionary")
+                continue
+            _validate_section(
+                ring, _DEPLOYMENT_RING_FIELDS, ring_path, errors, warnings
+            )
+            # Wrong-typed fields are already reported by _validate_section;
+            # the checks below only cover absence and value constraints.
+            name = ring.get("name")
+            if "name" not in ring or name == "":
+                errors.append(f"{ring_path}: Missing required field: name")
+            elif isinstance(name, str):
+                if name in ring_names:
+                    errors.append(f"{ring_path}: Duplicate ring name '{name}'")
+                else:
+                    ring_names.add(name)
+            groups = ring.get("groups")
+            if "groups" not in ring or groups == []:
+                errors.append(f"{ring_path}: Missing required field: groups")
+            elif isinstance(groups, list):
+                _validate_group_list(groups, f"{ring_path}.groups", errors)
+            days = ring.get("promote_after_days")
+            if isinstance(days, int) and days < 0:
+                errors.append(f"{ring_path}.promote_after_days: Must be >= 0")
+
+    install = deployment.get("install")
+    if install is not None:
+        if not isinstance(install, dict):
+            errors.append("deployment.install: Must be a dictionary")
+        else:
+            _validate_section(
+                install,
+                _DEPLOYMENT_INSTALL_FIELDS,
+                "deployment.install",
+                errors,
+                warnings,
+            )
+            if isinstance(install.get("groups"), list):
+                _validate_group_list(
+                    install["groups"], "deployment.install.groups", errors
+                )
+
+    retain = deployment.get("retain_versions")
+    if isinstance(retain, int) and retain < 0:
+        errors.append("deployment.retain_versions: Must be >= 0")
+
+
 def validate_config(
     config: dict[str, Any],
     recipe_path: str = "",
@@ -503,6 +624,7 @@ def validate_config(
     _validate_psadt_section(config, errors)
     _validate_intune_section(config, errors, warnings)
     _validate_logging_section(config, errors, warnings)
+    _validate_deployment_section(config, errors, warnings)
 
     # Determine final status
     status = "valid" if len(errors) == 0 else "invalid"

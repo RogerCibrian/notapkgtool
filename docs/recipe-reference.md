@@ -1000,6 +1000,82 @@ it does not exist and verifying write access). If that fails (e.g., permissions)
 to `C:\ProgramData\NAPT\` (system) or `%LOCALAPPDATA%\NAPT\` (user). If both fail, a warning is
 written to stderr and the script runs without a log file.
 
+## Deployment Configuration
+
+The `deployment` section controls upload strictness and deployment promotion.
+These settings are org policy — configure them in `defaults/org.yaml` and
+override per-recipe only when an app needs different treatment.
+
+```yaml
+deployment:
+  require_pending: false        # Optional: require a recorded pending release
+  rings:                        # Optional: rings for update promotion
+    - name: "pilot"
+      groups: ["sg-intune-pilot"]
+      promote_after_days: 2
+    - name: "production"
+      groups: ["sg-intune-all-workstations"]
+  install:                      # Optional: install entry assignment
+    intent: "available"
+    groups: ["All Users"]
+  retain_versions: 1            # Optional: superseded versions kept for rollback
+```
+
+Groups may be Entra ID display names or object IDs.
+Display names are resolved via the Graph API, which requires the
+`Group.Read.All` application permission (see
+[App Registration Setup](user-guide.md#app-registration-setup)).
+
+### require_pending
+
+**Type:** `boolean`
+**Required:** No
+**Default:** `false`
+
+When enabled, `napt upload` fails if the app's deployment state has no
+pending release matching the package — nothing reaches Intune without a
+recorded release.
+Enable this when publishes are gated through review of committed deployment
+state.
+For a manual upload under this policy, run `napt discover` first or add a
+pending entry (version, sha256, url) to the app's deployment state file.
+
+### rings
+
+**Type:** `list`
+**Required:** No
+**Default:** `[]`
+
+Ordered deployment rings for update promotion.
+Each ring requires a unique `name` and a non-empty `groups` list;
+`promote_after_days` (optional) sets how many days a version holds the ring
+before becoming eligible for the next one.
+
+**Note:** Rings are consumed by the upcoming `napt promote` command and have
+no effect yet.
+
+### install
+
+**Type:** `dict`
+**Required:** No
+**Default:** `intent: "available"`, `groups: []`
+
+Assignment for the install entry (net-new installs).
+`intent` is `"available"` (Company Portal) or `"required"`.
+
+**Note:** Consumed by the upcoming `napt promote` command; no effect yet.
+
+### retain_versions
+
+**Type:** `integer`
+**Required:** No
+**Default:** `1`
+
+How many superseded versions stay in Intune for rollback before deletion.
+`0` deletes a version as soon as it holds no rings.
+
+**Note:** Consumed by the upcoming `napt promote` command; no effect yet.
+
 ## Variable Substitution
 
 Recipes use two distinct substitution mechanisms with different syntax.

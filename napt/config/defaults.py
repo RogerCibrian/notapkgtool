@@ -108,6 +108,17 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "intunewin": {
         "release": "latest",
     },
+    # Deployment promotion settings.
+    # Rings, install-entry assignment, retention, and upload strictness.
+    "deployment": {
+        "rings": [],
+        "install": {
+            "intent": "available",
+            "groups": [],
+        },
+        "retain_versions": 1,
+        "require_pending": False,
+    },
 }
 
 
@@ -205,4 +216,31 @@ apiVersion: napt/v1
 # intunewin:
 #   # IntuneWinAppUtil.exe release: "latest" or specific version (e.g., "1.8.6")
 #   release: "latest"
+
+# deployment:
+#   # Require a recorded pending release before upload.
+#   # When true, 'napt upload' fails unless deployment state has a pending
+#   # entry matching the package (records what review approved).
+#   require_pending: false
+#
+#   # Deployment rings for update promotion (used by upcoming napt promote).
+#   # Each ring assigns the [Update] entry to Entra ID groups; a version
+#   # becomes eligible for the next ring after promote_after_days.
+#   rings:
+#     - name: "pilot"
+#       groups: ["sg-intune-pilot"]
+#       promote_after_days: 2
+#     - name: "broad"
+#       groups: ["sg-intune-broad"]
+#       promote_after_days: 5
+#     - name: "production"
+#       groups: ["sg-intune-all-workstations"]
+#
+#   # Install entry assignment (used by upcoming napt promote).
+#   install:
+#     intent: "available"  # available or required
+#     groups: ["All Users"]
+#
+#   # Superseded versions kept in Intune for rollback before deletion.
+#   retain_versions: 1
 """
