@@ -114,7 +114,7 @@ def _json_headers(access_token: str) -> dict[str, str]:
 
 
 def _check_response(response: requests.Response, context: str) -> dict:
-    """Check an HTTP response and raise the appropriate NAPT exception.
+    """Checks an HTTP response and raises the appropriate NAPT exception.
 
     Args:
         response: The HTTP response to check.
@@ -158,7 +158,7 @@ def _poll(
     success_state: str,
     context: str,
 ) -> dict:
-    """Poll a Graph API endpoint until the expected uploadState is reached.
+    """Polls a Graph API endpoint until the expected uploadState is reached.
 
     Args:
         access_token: Bearer token for Authorization header.
@@ -199,7 +199,7 @@ _GUID_RE = re.compile(
 
 
 def resolve_group_id(access_token: str, group: str) -> str:
-    """Resolve an Entra ID group name or object ID to an object ID.
+    """Resolves an Entra ID group name or object ID to an object ID.
 
     Values that already look like object IDs (GUIDs) pass through without
     a Graph call. Names are looked up by exact displayName match, which
@@ -245,7 +245,7 @@ def resolve_group_id(access_token: str, group: str) -> str:
 
 
 def get_app_assignments(access_token: str, app_id: str) -> list[dict]:
-    """Get the current assignments of a mobile app.
+    """Gets the current assignments of a mobile app.
 
     Args:
         access_token: Bearer token for Graph API.
@@ -275,7 +275,7 @@ VIRTUAL_TARGETS: dict[str, dict] = {
 
 
 def build_assignment(target: dict, intent: str) -> dict:
-    """Build a mobileAppAssignment payload for a resolved target.
+    """Builds a mobileAppAssignment payload for a resolved target.
 
     Args:
         target: An assignment target dict (group or virtual target).
@@ -293,7 +293,7 @@ def build_assignment(target: dict, intent: str) -> dict:
 
 
 def build_group_assignment(group_id: str, intent: str) -> dict:
-    """Build a mobileAppAssignment payload targeting one Entra ID group.
+    """Builds a mobileAppAssignment payload targeting one Entra ID group.
 
     Args:
         group_id: Object ID of the target group.
@@ -313,7 +313,7 @@ def build_group_assignment(group_id: str, intent: str) -> dict:
 
 
 def assign_app(access_token: str, app_id: str, assignments: list[dict]) -> None:
-    """Set a mobile app's assignments.
+    """Sets a mobile app's assignments.
 
     The assign action replaces the app's entire assignment set. Callers
     that intend to preserve existing assignments must read them first with
@@ -339,7 +339,7 @@ def assign_app(access_token: str, app_id: str, assignments: list[dict]) -> None:
 
 
 def list_mobile_apps(access_token: str) -> list[dict]:
-    """List all mobile apps in the tenant with id, displayName, and notes.
+    """Lists all mobile apps in the tenant with id, displayName, and notes.
 
     Follows @odata.nextLink pagination until the collection is exhausted.
 
@@ -368,7 +368,7 @@ def list_mobile_apps(access_token: str) -> list[dict]:
 
 
 def delete_mobile_app(access_token: str, app_id: str) -> None:
-    """Delete a mobile app from Intune.
+    """Deletes a mobile app from Intune.
 
     A 404 is tolerated — the app being already gone is the desired end
     state, so retried deletions stay idempotent.
@@ -390,7 +390,7 @@ def delete_mobile_app(access_token: str, app_id: str) -> None:
 
 
 def get_mobile_app(access_token: str, app_id: str) -> dict:
-    """Get one mobile app's full object by Graph API ID.
+    """Gets one mobile app's full object by Graph API ID.
 
     Used to read subtype fields that $select on the collection cannot
     reliably return, such as win32LobApp.committedContentVersion.
@@ -413,7 +413,7 @@ def get_mobile_app(access_token: str, app_id: str) -> dict:
 
 
 def create_win32_app(access_token: str, app_metadata: dict) -> str:
-    """Create a new Win32 LOB app record in Intune.
+    """Creates a new Win32 LOB app record in Intune.
 
     Args:
         access_token: Bearer token for Graph API.
@@ -438,7 +438,7 @@ def create_win32_app(access_token: str, app_metadata: dict) -> str:
 
 
 def update_win32_app(access_token: str, app_id: str, app_metadata: dict) -> None:
-    """Update an existing Win32 LOB app record's metadata in Intune.
+    """Updates an existing Win32 LOB app record's metadata in Intune.
 
     Args:
         access_token: Bearer token for Graph API.
@@ -459,7 +459,7 @@ def update_win32_app(access_token: str, app_id: str, app_metadata: dict) -> None
 
 
 def create_content_version(access_token: str, app_id: str) -> str:
-    """Create a new content version for a Win32 app.
+    """Creates a new content version for a Win32 app.
 
     Args:
         access_token: Bearer token for Graph API.
@@ -488,7 +488,7 @@ def create_content_version_file(
     cv_id: str,
     metadata: IntunewinMetadata,
 ) -> tuple[str, str]:
-    """Create a file entry for a content version and wait for the SAS URI.
+    """Creates a file entry for a content version and waits for the SAS URI.
 
     Posts the file size information to Graph API, then polls until Azure
     Storage has provisioned a SAS URI for the upload.
@@ -540,7 +540,7 @@ def upload_to_azure_blob(
     sas_uri: str,
     encrypted_payload_path: Path,
 ) -> None:
-    """Upload the encrypted payload to Azure Blob Storage using block blobs.
+    """Uploads the encrypted payload to Azure Blob Storage using block blobs.
 
     Splits the file into CHUNK_SIZE chunks, uploads each as a block with a
     base64-encoded block ID, then commits the block list. Prints an inline
@@ -637,7 +637,7 @@ def commit_content_version_file(
     file_id: str,
     metadata: IntunewinMetadata,
 ) -> None:
-    """Commit the uploaded file with encryption metadata, then wait for confirmation.
+    """Commits the uploaded file with encryption metadata, then waits for confirmation.
 
     Sends the encryption key, MAC, IV, and digest to Graph API, then polls
     until Intune confirms the file is committed.
@@ -689,7 +689,7 @@ def commit_content_version_file(
 
 
 def commit_content_version(access_token: str, app_id: str, cv_id: str) -> None:
-    """Set the committed content version on the Win32 app.
+    """Sets the committed content version on the Win32 app.
 
     This is the final step — after calling this, the app is fully published
     in Intune and available for assignment.
