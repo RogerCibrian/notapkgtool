@@ -15,6 +15,8 @@ from napt.cli import (
     cmd_discover,
     cmd_init,
     cmd_package,
+    cmd_promote_plan,
+    cmd_status,
     cmd_upload,
     cmd_validate,
 )
@@ -719,3 +721,125 @@ class TestResolveBuildDirFromRecipe:
         with patch("napt.cli.load_effective_config", return_value=mock_config):
             result = _resolve_build_dir_from_recipe(recipe, builds_dir=custom_builds)
         assert result == app_ver_dir
+
+
+# =============================================================================
+# cmd_promote_plan
+# =============================================================================
+
+
+class TestCmdPromotePlan:
+    """Tests for cmd_promote_plan handler."""
+
+    def test_actions_write_plan_and_return_zero(self, tmp_path, capsys):
+        """Tests that planned actions print a summary and report the plan file."""
+        actions = [
+            {
+                "type": "enter_ring",
+                "app_id": "test-app",
+                "version": "1.0.0",
+                "sha256": "a" * 64,
+                "ring": "pilot",
+                "groups": ["sg-pilot"],
+            }
+        ]
+        with (
+            patch("napt.cli.plan_promotions", return_value=actions),
+            patch("napt.cli.write_plan_file", return_value=True) as write_mock,
+        ):
+            code = cmd_promote_plan(
+                _args(recipes="recipes", state_dir=tmp_path / "state")
+            )
+        assert code == 0
+        out = capsys.readouterr().out
+        assert "enters ring 'pilot'" in out
+        assert "Plan written" in out
+        assert write_mock.call_args.args[0] == actions
+
+    def test_no_actions_returns_zero(self, tmp_path, capsys):
+        """Tests that an empty plan reports nothing to promote."""
+        with (
+            patch("napt.cli.plan_promotions", return_value=[]),
+            patch("napt.cli.write_plan_file", return_value=False),
+        ):
+            code = cmd_promote_plan(
+                _args(recipes="recipes", state_dir=tmp_path / "state")
+            )
+        assert code == 0
+        out = capsys.readouterr().out
+        assert "Nothing to promote" in out
+
+    def test_config_error_returns_one(self, tmp_path, capsys):
+        """Tests that ConfigError is caught and returns 1."""
+        with patch("napt.cli.plan_promotions", side_effect=ConfigError("bad")):
+            code = cmd_promote_plan(
+                _args(recipes="recipes", state_dir=tmp_path / "state")
+            )
+        assert code == 1
+        assert "bad" in capsys.readouterr().out
+
+
+# =============================================================================
+# cmd_status
+# =============================================================================
+
+
+class TestCmdStatus:
+    """Tests for cmd_status handler."""
+
+    def test_table_lists_apps(self, tmp_path, capsys):
+        """Tests that the text table lists each app with its versions."""
+        from napt.state import (
+            create_default_deployment_state,
+            deployment_state_path,
+            save_deployment_state,
+        )
+
+        state = create_default_deployment_state()
+        state["deployed"] = {"version": "1.2.3", "sha256": "a"}
+        state["rings"] = {
+            "pilot": {"version": "1.2.3", "sha256": "a", "entered_at": "x"}
+        }
+        save_deployment_state(
+            state,
+            deployment_state_path(tmp_path / "state" / "deployment", "napt-chrome"),
+        )
+
+        code = cmd_status(_args(state_dir=tmp_path / "state", format="text"))
+
+        assert code == 0
+        out = capsys.readouterr().out
+        assert "napt-chrome" in out
+        assert "1.2.3" in out
+        assert "pilot=1.2.3" in out
+
+    def test_json_format(self, tmp_path, capsys):
+        """Tests that JSON output parses and carries the summary."""
+        import json as json_module
+
+        from napt.state import (
+            create_default_deployment_state,
+            deployment_state_path,
+            save_deployment_state,
+        )
+
+        state = create_default_deployment_state()
+        state["pending"] = {"version": "2.0.0", "sha256": "b", "url": "u"}
+        save_deployment_state(
+            state,
+            deployment_state_path(tmp_path / "state" / "deployment", "app-x"),
+        )
+
+        code = cmd_status(_args(state_dir=tmp_path / "state", format="json"))
+
+        assert code == 0
+        rows = json_module.loads(capsys.readouterr().out)
+        assert rows[0]["app_id"] == "app-x"
+        assert rows[0]["pending"] == "2.0.0"
+
+    def test_empty_state_dir_returns_zero(self, tmp_path, capsys):
+        """Tests that no state files reports cleanly with exit 0."""
+        code = cmd_status(_args(state_dir=tmp_path / "state", format="text"))
+
+        assert code == 0
+        assert "No deployment state found" in capsys.readouterr().out

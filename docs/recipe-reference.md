@@ -1051,8 +1051,8 @@ Each ring requires a unique `name` and a non-empty `groups` list;
 `promote_after_days` (optional) sets how many days a version holds the ring
 before becoming eligible for the next one.
 
-**Note:** Rings are consumed by the upcoming `napt promote` command and have
-no effect yet.
+**Note:** `napt promote plan` evaluates rings to plan promotions;
+assignments are executed by the upcoming `napt promote apply`.
 
 ### install
 
@@ -1063,7 +1063,8 @@ no effect yet.
 Assignment for the install entry (net-new installs).
 `intent` is `"available"` (Company Portal) or `"required"`.
 
-**Note:** Consumed by the upcoming `napt promote` command; no effect yet.
+**Note:** `napt promote plan` plans the install assignment; it is executed
+by the upcoming `napt promote apply`.
 
 ### retain_versions
 
@@ -1074,7 +1075,7 @@ Assignment for the install entry (net-new installs).
 How many superseded versions stay in Intune for rollback before deletion.
 `0` deletes a version as soon as it holds no rings.
 
-**Note:** Consumed by the upcoming `napt promote` command; no effect yet.
+**Note:** Consumed by the upcoming `napt promote apply`; no effect yet.
 
 ## Variable Substitution
 

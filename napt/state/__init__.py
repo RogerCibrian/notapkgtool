@@ -66,6 +66,7 @@ from .deployment import (
     record_deployed,
     record_pending,
     save_deployment_state,
+    summarize_deployment_states,
 )
 
 __all__ = [
@@ -80,4 +81,5 @@ __all__ = [
     "record_pending",
     "save_cache",
     "save_deployment_state",
+    "summarize_deployment_states",
 ]

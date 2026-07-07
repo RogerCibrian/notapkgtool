@@ -26,6 +26,7 @@ from napt.state import (
     record_pending,
     save_cache,
     save_deployment_state,
+    summarize_deployment_states,
 )
 from napt.state.cache import create_default_cache
 
@@ -522,3 +523,36 @@ class TestRecordDeployed:
 
         assert state["deployed"]["version"] == "2.0.0"
         assert state["deployed"]["intune_app_id"] == "c"
+
+
+class TestSummarizeDeploymentStates:
+    """Tests for deployment state aggregation."""
+
+    def test_missing_directory_returns_empty(self, tmp_path):
+        """Tests that a nonexistent directory summarizes to nothing."""
+        assert summarize_deployment_states(tmp_path / "nope") == []
+
+    def test_summarizes_apps_sorted(self, tmp_path):
+        """Tests that summaries are sorted and carry the key fields."""
+        deployment_dir = tmp_path / "deployment"
+
+        zeta = create_default_deployment_state()
+        zeta["deployed"] = {"version": "2.0", "sha256": "b"}
+        zeta["rings"] = {"pilot": {"version": "2.0", "sha256": "b", "entered_at": "x"}}
+        save_deployment_state(zeta, deployment_state_path(deployment_dir, "zeta"))
+
+        alpha = create_default_deployment_state()
+        alpha["pending"] = {"version": "1.0", "sha256": "a", "url": "u"}
+        save_deployment_state(alpha, deployment_state_path(deployment_dir, "alpha"))
+
+        rows = summarize_deployment_states(deployment_dir)
+
+        assert rows == [
+            {"app_id": "alpha", "deployed": None, "pending": "1.0", "rings": {}},
+            {
+                "app_id": "zeta",
+                "deployed": "2.0",
+                "pending": None,
+                "rings": {"pilot": "2.0"},
+            },
+        ]

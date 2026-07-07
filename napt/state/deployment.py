@@ -236,3 +236,40 @@ def record_deployed(
     pending = state.get("pending")
     if pending and pending.get("sha256") == sha256:
         state["pending"] = None
+
+
+def summarize_deployment_states(deployment_dir: Path) -> list[dict[str, Any]]:
+    """Summarizes all per-app deployment state files in a directory.
+
+    Args:
+        deployment_dir: Directory holding per-app deployment state files.
+
+    Returns:
+        One summary dict per app, sorted by app id, each with the app id,
+            deployed version, pending version, and a ring-to-version map.
+            Empty when the directory does not exist or holds no state.
+
+    Raises:
+        PackagingError: On a corrupted deployment state file.
+
+    """
+    if not deployment_dir.is_dir():
+        return []
+
+    rows: list[dict[str, Any]] = []
+    for path in sorted(deployment_dir.glob("*.json")):
+        state = load_deployment_state(path)
+        deployed = state.get("deployed") or {}
+        pending = state.get("pending") or {}
+        rings = state.get("rings") or {}
+        rows.append(
+            {
+                "app_id": path.stem,
+                "deployed": deployed.get("version"),
+                "pending": pending.get("version"),
+                "rings": {
+                    name: entry.get("version") for name, entry in sorted(rings.items())
+                },
+            }
+        )
+    return rows
