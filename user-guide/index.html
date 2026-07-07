@@ -3217,12 +3217,20 @@ package directories are removed automatically.</p>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>napt<span class="w"> </span>package<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span>--version<span class="w"> </span><span class="m">130</span>.0.6723.116
 </span></code></pre></div>
 <h3 id="napt-promote">napt promote</h3>
-<p>Plans ring-based promotion of published apps. <code>promote plan</code> computes which
-releases enter or advance deployment rings (per <code>deployment.rings</code>) and
-writes <code>state/plan.json</code> when there is work; a stale plan file is removed
-when nothing is eligible. Read-only: neither Intune nor deployment state is
-modified. Applying plans arrives with <code>napt promote apply</code>.</p>
+<p>Plans and applies ring-based promotion of published apps. <code>promote plan</code>
+computes which releases enter or advance deployment rings (per
+<code>deployment.rings</code>) and writes <code>state/plan.json</code> when there is work; a
+stale plan file is removed when nothing is eligible. Read-only.</p>
+<p><code>promote apply</code> executes the plan against Intune: assigns install entries,
+enters and advances rings, unassigns displaced releases, and retires them
+per <code>deployment.retain_versions</code>. It consumes <code>state/plan.json</code> when one
+exists (removing it after a fully successful run) and plans fresh
+otherwise. Stale or already-applied actions are skipped with a warning, so
+re-running after a partial failure is safe. Assignments NAPT does not
+manage — admin-made groups, all-device targets, exclusions — are always
+preserved.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>napt<span class="w"> </span>promote<span class="w"> </span>plan<span class="w"> </span><span class="o">[</span>RECIPE_OR_DIR<span class="o">]</span><span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>napt<span class="w"> </span>promote<span class="w"> </span>apply<span class="w"> </span><span class="o">[</span>RECIPE_OR_DIR<span class="o">]</span><span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </span></code></pre></div>
 <h3 id="napt-status">napt status</h3>
 <p>Shows deployment state across all apps: deployed version, pending release,
@@ -3399,8 +3407,8 @@ A file holds four sections:</p>
 <ul>
 <li><code>deployed</code> - The version currently published to Intune, with its SHA-256 hash and Intune app IDs. Null until the first upload.</li>
 <li><code>pending</code> - The discovered release awaiting publication (version, SHA-256 hash, download URL). A single slot: a newer discovery replaces an unpublished candidate (newest wins), and discovering the already-deployed release clears it. Identity is the SHA-256 hash, so a vendor re-release of the same version with a different binary counts as new.</li>
-<li><code>rings</code> - Which version currently holds each deployment ring (used by upcoming promotion features).</li>
-<li><code>retained</code> - Superseded versions kept in Intune for rollback (used by upcoming promotion features).</li>
+<li><code>rings</code> - Which version currently holds each deployment ring, with the timestamp it entered (written by <code>napt promote apply</code>).</li>
+<li><code>retained</code> - Superseded versions kept in Intune for rollback per <code>deployment.retain_versions</code> (written by <code>napt promote apply</code>).</li>
 </ul>
 <p><code>napt discover</code> records the pending candidate.
 Later pipeline stages consume it.</p>
@@ -3414,7 +3422,10 @@ Its git status is therefore the CI signal that a promotion review is
 needed — no special exit codes (<code>napt</code> always exits 0 on success, 1 on
 error).
 Plan output is deterministic, so re-running plan against unchanged state
-produces a byte-identical file.</p>
+produces a byte-identical file.
+<code>napt promote apply</code> executes the plan as an allowlist — entries that no
+longer validate against current state are skipped, never improvised — and
+removes the file after a fully successful run.</p>
 <h3 id="default-behavior-stateful">Default Behavior (Stateful)</h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Cache and deployment state tracking enabled by default</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
@@ -3523,6 +3534,20 @@ to its own:</p>
 <td><code>--state-dir</code></td>
 <td>Per-app deployment state (<code>&lt;dir&gt;/deployment/</code>)</td>
 <td><code>directories.state</code></td>
+<td><code>state</code></td>
+</tr>
+<tr>
+<td><code>napt promote</code></td>
+<td><code>--state-dir</code></td>
+<td>Deployment state and plan.json</td>
+<td><code>directories.state</code></td>
+<td><code>state</code></td>
+</tr>
+<tr>
+<td><code>napt status</code></td>
+<td><code>--state-dir</code></td>
+<td>Deployment state to summarize (no config lookup)</td>
+<td>-</td>
 <td><code>state</code></td>
 </tr>
 <tr>

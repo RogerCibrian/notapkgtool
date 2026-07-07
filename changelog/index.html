@@ -2238,12 +2238,28 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.6.0...HEAD">Unreleased</a></h2>
 <h3 id="added">Added</h3>
 <ul>
-<li><strong><code>napt promote plan</code></strong> - Computes which releases enter or advance the
+<li><strong>Built-in assignment targets</strong> - <code>"All Users"</code> and <code>"All Devices"</code> in
+    deployment group lists assign Intune's virtual targets instead of
+    Entra ID groups. A real group sharing one of these display names must
+    be referenced by its object ID</li>
+<li>
+<p><strong><code>napt promote apply</code></strong> - Executes a promotion plan against Intune:
+    assigns install entries, enters and advances releases through rings,
+    unassigns displaced releases, and retires them per
+    <code>deployment.retain_versions</code> (only NAPT-stamped apps are ever
+    deleted). Consumes <code>state/plan.json</code> when present, plans fresh
+    otherwise. Stale or already-applied actions are skipped, so
+    re-running after a partial failure is safe. Admin-made assignments
+    are always preserved</p>
+</li>
+<li>
+<p><strong><code>napt promote plan</code></strong> - Computes which releases enter or advance the
     configured deployment rings (plus first-time install-entry
     assignments) and writes a reviewable <code>state/plan.json</code>. The plan file
     exists exactly when there is work — a run that finds nothing removes
     a stale plan — so its git status drives review workflows. Read-only;
-    applying plans arrives with <code>napt promote apply</code></li>
+    applying plans arrives with <code>napt promote apply</code></p>
+</li>
 <li>
 <p><strong><code>napt status</code></strong> - Shows deployed version, pending release, and ring
     positions across all apps; <code>--format json</code> for scripting</p>

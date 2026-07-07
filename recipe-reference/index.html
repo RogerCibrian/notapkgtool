@@ -4064,6 +4064,11 @@ override per-recipe only when an app needs different treatment.</p>
 Display names are resolved via the Graph API, which requires the
 <code>Group.Read.All</code> application permission (see
 <a href="../user-guide/#app-registration-setup">App Registration Setup</a>).</p>
+<p>Two names are reserved for Intune's built-in targets: <code>"All Users"</code> and
+<code>"All Devices"</code> assign the corresponding virtual group instead of looking
+up an Entra ID group.
+The reserved names always win — a real Entra ID group that shares one of
+these display names must be referenced by its object ID.</p>
 <h3 id="require_pending">require_pending</h3>
 <p><strong>Type:</strong> <code>boolean</code>
 <strong>Required:</strong> No
@@ -4083,23 +4088,27 @@ pending entry (version, sha256, url) to the app's deployment state file.</p>
 Each ring requires a unique <code>name</code> and a non-empty <code>groups</code> list;
 <code>promote_after_days</code> (optional) sets how many days a version holds the ring
 before becoming eligible for the next one.</p>
-<p><strong>Note:</strong> <code>napt promote plan</code> evaluates rings to plan promotions;
-assignments are executed by the upcoming <code>napt promote apply</code>.</p>
+<p>Rings are evaluated by <code>napt promote plan</code> and executed by
+<code>napt promote apply</code> (ring groups are assigned to the <code>[Update]</code> entry as
+required installs).</p>
 <h3 id="install_1">install</h3>
 <p><strong>Type:</strong> <code>dict</code>
 <strong>Required:</strong> No
 <strong>Default:</strong> <code>intent: "available"</code>, <code>groups: []</code></p>
 <p>Assignment for the install entry (net-new installs).
-<code>intent</code> is <code>"available"</code> (Company Portal) or <code>"required"</code>.</p>
-<p><strong>Note:</strong> <code>napt promote plan</code> plans the install assignment; it is executed
-by the upcoming <code>napt promote apply</code>.</p>
+<code>intent</code> is <code>"available"</code> (Company Portal) or <code>"required"</code>.
+No install assignment happens unless groups are configured; a common
+org-wide choice is <code>groups: ["All Users"]</code> for Company Portal
+self-service.
+The assignment is planned by <code>napt promote plan</code> and executed once per
+release by <code>napt promote apply</code>.</p>
 <h3 id="retain_versions">retain_versions</h3>
 <p><strong>Type:</strong> <code>integer</code>
 <strong>Required:</strong> No
 <strong>Default:</strong> <code>1</code></p>
 <p>How many superseded versions stay in Intune for rollback before deletion.
-<code>0</code> deletes a version as soon as it holds no rings.</p>
-<p><strong>Note:</strong> Consumed by the upcoming <code>napt promote apply</code>; no effect yet.</p>
+<code>0</code> deletes a version as soon as it holds no rings.
+Enforced by <code>napt promote apply</code>; only NAPT-stamped apps are ever deleted.</p>
 <h2 id="variable-substitution">Variable Substitution</h2>
 <p>Recipes use two distinct substitution mechanisms with different syntax.</p>
 <h3 id="napt-build-time-variables">NAPT build-time variables: <code>{{...}}</code></h3>
