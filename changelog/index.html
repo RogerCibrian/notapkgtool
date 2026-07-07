@@ -2238,6 +2238,16 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.6.0...HEAD">Unreleased</a></h2>
 <h3 id="added">Added</h3>
 <ul>
+<li><strong><code>napt promote plan</code></strong> - Computes which releases enter or advance the
+    configured deployment rings (plus first-time install-entry
+    assignments) and writes a reviewable <code>state/plan.json</code>. The plan file
+    exists exactly when there is work — a run that finds nothing removes
+    a stale plan — so its git status drives review workflows. Read-only;
+    applying plans arrives with <code>napt promote apply</code></li>
+<li>
+<p><strong><code>napt status</code></strong> - Shows deployed version, pending release, and ring
+    positions across all apps; <code>--format json</code> for scripting</p>
+</li>
 <li>
 <p><strong>Deployment configuration</strong> - New <code>deployment:</code> recipe section:
     <code>require_pending</code> makes <code>napt upload</code> fail unless the release was
