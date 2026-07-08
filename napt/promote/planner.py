@@ -61,6 +61,10 @@ __all__ = [
 # Deterministic ordering of action types within one app's actions.
 _ACTION_ORDER = {"assign_install": 0, "enter_ring": 1, "advance_ring": 2}
 
+# Schema version written to every plan file. Bump only with a migration
+# story: promote apply rejects plans stamped with a different version.
+PLAN_SCHEMA_VERSION = 1
+
 
 def plan_path_for(state_dir: Path) -> Path:
     """Returns the plan file path for a state directory.
@@ -336,6 +340,11 @@ def write_plan_file(actions: list[dict[str, Any]], plan_path: Path) -> bool:
 
     plan_path.parent.mkdir(parents=True, exist_ok=True)
     with open(plan_path, "w", encoding="utf-8") as f:
-        json.dump({"actions": actions}, f, indent=2, sort_keys=True)
+        json.dump(
+            {"schemaVersion": PLAN_SCHEMA_VERSION, "actions": actions},
+            f,
+            indent=2,
+            sort_keys=True,
+        )
         f.write("\n")  # Trailing newline for git
     return True

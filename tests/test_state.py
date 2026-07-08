@@ -283,6 +283,7 @@ class TestDeploymentStateFiles:
         """Tests that the default structure has all empty sections."""
         state = create_default_deployment_state()
 
+        assert state["schemaVersion"] == 1
         assert state["deployed"] is None
         assert state["pending"] is None
         assert state["rings"] == {}
@@ -296,6 +297,35 @@ class TestDeploymentStateFiles:
 
         assert state == create_default_deployment_state()
         assert not state_path.exists()
+
+    def test_save_stamps_schema_version(self, tmp_path):
+        """Tests that saving always writes the schema version."""
+        state_path = tmp_path / "napt-chrome.json"
+        state = {"deployed": None, "pending": None, "rings": {}, "retained": []}
+
+        save_deployment_state(state, state_path)
+
+        loaded = load_deployment_state(state_path)
+        assert loaded["schemaVersion"] == 1
+
+    def test_load_unstamped_file_raises(self, tmp_path):
+        """Tests that a file without a schemaVersion is rejected."""
+        state_path = tmp_path / "napt-chrome.json"
+        state_path.write_text(
+            '{"deployed": null, "pending": null, "rings": {}, "retained": []}',
+            encoding="utf-8",
+        )
+
+        with pytest.raises(StateError, match="schema version None"):
+            load_deployment_state(state_path)
+
+    def test_load_unsupported_schema_version_raises(self, tmp_path):
+        """Tests that a future schema version is rejected."""
+        state_path = tmp_path / "napt-chrome.json"
+        state_path.write_text('{"schemaVersion": 99}', encoding="utf-8")
+
+        with pytest.raises(StateError, match="schema version 99"):
+            load_deployment_state(state_path)
 
     def test_save_and_load_round_trip(self, tmp_path):
         """Tests round-trip save and load."""

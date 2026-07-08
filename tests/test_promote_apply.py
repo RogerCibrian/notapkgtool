@@ -203,7 +203,7 @@ def _write_plan(tmp_path: Path, actions: list[dict[str, Any]]) -> Path:
     plan_path = plan_path_for(tmp_path / "state")
     plan_path.parent.mkdir(parents=True, exist_ok=True)
     plan_path.write_text(
-        json.dumps({"actions": actions}, indent=2, sort_keys=True),
+        json.dumps({"schemaVersion": 1, "actions": actions}, indent=2, sort_keys=True),
         encoding="utf-8",
     )
     return plan_path
@@ -533,6 +533,14 @@ class TestLoadPlanFile:
         plan_path.write_text('{"other": []}', encoding="utf-8")
 
         with pytest.raises(StateError, match="Corrupted plan file"):
+            load_plan_file(plan_path)
+
+    def test_unsupported_plan_schema_version_raises(self, tmp_path):
+        """Tests that a future plan schema version is rejected."""
+        plan_path = tmp_path / "plan.json"
+        plan_path.write_text('{"schemaVersion": 99, "actions": []}', encoding="utf-8")
+
+        with pytest.raises(StateError, match="schema version 99"):
             load_plan_file(plan_path)
 
 

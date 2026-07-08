@@ -69,6 +69,10 @@ from typing import Any
 
 from napt.exceptions import StateError
 
+# Schema version written to every deployment state file. Bump only with
+# a migration story: loaders reject files stamped with a different version.
+DEPLOYMENT_STATE_SCHEMA_VERSION = 1
+
 
 def deployment_state_path(state_dir: Path, recipe_id: str) -> Path:
     """Returns the deployment state file path for a recipe.
@@ -94,6 +98,7 @@ def create_default_deployment_state() -> dict[str, Any]:
 
     """
     return {
+        "schemaVersion": DEPLOYMENT_STATE_SCHEMA_VERSION,
         "deployed": None,
         "pending": None,
         "rings": {},
@@ -115,14 +120,15 @@ def load_deployment_state(state_path: Path) -> dict[str, Any]:
         Deployment state dictionary.
 
     Raises:
-        StateError: If the file exists but contains invalid JSON.
-            Deployment state is authoritative, so a corrupted file is
-            never silently replaced.
+        StateError: If the file exists but contains invalid JSON, or its
+            schemaVersion is missing or unsupported. Deployment state is
+            authoritative, so a corrupted file is never silently
+            replaced.
 
     """
     try:
         with open(state_path, encoding="utf-8") as f:
-            return json.load(f)
+            state = json.load(f)
     except FileNotFoundError:
         return create_default_deployment_state()
     except json.JSONDecodeError as err:
@@ -131,6 +137,17 @@ def load_deployment_state(state_path: Path) -> dict[str, Any]:
             "Deployment state is authoritative and is not auto-replaced. "
             "Fix the JSON or restore the file from a backup."
         ) from err
+
+    found = state.get("schemaVersion")
+    if found != DEPLOYMENT_STATE_SCHEMA_VERSION:
+        raise StateError(
+            f"Unsupported deployment state schema version {found!r} in "
+            f"{state_path} (this NAPT release supports version "
+            f"{DEPLOYMENT_STATE_SCHEMA_VERSION}). Files from earlier "
+            f'pre-releases need "schemaVersion": '
+            f"{DEPLOYMENT_STATE_SCHEMA_VERSION} added."
+        )
+    return state
 
 
 def save_deployment_state(state: dict[str, Any], state_path: Path) -> None:
@@ -148,6 +165,7 @@ def save_deployment_state(state: dict[str, Any], state_path: Path) -> None:
         OSError: If the file cannot be written due to permissions.
 
     """
+    state["schemaVersion"] = DEPLOYMENT_STATE_SCHEMA_VERSION
     state_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(state_path, "w", encoding="utf-8") as f:

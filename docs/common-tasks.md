@@ -810,6 +810,253 @@ napt upload recipes/Vendor/app.yaml --force
 content version together — and keeps the app IDs.
 It never creates duplicates.
 
+## Automate NAPT with GitHub Actions
+
+NAPT performs no git or CI operations itself — it reads and writes
+deterministic files and leaves the choreography to your pipeline.
+This section is a reference setup for a fully review-gated flow on
+GitHub Actions.
+Adapt names, schedules, and branch rules to your org.
+
+**The model.** Two PR streams gate everything:
+
+- **Publish PRs** (one per app): `napt discover` records a pending
+  release in `state/deployment/<id>.json`; CI opens a per-app PR with
+  that diff. Merging approves the release — a workflow builds, packages,
+  and uploads it, with the hash gate guaranteeing the approved binary is
+  exactly what ships.
+- **Promotion PRs** (one, batched): `napt promote plan` writes
+  `state/plan.json` when releases are eligible to enter or advance
+  rings; CI commits it to a branch and opens a PR. Merging approves the
+  promotions — a workflow runs `napt promote apply`, which executes the
+  plan as an allowlist.
+  To hold one promotion, delete its entry from the plan file in the PR;
+  the next scheduled plan will re-propose it.
+
+**Writeback commits.** After upload and apply, NAPT has recorded new
+facts (Intune app IDs, ring positions) in the working tree that must
+reach `main`, so those workflows push a `[skip ci]` commit.
+Two consequences to set up once:
+
+- The workflow identity needs permission to push to `main` — either
+  allow the Actions bot through branch protection or use a bot/app
+  token with bypass rights.
+- `[skip ci]` keeps the writeback from re-triggering workflows.
+
+**Secrets.** `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, and
+`AZURE_TENANT_ID` for the app registration
+(see [App Registration Setup](user-guide.md#app-registration-setup)).
+
+**Recommended org.yaml hardening:**
+
+```yaml
+deployment:
+  require_pending: true   # nothing reaches Intune without a reviewed release
+```
+
+### Workflow 1: discover (opens publish PRs)
+
+```yaml
+name: discover
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  discover:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install napt
+      - name: Discover all recipes
+        shell: bash
+        run: |
+          git ls-files 'recipes/*.yaml' 'recipes/**/*.yaml' | while read -r recipe; do
+            napt discover "$recipe"
+          done
+      - name: Open one PR per app with a new pending release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "napt-bot"
+          git config user.email "napt-bot@users.noreply.github.com"
+          # Stage first so brand-new (untracked) state files are seen too
+          git add state/deployment
+          changed=$(git diff --cached --name-only -- state/deployment)
+          [ -z "$changed" ] && exit 0
+          # Snapshot all changes on a temp branch, then carve out one
+          # branch per app so each PR reviews exactly one state file.
+          git checkout -b napt/discover-snapshot
+          git commit -m "temp: discovery snapshot"
+          for f in $changed; do
+            app=$(basename "$f" .json)
+            git checkout -B "napt/discover-$app" origin/main
+            git checkout napt/discover-snapshot -- "$f"
+            git commit -m "feat: Record pending release for $app"
+            git push -f origin "napt/discover-$app"
+            gh pr create --head "napt/discover-$app" \
+              --title "Publish approval: $app" \
+              --body "Merging approves publishing this release to Intune." \
+              || true  # PR already open; the force-push updated it
+          done
+```
+
+### Workflow 2: publish (on merge of a publish PR)
+
+```yaml
+name: publish
+on:
+  push:
+    branches: [main]
+    paths: ["state/deployment/**"]
+concurrency: napt-writeback
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: windows-latest
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install napt
+      - name: Publish every app with an approved pending release
+        shell: bash
+        run: |
+          git ls-files 'recipes/*.yaml' 'recipes/**/*.yaml' | while read -r recipe; do
+            id=$(python -c "import sys, yaml; print(yaml.safe_load(open(sys.argv[1], encoding='utf-8'))['id'])" "$recipe")
+            state="state/deployment/$id.json"
+            [ -f "$state" ] || continue
+            pending=$(python -c "import json, sys; print(json.load(open(sys.argv[1], encoding='utf-8')).get('pending') is not None)" "$state")
+            [ "$pending" = "True" ] || continue
+            # Installers are machine-local (never committed), so this
+            # runner must fetch the binary. --stateless keeps the
+            # approved pending untouched: if the vendor swapped binaries
+            # since review, the upload hash gate refuses.
+            napt discover "$recipe" --stateless
+            napt build "$recipe"
+            napt package "$recipe"
+            napt upload "$recipe"
+          done
+      - name: Write back recorded app IDs
+        shell: bash
+        run: |
+          git config user.name "napt-bot"
+          git config user.email "napt-bot@users.noreply.github.com"
+          git add state/deployment
+          git diff --cached --quiet || {
+            git commit -m "chore: Record published releases [skip ci]"
+            git push
+          }
+```
+
+### Workflow 3: promotion plan (opens the promotion PR)
+
+```yaml
+name: promote-plan
+on:
+  schedule:
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  plan:
+    runs-on: windows-latest
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install napt
+      - name: Plan promotions (with drift report)
+        run: napt promote plan --check-drift
+      - name: Open or update the promotion PR
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # git status sees untracked files (a first-ever plan) too
+          [ -z "$(git status --porcelain -- state/plan.json)" ] && exit 0
+          git config user.name "napt-bot"
+          git config user.email "napt-bot@users.noreply.github.com"
+          git checkout -B napt/promotion-plan origin/main
+          git add state/plan.json
+          git commit -m "feat: Plan ring promotions"
+          git push -f origin napt/promotion-plan
+          gh pr create --head napt/promotion-plan \
+            --title "Promotion plan" \
+            --body "Merging approves these ring promotions. Delete an entry from state/plan.json to hold it." \
+            || true  # PR already open; the force-push updated it
+```
+
+### Workflow 4: promotion apply (on merge of the promotion PR)
+
+```yaml
+name: promote-apply
+on:
+  push:
+    branches: [main]
+    paths: ["state/plan.json"]
+concurrency: napt-writeback
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: windows-latest
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install napt
+      - name: Apply the approved plan
+        run: napt promote apply
+      - name: Write back ring positions and consume the plan
+        shell: bash
+        run: |
+          git config user.name "napt-bot"
+          git config user.email "napt-bot@users.noreply.github.com"
+          git add state
+          git diff --cached --quiet || {
+            git commit -m "chore: Record applied promotions [skip ci]"
+            git push
+          }
+```
+
+**Notes:**
+
+- Promotions merged but applied later are always safe: bake time only
+  grows, and apply validates every entry against current state anyway.
+- All four workflows are idempotent — re-running any of them converges
+  to the same result (upload adopts existing apps, apply skips
+  already-applied actions).
+- `windows-latest` runners are required for `napt package`
+  (IntuneWinAppUtil.exe is Windows-only). The discover workflow alone
+  could run on Linux with `msitools` installed for MSI version
+  extraction.
+
 ## Update Existing Recipes
 
 When a recipe needs changes (new version format, different download URL, etc.).
