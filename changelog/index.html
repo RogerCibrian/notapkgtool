@@ -2238,6 +2238,12 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.6.0...HEAD">Unreleased</a></h2>
 <h3 id="added">Added</h3>
 <ul>
+<li><strong>Assignment drift detection</strong> - <code>napt promote apply</code> (always) and
+    <code>napt promote plan --check-drift</code> (opt-in) compare Intune assignments
+    against deployment state and warn on every discrepancy: removed or
+    changed NAPT assignments, admin-made assignments on NAPT-managed
+    apps, releases missing from the tenant, and stamped apps no state
+    references. Drift is reported, never corrected.</li>
 <li><strong>Built-in assignment targets</strong> - <code>"All Users"</code> and <code>"All Devices"</code> in
     deployment group lists assign Intune's virtual targets instead of
     Entra ID groups. A real group sharing one of these display names must
