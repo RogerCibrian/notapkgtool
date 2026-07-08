@@ -470,6 +470,10 @@ napt promote plan --check-drift
 napt promote apply [RECIPE_OR_DIR] [OPTIONS]
 ```
 
+For the full review-gated CI setup — publish PRs, promotion PRs, and
+writeback commits — see
+[Automate NAPT with GitHub Actions](common-tasks.md#automate-napt-with-github-actions).
+
 ### napt status
 
 Shows deployment state across all apps: deployed version, pending release,
@@ -632,6 +636,8 @@ flowchart TD
 ### Deployment State
 
 Each app gets its own file, `state/deployment/<app_id>.json`, so concurrent changes to different apps never conflict and each file's diff is scoped to one app.
+Every file carries a `schemaVersion` (currently 1); NAPT refuses files
+whose schemaVersion is missing or unsupported.
 A file holds four sections:
 
 - `deployed` - The version currently published to Intune, with its SHA-256 hash and Intune app IDs. Null until the first upload.

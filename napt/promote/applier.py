@@ -49,6 +49,7 @@ from napt.exceptions import StateError
 from napt.logging import get_global_logger
 from napt.promote.drift import detect_drift
 from napt.promote.planner import (
+    PLAN_SCHEMA_VERSION,
     _collect_recipe_paths,
     plan_path_for,
     plan_promotions,
@@ -86,8 +87,9 @@ def load_plan_file(plan_path: Path) -> list[dict[str, Any]]:
         The planned action dicts.
 
     Raises:
-        StateError: If the plan file contains invalid JSON or lacks an
-            actions list.
+        StateError: If the plan file contains invalid JSON, lacks an
+            actions list, or its schemaVersion is missing or
+            unsupported.
 
     """
     try:
@@ -98,6 +100,14 @@ def load_plan_file(plan_path: Path) -> list[dict[str, Any]]:
             f"Corrupted plan file: {plan_path}. "
             "Re-run 'napt promote plan' to regenerate it."
         ) from err
+
+    found = data.get("schemaVersion")
+    if found != PLAN_SCHEMA_VERSION:
+        raise StateError(
+            f"Unsupported plan schema version {found!r} in {plan_path} "
+            f"(this NAPT release supports version {PLAN_SCHEMA_VERSION}). "
+            "Re-run 'napt promote plan' to regenerate it."
+        )
     return actions
 
 

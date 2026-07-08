@@ -62,6 +62,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING: Deployment state and plan files carry a schema version** -
+    `state/deployment/*.json` and `state/plan.json` are now stamped with
+    `schemaVersion: 1`; NAPT refuses files whose schemaVersion is
+    missing or unsupported. Add `"schemaVersion": 1` to files written by
+    earlier pre-releases (plan files can simply be regenerated)
 - **BREAKING: `intune.notes` removed** - The Intune notes field is
     reserved for NAPT's provenance stamp. Move any notes content to
     `intune.description` or `intune.owner`

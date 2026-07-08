@@ -405,7 +405,10 @@ class TestWritePlanFile:
         assert write_plan_file(actions, plan_path) is True
 
         assert plan_path.read_bytes() == first
-        assert json.loads(first.decode("utf-8")) == {"actions": actions}
+        assert json.loads(first.decode("utf-8")) == {
+            "actions": actions,
+            "schemaVersion": 1,
+        }
 
     def test_no_actions_removes_stale_plan(self, tmp_path):
         """Tests that an empty plan removes an existing plan file."""
