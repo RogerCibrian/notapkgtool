@@ -1448,40 +1448,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Active Work">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#in-progress" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        In Progress 🚧
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="In Progress 🚧">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#deployment-wave-management" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Deployment Wave Management
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -1706,6 +1672,17 @@
   
     <nav class="md-nav" aria-label="Recently Completed">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#deployment-wave-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deployment Wave Management
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#recipe-schema-redesign" class="md-nav__link">
@@ -1857,40 +1834,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Active Work">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#in-progress" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        In Progress 🚧
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="In Progress 🚧">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#deployment-wave-management" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Deployment Wave Management
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -2117,6 +2060,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#deployment-wave-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deployment Wave Management
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#recipe-schema-redesign" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2238,7 +2192,7 @@
 </tr>
 <tr>
 <td>Deployment Wave Management</td>
-<td>🚧 In Progress</td>
+<td>✅ Completed</td>
 <td>User-Facing</td>
 <td>Very High</td>
 <td>High</td>
@@ -2331,80 +2285,13 @@
 </table>
 <p><strong>Summary:</strong></p>
 <ul>
-<li>✅ <strong>Completed</strong>: 3</li>
-<li>🚧 <strong>In Progress</strong>: 1</li>
+<li>✅ <strong>Completed</strong>: 4</li>
 <li>💡 <strong>Ideas</strong>: 13</li>
 <li><strong>Total</strong>: 17 features</li>
 </ul>
 <hr />
 <h2 id="active-work">Active Work</h2>
-<h3 id="in-progress">In Progress 🚧</h3>
-<h4 id="deployment-wave-management">Deployment Wave Management</h4>
-<p><strong>Status</strong>: 🚧 In Progress
-<strong>Complexity</strong>: Very High (5-10 days)
-<strong>Value</strong>: High</p>
-<p><strong>Description</strong>: Ring-based promotion of published apps via a new
-<code>napt promote</code> command with Terraform-style <code>plan</code>/<code>apply</code> subcommands.
-Apps upload unassigned; promotion advances the newest version through an
-ordered list of rings (Microsoft Entra ID group assignments), replacing
-whatever version each ring currently holds.</p>
-<p>Agreed design:</p>
-<ul>
-<li><strong>Ring model</strong>: A ring is a named set of groups plus <code>promote_after_days</code>.
-  Each ring holds at most one version of an app's Update entry — the newest
-  version that has reached it.
-  The install entry gets static assignments (set once); rings control update
-  velocity only.</li>
-<li><strong>Plan/apply split</strong>: <code>napt promote plan</code> is a pure function of
-  (deployment state, config, clock) and writes a reviewable
-  <code>state/plan.json</code>; <code>napt promote apply</code> executes it with per-entry
-  validate-then-act, making both safe to re-run.</li>
-<li><strong>State split</strong>: The discovery cache moves to <code>cache/discovery.json</code>
-  (disposable).
-  Authoritative per-app deployment state lives in
-  <code>state/deployment/&lt;recipe-id&gt;.json</code> (deployed, pending, rings, retained),
-  serialized deterministically for clean diffs.</li>
-<li><strong>Identity and ownership</strong>: Uploads stamp <code>napt/v1 id=&lt;recipe&gt;
-  entry=&lt;install|update&gt; sha256=&lt;hash&gt;</code> into the Intune notes field;
-  <code>recipe_id + sha256</code> is the identity key.
-  The <code>intune.notes</code> recipe field is removed — the field is reserved for
-  NAPT.</li>
-<li><strong>Approval binding</strong>: Upload verifies the installer hash against the
-  approved pending entry, so what a reviewer approved is byte-for-byte what
-  ships.</li>
-<li><strong>Idempotent upload</strong>: Reconcile-before-act — adopt an existing stamped
-  app instead of creating a duplicate.</li>
-<li><strong>Newest wins</strong>: The pending slot holds one candidate; a newer discovery
-  replaces an unpublished one.</li>
-<li><strong>Retention</strong>: Displaced versions are kept per <code>retain_versions</code> (default
-  1) for instant rollback, then deleted; only stamped apps are ever touched.</li>
-<li><strong>Drift</strong>: Manual admin changes are warned about, never reverted.</li>
-<li><strong>GitOps-friendly, not git-aware</strong>: Deterministic state files, detailed
-  exit codes, and reference CI workflows in docs; NAPT itself performs no
-  git or PR operations.</li>
-</ul>
-<p><strong>Benefits</strong>:</p>
-<ul>
-<li>Enables controlled, staged deployments to reduce risk</li>
-<li>Supports ring-based deployment (Pilot, UAT, Production)</li>
-<li>Provides rollback capabilities for failed deployments</li>
-<li>Lets orgs gate publishes and promotions through PR review when state files
-  are committed to git</li>
-<li>Useful for organizations requiring careful change management</li>
-</ul>
-<p><strong>Dependencies</strong>:</p>
-<ul>
-<li>Requires Graph API assignment endpoints and <code>Group.Read.All</code> for group
-  name resolution</li>
-<li>Delivered across eight PRs: state split (shipped), upload provenance and
-  hash gate (shipped), idempotent upload (shipped), deployment config and
-  assignment client (shipped), <code>promote plan</code> and <code>napt status</code> (shipped),
-  <code>promote apply</code> with retention (shipped), drift detection (shipped),
-  GitOps docs and schema versioning</li>
-</ul>
-<p><strong>Related</strong>: Health-gated promotion (block on install failure rates) and
-native Intune supersedence are deliberate follow-ups, not part of this
-iteration.</p>
+<p><em>Nothing currently in progress.</em></p>
 <hr />
 <h2 id="future-ideas-by-category">Future Ideas (By Category)</h2>
 <blockquote>
@@ -2639,6 +2526,40 @@ signing)</p>
 <h2 id="declined-wont-implement">Declined / Won't Implement</h2>
 <hr />
 <h2 id="recently-completed">Recently Completed</h2>
+<h4 id="deployment-wave-management">Deployment Wave Management</h4>
+<p><strong>Status</strong>: ✅ Completed
+<strong>Complexity</strong>: Very High
+<strong>Value</strong>: High</p>
+<p><strong>Description</strong>: Ring-based promotion of published apps via
+<code>napt promote plan</code> / <code>napt promote apply</code> and <code>napt status</code>.
+Apps upload unassigned; promotion advances the newest release through an
+ordered list of rings (Entra ID group assignments on the <code>[Update]</code>
+entry), displacing whatever release each ring held.</p>
+<p><strong>Key design points</strong> (delivered across PRs #81-#88):</p>
+<ul>
+<li>Each ring holds at most one release — the newest that has reached it;
+  releases advance after <code>promote_after_days</code> in their current ring</li>
+<li>Terraform-style plan/apply: <code>state/plan.json</code> is the reviewable
+  artifact and apply's allowlist; validate-then-act makes both safe to
+  re-run</li>
+<li>Authoritative per-app deployment state
+  (<code>state/deployment/&lt;id&gt;.json</code>, <code>schemaVersion</code> 1) split from the
+  disposable discovery cache (<code>cache/discovery.json</code>)</li>
+<li>Provenance stamp <code>napt/v1 id=&lt;recipe&gt; entry=&lt;install|update&gt;
+  sha256=&lt;hash&gt;</code> in the Intune notes field: ownership + identity;
+  upload is idempotent (adopt, resume, or create) and hash-gated
+  against the reviewed pending release (<code>deployment.require_pending</code>)</li>
+<li>Retention (<code>retain_versions</code>) keeps displaced releases for rollback;
+  drift detection warns on every state/Intune discrepancy, never
+  corrects</li>
+<li>GitOps-friendly, not git-aware: deterministic state files and
+  reference GitHub Actions workflows in
+  <a href="../common-tasks/#automate-napt-with-github-actions">Common Tasks</a></li>
+</ul>
+<p><strong>Related</strong>: Health-gated promotion (block on install failure rates),
+native Intune supersedence, and <code>napt upload --replace</code> (delete and
+republish with re-applied assignments) are deliberate follow-ups.</p>
+<hr />
 <h4 id="recipe-schema-redesign">Recipe Schema Redesign</h4>
 <p><strong>Status</strong>: ✅ Completed
 <strong>Complexity</strong>: High

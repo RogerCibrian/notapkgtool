@@ -2298,6 +2298,11 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="changed">Changed</h3>
 <ul>
+<li><strong>BREAKING: Deployment state and plan files carry a schema version</strong> -
+    <code>state/deployment/*.json</code> and <code>state/plan.json</code> are now stamped with
+    <code>schemaVersion: 1</code>; NAPT refuses files whose schemaVersion is
+    missing or unsupported. Add <code>"schemaVersion": 1</code> to files written by
+    earlier pre-releases (plan files can simply be regenerated)</li>
 <li><strong>BREAKING: <code>intune.notes</code> removed</strong> - The Intune notes field is
     reserved for NAPT's provenance stamp. Move any notes content to
     <code>intune.description</code> or <code>intune.owner</code></li>

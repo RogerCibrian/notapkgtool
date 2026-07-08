@@ -3240,6 +3240,9 @@ credentials — without the flag, plan stays fully offline).</p>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>napt<span class="w"> </span>promote<span class="w"> </span>plan<span class="w"> </span>--check-drift
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>napt<span class="w"> </span>promote<span class="w"> </span>apply<span class="w"> </span><span class="o">[</span>RECIPE_OR_DIR<span class="o">]</span><span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </span></code></pre></div>
+<p>For the full review-gated CI setup — publish PRs, promotion PRs, and
+writeback commits — see
+<a href="../common-tasks/#automate-napt-with-github-actions">Automate NAPT with GitHub Actions</a>.</p>
 <h3 id="napt-status">napt status</h3>
 <p>Shows deployment state across all apps: deployed version, pending release,
 and which version holds each ring. <code>--format json</code> for scripting.</p>
@@ -3411,6 +3414,8 @@ This version-based caching is critical for CI/CD with frequent scheduled checks,
 <p><strong>Note:</strong> The cache is updated after every discovery run, even when skipping downloads. This updates the <code>last_updated</code> timestamp and confirms the cached version is still current.</p>
 <h3 id="deployment-state">Deployment State</h3>
 <p>Each app gets its own file, <code>state/deployment/&lt;app_id&gt;.json</code>, so concurrent changes to different apps never conflict and each file's diff is scoped to one app.
+Every file carries a <code>schemaVersion</code> (currently 1); NAPT refuses files
+whose schemaVersion is missing or unsupported.
 A file holds four sections:</p>
 <ul>
 <li><code>deployed</code> - The version currently published to Intune, with its SHA-256 hash and Intune app IDs. Null until the first upload.</li>
