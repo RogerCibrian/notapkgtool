@@ -20,6 +20,7 @@ from napt.state import (
     load_deployment_state,
     save_deployment_state,
 )
+from napt.upload.graph import VIRTUAL_TARGETS
 
 NOW = datetime(2026, 7, 8, 12, 0, 0, tzinfo=UTC)
 
@@ -129,11 +130,24 @@ def _tenant(sha_new: str = "b" * 64, sha_old: str = "a" * 64) -> list[dict[str, 
     ]
 
 
+def _fake_resolve_target(
+    token: str, group: str, cache: dict | None = None
+) -> dict[str, Any]:
+    """Mirrors resolve_assignment_target without Graph calls."""
+    if group in VIRTUAL_TARGETS:
+        return dict(VIRTUAL_TARGETS[group])
+    return {
+        "@odata.type": "#microsoft.graph.groupAssignmentTarget",
+        "groupId": f"gid-{group}",
+    }
+
+
 def _run_apply(
     tmp_path: Path,
     existing_apps: list[dict[str, Any]] | None = None,
     assignments: dict[str, list[dict[str, Any]]] | None = None,
     assign_side_effect: Any = None,
+    drift_findings: list[dict[str, Any]] | None = None,
 ) -> tuple[dict[str, Any], dict[str, MagicMock]]:
     """Runs apply_plan with all Graph calls mocked.
 
@@ -155,7 +169,7 @@ def _run_apply(
         "get_app_assignments": MagicMock(
             side_effect=lambda token, app_id: list(assignments.get(app_id, []))
         ),
-        "resolve_group_id": MagicMock(side_effect=lambda token, g: f"gid-{g}"),
+        "resolve_assignment_target": MagicMock(side_effect=_fake_resolve_target),
     }
 
     with ExitStack() as stack:
@@ -170,6 +184,12 @@ def _run_apply(
         )
         for name, mock in mocks.items():
             stack.enter_context(patch(f"napt.promote.applier.{name}", mock))
+        stack.enter_context(
+            patch(
+                "napt.promote.applier.detect_drift",
+                return_value=drift_findings or [],
+            )
+        )
         summary = apply_plan(
             tmp_path / "recipes",
             state_dir=tmp_path / "state",
@@ -429,7 +449,6 @@ class TestApplyInstallActions:
                 },
             }
         ]
-        mocks["resolve_group_id"].assert_not_called()
         state = load_deployment_state(state_path)
         assert state["install_assigned"] == {"version": "2.0.0", "sha256": "b" * 64}
 
@@ -480,7 +499,7 @@ class TestApplyOrchestration:
 
         summary, mocks = _run_apply(tmp_path, existing_apps=[])
 
-        assert summary == {"applied": [], "skipped": []}
+        assert summary == {"applied": [], "skipped": [], "drift": []}
         mocks["assign_app"].assert_not_called()
 
     def test_unknown_app_in_plan_skipped(self, tmp_path):
@@ -515,3 +534,19 @@ class TestLoadPlanFile:
 
         with pytest.raises(StateError, match="Corrupted plan file"):
             load_plan_file(plan_path)
+
+
+class TestApplyDrift:
+    """Tests for drift reporting in the apply summary."""
+
+    def test_drift_findings_included_in_summary(self, tmp_path):
+        """Tests that drift findings pass through to the summary."""
+        _write_recipe(tmp_path, rings=_RINGS)
+        _write_state(tmp_path, deployed=_deployed())
+        finding = {"app_id": "test-app", "kind": "missing_assignment", "detail": "x"}
+
+        summary, _ = _run_apply(
+            tmp_path, existing_apps=_tenant(), drift_findings=[finding]
+        )
+
+        assert summary["drift"] == [finding]

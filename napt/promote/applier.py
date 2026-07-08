@@ -47,6 +47,7 @@ from typing import Any
 from napt.config import load_effective_config
 from napt.exceptions import StateError
 from napt.logging import get_global_logger
+from napt.promote.drift import detect_drift
 from napt.promote.planner import (
     _collect_recipe_paths,
     plan_path_for,
@@ -59,13 +60,12 @@ from napt.state import (
 )
 from napt.upload.auth import get_access_token
 from napt.upload.graph import (
-    VIRTUAL_TARGETS,
     assign_app,
     build_assignment,
     delete_mobile_app,
     get_app_assignments,
     list_mobile_apps,
-    resolve_group_id,
+    resolve_assignment_target,
 )
 from napt.upload.stamp import ENTRY_INSTALL, ENTRY_UPDATE, find_stamped_app
 
@@ -223,20 +223,10 @@ class _ApplyRun:
         built-in virtual targets; anything else resolves to an Entra ID
         group target.
         """
-        targets: list[dict[str, Any]] = []
-        for group in groups:
-            if group in VIRTUAL_TARGETS:
-                targets.append(dict(VIRTUAL_TARGETS[group]))
-                continue
-            if group not in self._group_ids:
-                self._group_ids[group] = resolve_group_id(self.access_token, group)
-            targets.append(
-                {
-                    "@odata.type": "#microsoft.graph.groupAssignmentTarget",
-                    "groupId": self._group_ids[group],
-                }
-            )
-        return targets
+        return [
+            resolve_assignment_target(self.access_token, group, self._group_ids)
+            for group in groups
+        ]
 
     def skip(self, action: dict[str, Any], reason: str) -> None:
         """Records a skipped action and warns."""
@@ -436,6 +426,10 @@ def apply_plan(
     Deployment state is saved after each applied action, so a failed run
     resumes safely — already-applied actions validate as no-ops.
 
+    Assignment drift is checked on every run — including runs with
+    nothing to apply, which therefore still authenticate — and reported
+    in the summary, never corrected.
+
     Args:
         recipes: A recipe YAML file, or a directory scanned recursively.
         state_dir: State directory holding ``deployment/`` and
@@ -447,7 +441,8 @@ def apply_plan(
             Defaults to the current UTC time.
 
     Returns:
-        A summary dict with "applied" and "skipped" action lists.
+        A summary dict with "applied" and "skipped" action lists and
+            "drift" findings.
 
     Raises:
         AuthError: If authentication fails.
@@ -471,9 +466,6 @@ def apply_plan(
         actions = plan_promotions(recipes, state_dir=deployment_dir, now=now)
         logger.info("PROMOTE", "No plan file found; planning and applying")
 
-    if not actions:
-        return {"applied": [], "skipped": []}
-
     configs = {
         config["id"]: config
         for config in (
@@ -481,6 +473,9 @@ def apply_plan(
         )
     }
 
+    # Authenticate even when there is nothing to apply: the steady state
+    # (no eligible promotions) is exactly when out-of-band assignment
+    # changes accumulate, so drift is checked on every apply run.
     access_token = get_access_token()
     run = _ApplyRun(access_token, configs, deployment_dir, now)
 
@@ -497,4 +492,8 @@ def apply_plan(
         plan_path.unlink()
         logger.verbose("PROMOTE", f"Consumed plan file: {plan_path}")
 
-    return {"applied": run.applied, "skipped": run.skipped}
+    # Drift is checked after the actions so freshly applied assignments
+    # are reflected. Findings are warnings only, never corrected.
+    drift = detect_drift(access_token, configs, deployment_dir, run.existing_apps)
+
+    return {"applied": run.applied, "skipped": run.skipped, "drift": drift}

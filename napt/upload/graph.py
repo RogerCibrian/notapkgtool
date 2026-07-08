@@ -79,6 +79,7 @@ __all__ = [
     "get_app_assignments",
     "get_mobile_app",
     "list_mobile_apps",
+    "resolve_assignment_target",
     "resolve_group_id",
     "update_win32_app",
     "upload_to_azure_blob",
@@ -242,6 +243,44 @@ def resolve_group_id(access_token: str, group: str) -> str:
             f"({ids}). Use the object ID of the intended group instead."
         )
     return matches[0]["id"]
+
+
+def resolve_assignment_target(
+    access_token: str,
+    group: str,
+    group_id_cache: dict[str, str] | None = None,
+) -> dict:
+    """Resolves a deployment group entry to an assignment target dict.
+
+    The reserved names "All Users" and "All Devices" map to Intune's
+    built-in virtual targets; anything else resolves to an Entra ID
+    group target via resolve_group_id.
+
+    Args:
+        access_token: Bearer token for Graph API.
+        group: Group displayName, object ID, or reserved virtual name.
+        group_id_cache: Optional cache of name to object ID, shared
+            across calls to avoid repeated lookups.
+
+    Returns:
+        An assignment target dict for use with build_assignment.
+
+    Raises:
+        AuthError: On 401 or 403 (check Group.Read.All permission).
+        ConfigError: If no group or more than one group matches a name.
+        NetworkError: On 5xx or connection error.
+
+    """
+    if group in VIRTUAL_TARGETS:
+        return dict(VIRTUAL_TARGETS[group])
+    if group_id_cache is None:
+        group_id_cache = {}
+    if group not in group_id_cache:
+        group_id_cache[group] = resolve_group_id(access_token, group)
+    return {
+        "@odata.type": "#microsoft.graph.groupAssignmentTarget",
+        "groupId": group_id_cache[group],
+    }
 
 
 def get_app_assignments(access_token: str, app_id: str) -> list[dict]:

@@ -101,6 +101,7 @@ from napt.exceptions import (
 from napt.logging import get_logger, set_global_logger
 from napt.promote import (
     apply_plan,
+    check_drift,
     plan_path_for,
     plan_promotions,
     resolve_state_dir,
@@ -702,6 +703,16 @@ def cmd_promote_plan(args: argparse.Namespace) -> int:
         plan_path = plan_path_for(state_dir)
         actions = plan_promotions(recipes, state_dir=state_dir / "deployment")
         write_plan_file(actions, plan_path)
+        drift = (
+            check_drift(recipes, state_dir / "deployment") if args.check_drift else []
+        )
+    except AuthError as err:
+        print(f"Authentication error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
     except (ConfigError, StateError) as err:
         print(f"Error: {err}")
         if args.verbose or args.debug:
@@ -732,7 +743,24 @@ def cmd_promote_plan(args: argparse.Namespace) -> int:
         print()
         print("[OK] Nothing to promote. No plan file needed.")
 
+    if args.check_drift:
+        _print_drift(drift)
+
     return 0
+
+
+def _print_drift(drift: list[dict[str, Any]]) -> None:
+    """Prints drift findings as a warnings section."""
+    print()
+    print("=" * 70)
+    print("DRIFT CHECK")
+    print("=" * 70)
+    if drift:
+        for finding in drift:
+            print(f"  [WARNING] {finding['app_id']}: {finding['detail']}")
+    else:
+        print("  No drift detected.")
+    print("=" * 70)
 
 
 def cmd_promote_apply(args: argparse.Namespace) -> int:
@@ -808,6 +836,10 @@ def cmd_promote_apply(args: argparse.Namespace) -> int:
     for entry in skipped:
         print(f"  [SKIP] {_describe_action(entry['action'])} ({entry['reason']})")
     print("=" * 70)
+
+    if summary.get("drift"):
+        _print_drift(summary["drift"])
+
     print()
     print(f"[SUCCESS] Applied {len(applied)} action(s), " f"skipped {len(skipped)}.")
 
@@ -1373,6 +1405,14 @@ def main() -> None:
         help=(
             "State directory holding deployment/ and plan.json "
             "(default: directories.state from config)"
+        ),
+    )
+    parser_promote_plan.add_argument(
+        "--check-drift",
+        action="store_true",
+        help=(
+            "Also compare Intune assignments against deployment state "
+            "(requires Graph credentials); findings are warnings only"
         ),
     )
     parser_promote_plan.add_argument(

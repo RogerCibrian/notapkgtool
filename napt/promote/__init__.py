@@ -23,9 +23,14 @@ The core invariant: each ring holds at most one release of an app's Update
 entry — the newest release that has reached it. Promotion advances the
 deployed release into the next ring once it has held its current ring for
 the ring's ``promote_after_days``.
+
+Assignment drift — differences between what deployment state says should
+be assigned and what Intune actually has — is detected on every apply and
+on ``plan --check-drift``, and is always reported, never corrected.
 """
 
 from .applier import apply_plan, load_plan_file
+from .drift import check_drift, detect_drift
 from .planner import (
     plan_path_for,
     plan_promotions,
@@ -35,6 +40,8 @@ from .planner import (
 
 __all__ = [
     "apply_plan",
+    "check_drift",
+    "detect_drift",
     "load_plan_file",
     "plan_path_for",
     "plan_promotions",
