@@ -880,6 +880,11 @@ jobs:
           git ls-files 'recipes/*.yaml' 'recipes/**/*.yaml' | while read -r recipe; do
             napt discover "$recipe"
           done
+      - name: Cache installers for the publish workflow
+        uses: actions/cache/save@v4
+        with:
+          path: downloads
+          key: installers-${{ github.run_id }}
       - name: Open one PR per app with a new pending release
         shell: bash
         env:
@@ -932,6 +937,12 @@ jobs:
         with:
           python-version: "3.13"
       - run: pip install napt
+      - name: Restore cached installers
+        uses: actions/cache/restore@v4
+        with:
+          path: downloads
+          key: installers-
+          restore-keys: installers-
       - name: Publish every app with an approved pending release
         shell: bash
         run: |
@@ -941,11 +952,14 @@ jobs:
             [ -f "$state" ] || continue
             pending=$(python -c "import json, sys; print(json.load(open(sys.argv[1], encoding='utf-8')).get('pending') is not None)" "$state")
             [ "$pending" = "True" ] || continue
-            # Installers are machine-local (never committed), so this
-            # runner must fetch the binary. --stateless keeps the
-            # approved pending untouched: if the vendor swapped binaries
-            # since review, the upload hash gate refuses.
-            napt discover "$recipe" --stateless
+            # Use the cached installer when its hash matches the approved
+            # release; otherwise fetch from the vendor. --stateless keeps
+            # the approved pending untouched, and the upload hash gate
+            # refuses anything that does not match it.
+            psha=$(python -c "import json, sys; print(json.load(open(sys.argv[1], encoding='utf-8'))['pending']['sha256'])" "$state")
+            if ! sha256sum "downloads/$id/"* 2>/dev/null | grep -q "^$psha "; then
+              napt discover "$recipe" --stateless
+            fi
             napt build "$recipe"
             napt package "$recipe"
             napt upload "$recipe"
@@ -962,23 +976,21 @@ jobs:
           }
 ```
 
-**Advised: persist installers between discover and publish.**
-As written, the publish runner re-downloads from the vendor, which
+**Why the installer cache steps matter.**
+Without them, the publish runner re-downloads from the vendor, which
 couples an already-approved publish to the vendor still serving that
-exact binary — if the file was pulled or replaced in the meantime, the
-hash gate refuses and the approval is stranded until the next release is
-reviewed.
-Caching the downloaded installer at discover time removes that
-dependency: an object store (S3, Azure Blob), a GitHub Actions cache
-keyed on the pending release's sha256, or a self-hosted runner with a
-persistent `downloads/` directory all work.
-On the publish runner, restore the cache and skip the `--stateless`
-discover step on a hit.
-This is safe by construction — the hash gate validates whatever binary
-the runner provides against the approved sha256, so a cache can never
-ship the wrong bytes.
-It also preserves installers for retained releases, which the vendor may
-no longer serve if you ever need to republish one.
+exact binary — a pulled or replaced file strands the approval at the
+hash gate.
+The cache steps above hand the publish runner the very binary that was
+reviewed; the sha256 check in the loop falls back to a fresh download
+when the cache is stale or evicted (GitHub evicts caches unused for
+about a week), so the flow degrades gracefully.
+This is safe by construction — the upload hash gate validates whatever
+binary the runner provides, so a cache can never ship the wrong bytes.
+For long-lived archival — including installers for retained releases the
+vendor no longer serves — replace the cache steps with an object store
+(S3, Azure Blob) or a self-hosted runner with a persistent `downloads/`
+directory.
 
 ### Workflow 3: promotion plan (opens the promotion PR)
 
