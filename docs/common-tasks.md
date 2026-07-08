@@ -962,6 +962,24 @@ jobs:
           }
 ```
 
+**Advised: persist installers between discover and publish.**
+As written, the publish runner re-downloads from the vendor, which
+couples an already-approved publish to the vendor still serving that
+exact binary — if the file was pulled or replaced in the meantime, the
+hash gate refuses and the approval is stranded until the next release is
+reviewed.
+Caching the downloaded installer at discover time removes that
+dependency: an object store (S3, Azure Blob), a GitHub Actions cache
+keyed on the pending release's sha256, or a self-hosted runner with a
+persistent `downloads/` directory all work.
+On the publish runner, restore the cache and skip the `--stateless`
+discover step on a hit.
+This is safe by construction — the hash gate validates whatever binary
+the runner provides against the approved sha256, so a cache can never
+ship the wrong bytes.
+It also preserves installers for retained releases, which the vendor may
+no longer serve if you ever need to republish one.
+
 ### Workflow 3: promotion plan (opens the promotion PR)
 
 ```yaml
