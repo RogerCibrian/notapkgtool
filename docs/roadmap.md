@@ -27,6 +27,7 @@ This roadmap is a living document showing potential future directions for NAPT. 
 | Microsoft Intune Upload | ✅ Completed | User-Facing | High | Very High |
 | `napt auth setup` Command | 💡 Idea | User-Facing | Low | High |
 | Deployment Wave Management | ✅ Completed | User-Facing | Very High | High |
+| `napt promote rollback` Command | 💡 Idea | User-Facing | Medium | High |
 | Pre/Post Install/Uninstall Script Support | 💡 Idea | User-Facing | Low | Medium |
 | Enhanced CLI Help Menu | 💡 Idea | User-Facing | Low | Medium |
 | Intune App Categorization & Scope Tags | 💡 Idea | User-Facing | Medium | Medium |
@@ -43,8 +44,8 @@ This roadmap is a living document showing potential future directions for NAPT. 
 **Summary:**
 
 - ✅ **Completed**: 4
-- 💡 **Ideas**: 13
-- **Total**: 17 features
+- 💡 **Ideas**: 14
+- **Total**: 18 features
 
 ---
 
@@ -89,6 +90,39 @@ subcommands.
 
 - Azure CLI installed and authenticated with an account that can create app
   registrations
+
+#### `napt promote rollback` Command
+
+**Status**: 💡 Idea
+**Complexity**: Medium (1-3 days)
+**Value**: High
+
+**Description**: Reverses a bad rollout with one command by re-assigning a
+retained release to the rings it previously held and updating deployment
+state to match.
+Retained releases keep their Intune app objects per
+`deployment.retain_versions`, so rollback is an assignment change, not a
+republish.
+Routing it through the plan file (a `rollback` action type) would keep it
+review-gated like every other promotion action.
+
+**Benefits**:
+
+- One-command reversal using the already-retained release
+- Keeps deployment state and Intune consistent — a manual portal rollback
+    triggers drift warnings today and never self-heals
+- Review-gated when expressed as a plan action
+
+**Prerequisites**:
+
+- Semantics to decide: which rings roll back (all held by the bad
+    release, or one at a time), and what happens to the rolled-back
+    release (retired, held, or blocked from re-promotion)
+- A retained release must exist (`deployment.retain_versions` >= 1)
+
+**Related**: Deployment Wave Management shipped without a rollback verb;
+`napt promote apply`'s staleness checks correctly reject hand-authored
+plan actions for non-deployed releases, so this needs first-class support.
 
 #### Intune App Categorization & Scope Tags
 
