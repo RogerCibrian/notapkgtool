@@ -749,7 +749,9 @@ class TestCmdPromotePlan:
             patch("napt.cli.write_plan_file", return_value=True) as write_mock,
         ):
             code = cmd_promote_plan(
-                _args(recipes="recipes", state_dir=tmp_path / "state")
+                _args(
+                    recipes="recipes", state_dir=tmp_path / "state", check_drift=False
+                )
             )
         assert code == 0
         out = capsys.readouterr().out
@@ -764,7 +766,9 @@ class TestCmdPromotePlan:
             patch("napt.cli.write_plan_file", return_value=False),
         ):
             code = cmd_promote_plan(
-                _args(recipes="recipes", state_dir=tmp_path / "state")
+                _args(
+                    recipes="recipes", state_dir=tmp_path / "state", check_drift=False
+                )
             )
         assert code == 0
         out = capsys.readouterr().out
@@ -774,7 +778,9 @@ class TestCmdPromotePlan:
         """Tests that ConfigError is caught and returns 1."""
         with patch("napt.cli.plan_promotions", side_effect=ConfigError("bad")):
             code = cmd_promote_plan(
-                _args(recipes="recipes", state_dir=tmp_path / "state")
+                _args(
+                    recipes="recipes", state_dir=tmp_path / "state", check_drift=False
+                )
             )
         assert code == 1
         assert "bad" in capsys.readouterr().out
@@ -920,3 +926,58 @@ class TestCmdPromoteApply:
             )
         assert code == 1
         assert "bad plan" in capsys.readouterr().out
+
+
+# =============================================================================
+# drift output
+# =============================================================================
+
+
+class TestDriftOutput:
+    """Tests for drift warning presentation."""
+
+    def test_plan_check_drift_prints_findings(self, tmp_path, capsys):
+        """Tests that --check-drift findings are printed as warnings."""
+        finding = {
+            "app_id": "test-app",
+            "kind": "missing_assignment",
+            "detail": "expected assignment gone",
+        }
+        with (
+            patch("napt.cli.plan_promotions", return_value=[]),
+            patch("napt.cli.write_plan_file", return_value=False),
+            patch("napt.cli.check_drift", return_value=[finding]),
+        ):
+            code = cmd_promote_plan(
+                _args(
+                    recipes="recipes",
+                    state_dir=tmp_path / "state",
+                    check_drift=True,
+                )
+            )
+        assert code == 0
+        out = capsys.readouterr().out
+        assert "DRIFT CHECK" in out
+        assert "[WARNING] test-app: expected assignment gone" in out
+
+    def test_apply_prints_drift_from_summary(self, tmp_path, capsys):
+        """Tests that apply prints drift findings from the summary."""
+        summary = {
+            "applied": [],
+            "skipped": [],
+            "drift": [
+                {
+                    "app_id": "test-app",
+                    "kind": "orphaned_release",
+                    "detail": "stray app",
+                }
+            ],
+        }
+        with patch("napt.cli.apply_plan", return_value=summary):
+            code = cmd_promote_apply(
+                _args(recipes="recipes", state_dir=tmp_path, plan_file=None)
+            )
+        assert code == 0
+        out = capsys.readouterr().out
+        assert "DRIFT CHECK" in out
+        assert "[WARNING] test-app: stray app" in out

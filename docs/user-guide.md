@@ -456,8 +456,17 @@ re-running after a partial failure is safe. Assignments NAPT does not
 manage — admin-made groups, all-device targets, exclusions — are always
 preserved.
 
+Both commands report **assignment drift**: every discrepancy between what
+deployment state says should be assigned and what Intune actually has —
+removed or changed NAPT assignments, admin-made assignments on
+NAPT-managed apps, releases missing from the tenant, and stamped apps no
+state file references. Drift is warned about and never corrected. Apply
+checks automatically; plan checks with `--check-drift` (which needs Graph
+credentials — without the flag, plan stays fully offline).
+
 ```bash
 napt promote plan [RECIPE_OR_DIR] [OPTIONS]
+napt promote plan --check-drift
 napt promote apply [RECIPE_OR_DIR] [OPTIONS]
 ```
 

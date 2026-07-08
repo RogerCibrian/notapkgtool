@@ -714,6 +714,11 @@ release has proven itself.
    Ring groups are assigned to the release's `[Update]` entry as required
    installs; the displaced older release is unassigned and retired per
    `deployment.retain_versions`.
+   Every apply also prints a drift check — discrepancies between
+   deployment state and Intune (removed assignments, admin-made changes,
+   stray apps) are warned about, never corrected.
+   Use `napt promote plan --check-drift` for the same report without
+   applying anything.
    Run `napt status` to see where every app stands.
 
 Run plan and apply on a schedule and promotion becomes automatic: each

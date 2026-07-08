@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Assignment drift detection** - `napt promote apply` (always) and
+    `napt promote plan --check-drift` (opt-in) compare Intune assignments
+    against deployment state and warn on every discrepancy: removed or
+    changed NAPT assignments, admin-made assignments on NAPT-managed
+    apps, releases missing from the tenant, and stamped apps no state
+    references. Drift is reported, never corrected.
 - **Built-in assignment targets** - `"All Users"` and `"All Devices"` in
     deployment group lists assign Intune's virtual targets instead of
     Entra ID groups. A real group sharing one of these display names must
