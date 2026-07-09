@@ -57,6 +57,7 @@ from napt.upload.graph import (
     create_content_version,
     create_content_version_file,
     create_win32_app,
+    delete_mobile_app,
     get_mobile_app,
     list_mobile_apps,
     update_win32_app,
@@ -557,8 +558,10 @@ def _upload_single_app(
     Reconcile-before-act: when a NAPT-stamped app already matches this
     publish instance (recipe id, entry type, installer hash), the app is
     adopted instead of duplicated — skipped entirely if its content is
-    committed, or resumed with a fresh content upload if a previous run
-    crashed between app creation and commit. Otherwise the app record is
+    committed, or deleted and recreated if a previous run crashed between
+    app creation and commit (Intune refuses new content versions for an
+    app whose first content version was never committed, so such an
+    orphan cannot be resumed in place). Otherwise the app record is
     created and its content uploaded and committed.
 
     Adoption does not re-send app metadata or content: a matched app keeps
@@ -594,7 +597,26 @@ def _upload_single_app(
     patch_metadata_after_content = False
     if match is not None:
         intune_app_id: str = match["id"]
-        if force:
+        full_app = get_mobile_app(access_token, intune_app_id)
+        if not full_app.get("committedContentVersion"):
+            # Orphan from a run that crashed between app creation and
+            # content commit. Intune rejects a contentVersions POST until
+            # the first content version is committed, so replace the app
+            # instead of resuming it.
+            logger.step(
+                step_create,
+                total_steps,
+                f"Recreating app record for '{display_name}'...",
+            )
+            delete_mobile_app(access_token, intune_app_id)
+            logger.info(
+                "UPLOAD",
+                f"Deleted Intune app {intune_app_id}: a previous upload "
+                "never committed its content",
+            )
+            intune_app_id = create_win32_app(access_token, app_metadata)
+            logger.info("UPLOAD", f"Created Intune app: {intune_app_id}")
+        elif force:
             logger.step(
                 step_create,
                 total_steps,
@@ -605,28 +627,16 @@ def _upload_single_app(
             # PATCH with HTTP 412 ConditionNotMet (stale internal ETag).
             patch_metadata_after_content = True
         else:
-            full_app = get_mobile_app(access_token, intune_app_id)
-            if full_app.get("committedContentVersion"):
-                logger.step(
-                    step_create,
-                    total_steps,
-                    f"Adopting existing app record for '{display_name}'...",
-                )
-                logger.info(
-                    "UPLOAD",
-                    f"Adopted Intune app: {intune_app_id} (content already committed)",
-                )
-                return intune_app_id
-
             logger.step(
                 step_create,
                 total_steps,
-                f"Resuming upload for existing app record '{display_name}'...",
+                f"Adopting existing app record for '{display_name}'...",
             )
             logger.info(
                 "UPLOAD",
-                f"Reusing Intune app: {intune_app_id} (content was never committed)",
+                f"Adopted Intune app: {intune_app_id} (content already committed)",
             )
+            return intune_app_id
     else:
         logger.step(
             step_create, total_steps, f"Creating app record for '{display_name}'..."

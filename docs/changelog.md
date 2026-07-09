@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed `napt upload` failing with HTTP 400 (`The mobile app content
+    cannot be updated before the first content version is committed`)
+    when re-running after a crash between app creation and content
+    commit. Such orphaned app records are now deleted and recreated,
+    since Intune cannot resume them in place.
 - Fixed `napt upload` failing intermittently with HTTP 403
     (`SAS identifier cannot be found`) when Azure Storage had not yet
     propagated a freshly issued SAS URI. Blob uploads now retry
