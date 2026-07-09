@@ -17,7 +17,7 @@
 Implements ring-based promotion of published apps: ``napt promote plan``
 computes which releases should enter or advance through the configured
 deployment rings and writes a reviewable plan file; ``napt promote apply``
-(upcoming) executes a plan against Intune.
+executes a plan against Intune.
 
 The core invariant: each ring holds at most one release of an app's Update
 entry — the newest release that has reached it. Promotion advances the
@@ -27,24 +27,31 @@ the ring's ``promote_after_days``.
 Assignment drift — differences between what deployment state says should
 be assigned and what Intune actually has — is detected on every apply and
 on ``plan --check-drift``, and is always reported, never corrected.
+
+Publications whose deployment state writeback was lost (e.g. a failed CI
+push after a successful upload) are recovered from tenant evidence on
+every apply and on ``plan --reconcile``.
 """
 
 from .applier import apply_plan, load_plan_file
-from .drift import check_drift, detect_drift
+from .drift import detect_drift
 from .planner import (
+    load_recipe_configs,
     plan_path_for,
     plan_promotions,
     resolve_state_dir,
     write_plan_file,
 )
+from .reconcile import reconcile_publications
 
 __all__ = [
     "apply_plan",
-    "check_drift",
     "detect_drift",
     "load_plan_file",
+    "load_recipe_configs",
     "plan_path_for",
     "plan_promotions",
+    "reconcile_publications",
     "resolve_state_dir",
     "write_plan_file",
 ]

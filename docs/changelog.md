@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Publication recovery** - `napt promote apply` (always) and
+    `napt promote plan --reconcile` (opt-in) record publications that are
+    fully committed in Intune but whose deployment state writeback was
+    lost (e.g. a CI runner uploaded successfully, then failed to push the
+    state commit). Recovery uses the same provenance-stamp evidence as
+    idempotent upload adoption, requires every entry of the release to
+    have committed content, and makes the recovered release promotable in
+    the same run. Partially published releases are warned about instead —
+    re-run `napt upload` to finish them
+
 ## [0.7.0] - 2026-07-07
 
 ### Added

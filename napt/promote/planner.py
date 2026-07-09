@@ -52,6 +52,7 @@ from napt.logging import get_global_logger
 from napt.state import deployment_state_path, load_deployment_state
 
 __all__ = [
+    "load_recipe_configs",
     "plan_path_for",
     "plan_promotions",
     "resolve_state_dir",
@@ -237,6 +238,28 @@ def _collect_recipe_paths(recipes: Path) -> list[Path]:
             raise ConfigError(f"No recipe files found under {recipes}")
         return found
     raise ConfigError(f"Recipe path not found: {recipes}")
+
+
+def load_recipe_configs(recipes: Path) -> dict[str, dict[str, Any]]:
+    """Loads effective configurations for a recipe file or directory.
+
+    Args:
+        recipes: A recipe YAML file, or a directory scanned recursively.
+
+    Returns:
+        Effective configurations keyed by recipe id.
+
+    Raises:
+        ConfigError: If the path does not exist, contains no recipes, or
+            a recipe is invalid.
+
+    """
+    return {
+        config["id"]: config
+        for config in (
+            load_effective_config(path) for path in _collect_recipe_paths(recipes)
+        )
+    }
 
 
 def resolve_state_dir(recipes: Path) -> Path:
