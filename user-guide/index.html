@@ -3220,7 +3220,8 @@ package directories are removed automatically.</p>
 <p>Plans and applies ring-based promotion of published apps. <code>promote plan</code>
 computes which releases enter or advance deployment rings (per
 <code>deployment.rings</code>) and writes <code>state/plan.json</code> when there is work; a
-stale plan file is removed when nothing is eligible. Read-only.</p>
+stale plan file is removed when nothing is eligible. Read-only unless
+<code>--reconcile</code> is passed.</p>
 <p><code>promote apply</code> executes the plan against Intune: assigns install entries,
 enters and advances rings, unassigns displaced releases, and retires them
 per <code>deployment.retain_versions</code>. It consumes <code>state/plan.json</code> when one
@@ -3236,8 +3237,20 @@ NAPT-managed apps, releases missing from the tenant, and stamped apps no
 state file references. Drift is warned about and never corrected. Apply
 checks automatically; plan checks with <code>--check-drift</code> (which needs Graph
 credentials — without the flag, plan stays fully offline).</p>
+<p>Both commands also recover <strong>lost publication writebacks</strong>: when an
+upload succeeded but the state commit recording it never landed (a CI
+push rejected by branch protection, a crashed runner), the tenant holds
+a fully published release that state still lists as pending. Recovery
+re-derives the deployed record from the same provenance-stamp evidence
+idempotent upload uses, and only when every entry of the release has
+committed content — a partially published release is warned about
+instead, since only a publish re-run can finish it. Apply reconciles
+automatically; plan reconciles with <code>--reconcile</code> (which needs Graph
+credentials and, unlike the rest of plan, writes deployment state).
+Reconciliation runs before planning, so a recovered release is
+promotable in the same run.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>napt<span class="w"> </span>promote<span class="w"> </span>plan<span class="w"> </span><span class="o">[</span>RECIPE_OR_DIR<span class="o">]</span><span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>napt<span class="w"> </span>promote<span class="w"> </span>plan<span class="w"> </span>--check-drift
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>napt<span class="w"> </span>promote<span class="w"> </span>plan<span class="w"> </span>--check-drift<span class="w"> </span>--reconcile
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>napt<span class="w"> </span>promote<span class="w"> </span>apply<span class="w"> </span><span class="o">[</span>RECIPE_OR_DIR<span class="o">]</span><span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </span></code></pre></div>
 <p>For the full review-gated CI setup — publish PRs, promotion PRs, and
