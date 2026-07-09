@@ -28,12 +28,27 @@ from napt.build.manager import (
     _create_build_directory,
     _extract_app_icon,
     _find_installer_file,
+    _get_installer_version,
     _write_build_manifest,
 )
 from napt.exceptions import ConfigError
 from napt.versioning.msi import MSIMetadata
 
 # All tests in this file are unit tests (fast, mocked)
+
+
+def _write_pending_state(state_dir: Path, app_id: str, pending: dict) -> None:
+    """Writes a deployment state file with the given pending release."""
+    deployment_dir = state_dir / "deployment"
+    deployment_dir.mkdir(parents=True, exist_ok=True)
+    state = {
+        "schemaVersion": 1,
+        "deployed": None,
+        "pending": pending,
+        "rings": {},
+        "retained": [],
+    }
+    (deployment_dir / f"{app_id}.json").write_text(json.dumps(state))
 
 
 class TestFindInstallerFile:
@@ -105,6 +120,56 @@ class TestFindInstallerFile:
 
         assert result == new
 
+    def test_find_by_deployment_state_url(self, tmp_path):
+        """Tests that the pending release URL locates a vendor filename
+        that name matching cannot."""
+        downloads_dir = tmp_path / "downloads"
+        app_dir = downloads_dir / "napt-test-7zip"
+        app_dir.mkdir(parents=True)
+        installer = app_dir / "7z2602-x64.exe"
+        installer.write_text("fake exe")
+
+        _write_pending_state(
+            tmp_path / "state",
+            "napt-test-7zip",
+            {
+                "version": "26.02",
+                "sha256": "abc123",
+                "url": "https://example.com/dl/7z2602-x64.exe",
+            },
+        )
+
+        config = {
+            "id": "napt-test-7zip",
+            "name": "NAPT Test 7-Zip",
+            "discovery": {},
+            "directories": {"state": str(tmp_path / "state")},
+        }
+
+        result = _find_installer_file(downloads_dir, config)
+
+        assert result == installer
+
+    def test_find_no_pending_state_falls_through(self, tmp_path):
+        """Tests that an empty deployment state falls through to name
+        matching."""
+        downloads_dir = tmp_path / "downloads"
+        app_dir = downloads_dir / "test-app"
+        app_dir.mkdir(parents=True)
+        installer = app_dir / "test-app.msi"
+        installer.write_text("fake msi")
+
+        config = {
+            "id": "test-app",
+            "name": "Test App",
+            "discovery": {},
+            "directories": {"state": str(tmp_path / "state")},
+        }
+
+        result = _find_installer_file(downloads_dir, config)
+
+        assert result == installer
+
     def test_find_not_found_raises(self, tmp_path):
         """Test error when no installer found."""
         downloads_dir = tmp_path / "downloads"
@@ -117,6 +182,75 @@ class TestFindInstallerFile:
 
         with pytest.raises(PackagingError, match="Cannot locate installer file"):
             _find_installer_file(downloads_dir, config)
+
+
+class TestGetInstallerVersion:
+    """Tests for determining installer versions."""
+
+    def test_version_from_deployment_state(self, tmp_path):
+        """Tests that a non-MSI installer version falls back to the
+        pending release in deployment state."""
+        installer = tmp_path / "7z2602-x64.exe"
+        installer.write_text("fake exe")
+
+        _write_pending_state(
+            tmp_path / "state",
+            "napt-test-7zip",
+            {
+                "version": "26.02",
+                "sha256": "abc123",
+                "url": "https://example.com/dl/7z2602-x64.exe",
+            },
+        )
+
+        config = {
+            "id": "napt-test-7zip",
+            "name": "NAPT Test 7-Zip",
+            "directories": {"state": str(tmp_path / "state")},
+        }
+
+        assert _get_installer_version(installer, config) == "26.02"
+
+    def test_discovery_cache_wins_over_state(self, tmp_path):
+        """Tests that the discovery cache version takes priority over
+        deployment state."""
+        installer = tmp_path / "app-setup.exe"
+        installer.write_text("fake exe")
+
+        cache_file = tmp_path / "cache" / "discovery.json"
+        cache_file.parent.mkdir(parents=True)
+        cache_file.write_text(
+            json.dumps({"apps": {"test-app": {"known_version": "1.2.3"}}})
+        )
+
+        _write_pending_state(
+            tmp_path / "state",
+            "test-app",
+            {"version": "9.9.9", "sha256": "abc123", "url": ""},
+        )
+
+        config = {
+            "id": "test-app",
+            "name": "Test App",
+            "directories": {"state": str(tmp_path / "state")},
+        }
+
+        assert _get_installer_version(installer, config, cache_file) == "1.2.3"
+
+    def test_no_version_source_raises(self, tmp_path):
+        """Tests that a non-MSI installer with no cache and no pending
+        release raises ConfigError."""
+        installer = tmp_path / "app-setup.exe"
+        installer.write_text("fake exe")
+
+        config = {
+            "id": "test-app",
+            "name": "Test App",
+            "directories": {"state": str(tmp_path / "state")},
+        }
+
+        with pytest.raises(ConfigError, match="Could not determine version"):
+            _get_installer_version(installer, config)
 
 
 class TestCreateBuildDirectory:

@@ -575,6 +575,70 @@ def create_content_version_file(
     return file_id, data["azureStorageUri"]
 
 
+_BLOB_RETRY_STATUS = (403, 408, 429, 500, 502, 503, 504)
+_BLOB_RETRY_ATTEMPTS = 5
+_BLOB_RETRY_INITIAL_DELAY = 2.0
+
+
+def _blob_put_with_retry(
+    url: str,
+    data: bytes,
+    headers: dict[str, str],
+    context: str,
+    timeout: int = 300,
+) -> None:
+    """PUTs a payload to Azure Blob Storage, retrying transient failures.
+
+    A freshly provisioned SAS URI can be rejected with HTTP 403 ("SAS
+    identifier cannot be found") for a few seconds until the signature
+    propagates to the storage front end, so 403 is retryable here —
+    unlike Graph API calls, where it means missing permissions. Retries
+    use exponential backoff starting at 2 seconds.
+
+    Args:
+        url: Blob endpoint including the SAS query string.
+        data: Request body.
+        headers: Request headers.
+        context: Failure description used in log and error messages.
+        timeout: Per-request timeout in seconds.
+
+    Raises:
+        NetworkError: On a non-retryable HTTP status, or once retries
+            are exhausted.
+
+    """
+    from napt.logging import get_global_logger
+
+    logger = get_global_logger()
+    delay = _BLOB_RETRY_INITIAL_DELAY
+    for attempt in range(1, _BLOB_RETRY_ATTEMPTS + 1):
+        err: Exception | None = None
+        try:
+            resp = requests.put(url, data=data, headers=headers, timeout=timeout)
+        except requests.RequestException as exc:
+            err = exc
+            detail = str(exc)
+        else:
+            if resp.ok:
+                return
+            detail = f"HTTP {resp.status_code}\n{resp.text}"
+            if resp.status_code not in _BLOB_RETRY_STATUS:
+                raise NetworkError(f"{context}: {detail}")
+
+        if attempt == _BLOB_RETRY_ATTEMPTS:
+            raise NetworkError(
+                f"{context} after {_BLOB_RETRY_ATTEMPTS} attempts: {detail}"
+            ) from err
+
+        logger.warning(
+            "UPLOAD",
+            f"{context} ({detail.splitlines()[0]}); "
+            f"retrying in {delay:.0f}s (attempt {attempt}/{_BLOB_RETRY_ATTEMPTS})",
+        )
+        time.sleep(delay)
+        delay *= 2
+
+
 def upload_to_azure_blob(
     sas_uri: str,
     encrypted_payload_path: Path,
@@ -583,7 +647,9 @@ def upload_to_azure_blob(
 
     Splits the file into CHUNK_SIZE chunks, uploads each as a block with a
     base64-encoded block ID, then commits the block list. Prints an inline
-    progress percentage as each chunk completes.
+    progress percentage as each chunk completes. Transient per-request
+    failures (including 403 from a not-yet-propagated SAS URI) are retried
+    with backoff.
 
     Args:
         sas_uri: Azure Blob Storage SAS URI from create_content_version_file.
@@ -591,7 +657,8 @@ def upload_to_azure_blob(
             (IntunePackage.intunewin from inside the .intunewin ZIP).
 
     Raises:
-        NetworkError: If any block upload or the block list commit fails.
+        NetworkError: If any block upload or the block list commit fails
+            after retries.
 
     """
     from napt.logging import get_global_logger
@@ -616,20 +683,15 @@ def upload_to_azure_blob(
             block_ids.append(block_id)
 
             put_url = f"{sas_uri}&comp=block&blockid={block_id}"
-            resp = requests.put(
+            _blob_put_with_retry(
                 put_url,
-                data=chunk,
+                chunk,
                 headers={
                     "x-ms-blob-type": "BlockBlob",
                     "Content-Length": str(len(chunk)),
                 },
-                timeout=300,
+                context=f"Azure Blob block upload failed (block {block_index})",
             )
-            if not resp.ok:
-                raise NetworkError(
-                    f"Azure Blob block upload failed (block {block_index}): "
-                    f"HTTP {resp.status_code}\n{resp.text}"
-                )
 
             bytes_uploaded += len(chunk)
             if total_bytes:
@@ -648,16 +710,13 @@ def upload_to_azure_blob(
         + "</BlockList>"
     )
     commit_url = f"{sas_uri}&comp=blocklist"
-    resp = requests.put(
+    _blob_put_with_retry(
         commit_url,
-        data=block_list_xml.encode("utf-8"),
+        block_list_xml.encode("utf-8"),
         headers={"Content-Type": "application/xml"},
+        context="Azure Blob block list commit failed",
         timeout=60,
     )
-    if not resp.ok:
-        raise NetworkError(
-            f"Azure Blob block list commit failed: HTTP {resp.status_code}\n{resp.text}"
-        )
 
     elapsed = time.time() - started_at
     speed_mb = (bytes_uploaded / (1024 * 1024)) / elapsed if elapsed > 0 else 0

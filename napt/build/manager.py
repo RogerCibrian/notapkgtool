@@ -66,6 +66,7 @@ from napt.config import load_effective_config
 from napt.exceptions import ConfigError, PackagingError
 from napt.psadt import get_psadt_release
 from napt.results import BuildResult
+from napt.state import deployment_state_path, load_deployment_state
 from napt.versioning.msi import (
     MSIMetadata,
     extract_msi_metadata,
@@ -119,6 +120,32 @@ def sanitize_filename(name: str, app_id: str = "") -> str:
     return sanitized
 
 
+def _pending_release(config: dict[str, Any]) -> dict[str, Any] | None:
+    """Reads the pending release from the app's deployment state.
+
+    Deployment state is committed alongside recipes, so the pending
+    release (version, sha256, url) is available on machines that never
+    ran discover — such as a CI publish job restoring downloads from a
+    cache.
+
+    Args:
+        config: Recipe configuration.
+
+    Returns:
+        The pending release entry, or None when no state directory is
+            configured or no pending release is recorded.
+
+    Raises:
+        StateError: If the deployment state file exists but is corrupted
+            or has an unsupported schema version.
+    """
+    state_dir = config.get("directories", {}).get("state")
+    if not state_dir:
+        return None
+    state_path = deployment_state_path(Path(state_dir) / "deployment", config["id"])
+    return load_deployment_state(state_path).get("pending")
+
+
 def _get_installer_version(
     installer_file: Path, config: dict[str, Any], cache_file: Path | None = None
 ) -> str:
@@ -128,7 +155,8 @@ def _get_installer_version(
         1. Auto-detect MSI files (`.msi` extension) and extract version
         2. Auto-detect MSIX files (`.msix` extension) and extract version
         3. Fall back to known_version from the discovery cache
-        4. If all else fails, raise an error
+        4. Fall back to the pending release version from deployment state
+        5. If all else fails, raise an error
 
     Args:
         installer_file: Path to the installer file.
@@ -179,6 +207,15 @@ def _get_installer_version(
             logger.verbose("BUILD", f"Using version from cache: {known_version}")
             return known_version
 
+    # Non-MSI/MSIX without a discovery cache: fall back to the pending
+    # release recorded in deployment state
+    pending = _pending_release(config)
+    if pending and pending.get("version"):
+        logger.verbose(
+            "BUILD", f"Using version from deployment state: {pending['version']}"
+        )
+        return pending["version"]
+
     # No version found - provide error
     raise ConfigError(
         f"Could not determine version for {app_id}. Either:\n"
@@ -195,8 +232,10 @@ def _find_installer_file(
     Uses multiple strategies to locate the installer:
     1. URL from recipe (for url_download strategy)
     2. URL from discovery cache (for web_scrape, api_github, api_json strategies)
-    3. Filename matching by app name/id
-    4. Most recent installer (last resort)
+    3. URL of the pending release in deployment state (for machines that
+        never ran discover, such as CI publish jobs)
+    4. Filename matching by app name/id
+    5. Most recent installer (last resort)
 
     Args:
         downloads_dir: Downloads directory to search.
@@ -255,7 +294,23 @@ def _find_installer_file(
         except Exception as err:
             logger.warning("BUILD", f"Could not check discovery cache: {err}")
 
-    # Strategy 3: Fallback - Search for installer matching app name/id
+    # Strategy 3: Extract filename from the pending release URL in
+    # deployment state (committed to the repo, unlike the discovery cache)
+    pending = _pending_release(config)
+    if pending:
+        parsed = urlparse(pending.get("url", ""))
+        filename = Path(parsed.path).name
+        if filename:
+            installer_path = app_dir / filename
+
+            if installer_path.exists():
+                logger.verbose(
+                    "BUILD",
+                    f"Found installer from deployment state: {installer_path}",
+                )
+                return installer_path
+
+    # Strategy 4: Fallback - Search for installer matching app name/id
     app_name = config["name"].lower()
 
     # Try to find installer matching app_id or app_name in filename
@@ -283,8 +338,8 @@ def _find_installer_file(
     # No installer found after trying all strategies
     raise PackagingError(
         f"Cannot locate installer file for {app_id} in {downloads_dir}/{app_id}. "
-        f"Tried locating via recipe URL, state file URL, and filename matching, "
-        f"but no matching installer found. "
+        f"Tried locating via recipe URL, discovery cache URL, deployment "
+        f"state URL, and filename matching, but no matching installer found. "
         f"Verify the installer file exists in {downloads_dir}/{app_id}."
     )
 
