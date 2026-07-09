@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed `napt build` failing to find the installer (or its version) on
+    machines that never ran `napt discover`, such as CI publish jobs
+    restoring `downloads/` from a cache. Build now falls back to the
+    pending release URL and version recorded in committed deployment
+    state when the local discovery cache is absent. Previously any
+    non-`url_download` recipe failed with "Cannot locate installer file"
+    in the reference GitOps publish workflow.
+
 ## [0.7.0] - 2026-07-07
 
 ### Added
