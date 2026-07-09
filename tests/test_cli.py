@@ -750,7 +750,10 @@ class TestCmdPromotePlan:
         ):
             code = cmd_promote_plan(
                 _args(
-                    recipes="recipes", state_dir=tmp_path / "state", check_drift=False
+                    recipes="recipes",
+                    state_dir=tmp_path / "state",
+                    check_drift=False,
+                    reconcile=False,
                 )
             )
         assert code == 0
@@ -767,7 +770,10 @@ class TestCmdPromotePlan:
         ):
             code = cmd_promote_plan(
                 _args(
-                    recipes="recipes", state_dir=tmp_path / "state", check_drift=False
+                    recipes="recipes",
+                    state_dir=tmp_path / "state",
+                    check_drift=False,
+                    reconcile=False,
                 )
             )
         assert code == 0
@@ -779,7 +785,10 @@ class TestCmdPromotePlan:
         with patch("napt.cli.plan_promotions", side_effect=ConfigError("bad")):
             code = cmd_promote_plan(
                 _args(
-                    recipes="recipes", state_dir=tmp_path / "state", check_drift=False
+                    recipes="recipes",
+                    state_dir=tmp_path / "state",
+                    check_drift=False,
+                    reconcile=False,
                 )
             )
         assert code == 1
@@ -946,13 +955,17 @@ class TestDriftOutput:
         with (
             patch("napt.cli.plan_promotions", return_value=[]),
             patch("napt.cli.write_plan_file", return_value=False),
-            patch("napt.cli.check_drift", return_value=[finding]),
+            patch("napt.cli.load_recipe_configs", return_value={}),
+            patch("napt.cli.get_access_token", return_value="tok"),
+            patch("napt.cli.list_mobile_apps", return_value=[]),
+            patch("napt.cli.detect_drift", return_value=[finding]),
         ):
             code = cmd_promote_plan(
                 _args(
                     recipes="recipes",
                     state_dir=tmp_path / "state",
                     check_drift=True,
+                    reconcile=False,
                 )
             )
         assert code == 0
@@ -981,3 +994,123 @@ class TestDriftOutput:
         out = capsys.readouterr().out
         assert "DRIFT CHECK" in out
         assert "[WARNING] test-app: stray app" in out
+
+
+# =============================================================================
+# reconciliation output
+# =============================================================================
+
+
+class TestReconcileOutput:
+    """Tests for publication reconciliation presentation."""
+
+    def test_plan_reconcile_prints_findings(self, tmp_path, capsys):
+        """Tests that --reconcile findings are printed with kind markers."""
+        findings = [
+            {
+                "app_id": "test-app",
+                "kind": "recovered",
+                "detail": "recorded publication of 2.0.0",
+            },
+            {
+                "app_id": "other-app",
+                "kind": "incomplete",
+                "detail": "partially published - re-run publish to finish",
+            },
+        ]
+        with (
+            patch("napt.cli.plan_promotions", return_value=[]),
+            patch("napt.cli.write_plan_file", return_value=False),
+            patch("napt.cli.load_recipe_configs", return_value={}),
+            patch("napt.cli.get_access_token", return_value="tok"),
+            patch("napt.cli.list_mobile_apps", return_value=[]),
+            patch("napt.cli.reconcile_publications", return_value=findings),
+        ):
+            code = cmd_promote_plan(
+                _args(
+                    recipes="recipes",
+                    state_dir=tmp_path / "state",
+                    check_drift=False,
+                    reconcile=True,
+                )
+            )
+        assert code == 0
+        out = capsys.readouterr().out
+        assert "PUBLICATION RECONCILIATION" in out
+        assert "[OK] test-app: recorded publication of 2.0.0" in out
+        assert "[WARNING] other-app:" in out
+
+    def test_plan_reconcile_runs_before_planning(self, tmp_path, capsys):
+        """Tests that reconciliation happens before the plan is computed."""
+        order: list[str] = []
+        with (
+            patch("napt.cli.load_recipe_configs", return_value={}),
+            patch("napt.cli.get_access_token", return_value="tok"),
+            patch("napt.cli.list_mobile_apps", return_value=[]),
+            patch(
+                "napt.cli.reconcile_publications",
+                side_effect=lambda *a: order.append("reconcile") or [],
+            ),
+            patch(
+                "napt.cli.plan_promotions",
+                side_effect=lambda *a, **k: order.append("plan") or [],
+            ),
+            patch("napt.cli.write_plan_file", return_value=False),
+        ):
+            code = cmd_promote_plan(
+                _args(
+                    recipes="recipes",
+                    state_dir=tmp_path / "state",
+                    check_drift=False,
+                    reconcile=True,
+                )
+            )
+        assert code == 0
+        assert order == ["reconcile", "plan"]
+
+    def test_plan_shares_one_session_for_reconcile_and_drift(self, tmp_path):
+        """Tests that --reconcile --check-drift together authenticate and
+        list the tenant only once."""
+        with (
+            patch("napt.cli.load_recipe_configs", return_value={}),
+            patch("napt.cli.get_access_token", return_value="tok") as auth_mock,
+            patch("napt.cli.list_mobile_apps", return_value=[]) as list_mock,
+            patch("napt.cli.reconcile_publications", return_value=[]),
+            patch("napt.cli.detect_drift", return_value=[]),
+            patch("napt.cli.plan_promotions", return_value=[]),
+            patch("napt.cli.write_plan_file", return_value=False),
+        ):
+            code = cmd_promote_plan(
+                _args(
+                    recipes="recipes",
+                    state_dir=tmp_path / "state",
+                    check_drift=True,
+                    reconcile=True,
+                )
+            )
+        assert code == 0
+        assert auth_mock.call_count == 1
+        assert list_mock.call_count == 1
+
+    def test_apply_prints_recovered_from_summary(self, tmp_path, capsys):
+        """Tests that apply prints reconciliation findings from the summary."""
+        summary = {
+            "applied": [],
+            "skipped": [],
+            "drift": [],
+            "recovered": [
+                {
+                    "app_id": "test-app",
+                    "kind": "recovered",
+                    "detail": "recorded publication of 2.0.0",
+                }
+            ],
+        }
+        with patch("napt.cli.apply_plan", return_value=summary):
+            code = cmd_promote_apply(
+                _args(recipes="recipes", state_dir=tmp_path, plan_file=None)
+            )
+        assert code == 0
+        out = capsys.readouterr().out
+        assert "PUBLICATION RECONCILIATION" in out
+        assert "[OK] test-app: recorded publication of 2.0.0" in out

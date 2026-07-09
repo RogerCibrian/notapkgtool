@@ -44,16 +44,16 @@ import json
 from pathlib import Path
 from typing import Any
 
-from napt.config import load_effective_config
 from napt.exceptions import StateError
 from napt.logging import get_global_logger
 from napt.promote.drift import detect_drift
 from napt.promote.planner import (
     PLAN_SCHEMA_VERSION,
-    _collect_recipe_paths,
+    load_recipe_configs,
     plan_path_for,
     plan_promotions,
 )
+from napt.promote.reconcile import reconcile_publications
 from napt.state import (
     deployment_state_path,
     load_deployment_state,
@@ -438,7 +438,13 @@ def apply_plan(
 
     Assignment drift is checked on every run — including runs with
     nothing to apply, which therefore still authenticate — and reported
-    in the summary, never corrected.
+    in the summary, never corrected. Publications whose state writeback
+    was lost are recovered first (see
+    [reconcile_publications][napt.promote.reconcile.reconcile_publications]).
+    When planning fresh, recovery runs before the plan is computed, so a
+    recovered release is promotable in the same run; a pre-existing plan
+    file was computed earlier and gains nothing from the recovery — the
+    next plan run picks the release up.
 
     Args:
         recipes: A recipe YAML file, or a directory scanned recursively.
@@ -451,8 +457,8 @@ def apply_plan(
             Defaults to the current UTC time.
 
     Returns:
-        A summary dict with "applied" and "skipped" action lists and
-            "drift" findings.
+        A summary dict with "applied" and "skipped" action lists,
+            "drift" findings, and "recovered" reconciliation findings.
 
     Raises:
         AuthError: If authentication fails.
@@ -468,6 +474,20 @@ def apply_plan(
     plan_path = plan_file if plan_file is not None else plan_path_for(state_dir)
     deployment_dir = state_dir / "deployment"
 
+    configs = load_recipe_configs(recipes)
+
+    # Authenticate even when there is nothing to apply: the steady state
+    # (no eligible promotions) is exactly when out-of-band assignment
+    # changes accumulate, so drift is checked on every apply run.
+    access_token = get_access_token()
+    run = _ApplyRun(access_token, configs, deployment_dir, now)
+
+    # Recover lost publication writebacks before planning, so a
+    # recovered release is promotable in this same run.
+    recovered = reconcile_publications(
+        access_token, configs, deployment_dir, run.existing_apps
+    )
+
     from_file = plan_path.exists()
     if from_file:
         actions = load_plan_file(plan_path)
@@ -475,19 +495,6 @@ def apply_plan(
     else:
         actions = plan_promotions(recipes, state_dir=deployment_dir, now=now)
         logger.info("PROMOTE", "No plan file found; planning and applying")
-
-    configs = {
-        config["id"]: config
-        for config in (
-            load_effective_config(path) for path in _collect_recipe_paths(recipes)
-        )
-    }
-
-    # Authenticate even when there is nothing to apply: the steady state
-    # (no eligible promotions) is exactly when out-of-band assignment
-    # changes accumulate, so drift is checked on every apply run.
-    access_token = get_access_token()
-    run = _ApplyRun(access_token, configs, deployment_dir, now)
 
     for action in actions:
         if action["app_id"] not in configs:
@@ -506,4 +513,9 @@ def apply_plan(
     # are reflected. Findings are warnings only, never corrected.
     drift = detect_drift(access_token, configs, deployment_dir, run.existing_apps)
 
-    return {"applied": run.applied, "skipped": run.skipped, "drift": drift}
+    return {
+        "applied": run.applied,
+        "skipped": run.skipped,
+        "drift": drift,
+        "recovered": recovered,
+    }

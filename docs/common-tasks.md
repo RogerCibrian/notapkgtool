@@ -1016,19 +1016,21 @@ jobs:
         with:
           python-version: "3.13"
       - run: pip install napt
-      - name: Plan promotions (with drift report)
-        run: napt promote plan --check-drift
+      - name: Plan promotions (with drift report and writeback recovery)
+        run: napt promote plan --check-drift --reconcile
       - name: Open or update the promotion PR
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # git status sees untracked files (a first-ever plan) too
-          [ -z "$(git status --porcelain -- state/plan.json)" ] && exit 0
+          # git status sees untracked files (a first-ever plan) too.
+          # Watch all of state/: --reconcile may have repaired a
+          # deployment state file whose publish writeback was lost.
+          [ -z "$(git status --porcelain -- state)" ] && exit 0
           git config user.name "napt-bot"
           git config user.email "napt-bot@users.noreply.github.com"
           git checkout -B napt/promotion-plan origin/main
-          git add state/plan.json
+          git add state
           git commit -m "feat: Plan ring promotions"
           git push -f origin napt/promotion-plan
           gh pr create --head napt/promotion-plan \
@@ -1082,6 +1084,11 @@ jobs:
 - All four workflows are idempotent — re-running any of them converges
   to the same result (upload adopts existing apps, apply skips
   already-applied actions).
+- A publish whose writeback push fails (branch protection, a crashed
+  runner) self-heals: the next plan run's `--reconcile` re-records the
+  publication from tenant evidence, the promotion PR carries the repair,
+  and the recovered release is planned for its first ring in the same
+  run. Re-running the failed publish also converges, just sooner.
 - `windows-latest` runners are required for `napt package`
   (IntuneWinAppUtil.exe is Windows-only). The discover workflow alone
   could run on Linux with `msitools` installed for MSI version

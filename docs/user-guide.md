@@ -445,7 +445,8 @@ napt package recipes/Google/chrome.yaml --version 130.0.6723.116
 Plans and applies ring-based promotion of published apps. `promote plan`
 computes which releases enter or advance deployment rings (per
 `deployment.rings`) and writes `state/plan.json` when there is work; a
-stale plan file is removed when nothing is eligible. Read-only.
+stale plan file is removed when nothing is eligible. Read-only unless
+`--reconcile` is passed.
 
 `promote apply` executes the plan against Intune: assigns install entries,
 enters and advances rings, unassigns displaced releases, and retires them
@@ -464,9 +465,22 @@ state file references. Drift is warned about and never corrected. Apply
 checks automatically; plan checks with `--check-drift` (which needs Graph
 credentials — without the flag, plan stays fully offline).
 
+Both commands also recover **lost publication writebacks**: when an
+upload succeeded but the state commit recording it never landed (a CI
+push rejected by branch protection, a crashed runner), the tenant holds
+a fully published release that state still lists as pending. Recovery
+re-derives the deployed record from the same provenance-stamp evidence
+idempotent upload uses, and only when every entry of the release has
+committed content — a partially published release is warned about
+instead, since only a publish re-run can finish it. Apply reconciles
+automatically; plan reconciles with `--reconcile` (which needs Graph
+credentials and, unlike the rest of plan, writes deployment state).
+Reconciliation runs before planning, so a recovered release is
+promotable in the same run.
+
 ```bash
 napt promote plan [RECIPE_OR_DIR] [OPTIONS]
-napt promote plan --check-drift
+napt promote plan --check-drift --reconcile
 napt promote apply [RECIPE_OR_DIR] [OPTIONS]
 ```
 

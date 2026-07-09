@@ -39,18 +39,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from napt.config import load_effective_config
-from napt.promote.planner import _collect_recipe_paths
 from napt.state import deployment_state_path, load_deployment_state
-from napt.upload.auth import get_access_token
 from napt.upload.graph import (
     get_app_assignments,
-    list_mobile_apps,
     resolve_assignment_target,
 )
 from napt.upload.stamp import ENTRY_INSTALL, ENTRY_UPDATE, parse_stamp
 
-__all__ = ["check_drift", "detect_drift"]
+__all__ = ["detect_drift"]
 
 
 def _target_key(target: dict[str, Any] | None) -> tuple[str, str]:
@@ -283,33 +279,3 @@ def detect_drift(
     return findings
 
 
-def check_drift(recipes: Path, deployment_dir: Path) -> list[dict[str, Any]]:
-    """Authenticates and detects drift for a recipe or directory of recipes.
-
-    Convenience wrapper for standalone drift checks (``napt promote plan
-    --check-drift``): loads the effective configurations, authenticates,
-    lists the tenant, and runs detect_drift.
-
-    Args:
-        recipes: A recipe YAML file, or a directory scanned recursively.
-        deployment_dir: Directory holding per-app deployment state files.
-
-    Returns:
-        Finding dicts from detect_drift.
-
-    Raises:
-        AuthError: If authentication fails.
-        ConfigError: On invalid recipes or unresolvable groups.
-        NetworkError: On Graph API failures.
-        StateError: On a corrupted deployment state file.
-
-    """
-    configs = {
-        config["id"]: config
-        for config in (
-            load_effective_config(path) for path in _collect_recipe_paths(recipes)
-        )
-    }
-    access_token = get_access_token()
-    existing_apps = list_mobile_apps(access_token)
-    return detect_drift(access_token, configs, deployment_dir, existing_apps)

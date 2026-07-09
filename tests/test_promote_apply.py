@@ -190,6 +190,14 @@ def _run_apply(
                 return_value=drift_findings or [],
             )
         )
+        # Reconciliation's committed-content lookups; only reached when a
+        # test seeds a pending release with stamped tenant entries.
+        stack.enter_context(
+            patch(
+                "napt.promote.reconcile.get_mobile_app",
+                return_value={"committedContentVersion": "1"},
+            )
+        )
         summary = apply_plan(
             tmp_path / "recipes",
             state_dir=tmp_path / "state",
@@ -499,8 +507,39 @@ class TestApplyOrchestration:
 
         summary, mocks = _run_apply(tmp_path, existing_apps=[])
 
-        assert summary == {"applied": [], "skipped": [], "drift": []}
+        assert summary == {
+            "applied": [],
+            "skipped": [],
+            "drift": [],
+            "recovered": [],
+        }
         mocks["assign_app"].assert_not_called()
+
+    def test_recovers_lost_writeback_and_promotes_same_run(self, tmp_path):
+        """Tests that a publication whose writeback was lost is recovered
+        and enters the first ring in the same apply run."""
+        _write_recipe(tmp_path, rings=_RINGS)
+        # State still shows the release as pending: the publish run
+        # uploaded successfully but its state commit never landed.
+        state = create_default_deployment_state()
+        state["pending"] = {
+            "version": "2.0.0",
+            "sha256": "b" * 64,
+            "url": "https://example.com/app.msi",
+        }
+        state_path = deployment_state_path(
+            tmp_path / "state" / "deployment", "test-app"
+        )
+        save_deployment_state(state, state_path)
+
+        summary, _ = _run_apply(tmp_path, existing_apps=_tenant())
+
+        assert [f["kind"] for f in summary["recovered"]] == ["recovered"]
+        assert [a["type"] for a in summary["applied"]] == ["enter_ring"]
+        state = load_deployment_state(state_path)
+        assert state["pending"] is None
+        assert state["deployed"]["intune_app_id"] == "install-new"
+        assert state["rings"]["pilot"]["sha256"] == "b" * 64
 
     def test_unknown_app_in_plan_skipped(self, tmp_path):
         """Tests that a plan action without a matching recipe is skipped."""

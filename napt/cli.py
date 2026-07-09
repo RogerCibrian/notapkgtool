@@ -101,14 +101,18 @@ from napt.exceptions import (
 from napt.logging import get_logger, set_global_logger
 from napt.promote import (
     apply_plan,
-    check_drift,
+    detect_drift,
+    load_recipe_configs,
     plan_path_for,
     plan_promotions,
+    reconcile_publications,
     resolve_state_dir,
     write_plan_file,
 )
 from napt.state import summarize_deployment_states
 from napt.upload import upload_package
+from napt.upload.auth import get_access_token
+from napt.upload.graph import list_mobile_apps
 from napt.validation import validate_recipe
 
 
@@ -674,8 +678,9 @@ def cmd_promote_plan(args: argparse.Namespace) -> int:
     Computes promotion actions for all recipes (or one recipe) as a pure
     function of deployment state, configuration, and the clock, and
     writes the plan file when there is work. Read-only with respect to
-    Intune and deployment state; the plan file is the only output. A
-    stale plan file is removed when no actions are eligible.
+    Intune, and — unless --reconcile recovers a lost publication
+    writeback first — to deployment state; a stale plan file is removed
+    when no actions are eligible.
 
     Args:
         args: Parsed command-line arguments containing the recipes path,
@@ -701,11 +706,25 @@ def cmd_promote_plan(args: argparse.Namespace) -> int:
             else resolve_state_dir(recipes)
         )
         plan_path = plan_path_for(state_dir)
+        recovered: list[dict[str, Any]] = []
+        drift: list[dict[str, Any]] = []
+        if args.reconcile or args.check_drift:
+            # One authenticated session serves both reconciliation and
+            # the drift check; drift runs second so it sees repaired
+            # state. Planning is offline and needs none of this.
+            configs = load_recipe_configs(recipes)
+            access_token = get_access_token()
+            existing_apps = list_mobile_apps(access_token)
+            if args.reconcile:
+                recovered = reconcile_publications(
+                    access_token, configs, state_dir / "deployment", existing_apps
+                )
+            if args.check_drift:
+                drift = detect_drift(
+                    access_token, configs, state_dir / "deployment", existing_apps
+                )
         actions = plan_promotions(recipes, state_dir=state_dir / "deployment")
         write_plan_file(actions, plan_path)
-        drift = (
-            check_drift(recipes, state_dir / "deployment") if args.check_drift else []
-        )
     except AuthError as err:
         print(f"Authentication error: {err}")
         if args.verbose or args.debug:
@@ -743,6 +762,8 @@ def cmd_promote_plan(args: argparse.Namespace) -> int:
         print()
         print("[OK] Nothing to promote. No plan file needed.")
 
+    if args.reconcile:
+        _print_recovered(recovered)
     if args.check_drift:
         _print_drift(drift)
 
@@ -760,6 +781,21 @@ def _print_drift(drift: list[dict[str, Any]]) -> None:
             print(f"  [WARNING] {finding['app_id']}: {finding['detail']}")
     else:
         print("  No drift detected.")
+    print("=" * 70)
+
+
+def _print_recovered(recovered: list[dict[str, Any]]) -> None:
+    """Prints publication reconciliation findings as a section."""
+    print()
+    print("=" * 70)
+    print("PUBLICATION RECONCILIATION")
+    print("=" * 70)
+    if recovered:
+        for finding in recovered:
+            marker = "[OK]" if finding["kind"] == "recovered" else "[WARNING]"
+            print(f"  {marker} {finding['app_id']}: {finding['detail']}")
+    else:
+        print("  Nothing to recover.")
     print("=" * 70)
 
 
@@ -837,6 +873,8 @@ def cmd_promote_apply(args: argparse.Namespace) -> int:
         print(f"  [SKIP] {_describe_action(entry['action'])} ({entry['reason']})")
     print("=" * 70)
 
+    if summary.get("recovered"):
+        _print_recovered(summary["recovered"])
     if summary.get("drift"):
         _print_drift(summary["drift"])
 
@@ -1386,9 +1424,11 @@ def main() -> None:
         help="Compute eligible promotions and write the plan file",
         description=(
             "Compute which releases enter or advance deployment rings, and "
-            "write state/plan.json when there is work. Read-only: neither "
-            "Intune nor deployment state is modified. A stale plan file is "
-            "removed when nothing is eligible."
+            "write state/plan.json when there is work. Never modifies "
+            "Intune. Read-only for deployment state too, except that "
+            "--reconcile writes it when recovering a lost publication "
+            "writeback. A stale plan file is removed when nothing is "
+            "eligible."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -1413,6 +1453,16 @@ def main() -> None:
         help=(
             "Also compare Intune assignments against deployment state "
             "(requires Graph credentials); findings are warnings only"
+        ),
+    )
+    parser_promote_plan.add_argument(
+        "--reconcile",
+        action="store_true",
+        help=(
+            "Before planning, record publications that are committed in "
+            "Intune but whose deployment state writeback was lost, so "
+            "they are promotable in this run (requires Graph credentials; "
+            "writes deployment state)"
         ),
     )
     parser_promote_plan.add_argument(
