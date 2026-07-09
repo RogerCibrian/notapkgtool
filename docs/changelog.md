@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed `napt upload` failing intermittently with HTTP 403
+    (`SAS identifier cannot be found`) when Azure Storage had not yet
+    propagated a freshly issued SAS URI. Blob uploads now retry
+    transient failures with exponential backoff.
 - Fixed `napt build` failing to find the installer (or its version) on
     machines that never ran `napt discover`, such as CI publish jobs
     restoring `downloads/` from a cache. Build now falls back to the
