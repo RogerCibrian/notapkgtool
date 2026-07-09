@@ -151,14 +151,57 @@ def test_upload_to_azure_blob_uploads_blocks_and_commits(tmp_path: Path) -> None
 def test_upload_to_azure_blob_block_failure_raises_network_error(
     tmp_path: Path,
 ) -> None:
-    """Tests that a failed block PUT raises NetworkError."""
+    """Tests that a persistently failing block PUT raises NetworkError
+    after exhausting retries."""
     payload = tmp_path / "payload.intunewin"
     payload.write_bytes(b"data")
 
     with req_mock.Mocker() as m:
         m.put(req_mock.ANY, status_code=500)
-        with pytest.raises(NetworkError, match="block upload failed"):
+        with patch("napt.upload.graph.time.sleep"):
+            with pytest.raises(NetworkError, match="block upload failed"):
+                upload_to_azure_blob(SAS_URI, payload)
+
+    assert m.call_count == 5
+
+
+def test_upload_to_azure_blob_retries_transient_403(tmp_path: Path) -> None:
+    """Tests that a transient 403 from a not-yet-propagated SAS URI is
+    retried and the upload succeeds."""
+    payload = tmp_path / "payload.intunewin"
+    payload.write_bytes(b"data")
+
+    with req_mock.Mocker() as m:
+        m.put(
+            req_mock.ANY,
+            [
+                {"text": "SAS identifier cannot be found", "status_code": 403},
+                {"status_code": 201},
+                {"status_code": 201},
+            ],
+        )
+        with patch("napt.upload.graph.time.sleep"):
             upload_to_azure_blob(SAS_URI, payload)
+
+    # One failed block PUT + its retry + the block list commit
+    assert m.call_count == 3
+
+
+def test_upload_to_azure_blob_non_retryable_status_fails_fast(
+    tmp_path: Path,
+) -> None:
+    """Tests that a non-retryable HTTP status raises immediately without
+    retrying."""
+    payload = tmp_path / "payload.intunewin"
+    payload.write_bytes(b"data")
+
+    with req_mock.Mocker() as m:
+        m.put(req_mock.ANY, status_code=400)
+        with patch("napt.upload.graph.time.sleep"):
+            with pytest.raises(NetworkError, match="block upload failed"):
+                upload_to_azure_blob(SAS_URI, payload)
+
+    assert m.call_count == 1
 
 
 # --- commit_content_version_file ---

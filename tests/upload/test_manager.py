@@ -459,7 +459,8 @@ def _run_upload(
 
     Returns:
         A tuple of (UploadResult, mocks) where mocks holds the
-            "create_app", "create_cv", and "update_app" MagicMocks.
+            "create_app", "create_cv", "update_app", and "delete_app"
+            MagicMocks.
 
     """
     recipe_path = tmp_path / "recipes" / "Vendor" / "test-app.yaml"
@@ -472,6 +473,7 @@ def _run_upload(
         "create_app": MagicMock(side_effect=patches["create_win32_app"]),
         "create_cv": MagicMock(side_effect=patches["create_content_version"]),
         "update_app": MagicMock(),
+        "delete_app": MagicMock(),
     }
     create_app_mock = mocks["create_app"]
     create_cv_mock = mocks["create_cv"]
@@ -523,6 +525,9 @@ def _run_upload(
         )
         stack.enter_context(
             patch("napt.upload.manager.update_win32_app", mocks["update_app"])
+        )
+        stack.enter_context(
+            patch("napt.upload.manager.delete_mobile_app", mocks["delete_app"])
         )
         stack.enter_context(patch("napt.upload.manager.upload_to_azure_blob"))
         stack.enter_context(patch("napt.upload.manager.commit_content_version_file"))
@@ -676,10 +681,14 @@ def test_upload_adopts_committed_stamped_apps(
     assert state["deployed"]["intune_app_id"] == "existing-install"
 
 
-def test_upload_resumes_uncommitted_stamped_app(
+def test_upload_recreates_uncommitted_stamped_app(
     tmp_path: Path, monkeypatch, fake_metadata
 ) -> None:
-    """Tests that an uncommitted stamped app gets content without recreation."""
+    """Tests that an uncommitted stamped app is deleted and recreated.
+
+    Intune refuses new content versions for an app whose first content
+    version was never committed, so a resume-in-place is impossible.
+    """
     monkeypatch.chdir(tmp_path)
     make_package_dir(tmp_path, installer_sha256="a" * 64)
 
@@ -690,10 +699,13 @@ def test_upload_resumes_uncommitted_stamped_app(
         full_app={"committedContentVersion": None},
     )
 
-    mocks["create_app"].assert_not_called()
+    assert mocks["delete_app"].call_count == 2
+    assert mocks["delete_app"].call_args_list[0].args[1] == "existing-install"
+    assert mocks["delete_app"].call_args_list[1].args[1] == "existing-update"
+    assert mocks["create_app"].call_count == 2
     assert mocks["create_cv"].call_count == 2  # content uploaded to both entries
-    assert result.intune_app_id == "existing-install"
-    assert result.intune_update_app_id == "existing-update"
+    assert result.intune_app_id == "intune-app-123"
+    assert result.intune_update_app_id == "intune-update-456"
 
 
 def test_upload_different_hash_creates_new_apps(
@@ -745,6 +757,7 @@ def test_upload_force_reuploads_matched_apps(
         tmp_path,
         fake_metadata,
         existing_apps=_stamped_apps("a" * 64),
+        full_app={"committedContentVersion": "1"},
         force=True,
     )
 
@@ -753,6 +766,29 @@ def test_upload_force_reuploads_matched_apps(
     assert mocks["create_cv"].call_count == 2  # fresh content for both entries
     assert result.intune_app_id == "existing-install"
     assert result.intune_update_app_id == "existing-update"
+
+
+def test_upload_force_recreates_uncommitted_stamped_app(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that --force also deletes and recreates an uncommitted app
+    instead of re-uploading in place."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path, installer_sha256="a" * 64)
+
+    result, mocks = _run_upload(
+        tmp_path,
+        fake_metadata,
+        existing_apps=_stamped_apps("a" * 64),
+        full_app={"committedContentVersion": None},
+        force=True,
+    )
+
+    assert mocks["delete_app"].call_count == 2
+    assert mocks["create_app"].call_count == 2
+    mocks["update_app"].assert_not_called()  # fresh apps need no metadata patch
+    assert result.intune_app_id == "intune-app-123"
+    assert result.intune_update_app_id == "intune-update-456"
 
 
 def test_upload_force_without_match_creates_normally(
