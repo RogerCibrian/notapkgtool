@@ -223,7 +223,7 @@ apiVersion: napt/v1
 #   # entry matching the package (records what review approved).
 #   require_pending: false
 #
-#   # Deployment rings for update promotion (used by upcoming napt promote).
+#   # Deployment rings for update promotion (used by napt promote).
 #   # Each ring assigns the [Update] entry to Entra ID groups; a version
 #   # becomes eligible for the next ring after promote_after_days.
 #   rings:

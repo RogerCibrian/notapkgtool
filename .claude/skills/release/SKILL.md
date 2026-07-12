@@ -84,7 +84,7 @@ bump and changelog promotion — nothing from an unrelated feature branch can le
    Release PR for NAPT X.Y.Z. Bumps version in `pyproject.toml` and `napt/__init__.py`, promotes the `[Unreleased]` section of `docs/changelog.md` to `[X.Y.Z]`, and adds a fresh empty `[Unreleased]` section.
 
    ## Motivation
-   Cuts the X.Y.Z release. Squash-merge this PR, then `/release X.Y.Z` again to tag and publish.
+   Cuts the X.Y.Z release.
 
    ## Changes
    - Bump `pyproject.toml` version to X.Y.Z
@@ -106,7 +106,7 @@ bump and changelog promotion — nothing from an unrelated feature branch can le
    )"
    ```
 
-   Substitute `X.Y.Z` with the real version and `YYYY-MM-DD` with today's date in the heredoc before running. Pull the bullet content for the **Changes** section from the actual `[X.Y.Z]` changelog block — replace the boilerplate above with one line per real bullet if there are notable user-facing changes worth surfacing in the PR body.
+   Substitute `X.Y.Z` with the real version and `YYYY-MM-DD` with today's date in the heredoc before running. Pull the bullet content for the **Changes** section from the actual `[X.Y.Z]` changelog block — replace the boilerplate above with one line per real bullet if there are notable user-facing changes worth surfacing in the PR body. The PR body describes what changed and why only — no workflow instructions (e.g. "squash-merge this, then run X"); those belong in your report to the user, not the PR.
 
 9. **Report PR URL.** Tell the user to squash-merge, then re-run `/release X.Y.Z` for Phase 2.
 
