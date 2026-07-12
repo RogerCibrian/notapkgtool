@@ -479,8 +479,9 @@ way before executing anything, so an unresolvable group aborts the run
 with zero tenant mutations instead of stranding a half-applied plan;
 fix the configuration and re-plan. A dead group referenced only by
 stale or already-applied actions never blocks a run, so re-running
-after a partial failure stays safe. Offline plans skip validation, and
-the apply preflight backstops whatever they produce.
+after a partial failure stays safe. Offline plans skip validation —
+warning when they produce actions — and the apply preflight backstops
+whatever they produce.
 
 Both commands also recover **lost publication writebacks**: when an
 upload succeeded but the state commit recording it never landed (a CI

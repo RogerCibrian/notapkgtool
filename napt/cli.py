@@ -743,6 +743,12 @@ def cmd_promote_plan(args: argparse.Namespace) -> int:
                 )
         else:
             actions = plan_promotions(recipes, state_dir=state_dir / "deployment")
+            if actions:
+                logger.warning(
+                    "PROMOTE",
+                    "Plan groups not validated against Entra ID (offline "
+                    "run); apply validates them before assigning.",
+                )
         write_plan_file(actions, plan_path)
     except AuthError as err:
         print(f"Authentication error: {err}")

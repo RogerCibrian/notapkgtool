@@ -18,8 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     before executing any, so an unresolvable group aborts with zero
     tenant mutations instead of stranding a half-applied plan (a dead
     group referenced only by stale or already-applied actions never
-    blocks a run). Offline plans (no flags) skip validation; the apply
-    preflight is their backstop
+    blocks a run). Offline plans (no flags) skip validation and warn
+    when they produce actions; the apply preflight is their backstop
 - **Publication recovery** - `napt promote apply` (always) and
     `napt promote plan --reconcile` (opt-in) record publications that are
     fully committed in Intune but whose deployment state writeback was
