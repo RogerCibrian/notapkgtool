@@ -2328,6 +2328,13 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="fixed">Fixed</h3>
 <ul>
+<li>Fixed three defects in the reference GitHub Actions workflows: the
+    <code>publish</code> and <code>promote-apply</code> writeback pushes now rebase and retry
+    instead of failing when <code>main</code> advanced mid-run; the two workflows
+    no longer share a concurrency group, which cancelled one of them
+    when a single merge triggered both; and <code>publish</code> now fails fast
+    with a clear error when the vendor no longer serves an approved
+    installer, instead of failing minutes later at the upload hash gate</li>
 <li>Fixed <code>napt upload</code> failing with HTTP 400 (<code>The mobile app content
     cannot be updated before the first content version is committed</code>)
     when re-running after a crash between app creation and content
