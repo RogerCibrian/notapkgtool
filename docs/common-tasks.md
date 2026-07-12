@@ -921,7 +921,11 @@ on:
   push:
     branches: [main]
     paths: ["state/deployment/**"]
-concurrency: napt-writeback
+# Serializes publish runs (bursts of merges dedupe to the newest run).
+# Deliberately NOT shared with promote-apply: a merge that touches both
+# deployment state and the plan file triggers both workflows, and runs
+# sharing a group cancel each other instead of queueing.
+concurrency: napt-publish
 permissions:
   contents: write
 jobs:
@@ -959,6 +963,12 @@ jobs:
             psha=$(python -c "import json, sys; print(json.load(open(sys.argv[1], encoding='utf-8'))['pending']['sha256'])" "$state")
             if ! sha256sum "downloads/$id/"* 2>/dev/null | grep -q "^$psha "; then
               napt discover "$recipe" --stateless
+              # Fail fast when the vendor no longer serves the approved
+              # binary (the upload hash gate would refuse it anyway).
+              sha256sum "downloads/$id/"* 2>/dev/null | grep -q "^$psha " || {
+                echo "::error::$id: vendor no longer serves the approved release ($psha); the approval is stranded until a new discover PR supersedes it"
+                exit 1
+              }
             fi
             napt build "$recipe"
             napt package "$recipe"
@@ -970,10 +980,16 @@ jobs:
           git config user.name "napt-bot"
           git config user.email "napt-bot@users.noreply.github.com"
           git add state/deployment
-          git diff --cached --quiet || {
-            git commit -m "chore: Record published releases [skip ci]"
-            git push
-          }
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: Record published releases [skip ci]"
+          # main may have advanced while this run published (more merges,
+          # another workflow's writeback). State files are per-app, so a
+          # rebase cannot conflict.
+          for attempt in 1 2 3; do
+            git push && exit 0
+            git pull --rebase origin main
+          done
+          git push
 ```
 
 **Why the installer cache steps matter.**
@@ -1047,7 +1063,9 @@ on:
   push:
     branches: [main]
     paths: ["state/plan.json"]
-concurrency: napt-writeback
+# Own group (not shared with publish) - see the publish workflow's
+# concurrency comment.
+concurrency: napt-promote-apply
 permissions:
   contents: write
 jobs:
@@ -1071,10 +1089,14 @@ jobs:
           git config user.name "napt-bot"
           git config user.email "napt-bot@users.noreply.github.com"
           git add state
-          git diff --cached --quiet || {
-            git commit -m "chore: Record applied promotions [skip ci]"
-            git push
-          }
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: Record applied promotions [skip ci]"
+          # Same rebase-and-retry as the publish writeback.
+          for attempt in 1 2 3; do
+            git push && exit 0
+            git pull --rebase origin main
+          done
+          git push
 ```
 
 **Notes:**
