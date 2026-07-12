@@ -21,6 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     
 ### Fixed
 
+- Fixed three defects in the reference GitHub Actions workflows: the
+    `publish` and `promote-apply` writeback pushes now rebase and retry
+    instead of failing when `main` advanced mid-run; the two workflows
+    no longer share a concurrency group, which cancelled one of them
+    when a single merge triggered both; and `publish` now fails fast
+    with a clear error when the vendor no longer serves an approved
+    installer, instead of failing minutes later at the upload hash gate
 - Fixed `napt upload` failing with HTTP 400 (`The mobile app content
     cannot be updated before the first content version is committed`)
     when re-running after a crash between app creation and content
