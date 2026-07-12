@@ -148,6 +148,7 @@ def _run_apply(
     assignments: dict[str, list[dict[str, Any]]] | None = None,
     assign_side_effect: Any = None,
     drift_findings: list[dict[str, Any]] | None = None,
+    resolve_side_effect: Any = None,
 ) -> tuple[dict[str, Any], dict[str, MagicMock]]:
     """Runs apply_plan with all Graph calls mocked.
 
@@ -157,6 +158,9 @@ def _run_apply(
         assignments: Map of app graph ID to current assignment list
             (default empty for every app).
         assign_side_effect: Optional side effect for assign_app.
+        drift_findings: detect_drift return value.
+        resolve_side_effect: Overrides the group resolution fake (shared
+            by the preflight and the action loop).
 
     Returns:
         A tuple of (summary, mocks).
@@ -169,7 +173,9 @@ def _run_apply(
         "get_app_assignments": MagicMock(
             side_effect=lambda token, app_id: list(assignments.get(app_id, []))
         ),
-        "resolve_assignment_target": MagicMock(side_effect=_fake_resolve_target),
+        "resolve_assignment_target": MagicMock(
+            side_effect=resolve_side_effect or _fake_resolve_target
+        ),
     }
 
     with ExitStack() as stack:
@@ -184,6 +190,13 @@ def _run_apply(
         )
         for name, mock in mocks.items():
             stack.enter_context(patch(f"napt.promote.applier.{name}", mock))
+        # The apply preflight resolves groups through its own module.
+        stack.enter_context(
+            patch(
+                "napt.promote.preflight.resolve_assignment_target",
+                mocks["resolve_assignment_target"],
+            )
+        )
         stack.enter_context(
             patch(
                 "napt.promote.applier.detect_drift",
@@ -540,6 +553,89 @@ class TestApplyOrchestration:
         assert state["pending"] is None
         assert state["deployed"]["intune_app_id"] == "install-new"
         assert state["rings"]["pilot"]["sha256"] == "b" * 64
+
+    def test_preflight_aborts_with_zero_mutations(self, tmp_path):
+        """Tests that an unresolvable group anywhere in the plan aborts
+        before any action mutates the tenant."""
+        from napt.exceptions import ConfigError
+
+        _write_recipe(tmp_path, rings=_RINGS)
+        state_path = _write_state(tmp_path, deployed=_deployed())
+        plan_path = _write_plan(
+            tmp_path,
+            [
+                _enter_ring_action(),  # resolvable: Pilot Devices
+                {
+                    "type": "advance_ring",
+                    "app_id": "test-app",
+                    "version": "2.0.0",
+                    "sha256": "b" * 64,
+                    "from_ring": "pilot",
+                    "ring": "broad",
+                    "groups": ["missing-group"],
+                },
+            ],
+        )
+
+        def _resolve(token, group, cache=None):
+            if group == "missing-group":
+                raise ConfigError(
+                    f"No Entra ID group found with displayName '{group}'."
+                )
+            return _fake_resolve_target(token, group, cache)
+
+        with pytest.raises(ConfigError, match="nothing was applied"):
+            _run_apply(
+                tmp_path,
+                existing_apps=_tenant(),
+                resolve_side_effect=_resolve,
+            )
+
+        state = load_deployment_state(state_path)
+        assert state["rings"] == {}  # the resolvable action did not apply
+        assert plan_path.exists()  # plan not consumed
+
+    def test_preflight_ignores_dead_group_on_stale_action(self, tmp_path):
+        """Tests that an unresolvable group referenced only by a stale
+        action is never resolved, preserving resume safety."""
+        from napt.exceptions import ConfigError
+
+        _write_recipe(tmp_path, rings=_RINGS)
+        _write_state(tmp_path, deployed=_deployed())  # deployed is b*64
+        _write_plan(
+            tmp_path,
+            [
+                _enter_ring_action(),  # live: Pilot Devices
+                # Stale: sha no longer deployed; its group was deleted
+                # after the action originally applied.
+                {
+                    "type": "enter_ring",
+                    "app_id": "test-app",
+                    "version": "1.0.0",
+                    "sha256": "a" * 64,
+                    "ring": "pilot",
+                    "groups": ["deleted-group"],
+                },
+            ],
+        )
+
+        def _resolve(token, group, cache=None):
+            if group == "deleted-group":
+                raise ConfigError(
+                    f"No Entra ID group found with displayName '{group}'."
+                )
+            return _fake_resolve_target(token, group, cache)
+
+        summary, _ = _run_apply(
+            tmp_path,
+            existing_apps=_tenant(),
+            resolve_side_effect=_resolve,
+        )
+
+        assert [a["type"] for a in summary["applied"]] == ["enter_ring"]
+        assert [s["reason"] for s in summary["skipped"]] == [
+            "stale action - the deployed release has changed"
+        ]
 
     def test_unknown_app_in_plan_skipped(self, tmp_path):
         """Tests that a plan action without a matching recipe is skipped."""

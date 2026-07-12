@@ -1068,6 +1068,96 @@ class TestReconcileOutput:
         assert code == 0
         assert order == ["reconcile", "plan"]
 
+    def test_plan_validation_failure_writes_no_plan(self, tmp_path, capsys):
+        """Tests that an unresolvable group fails the authenticated plan
+        without writing a plan file."""
+        actions = [
+            {
+                "type": "enter_ring",
+                "app_id": "test-app",
+                "version": "1.0.0",
+                "sha256": "a" * 64,
+                "ring": "pilot",
+                "groups": ["ghost-group"],
+            }
+        ]
+        with (
+            patch("napt.cli.load_recipe_configs", return_value={}),
+            patch("napt.cli.get_access_token", return_value="tok"),
+            patch("napt.cli.list_mobile_apps", return_value=[]),
+            patch("napt.cli.detect_drift", return_value=[]),
+            patch("napt.cli.plan_promotions", return_value=actions),
+            patch(
+                "napt.cli.unresolvable_groups",
+                return_value=[
+                    "No Entra ID group found with displayName 'ghost-group'."
+                ],
+            ),
+            patch("napt.cli.write_plan_file") as write_mock,
+        ):
+            code = cmd_promote_plan(
+                _args(
+                    recipes="recipes",
+                    state_dir=tmp_path / "state",
+                    check_drift=True,
+                    reconcile=False,
+                )
+            )
+        assert code == 1
+        out = capsys.readouterr().out
+        assert "Plan validation failed" in out
+        assert "ghost-group" in out
+        write_mock.assert_not_called()
+
+    def test_offline_plan_skips_validation(self, tmp_path, capsys):
+        """Tests that a plan without tenant flags never validates groups
+        and that an empty plan draws no unvalidated warning."""
+        with (
+            patch("napt.cli.plan_promotions", return_value=[]),
+            patch("napt.cli.write_plan_file", return_value=False),
+            patch("napt.cli.unresolvable_groups") as validate_mock,
+        ):
+            code = cmd_promote_plan(
+                _args(
+                    recipes="recipes",
+                    state_dir=tmp_path / "state",
+                    check_drift=False,
+                    reconcile=False,
+                )
+            )
+        assert code == 0
+        validate_mock.assert_not_called()
+        assert "not validated" not in capsys.readouterr().out
+
+    def test_offline_plan_with_actions_warns_unvalidated(self, tmp_path, capsys):
+        """Tests that an offline plan producing actions warns that its
+        groups were not validated."""
+        actions = [
+            {
+                "type": "enter_ring",
+                "app_id": "test-app",
+                "version": "1.0.0",
+                "sha256": "a" * 64,
+                "ring": "pilot",
+                "groups": ["sg-pilot"],
+            }
+        ]
+        with (
+            patch("napt.cli.plan_promotions", return_value=actions),
+            patch("napt.cli.write_plan_file", return_value=True),
+        ):
+            code = cmd_promote_plan(
+                _args(
+                    recipes="recipes",
+                    state_dir=tmp_path / "state",
+                    check_drift=False,
+                    reconcile=False,
+                )
+            )
+        assert code == 0
+        out = capsys.readouterr().out
+        assert "Plan groups not validated against Entra ID" in out
+
     def test_plan_shares_one_session_for_reconcile_and_drift(self, tmp_path):
         """Tests that --reconcile --check-drift together authenticate and
         list the tenant only once."""

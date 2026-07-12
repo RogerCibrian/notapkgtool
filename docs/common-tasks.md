@@ -719,6 +719,11 @@ release has proven itself.
    stray apps) are warned about, never corrected.
    Use `napt promote plan --check-drift` for the same report without
    applying anything.
+   Both commands also fail fast on a group typo or deleted Entra ID
+   group: an authenticated plan refuses to write a plan that names an
+   unresolvable group, and apply checks every group it is about to
+   assign before touching anything, so a bad group aborts with zero
+   changes instead of a half-applied plan.
    Run `napt status` to see where every app stands.
 
 Run plan and apply on a schedule and promotion becomes automatic: each

@@ -221,7 +221,74 @@ class TestDetectDrift:
         )
 
         assert [f["kind"] for f in findings] == ["unexpected_assignment"]
+        assert "NAPT has no record" in findings[0]["detail"]
         assert "leaving it alone" in findings[0]["detail"]
+
+    def test_unrecorded_install_assignment_reported(self, tmp_path):
+        """Tests that an unrecorded assignment matching the configured
+        install target is classified as unrecorded, not unexpected."""
+        config = _config(install_groups=["Pilot Devices"])
+        deployment_dir = _write_state(
+            tmp_path,
+            deployed={"version": "1.0.0", "sha256": "a" * 64},
+            # No install_assigned record: the apply writeback was lost.
+        )
+
+        findings = _detect(
+            tmp_path,
+            config,
+            deployment_dir,
+            [_stamped("test-app", "install", "a" * 64, "install-1")],
+            assignments={
+                "install-1": [_assignment("Pilot Devices", intent="available")]
+            },
+        )
+
+        assert [f["kind"] for f in findings] == ["unrecorded_assignment"]
+        assert "matches the configured target" in findings[0]["detail"]
+        assert "NAPT has no record" in findings[0]["detail"]
+
+    def test_unrecorded_ring_assignment_reported(self, tmp_path):
+        """Tests that an unrecorded assignment matching a configured ring
+        group is classified as unrecorded."""
+        config = _config(rings=_RINGS)
+        deployment_dir = _write_state(
+            tmp_path,
+            deployed={"version": "1.0.0", "sha256": "a" * 64},
+            # No ring record: the apply writeback was lost.
+        )
+
+        findings = _detect(
+            tmp_path,
+            config,
+            deployment_dir,
+            [_stamped("test-app", "update", "a" * 64, "update-1")],
+            assignments={"update-1": [_assignment("Pilot Devices")]},
+        )
+
+        assert [f["kind"] for f in findings] == ["unrecorded_assignment"]
+
+    def test_intent_mismatch_with_config_stays_unexpected(self, tmp_path):
+        """Tests that an unrecorded assignment whose intent differs from
+        the configured target stays unexpected."""
+        config = _config(install_groups=["Pilot Devices"])
+        deployment_dir = _write_state(
+            tmp_path,
+            deployed={"version": "1.0.0", "sha256": "a" * 64},
+        )
+
+        findings = _detect(
+            tmp_path,
+            config,
+            deployment_dir,
+            [_stamped("test-app", "install", "a" * 64, "install-1")],
+            assignments={
+                # Config says available; this assignment is required.
+                "install-1": [_assignment("Pilot Devices", intent="required")]
+            },
+        )
+
+        assert [f["kind"] for f in findings] == ["unexpected_assignment"]
 
     def test_missing_app_reported(self, tmp_path):
         """Tests that a state-referenced release missing from Intune reports."""

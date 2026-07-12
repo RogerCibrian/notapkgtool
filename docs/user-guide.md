@@ -459,11 +459,29 @@ preserved.
 
 Both commands report **assignment drift**: every discrepancy between what
 deployment state says should be assigned and what Intune actually has —
-removed or changed NAPT assignments, admin-made assignments on
-NAPT-managed apps, releases missing from the tenant, and stamped apps no
-state file references. Drift is warned about and never corrected. Apply
-checks automatically; plan checks with `--check-drift` (which needs Graph
+removed or changed NAPT assignments, unrecorded or foreign assignments
+on NAPT-managed apps, releases missing from the tenant, and stamped apps
+no state file references. An assignment NAPT has no record of making is
+classified by evidence: one that matches a currently configured target
+is reported as *unrecorded* (a lost apply writeback, which a later apply
+converges, or an admin pre-empting configured policy), while one
+matching no configured target is reported as *unexpected* (typically
+admin-made). Drift is warned about and never corrected. Apply checks
+automatically; plan checks with `--check-drift` (which needs Graph
 credentials — without the flag, plan stays fully offline).
+
+Both commands also **validate plan groups**. Authenticated plan runs
+(`--check-drift` or `--reconcile`) resolve every group named in the
+computed plan and fail — writing no plan file — when one does not
+resolve, so a plan with a group typo never becomes a reviewable
+promotion PR. Apply preflights every action it would execute the same
+way before executing anything, so an unresolvable group aborts the run
+with zero tenant mutations instead of stranding a half-applied plan;
+fix the configuration and re-plan. A dead group referenced only by
+stale or already-applied actions never blocks a run, so re-running
+after a partial failure stays safe. Offline plans skip validation —
+warning when they produce actions — and the apply preflight backstops
+whatever they produce.
 
 Both commands also recover **lost publication writebacks**: when an
 upload succeeded but the state commit recording it never landed (a CI
