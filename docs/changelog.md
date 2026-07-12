@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Plan group validation** - Every group named in a promotion plan is
+    now resolved against Entra ID before anything can act on it:
+    authenticated `napt promote plan` runs (`--check-drift` or
+    `--reconcile`) fail without writing a plan when a group does not
+    resolve, so a broken plan never becomes a reviewable promotion PR,
+    and `napt promote apply` preflights every action it would execute
+    before executing any, so an unresolvable group aborts with zero
+    tenant mutations instead of stranding a half-applied plan (a dead
+    group referenced only by stale or already-applied actions never
+    blocks a run). Offline plans (no flags) skip validation; the apply
+    preflight is their backstop
 - **Publication recovery** - `napt promote apply` (always) and
     `napt promote plan --reconcile` (opt-in) record publications that are
     fully committed in Intune but whose deployment state writeback was
@@ -19,6 +30,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     the same run. Partially published releases are warned about instead —
     re-run `napt upload` to finish them
     
+### Changed
+
+- **Drift findings state what NAPT knows, not what it guesses** - An
+    assignment NAPT has no record of making is now classified by
+    evidence: `unrecorded_assignment` when it matches a currently
+    configured target (either a lost apply writeback, which a later
+    apply converges, or an admin pre-empting configured policy) and
+    `unexpected_assignment` when it matches no configured target. The
+    old `unexpected_assignment` message asserted "was not made by NAPT",
+    which drift cannot actually know — Intune assignments carry no
+    authorship, so state records are the only memory
+
 ### Fixed
 
 - Fixed `napt upload` failing with HTTP 400 (`The mobile app content

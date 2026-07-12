@@ -107,6 +107,7 @@ from napt.promote import (
     plan_promotions,
     reconcile_publications,
     resolve_state_dir,
+    unresolvable_groups,
     write_plan_file,
 )
 from napt.state import summarize_deployment_states
@@ -709,21 +710,39 @@ def cmd_promote_plan(args: argparse.Namespace) -> int:
         recovered: list[dict[str, Any]] = []
         drift: list[dict[str, Any]] = []
         if args.reconcile or args.check_drift:
-            # One authenticated session serves both reconciliation and
-            # the drift check; drift runs second so it sees repaired
-            # state. Planning is offline and needs none of this.
+            # One authenticated session serves reconciliation, plan
+            # validation, and the drift check. Reconciliation runs
+            # before planning so recovered releases are promotable this
+            # run; drift runs after it so repaired state is compared.
             configs = load_recipe_configs(recipes)
             access_token = get_access_token()
             existing_apps = list_mobile_apps(access_token)
+            group_id_cache: dict[str, str] = {}
             if args.reconcile:
                 recovered = reconcile_publications(
                     access_token, configs, state_dir / "deployment", existing_apps
                 )
+            actions = plan_promotions(recipes, state_dir=state_dir / "deployment")
+            # A plan with an unresolvable group must never become a
+            # reviewable promotion PR: fail hard instead of writing it.
+            problems = unresolvable_groups(access_token, actions, group_id_cache)
+            if problems:
+                raise ConfigError(
+                    "Plan validation failed; no plan was written. "
+                    "Unresolvable groups:\n  "
+                    + "\n  ".join(problems)
+                    + "\nFix the group configuration and re-run."
+                )
             if args.check_drift:
                 drift = detect_drift(
-                    access_token, configs, state_dir / "deployment", existing_apps
+                    access_token,
+                    configs,
+                    state_dir / "deployment",
+                    existing_apps,
+                    group_id_cache=group_id_cache,
                 )
-        actions = plan_promotions(recipes, state_dir=state_dir / "deployment")
+        else:
+            actions = plan_promotions(recipes, state_dir=state_dir / "deployment")
         write_plan_file(actions, plan_path)
     except AuthError as err:
         print(f"Authentication error: {err}")
@@ -1427,8 +1446,10 @@ def main() -> None:
             "write state/plan.json when there is work. Never modifies "
             "Intune. Read-only for deployment state too, except that "
             "--reconcile writes it when recovering a lost publication "
-            "writeback. A stale plan file is removed when nothing is "
-            "eligible."
+            "writeback. With --check-drift or --reconcile, every group in "
+            "the plan is validated against Entra ID and an unresolvable "
+            "group fails the run without writing a plan. A stale plan "
+            "file is removed when nothing is eligible."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )

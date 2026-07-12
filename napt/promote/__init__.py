@@ -42,6 +42,7 @@ from .planner import (
     resolve_state_dir,
     write_plan_file,
 )
+from .preflight import unresolvable_groups
 from .reconcile import reconcile_publications
 
 __all__ = [
@@ -53,5 +54,6 @@ __all__ = [
     "plan_promotions",
     "reconcile_publications",
     "resolve_state_dir",
+    "unresolvable_groups",
     "write_plan_file",
 ]

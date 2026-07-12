@@ -27,11 +27,20 @@ Finding kinds:
     install group) is no longer present.
 - ``intent_mismatch``: An expected assignment exists with a different
     intent.
+- ``unrecorded_assignment``: A NAPT-stamped app carries an assignment
+    that matches a currently configured target, but NAPT has no record
+    of making it — either an apply writeback was lost (a later apply
+    converges it) or it was made outside NAPT. Left alone.
 - ``unexpected_assignment``: A NAPT-stamped app carries an assignment
-    NAPT did not make (typically admin-made; left alone).
+    NAPT has no record of making and that matches no configured target
+    (typically admin-made; left alone).
 - ``orphaned_release``: A stamped app exists for a release that no state
     file references (e.g., a crashed run replaced by newest-wins).
 - ``unknown_app``: A stamped app references a recipe id with no recipe.
+
+Authorship is always inferred, never known: Graph assignments carry no
+provenance field, so deployment state records are the only memory of
+what NAPT assigned — and a lost writeback loses that memory.
 """
 
 from __future__ import annotations
@@ -39,6 +48,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from napt.exceptions import ConfigError
 from napt.state import deployment_state_path, load_deployment_state
 from napt.upload.graph import (
     get_app_assignments,
@@ -136,11 +146,67 @@ def _expected_assignments(
     return expected
 
 
+def _configured_targets(
+    access_token: str,
+    config: dict[str, Any],
+    group_id_cache: dict[str, str],
+    names: dict,
+) -> dict[str, dict[tuple[str, str], str]]:
+    """Builds the target map the current configuration would assign.
+
+    Used to distinguish an unrecorded NAPT assignment (matches a
+    configured target) from a genuinely foreign one. Configured groups
+    that do not resolve are skipped: they cannot match an assignment
+    that actually exists in the tenant.
+
+    Args:
+        access_token: Bearer token for Graph API.
+        config: The app's effective configuration.
+        group_id_cache: Shared cache for group name resolution.
+        names: Target-key to configured-name map, filled as a side
+            effect for readable findings.
+
+    Returns:
+        A map of entry type to a map of target key to configured intent.
+
+    """
+    deployment = config["deployment"]
+    configured: dict[str, dict[tuple[str, str], str]] = {
+        ENTRY_INSTALL: {},
+        ENTRY_UPDATE: {},
+    }
+
+    install_cfg = deployment["install"]
+    for group in install_cfg["groups"]:
+        try:
+            target = resolve_assignment_target(access_token, group, group_id_cache)
+        except ConfigError:
+            continue
+        key = _target_key(target)
+        names[key] = group
+        configured[ENTRY_INSTALL][key] = install_cfg["intent"]
+
+    for ring in deployment["rings"]:
+        for group in ring["groups"]:
+            try:
+                target = resolve_assignment_target(
+                    access_token, group, group_id_cache
+                )
+            except ConfigError:
+                continue
+            key = _target_key(target)
+            names[key] = group
+            configured[ENTRY_UPDATE][key] = "required"
+
+    return configured
+
+
 def detect_drift(
     access_token: str,
     configs: dict[str, dict[str, Any]],
     deployment_dir: Path,
     existing_apps: list[dict[str, Any]],
+    group_id_cache: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     """Detects assignment drift between deployment state and Intune.
 
@@ -149,6 +215,9 @@ def detect_drift(
         configs: Effective configurations keyed by recipe id.
         deployment_dir: Directory holding per-app deployment state files.
         existing_apps: Mobile app dicts from list_mobile_apps.
+        group_id_cache: Shared cache for group name resolution, so a
+            caller that already resolved groups (apply, plan validation)
+            re-resolves nothing. A new cache is used when omitted.
 
     Returns:
         Finding dicts, each with "app_id", "kind", and "detail" keys,
@@ -163,7 +232,8 @@ def detect_drift(
 
     """
     findings: list[dict[str, Any]] = []
-    group_id_cache: dict[str, str] = {}
+    if group_id_cache is None:
+        group_id_cache = {}
     names: dict = {}
 
     stamped_by_recipe: dict[str, list[tuple[dict, dict]]] = {}
@@ -191,6 +261,8 @@ def detect_drift(
         expected = _expected_assignments(
             access_token, config, state, group_id_cache, names
         )
+        # Built lazily: only an unaccounted-for assignment needs it.
+        configured: dict[str, dict[tuple[str, str], str]] | None = None
         referenced = _referenced_shas(state)
         stamped = stamped_by_recipe.get(app_id, [])
         stamped_keys = {(s["entry"], s["sha256"]) for s, _ in stamped}
@@ -261,16 +333,40 @@ def detect_drift(
                     )
 
             for key, assignment in actual.items():
-                if key not in expected_targets:
+                if key in expected_targets:
+                    continue
+                if configured is None:
+                    configured = _configured_targets(
+                        access_token, config, group_id_cache, names
+                    )
+                target_name = _describe_target(assignment.get("target"), names)
+                intent = assignment.get("intent")
+                if configured[entry].get(key) == intent:
+                    findings.append(
+                        {
+                            "app_id": app_id,
+                            "kind": "unrecorded_assignment",
+                            "detail": (
+                                f"{entry} entry for {sha[:12]}: assignment "
+                                f"'{target_name}' ({intent}) matches the "
+                                "configured target but NAPT has no record "
+                                "of making it - either an apply writeback "
+                                "was lost (a later apply converges it) or "
+                                "it was made outside NAPT - leaving it "
+                                "alone"
+                            ),
+                        }
+                    )
+                else:
                     findings.append(
                         {
                             "app_id": app_id,
                             "kind": "unexpected_assignment",
                             "detail": (
-                                f"{entry} entry for {sha[:12]}: assignment "
-                                f"'{_describe_target(assignment.get('target'), names)}' "
-                                f"({assignment.get('intent')}) was not made "
-                                "by NAPT - leaving it alone"
+                                f"{entry} entry for {sha[:12]}: NAPT has no "
+                                f"record of making assignment "
+                                f"'{target_name}' ({intent}) and it matches "
+                                "no configured target - leaving it alone"
                             ),
                         }
                     )

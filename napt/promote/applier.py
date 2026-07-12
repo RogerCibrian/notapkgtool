@@ -44,7 +44,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from napt.exceptions import StateError
+from napt.exceptions import ConfigError, StateError
 from napt.logging import get_global_logger
 from napt.promote.drift import detect_drift
 from napt.promote.planner import (
@@ -53,6 +53,7 @@ from napt.promote.planner import (
     plan_path_for,
     plan_promotions,
 )
+from napt.promote.preflight import unresolvable_groups
 from napt.promote.reconcile import reconcile_publications
 from napt.state import (
     deployment_state_path,
@@ -207,7 +208,7 @@ class _ApplyRun:
         self.now = now
         self.existing_apps = list_mobile_apps(access_token)
         self._states: dict[str, dict[str, Any]] = {}
-        self._group_ids: dict[str, str] = {}
+        self.group_id_cache: dict[str, str] = {}
         self.applied: list[dict[str, Any]] = []
         self.skipped: list[dict[str, Any]] = []
 
@@ -234,7 +235,7 @@ class _ApplyRun:
         group target.
         """
         return [
-            resolve_assignment_target(self.access_token, group, self._group_ids)
+            resolve_assignment_target(self.access_token, group, self.group_id_cache)
             for group in groups
         ]
 
@@ -300,39 +301,74 @@ def _retire_release(run: _ApplyRun, app_id: str, version: str, sha256: str) -> N
                 )
 
 
-def _apply_ring_action(run: _ApplyRun, action: dict[str, Any]) -> bool:
-    """Applies an enter_ring or advance_ring action.
+def _action_skip_reason(run: _ApplyRun, action: dict[str, Any]) -> str | None:
+    """Decides whether a planned action would be skipped instead of applied.
+
+    The single authority for skip semantics: the apply loop records the
+    returned reason, and the group preflight validates only actions this
+    function clears — so a group referenced solely by a stale or
+    already-applied action can never block a run. All checks are local
+    (state files, cached tenant listing); nothing calls Graph.
 
     Args:
         run: The apply run context.
         action: The planned action.
 
     Returns:
-        True when applied, False when skipped.
+        The skip reason, or None when the action should execute.
+
+    """
+    app_id: str = action["app_id"]
+    sha256: str = action["sha256"]
+    if app_id not in run.configs:
+        return "no recipe found for this app"
+
+    state = run.state_for(app_id)
+    deployed = state.get("deployed") or {}
+    if deployed.get("sha256") != sha256:
+        return "stale action - the deployed release has changed"
+
+    if action["type"] == "assign_install":
+        previous = state.get("install_assigned") or {}
+        if previous.get("sha256") == sha256:
+            return "already applied"
+        if find_stamped_app(run.existing_apps, app_id, ENTRY_INSTALL, sha256) is None:
+            return "no stamped install entry found in the tenant"
+        return None
+
+    ring: str = action["ring"]
+    ring_names = [r["name"] for r in run.configs[app_id]["deployment"]["rings"]]
+    if ring not in ring_names:
+        return f"ring '{ring}' is no longer configured"
+    if (state.get("rings") or {}).get(ring, {}).get("sha256") == sha256:
+        return "already applied"
+    if find_stamped_app(run.existing_apps, app_id, ENTRY_UPDATE, sha256) is None:
+        return "no stamped update entry found in the tenant"
+    return None
+
+
+def _apply_ring_action(run: _ApplyRun, action: dict[str, Any]) -> None:
+    """Applies an enter_ring or advance_ring action.
+
+    Assumes the action was cleared by
+    [_action_skip_reason][napt.promote.applier._action_skip_reason];
+    in particular a stamped update entry for the release exists.
+
+    Args:
+        run: The apply run context.
+        action: The planned action.
 
     """
     app_id: str = action["app_id"]
     sha256: str = action["sha256"]
     ring: str = action["ring"]
     state = run.state_for(app_id)
-    deployed = state.get("deployed") or {}
-
-    if deployed.get("sha256") != sha256:
-        run.skip(action, "stale action - the deployed release has changed")
-        return False
-    ring_names = [r["name"] for r in run.configs[app_id]["deployment"]["rings"]]
-    if ring not in ring_names:
-        run.skip(action, f"ring '{ring}' is no longer configured")
-        return False
     rings_state: dict[str, Any] = state.setdefault("rings", {})
-    if rings_state.get(ring, {}).get("sha256") == sha256:
-        run.skip(action, "already applied")
-        return False
 
     update_app = find_stamped_app(run.existing_apps, app_id, ENTRY_UPDATE, sha256)
-    if update_app is None:
+    if update_app is None:  # cleared by _action_skip_reason
         run.skip(action, "no stamped update entry found in the tenant")
-        return False
+        return
 
     targets = run.resolve_targets(action["groups"])
     _add_assignments(run.access_token, update_app["id"], targets, _RING_INTENT)
@@ -366,37 +402,29 @@ def _apply_ring_action(run: _ApplyRun, action: dict[str, Any]) -> bool:
 
     run.save_state(app_id)
     run.applied.append(action)
-    return True
 
 
-def _apply_install_action(run: _ApplyRun, action: dict[str, Any]) -> bool:
+def _apply_install_action(run: _ApplyRun, action: dict[str, Any]) -> None:
     """Applies an assign_install action.
+
+    Assumes the action was cleared by
+    [_action_skip_reason][napt.promote.applier._action_skip_reason];
+    in particular a stamped install entry for the release exists.
 
     Args:
         run: The apply run context.
         action: The planned action.
 
-    Returns:
-        True when applied, False when skipped.
-
     """
     app_id: str = action["app_id"]
     sha256: str = action["sha256"]
     state = run.state_for(app_id)
-    deployed = state.get("deployed") or {}
-
-    if deployed.get("sha256") != sha256:
-        run.skip(action, "stale action - the deployed release has changed")
-        return False
     previous = state.get("install_assigned") or {}
-    if previous.get("sha256") == sha256:
-        run.skip(action, "already applied")
-        return False
 
     install_app = find_stamped_app(run.existing_apps, app_id, ENTRY_INSTALL, sha256)
-    if install_app is None:
+    if install_app is None:  # cleared by _action_skip_reason
         run.skip(action, "no stamped install entry found in the tenant")
-        return False
+        return
 
     targets = run.resolve_targets(action["groups"])
     _add_assignments(run.access_token, install_app["id"], targets, action["intent"])
@@ -420,7 +448,6 @@ def _apply_install_action(run: _ApplyRun, action: dict[str, Any]) -> bool:
     }
     run.save_state(app_id)
     run.applied.append(action)
-    return True
 
 
 def apply_plan(
@@ -433,8 +460,13 @@ def apply_plan(
 
     Consumes the plan file when one exists (removing it after a fully
     successful run); otherwise plans fresh and applies immediately.
-    Deployment state is saved after each applied action, so a failed run
-    resumes safely — already-applied actions validate as no-ops.
+    Every group a non-skipped action will assign is resolved before any
+    action executes, so an unresolvable group aborts the run with zero
+    mutations rather than stranding a half-applied plan — while a dead
+    group referenced only by stale or already-applied actions never
+    blocks a run. Deployment state is saved after each applied action,
+    so a failed run resumes safely — already-applied actions validate
+    as no-ops.
 
     Assignment drift is checked on every run — including runs with
     nothing to apply, which therefore still authenticate — and reported
@@ -496,9 +528,28 @@ def apply_plan(
         actions = plan_promotions(recipes, state_dir=deployment_dir, now=now)
         logger.info("PROMOTE", "No plan file found; planning and applying")
 
+    # Preflight: every group a live action will touch must resolve
+    # before anything is applied, so an unresolvable group aborts with
+    # zero mutations instead of stranding a half-applied plan. Skipped
+    # actions are excluded — a dead group referenced only by a stale or
+    # already-applied action never blocks a run, preserving the
+    # resume-after-partial-failure guarantee. Resolutions are cached for
+    # the action loop below.
+    live = [a for a in actions if _action_skip_reason(run, a) is None]
+    problems = unresolvable_groups(access_token, live, run.group_id_cache)
+    if problems:
+        raise ConfigError(
+            "Plan preflight failed; nothing was applied. Unresolvable "
+            "groups:\n  "
+            + "\n  ".join(problems)
+            + "\nFix the group configuration and re-plan, or correct the "
+            "plan file, then re-run."
+        )
+
     for action in actions:
-        if action["app_id"] not in configs:
-            run.skip(action, "no recipe found for this app")
+        reason = _action_skip_reason(run, action)
+        if reason is not None:
+            run.skip(action, reason)
             continue
         if action["type"] == "assign_install":
             _apply_install_action(run, action)
@@ -511,7 +562,13 @@ def apply_plan(
 
     # Drift is checked after the actions so freshly applied assignments
     # are reflected. Findings are warnings only, never corrected.
-    drift = detect_drift(access_token, configs, deployment_dir, run.existing_apps)
+    drift = detect_drift(
+        access_token,
+        configs,
+        deployment_dir,
+        run.existing_apps,
+        group_id_cache=run.group_id_cache,
+    )
 
     return {
         "applied": run.applied,
