@@ -846,9 +846,6 @@ Two consequences to set up once:
 - The workflow identity needs permission to push to `main` — either
   allow the Actions bot through branch protection or use a bot/app
   token with bypass rights.
-  Note that GitHub only allows the Actions app as a ruleset bypass
-  actor on organization-owned repos; on a personal repo, use a PAT or
-  bot token for the writeback pushes instead.
 - `[skip ci]` keeps the writeback from re-triggering workflows.
 
 **Secrets.** `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, and
