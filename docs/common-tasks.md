@@ -879,7 +879,7 @@ jobs:
         with:
           python-version: "3.13"
       - run: pip install napt
-      - name: Restore installers and download cache from the last run
+      - name: Restore installers and discovery cache from the last run
         uses: actions/cache/restore@v4
         with:
           path: |
