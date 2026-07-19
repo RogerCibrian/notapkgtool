@@ -1126,6 +1126,18 @@ jobs:
   (an unresolvable group, a Graph error) fails that app, keeps its plan
   file on `main` for the next apply, and never blocks the other apps —
   which is why the writeback above runs even when the apply step fails.
+- Resolving a failed app depends on the failure class.
+  A transient Graph error needs no fix: re-run the apply workflow —
+  already-applied actions skip, the rest complete, and the plan file is
+  consumed.
+  An unresolvable group needs the configuration fixed (or the Entra ID
+  group restored) and then a re-plan, not just a re-run: plan files bake
+  in group names at plan time, so the fix reaches Intune when the next
+  scheduled plan regenerates the file and the promotion PR carries the
+  corrected plan.
+  Until then, apply keeps failing that one app — and only that one.
+  A corrupted state file restores from git history like any other
+  committed file.
 - All four workflows are idempotent — re-running any of them converges
   to the same result (upload adopts existing apps, apply skips
   already-applied actions).
