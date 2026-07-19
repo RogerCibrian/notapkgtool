@@ -702,8 +702,11 @@ release has proven itself.
 
    A newly uploaded release enters the first ring; a release that has held
    its ring for `promote_after_days` advances to the next.
-   Eligible actions are written to `state/plan.json`; review the file, or
-   commit it and gate the apply on a pull request.
+   Eligible actions are written per app to `state/plans/<app-id>.json`;
+   review the files, or commit them and gate the apply on a pull request.
+   Each action names the app, the release, the groups it will assign,
+   and — for advancement — when the release entered its current ring and
+   that ring's bake threshold, so the files read as the review record.
 
 3. **Apply** — execute the plan against Intune:
 
@@ -714,16 +717,18 @@ release has proven itself.
    Ring groups are assigned to the release's `[Update]` entry as required
    installs; the displaced older release is unassigned and retired per
    `deployment.retain_versions`.
+   Each app's plan file is consumed after that app applies fully, and one
+   app's failure keeps its plan file for retry without blocking the rest.
    Every apply also prints a drift check — discrepancies between
    deployment state and Intune (removed assignments, admin-made changes,
    stray apps) are warned about, never corrected.
    Use `napt promote plan --check-drift` for the same report without
    applying anything.
    Both commands also fail fast on a group typo or deleted Entra ID
-   group: an authenticated plan refuses to write a plan that names an
-   unresolvable group, and apply checks every group it is about to
-   assign before touching anything, so a bad group aborts with zero
-   changes instead of a half-applied plan.
+   group: an authenticated plan refuses to write plans that name an
+   unresolvable group, and apply checks every group an app's plan is
+   about to assign before touching that app, so a bad group fails that
+   app with zero changes instead of a half-applied plan.
    Run `napt status` to see where every app stands.
 
 Run plan and apply on a schedule and promotion becomes automatic: each
@@ -830,13 +835,14 @@ Adapt names, schedules, and branch rules to your org.
   that diff. Merging approves the release — a workflow builds, packages,
   and uploads it, with the hash gate guaranteeing the approved binary is
   exactly what ships.
-- **Promotion PRs** (one, batched): `napt promote plan` writes
-  `state/plan.json` when releases are eligible to enter or advance
-  rings; CI commits it to a branch and opens a PR. Merging approves the
-  promotions — a workflow runs `napt promote apply`, which executes the
-  plan as an allowlist.
-  To hold one promotion, delete its entry from the plan file in the PR;
-  the next scheduled plan will re-propose it.
+- **Promotion PRs** (one, batched): `napt promote plan` writes one
+  `state/plans/<id>.json` file per app with releases eligible to enter
+  or advance rings; CI commits them to a branch and opens a PR. Merging
+  approves the promotions — a workflow runs `napt promote apply`, which
+  executes each app's plan as an allowlist, independently.
+  To hold one app's promotions, delete its plan file in the PR; the
+  next scheduled plan will re-propose it, and the other apps merge and
+  apply unaffected.
 
 **Writeback commits.** After upload and apply, NAPT has recorded new
 facts (Intune app IDs, ring positions) in the working tree that must
@@ -1056,7 +1062,7 @@ jobs:
           git push -f origin napt/promotion-plan
           gh pr create --head napt/promotion-plan \
             --title "Promotion plan" \
-            --body "Merging approves these ring promotions. Delete an entry from state/plan.json to hold it." \
+            --body "Merging approves these ring promotions. To hold one app, delete its state/plans/ file." \
             || true  # PR already open; the force-push updated it
 ```
 
@@ -1067,7 +1073,7 @@ name: promote-apply
 on:
   push:
     branches: [main]
-    paths: ["state/plan.json"]
+    paths: ["state/plans/**"]
 # Own group (not shared with publish) - see the publish workflow's
 # concurrency comment.
 concurrency: napt-promote-apply
@@ -1086,9 +1092,14 @@ jobs:
         with:
           python-version: "3.13"
       - run: pip install napt
-      - name: Apply the approved plan
+      # Apply exits 1 when any app's plan fails, but other apps may
+      # have applied — continue so the writeback records their ring
+      # positions and consumed plans; a final step fails the run.
+      - name: Apply the approved plans
+        id: apply
+        continue-on-error: true
         run: napt promote apply
-      - name: Write back ring positions and consume the plan
+      - name: Write back ring positions and consume the plans
         shell: bash
         run: |
           git config user.name "napt-bot"
@@ -1102,12 +1113,19 @@ jobs:
             git pull --rebase origin main
           done
           git push
+      - name: Surface a failed apply
+        if: steps.apply.outcome == 'failure'
+        run: exit 1
 ```
 
 **Notes:**
 
 - Promotions merged but applied later are always safe: bake time only
   grows, and apply validates every entry against current state anyway.
+- Apply treats each app's plan file as an independent unit: a failure
+  (an unresolvable group, a Graph error) fails that app, keeps its plan
+  file on `main` for the next apply, and never blocks the other apps —
+  which is why the writeback above runs even when the apply step fails.
 - All four workflows are idempotent — re-running any of them converges
   to the same result (upload adopts existing apps, apply skips
   already-applied actions).

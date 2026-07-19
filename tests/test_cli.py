@@ -745,8 +745,9 @@ class TestCmdPromotePlan:
             }
         ]
         with (
+            patch("napt.cli.load_recipe_configs", return_value={}),
             patch("napt.cli.plan_promotions", return_value=actions),
-            patch("napt.cli.write_plan_file", return_value=True) as write_mock,
+            patch("napt.cli.write_plan_files", return_value=["p"]) as write_mock,
         ):
             code = cmd_promote_plan(
                 _args(
@@ -765,8 +766,9 @@ class TestCmdPromotePlan:
     def test_no_actions_returns_zero(self, tmp_path, capsys):
         """Tests that an empty plan reports nothing to promote."""
         with (
+            patch("napt.cli.load_recipe_configs", return_value={}),
             patch("napt.cli.plan_promotions", return_value=[]),
-            patch("napt.cli.write_plan_file", return_value=False),
+            patch("napt.cli.write_plan_files", return_value=[]),
         ):
             code = cmd_promote_plan(
                 _args(
@@ -782,7 +784,10 @@ class TestCmdPromotePlan:
 
     def test_config_error_returns_one(self, tmp_path, capsys):
         """Tests that ConfigError is caught and returns 1."""
-        with patch("napt.cli.plan_promotions", side_effect=ConfigError("bad")):
+        with (
+            patch("napt.cli.load_recipe_configs", return_value={}),
+            patch("napt.cli.plan_promotions", side_effect=ConfigError("bad")),
+        ):
             code = cmd_promote_plan(
                 _args(
                     recipes="recipes",
@@ -895,6 +900,7 @@ class TestCmdPromoteApply:
                     "reason": "already applied",
                 }
             ],
+            "failed": [],
         }
         with patch("napt.cli.apply_plan", return_value=summary):
             code = cmd_promote_apply(
@@ -909,12 +915,34 @@ class TestCmdPromoteApply:
 
     def test_nothing_to_apply_returns_zero(self, tmp_path, capsys):
         """Tests that an empty summary reports cleanly."""
-        with patch("napt.cli.apply_plan", return_value={"applied": [], "skipped": []}):
+        summary = {"applied": [], "skipped": [], "failed": []}
+        with patch("napt.cli.apply_plan", return_value=summary):
             code = cmd_promote_apply(
                 _args(recipes="recipes", state_dir=tmp_path, plan_file=None)
             )
         assert code == 0
         assert "Nothing to apply" in capsys.readouterr().out
+
+    def test_failed_apps_print_and_return_one(self, tmp_path, capsys):
+        """Tests that per-app failures are printed and fail the run."""
+        summary = {
+            "applied": [],
+            "skipped": [],
+            "failed": [
+                {
+                    "app_id": "test-app",
+                    "error": "unresolvable groups: ghost-group",
+                }
+            ],
+        }
+        with patch("napt.cli.apply_plan", return_value=summary):
+            code = cmd_promote_apply(
+                _args(recipes="recipes", state_dir=tmp_path, plan_file=None)
+            )
+        assert code == 1
+        out = capsys.readouterr().out
+        assert "[FAIL] test-app: unresolvable groups: ghost-group" in out
+        assert "1 app(s) failed" in out
 
     def test_auth_error_returns_one(self, tmp_path, capsys):
         """Tests that AuthError is caught and returns 1."""
@@ -954,7 +982,7 @@ class TestDriftOutput:
         }
         with (
             patch("napt.cli.plan_promotions", return_value=[]),
-            patch("napt.cli.write_plan_file", return_value=False),
+            patch("napt.cli.write_plan_files", return_value=[]),
             patch("napt.cli.load_recipe_configs", return_value={}),
             patch("napt.cli.get_access_token", return_value="tok"),
             patch("napt.cli.list_mobile_apps", return_value=[]),
@@ -978,6 +1006,7 @@ class TestDriftOutput:
         summary = {
             "applied": [],
             "skipped": [],
+            "failed": [],
             "drift": [
                 {
                     "app_id": "test-app",
@@ -1020,7 +1049,7 @@ class TestReconcileOutput:
         ]
         with (
             patch("napt.cli.plan_promotions", return_value=[]),
-            patch("napt.cli.write_plan_file", return_value=False),
+            patch("napt.cli.write_plan_files", return_value=[]),
             patch("napt.cli.load_recipe_configs", return_value={}),
             patch("napt.cli.get_access_token", return_value="tok"),
             patch("napt.cli.list_mobile_apps", return_value=[]),
@@ -1055,7 +1084,7 @@ class TestReconcileOutput:
                 "napt.cli.plan_promotions",
                 side_effect=lambda *a, **k: order.append("plan") or [],
             ),
-            patch("napt.cli.write_plan_file", return_value=False),
+            patch("napt.cli.write_plan_files", return_value=[]),
         ):
             code = cmd_promote_plan(
                 _args(
@@ -1093,7 +1122,7 @@ class TestReconcileOutput:
                     "No Entra ID group found with displayName 'ghost-group'."
                 ],
             ),
-            patch("napt.cli.write_plan_file") as write_mock,
+            patch("napt.cli.write_plan_files") as write_mock,
         ):
             code = cmd_promote_plan(
                 _args(
@@ -1113,8 +1142,9 @@ class TestReconcileOutput:
         """Tests that a plan without tenant flags never validates groups
         and that an empty plan draws no unvalidated warning."""
         with (
+            patch("napt.cli.load_recipe_configs", return_value={}),
             patch("napt.cli.plan_promotions", return_value=[]),
-            patch("napt.cli.write_plan_file", return_value=False),
+            patch("napt.cli.write_plan_files", return_value=[]),
             patch("napt.cli.unresolvable_groups") as validate_mock,
         ):
             code = cmd_promote_plan(
@@ -1143,8 +1173,9 @@ class TestReconcileOutput:
             }
         ]
         with (
+            patch("napt.cli.load_recipe_configs", return_value={}),
             patch("napt.cli.plan_promotions", return_value=actions),
-            patch("napt.cli.write_plan_file", return_value=True),
+            patch("napt.cli.write_plan_files", return_value=["p"]),
         ):
             code = cmd_promote_plan(
                 _args(
@@ -1168,7 +1199,7 @@ class TestReconcileOutput:
             patch("napt.cli.reconcile_publications", return_value=[]),
             patch("napt.cli.detect_drift", return_value=[]),
             patch("napt.cli.plan_promotions", return_value=[]),
-            patch("napt.cli.write_plan_file", return_value=False),
+            patch("napt.cli.write_plan_files", return_value=[]),
         ):
             code = cmd_promote_plan(
                 _args(
@@ -1187,6 +1218,7 @@ class TestReconcileOutput:
         summary = {
             "applied": [],
             "skipped": [],
+            "failed": [],
             "drift": [],
             "recovered": [
                 {

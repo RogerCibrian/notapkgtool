@@ -15,7 +15,7 @@ from napt.promote import (
     plan_path_for,
     plan_promotions,
     resolve_state_dir,
-    write_plan_file,
+    write_plan_files,
 )
 from napt.state import (
     create_default_deployment_state,
@@ -136,6 +136,7 @@ class TestPlanPromotions:
             {
                 "type": "enter_ring",
                 "app_id": "test-app",
+                "name": "App test-app",
                 "version": "1.0.0",
                 "sha256": "a" * 64,
                 "ring": "pilot",
@@ -154,6 +155,7 @@ class TestPlanPromotions:
             {
                 "type": "assign_install",
                 "app_id": "test-app",
+                "name": "App test-app",
                 "version": "1.0.0",
                 "sha256": "a" * 64,
                 "intent": "available",
@@ -229,9 +231,12 @@ class TestPlanPromotions:
             {
                 "type": "advance_ring",
                 "app_id": "test-app",
+                "name": "App test-app",
                 "version": "1.0.0",
                 "sha256": "a" * 64,
                 "from_ring": "pilot",
+                "from_ring_entered_at": "2026-07-06T12:00:00+00:00",
+                "promote_after_days": 2,
                 "ring": "broad",
                 "groups": ["sg-broad"],
             }
@@ -383,47 +388,82 @@ class TestResolveStateDir:
         assert resolve_state_dir(recipe) == Path("state")
 
 
-class TestWritePlanFile:
-    """Tests for plan file lifecycle."""
+def _action(app_id: str = "a") -> dict[str, Any]:
+    return {
+        "type": "enter_ring",
+        "app_id": app_id,
+        "name": f"App {app_id}",
+        "version": "1.0",
+        "sha256": "x",
+        "ring": "pilot",
+        "groups": ["g"],
+    }
+
+
+class TestWritePlanFiles:
+    """Tests for per-app plan file lifecycle."""
 
     def test_writes_deterministic_plan(self, tmp_path):
         """Tests that identical actions produce byte-identical plan files."""
-        plan_path = plan_path_for(tmp_path / "state")
-        actions = [
-            {
-                "type": "enter_ring",
-                "app_id": "a",
-                "version": "1.0",
-                "sha256": "x",
-                "ring": "pilot",
-                "groups": ["g"],
-            }
+        state_dir = tmp_path / "state"
+        actions = [_action()]
+
+        assert write_plan_files(actions, state_dir, ["a"]) == [
+            plan_path_for(state_dir, "a")
+        ]
+        first = plan_path_for(state_dir, "a").read_bytes()
+        assert write_plan_files(actions, state_dir, ["a"]) == [
+            plan_path_for(state_dir, "a")
         ]
 
-        assert write_plan_file(actions, plan_path) is True
-        first = plan_path.read_bytes()
-        assert write_plan_file(actions, plan_path) is True
-
-        assert plan_path.read_bytes() == first
+        assert plan_path_for(state_dir, "a").read_bytes() == first
         assert json.loads(first.decode("utf-8")) == {
             "actions": actions,
+            "app_id": "a",
             "schemaVersion": 1,
         }
 
+    def test_splits_actions_per_app(self, tmp_path):
+        """Tests that each app's actions land in that app's plan file."""
+        state_dir = tmp_path / "state"
+        actions = [_action("a"), _action("b"), _action("a")]
+
+        written = write_plan_files(actions, state_dir, ["a", "b"])
+
+        assert written == [
+            plan_path_for(state_dir, "a"),
+            plan_path_for(state_dir, "b"),
+        ]
+        plan_a = json.loads(written[0].read_text(encoding="utf-8"))
+        plan_b = json.loads(written[1].read_text(encoding="utf-8"))
+        assert len(plan_a["actions"]) == 2
+        assert len(plan_b["actions"]) == 1
+        assert all(a["app_id"] == "a" for a in plan_a["actions"])
+
     def test_no_actions_removes_stale_plan(self, tmp_path):
-        """Tests that an empty plan removes an existing plan file."""
-        plan_path = plan_path_for(tmp_path / "state")
-        plan_path.parent.mkdir(parents=True)
-        plan_path.write_text('{"actions": []}', encoding="utf-8")
+        """Tests that an app with no work has its stale plan file removed."""
+        state_dir = tmp_path / "state"
+        write_plan_files([_action("a")], state_dir, ["a"])
 
-        assert write_plan_file([], plan_path) is False
+        assert write_plan_files([], state_dir, ["a"]) == []
 
-        assert not plan_path.exists()
+        assert not plan_path_for(state_dir, "a").exists()
+
+    def test_stale_removal_scoped_to_run(self, tmp_path):
+        """Tests that apps outside the run keep their plan files."""
+        state_dir = tmp_path / "state"
+        write_plan_files([_action("a"), _action("b")], state_dir, ["a", "b"])
+
+        # A single-recipe run covering only "a" with no work for it.
+        assert write_plan_files([], state_dir, ["a"]) == []
+
+        assert not plan_path_for(state_dir, "a").exists()
+        assert plan_path_for(state_dir, "b").exists()
 
     def test_no_actions_no_file_is_noop(self, tmp_path):
-        """Tests that an empty plan with no existing file writes nothing."""
-        plan_path = plan_path_for(tmp_path / "state")
+        """Tests that an empty plan with no existing files writes nothing."""
+        state_dir = tmp_path / "state"
 
-        assert write_plan_file([], plan_path) is False
+        assert write_plan_files([], state_dir, ["a"]) == []
 
-        assert not plan_path.exists()
+        assert not plan_path_for(state_dir, "a").exists()

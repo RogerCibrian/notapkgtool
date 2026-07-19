@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING: Per-app promotion plans** - `napt promote plan` now writes
+    one plan file per app (`state/plans/<app-id>.json`) instead of a
+    single batched `state/plan.json`, and `napt promote apply` consumes
+    each file independently
+    - One app's failure (unresolvable group, Graph error) keeps its plan
+        file for retry and no longer blocks the other apps' promotions;
+        failed apps are reported and fail the run after the others apply
+    - To hold one app's promotions during review, delete its plan file —
+        no more hand-editing action entries inside a shared JSON
+    - Plan actions now carry reviewer context: the app's display name,
+        and for ring advancement, when the release entered the ring it is
+        leaving and that ring's bake threshold
+    - Migration: none needed for state — plans are transient. Update
+        promotion workflows to watch `state/plans/**` instead of
+        `state/plan.json` (see the reference workflows in Common Tasks)
+
 ## [0.8.0] - 2026-07-12
 
 ### Added

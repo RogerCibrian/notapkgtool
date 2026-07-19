@@ -39,8 +39,9 @@ from .planner import (
     load_recipe_configs,
     plan_path_for,
     plan_promotions,
+    plans_dir_for,
     resolve_state_dir,
-    write_plan_file,
+    write_plan_files,
 )
 from .preflight import unresolvable_groups
 from .reconcile import reconcile_publications
@@ -52,8 +53,9 @@ __all__ = [
     "load_recipe_configs",
     "plan_path_for",
     "plan_promotions",
+    "plans_dir_for",
     "reconcile_publications",
     "resolve_state_dir",
     "unresolvable_groups",
-    "write_plan_file",
+    "write_plan_files",
 ]
