@@ -424,8 +424,7 @@ class TestApplyRingActions:
         mocks["assign_app"].assert_not_called()
 
     def test_failure_keeps_plan_file(self, tmp_path):
-        """Tests that a Graph failure records the app as failed and
-        leaves its plan file for retry."""
+        """Tests that a Graph failure fails the app and keeps its plan file."""
         _write_recipe(tmp_path, rings=_RINGS)
         _write_state(tmp_path, deployed=_deployed())
         plan_path = _write_plan(tmp_path, [_enter_ring_action()])
@@ -563,8 +562,7 @@ class TestApplyOrchestration:
         assert state["rings"]["pilot"]["sha256"] == "b" * 64
 
     def test_preflight_fails_app_with_zero_mutations(self, tmp_path):
-        """Tests that an unresolvable group anywhere in an app's plan
-        fails that app before any of its actions mutate the tenant."""
+        """Tests that an unresolvable group fails the app with zero mutations."""
         from napt.exceptions import ConfigError
 
         _write_recipe(tmp_path, rings=_RINGS)
@@ -649,8 +647,7 @@ class TestApplyOrchestration:
         ]
 
     def test_failed_app_does_not_block_others(self, tmp_path):
-        """Tests that one app's preflight failure keeps its plan file
-        while the other app's plan still applies and is consumed."""
+        """Tests that one app's preflight failure does not block another app."""
         from napt.exceptions import ConfigError
 
         _write_recipe(tmp_path, app_id="app-bad", rings=_RINGS)
@@ -690,8 +687,7 @@ class TestApplyOrchestration:
         assert state["rings"]["pilot"]["sha256"] == "b" * 64
 
     def test_graph_failure_isolated_to_one_app(self, tmp_path):
-        """Tests that a Graph failure applying one app keeps its plan
-        file while the remaining apps still apply."""
+        """Tests that a Graph failure applying one app spares the others."""
         _write_recipe(tmp_path, app_id="app-bad", rings=_RINGS)
         _write_recipe(tmp_path, app_id="app-good", rings=_RINGS)
         _write_state(tmp_path, app_id="app-bad", deployed=_deployed())
@@ -753,6 +749,42 @@ class TestLoadPlanFile:
         plan_path.write_text('{"other": []}', encoding="utf-8")
 
         with pytest.raises(StateError, match="Corrupted plan file"):
+            load_plan_file(plan_path)
+
+    def test_mixed_app_plan_raises(self, tmp_path):
+        """Tests that a plan file mixing apps is rejected."""
+        plan_path = tmp_path / "plan.json"
+        plan_path.write_text(
+            json.dumps(
+                {
+                    "schemaVersion": 1,
+                    "actions": [
+                        _enter_ring_action(),
+                        {**_enter_ring_action(), "app_id": "other-app"},
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with pytest.raises(StateError, match="per-app"):
+            load_plan_file(plan_path)
+
+    def test_declared_app_id_mismatch_raises(self, tmp_path):
+        """Tests that actions disagreeing with the declared app are rejected."""
+        plan_path = tmp_path / "plan.json"
+        plan_path.write_text(
+            json.dumps(
+                {
+                    "schemaVersion": 1,
+                    "app_id": "other-app",
+                    "actions": [_enter_ring_action()],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with pytest.raises(StateError, match="per-app"):
             load_plan_file(plan_path)
 
     def test_unsupported_plan_schema_version_raises(self, tmp_path):

@@ -14,7 +14,7 @@
 
 """Promotion apply for NAPT deployment rings.
 
-Executes a promotion plan against Intune: assigns install entries,
+Executes promotion plans against Intune: assigns install entries,
 enters and advances releases through rings, displaces superseded
 releases, and retires them per the retention policy.
 
@@ -86,7 +86,7 @@ _RING_INTENT = "required"
 
 
 def load_plan_file(plan_path: Path) -> list[dict[str, Any]]:
-    """Loads planned actions from a plan file.
+    """Loads planned actions from a per-app plan file.
 
     Args:
         plan_path: Path to the plan file.
@@ -96,8 +96,9 @@ def load_plan_file(plan_path: Path) -> list[dict[str, Any]]:
 
     Raises:
         StateError: If the plan file contains invalid JSON, lacks an
-            actions list, or its schemaVersion is missing or
-            unsupported.
+            actions list, its schemaVersion is missing or unsupported,
+            or its actions do not all belong to the single app the file
+            declares.
 
     """
     try:
@@ -115,6 +116,20 @@ def load_plan_file(plan_path: Path) -> list[dict[str, Any]]:
             f"Unsupported plan schema version {found!r} in {plan_path} "
             f"(this NAPT release supports version {PLAN_SCHEMA_VERSION}). "
             "Re-run 'napt promote plan' to regenerate it."
+        )
+
+    # A plan file is one app's unit of work: apply's failure isolation
+    # and consume-after-success semantics attribute the whole file to a
+    # single app, so a file mixing apps cannot be applied faithfully.
+    action_app_ids = {action.get("app_id") for action in actions}
+    declared = data.get("app_id")
+    expected = {declared} if declared is not None else action_app_ids
+    if len(action_app_ids) > 1 or action_app_ids - expected:
+        raise StateError(
+            f"Plan file {plan_path} mixes actions for more than one app "
+            f"(declared app_id {declared!r}, actions reference "
+            f"{sorted(str(a) for a in action_app_ids)}). Plan files are "
+            "per-app. Re-run 'napt promote plan' to regenerate them."
         )
     return actions
 
