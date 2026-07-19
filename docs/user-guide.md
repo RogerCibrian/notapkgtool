@@ -444,18 +444,23 @@ napt package recipes/Google/chrome.yaml --version 130.0.6723.116
 
 Plans and applies ring-based promotion of published apps. `promote plan`
 computes which releases enter or advance deployment rings (per
-`deployment.rings`) and writes `state/plan.json` when there is work; a
-stale plan file is removed when nothing is eligible. Read-only unless
-`--reconcile` is passed.
+`deployment.rings`) and writes one plan file per app with work
+(`state/plans/<app-id>.json`); an app's stale plan file is removed when
+nothing is eligible for it. Read-only unless `--reconcile` is passed.
+Besides the fields apply acts on, each action carries reviewer context:
+the app's display name and — for ring advancement — when the release
+entered the ring it is leaving and that ring's bake threshold.
 
-`promote apply` executes the plan against Intune: assigns install entries,
-enters and advances rings, unassigns displaced releases, and retires them
-per `deployment.retain_versions`. It consumes `state/plan.json` when one
-exists (removing it after a fully successful run) and plans fresh
-otherwise. Stale or already-applied actions are skipped with a warning, so
-re-running after a partial failure is safe. Assignments NAPT does not
-manage — admin-made groups, all-device targets, exclusions — are always
-preserved.
+`promote apply` executes the plans against Intune: assigns install
+entries, enters and advances rings, unassigns displaced releases, and
+retires them per `deployment.retain_versions`. It consumes every plan
+file in `state/plans/` when any exist (removing each after its app
+applies fully) and plans fresh otherwise. Each app's plan is an
+independent unit — one app's failure keeps its plan file for retry and
+never blocks the others. Stale or already-applied actions are skipped
+with a warning, so re-running after a partial failure is safe.
+Assignments NAPT does not manage — admin-made groups, all-device
+targets, exclusions — are always preserved.
 
 Both commands report **assignment drift**: every discrepancy between what
 deployment state says should be assigned and what Intune actually has —
@@ -472,14 +477,14 @@ credentials — without the flag, plan stays fully offline).
 
 Both commands also **validate plan groups**. Authenticated plan runs
 (`--check-drift` or `--reconcile`) resolve every group named in the
-computed plan and fail — writing no plan file — when one does not
+computed plan and fail — writing no plan files — when one does not
 resolve, so a plan with a group typo never becomes a reviewable
-promotion PR. Apply preflights every action it would execute the same
-way before executing anything, so an unresolvable group aborts the run
-with zero tenant mutations instead of stranding a half-applied plan;
-fix the configuration and re-plan. A dead group referenced only by
-stale or already-applied actions never blocks a run, so re-running
-after a partial failure stays safe. Offline plans skip validation —
+promotion PR. Apply preflights each app's actions the same way before
+executing any of them, so an unresolvable group fails that app with
+zero tenant mutations instead of stranding a half-applied plan; fix
+the configuration and re-plan. A dead group referenced only by stale
+or already-applied actions never blocks an app, so re-running after a
+partial failure stays safe. Offline plans skip validation —
 warning when they produce actions — and the apply preflight backstops
 whatever they produce.
 
@@ -680,21 +685,24 @@ A file holds four sections:
 `napt discover` records the pending candidate.
 Later pipeline stages consume it.
 
-### Promotion plan file
+### Promotion plan files
 
 `napt promote plan` evaluates ring eligibility as a pure function of
-deployment state, configuration, and the clock, and writes the result to
-`state/plan.json`.
-The plan file exists exactly when there are eligible actions: a plan run
-that finds nothing removes a stale plan file.
-Its git status is therefore the CI signal that a promotion review is
-needed — no special exit codes (`napt` always exits 0 on success, 1 on
-error).
+deployment state, configuration, and the clock, and writes the result as
+one file per app: `state/plans/<app-id>.json`.
+An app's plan file exists exactly when that app has eligible actions: a
+plan run that finds nothing for an app removes its stale plan file.
+Each file's git status is therefore the per-app CI signal that a
+promotion review is needed — no special exit codes (`napt` always exits
+0 on success, 1 on error).
 Plan output is deterministic, so re-running plan against unchanged state
-produces a byte-identical file.
-`napt promote apply` executes the plan as an allowlist — entries that no
+produces byte-identical files.
+`napt promote apply` executes each plan as an allowlist — entries that no
 longer validate against current state are skipped, never improvised — and
-removes the file after a fully successful run.
+removes each file after its app applies fully.
+To hold one app's promotions during review, delete its plan file; the
+other apps' plans are unaffected, and the next plan run re-proposes
+whatever is still eligible.
 
 ### Default Behavior (Stateful)
 
@@ -796,7 +804,7 @@ to its own:
 | `napt discover` | `--output-dir` | Where to save downloaded installers | `directories.discover` | `downloads` |
 | `napt discover` | `--cache-file` | Discovery cache file (`<dir>/discovery.json`) | `directories.cache` | `cache` |
 | `napt discover` | `--state-dir` | Per-app deployment state (`<dir>/deployment/`) | `directories.state` | `state` |
-| `napt promote` | `--state-dir` | Deployment state and plan.json | `directories.state` | `state` |
+| `napt promote` | `--state-dir` | Deployment state and plan files | `directories.state` | `state` |
 | `napt status` | `--state-dir` | Deployment state to summarize (no config lookup) | - | `state` |
 | `napt build` | `--downloads-dir` | Where to find the installer | `directories.discover` | `downloads` |
 | `napt build` | `--output-dir` | Where to save builds | `directories.build` | `builds` |

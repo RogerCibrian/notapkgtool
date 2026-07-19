@@ -16,8 +16,9 @@
 
 Implements ring-based promotion of published apps: ``napt promote plan``
 computes which releases should enter or advance through the configured
-deployment rings and writes a reviewable plan file; ``napt promote apply``
-executes a plan against Intune.
+deployment rings and writes one reviewable plan file per app;
+``napt promote apply`` executes each app's plan against Intune
+independently.
 
 The core invariant: each ring holds at most one release of an app's Update
 entry — the newest release that has reached it. Promotion advances the
@@ -39,8 +40,9 @@ from .planner import (
     load_recipe_configs,
     plan_path_for,
     plan_promotions,
+    plans_dir_for,
     resolve_state_dir,
-    write_plan_file,
+    write_plan_files,
 )
 from .preflight import unresolvable_groups
 from .reconcile import reconcile_publications
@@ -52,8 +54,9 @@ __all__ = [
     "load_recipe_configs",
     "plan_path_for",
     "plan_promotions",
+    "plans_dir_for",
     "reconcile_publications",
     "resolve_state_dir",
     "unresolvable_groups",
-    "write_plan_file",
+    "write_plan_files",
 ]

@@ -33,14 +33,16 @@ A ring without ``promote_after_days`` never advances automatically —
 releases hold it until the configuration changes (the natural terminal
 ring, or a deliberate manual gate).
 
-The plan file (default ``state/plan.json``) is written only when actions
-exist; a stale plan file is removed when a plan run finds none. Exit
+Plans are written per app (default ``state/plans/<app_id>.json``), and
+an app's plan file exists exactly when that app has eligible actions; a
+stale plan file is removed when a plan run finds none for its app. Exit
 codes follow NAPT's uniform contract (0 success, 1 error) — CI detects
-pending work from the plan file's git status, not from exit codes.
+pending work from the plan files' git status, not from exit codes.
 """
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 import json
 from pathlib import Path
@@ -55,8 +57,9 @@ __all__ = [
     "load_recipe_configs",
     "plan_path_for",
     "plan_promotions",
+    "plans_dir_for",
     "resolve_state_dir",
-    "write_plan_file",
+    "write_plan_files",
 ]
 
 # Deterministic ordering of action types within one app's actions.
@@ -67,17 +70,31 @@ _ACTION_ORDER = {"assign_install": 0, "enter_ring": 1, "advance_ring": 2}
 PLAN_SCHEMA_VERSION = 1
 
 
-def plan_path_for(state_dir: Path) -> Path:
-    """Returns the plan file path for a state directory.
+def plans_dir_for(state_dir: Path) -> Path:
+    """Returns the plans directory for a state directory.
 
     Args:
         state_dir: The configured state directory (``directories.state``).
 
     Returns:
-        Path to the plan file (``<state_dir>/plan.json``).
+        Path to the plans directory (``<state_dir>/plans``).
 
     """
-    return state_dir / "plan.json"
+    return state_dir / "plans"
+
+
+def plan_path_for(state_dir: Path, app_id: str) -> Path:
+    """Returns an app's plan file path.
+
+    Args:
+        state_dir: The configured state directory (``directories.state``).
+        app_id: Recipe identifier the plan belongs to.
+
+    Returns:
+        Path to the app's plan file (``<state_dir>/plans/<app_id>.json``).
+
+    """
+    return plans_dir_for(state_dir) / f"{app_id}.json"
 
 
 def _parse_entered_at(value: str, context: str) -> datetime:
@@ -113,6 +130,13 @@ def _plan_app_actions(
 ) -> list[dict[str, Any]]:
     """Computes promotion actions for one app.
 
+    Besides the fields apply keys on (app id, sha256, ring), every
+    action carries informational fields for reviewers: the recipe's
+    display ``name``, and — for ``advance_ring`` — when the release
+    entered the ring it is leaving and that ring's bake threshold. Only
+    values stable across runs are included (never clock-derived ones),
+    preserving byte-identical plans for unchanged inputs.
+
     Args:
         config: Effective configuration for the app's recipe.
         state: The app's deployment state.
@@ -124,6 +148,7 @@ def _plan_app_actions(
 
     """
     app_id: str = config["id"]
+    name: str = config["name"]
     deployment: dict[str, Any] = config["deployment"]
     deployed = state.get("deployed")
 
@@ -149,6 +174,7 @@ def _plan_app_actions(
             {
                 "type": "assign_install",
                 "app_id": app_id,
+                "name": name,
                 "version": version,
                 "sha256": sha256,
                 "intent": install_cfg["intent"],
@@ -175,6 +201,7 @@ def _plan_app_actions(
             {
                 "type": "enter_ring",
                 "app_id": app_id,
+                "name": name,
                 "version": version,
                 "sha256": sha256,
                 "ring": first["name"],
@@ -204,9 +231,12 @@ def _plan_app_actions(
         {
             "type": "advance_ring",
             "app_id": app_id,
+            "name": name,
             "version": version,
             "sha256": sha256,
             "from_ring": held_ring_name,
+            "from_ring_entered_at": rings_state[held_ring_name]["entered_at"],
+            "promote_after_days": days,
             "ring": next_ring["name"],
             "groups": list(next_ring["groups"]),
         }
@@ -340,34 +370,55 @@ def plan_promotions(
     return actions
 
 
-def write_plan_file(actions: list[dict[str, Any]], plan_path: Path) -> bool:
-    """Writes the plan file, or removes a stale one when there is no work.
+def write_plan_files(
+    actions: list[dict[str, Any]],
+    state_dir: Path,
+    app_ids: Iterable[str],
+) -> list[Path]:
+    """Writes one plan file per app, removing stale files for apps without work.
 
-    The plan file exists exactly when there are planned actions, so its
-    git status is the signal that a promotion review is needed. Output is
-    deterministic (sorted keys, fixed indentation, no timestamps).
+    An app's plan file exists exactly when that app has planned actions,
+    so each file's git status is the per-app signal that a promotion
+    review is needed. Only apps covered by this run (``app_ids``) are
+    written or cleaned up — plan files for apps outside the run are left
+    untouched, so planning a single recipe never clobbers the rest of
+    the fleet's plans. Output is deterministic (sorted keys, fixed
+    indentation, no clock-derived values).
 
     Args:
         actions: Planned actions from plan_promotions.
-        plan_path: Path to the plan file.
+        state_dir: The configured state directory; plan files live in
+            its ``plans/`` subdirectory.
+        app_ids: Recipe ids covered by this plan run.
 
     Returns:
-        True when a plan file exists after the call, False when there
-            was no work (and any stale plan file was removed).
+        Paths of the plan files written, sorted by app id.
 
     """
-    if not actions:
-        if plan_path.exists():
-            plan_path.unlink()
-        return False
+    by_app: dict[str, list[dict[str, Any]]] = {}
+    for action in actions:
+        by_app.setdefault(action["app_id"], []).append(action)
 
-    plan_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(plan_path, "w", encoding="utf-8") as f:
-        json.dump(
-            {"schemaVersion": PLAN_SCHEMA_VERSION, "actions": actions},
-            f,
-            indent=2,
-            sort_keys=True,
-        )
-        f.write("\n")  # Trailing newline for git
-    return True
+    written: list[Path] = []
+    for app_id in sorted(set(app_ids) | set(by_app)):
+        plan_path = plan_path_for(state_dir, app_id)
+        app_actions = by_app.get(app_id)
+        if not app_actions:
+            if plan_path.exists():
+                plan_path.unlink()
+            continue
+        plan_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(plan_path, "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "schemaVersion": PLAN_SCHEMA_VERSION,
+                    "app_id": app_id,
+                    "actions": app_actions,
+                },
+                f,
+                indent=2,
+                sort_keys=True,
+            )
+            f.write("\n")  # Trailing newline for git
+        written.append(plan_path)
+    return written

@@ -103,12 +103,12 @@ from napt.promote import (
     apply_plan,
     detect_drift,
     load_recipe_configs,
-    plan_path_for,
     plan_promotions,
+    plans_dir_for,
     reconcile_publications,
     resolve_state_dir,
     unresolvable_groups,
-    write_plan_file,
+    write_plan_files,
 )
 from napt.state import summarize_deployment_states
 from napt.upload import upload_package
@@ -678,10 +678,10 @@ def cmd_promote_plan(args: argparse.Namespace) -> int:
 
     Computes promotion actions for all recipes (or one recipe) as a pure
     function of deployment state, configuration, and the clock, and
-    writes the plan file when there is work. Read-only with respect to
+    writes one plan file per app with work. Read-only with respect to
     Intune, and — unless --reconcile recovers a lost publication
-    writeback first — to deployment state; a stale plan file is removed
-    when no actions are eligible.
+    writeback first — to deployment state; an app's stale plan file is
+    removed when none of its actions remain eligible.
 
     Args:
         args: Parsed command-line arguments containing the recipes path,
@@ -706,7 +706,7 @@ def cmd_promote_plan(args: argparse.Namespace) -> int:
             if args.state_dir is not None
             else resolve_state_dir(recipes)
         )
-        plan_path = plan_path_for(state_dir)
+        configs = load_recipe_configs(recipes)
         recovered: list[dict[str, Any]] = []
         drift: list[dict[str, Any]] = []
         if args.reconcile or args.check_drift:
@@ -714,7 +714,6 @@ def cmd_promote_plan(args: argparse.Namespace) -> int:
             # validation, and the drift check. Reconciliation runs
             # before planning so recovered releases are promotable this
             # run; drift runs after it so repaired state is compared.
-            configs = load_recipe_configs(recipes)
             access_token = get_access_token()
             existing_apps = list_mobile_apps(access_token)
             group_id_cache: dict[str, str] = {}
@@ -749,7 +748,7 @@ def cmd_promote_plan(args: argparse.Namespace) -> int:
                     "Plan groups not validated against Entra ID (offline "
                     "run); apply validates them before assigning.",
                 )
-        write_plan_file(actions, plan_path)
+        written = write_plan_files(actions, state_dir, configs)
     except AuthError as err:
         print(f"Authentication error: {err}")
         if args.verbose or args.debug:
@@ -780,12 +779,15 @@ def cmd_promote_plan(args: argparse.Namespace) -> int:
             print(f"  {_describe_action(action)}")
         print("=" * 70)
         print()
-        print(f"[OK] Plan written: {plan_path} ({len(actions)} action(s))")
+        print(
+            f"[OK] Plan written: {len(written)} file(s) in "
+            f"{plans_dir_for(state_dir)} ({len(actions)} action(s))"
+        )
     else:
         print("  No promotions eligible.")
         print("=" * 70)
         print()
-        print("[OK] Nothing to promote. No plan file needed.")
+        print("[OK] Nothing to promote. No plan files needed.")
 
     if args.reconcile:
         _print_recovered(recovered)
@@ -827,12 +829,14 @@ def _print_recovered(recovered: list[dict[str, Any]]) -> None:
 def cmd_promote_apply(args: argparse.Namespace) -> int:
     """Handler for 'napt promote apply' command.
 
-    Executes a promotion plan against Intune: assigns install entries,
+    Executes promotion plans against Intune: assigns install entries,
     enters and advances releases through rings, displaces superseded
-    releases, and retires them per the retention policy. Consumes the
-    plan file when one exists; otherwise plans fresh and applies
-    immediately. Stale or already-applied actions are skipped with a
-    warning, so re-running after a partial failure is safe.
+    releases, and retires them per the retention policy. Consumes each
+    per-app plan file after its app applies fully; otherwise plans
+    fresh and applies immediately. One app's failure keeps its plan
+    file for retry and never blocks the others, and stale or
+    already-applied actions are skipped with a warning, so re-running
+    after a partial failure is safe.
 
     Args:
         args: Parsed command-line arguments containing the recipes path,
@@ -840,7 +844,7 @@ def cmd_promote_apply(args: argparse.Namespace) -> int:
 
     Returns:
         Exit code (0 for success — including nothing to apply,
-        1 for failure).
+        1 for failure, including any app whose plan failed to apply).
 
     """
     logger = get_logger(verbose=args.verbose, debug=args.debug)
@@ -886,16 +890,19 @@ def cmd_promote_apply(args: argparse.Namespace) -> int:
 
     applied = summary["applied"]
     skipped = summary["skipped"]
+    failed = summary["failed"]
 
     print("=" * 70)
     print("PROMOTION APPLY")
     print("=" * 70)
-    if not applied and not skipped:
+    if not applied and not skipped and not failed:
         print("  Nothing to apply.")
     for action in applied:
         print(f"  [OK] {_describe_action(action)}")
     for entry in skipped:
         print(f"  [SKIP] {_describe_action(entry['action'])} ({entry['reason']})")
+    for entry in failed:
+        print(f"  [FAIL] {entry['app_id']}: {entry['error']}")
     print("=" * 70)
 
     if summary.get("recovered"):
@@ -904,6 +911,13 @@ def cmd_promote_apply(args: argparse.Namespace) -> int:
         _print_drift(summary["drift"])
 
     print()
+    if failed:
+        print(
+            f"[FAIL] Applied {len(applied)} action(s), skipped "
+            f"{len(skipped)}; {len(failed)} app(s) failed and kept "
+            "their plan files. Fix the errors and re-run."
+        )
+        return 1
     print(f"[SUCCESS] Applied {len(applied)} action(s), " f"skipped {len(skipped)}.")
 
     return 0
@@ -1446,16 +1460,17 @@ def main() -> None:
     )
     parser_promote_plan = promote_sub.add_parser(
         "plan",
-        help="Compute eligible promotions and write the plan file",
+        help="Compute eligible promotions and write per-app plan files",
         description=(
             "Compute which releases enter or advance deployment rings, and "
-            "write state/plan.json when there is work. Never modifies "
-            "Intune. Read-only for deployment state too, except that "
-            "--reconcile writes it when recovering a lost publication "
-            "writeback. With --check-drift or --reconcile, every group in "
-            "the plan is validated against Entra ID and an unresolvable "
-            "group fails the run without writing a plan. A stale plan "
-            "file is removed when nothing is eligible."
+            "write one state/plans/<app>.json file per app with work. "
+            "Never modifies Intune. Read-only for deployment state too, "
+            "except that --reconcile writes it when recovering a lost "
+            "publication writeback. With --check-drift or --reconcile, "
+            "every group in the plan is validated against Entra ID and an "
+            "unresolvable group fails the run without writing any plan. "
+            "An app's stale plan file is removed when nothing is eligible "
+            "for it."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -1470,7 +1485,7 @@ def main() -> None:
         type=Path,
         default=None,
         help=(
-            "State directory holding deployment/ and plan.json "
+            "State directory holding deployment/ and plans/ "
             "(default: directories.state from config)"
         ),
     )
@@ -1508,14 +1523,15 @@ def main() -> None:
 
     parser_promote_apply = promote_sub.add_parser(
         "apply",
-        help="Execute a promotion plan against Intune",
+        help="Execute promotion plans against Intune",
         description=(
             "Execute promotion actions: assign install entries, enter and "
             "advance rings, displace superseded releases, and retire them "
-            "per deployment.retain_versions. Consumes state/plan.json when "
-            "it exists; otherwise plans fresh and applies immediately. "
-            "Stale or already-applied actions are skipped, so re-running "
-            "is safe."
+            "per deployment.retain_versions. Consumes each per-app plan "
+            "file in state/plans/ when any exist; otherwise plans fresh "
+            "and applies immediately. One app's failure keeps its plan "
+            "file and never blocks the others, and stale or "
+            "already-applied actions are skipped, so re-running is safe."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -1530,7 +1546,7 @@ def main() -> None:
         type=Path,
         default=None,
         help=(
-            "State directory holding deployment/ and plan.json "
+            "State directory holding deployment/ and plans/ "
             "(default: directories.state from config)"
         ),
     )
@@ -1538,7 +1554,10 @@ def main() -> None:
         "--plan-file",
         type=Path,
         default=None,
-        help="Plan file to execute (default: <state-dir>/plan.json if present)",
+        help=(
+            "Single plan file to execute (default: every file in "
+            "<state-dir>/plans/ if any exist)"
+        ),
     )
     parser_promote_apply.add_argument(
         "-v",

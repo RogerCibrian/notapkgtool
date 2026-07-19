@@ -352,9 +352,9 @@ entry), displacing whatever release each ring held.
 
 - Each ring holds at most one release — the newest that has reached it;
   releases advance after `promote_after_days` in their current ring
-- Terraform-style plan/apply: `state/plan.json` is the reviewable
-  artifact and apply's allowlist; validate-then-act makes both safe to
-  re-run
+- Terraform-style plan/apply: per-app plan files
+  (`state/plans/<id>.json`) are the reviewable artifact and apply's
+  allowlist; validate-then-act makes both safe to re-run
 - Authoritative per-app deployment state
   (`state/deployment/<id>.json`, `schemaVersion` 1) split from the
   disposable discovery cache (`cache/discovery.json`)

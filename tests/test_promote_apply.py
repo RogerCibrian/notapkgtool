@@ -221,10 +221,15 @@ def _run_apply(
 
 
 def _write_plan(tmp_path: Path, actions: list[dict[str, Any]]) -> Path:
-    plan_path = plan_path_for(tmp_path / "state")
+    app_id = actions[0]["app_id"]
+    plan_path = plan_path_for(tmp_path / "state", app_id)
     plan_path.parent.mkdir(parents=True, exist_ok=True)
     plan_path.write_text(
-        json.dumps({"schemaVersion": 1, "actions": actions}, indent=2, sort_keys=True),
+        json.dumps(
+            {"schemaVersion": 1, "app_id": app_id, "actions": actions},
+            indent=2,
+            sort_keys=True,
+        ),
         encoding="utf-8",
     )
     return plan_path
@@ -419,19 +424,20 @@ class TestApplyRingActions:
         mocks["assign_app"].assert_not_called()
 
     def test_failure_keeps_plan_file(self, tmp_path):
-        """Tests that a Graph failure leaves the plan file for retry."""
+        """Tests that a Graph failure fails the app and keeps its plan file."""
         _write_recipe(tmp_path, rings=_RINGS)
         _write_state(tmp_path, deployed=_deployed())
         plan_path = _write_plan(tmp_path, [_enter_ring_action()])
 
-        with pytest.raises(NetworkError):
-            _run_apply(
-                tmp_path,
-                existing_apps=_tenant(),
-                assign_side_effect=NetworkError("Graph down"),
-            )
+        summary, _ = _run_apply(
+            tmp_path,
+            existing_apps=_tenant(),
+            assign_side_effect=NetworkError("Graph down"),
+        )
 
         assert plan_path.exists()
+        assert [f["app_id"] for f in summary["failed"]] == ["test-app"]
+        assert "Graph down" in summary["failed"][0]["error"]
 
 
 class TestApplyInstallActions:
@@ -523,6 +529,7 @@ class TestApplyOrchestration:
         assert summary == {
             "applied": [],
             "skipped": [],
+            "failed": [],
             "drift": [],
             "recovered": [],
         }
@@ -554,9 +561,8 @@ class TestApplyOrchestration:
         assert state["deployed"]["intune_app_id"] == "install-new"
         assert state["rings"]["pilot"]["sha256"] == "b" * 64
 
-    def test_preflight_aborts_with_zero_mutations(self, tmp_path):
-        """Tests that an unresolvable group anywhere in the plan aborts
-        before any action mutates the tenant."""
+    def test_preflight_fails_app_with_zero_mutations(self, tmp_path):
+        """Tests that an unresolvable group fails the app with zero mutations."""
         from napt.exceptions import ConfigError
 
         _write_recipe(tmp_path, rings=_RINGS)
@@ -584,13 +590,16 @@ class TestApplyOrchestration:
                 )
             return _fake_resolve_target(token, group, cache)
 
-        with pytest.raises(ConfigError, match="nothing was applied"):
-            _run_apply(
-                tmp_path,
-                existing_apps=_tenant(),
-                resolve_side_effect=_resolve,
-            )
+        summary, mocks = _run_apply(
+            tmp_path,
+            existing_apps=_tenant(),
+            resolve_side_effect=_resolve,
+        )
 
+        assert summary["applied"] == []
+        assert [f["app_id"] for f in summary["failed"]] == ["test-app"]
+        assert "missing-group" in summary["failed"][0]["error"]
+        mocks["assign_app"].assert_not_called()
         state = load_deployment_state(state_path)
         assert state["rings"] == {}  # the resolvable action did not apply
         assert plan_path.exists()  # plan not consumed
@@ -637,6 +646,78 @@ class TestApplyOrchestration:
             "stale action - the deployed release has changed"
         ]
 
+    def test_failed_app_does_not_block_others(self, tmp_path):
+        """Tests that one app's preflight failure does not block another app."""
+        from napt.exceptions import ConfigError
+
+        _write_recipe(tmp_path, app_id="app-bad", rings=_RINGS)
+        _write_recipe(tmp_path, app_id="app-good", rings=_RINGS)
+        _write_state(tmp_path, app_id="app-bad", deployed=_deployed())
+        good_state = _write_state(tmp_path, app_id="app-good", deployed=_deployed())
+        bad_action = _enter_ring_action()
+        bad_action["app_id"] = "app-bad"
+        bad_action["groups"] = ["missing-group"]
+        good_action = _enter_ring_action()
+        good_action["app_id"] = "app-good"
+        bad_plan = _write_plan(tmp_path, [bad_action])
+        good_plan = _write_plan(tmp_path, [good_action])
+        tenant = [
+            _stamped("app-bad", "update", "b" * 64, "update-bad"),
+            _stamped("app-good", "update", "b" * 64, "update-good"),
+        ]
+
+        def _resolve(token, group, cache=None):
+            if group == "missing-group":
+                raise ConfigError(
+                    f"No Entra ID group found with displayName '{group}'."
+                )
+            return _fake_resolve_target(token, group, cache)
+
+        summary, _ = _run_apply(
+            tmp_path,
+            existing_apps=tenant,
+            resolve_side_effect=_resolve,
+        )
+
+        assert [a["app_id"] for a in summary["applied"]] == ["app-good"]
+        assert [f["app_id"] for f in summary["failed"]] == ["app-bad"]
+        assert bad_plan.exists()
+        assert not good_plan.exists()
+        state = load_deployment_state(good_state)
+        assert state["rings"]["pilot"]["sha256"] == "b" * 64
+
+    def test_graph_failure_isolated_to_one_app(self, tmp_path):
+        """Tests that a Graph failure applying one app spares the others."""
+        _write_recipe(tmp_path, app_id="app-bad", rings=_RINGS)
+        _write_recipe(tmp_path, app_id="app-good", rings=_RINGS)
+        _write_state(tmp_path, app_id="app-bad", deployed=_deployed())
+        _write_state(tmp_path, app_id="app-good", deployed=_deployed())
+        bad_action = _enter_ring_action()
+        bad_action["app_id"] = "app-bad"
+        good_action = _enter_ring_action()
+        good_action["app_id"] = "app-good"
+        bad_plan = _write_plan(tmp_path, [bad_action])
+        good_plan = _write_plan(tmp_path, [good_action])
+        tenant = [
+            _stamped("app-bad", "update", "b" * 64, "update-bad"),
+            _stamped("app-good", "update", "b" * 64, "update-good"),
+        ]
+
+        def _assign(token, app_id, assignments):
+            if app_id == "update-bad":
+                raise NetworkError("Graph down")
+
+        summary, _ = _run_apply(
+            tmp_path,
+            existing_apps=tenant,
+            assign_side_effect=_assign,
+        )
+
+        assert [a["app_id"] for a in summary["applied"]] == ["app-good"]
+        assert [f["app_id"] for f in summary["failed"]] == ["app-bad"]
+        assert bad_plan.exists()
+        assert not good_plan.exists()
+
     def test_unknown_app_in_plan_skipped(self, tmp_path):
         """Tests that a plan action without a matching recipe is skipped."""
         _write_recipe(tmp_path, rings=_RINGS)
@@ -668,6 +749,42 @@ class TestLoadPlanFile:
         plan_path.write_text('{"other": []}', encoding="utf-8")
 
         with pytest.raises(StateError, match="Corrupted plan file"):
+            load_plan_file(plan_path)
+
+    def test_mixed_app_plan_raises(self, tmp_path):
+        """Tests that a plan file mixing apps is rejected."""
+        plan_path = tmp_path / "plan.json"
+        plan_path.write_text(
+            json.dumps(
+                {
+                    "schemaVersion": 1,
+                    "actions": [
+                        _enter_ring_action(),
+                        {**_enter_ring_action(), "app_id": "other-app"},
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with pytest.raises(StateError, match="per-app"):
+            load_plan_file(plan_path)
+
+    def test_declared_app_id_mismatch_raises(self, tmp_path):
+        """Tests that actions disagreeing with the declared app are rejected."""
+        plan_path = tmp_path / "plan.json"
+        plan_path.write_text(
+            json.dumps(
+                {
+                    "schemaVersion": 1,
+                    "app_id": "other-app",
+                    "actions": [_enter_ring_action()],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with pytest.raises(StateError, match="per-app"):
             load_plan_file(plan_path)
 
     def test_unsupported_plan_schema_version_raises(self, tmp_path):
