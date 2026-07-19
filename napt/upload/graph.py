@@ -31,6 +31,11 @@ assign_app) used by deployment promotion.
 All functions take an access_token as the first argument. Obtain one via
 napt.upload.auth.get_access_token().
 
+Graph calls retry transient failures — HTTP 429 (honoring Retry-After),
+transient server errors, and connection drops — with bounded exponential
+backoff before raising. Azure Blob PUTs carry their own retry tuned for
+SAS-propagation 403s.
+
 Example:
     Full upload flow:
         ```python
@@ -153,6 +158,117 @@ def _check_response(response: requests.Response, context: str) -> dict:
     return response.json()
 
 
+# Microsoft Graph throttles the Intune endpoints (HTTP 429 with a
+# Retry-After header, per app per tenant) and sheds load with transient
+# server errors. Every Graph call NAPT makes is idempotent — reads,
+# full-set assignment writes, PATCHes and DELETEs by id — so transient
+# failures retry with backoff instead of surfacing immediately.
+_GRAPH_RETRY_STATUS = (429, 500, 502, 503, 504)
+_GRAPH_RETRY_ATTEMPTS = 5
+_GRAPH_RETRY_INITIAL_DELAY = 2.0
+# Ceiling for a wait taken from Retry-After; anything longer is served
+# by the normal failure path rather than a stalled run.
+_GRAPH_RETRY_MAX_WAIT = 300.0
+
+
+def _retry_wait(response: requests.Response | None, fallback: float) -> float:
+    """Returns the wait before the next retry attempt.
+
+    Honors a numeric ``Retry-After`` header when the response carries one
+    (Graph throttling responses do), capped at a ceiling; otherwise the
+    exponential-backoff fallback applies.
+
+    Args:
+        response: The throttled or failed response, or None for a
+            connection-level failure.
+        fallback: Current exponential backoff delay in seconds.
+
+    Returns:
+        Seconds to wait before the next attempt.
+
+    """
+    if response is not None:
+        retry_after = response.headers.get("Retry-After", "")
+        if retry_after.strip().isdigit():
+            return min(float(retry_after), _GRAPH_RETRY_MAX_WAIT)
+    return fallback
+
+
+def _graph_request(
+    method: str,
+    url: str,
+    context: str,
+    headers: dict[str, str],
+    json: dict | None = None,
+    ok_statuses: tuple[int, ...] = (),
+) -> dict:
+    """Issues a Graph API request, retrying transient failures.
+
+    HTTP 429 (honoring ``Retry-After``) and transient server errors
+    retry with exponential backoff, as do connection-level failures.
+    Every other response goes straight to
+    [_check_response][napt.upload.graph._check_response], so
+    permission and validation errors surface immediately. The last
+    attempt's failure is raised with full response detail.
+
+    Args:
+        method: HTTP method name.
+        url: Full request URL.
+        context: Short description of the operation for error messages.
+        headers: Request headers, including authorization.
+        json: Optional JSON body.
+        ok_statuses: Statuses to treat as success with an empty body
+            (e.g. 404 for an idempotent delete).
+
+    Returns:
+        Parsed JSON body as a dict, or empty dict for empty responses
+            and ``ok_statuses`` matches.
+
+    Raises:
+        AuthError: On 401 or 403.
+        ConfigError: On 400.
+        NetworkError: On any other non-2xx status once retries are
+            exhausted, or on a connection failure that outlasts them.
+
+    """
+    from napt.logging import get_global_logger
+
+    logger = get_global_logger()
+    delay = _GRAPH_RETRY_INITIAL_DELAY
+    for attempt in range(1, _GRAPH_RETRY_ATTEMPTS + 1):
+        err: Exception | None = None
+        resp: requests.Response | None = None
+        try:
+            resp = requests.request(method, url, headers=headers, json=json, timeout=30)
+        except requests.RequestException as exc:
+            err = exc
+            detail = str(exc)
+        else:
+            if resp.status_code in ok_statuses:
+                return {}
+            if resp.status_code not in _GRAPH_RETRY_STATUS:
+                return _check_response(resp, context)
+            detail = f"HTTP {resp.status_code}"
+
+        if attempt == _GRAPH_RETRY_ATTEMPTS:
+            if resp is not None:
+                return _check_response(resp, context)
+            raise NetworkError(
+                f"{context} after {_GRAPH_RETRY_ATTEMPTS} attempts: {detail}"
+            ) from err
+
+        wait = _retry_wait(resp, delay)
+        logger.warning(
+            "GRAPH",
+            f"{context}: transient failure ({detail}); retrying in "
+            f"{wait:.0f}s (attempt {attempt}/{_GRAPH_RETRY_ATTEMPTS})",
+        )
+        time.sleep(wait)
+        delay *= 2
+
+    raise NetworkError(f"{context}: retry attempts exhausted")  # pragma: no cover
+
+
 def _poll(
     access_token: str,
     poll_url: str,
@@ -177,8 +293,9 @@ def _poll(
     """
     deadline = time.monotonic() + POLL_MAX_SECONDS
     while time.monotonic() < deadline:
-        resp = requests.get(poll_url, headers=_auth_headers(access_token), timeout=30)
-        data = _check_response(resp, context)
+        data = _graph_request(
+            "GET", poll_url, context, headers=_auth_headers(access_token)
+        )
         state: str = data.get("uploadState", "")
         if state == success_state:
             return data
@@ -227,8 +344,9 @@ def resolve_group_id(access_token: str, group: str) -> str:
         f"{GRAPH_BASE}/groups"
         f"?$filter=displayName eq '{escaped}'&$select=id,displayName"
     )
-    resp = requests.get(url, headers=_auth_headers(access_token), timeout=30)
-    body = _check_response(resp, "resolve_group_id")
+    body = _graph_request(
+        "GET", url, "resolve_group_id", headers=_auth_headers(access_token)
+    )
     matches: list[dict] = body.get("value", [])
 
     if not matches:
@@ -299,8 +417,9 @@ def get_app_assignments(access_token: str, app_id: str) -> list[dict]:
 
     """
     url = f"{GRAPH_BASE}/deviceAppManagement/mobileApps/{app_id}/assignments"
-    resp = requests.get(url, headers=_auth_headers(access_token), timeout=30)
-    body = _check_response(resp, "get_app_assignments")
+    body = _graph_request(
+        "GET", url, "get_app_assignments", headers=_auth_headers(access_token)
+    )
     return body.get("value", [])
 
 
@@ -371,10 +490,9 @@ def assign_app(access_token: str, app_id: str, assignments: list[dict]) -> None:
     """
     url = f"{GRAPH_BASE}/deviceAppManagement/mobileApps/{app_id}/assign"
     body = {"mobileAppAssignments": assignments}
-    resp = requests.post(
-        url, headers=_json_headers(access_token), json=body, timeout=30
+    _graph_request(
+        "POST", url, "assign_app", headers=_json_headers(access_token), json=body
     )
-    _check_response(resp, "assign_app")
 
 
 def list_mobile_apps(access_token: str) -> list[dict]:
@@ -399,8 +517,9 @@ def list_mobile_apps(access_token: str) -> list[dict]:
     )
     apps: list[dict] = []
     while url:
-        resp = requests.get(url, headers=_auth_headers(access_token), timeout=30)
-        body = _check_response(resp, "list_mobile_apps")
+        body = _graph_request(
+            "GET", url, "list_mobile_apps", headers=_auth_headers(access_token)
+        )
         apps.extend(body.get("value", []))
         url = body.get("@odata.nextLink")
     return apps
@@ -422,10 +541,13 @@ def delete_mobile_app(access_token: str, app_id: str) -> None:
 
     """
     url = f"{GRAPH_BASE}/deviceAppManagement/mobileApps/{app_id}"
-    resp = requests.delete(url, headers=_auth_headers(access_token), timeout=30)
-    if resp.status_code == 404:
-        return
-    _check_response(resp, "delete_mobile_app")
+    _graph_request(
+        "DELETE",
+        url,
+        "delete_mobile_app",
+        headers=_auth_headers(access_token),
+        ok_statuses=(404,),
+    )
 
 
 def get_mobile_app(access_token: str, app_id: str) -> dict:
@@ -447,8 +569,9 @@ def get_mobile_app(access_token: str, app_id: str) -> dict:
 
     """
     url = f"{GRAPH_BASE}/deviceAppManagement/mobileApps/{app_id}"
-    resp = requests.get(url, headers=_auth_headers(access_token), timeout=30)
-    return _check_response(resp, "get_mobile_app")
+    return _graph_request(
+        "GET", url, "get_mobile_app", headers=_auth_headers(access_token)
+    )
 
 
 def create_win32_app(access_token: str, app_metadata: dict) -> str:
@@ -469,10 +592,13 @@ def create_win32_app(access_token: str, app_metadata: dict) -> str:
 
     """
     url = f"{GRAPH_BASE}/deviceAppManagement/mobileApps"
-    resp = requests.post(
-        url, headers=_json_headers(access_token), json=app_metadata, timeout=30
+    body = _graph_request(
+        "POST",
+        url,
+        "create_win32_app",
+        headers=_json_headers(access_token),
+        json=app_metadata,
     )
-    body = _check_response(resp, "create_win32_app")
     return body["id"]
 
 
@@ -491,10 +617,13 @@ def update_win32_app(access_token: str, app_id: str, app_metadata: dict) -> None
 
     """
     url = f"{GRAPH_BASE}/deviceAppManagement/mobileApps/{app_id}"
-    resp = requests.patch(
-        url, headers=_json_headers(access_token), json=app_metadata, timeout=30
+    _graph_request(
+        "PATCH",
+        url,
+        "update_win32_app",
+        headers=_json_headers(access_token),
+        json=app_metadata,
     )
-    _check_response(resp, "update_win32_app")
 
 
 def create_content_version(access_token: str, app_id: str) -> str:
@@ -516,8 +645,9 @@ def create_content_version(access_token: str, app_id: str) -> str:
         f"{GRAPH_BASE}/deviceAppManagement/mobileApps/{app_id}"
         f"/microsoft.graph.win32LobApp/contentVersions"
     )
-    resp = requests.post(url, headers=_json_headers(access_token), json={}, timeout=30)
-    body = _check_response(resp, "create_content_version")
+    body = _graph_request(
+        "POST", url, "create_content_version", headers=_json_headers(access_token), json={}
+    )
     return body["id"]
 
 
@@ -559,10 +689,13 @@ def create_content_version_file(
         "manifest": None,
         "isDependency": False,
     }
-    resp = requests.post(
-        base_url, headers=_json_headers(access_token), json=body, timeout=30
+    file_body = _graph_request(
+        "POST",
+        base_url,
+        "create_content_version_file",
+        headers=_json_headers(access_token),
+        json=body,
     )
-    file_body = _check_response(resp, "create_content_version_file")
     file_id: str = file_body["id"]
 
     poll_url = f"{base_url}/{file_id}"
@@ -768,11 +901,13 @@ def commit_content_version_file(
             "fileDigestAlgorithm": metadata.file_digest_algorithm,
         }
     }
-    resp = requests.post(
-        commit_url, headers=_json_headers(access_token), json=body, timeout=30
+    _graph_request(
+        "POST",
+        commit_url,
+        "commit_content_version_file",
+        headers=_json_headers(access_token),
+        json=body,
     )
-    # Graph API returns 200 for this call
-    _check_response(resp, "commit_content_version_file")
 
     poll_url = (
         f"{GRAPH_BASE}/deviceAppManagement/mobileApps/{app_id}"
@@ -807,7 +942,10 @@ def commit_content_version(access_token: str, app_id: str, cv_id: str) -> None:
         "@odata.type": WIN32_LOB_APP_TYPE,
         "committedContentVersion": cv_id,
     }
-    resp = requests.patch(
-        url, headers=_json_headers(access_token), json=body, timeout=30
+    _graph_request(
+        "PATCH",
+        url,
+        "commit_content_version",
+        headers=_json_headers(access_token),
+        json=body,
     )
-    _check_response(resp, "commit_content_version")

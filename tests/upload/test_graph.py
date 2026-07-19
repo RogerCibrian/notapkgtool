@@ -75,11 +75,12 @@ def test_create_content_version_returns_cv_id() -> None:
 
 
 def test_create_content_version_500_raises_network_error() -> None:
-    """Tests that a 500 response raises NetworkError."""
+    """Tests that a persistent 500 raises NetworkError after retries."""
     with req_mock.Mocker() as m:
         m.post(_CV_URL, json={}, status_code=500)
-        with pytest.raises(NetworkError):
-            create_content_version(TOKEN, APP_ID)
+        with patch("napt.upload.graph.time.sleep"):
+            with pytest.raises(NetworkError):
+                create_content_version(TOKEN, APP_ID)
 
 
 # --- create_content_version_file ---
@@ -249,11 +250,101 @@ def test_commit_content_version_patches_app() -> None:
 
 
 def test_commit_content_version_500_raises_network_error() -> None:
-    """Tests that a 500 from commit_content_version raises NetworkError."""
+    """Tests that a persistent 500 raises NetworkError after retries."""
     with req_mock.Mocker() as m:
         m.patch(_APP_URL, json={}, status_code=500)
-        with pytest.raises(NetworkError):
-            commit_content_version(TOKEN, APP_ID, CV_ID)
+        with patch("napt.upload.graph.time.sleep"):
+            with pytest.raises(NetworkError):
+                commit_content_version(TOKEN, APP_ID, CV_ID)
+
+
+# --- _graph_request retry behavior ---
+
+
+def test_graph_request_retries_429_honoring_retry_after() -> None:
+    """Tests that a throttled call waits per Retry-After and succeeds."""
+    body = {"id": APP_ID}
+    with req_mock.Mocker() as m:
+        m.get(
+            _APP_URL,
+            [
+                {"status_code": 429, "headers": {"Retry-After": "7"}},
+                {"json": body, "status_code": 200},
+            ],
+        )
+        with patch("napt.upload.graph.time.sleep") as sleep_mock:
+            result = get_mobile_app(TOKEN, APP_ID)
+
+    assert result == body
+    assert len(m.request_history) == 2
+    assert sleep_mock.call_args.args[0] == 7.0
+
+
+def test_graph_request_retries_transient_500() -> None:
+    """Tests that a transient 500 retries with backoff and succeeds."""
+    body = {"id": APP_ID}
+    with req_mock.Mocker() as m:
+        m.get(_APP_URL, [{"status_code": 503}, {"json": body, "status_code": 200}])
+        with patch("napt.upload.graph.time.sleep") as sleep_mock:
+            result = get_mobile_app(TOKEN, APP_ID)
+
+    assert result == body
+    assert sleep_mock.call_args.args[0] == 2.0  # initial backoff, no Retry-After
+
+
+def test_graph_request_exhausts_attempts() -> None:
+    """Tests that persistent throttling raises after bounded attempts."""
+    with req_mock.Mocker() as m:
+        m.get(_APP_URL, status_code=429)
+        with patch("napt.upload.graph.time.sleep"):
+            with pytest.raises(NetworkError):
+                get_mobile_app(TOKEN, APP_ID)
+
+    assert len(m.request_history) == 5
+
+
+def test_graph_request_non_retryable_fails_fast() -> None:
+    """Tests that a 400 raises immediately without retrying."""
+    with req_mock.Mocker() as m:
+        m.post(_APPS_URL, json={"error": "bad"}, status_code=400)
+        with patch("napt.upload.graph.time.sleep") as sleep_mock:
+            with pytest.raises(ConfigError):
+                create_win32_app(TOKEN, {})
+
+    assert len(m.request_history) == 1
+    sleep_mock.assert_not_called()
+
+
+def test_graph_request_retries_connection_error() -> None:
+    """Tests that a connection-level failure retries and succeeds."""
+    import requests as requests_lib
+
+    body = {"id": APP_ID}
+    with req_mock.Mocker() as m:
+        m.get(
+            _APP_URL,
+            [
+                {"exc": requests_lib.exceptions.ConnectionError},
+                {"json": body, "status_code": 200},
+            ],
+        )
+        with patch("napt.upload.graph.time.sleep"):
+            result = get_mobile_app(TOKEN, APP_ID)
+
+    assert result == body
+
+
+def test_delete_mobile_app_tolerates_404() -> None:
+    """Tests that deleting an already-gone app is a no-op, not a retry."""
+    from napt.upload.graph import delete_mobile_app
+
+    with req_mock.Mocker() as m:
+        m.delete(_APP_URL, status_code=404)
+        with patch("napt.upload.graph.time.sleep") as sleep_mock:
+            delete_mobile_app(TOKEN, APP_ID)
+
+    assert len(m.request_history) == 1
+    sleep_mock.assert_not_called()
 
 
 # --- list_mobile_apps / get_mobile_app ---

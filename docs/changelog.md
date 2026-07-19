@@ -24,6 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Migration: none needed for state — plans are transient. Update
         promotion workflows to watch `state/plans/**` instead of
         `state/plan.json` (see the reference workflows in Common Tasks)
+- **Graph API calls retry transient failures** - Throttling (HTTP 429,
+    honoring Retry-After) and transient server or connection errors now
+    retry with bounded exponential backoff across upload, promotion, and
+    drift operations, so a momentary Graph hiccup no longer fails a
+    publish or marks an app's promotion as failed
 
 ## [0.8.0] - 2026-07-12
 
