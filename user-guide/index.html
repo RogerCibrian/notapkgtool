@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -33,7 +33,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -911,10 +911,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#promotion-plan-file" class="md-nav__link">
+  <a href="#promotion-plan-files" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Promotion plan file
+        Promotion plan files
       
     </span>
   </a>
@@ -2488,10 +2488,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#promotion-plan-file" class="md-nav__link">
+  <a href="#promotion-plan-files" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Promotion plan file
+        Promotion plan files
       
     </span>
   </a>
@@ -3219,17 +3219,22 @@ package directories are removed automatically.</p>
 <h3 id="napt-promote">napt promote</h3>
 <p>Plans and applies ring-based promotion of published apps. <code>promote plan</code>
 computes which releases enter or advance deployment rings (per
-<code>deployment.rings</code>) and writes <code>state/plan.json</code> when there is work; a
-stale plan file is removed when nothing is eligible. Read-only unless
-<code>--reconcile</code> is passed.</p>
-<p><code>promote apply</code> executes the plan against Intune: assigns install entries,
-enters and advances rings, unassigns displaced releases, and retires them
-per <code>deployment.retain_versions</code>. It consumes <code>state/plan.json</code> when one
-exists (removing it after a fully successful run) and plans fresh
-otherwise. Stale or already-applied actions are skipped with a warning, so
-re-running after a partial failure is safe. Assignments NAPT does not
-manage — admin-made groups, all-device targets, exclusions — are always
-preserved.</p>
+<code>deployment.rings</code>) and writes one plan file per app with work
+(<code>state/plans/&lt;app-id&gt;.json</code>); an app's stale plan file is removed when
+nothing is eligible for it. Read-only unless <code>--reconcile</code> is passed.
+Besides the fields apply acts on, each action carries reviewer context:
+the app's display name and — for ring advancement — when the release
+entered the ring it is leaving and that ring's bake threshold.</p>
+<p><code>promote apply</code> executes the plans against Intune: assigns install
+entries, enters and advances rings, unassigns displaced releases, and
+retires them per <code>deployment.retain_versions</code>. It consumes every plan
+file in <code>state/plans/</code> when any exist (removing each after its app
+applies fully) and plans fresh otherwise. Each app's plan is an
+independent unit — one app's failure keeps its plan file for retry and
+never blocks the others. Stale or already-applied actions are skipped
+with a warning, so re-running after a partial failure is safe.
+Assignments NAPT does not manage — admin-made groups, all-device
+targets, exclusions — are always preserved.</p>
 <p>Both commands report <strong>assignment drift</strong>: every discrepancy between what
 deployment state says should be assigned and what Intune actually has —
 removed or changed NAPT assignments, unrecorded or foreign assignments
@@ -3244,14 +3249,14 @@ automatically; plan checks with <code>--check-drift</code> (which needs Graph
 credentials — without the flag, plan stays fully offline).</p>
 <p>Both commands also <strong>validate plan groups</strong>. Authenticated plan runs
 (<code>--check-drift</code> or <code>--reconcile</code>) resolve every group named in the
-computed plan and fail — writing no plan file — when one does not
+computed plan and fail — writing no plan files — when one does not
 resolve, so a plan with a group typo never becomes a reviewable
-promotion PR. Apply preflights every action it would execute the same
-way before executing anything, so an unresolvable group aborts the run
-with zero tenant mutations instead of stranding a half-applied plan;
-fix the configuration and re-plan. A dead group referenced only by
-stale or already-applied actions never blocks a run, so re-running
-after a partial failure stays safe. Offline plans skip validation —
+promotion PR. Apply preflights each app's actions the same way before
+executing any of them, so an unresolvable group fails that app with
+zero tenant mutations instead of stranding a half-applied plan; fix
+the configuration and re-plan. A dead group referenced only by stale
+or already-applied actions never blocks an app, so re-running after a
+partial failure stays safe. Offline plans skip validation —
 warning when they produce actions — and the apply preflight backstops
 whatever they produce.</p>
 <p>Both commands also recover <strong>lost publication writebacks</strong>: when an
@@ -3455,20 +3460,23 @@ A file holds four sections:</p>
 </ul>
 <p><code>napt discover</code> records the pending candidate.
 Later pipeline stages consume it.</p>
-<h3 id="promotion-plan-file">Promotion plan file</h3>
+<h3 id="promotion-plan-files">Promotion plan files</h3>
 <p><code>napt promote plan</code> evaluates ring eligibility as a pure function of
-deployment state, configuration, and the clock, and writes the result to
-<code>state/plan.json</code>.
-The plan file exists exactly when there are eligible actions: a plan run
-that finds nothing removes a stale plan file.
-Its git status is therefore the CI signal that a promotion review is
-needed — no special exit codes (<code>napt</code> always exits 0 on success, 1 on
-error).
+deployment state, configuration, and the clock, and writes the result as
+one file per app: <code>state/plans/&lt;app-id&gt;.json</code>.
+An app's plan file exists exactly when that app has eligible actions: a
+plan run that finds nothing for an app removes its stale plan file.
+Each file's git status is therefore the per-app CI signal that a
+promotion review is needed — no special exit codes (<code>napt</code> always exits
+0 on success, 1 on error).
 Plan output is deterministic, so re-running plan against unchanged state
-produces a byte-identical file.
-<code>napt promote apply</code> executes the plan as an allowlist — entries that no
+produces byte-identical files.
+<code>napt promote apply</code> executes each plan as an allowlist — entries that no
 longer validate against current state are skipped, never improvised — and
-removes the file after a fully successful run.</p>
+removes each file after its app applies fully.
+To hold one app's promotions during review, delete its plan file; the
+other apps' plans are unaffected, and the next plan run re-proposes
+whatever is still eligible.</p>
 <h3 id="default-behavior-stateful">Default Behavior (Stateful)</h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Cache and deployment state tracking enabled by default</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
@@ -3582,7 +3590,7 @@ to its own:</p>
 <tr>
 <td><code>napt promote</code></td>
 <td><code>--state-dir</code></td>
-<td>Deployment state and plan.json</td>
+<td>Deployment state and plan files</td>
 <td><code>directories.state</code></td>
 <td><code>state</code></td>
 </tr>
@@ -3805,7 +3813,7 @@ its own subdirectory, so switching versions just downloads once and caches both.
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.tabs.sticky", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

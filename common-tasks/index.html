@@ -25,7 +25,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -33,7 +33,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -3041,8 +3041,11 @@ release has proven itself.</p>
 </span></code></pre></div>
 <p>A newly uploaded release enters the first ring; a release that has held
    its ring for <code>promote_after_days</code> advances to the next.
-   Eligible actions are written to <code>state/plan.json</code>; review the file, or
-   commit it and gate the apply on a pull request.</p>
+   Eligible actions are written per app to <code>state/plans/&lt;app-id&gt;.json</code>;
+   review the files, or commit them and gate the apply on a pull request.
+   Each action names the app, the release, the groups it will assign,
+   and — for advancement — when the release entered its current ring and
+   that ring's bake threshold, so the files read as the review record.</p>
 <ol>
 <li><strong>Apply</strong> — execute the plan against Intune:</li>
 </ol>
@@ -3051,16 +3054,18 @@ release has proven itself.</p>
 <p>Ring groups are assigned to the release's <code>[Update]</code> entry as required
    installs; the displaced older release is unassigned and retired per
    <code>deployment.retain_versions</code>.
+   Each app's plan file is consumed after that app applies fully, and one
+   app's failure keeps its plan file for retry without blocking the rest.
    Every apply also prints a drift check — discrepancies between
    deployment state and Intune (removed assignments, admin-made changes,
    stray apps) are warned about, never corrected.
    Use <code>napt promote plan --check-drift</code> for the same report without
    applying anything.
    Both commands also fail fast on a group typo or deleted Entra ID
-   group: an authenticated plan refuses to write a plan that names an
-   unresolvable group, and apply checks every group it is about to
-   assign before touching anything, so a bad group aborts with zero
-   changes instead of a half-applied plan.
+   group: an authenticated plan refuses to write plans that name an
+   unresolvable group, and apply checks every group an app's plan is
+   about to assign before touching that app, so a bad group fails that
+   app with zero changes instead of a half-applied plan.
    Run <code>napt status</code> to see where every app stands.</p>
 <p>Run plan and apply on a schedule and promotion becomes automatic: each
 release baked long enough moves one ring further on the next run.
@@ -3142,13 +3147,14 @@ Adapt names, schedules, and branch rules to your org.</p>
   that diff. Merging approves the release — a workflow builds, packages,
   and uploads it, with the hash gate guaranteeing the approved binary is
   exactly what ships.</li>
-<li><strong>Promotion PRs</strong> (one, batched): <code>napt promote plan</code> writes
-  <code>state/plan.json</code> when releases are eligible to enter or advance
-  rings; CI commits it to a branch and opens a PR. Merging approves the
-  promotions — a workflow runs <code>napt promote apply</code>, which executes the
-  plan as an allowlist.
-  To hold one promotion, delete its entry from the plan file in the PR;
-  the next scheduled plan will re-propose it.</li>
+<li><strong>Promotion PRs</strong> (one, batched): <code>napt promote plan</code> writes one
+  <code>state/plans/&lt;id&gt;.json</code> file per app with releases eligible to enter
+  or advance rings; CI commits them to a branch and opens a PR. Merging
+  approves the promotions — a workflow runs <code>napt promote apply</code>, which
+  executes each app's plan as an allowlist, independently.
+  To hold one app's promotions, delete its plan file in the PR; the
+  next scheduled plan will re-propose it, and the other apps merge and
+  apply unaffected.</li>
 </ul>
 <p><strong>Writeback commits.</strong> After upload and apply, NAPT has recorded new
 facts (Intune app IDs, ring positions) in the working tree that must
@@ -3355,7 +3361,7 @@ directory.</p>
 </span><span id="__span-56-38"><a id="__codelineno-56-38" name="__codelineno-56-38" href="#__codelineno-56-38"></a><span class="w">          </span><span class="no">git push -f origin napt/promotion-plan</span>
 </span><span id="__span-56-39"><a id="__codelineno-56-39" name="__codelineno-56-39" href="#__codelineno-56-39"></a><span class="w">          </span><span class="no">gh pr create --head napt/promotion-plan \</span>
 </span><span id="__span-56-40"><a id="__codelineno-56-40" name="__codelineno-56-40" href="#__codelineno-56-40"></a><span class="w">            </span><span class="no">--title &quot;Promotion plan&quot; \</span>
-</span><span id="__span-56-41"><a id="__codelineno-56-41" name="__codelineno-56-41" href="#__codelineno-56-41"></a><span class="w">            </span><span class="no">--body &quot;Merging approves these ring promotions. Delete an entry from state/plan.json to hold it.&quot; \</span>
+</span><span id="__span-56-41"><a id="__codelineno-56-41" name="__codelineno-56-41" href="#__codelineno-56-41"></a><span class="w">            </span><span class="no">--body &quot;Merging approves these ring promotions. To hold one app, delete its state/plans/ file.&quot; \</span>
 </span><span id="__span-56-42"><a id="__codelineno-56-42" name="__codelineno-56-42" href="#__codelineno-56-42"></a><span class="w">            </span><span class="no">|| true  # PR already open; the force-push updated it</span>
 </span></code></pre></div>
 <h3 id="workflow-4-promotion-apply-on-merge-of-the-promotion-pr">Workflow 4: promotion apply (on merge of the promotion PR)</h3>
@@ -3363,7 +3369,7 @@ directory.</p>
 </span><span id="__span-57-2"><a id="__codelineno-57-2" name="__codelineno-57-2" href="#__codelineno-57-2"></a><span class="nt">on</span><span class="p">:</span>
 </span><span id="__span-57-3"><a id="__codelineno-57-3" name="__codelineno-57-3" href="#__codelineno-57-3"></a><span class="w">  </span><span class="nt">push</span><span class="p">:</span>
 </span><span id="__span-57-4"><a id="__codelineno-57-4" name="__codelineno-57-4" href="#__codelineno-57-4"></a><span class="w">    </span><span class="nt">branches</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">main</span><span class="p p-Indicator">]</span>
-</span><span id="__span-57-5"><a id="__codelineno-57-5" name="__codelineno-57-5" href="#__codelineno-57-5"></a><span class="w">    </span><span class="nt">paths</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;state/plan.json&quot;</span><span class="p p-Indicator">]</span>
+</span><span id="__span-57-5"><a id="__codelineno-57-5" name="__codelineno-57-5" href="#__codelineno-57-5"></a><span class="w">    </span><span class="nt">paths</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;state/plans/**&quot;</span><span class="p p-Indicator">]</span>
 </span><span id="__span-57-6"><a id="__codelineno-57-6" name="__codelineno-57-6" href="#__codelineno-57-6"></a><span class="c1"># Own group (not shared with publish) - see the publish workflow&#39;s</span>
 </span><span id="__span-57-7"><a id="__codelineno-57-7" name="__codelineno-57-7" href="#__codelineno-57-7"></a><span class="c1"># concurrency comment.</span>
 </span><span id="__span-57-8"><a id="__codelineno-57-8" name="__codelineno-57-8" href="#__codelineno-57-8"></a><span class="nt">concurrency</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt-promote-apply</span>
@@ -3382,27 +3388,51 @@ directory.</p>
 </span><span id="__span-57-21"><a id="__codelineno-57-21" name="__codelineno-57-21" href="#__codelineno-57-21"></a><span class="w">        </span><span class="nt">with</span><span class="p">:</span>
 </span><span id="__span-57-22"><a id="__codelineno-57-22" name="__codelineno-57-22" href="#__codelineno-57-22"></a><span class="w">          </span><span class="nt">python-version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;3.13&quot;</span>
 </span><span id="__span-57-23"><a id="__codelineno-57-23" name="__codelineno-57-23" href="#__codelineno-57-23"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pip install napt</span>
-</span><span id="__span-57-24"><a id="__codelineno-57-24" name="__codelineno-57-24" href="#__codelineno-57-24"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Apply the approved plan</span>
-</span><span id="__span-57-25"><a id="__codelineno-57-25" name="__codelineno-57-25" href="#__codelineno-57-25"></a><span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt promote apply</span>
-</span><span id="__span-57-26"><a id="__codelineno-57-26" name="__codelineno-57-26" href="#__codelineno-57-26"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Write back ring positions and consume the plan</span>
-</span><span id="__span-57-27"><a id="__codelineno-57-27" name="__codelineno-57-27" href="#__codelineno-57-27"></a><span class="w">        </span><span class="nt">shell</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bash</span>
-</span><span id="__span-57-28"><a id="__codelineno-57-28" name="__codelineno-57-28" href="#__codelineno-57-28"></a><span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-57-29"><a id="__codelineno-57-29" name="__codelineno-57-29" href="#__codelineno-57-29"></a><span class="w">          </span><span class="no">git config user.name &quot;napt-bot&quot;</span>
-</span><span id="__span-57-30"><a id="__codelineno-57-30" name="__codelineno-57-30" href="#__codelineno-57-30"></a><span class="w">          </span><span class="no">git config user.email &quot;napt-bot@users.noreply.github.com&quot;</span>
-</span><span id="__span-57-31"><a id="__codelineno-57-31" name="__codelineno-57-31" href="#__codelineno-57-31"></a><span class="w">          </span><span class="no">git add state</span>
-</span><span id="__span-57-32"><a id="__codelineno-57-32" name="__codelineno-57-32" href="#__codelineno-57-32"></a><span class="w">          </span><span class="no">git diff --cached --quiet &amp;&amp; exit 0</span>
-</span><span id="__span-57-33"><a id="__codelineno-57-33" name="__codelineno-57-33" href="#__codelineno-57-33"></a><span class="w">          </span><span class="no">git commit -m &quot;chore: Record applied promotions [skip ci]&quot;</span>
-</span><span id="__span-57-34"><a id="__codelineno-57-34" name="__codelineno-57-34" href="#__codelineno-57-34"></a><span class="w">          </span><span class="no"># Same rebase-and-retry as the publish writeback.</span>
-</span><span id="__span-57-35"><a id="__codelineno-57-35" name="__codelineno-57-35" href="#__codelineno-57-35"></a><span class="w">          </span><span class="no">for attempt in 1 2 3; do</span>
-</span><span id="__span-57-36"><a id="__codelineno-57-36" name="__codelineno-57-36" href="#__codelineno-57-36"></a><span class="w">            </span><span class="no">git push &amp;&amp; exit 0</span>
-</span><span id="__span-57-37"><a id="__codelineno-57-37" name="__codelineno-57-37" href="#__codelineno-57-37"></a><span class="w">            </span><span class="no">git pull --rebase origin main</span>
-</span><span id="__span-57-38"><a id="__codelineno-57-38" name="__codelineno-57-38" href="#__codelineno-57-38"></a><span class="w">          </span><span class="no">done</span>
-</span><span id="__span-57-39"><a id="__codelineno-57-39" name="__codelineno-57-39" href="#__codelineno-57-39"></a><span class="w">          </span><span class="no">git push</span>
+</span><span id="__span-57-24"><a id="__codelineno-57-24" name="__codelineno-57-24" href="#__codelineno-57-24"></a><span class="w">      </span><span class="c1"># Apply exits 1 when any app&#39;s plan fails, but other apps may</span>
+</span><span id="__span-57-25"><a id="__codelineno-57-25" name="__codelineno-57-25" href="#__codelineno-57-25"></a><span class="w">      </span><span class="c1"># have applied — continue so the writeback records their ring</span>
+</span><span id="__span-57-26"><a id="__codelineno-57-26" name="__codelineno-57-26" href="#__codelineno-57-26"></a><span class="w">      </span><span class="c1"># positions and consumed plans; a final step fails the run.</span>
+</span><span id="__span-57-27"><a id="__codelineno-57-27" name="__codelineno-57-27" href="#__codelineno-57-27"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Apply the approved plans</span>
+</span><span id="__span-57-28"><a id="__codelineno-57-28" name="__codelineno-57-28" href="#__codelineno-57-28"></a><span class="w">        </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">apply</span>
+</span><span id="__span-57-29"><a id="__codelineno-57-29" name="__codelineno-57-29" href="#__codelineno-57-29"></a><span class="w">        </span><span class="nt">continue-on-error</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-57-30"><a id="__codelineno-57-30" name="__codelineno-57-30" href="#__codelineno-57-30"></a><span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt promote apply</span>
+</span><span id="__span-57-31"><a id="__codelineno-57-31" name="__codelineno-57-31" href="#__codelineno-57-31"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Write back ring positions and consume the plans</span>
+</span><span id="__span-57-32"><a id="__codelineno-57-32" name="__codelineno-57-32" href="#__codelineno-57-32"></a><span class="w">        </span><span class="nt">shell</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bash</span>
+</span><span id="__span-57-33"><a id="__codelineno-57-33" name="__codelineno-57-33" href="#__codelineno-57-33"></a><span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-57-34"><a id="__codelineno-57-34" name="__codelineno-57-34" href="#__codelineno-57-34"></a><span class="w">          </span><span class="no">git config user.name &quot;napt-bot&quot;</span>
+</span><span id="__span-57-35"><a id="__codelineno-57-35" name="__codelineno-57-35" href="#__codelineno-57-35"></a><span class="w">          </span><span class="no">git config user.email &quot;napt-bot@users.noreply.github.com&quot;</span>
+</span><span id="__span-57-36"><a id="__codelineno-57-36" name="__codelineno-57-36" href="#__codelineno-57-36"></a><span class="w">          </span><span class="no">git add state</span>
+</span><span id="__span-57-37"><a id="__codelineno-57-37" name="__codelineno-57-37" href="#__codelineno-57-37"></a><span class="w">          </span><span class="no">git diff --cached --quiet &amp;&amp; exit 0</span>
+</span><span id="__span-57-38"><a id="__codelineno-57-38" name="__codelineno-57-38" href="#__codelineno-57-38"></a><span class="w">          </span><span class="no">git commit -m &quot;chore: Record applied promotions [skip ci]&quot;</span>
+</span><span id="__span-57-39"><a id="__codelineno-57-39" name="__codelineno-57-39" href="#__codelineno-57-39"></a><span class="w">          </span><span class="no"># Same rebase-and-retry as the publish writeback.</span>
+</span><span id="__span-57-40"><a id="__codelineno-57-40" name="__codelineno-57-40" href="#__codelineno-57-40"></a><span class="w">          </span><span class="no">for attempt in 1 2 3; do</span>
+</span><span id="__span-57-41"><a id="__codelineno-57-41" name="__codelineno-57-41" href="#__codelineno-57-41"></a><span class="w">            </span><span class="no">git push &amp;&amp; exit 0</span>
+</span><span id="__span-57-42"><a id="__codelineno-57-42" name="__codelineno-57-42" href="#__codelineno-57-42"></a><span class="w">            </span><span class="no">git pull --rebase origin main</span>
+</span><span id="__span-57-43"><a id="__codelineno-57-43" name="__codelineno-57-43" href="#__codelineno-57-43"></a><span class="w">          </span><span class="no">done</span>
+</span><span id="__span-57-44"><a id="__codelineno-57-44" name="__codelineno-57-44" href="#__codelineno-57-44"></a><span class="w">          </span><span class="no">git push</span>
+</span><span id="__span-57-45"><a id="__codelineno-57-45" name="__codelineno-57-45" href="#__codelineno-57-45"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Surface a failed apply</span>
+</span><span id="__span-57-46"><a id="__codelineno-57-46" name="__codelineno-57-46" href="#__codelineno-57-46"></a><span class="w">        </span><span class="nt">if</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">steps.apply.outcome == &#39;failure&#39;</span>
+</span><span id="__span-57-47"><a id="__codelineno-57-47" name="__codelineno-57-47" href="#__codelineno-57-47"></a><span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">exit 1</span>
 </span></code></pre></div>
 <p><strong>Notes:</strong></p>
 <ul>
 <li>Promotions merged but applied later are always safe: bake time only
   grows, and apply validates every entry against current state anyway.</li>
+<li>Apply treats each app's plan file as an independent unit: a failure
+  (an unresolvable group, a Graph error) fails that app, keeps its plan
+  file on <code>main</code> for the next apply, and never blocks the other apps —
+  which is why the writeback above runs even when the apply step fails.</li>
+<li>Resolving a failed app depends on the failure class.
+  A transient Graph error needs no fix: re-run the apply workflow —
+  already-applied actions skip, the rest complete, and the plan file is
+  consumed.
+  An unresolvable group needs the configuration fixed (or the Entra ID
+  group restored) and then a re-plan, not just a re-run: plan files bake
+  in group names at plan time, so the fix reaches Intune when the next
+  scheduled plan regenerates the file and the promotion PR carries the
+  corrected plan.
+  Until then, apply keeps failing that one app — and only that one.
+  A corrupted state file restores from git history like any other
+  committed file.</li>
 <li>All four workflows are idempotent — re-running any of them converges
   to the same result (upload adopts existing apps, apply skips
   already-applied actions).</li>
@@ -3600,7 +3630,7 @@ If one is corrupted, fix the JSON or restore the file from a backup.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.tabs.sticky", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
