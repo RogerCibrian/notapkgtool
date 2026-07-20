@@ -2411,6 +2411,24 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
     <code>state/plan.json</code> (see the reference workflows in Common Tasks)</li>
 </ul>
 </li>
+<li><strong>Graph API calls retry transient failures</strong> - Throttling (HTTP
+    429/503/509, honoring Retry-After) and transient server or
+    connection errors now retry with bounded exponential backoff across
+    upload, promotion, and drift operations, so a momentary Graph hiccup
+    no longer fails a publish or marks an app's promotion as failed<ul>
+<li>Resource-creating calls retry only unambiguous throttling
+    responses, so a reply lost after a processed create can never
+    duplicate an Intune app; re-running converges via upload's
+    stamp adoption</li>
+<li>Every Graph request carries a <code>client-request-id</code> for Microsoft
+    support correlation</li>
+<li>All remaining HTTP calls — GitHub release lookups (PSADT,
+    IntuneWinAppUtil, <code>api_github</code> discovery), vendor page and API
+    fetches (<code>web_scrape</code>, <code>api_json</code>), and tool downloads — now
+    share the installer download layer's retrying session instead
+    of being single-shot</li>
+</ul>
+</li>
 </ul>
 <h2 id="080-2026-07-12"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.7.0...0.8.0">0.8.0</a> - 2026-07-12</h2>
 <h3 id="added">Added</h3>
