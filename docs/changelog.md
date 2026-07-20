@@ -35,6 +35,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         stamp adoption
     - Every Graph request carries a `client-request-id` for Microsoft
         support correlation
+    - All remaining HTTP calls — GitHub release lookups (PSADT,
+        IntuneWinAppUtil, `api_github` discovery), vendor page and API
+        fetches (`web_scrape`, `api_json`), and tool downloads — now
+        share the installer download layer's retrying session instead
+        of being single-shot
 
 ## [0.8.0] - 2026-07-12
 
