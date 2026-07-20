@@ -30,6 +30,7 @@ This roadmap is a living document showing potential future directions for NAPT. 
 | Pre/Post Install/Uninstall Script Support | 💡 Idea | User-Facing | Low | Medium |
 | Enhanced CLI Help Menu | 💡 Idea | User-Facing | Low | Medium |
 | Intune App Categorization & Scope Tags | 💡 Idea | User-Facing | Medium | Medium |
+| Configurable Install-Entry Cutover Ring | 💡 Idea | User-Facing | Medium | Medium |
 | PowerShell Validation | 💡 Idea | Code Quality | High | High |
 | Recipe Linting & Best Practices | 💡 Idea | Code Quality | High | Medium |
 | Unrecognized Config Field Warnings | ✅ Completed | Code Quality | Low | Medium |
@@ -43,8 +44,8 @@ This roadmap is a living document showing potential future directions for NAPT. 
 **Summary:**
 
 - ✅ **Completed**: 4
-- 💡 **Ideas**: 13
-- **Total**: 17 features
+- 💡 **Ideas**: 14
+- **Total**: 18 features
 
 ---
 
@@ -154,6 +155,42 @@ information, examples, and better organization.
 - Tips for troubleshooting (--verbose, --debug flags)
 
 **Related**: CLI help currently minimal, relies on online documentation
+
+#### Configurable Install-Entry Cutover Ring
+
+**Status**: 💡 Idea
+**Complexity**: Medium (1-3 days)
+**Value**: Medium
+
+**Description**: Today the same promotion plan that starts a release's
+rollout in the first ring also points new installs at it (the `assign`
+action), so net-new devices receive the release before it has baked.
+Add an optional `deployment.install` setting (e.g.
+`after_ring: <ring-name>`) so the install assignment follows the release
+only once it has entered that ring.
+Default stays immediate cutover.
+
+**Benefits**:
+
+- Net-new devices keep receiving the proven release while the new one
+  bakes through early rings
+- A release held or rolled back before the cutover ring never reaches
+  new installs at all
+- Org-policy knob in `defaults/org.yaml`, per-recipe overridable like
+  the rest of `deployment`
+
+**Dependencies**:
+
+- Planner must gate the `assign` action on ring state instead of
+  planning it on publish
+- New recipe field: run `/add-recipe-field` for validation and
+  recipe-reference updates
+
+**Related**: Deferring the cutover opens a small churn window: a new
+device in a ring group that already carries the new release installs
+the old one and updates right away.
+Bounded by the bake time of rings before the cutover point, so small
+with a pilot-sized first ring.
 
 ### Code Quality & Validation
 

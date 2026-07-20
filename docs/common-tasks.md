@@ -703,6 +703,8 @@ release has proven itself.
    A newly uploaded release starts its rollout in the first ring; a
    release that has held its ring for `promote_after_days` is promoted to
    the next.
+   The same plan also points new installs (the install entry) at the new
+   release, so net-new devices get it as soon as the first ring does.
    Eligible actions are written per app to `state/plans/<app-id>.json`;
    review the files, or commit them and gate the apply on a pull request.
    Every action opens with a plain-English summary sentence and carries
