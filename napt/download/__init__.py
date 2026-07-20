@@ -34,6 +34,6 @@ Example:
 
 from napt.exceptions import NotModifiedError
 
-from .download import download_file
+from .download import download_file, make_session
 
-__all__ = ["download_file", "NotModifiedError"]
+__all__ = ["download_file", "make_session", "NotModifiedError"]

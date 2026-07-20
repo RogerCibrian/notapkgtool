@@ -46,6 +46,7 @@ import subprocess
 
 import requests
 
+from napt.download import make_session
 from napt.exceptions import ConfigError, NetworkError, PackagingError
 from napt.results import PackageResult
 
@@ -96,7 +97,8 @@ def fetch_latest_intunewin_version() -> str:
         headers["Authorization"] = f"Bearer {token}"
 
     try:
-        response = requests.get(INTUNEWIN_GITHUB_API, headers=headers, timeout=30)
+        with make_session() as session:
+            response = session.get(INTUNEWIN_GITHUB_API, headers=headers, timeout=30)
         response.raise_for_status()
         data = response.json()
     except requests.RequestException as err:
@@ -182,19 +184,20 @@ def _get_intunewin_tool(cache_dir: Path, release: str) -> Path:
     # The repo uses inconsistent tag formats (e.g. "v1.8.6" and "1.8.3"),
     # so try both and use whichever resolves.
     response = None
-    for tag in [f"v{version}", version]:
-        url = INTUNEWIN_DOWNLOAD_URL.format(tag=tag)
-        try:
-            r = requests.get(url, timeout=60)
-            if r.status_code == 404:
-                continue
-            r.raise_for_status()
-            response = r
-            break
-        except requests.RequestException as err:
-            raise NetworkError(
-                f"Failed to download IntuneWinAppUtil.exe {version}: {err}"
-            ) from err
+    with make_session() as session:
+        for tag in [f"v{version}", version]:
+            url = INTUNEWIN_DOWNLOAD_URL.format(tag=tag)
+            try:
+                r = session.get(url, timeout=60)
+                if r.status_code == 404:
+                    continue
+                r.raise_for_status()
+                response = r
+                break
+            except requests.RequestException as err:
+                raise NetworkError(
+                    f"Failed to download IntuneWinAppUtil.exe {version}: {err}"
+                ) from err
 
     if response is None:
         raise NetworkError(

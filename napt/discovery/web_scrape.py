@@ -79,6 +79,7 @@ from bs4 import BeautifulSoup
 import requests
 
 from napt.discovery.base import RemoteVersion
+from napt.download import make_session
 from napt.exceptions import ConfigError, NetworkError
 
 from .base import register_strategy
@@ -153,7 +154,8 @@ class WebScrapeStrategy:
         # Download the HTML page
         logger.verbose("DISCOVERY", f"Fetching page: {page_url}")
         try:
-            response = requests.get(page_url, timeout=30)
+            with make_session() as session:
+                response = session.get(page_url, timeout=30)
         except requests.exceptions.RequestException as err:
             raise NetworkError(f"Failed to fetch page: {err}") from err
 

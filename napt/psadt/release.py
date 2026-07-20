@@ -58,6 +58,7 @@ import zipfile
 
 import requests
 
+from napt.download import make_session
 from napt.exceptions import NetworkError, PackagingError
 
 PSADT_REPO = "PSAppDeployToolkit/PSAppDeployToolkit"
@@ -101,7 +102,8 @@ def fetch_latest_psadt_version() -> str:
             "X-GitHub-Api-Version": "2022-11-28",
         }
 
-        response = requests.get(PSADT_GITHUB_API, headers=headers, timeout=30)
+        with make_session() as session:
+            response = session.get(PSADT_GITHUB_API, headers=headers, timeout=30)
         response.raise_for_status()
     except requests.RequestException as err:
         raise NetworkError(
@@ -229,7 +231,8 @@ def get_psadt_release(release_spec: str, cache_dir: Path) -> Path:
             "X-GitHub-Api-Version": "2022-11-28",
         }
 
-        response = requests.get(release_url, headers=headers, timeout=30)
+        with make_session() as session:
+            response = session.get(release_url, headers=headers, timeout=30)
         response.raise_for_status()
     except requests.RequestException as err:
         raise NetworkError(
@@ -271,7 +274,8 @@ def get_psadt_release(release_spec: str, cache_dir: Path) -> Path:
 
     # Download the .zip file
     try:
-        zip_response = requests.get(download_url, timeout=300)
+        with make_session() as session:
+            zip_response = session.get(download_url, timeout=300)
         zip_response.raise_for_status()
     except requests.RequestException as err:
         raise NetworkError(f"Failed to download PSADT release: {err}") from err

@@ -279,6 +279,14 @@ Examples:
 - `"Downloading PSADT 4.1.7..."` → `info` (network action the user should see)
 - `"Copying file: PSAppDeployToolkit/"` → `verbose` (internal file operation)
 
+**Prefixes:** The prefix names the pipeline stage the message belongs to
+(`DISCOVERY`, `BUILD`, `PACKAGE`, `UPLOAD`, `PROMOTE`, `INIT`). Shared
+infrastructure modules log under their domain instead — `HTTP` for
+transport (requests, retries), `FILE`, `CACHE`, `CONFIG`, `STATE`,
+`DETECTION` — so the same module reads consistently regardless of which
+stage called it. Don't invent a new prefix when a message fits an
+existing one.
+
 ---
 
 ## Console Output

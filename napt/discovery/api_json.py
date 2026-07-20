@@ -76,6 +76,7 @@ from jsonpath_ng import parse as jsonpath_parse
 import requests
 
 from napt.discovery.base import RemoteVersion
+from napt.download import make_session
 from napt.exceptions import ConfigError, NetworkError
 
 from .base import register_strategy
@@ -173,13 +174,16 @@ class ApiJsonStrategy:
         # Make API request
         logger.verbose("DISCOVERY", f"Calling API: {method} {api_url}")
         try:
-            response = requests.request(
-                method,
-                api_url,
-                headers=expanded_headers,
-                json=body if method == "POST" else None,
-                timeout=timeout,
-            )
+            # GETs retry transient failures through the shared session;
+            # POSTs are sent once (a vendor API's idempotency is unknown).
+            with make_session() as session:
+                response = session.request(
+                    method,
+                    api_url,
+                    headers=expanded_headers,
+                    json=body if method == "POST" else None,
+                    timeout=timeout,
+                )
         except requests.exceptions.RequestException as err:
             raise NetworkError(f"Failed to call API: {err}") from err
 

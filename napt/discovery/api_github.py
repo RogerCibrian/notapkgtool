@@ -61,6 +61,7 @@ from typing import Any
 import requests
 
 from napt.discovery.base import RemoteVersion
+from napt.download import make_session
 from napt.exceptions import ConfigError, NetworkError
 
 from .base import register_strategy
@@ -158,7 +159,8 @@ class ApiGithubStrategy:
         logger.verbose("DISCOVERY", f"Fetching release from: {api_url}")
 
         try:
-            response = requests.get(api_url, headers=headers, timeout=30)
+            with make_session() as session:
+                response = session.get(api_url, headers=headers, timeout=30)
         except requests.exceptions.RequestException as err:
             raise NetworkError(f"Failed to fetch GitHub release: {err}") from err
 

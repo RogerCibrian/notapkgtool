@@ -148,11 +148,15 @@ def _filename_from_url(url: str) -> str:
     return name or "download.bin"
 
 
-def _make_session() -> requests.Session:
-    """Create a requests.Session with retry/backoff defaults.
+def make_session() -> requests.Session:
+    """Creates a requests.Session with retry/backoff defaults.
 
-    Retries on common transient status codes, applies exponential backoff,
-    and sets a User-Agent header identifying NAPT.
+    Retries on common transient status codes (429, 500, 502, 503, 504 —
+    honoring Retry-After) and connection failures, applies exponential
+    backoff, and sets a User-Agent header identifying NAPT. Retries only
+    GET and HEAD; other methods are sent once. The shared transport
+    layer for every NAPT HTTP call outside Microsoft Graph (which has
+    its own retry tuned to Graph's error contract).
 
     Note:
         Forces Accept-Encoding: identity to request raw (uncompressed) bytes.
@@ -247,7 +251,7 @@ def download_file(
     logger.verbose("HTTP", f"GET {url}")
 
     started_at = time.time()
-    with _make_session() as session:
+    with make_session() as session:
         # Stream response so we can hash while writing.
         resp = session.get(
             url, stream=True, allow_redirects=True, timeout=timeout, headers=headers
