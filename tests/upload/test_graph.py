@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 from pathlib import Path
+import time
 from unittest.mock import patch
 
 import pytest
+import requests
 import requests_mock as req_mock
 
 from napt.exceptions import ConfigError, NetworkError
 from napt.upload.graph import (
     GRAPH_BASE,
+    _auth_headers,
+    _graph_request,
     assign_app,
     build_group_assignment,
     commit_content_version,
@@ -18,6 +22,7 @@ from napt.upload.graph import (
     create_content_version,
     create_content_version_file,
     create_win32_app,
+    delete_mobile_app,
     get_app_assignments,
     get_mobile_app,
     list_mobile_apps,
@@ -317,14 +322,12 @@ def test_graph_request_non_retryable_fails_fast() -> None:
 
 def test_graph_request_retries_connection_error() -> None:
     """Tests that a connection-level failure retries and succeeds."""
-    import requests as requests_lib
-
     body = {"id": APP_ID}
     with req_mock.Mocker() as m:
         m.get(
             _APP_URL,
             [
-                {"exc": requests_lib.exceptions.ConnectionError},
+                {"exc": requests.exceptions.ConnectionError},
                 {"json": body, "status_code": 200},
             ],
         )
@@ -334,14 +337,91 @@ def test_graph_request_retries_connection_error() -> None:
     assert result == body
 
 
+def test_graph_request_retries_509_bandwidth_throttle() -> None:
+    """Tests that a 509 bandwidth throttle is retried."""
+    body = {"id": APP_ID}
+    with req_mock.Mocker() as m:
+        m.get(_APP_URL, [{"status_code": 509}, {"json": body, "status_code": 200}])
+        with patch("napt.upload.graph.time.sleep"):
+            result = get_mobile_app(TOKEN, APP_ID)
+
+    assert result == body
+
+
+def test_graph_request_sends_client_request_id() -> None:
+    """Tests that every request carries a client-request-id header."""
+    with req_mock.Mocker() as m:
+        m.get(_APP_URL, json={"id": APP_ID})
+        get_mobile_app(TOKEN, APP_ID)
+
+    assert m.request_history[0].headers["client-request-id"]
+
+
 def test_delete_mobile_app_tolerates_404() -> None:
     """Tests that deleting an already-gone app is a no-op, not a retry."""
-    from napt.upload.graph import delete_mobile_app
-
     with req_mock.Mocker() as m:
         m.delete(_APP_URL, status_code=404)
         with patch("napt.upload.graph.time.sleep") as sleep_mock:
             delete_mobile_app(TOKEN, APP_ID)
+
+    assert len(m.request_history) == 1
+    sleep_mock.assert_not_called()
+
+
+def test_create_connection_error_fails_fast() -> None:
+    """Tests that a create POST never retries a connection failure."""
+    with req_mock.Mocker() as m:
+        m.post(_APPS_URL, exc=requests.exceptions.ConnectionError)
+        with patch("napt.upload.graph.time.sleep") as sleep_mock:
+            with pytest.raises(NetworkError):
+                create_win32_app(TOKEN, {"displayName": "Test App"})
+
+    assert len(m.request_history) == 1
+    sleep_mock.assert_not_called()
+
+
+def test_create_ambiguous_gateway_error_fails_fast() -> None:
+    """Tests that a create POST never retries an ambiguous 502."""
+    with req_mock.Mocker() as m:
+        m.post(_APPS_URL, status_code=502)
+        with patch("napt.upload.graph.time.sleep") as sleep_mock:
+            with pytest.raises(NetworkError):
+                create_win32_app(TOKEN, {"displayName": "Test App"})
+
+    assert len(m.request_history) == 1
+    sleep_mock.assert_not_called()
+
+
+def test_create_retries_throttle() -> None:
+    """Tests that a create POST retries an unambiguous 429 throttle."""
+    with req_mock.Mocker() as m:
+        m.post(
+            _APPS_URL,
+            [
+                {"status_code": 429, "headers": {"Retry-After": "3"}},
+                {"json": {"id": APP_ID}, "status_code": 201},
+            ],
+        )
+        with patch("napt.upload.graph.time.sleep") as sleep_mock:
+            result = create_win32_app(TOKEN, {"displayName": "Test App"})
+
+    assert result == APP_ID
+    assert sleep_mock.call_args.args[0] == 3.0
+
+
+def test_graph_request_deadline_stops_retries() -> None:
+    """Tests that an exhausted deadline surfaces the failure unslept."""
+    with req_mock.Mocker() as m:
+        m.get(_APP_URL, status_code=429, headers={"Retry-After": "60"})
+        with patch("napt.upload.graph.time.sleep") as sleep_mock:
+            with pytest.raises(NetworkError):
+                _graph_request(
+                    "GET",
+                    _APP_URL,
+                    "deadline test",
+                    headers=_auth_headers(TOKEN),
+                    deadline=time.monotonic() + 1.0,
+                )
 
     assert len(m.request_history) == 1
     sleep_mock.assert_not_called()

@@ -33,8 +33,10 @@ napt.upload.auth.get_access_token().
 
 Graph calls retry transient failures — HTTP 429 (honoring Retry-After),
 transient server errors, and connection drops — with bounded exponential
-backoff before raising. Azure Blob PUTs carry their own retry tuned for
-SAS-propagation 403s.
+backoff before raising. Resource-creating POSTs retry only unambiguous
+throttling responses, so a lost reply to a processed create is never
+resubmitted as a duplicate. Azure Blob PUTs carry their own retry tuned
+for SAS-propagation 403s.
 
 Example:
     Full upload flow:
@@ -66,6 +68,7 @@ import base64
 from pathlib import Path
 import re
 import time
+import uuid
 
 import requests
 
@@ -160,10 +163,17 @@ def _check_response(response: requests.Response, context: str) -> dict:
 
 # Microsoft Graph throttles the Intune endpoints (HTTP 429 with a
 # Retry-After header, per app per tenant) and sheds load with transient
-# server errors. Every Graph call NAPT makes is idempotent — reads,
-# full-set assignment writes, PATCHes and DELETEs by id — so transient
-# failures retry with backoff instead of surfacing immediately.
-_GRAPH_RETRY_STATUS = (429, 500, 502, 503, 504)
+# server errors. Most Graph calls NAPT makes are idempotent — reads,
+# full-set assignment writes, PATCHes and DELETEs by id — and retry the
+# full transient set. Resource-creating POSTs are not: a connection
+# drop or gateway error (500/502/504) can hide a create that actually
+# succeeded, and resubmitting would duplicate the resource, so they
+# retry only responses that guarantee the request was shed before
+# processing (429/503/509 per the Graph error contract). A surfaced
+# ambiguous failure converges on re-run through the upload flow's
+# provenance-stamp adoption.
+_GRAPH_RETRY_STATUS = (429, 500, 502, 503, 504, 509)
+_GRAPH_RETRY_STATUS_UNAMBIGUOUS = (429, 503, 509)
 _GRAPH_RETRY_ATTEMPTS = 5
 _GRAPH_RETRY_INITIAL_DELAY = 2.0
 # Ceiling for a wait taken from Retry-After; anything longer is served
@@ -201,15 +211,22 @@ def _graph_request(
     headers: dict[str, str],
     json: dict | None = None,
     ok_statuses: tuple[int, ...] = (),
+    idempotent: bool = True,
+    deadline: float | None = None,
 ) -> dict:
     """Issues a Graph API request, retrying transient failures.
 
     HTTP 429 (honoring ``Retry-After``) and transient server errors
     retry with exponential backoff, as do connection-level failures.
-    Every other response goes straight to
+    Non-idempotent calls (resource-creating POSTs) retry only statuses
+    that guarantee the request was shed before processing, and never
+    connection failures — a lost reply to a processed create must not
+    be resubmitted. Every other response goes straight to
     [_check_response][napt.upload.graph._check_response], so
     permission and validation errors surface immediately. The last
-    attempt's failure is raised with full response detail.
+    attempt's failure is raised with full response detail. Each request
+    carries a fresh ``client-request-id`` header for Microsoft support
+    correlation.
 
     Args:
         method: HTTP method name.
@@ -219,34 +236,50 @@ def _graph_request(
         json: Optional JSON body.
         ok_statuses: Statuses to treat as success with an empty body
             (e.g. 404 for an idempotent delete).
+        idempotent: Whether resubmitting this request is always safe.
+            False restricts retries to unambiguous throttling responses.
+        deadline: Optional ``time.monotonic()`` budget; a retry wait
+            that would run past it surfaces the failure instead.
 
     Returns:
         Parsed JSON body as a dict, or empty dict for empty responses
-            and ``ok_statuses`` matches.
+        and ``ok_statuses`` matches.
 
     Raises:
         AuthError: On 401 or 403.
         ConfigError: On 400.
         NetworkError: On any other non-2xx status once retries are
-            exhausted, or on a connection failure that outlasts them.
+            exhausted, or on a connection failure.
 
     """
     from napt.logging import get_global_logger
 
     logger = get_global_logger()
+    retry_statuses = (
+        _GRAPH_RETRY_STATUS if idempotent else _GRAPH_RETRY_STATUS_UNAMBIGUOUS
+    )
     delay = _GRAPH_RETRY_INITIAL_DELAY
     for attempt in range(1, _GRAPH_RETRY_ATTEMPTS + 1):
         err: Exception | None = None
         resp: requests.Response | None = None
+        request_headers = {**headers, "client-request-id": str(uuid.uuid4())}
         try:
-            resp = requests.request(method, url, headers=headers, json=json, timeout=30)
+            resp = requests.request(
+                method, url, headers=request_headers, json=json, timeout=30
+            )
         except requests.RequestException as exc:
+            if not idempotent:
+                # The request may have been processed before the
+                # connection died; resubmitting could duplicate the
+                # resource. Surface it — re-running converges through
+                # the flow-level stamp adoption.
+                raise NetworkError(f"{context}: {exc}") from exc
             err = exc
             detail = str(exc)
         else:
             if resp.status_code in ok_statuses:
                 return {}
-            if resp.status_code not in _GRAPH_RETRY_STATUS:
+            if resp.status_code not in retry_statuses:
                 return _check_response(resp, context)
             detail = f"HTTP {resp.status_code}"
 
@@ -258,8 +291,13 @@ def _graph_request(
             ) from err
 
         wait = _retry_wait(resp, delay)
+        if deadline is not None and time.monotonic() + wait >= deadline:
+            # No budget left for another attempt; surface this failure.
+            if resp is not None:
+                return _check_response(resp, context)
+            raise NetworkError(f"{context}: {detail}") from err
         logger.warning(
-            "GRAPH",
+            "HTTP",
             f"{context}: transient failure ({detail}); retrying in "
             f"{wait:.0f}s (attempt {attempt}/{_GRAPH_RETRY_ATTEMPTS})",
         )
@@ -288,13 +326,19 @@ def _poll(
 
     Raises:
         NetworkError: If the state transitions to an error state, or if the
-            poll times out after POLL_MAX_SECONDS.
+            poll times out after POLL_MAX_SECONDS. The deadline covers
+            transient-failure retry waits too, so throttling during the
+            poll cannot stretch it indefinitely.
 
     """
     deadline = time.monotonic() + POLL_MAX_SECONDS
     while time.monotonic() < deadline:
         data = _graph_request(
-            "GET", poll_url, context, headers=_auth_headers(access_token)
+            "GET",
+            poll_url,
+            context,
+            headers=_auth_headers(access_token),
+            deadline=deadline,
         )
         state: str = data.get("uploadState", "")
         if state == success_state:
@@ -598,6 +642,7 @@ def create_win32_app(access_token: str, app_metadata: dict) -> str:
         "create_win32_app",
         headers=_json_headers(access_token),
         json=app_metadata,
+        idempotent=False,
     )
     return body["id"]
 
@@ -646,7 +691,12 @@ def create_content_version(access_token: str, app_id: str) -> str:
         f"/microsoft.graph.win32LobApp/contentVersions"
     )
     body = _graph_request(
-        "POST", url, "create_content_version", headers=_json_headers(access_token), json={}
+        "POST",
+        url,
+        "create_content_version",
+        headers=_json_headers(access_token),
+        json={},
+        idempotent=False,
     )
     return body["id"]
 
@@ -695,6 +745,7 @@ def create_content_version_file(
         "create_content_version_file",
         headers=_json_headers(access_token),
         json=body,
+        idempotent=False,
     )
     file_id: str = file_body["id"]
 
@@ -764,7 +815,7 @@ def _blob_put_with_retry(
             ) from err
 
         logger.warning(
-            "UPLOAD",
+            "HTTP",
             f"{context} ({detail.splitlines()[0]}); "
             f"retrying in {delay:.0f}s (attempt {attempt}/{_BLOB_RETRY_ATTEMPTS})",
         )
@@ -883,6 +934,9 @@ def commit_content_version_file(
     Raises:
         AuthError: On 401 or 403.
         NetworkError: On 5xx, connection error, or if commit times out.
+
+    Note:
+        Graph returns 200 (not 201) for the commit POST.
 
     """
     commit_url = (
