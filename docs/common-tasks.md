@@ -839,8 +839,9 @@ Adapt names, schedules, and branch rules to your org.
   release in `state/deployment/<id>.json`; CI opens a per-app PR with
   that diff. The title carries the decision
   (`Publish Google Chrome 140.0.7339.128`) and the body is a generated
-  fact sheet: version, installer URL, hash, what merging does, how to
-  hold. Merging approves the release — a workflow builds, packages,
+  fact sheet: version, currently deployed version, installer URL,
+  SHA-256, what merging does, and how to hold or reject.
+  Merging approves the release — a workflow builds, packages,
   and uploads it, with the hash gate guaranteeing the approved binary is
   exactly what ships.
 - **Promotion PRs** (one, batched): `napt promote plan` writes one
@@ -1151,7 +1152,8 @@ jobs:
       - name: Plan promotions (with drift report and writeback recovery)
         shell: bash
         # tee keeps the log so the PR body below can carry the drift
-        # warnings; bash's default pipefail preserves the exit code.
+        # warnings. Actions' `shell: bash` runs with -eo pipefail, so
+        # napt's exit code survives the pipe.
         run: napt promote plan --check-drift --reconcile | tee plan.log
       - name: Open or update the promotion PR
         shell: bash
