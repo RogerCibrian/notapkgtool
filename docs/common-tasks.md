@@ -837,12 +837,19 @@ Adapt names, schedules, and branch rules to your org.
 
 - **Publish PRs** (one per app): `napt discover` records a pending
   release in `state/deployment/<id>.json`; CI opens a per-app PR with
-  that diff. Merging approves the release — a workflow builds, packages,
+  that diff. The title carries the decision
+  (`Publish Google Chrome 140.0.7339.128`) and the body is a generated
+  fact sheet: version, installer URL, hash, what merging does, how to
+  hold. Merging approves the release — a workflow builds, packages,
   and uploads it, with the hash gate guaranteeing the approved binary is
   exactly what ships.
 - **Promotion PRs** (one, batched): `napt promote plan` writes one
   `state/plans/<id>.json` file per app with that app's eligible
-  promotions; CI commits them to a branch and opens a PR. Merging
+  promotions; CI commits them to a branch and opens a PR whose body
+  opens with a risk line (`**This plan:** 2 to pilot, 1 to production`),
+  lists every app's plan summaries and the run's drift warnings, and
+  carries a `promotes-to-production` label when the final ring is
+  targeted. Merging
   approves the promotions — a workflow runs `napt promote apply`, which
   executes each app's plan as an allowlist, independently.
   To hold one app's promotions, delete its plan file in the PR; the
@@ -922,6 +929,69 @@ jobs:
           git add state/deployment
           changed=$(git diff --cached --name-only -- state/deployment)
           [ -z "$changed" ] && exit 0
+          # Writes pr-body.md and prints the PR title for one app's
+          # state file. The title is the decision (imperative, display
+          # name + version); the body layers facts, then what merging
+          # does, then how to say no.
+          pr_meta() {
+          python - "$1" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          import yaml
+
+          state_path = Path(sys.argv[1])
+          app_id = state_path.stem
+          state = json.loads(state_path.read_text(encoding="utf-8"))
+          name = app_id
+          for recipe in Path("recipes").rglob("*.y*ml"):
+              try:
+                  data = yaml.safe_load(recipe.read_text(encoding="utf-8"))
+              except yaml.YAMLError:
+                  continue
+              if isinstance(data, dict) and data.get("id") == app_id:
+                  name = data.get("name") or app_id
+                  break
+          pending = state.get("pending")
+          deployed = state.get("deployed") or {}
+          if pending is None:
+              # Discovery cleared the pending slot: the vendor serves
+              # the already-deployed release. The diff only records it.
+              Path("pr-body.md").write_text(
+                  f"**Name:** {name}\n\n"
+                  "Discovery found the vendor serving the already-"
+                  "deployed release, so this diff only clears the "
+                  "app's pending slot. Merging records that; nothing "
+                  "is published.\n",
+                  encoding="utf-8",
+              )
+              print(f"Clear pending release for {name}")
+              raise SystemExit
+          current = deployed.get("version") or "none - first deployment"
+          Path("pr-body.md").write_text(
+              f"**Name:** {name}\n"
+              f"**New version:** {pending['version']}\n"
+              f"**Currently deployed:** {current}\n"
+              f"**Installer:** {pending['url']}\n"
+              f"**SHA-256:** `{pending['sha256']}`\n"
+              "\n"
+              "**Merging approves this exact binary.** The publish "
+              "workflow builds, packages, and uploads it; the upload "
+              "hash gate refuses any file that does not match the "
+              "SHA-256 above.\n"
+              "\n"
+              "**To hold:** leave this PR open - nothing ships until "
+              "it merges.\n"
+              "**Closing is not a durable rejection:** the next "
+              "discover run re-proposes the release, and a newer "
+              "vendor release replaces this PR's content "
+              "automatically.\n",
+              encoding="utf-8",
+          )
+          print(f"Publish {name} {pending['version']}")
+          PY
+          }
           # Snapshot all changes on a temp branch, then carve out one
           # branch per app so each PR reviews exactly one state file.
           git checkout -b napt/discover-snapshot
@@ -932,10 +1002,13 @@ jobs:
             git checkout napt/discover-snapshot -- "$f"
             git commit -m "feat: Record pending release for $app"
             git push -f origin "napt/discover-$app"
+            title=$(pr_meta "$f")
+            # Refresh the title and body on every force-push so a
+            # superseding release never leaves a stale decision open.
             gh pr create --head "napt/discover-$app" \
-              --title "Publish approval: $app" \
-              --body "Merging approves publishing this release to Intune." \
-              || true  # PR already open; the force-push updated it
+              --title "$title" --body-file pr-body.md \
+              || gh pr edit "napt/discover-$app" \
+                --title "$title" --body-file pr-body.md
           done
 ```
 
@@ -1076,7 +1149,10 @@ jobs:
           python-version: "3.13"
       - run: pip install napt
       - name: Plan promotions (with drift report and writeback recovery)
-        run: napt promote plan --check-drift --reconcile
+        shell: bash
+        # tee keeps the log so the PR body below can carry the drift
+        # warnings; bash's default pipefail preserves the exit code.
+        run: napt promote plan --check-drift --reconcile | tee plan.log
       - name: Open or update the promotion PR
         shell: bash
         env:
@@ -1092,10 +1168,97 @@ jobs:
           git add state
           git commit -m "feat: Plan ring promotions"
           git push -f origin napt/promotion-plan
+          # Writes pr-body.md from the plan files themselves: the risk
+          # line first, then each app's action summaries (the same
+          # sentences NAPT wrote into the files), the hold instruction,
+          # and the plan run's drift warnings. Prints "production" when
+          # the plan assigns the final ring (ring policy is org-wide,
+          # so the last ring comes from org.yaml).
+          label=$(python - <<'PY'
+          import json
+          from pathlib import Path
+
+          import yaml
+
+          org = yaml.safe_load(
+              Path("defaults/org.yaml").read_text(encoding="utf-8")
+          ) or {}
+          rings = [r["name"] for r in org.get("deployment", {}).get("rings", [])]
+          last_ring = rings[-1] if rings else None
+
+          counts = {}
+          assigns = 0
+          stanzas = []
+          final_ring_hit = False
+          for path in sorted(Path("state/plans").glob("*.json")):
+              plan = json.loads(path.read_text(encoding="utf-8"))
+              lines = [f"**{plan['name']}** (`{plan['app_id']}`)"]
+              for action in plan["actions"]:
+                  lines.append(f"- {action['summary']}")
+                  if action["type"] == "promote":
+                      counts[action["ring"]] = counts.get(action["ring"], 0) + 1
+                      if action["ring"] == last_ring:
+                          final_ring_hit = True
+                  else:
+                      assigns += 1
+              stanzas.append("\n".join(lines))
+
+          ordered = [r for r in rings if r in counts]
+          ordered += [r for r in counts if r not in rings]
+          bits = [f"{counts[r]} to {r}" for r in ordered]
+          if assigns:
+              bits.append(f"{assigns} install assignment(s)")
+          risk = ", ".join(bits) if bits else (
+              "no ring changes - this refresh carries recovered "
+              "deployment state only"
+          )
+
+          drift = []
+          in_section = False
+          for line in Path("plan.log").read_text(encoding="utf-8").splitlines():
+              if "DRIFT CHECK" in line:
+                  in_section = True
+              elif in_section and "[WARNING]" in line:
+                  drift.append("- " + line.split("[WARNING]", 1)[1].strip())
+
+          parts = [f"**This plan:** {risk}"]
+          if stanzas:
+              parts.extend(stanzas)
+              parts.append(
+                  "**Merging approves and applies every action above.**"
+              )
+              parts.append(
+                  "**To hold one app:** delete its "
+                  "`state/plans/<app-id>.json` file from this PR - the "
+                  "other apps apply unaffected, and the next plan run "
+                  "re-proposes whatever is still eligible."
+              )
+          if drift:
+              parts.append(
+                  "**Drift warnings** (deployment state vs. the tenant "
+                  "at plan time):\n" + "\n".join(drift)
+              )
+          Path("pr-body.md").write_text(
+              "\n\n".join(parts) + "\n", encoding="utf-8"
+          )
+          print("production" if final_ring_hit else "")
+          PY
+          )
+          # Title stays generic and stable (only one promotion PR is
+          # ever open; title churn breaks email threading) - the risk
+          # signal lives in the body's first line and the label.
           gh pr create --head napt/promotion-plan \
-            --title "Promotion plan" \
-            --body "Merging approves these ring promotions. To hold one app, delete its state/plans/ file." \
-            || true  # PR already open; the force-push updated it
+            --title "Promotion plan" --body-file pr-body.md \
+            || gh pr edit napt/promotion-plan --body-file pr-body.md
+          if [ "$label" = "production" ]; then
+            gh label create promotes-to-production \
+              --description "This plan assigns the final ring" \
+              --color D93F0B --force
+            gh pr edit napt/promotion-plan --add-label promotes-to-production
+          else
+            gh pr edit napt/promotion-plan \
+              --remove-label promotes-to-production || true
+          fi
 ```
 
 ### Workflow 4: promotion apply (on merge of the promotion PR)

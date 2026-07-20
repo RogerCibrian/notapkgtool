@@ -35,6 +35,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         `enter_ring`, `advance_ring`, and `assign_install`
     - `napt promote plan` and `apply` print the same summary sentences,
         so console output and plan files never disagree
+- **Reviewer-friendly GitOps PRs** - The reference workflows in Common
+    Tasks now generate the review surface instead of one-line PRs
+    - Publish PRs are titled `Publish <Name> <version>` with a fact
+        sheet body: version, currently deployed version, installer URL,
+        SHA-256, what merging does, and how to hold or reject
+    - The promotion PR body opens with a risk line
+        (`**This plan:** 2 to pilot, 1 to production`), lists every
+        app's plan action summaries, embeds the plan run's drift
+        warnings, and carries a `promotes-to-production` label when the
+        final ring is targeted
+    - Titles and bodies regenerate on every refresh, so a superseding
+        release never leaves a stale decision under review
 - **Graph API calls retry transient failures** - Throttling (HTTP
     429/503/509, honoring Retry-After) and transient server or
     connection errors now retry with bounded exponential backoff across
