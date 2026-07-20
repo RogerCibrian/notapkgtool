@@ -650,27 +650,16 @@ def cmd_upload(args: argparse.Namespace) -> int:
 def _describe_action(action: dict[str, Any]) -> str:
     """Formats one planned promotion action as a summary line.
 
+    Reuses the action's ``summary`` — the same sentence written to the
+    plan file — so console output and plan files never disagree.
+
     Args:
         action: A planned action dict from plan_promotions.
 
     Returns:
         A one-line ASCII description for console output.
     """
-    groups = ", ".join(action["groups"])
-    if action["type"] == "assign_install":
-        return (
-            f"{action['app_id']}: assign install entry "
-            f"({action['intent']}) -> {groups}"
-        )
-    if action["type"] == "enter_ring":
-        return (
-            f"{action['app_id']}: {action['version']} enters ring "
-            f"'{action['ring']}' -> {groups}"
-        )
-    return (
-        f"{action['app_id']}: {action['version']} advances "
-        f"'{action['from_ring']}' -> '{action['ring']}' -> {groups}"
-    )
+    return f"{action['app_id']}: {action['summary']}"
 
 
 def cmd_promote_plan(args: argparse.Namespace) -> int:
@@ -830,8 +819,8 @@ def cmd_promote_apply(args: argparse.Namespace) -> int:
     """Handler for 'napt promote apply' command.
 
     Executes promotion plans against Intune: assigns install entries,
-    enters and advances releases through rings, displaces superseded
-    releases, and retires them per the retention policy. Consumes each
+    promotes releases through rings, displaces the older releases they
+    replace, and retires them per the retention policy. Consumes each
     per-app plan file after its app applies fully; otherwise plans
     fresh and applies immediately. One app's failure keeps its plan
     file for retry and never blocks the others, and stale or
@@ -1462,8 +1451,9 @@ def main() -> None:
         "plan",
         help="Compute eligible promotions and write per-app plan files",
         description=(
-            "Compute which releases enter or advance deployment rings, and "
-            "write one state/plans/<app>.json file per app with work. "
+            "Compute which releases are ready to promote through deployment "
+            "rings, and write one state/plans/<app>.json file per app with "
+            "work. "
             "Never modifies Intune. Read-only for deployment state too, "
             "except that --reconcile writes it when recovering a lost "
             "publication writeback. With --check-drift or --reconcile, "
@@ -1525,9 +1515,10 @@ def main() -> None:
         "apply",
         help="Execute promotion plans against Intune",
         description=(
-            "Execute promotion actions: assign install entries, enter and "
-            "advance rings, displace superseded releases, and retire them "
-            "per deployment.retain_versions. Consumes each per-app plan "
+            "Execute promotion actions: assign install entries, promote "
+            "releases through rings, displace the older releases they "
+            "replace, and retire them per deployment.retain_versions. "
+            "Consumes each per-app plan "
             "file in state/plans/ when any exist; otherwise plans fresh "
             "and applies immediately. One app's failure keeps its plan "
             "file and never blocks the others, and stale or "

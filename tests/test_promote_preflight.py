@@ -22,7 +22,7 @@ def _resolve_or_raise(token, group, cache=None):
 
 def _actions(*group_lists: list[str]) -> list[dict]:
     return [
-        {"type": "enter_ring", "app_id": f"app-{i}", "groups": groups}
+        {"type": "promote", "app_id": f"app-{i}", "groups": groups}
         for i, groups in enumerate(group_lists)
     ]
 

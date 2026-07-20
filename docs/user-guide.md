@@ -443,17 +443,18 @@ napt package recipes/Google/chrome.yaml --version 130.0.6723.116
 ### napt promote
 
 Plans and applies ring-based promotion of published apps. `promote plan`
-computes which releases enter or advance deployment rings (per
-`deployment.rings`) and writes one plan file per app with work
+computes which releases are ready to promote through deployment rings
+(per `deployment.rings`) and writes one plan file per app with work
 (`state/plans/<app-id>.json`); an app's stale plan file is removed when
 nothing is eligible for it. Read-only unless `--reconcile` is passed.
 Besides the fields apply acts on, each action carries reviewer context:
-the app's display name and — for ring advancement — when the release
-entered the ring it is leaving and that ring's bake threshold.
+a plain-English summary sentence, the Intune entry it touches, the
+version it replaces, and — for a promotion out of a held ring — when
+the release entered that ring and its bake threshold.
 
 `promote apply` executes the plans against Intune: assigns install
-entries, enters and advances rings, unassigns displaced releases, and
-retires them per `deployment.retain_versions`. It consumes every plan
+entries, promotes releases through rings, unassigns displaced releases,
+and retires them per `deployment.retain_versions`. It consumes every plan
 file in `state/plans/` when any exist (removing each after its app
 applies fully) and plans fresh otherwise. Each app's plan is an
 independent unit — one app's failure keeps its plan file for retry and
@@ -690,6 +691,37 @@ Later pipeline stages consume it.
 `napt promote plan` evaluates ring eligibility as a pure function of
 deployment state, configuration, and the clock, and writes the result as
 one file per app: `state/plans/<app-id>.json`.
+A plan file names its app once at the top and lists actions of two
+types, one per Intune entry: `promote` moves a release one ring forward
+(`from_ring: null` marks a first rollout into the first ring), and
+`assign` points new installs at the release.
+Every action opens with a plain-English `summary` and carries the
+details behind it — the entry touched, the version it replaces, bake
+timestamps — so the file diff reads on its own in review:
+
+```json
+{
+  "schemaVersion": 1,
+  "app_id": "napt-chrome",
+  "name": "Google Chrome",
+  "actions": [
+    {
+      "summary": "Promote 140.0.7339.128 from pilot to production, replacing 139.0.7258.155; it has held pilot since 2026-07-14 (threshold: 2 days).",
+      "type": "promote",
+      "entry": "update",
+      "version": "140.0.7339.128",
+      "replaces": "139.0.7258.155",
+      "from_ring": "pilot",
+      "from_ring_entered_at": "2026-07-14T07:12:03+00:00",
+      "promote_after_days": 2,
+      "ring": "production",
+      "groups": ["Production Devices"],
+      "sha256": "6ff02fd8a4..."
+    }
+  ]
+}
+```
+
 An app's plan file exists exactly when that app has eligible actions: a
 plan run that finds nothing for an app removes its stale plan file.
 Each file's git status is therefore the per-app CI signal that a
