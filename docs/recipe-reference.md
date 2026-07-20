@@ -1074,6 +1074,10 @@ org-wide choice is `groups: ["All Users"]` for Company Portal
 self-service.
 The assignment is planned by `napt promote plan` and executed once per
 release by `napt promote apply`.
+The cutover happens with the release's first promotion: the same plan
+that starts a release's rollout in the first ring also points new
+installs at it, so net-new devices receive the release before it has
+baked through the rings.
 
 ### retain_versions
 

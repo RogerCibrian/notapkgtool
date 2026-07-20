@@ -700,13 +700,18 @@ release has proven itself.
    napt promote plan
    ```
 
-   A newly uploaded release enters the first ring; a release that has held
-   its ring for `promote_after_days` advances to the next.
+   A newly uploaded release starts its rollout in the first ring; a
+   release that has held its ring for `promote_after_days` is promoted to
+   the next.
+   The same plan also points new installs (the install entry) at the new
+   release, so net-new devices get it as soon as the first ring does.
    Eligible actions are written per app to `state/plans/<app-id>.json`;
    review the files, or commit them and gate the apply on a pull request.
-   Each action names the app, the release, the groups it will assign,
-   and — for advancement — when the release entered its current ring and
-   that ring's bake threshold, so the files read as the review record.
+   Every action opens with a plain-English summary sentence and carries
+   the details behind it — the release, the groups it will assign, the
+   version it replaces, and for a promotion out of a held ring, when the
+   release entered it and the ring's bake threshold — so the files read
+   as the review record.
 
 3. **Apply** — execute the plan against Intune:
 
@@ -836,8 +841,8 @@ Adapt names, schedules, and branch rules to your org.
   and uploads it, with the hash gate guaranteeing the approved binary is
   exactly what ships.
 - **Promotion PRs** (one, batched): `napt promote plan` writes one
-  `state/plans/<id>.json` file per app with releases eligible to enter
-  or advance rings; CI commits them to a branch and opens a PR. Merging
+  `state/plans/<id>.json` file per app with that app's eligible
+  promotions; CI commits them to a branch and opens a PR. Merging
   approves the promotions — a workflow runs `napt promote apply`, which
   executes each app's plan as an allowlist, independently.
   To hold one app's promotions, delete its plan file in the PR; the

@@ -125,8 +125,8 @@ class TestPlanPromotions:
 
         assert actions == []
 
-    def test_deployed_release_enters_first_ring(self, tmp_path):
-        """Tests that a deployed release holding no ring enters ring 0."""
+    def test_deployed_release_starts_rollout_in_first_ring(self, tmp_path):
+        """Tests that a deployed release holding no ring starts at ring 0."""
         recipe = _write_recipe(tmp_path, rings=_RINGS)
         state_dir = _write_state(tmp_path, deployed=_deployed())
 
@@ -134,13 +134,22 @@ class TestPlanPromotions:
 
         assert actions == [
             {
-                "type": "enter_ring",
                 "app_id": "test-app",
                 "name": "App test-app",
+                "summary": (
+                    "Start rolling out 1.0.0: assign the update entry to "
+                    "the pilot ring (sg-pilot)."
+                ),
+                "type": "promote",
+                "entry": "update",
                 "version": "1.0.0",
-                "sha256": "a" * 64,
+                "replaces": None,
+                "from_ring": None,
+                "from_ring_entered_at": None,
+                "promote_after_days": None,
                 "ring": "pilot",
                 "groups": ["sg-pilot"],
+                "sha256": "a" * 64,
             }
         ]
 
@@ -153,13 +162,19 @@ class TestPlanPromotions:
 
         assert actions == [
             {
-                "type": "assign_install",
                 "app_id": "test-app",
                 "name": "App test-app",
+                "summary": (
+                    "Point new installs at 1.0.0: assign the install entry "
+                    "to All Users (available)."
+                ),
+                "type": "assign",
+                "entry": "install",
                 "version": "1.0.0",
-                "sha256": "a" * 64,
+                "replaces": None,
                 "intent": "available",
                 "groups": ["All Users"],
+                "sha256": "a" * 64,
             }
         ]
 
@@ -188,8 +203,10 @@ class TestPlanPromotions:
 
         actions = plan_promotions(recipe, state_dir=state_dir, now=NOW)
 
-        assert [a["type"] for a in actions] == ["assign_install"]
+        assert [a["type"] for a in actions] == ["assign"]
         assert actions[0]["sha256"] == "b" * 64
+        assert actions[0]["replaces"] == "prev"
+        assert ", replacing prev." in actions[0]["summary"]
 
     def test_baking_release_does_not_advance(self, tmp_path):
         """Tests that a release still baking holds its ring."""
@@ -210,8 +227,8 @@ class TestPlanPromotions:
 
         assert actions == []
 
-    def test_baked_release_advances_to_next_ring(self, tmp_path):
-        """Tests that an eligible release advances with the next ring's groups."""
+    def test_baked_release_promotes_to_next_ring(self, tmp_path):
+        """Tests that an eligible release promotes with the next ring's groups."""
         recipe = _write_recipe(tmp_path, rings=_RINGS)
         state_dir = _write_state(
             tmp_path,
@@ -229,16 +246,22 @@ class TestPlanPromotions:
 
         assert actions == [
             {
-                "type": "advance_ring",
                 "app_id": "test-app",
                 "name": "App test-app",
+                "summary": (
+                    "Promote 1.0.0 from pilot to broad; it has held pilot "
+                    "since 2026-07-06 (threshold: 2 days)."
+                ),
+                "type": "promote",
+                "entry": "update",
                 "version": "1.0.0",
-                "sha256": "a" * 64,
+                "replaces": None,
                 "from_ring": "pilot",
                 "from_ring_entered_at": "2026-07-06T12:00:00+00:00",
                 "promote_after_days": 2,
                 "ring": "broad",
                 "groups": ["sg-broad"],
+                "sha256": "a" * 64,
             }
         ]
 
@@ -302,7 +325,8 @@ class TestPlanPromotions:
         actions = plan_promotions(recipe, state_dir=state_dir, now=NOW)
 
         assert len(actions) == 1
-        assert actions[0]["type"] == "enter_ring"
+        assert actions[0]["type"] == "promote"
+        assert actions[0]["from_ring"] is None
         assert actions[0]["ring"] == "pilot"
         assert actions[0]["version"] == "2.0.0"
 
@@ -313,7 +337,7 @@ class TestPlanPromotions:
 
         actions = plan_promotions(recipe, state_dir=state_dir, now=NOW)
 
-        assert [a["type"] for a in actions] == ["assign_install"]
+        assert [a["type"] for a in actions] == ["assign"]
 
     def test_actions_sorted_by_app_id(self, tmp_path):
         """Tests that actions across apps are deterministically ordered."""
@@ -366,7 +390,7 @@ class TestPlanPromotions:
         actions = plan_promotions(recipe, state_dir=None, now=NOW)
 
         assert len(actions) == 1
-        assert actions[0]["type"] == "enter_ring"
+        assert actions[0]["type"] == "promote"
 
 
 class TestResolveStateDir:
@@ -390,13 +414,22 @@ class TestResolveStateDir:
 
 def _action(app_id: str = "a") -> dict[str, Any]:
     return {
-        "type": "enter_ring",
         "app_id": app_id,
         "name": f"App {app_id}",
+        "summary": (
+            "Start rolling out 1.0: assign the update entry to the "
+            "pilot ring (g)."
+        ),
+        "type": "promote",
+        "entry": "update",
         "version": "1.0",
-        "sha256": "x",
+        "replaces": None,
+        "from_ring": None,
+        "from_ring_entered_at": None,
+        "promote_after_days": None,
         "ring": "pilot",
         "groups": ["g"],
+        "sha256": "x",
     }
 
 
@@ -418,10 +451,38 @@ class TestWritePlanFiles:
 
         assert plan_path_for(state_dir, "a").read_bytes() == first
         assert json.loads(first.decode("utf-8")) == {
-            "actions": actions,
-            "app_id": "a",
             "schemaVersion": 1,
+            "app_id": "a",
+            "name": "App a",
+            "actions": [
+                {
+                    key: value
+                    for key, value in _action().items()
+                    if key not in ("app_id", "name")
+                }
+            ],
         }
+
+    def test_plan_file_keys_in_reading_order(self, tmp_path):
+        """Tests that plan files keep reading order, summary first."""
+        state_dir = tmp_path / "state"
+        write_plan_files([_action()], state_dir, ["a"])
+
+        text = plan_path_for(state_dir, "a").read_text(encoding="utf-8")
+
+        top_level = ['"schemaVersion"', '"app_id"', '"name"', '"actions"']
+        action_keys = [
+            '"summary"',
+            '"type"',
+            '"entry"',
+            '"version"',
+            '"replaces"',
+            '"ring"',
+            '"groups"',
+            '"sha256"',
+        ]
+        positions = [text.index(key) for key in top_level + action_keys]
+        assert positions == sorted(positions)
 
     def test_splits_actions_per_app(self, tmp_path):
         """Tests that each app's actions land in that app's plan file."""
@@ -438,7 +499,9 @@ class TestWritePlanFiles:
         plan_b = json.loads(written[1].read_text(encoding="utf-8"))
         assert len(plan_a["actions"]) == 2
         assert len(plan_b["actions"]) == 1
-        assert all(a["app_id"] == "a" for a in plan_a["actions"])
+        assert plan_a["app_id"] == "a"
+        assert plan_a["name"] == "App a"
+        assert all("app_id" not in a for a in plan_a["actions"])
 
     def test_no_actions_removes_stale_plan(self, tmp_path):
         """Tests that an app with no work has its stale plan file removed."""

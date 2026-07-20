@@ -15,8 +15,8 @@
 """Promotion apply for NAPT deployment rings.
 
 Executes promotion plans against Intune: assigns install entries,
-enters and advances releases through rings, displaces superseded
-releases, and retires them per the retention policy.
+promotes releases through rings, displaces the older releases they
+replace, and retires them per the retention policy.
 
 Plans are applied per app: each ``state/plans/<app_id>.json`` file is
 an independent unit of work, preflighted, executed, and consumed on
@@ -88,6 +88,11 @@ _RING_INTENT = "required"
 def load_plan_file(plan_path: Path) -> list[dict[str, Any]]:
     """Loads planned actions from a per-app plan file.
 
+    The file records its app id and display name once at the top level;
+    both are re-injected into every returned action, so in-memory
+    actions look the same whether they came from a plan file or a fresh
+    plan.
+
     Args:
         plan_path: Path to the plan file.
 
@@ -96,14 +101,15 @@ def load_plan_file(plan_path: Path) -> list[dict[str, Any]]:
 
     Raises:
         StateError: If the plan file contains invalid JSON, lacks an
-            actions list, its schemaVersion is missing or unsupported,
-            or its actions do not all belong to the single app the file
-            declares.
+            actions list or app id, its schemaVersion is missing or
+            unsupported, or an action references a different app than
+            the one the file declares.
 
     """
     try:
         data = json.loads(plan_path.read_text(encoding="utf-8"))
         actions = data["actions"]
+        declared = data["app_id"]
     except (json.JSONDecodeError, KeyError, TypeError) as err:
         raise StateError(
             f"Corrupted plan file: {plan_path}. "
@@ -120,17 +126,26 @@ def load_plan_file(plan_path: Path) -> list[dict[str, Any]]:
 
     # A plan file is one app's unit of work: apply's failure isolation
     # and consume-after-success semantics attribute the whole file to a
-    # single app, so a file mixing apps cannot be applied faithfully.
-    action_app_ids = {action.get("app_id") for action in actions}
-    declared = data.get("app_id")
-    expected = {declared} if declared is not None else action_app_ids
-    if len(action_app_ids) > 1 or action_app_ids - expected:
+    # single app, so a file whose actions reference another app (a hand
+    # edit) cannot be applied faithfully.
+    foreign = {
+        action.get("app_id")
+        for action in actions
+        if action.get("app_id") not in (None, declared)
+    }
+    if foreign:
         raise StateError(
             f"Plan file {plan_path} mixes actions for more than one app "
             f"(declared app_id {declared!r}, actions reference "
-            f"{sorted(str(a) for a in action_app_ids)}). Plan files are "
+            f"{sorted(str(a) for a in foreign)}). Plan files are "
             "per-app. Re-run 'napt promote plan' to regenerate them."
         )
+
+    name = data.get("name")
+    for action in actions:
+        action["app_id"] = declared
+        if name is not None:
+            action.setdefault("name", name)
     return actions
 
 
@@ -350,7 +365,7 @@ def _action_skip_reason(run: _ApplyRun, action: dict[str, Any]) -> str | None:
     if deployed.get("sha256") != sha256:
         return "stale action - the deployed release has changed"
 
-    if action["type"] == "assign_install":
+    if action["type"] == "assign":
         previous = state.get("install_assigned") or {}
         if previous.get("sha256") == sha256:
             return "already applied"
@@ -369,8 +384,8 @@ def _action_skip_reason(run: _ApplyRun, action: dict[str, Any]) -> str | None:
     return None
 
 
-def _apply_ring_action(run: _ApplyRun, action: dict[str, Any]) -> None:
-    """Applies an enter_ring or advance_ring action.
+def _apply_promote(run: _ApplyRun, action: dict[str, Any]) -> None:
+    """Applies a promote action, assigning the update entry to its target ring.
 
     Assumes the action was cleared by
     [_action_skip_reason][napt.promote.applier._action_skip_reason];
@@ -426,8 +441,8 @@ def _apply_ring_action(run: _ApplyRun, action: dict[str, Any]) -> None:
     run.applied.append(action)
 
 
-def _apply_install_action(run: _ApplyRun, action: dict[str, Any]) -> None:
-    """Applies an assign_install action.
+def _apply_assign(run: _ApplyRun, action: dict[str, Any]) -> None:
+    """Applies an assign action, pointing the install entry at the release.
 
     Assumes the action was cleared by
     [_action_skip_reason][napt.promote.applier._action_skip_reason];
@@ -602,10 +617,10 @@ def apply_plan(
                 if reason is not None:
                     run.skip(action, reason)
                     continue
-                if action["type"] == "assign_install":
-                    _apply_install_action(run, action)
+                if action["type"] == "assign":
+                    _apply_assign(run, action)
                 else:
-                    _apply_ring_action(run, action)
+                    _apply_promote(run, action)
         except (ConfigError, NetworkError, StateError) as err:
             logger.warning(
                 "PROMOTE",

@@ -20,14 +20,21 @@ file. Re-running plan against unchanged inputs produces byte-identical
 output, so committed plan files diff cleanly and CI can use the plan
 file's change status to decide whether to open a review.
 
-Three action types are planned per app:
+Two action types are planned per app, one per Intune entry:
 
-- ``assign_install``: The install entry has never been assigned; assign
-    it to the configured ``deployment.install`` groups.
-- ``enter_ring``: The deployed release holds no ring; assign the Update
-    entry to the first ring's groups.
-- ``advance_ring``: The deployed release has held its furthest ring for
-    at least that ring's ``promote_after_days``; assign the next ring.
+- ``assign``: Point new installs at the deployed release — assign its
+    install entry to the configured ``deployment.install`` groups,
+    displacing the previous release's install assignment.
+- ``promote``: Move the deployed release one ring forward — assign its
+    update entry to the target ring's groups. ``from_ring: null`` marks
+    a first rollout (the release enters the first ring); otherwise the
+    release has held ``from_ring`` for at least that ring's
+    ``promote_after_days``.
+
+Every action carries a plain-English ``summary`` sentence plus the
+reviewer context behind it — the entry it touches, the version it
+replaces, and bake timestamps — so a committed plan file reads on its
+own in review.
 
 A ring without ``promote_after_days`` never advances automatically —
 releases hold it until the configuration changes (the natural terminal
@@ -63,7 +70,7 @@ __all__ = [
 ]
 
 # Deterministic ordering of action types within one app's actions.
-_ACTION_ORDER = {"assign_install": 0, "enter_ring": 1, "advance_ring": 2}
+_ACTION_ORDER = {"assign": 0, "promote": 1}
 
 # Schema version written to every plan file. Bump only with a migration
 # story: promote apply rejects plans stamped with a different version.
@@ -123,6 +130,19 @@ def _parse_entered_at(value: str, context: str) -> datetime:
     return parsed
 
 
+def _replacing(replaces: str | None) -> str:
+    """Returns the summary clause naming the replaced version, if any.
+
+    Args:
+        replaces: Version the action replaces, or None.
+
+    Returns:
+        ``", replacing <version>"``, or an empty string.
+
+    """
+    return f", replacing {replaces}" if replaces else ""
+
+
 def _plan_app_actions(
     config: dict[str, Any],
     state: dict[str, Any],
@@ -131,9 +151,10 @@ def _plan_app_actions(
     """Computes promotion actions for one app.
 
     Besides the fields apply keys on (app id, sha256, ring), every
-    action carries informational fields for reviewers: the recipe's
-    display ``name``, and — for ``advance_ring`` — when the release
-    entered the ring it is leaving and that ring's bake threshold. Only
+    action carries reviewer context: a plain-English ``summary``
+    sentence, the Intune ``entry`` it touches, the version it
+    ``replaces``, and — for a promotion out of a held ring — when the
+    release entered that ring and the ring's bake threshold. Only
     values stable across runs are included (never clock-derived ones),
     preserving byte-identical plans for unchanged inputs.
 
@@ -170,15 +191,25 @@ def _plan_app_actions(
         and install_cfg["groups"]
         and install_assigned.get("sha256") != sha256
     ):
+        groups = list(install_cfg["groups"])
+        intent: str = install_cfg["intent"]
+        replaces = install_assigned.get("version")
         actions.append(
             {
-                "type": "assign_install",
                 "app_id": app_id,
                 "name": name,
+                "summary": (
+                    f"Point new installs at {version}: assign the install "
+                    f"entry to {', '.join(groups)} ({intent})"
+                    f"{_replacing(replaces)}."
+                ),
+                "type": "assign",
+                "entry": "install",
                 "version": version,
+                "replaces": replaces,
+                "intent": intent,
+                "groups": groups,
                 "sha256": sha256,
-                "intent": install_cfg["intent"],
-                "groups": list(install_cfg["groups"]),
             }
         )
 
@@ -197,15 +228,28 @@ def _plan_app_actions(
 
     if not held_indexes:
         first = rings_cfg[0]
+        ring_name: str = first["name"]
+        groups = list(first["groups"])
+        replaces = rings_state.get(ring_name, {}).get("version")
         actions.append(
             {
-                "type": "enter_ring",
                 "app_id": app_id,
                 "name": name,
+                "summary": (
+                    f"Start rolling out {version}: assign the update entry "
+                    f"to the {ring_name} ring ({', '.join(groups)})"
+                    f"{_replacing(replaces)}."
+                ),
+                "type": "promote",
+                "entry": "update",
                 "version": version,
+                "replaces": replaces,
+                "from_ring": None,
+                "from_ring_entered_at": None,
+                "promote_after_days": None,
+                "ring": ring_name,
+                "groups": groups,
                 "sha256": sha256,
-                "ring": first["name"],
-                "groups": list(first["groups"]),
             }
         )
         return actions
@@ -227,18 +271,30 @@ def _plan_app_actions(
         return actions  # Still baking.
 
     next_ring = rings_cfg[furthest + 1]
+    next_ring_name: str = next_ring["name"]
+    groups = list(next_ring["groups"])
+    replaces = rings_state.get(next_ring_name, {}).get("version")
+    day_word = "day" if days == 1 else "days"
     actions.append(
         {
-            "type": "advance_ring",
             "app_id": app_id,
             "name": name,
+            "summary": (
+                f"Promote {version} from {held_ring_name} to "
+                f"{next_ring_name}{_replacing(replaces)}; it has held "
+                f"{held_ring_name} since {entered_at.date().isoformat()} "
+                f"(threshold: {days} {day_word})."
+            ),
+            "type": "promote",
+            "entry": "update",
             "version": version,
-            "sha256": sha256,
+            "replaces": replaces,
             "from_ring": held_ring_name,
             "from_ring_entered_at": rings_state[held_ring_name]["entered_at"],
             "promote_after_days": days,
-            "ring": next_ring["name"],
-            "groups": list(next_ring["groups"]),
+            "ring": next_ring_name,
+            "groups": groups,
+            "sha256": sha256,
         }
     )
     return actions
@@ -382,8 +438,13 @@ def write_plan_files(
     review is needed. Only apps covered by this run (``app_ids``) are
     written or cleaned up — plan files for apps outside the run are left
     untouched, so planning a single recipe never clobbers the rest of
-    the fleet's plans. Output is deterministic (sorted keys, fixed
-    indentation, no clock-derived values).
+    the fleet's plans.
+
+    The app's id and display name are written once at the file's top
+    level rather than repeated per action; promote apply re-injects them
+    when it loads the file. Output is deterministic — a fixed key order
+    (reading order, ``summary`` first, not alphabetical), fixed
+    indentation, no clock-derived values.
 
     Args:
         actions: Planned actions from plan_promotions.
@@ -413,11 +474,18 @@ def write_plan_files(
                 {
                     "schemaVersion": PLAN_SCHEMA_VERSION,
                     "app_id": app_id,
-                    "actions": app_actions,
+                    "name": app_actions[0]["name"],
+                    "actions": [
+                        {
+                            key: value
+                            for key, value in action.items()
+                            if key not in ("app_id", "name")
+                        }
+                        for action in app_actions
+                    ],
                 },
                 f,
                 indent=2,
-                sort_keys=True,
             )
             f.write("\n")  # Trailing newline for git
         written.append(plan_path)

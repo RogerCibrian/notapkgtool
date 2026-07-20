@@ -24,6 +24,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Migration: none needed for state — plans are transient. Update
         promotion workflows to watch `state/plans/**` instead of
         `state/plan.json` (see the reference workflows in Common Tasks)
+- **BREAKING: Plan files read at a glance** - Every planned action now
+    opens with a plain-English `summary` sentence and names the Intune
+    `entry` it touches (`install` or `update`) and the version it
+    `replaces`; the app's id and display name appear once at the top of
+    the file, and keys follow reading order instead of alphabetical
+    - The action vocabulary now matches the feature: `promote` moves a
+        release one ring forward (`from_ring: null` marks a first
+        rollout) and `assign` points new installs at it — replacing
+        `enter_ring`, `advance_ring`, and `assign_install`
+    - `napt promote plan` and `apply` print the same summary sentences,
+        so console output and plan files never disagree
 - **Graph API calls retry transient failures** - Throttling (HTTP
     429/503/509, honoring Retry-After) and transient server or
     connection errors now retry with bounded exponential backoff across

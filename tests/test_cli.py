@@ -736,12 +736,22 @@ class TestCmdPromotePlan:
         """Tests that planned actions print a summary and report the plan file."""
         actions = [
             {
-                "type": "enter_ring",
                 "app_id": "test-app",
+                "name": "App test-app",
+                "summary": (
+                    "Start rolling out 1.0.0: assign the update entry to "
+                    "the pilot ring (sg-pilot)."
+                ),
+                "type": "promote",
+                "entry": "update",
                 "version": "1.0.0",
-                "sha256": "a" * 64,
+                "replaces": None,
+                "from_ring": None,
+                "from_ring_entered_at": None,
+                "promote_after_days": None,
                 "ring": "pilot",
                 "groups": ["sg-pilot"],
+                "sha256": "a" * 64,
             }
         ]
         with (
@@ -759,7 +769,7 @@ class TestCmdPromotePlan:
             )
         assert code == 0
         out = capsys.readouterr().out
-        assert "enters ring 'pilot'" in out
+        assert "test-app: Start rolling out 1.0.0" in out
         assert "Plan written" in out
         assert write_mock.call_args.args[0] == actions
 
@@ -879,23 +889,31 @@ class TestCmdPromoteApply:
         summary = {
             "applied": [
                 {
-                    "type": "enter_ring",
                     "app_id": "test-app",
+                    "summary": (
+                        "Start rolling out 1.0.0: assign the update entry "
+                        "to the pilot ring (sg-pilot)."
+                    ),
+                    "type": "promote",
                     "version": "1.0.0",
-                    "sha256": "a" * 64,
                     "ring": "pilot",
                     "groups": ["sg-pilot"],
+                    "sha256": "a" * 64,
                 }
             ],
             "skipped": [
                 {
                     "action": {
-                        "type": "assign_install",
                         "app_id": "other-app",
+                        "summary": (
+                            "Point new installs at 1.0.0: assign the "
+                            "install entry to All Users (available)."
+                        ),
+                        "type": "assign",
                         "version": "1.0.0",
-                        "sha256": "b" * 64,
                         "intent": "available",
                         "groups": ["All Users"],
+                        "sha256": "b" * 64,
                     },
                     "reason": "already applied",
                 }
@@ -1102,12 +1120,16 @@ class TestReconcileOutput:
         without writing a plan file."""
         actions = [
             {
-                "type": "enter_ring",
                 "app_id": "test-app",
+                "summary": (
+                    "Start rolling out 1.0.0: assign the update entry to "
+                    "the pilot ring (ghost-group)."
+                ),
+                "type": "promote",
                 "version": "1.0.0",
-                "sha256": "a" * 64,
                 "ring": "pilot",
                 "groups": ["ghost-group"],
+                "sha256": "a" * 64,
             }
         ]
         with (
@@ -1164,12 +1186,16 @@ class TestReconcileOutput:
         groups were not validated."""
         actions = [
             {
-                "type": "enter_ring",
                 "app_id": "test-app",
+                "summary": (
+                    "Start rolling out 1.0.0: assign the update entry to "
+                    "the pilot ring (sg-pilot)."
+                ),
+                "type": "promote",
                 "version": "1.0.0",
-                "sha256": "a" * 64,
                 "ring": "pilot",
                 "groups": ["sg-pilot"],
+                "sha256": "a" * 64,
             }
         ]
         with (

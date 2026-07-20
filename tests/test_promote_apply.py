@@ -226,20 +226,29 @@ def _write_plan(tmp_path: Path, actions: list[dict[str, Any]]) -> Path:
     plan_path.parent.mkdir(parents=True, exist_ok=True)
     plan_path.write_text(
         json.dumps(
-            {"schemaVersion": 1, "app_id": app_id, "actions": actions},
+            {
+                "schemaVersion": 1,
+                "app_id": app_id,
+                "name": f"App {app_id}",
+                "actions": [
+                    {
+                        key: value
+                        for key, value in action.items()
+                        if key not in ("app_id", "name")
+                    }
+                    for action in actions
+                ],
+            },
             indent=2,
-            sort_keys=True,
         ),
         encoding="utf-8",
     )
     return plan_path
 
 
-def _enter_ring_action(
-    sha256: str = "b" * 64, version: str = "2.0.0"
-) -> dict[str, Any]:
+def _promote_action(sha256: str = "b" * 64, version: str = "2.0.0") -> dict[str, Any]:
     return {
-        "type": "enter_ring",
+        "type": "promote",
         "app_id": "test-app",
         "version": version,
         "sha256": sha256,
@@ -248,14 +257,14 @@ def _enter_ring_action(
     }
 
 
-class TestApplyRingActions:
-    """Tests for enter_ring and advance_ring execution."""
+class TestApplyPromoteActions:
+    """Tests for promote execution."""
 
-    def test_enter_ring_assigns_and_records(self, tmp_path):
-        """Tests that entering a ring assigns groups and writes state."""
+    def test_promote_assigns_and_records(self, tmp_path):
+        """Tests that promoting into a ring assigns groups and writes state."""
         _write_recipe(tmp_path, rings=_RINGS)
         state_path = _write_state(tmp_path, deployed=_deployed())
-        plan_path = _write_plan(tmp_path, [_enter_ring_action()])
+        plan_path = _write_plan(tmp_path, [_promote_action()])
 
         summary, mocks = _run_apply(tmp_path, existing_apps=_tenant())
 
@@ -288,7 +297,7 @@ class TestApplyRingActions:
         """Tests that admin-made assignments survive the assign call."""
         _write_recipe(tmp_path, rings=_RINGS)
         _write_state(tmp_path, deployed=_deployed())
-        _write_plan(tmp_path, [_enter_ring_action()])
+        _write_plan(tmp_path, [_promote_action()])
         admin_assignment = {
             "id": "existing-1",
             "intent": "available",
@@ -323,7 +332,7 @@ class TestApplyRingActions:
                 }
             },
         )
-        _write_plan(tmp_path, [_enter_ring_action()])
+        _write_plan(tmp_path, [_promote_action()])
         old_assignment = {
             "id": "x",
             "intent": "required",
@@ -364,7 +373,7 @@ class TestApplyRingActions:
             },
             retained=[{"version": "0.9.0", "sha256": "9" * 64}],
         )
-        _write_plan(tmp_path, [_enter_ring_action()])
+        _write_plan(tmp_path, [_promote_action()])
         tenant = _tenant() + [
             _stamped("test-app", "install", "9" * 64, "install-ancient"),
             _stamped("test-app", "update", "9" * 64, "update-ancient"),
@@ -380,7 +389,7 @@ class TestApplyRingActions:
         """Tests that an action for a superseded release is skipped."""
         _write_recipe(tmp_path, rings=_RINGS)
         _write_state(tmp_path, deployed=_deployed(version="3.0.0", sha256="c" * 64))
-        _write_plan(tmp_path, [_enter_ring_action()])  # plans v2, deployed v3
+        _write_plan(tmp_path, [_promote_action()])  # plans v2, deployed v3
 
         summary, mocks = _run_apply(tmp_path, existing_apps=_tenant())
 
@@ -403,7 +412,7 @@ class TestApplyRingActions:
                 }
             },
         )
-        _write_plan(tmp_path, [_enter_ring_action()])
+        _write_plan(tmp_path, [_promote_action()])
 
         summary, mocks = _run_apply(tmp_path, existing_apps=_tenant())
 
@@ -415,7 +424,7 @@ class TestApplyRingActions:
         """Tests that a release without a stamped update entry is skipped."""
         _write_recipe(tmp_path, rings=_RINGS)
         _write_state(tmp_path, deployed=_deployed())
-        _write_plan(tmp_path, [_enter_ring_action()])
+        _write_plan(tmp_path, [_promote_action()])
 
         summary, mocks = _run_apply(tmp_path, existing_apps=[])
 
@@ -427,7 +436,7 @@ class TestApplyRingActions:
         """Tests that a Graph failure fails the app and keeps its plan file."""
         _write_recipe(tmp_path, rings=_RINGS)
         _write_state(tmp_path, deployed=_deployed())
-        plan_path = _write_plan(tmp_path, [_enter_ring_action()])
+        plan_path = _write_plan(tmp_path, [_promote_action()])
 
         summary, _ = _run_apply(
             tmp_path,
@@ -440,12 +449,12 @@ class TestApplyRingActions:
         assert "Graph down" in summary["failed"][0]["error"]
 
 
-class TestApplyInstallActions:
-    """Tests for assign_install execution."""
+class TestApplyAssignActions:
+    """Tests for assign execution."""
 
-    def _install_action(self, sha256: str = "b" * 64) -> dict[str, Any]:
+    def _assign_action(self, sha256: str = "b" * 64) -> dict[str, Any]:
         return {
-            "type": "assign_install",
+            "type": "assign",
             "app_id": "test-app",
             "version": "2.0.0",
             "sha256": sha256,
@@ -457,7 +466,7 @@ class TestApplyInstallActions:
         """Tests that the install entry is assigned and recorded by sha."""
         _write_recipe(tmp_path, install_groups=["All Users"])
         state_path = _write_state(tmp_path, deployed=_deployed())
-        _write_plan(tmp_path, [self._install_action()])
+        _write_plan(tmp_path, [self._assign_action()])
 
         summary, mocks = _run_apply(tmp_path, existing_apps=_tenant())
 
@@ -483,7 +492,7 @@ class TestApplyInstallActions:
         """Tests that the previous release's install entry loses the groups."""
         _write_recipe(tmp_path, install_groups=["All Users"])
         _write_state(tmp_path, deployed=_deployed(), install_assigned="a" * 64)
-        _write_plan(tmp_path, [self._install_action()])
+        _write_plan(tmp_path, [self._assign_action()])
         old_assignment = {
             "id": "x",
             "intent": "available",
@@ -555,7 +564,7 @@ class TestApplyOrchestration:
         summary, _ = _run_apply(tmp_path, existing_apps=_tenant())
 
         assert [f["kind"] for f in summary["recovered"]] == ["recovered"]
-        assert [a["type"] for a in summary["applied"]] == ["enter_ring"]
+        assert [a["type"] for a in summary["applied"]] == ["promote"]
         state = load_deployment_state(state_path)
         assert state["pending"] is None
         assert state["deployed"]["intune_app_id"] == "install-new"
@@ -570,9 +579,9 @@ class TestApplyOrchestration:
         plan_path = _write_plan(
             tmp_path,
             [
-                _enter_ring_action(),  # resolvable: Pilot Devices
+                _promote_action(),  # resolvable: Pilot Devices
                 {
-                    "type": "advance_ring",
+                    "type": "promote",
                     "app_id": "test-app",
                     "version": "2.0.0",
                     "sha256": "b" * 64,
@@ -614,11 +623,11 @@ class TestApplyOrchestration:
         _write_plan(
             tmp_path,
             [
-                _enter_ring_action(),  # live: Pilot Devices
+                _promote_action(),  # live: Pilot Devices
                 # Stale: sha no longer deployed; its group was deleted
                 # after the action originally applied.
                 {
-                    "type": "enter_ring",
+                    "type": "promote",
                     "app_id": "test-app",
                     "version": "1.0.0",
                     "sha256": "a" * 64,
@@ -641,7 +650,7 @@ class TestApplyOrchestration:
             resolve_side_effect=_resolve,
         )
 
-        assert [a["type"] for a in summary["applied"]] == ["enter_ring"]
+        assert [a["type"] for a in summary["applied"]] == ["promote"]
         assert [s["reason"] for s in summary["skipped"]] == [
             "stale action - the deployed release has changed"
         ]
@@ -654,10 +663,10 @@ class TestApplyOrchestration:
         _write_recipe(tmp_path, app_id="app-good", rings=_RINGS)
         _write_state(tmp_path, app_id="app-bad", deployed=_deployed())
         good_state = _write_state(tmp_path, app_id="app-good", deployed=_deployed())
-        bad_action = _enter_ring_action()
+        bad_action = _promote_action()
         bad_action["app_id"] = "app-bad"
         bad_action["groups"] = ["missing-group"]
-        good_action = _enter_ring_action()
+        good_action = _promote_action()
         good_action["app_id"] = "app-good"
         bad_plan = _write_plan(tmp_path, [bad_action])
         good_plan = _write_plan(tmp_path, [good_action])
@@ -692,9 +701,9 @@ class TestApplyOrchestration:
         _write_recipe(tmp_path, app_id="app-good", rings=_RINGS)
         _write_state(tmp_path, app_id="app-bad", deployed=_deployed())
         _write_state(tmp_path, app_id="app-good", deployed=_deployed())
-        bad_action = _enter_ring_action()
+        bad_action = _promote_action()
         bad_action["app_id"] = "app-bad"
-        good_action = _enter_ring_action()
+        good_action = _promote_action()
         good_action["app_id"] = "app-good"
         bad_plan = _write_plan(tmp_path, [bad_action])
         good_plan = _write_plan(tmp_path, [good_action])
@@ -722,7 +731,7 @@ class TestApplyOrchestration:
         """Tests that a plan action without a matching recipe is skipped."""
         _write_recipe(tmp_path, rings=_RINGS)
         _write_state(tmp_path, deployed=_deployed())
-        action = _enter_ring_action()
+        action = _promote_action()
         action["app_id"] = "ghost-app"
         _write_plan(tmp_path, [action])
 
@@ -746,21 +755,32 @@ class TestLoadPlanFile:
     def test_missing_actions_key_raises(self, tmp_path):
         """Tests that a plan without an actions list raises StateError."""
         plan_path = tmp_path / "plan.json"
-        plan_path.write_text('{"other": []}', encoding="utf-8")
+        plan_path.write_text('{"app_id": "test-app"}', encoding="utf-8")
 
         with pytest.raises(StateError, match="Corrupted plan file"):
             load_plan_file(plan_path)
 
-    def test_mixed_app_plan_raises(self, tmp_path):
-        """Tests that a plan file mixing apps is rejected."""
+    def test_missing_app_id_raises(self, tmp_path):
+        """Tests that a plan without a declared app id raises StateError."""
+        plan_path = tmp_path / "plan.json"
+        plan_path.write_text(
+            '{"schemaVersion": 1, "actions": []}', encoding="utf-8"
+        )
+
+        with pytest.raises(StateError, match="Corrupted plan file"):
+            load_plan_file(plan_path)
+
+    def test_foreign_action_app_id_raises(self, tmp_path):
+        """Tests that an action referencing another app is rejected."""
         plan_path = tmp_path / "plan.json"
         plan_path.write_text(
             json.dumps(
                 {
                     "schemaVersion": 1,
+                    "app_id": "test-app",
                     "actions": [
-                        _enter_ring_action(),
-                        {**_enter_ring_action(), "app_id": "other-app"},
+                        _promote_action(),
+                        {**_promote_action(), "app_id": "other-app"},
                     ],
                 }
             ),
@@ -770,27 +790,38 @@ class TestLoadPlanFile:
         with pytest.raises(StateError, match="per-app"):
             load_plan_file(plan_path)
 
-    def test_declared_app_id_mismatch_raises(self, tmp_path):
-        """Tests that actions disagreeing with the declared app are rejected."""
+    def test_injects_file_level_app_id_and_name(self, tmp_path):
+        """Tests that the file's app id and name are injected into actions."""
         plan_path = tmp_path / "plan.json"
+        action = {
+            key: value
+            for key, value in _promote_action().items()
+            if key != "app_id"
+        }
         plan_path.write_text(
             json.dumps(
                 {
                     "schemaVersion": 1,
-                    "app_id": "other-app",
-                    "actions": [_enter_ring_action()],
+                    "app_id": "test-app",
+                    "name": "App test-app",
+                    "actions": [action],
                 }
             ),
             encoding="utf-8",
         )
 
-        with pytest.raises(StateError, match="per-app"):
-            load_plan_file(plan_path)
+        actions = load_plan_file(plan_path)
+
+        assert actions[0]["app_id"] == "test-app"
+        assert actions[0]["name"] == "App test-app"
 
     def test_unsupported_plan_schema_version_raises(self, tmp_path):
-        """Tests that a future plan schema version is rejected."""
+        """Tests that an unsupported plan schema version is rejected."""
         plan_path = tmp_path / "plan.json"
-        plan_path.write_text('{"schemaVersion": 99, "actions": []}', encoding="utf-8")
+        plan_path.write_text(
+            '{"schemaVersion": 99, "app_id": "test-app", "actions": []}',
+            encoding="utf-8",
+        )
 
         with pytest.raises(StateError, match="schema version 99"):
             load_plan_file(plan_path)
