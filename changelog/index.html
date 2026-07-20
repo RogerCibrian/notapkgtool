@@ -2411,6 +2411,19 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
     <code>state/plan.json</code> (see the reference workflows in Common Tasks)</li>
 </ul>
 </li>
+<li><strong>BREAKING: Plan files read at a glance</strong> - Every planned action now
+    opens with a plain-English <code>summary</code> sentence and names the Intune
+    <code>entry</code> it touches (<code>install</code> or <code>update</code>) and the version it
+    <code>replaces</code>; the app's id and display name appear once at the top of
+    the file, and keys follow reading order instead of alphabetical<ul>
+<li>The action vocabulary now matches the feature: <code>promote</code> moves a
+    release one ring forward (<code>from_ring: null</code> marks a first
+    rollout) and <code>assign</code> points new installs at it — replacing
+    <code>enter_ring</code>, <code>advance_ring</code>, and <code>assign_install</code></li>
+<li><code>napt promote plan</code> and <code>apply</code> print the same summary sentences,
+    so console output and plan files never disagree</li>
+</ul>
+</li>
 <li><strong>Graph API calls retry transient failures</strong> - Throttling (HTTP
     429/503/509, honoring Retry-After) and transient server or
     connection errors now retry with bounded exponential backoff across

@@ -4101,7 +4101,11 @@ No install assignment happens unless groups are configured; a common
 org-wide choice is <code>groups: ["All Users"]</code> for Company Portal
 self-service.
 The assignment is planned by <code>napt promote plan</code> and executed once per
-release by <code>napt promote apply</code>.</p>
+release by <code>napt promote apply</code>.
+The cutover happens with the release's first promotion: the same plan
+that starts a release's rollout in the first ring also points new
+installs at it, so net-new devices receive the release before it has
+baked through the rings.</p>
 <h3 id="retain_versions">retain_versions</h3>
 <p><strong>Type:</strong> <code>integer</code>
 <strong>Required:</strong> No

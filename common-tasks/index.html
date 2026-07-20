@@ -3039,13 +3039,18 @@ release has proven itself.</p>
 </ol>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-47-1"><a id="__codelineno-47-1" name="__codelineno-47-1" href="#__codelineno-47-1"></a>napt<span class="w"> </span>promote<span class="w"> </span>plan
 </span></code></pre></div>
-<p>A newly uploaded release enters the first ring; a release that has held
-   its ring for <code>promote_after_days</code> advances to the next.
+<p>A newly uploaded release starts its rollout in the first ring; a
+   release that has held its ring for <code>promote_after_days</code> is promoted to
+   the next.
+   The same plan also points new installs (the install entry) at the new
+   release, so net-new devices get it as soon as the first ring does.
    Eligible actions are written per app to <code>state/plans/&lt;app-id&gt;.json</code>;
    review the files, or commit them and gate the apply on a pull request.
-   Each action names the app, the release, the groups it will assign,
-   and — for advancement — when the release entered its current ring and
-   that ring's bake threshold, so the files read as the review record.</p>
+   Every action opens with a plain-English summary sentence and carries
+   the details behind it — the release, the groups it will assign, the
+   version it replaces, and for a promotion out of a held ring, when the
+   release entered it and the ring's bake threshold — so the files read
+   as the review record.</p>
 <ol>
 <li><strong>Apply</strong> — execute the plan against Intune:</li>
 </ol>
@@ -3148,8 +3153,8 @@ Adapt names, schedules, and branch rules to your org.</p>
   and uploads it, with the hash gate guaranteeing the approved binary is
   exactly what ships.</li>
 <li><strong>Promotion PRs</strong> (one, batched): <code>napt promote plan</code> writes one
-  <code>state/plans/&lt;id&gt;.json</code> file per app with releases eligible to enter
-  or advance rings; CI commits them to a branch and opens a PR. Merging
+  <code>state/plans/&lt;id&gt;.json</code> file per app with that app's eligible
+  promotions; CI commits them to a branch and opens a PR. Merging
   approves the promotions — a workflow runs <code>napt promote apply</code>, which
   executes each app's plan as an allowlist, independently.
   To hold one app's promotions, delete its plan file in the PR; the
