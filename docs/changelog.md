@@ -47,6 +47,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         final ring is targeted
     - Titles and bodies regenerate on every refresh, so a superseding
         release never leaves a stale decision under review
+    - The promotion PR branch is now `napt/promote-plan` (matching
+        `napt promote plan`); delete a lingering `napt/promotion-plan`
+        branch when updating existing workflows
 - **Graph API calls retry transient failures** - Throttling (HTTP
     429/503/509, honoring Retry-After) and transient server or
     connection errors now retry with bounded exponential backoff across

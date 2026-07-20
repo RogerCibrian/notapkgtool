@@ -1164,10 +1164,10 @@ jobs:
           [ -z "$(git status --porcelain -- state)" ] && exit 0
           git config user.name "napt-bot"
           git config user.email "napt-bot@users.noreply.github.com"
-          git checkout -B napt/promotion-plan origin/main
+          git checkout -B napt/promote-plan origin/main
           git add state
           git commit -m "feat: Plan ring promotions"
-          git push -f origin napt/promotion-plan
+          git push -f origin napt/promote-plan
           # Writes pr-body.md from the plan files themselves: the risk
           # line first, then each app's action summaries (the same
           # sentences NAPT wrote into the files), the hold instruction,
@@ -1247,16 +1247,16 @@ jobs:
           # Title stays generic and stable (only one promotion PR is
           # ever open; title churn breaks email threading) - the risk
           # signal lives in the body's first line and the label.
-          gh pr create --head napt/promotion-plan \
+          gh pr create --head napt/promote-plan \
             --title "Promotion plan" --body-file pr-body.md \
-            || gh pr edit napt/promotion-plan --body-file pr-body.md
+            || gh pr edit napt/promote-plan --body-file pr-body.md
           if [ "$label" = "production" ]; then
             gh label create promotes-to-production \
               --description "This plan assigns the final ring" \
               --color D93F0B --force
-            gh pr edit napt/promotion-plan --add-label promotes-to-production
+            gh pr edit napt/promote-plan --add-label promotes-to-production
           else
-            gh pr edit napt/promotion-plan \
+            gh pr edit napt/promote-plan \
               --remove-label promotes-to-production || true
           fi
 ```
