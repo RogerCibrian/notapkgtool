@@ -167,7 +167,8 @@ rollout in the first ring also points new installs at it (the `assign`
 action), so net-new devices receive the release before it has baked.
 Add an optional `deployment.install` setting (e.g.
 `after_ring: <ring-name>`) so the install assignment follows the release
-only once it has entered that ring.
+only once it has entered that ring — the planner gates the `assign`
+action on ring state instead of planning it on publish.
 Default stays immediate cutover.
 
 **Benefits**:
@@ -181,8 +182,6 @@ Default stays immediate cutover.
 
 **Dependencies**:
 
-- Planner must gate the `assign` action on ring state instead of
-  planning it on publish
 - New recipe field: run `/add-recipe-field` for validation and
   recipe-reference updates
 
