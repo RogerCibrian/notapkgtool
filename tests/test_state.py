@@ -22,8 +22,8 @@ from napt.state import (
     deployment_state_path,
     load_cache,
     load_deployment_state,
-    record_deployed,
     record_pending,
+    record_published,
     save_cache,
     save_deployment_state,
     summarize_deployment_states,
@@ -284,7 +284,7 @@ class TestDeploymentStateFiles:
         state = create_default_deployment_state()
 
         assert state["schemaVersion"] == 1
-        assert state["deployed"] is None
+        assert state["published"] is None
         assert state["pending"] is None
         assert state["rings"] == {}
         assert state["retained"] == []
@@ -301,7 +301,7 @@ class TestDeploymentStateFiles:
     def test_save_stamps_schema_version(self, tmp_path):
         """Tests that saving always writes the schema version."""
         state_path = tmp_path / "napt-chrome.json"
-        state = {"deployed": None, "pending": None, "rings": {}, "retained": []}
+        state = {"published": None, "pending": None, "rings": {}, "retained": []}
 
         save_deployment_state(state, state_path)
 
@@ -312,7 +312,7 @@ class TestDeploymentStateFiles:
         """Tests that a file without a schemaVersion is rejected."""
         state_path = tmp_path / "napt-chrome.json"
         state_path.write_text(
-            '{"deployed": null, "pending": null, "rings": {}, "retained": []}',
+            '{"published": null, "pending": null, "rings": {}, "retained": []}',
             encoding="utf-8",
         )
 
@@ -355,8 +355,8 @@ class TestDeploymentStateFiles:
 
     def test_save_is_deterministic(self, tmp_path):
         """Tests that logically identical state produces byte-identical files."""
-        path_a = tmp_path / "a.json"
-        path_b = tmp_path / "b.json"
+        path_a = tmp_path / "a" / "napt-chrome.json"
+        path_b = tmp_path / "b" / "napt-chrome.json"
 
         state_a = create_default_deployment_state()
         state_a["pending"] = {
@@ -373,13 +373,73 @@ class TestDeploymentStateFiles:
                 "sha256": "abc",
                 "version": "1.0.0",
             },
-            "deployed": None,
+            "published": None,
         }
 
         save_deployment_state(state_a, path_a)
         save_deployment_state(state_b, path_b)
 
         assert path_a.read_bytes() == path_b.read_bytes()
+
+    def test_save_stamps_app_id_from_filename(self, tmp_path):
+        """Tests that the filename is stamped as the file's app_id."""
+        state_path = tmp_path / "napt-chrome.json"
+
+        save_deployment_state(create_default_deployment_state(), state_path)
+
+        state = load_deployment_state(state_path)
+        assert state["app_id"] == "napt-chrome"
+
+    def test_save_keys_in_reading_order(self, tmp_path):
+        """Tests that saved files keep reading order, not alphabetical."""
+        state_path = tmp_path / "napt-chrome.json"
+        state = create_default_deployment_state()
+        state["name"] = "Google Chrome"
+        state["published"] = {
+            "intune_app_id": "x",
+            "intune_update_app_id": "y",
+            "sha256": "abc",
+            "version": "1.0.0",
+        }
+        state["pending"] = {"sha256": "def", "url": "https://x", "version": "2.0.0"}
+        state["install_assigned"] = {"sha256": "abc", "version": "1.0.0"}
+        state["rings"] = {
+            "pilot": {"entered_at": "t", "sha256": "abc", "version": "1.0.0"}
+        }
+
+        save_deployment_state(state, state_path)
+
+        text = state_path.read_text(encoding="utf-8")
+        keys = [
+            '"schemaVersion"',
+            '"app_id"',
+            '"name"',
+            '"published"',
+            '"install_assigned"',
+            '"pending"',
+            '"rings"',
+            '"retained"',
+        ]
+        positions = [text.index(key) for key in keys]
+        assert positions == sorted(positions)
+        # Blocks read version first, hashes and IDs after.
+        published = text.index('"published"')
+        assert (
+            published
+            < text.index('"version"')
+            < text.index('"sha256"')
+            < text.index('"intune_app_id"')
+        )
+
+    def test_load_rejects_app_id_filename_mismatch(self, tmp_path):
+        """Tests that a copied or renamed state file is rejected."""
+        state_path = tmp_path / "napt-chrome.json"
+        save_deployment_state(create_default_deployment_state(), state_path)
+        copied = tmp_path / "napt-edge.json"
+        copied.write_text(state_path.read_text(encoding="utf-8"), encoding="utf-8")
+
+        with pytest.raises(StateError, match="copied or renamed"):
+            load_deployment_state(copied)
 
     def test_save_twice_is_byte_identical(self, tmp_path):
         """Tests that re-saving unchanged state does not alter the file."""
@@ -398,7 +458,7 @@ class TestRecordPending:
     """Tests for pending release recording (single slot, newest wins)."""
 
     def test_first_discovery_is_recorded(self):
-        """Tests that a release is recorded when nothing is deployed or pending."""
+        """Tests that a release is recorded when nothing is published or pending."""
         state = create_default_deployment_state()
 
         action = record_pending(
@@ -440,10 +500,10 @@ class TestRecordPending:
             "url": "https://x/2.msi",
         }
 
-    def test_deployed_release_is_not_recorded(self):
-        """Tests that discovering the deployed release records nothing."""
+    def test_published_release_is_not_recorded(self):
+        """Tests that discovering the published release records nothing."""
         state = create_default_deployment_state()
-        state["deployed"] = {"version": "1.0.0", "sha256": "aaa"}
+        state["published"] = {"version": "1.0.0", "sha256": "aaa"}
 
         action = record_pending(
             state, version="1.0.0", sha256="aaa", url="https://x/1.msi"
@@ -452,10 +512,10 @@ class TestRecordPending:
         assert action is None
         assert state["pending"] is None
 
-    def test_rollback_to_deployed_clears_pending(self):
-        """Tests that pending is cleared when the vendor serves the deployed release."""
+    def test_rollback_to_published_clears_pending(self):
+        """Tests that pending is cleared when the vendor serves the published release."""
         state = create_default_deployment_state()
-        state["deployed"] = {"version": "1.0.0", "sha256": "aaa"}
+        state["published"] = {"version": "1.0.0", "sha256": "aaa"}
         record_pending(state, version="2.0.0", sha256="bbb", url="https://x/2.msi")
 
         action = record_pending(
@@ -468,7 +528,7 @@ class TestRecordPending:
     def test_same_version_different_binary_is_new(self):
         """Tests that identity is the hash, not the version string."""
         state = create_default_deployment_state()
-        state["deployed"] = {"version": "1.0.0", "sha256": "aaa"}
+        state["published"] = {"version": "1.0.0", "sha256": "aaa"}
 
         action = record_pending(
             state, version="1.0.0", sha256="zzz", url="https://x/1.msi"
@@ -477,10 +537,10 @@ class TestRecordPending:
         assert action == "recorded"
         assert state["pending"]["sha256"] == "zzz"
 
-    def test_newer_release_supersedes_pending_over_deployed(self):
-        """Tests the full flow: deployed, pending, then an even newer release."""
+    def test_newer_release_supersedes_pending_over_published(self):
+        """Tests the full flow: published, pending, then an even newer release."""
         state = create_default_deployment_state()
-        state["deployed"] = {"version": "1.0.0", "sha256": "aaa"}
+        state["published"] = {"version": "1.0.0", "sha256": "aaa"}
         record_pending(state, version="2.0.0", sha256="bbb", url="https://x/2.msi")
 
         action = record_pending(
@@ -489,18 +549,18 @@ class TestRecordPending:
 
         assert action == "replaced"
         assert state["pending"]["version"] == "3.0.0"
-        assert state["deployed"]["version"] == "1.0.0"
+        assert state["published"]["version"] == "1.0.0"
 
 
-class TestRecordDeployed:
-    """Tests for deployed release recording."""
+class TestRecordPublished:
+    """Tests for published release recording."""
 
-    def test_records_deployed_and_clears_matching_pending(self):
+    def test_records_published_and_clears_matching_pending(self):
         """Tests that publishing the pending release clears the slot."""
         state = create_default_deployment_state()
         record_pending(state, version="2.0.0", sha256="bbb", url="https://x/2.msi")
 
-        record_deployed(
+        record_published(
             state,
             version="2.0.0",
             sha256="bbb",
@@ -508,7 +568,7 @@ class TestRecordDeployed:
             intune_update_app_id="update-1",
         )
 
-        assert state["deployed"] == {
+        assert state["published"] == {
             "version": "2.0.0",
             "sha256": "bbb",
             "intune_app_id": "app-1",
@@ -521,7 +581,7 @@ class TestRecordDeployed:
         state = create_default_deployment_state()
         record_pending(state, version="3.0.0", sha256="ccc", url="https://x/3.msi")
 
-        record_deployed(
+        record_published(
             state,
             version="2.0.0",
             sha256="bbb",
@@ -529,13 +589,13 @@ class TestRecordDeployed:
             intune_update_app_id=None,
         )
 
-        assert state["deployed"]["version"] == "2.0.0"
+        assert state["published"]["version"] == "2.0.0"
         assert state["pending"]["version"] == "3.0.0"
 
-    def test_replaces_previous_deployed(self):
-        """Tests that a new publication replaces the deployed section."""
+    def test_replaces_previous_published(self):
+        """Tests that a new publication replaces the published section."""
         state = create_default_deployment_state()
-        record_deployed(
+        record_published(
             state,
             version="1.0.0",
             sha256="aaa",
@@ -543,7 +603,7 @@ class TestRecordDeployed:
             intune_update_app_id="b",
         )
 
-        record_deployed(
+        record_published(
             state,
             version="2.0.0",
             sha256="bbb",
@@ -551,8 +611,8 @@ class TestRecordDeployed:
             intune_update_app_id="d",
         )
 
-        assert state["deployed"]["version"] == "2.0.0"
-        assert state["deployed"]["intune_app_id"] == "c"
+        assert state["published"]["version"] == "2.0.0"
+        assert state["published"]["intune_app_id"] == "c"
 
 
 class TestSummarizeDeploymentStates:
@@ -567,7 +627,7 @@ class TestSummarizeDeploymentStates:
         deployment_dir = tmp_path / "deployment"
 
         zeta = create_default_deployment_state()
-        zeta["deployed"] = {"version": "2.0", "sha256": "b"}
+        zeta["published"] = {"version": "2.0", "sha256": "b"}
         zeta["rings"] = {"pilot": {"version": "2.0", "sha256": "b", "entered_at": "x"}}
         save_deployment_state(zeta, deployment_state_path(deployment_dir, "zeta"))
 
@@ -578,10 +638,10 @@ class TestSummarizeDeploymentStates:
         rows = summarize_deployment_states(deployment_dir)
 
         assert rows == [
-            {"app_id": "alpha", "deployed": None, "pending": "1.0", "rings": {}},
+            {"app_id": "alpha", "published": None, "pending": "1.0", "rings": {}},
             {
                 "app_id": "zeta",
-                "deployed": "2.0",
+                "published": "2.0",
                 "pending": None,
                 "rings": {"pilot": "2.0"},
             },

@@ -83,14 +83,14 @@ def _write_recipe(
 def _write_state(
     tmp_path: Path,
     app_id: str = "test-app",
-    deployed: dict[str, Any] | None = None,
+    published: dict[str, Any] | None = None,
     rings: dict[str, Any] | None = None,
     install_assigned: str | None = None,
 ) -> Path:
     """Writes a deployment state file and returns the deployment dir."""
     deployment_dir = tmp_path / "state" / "deployment"
     state = create_default_deployment_state()
-    state["deployed"] = deployed
+    state["published"] = published
     if rings:
         state["rings"] = rings
     if install_assigned:
@@ -99,7 +99,7 @@ def _write_state(
     return deployment_dir
 
 
-def _deployed(
+def _published(
     version: str = "1.0.0",
     sha256: str = "a" * 64,
     update_id: str | None = "update-1",
@@ -116,19 +116,19 @@ def _deployed(
 class TestPlanPromotions:
     """Tests for promotion action computation."""
 
-    def test_nothing_deployed_plans_nothing(self, tmp_path):
-        """Tests that an app with no deployed release yields no actions."""
+    def test_nothing_published_plans_nothing(self, tmp_path):
+        """Tests that an app with no published release yields no actions."""
         recipe = _write_recipe(tmp_path, rings=_RINGS)
-        state_dir = _write_state(tmp_path, deployed=None)
+        state_dir = _write_state(tmp_path, published=None)
 
         actions = plan_promotions(recipe, state_dir=state_dir, now=NOW)
 
         assert actions == []
 
-    def test_deployed_release_starts_rollout_in_first_ring(self, tmp_path):
-        """Tests that a deployed release holding no ring starts at ring 0."""
+    def test_published_release_starts_rollout_in_first_ring(self, tmp_path):
+        """Tests that a published release holding no ring starts at ring 0."""
         recipe = _write_recipe(tmp_path, rings=_RINGS)
-        state_dir = _write_state(tmp_path, deployed=_deployed())
+        state_dir = _write_state(tmp_path, published=_published())
 
         actions = plan_promotions(recipe, state_dir=state_dir, now=NOW)
 
@@ -143,7 +143,7 @@ class TestPlanPromotions:
                 "type": "promote",
                 "entry": "update",
                 "version": "1.0.0",
-                "replaces": None,
+                "displaces": None,
                 "from_ring": None,
                 "from_ring_entered_at": None,
                 "promote_after_days": None,
@@ -156,7 +156,7 @@ class TestPlanPromotions:
     def test_install_assignment_planned_once(self, tmp_path):
         """Tests that install assignment is planned only when unassigned."""
         recipe = _write_recipe(tmp_path, install_groups=["All Users"])
-        state_dir = _write_state(tmp_path, deployed=_deployed())
+        state_dir = _write_state(tmp_path, published=_published())
 
         actions = plan_promotions(recipe, state_dir=state_dir, now=NOW)
 
@@ -171,7 +171,7 @@ class TestPlanPromotions:
                 "type": "assign",
                 "entry": "install",
                 "version": "1.0.0",
-                "replaces": None,
+                "displaces": None,
                 "intent": "available",
                 "groups": ["All Users"],
                 "sha256": "a" * 64,
@@ -179,14 +179,14 @@ class TestPlanPromotions:
         ]
 
         state_dir = _write_state(
-            tmp_path, deployed=_deployed(), install_assigned="a" * 64
+            tmp_path, published=_published(), install_assigned="a" * 64
         )
         assert plan_promotions(recipe, state_dir=state_dir, now=NOW) == []
 
     def test_no_install_groups_plans_no_install_assignment(self, tmp_path):
         """Tests that NAPT assigns nothing unless groups are configured."""
         recipe = _write_recipe(tmp_path)  # no deployment section at all
-        state_dir = _write_state(tmp_path, deployed=_deployed())
+        state_dir = _write_state(tmp_path, published=_published())
 
         actions = plan_promotions(recipe, state_dir=state_dir, now=NOW)
 
@@ -197,7 +197,7 @@ class TestPlanPromotions:
         recipe = _write_recipe(tmp_path, install_groups=["All Users"])
         state_dir = _write_state(
             tmp_path,
-            deployed=_deployed(version="2.0.0", sha256="b" * 64),
+            published=_published(version="2.0.0", sha256="b" * 64),
             install_assigned="a" * 64,  # previous release's assignment
         )
 
@@ -205,15 +205,15 @@ class TestPlanPromotions:
 
         assert [a["type"] for a in actions] == ["assign"]
         assert actions[0]["sha256"] == "b" * 64
-        assert actions[0]["replaces"] == "prev"
-        assert ", replacing prev." in actions[0]["summary"]
+        assert actions[0]["displaces"] == "prev"
+        assert ", displacing prev." in actions[0]["summary"]
 
     def test_baking_release_does_not_advance(self, tmp_path):
         """Tests that a release still baking holds its ring."""
         recipe = _write_recipe(tmp_path, rings=_RINGS)
         state_dir = _write_state(
             tmp_path,
-            deployed=_deployed(),
+            published=_published(),
             rings={
                 "pilot": {
                     "version": "1.0.0",
@@ -232,7 +232,7 @@ class TestPlanPromotions:
         recipe = _write_recipe(tmp_path, rings=_RINGS)
         state_dir = _write_state(
             tmp_path,
-            deployed=_deployed(),
+            published=_published(),
             rings={
                 "pilot": {
                     "version": "1.0.0",
@@ -255,7 +255,7 @@ class TestPlanPromotions:
                 "type": "promote",
                 "entry": "update",
                 "version": "1.0.0",
-                "replaces": None,
+                "displaces": None,
                 "from_ring": "pilot",
                 "from_ring_entered_at": "2026-07-06T12:00:00+00:00",
                 "promote_after_days": 2,
@@ -270,7 +270,7 @@ class TestPlanPromotions:
         recipe = _write_recipe(tmp_path, rings=_RINGS)
         state_dir = _write_state(
             tmp_path,
-            deployed=_deployed(),
+            published=_published(),
             rings={
                 "production": {
                     "version": "1.0.0",
@@ -293,7 +293,7 @@ class TestPlanPromotions:
         recipe = _write_recipe(tmp_path, rings=rings)
         state_dir = _write_state(
             tmp_path,
-            deployed=_deployed(),
+            published=_published(),
             rings={
                 "pilot": {
                     "version": "1.0.0",
@@ -308,11 +308,11 @@ class TestPlanPromotions:
         assert actions == []
 
     def test_new_release_restarts_at_first_ring(self, tmp_path):
-        """Tests that a newly deployed release re-enters ring 0."""
+        """Tests that a newly published release re-enters ring 0."""
         recipe = _write_recipe(tmp_path, rings=_RINGS)
         state_dir = _write_state(
             tmp_path,
-            deployed=_deployed(version="2.0.0", sha256="b" * 64),
+            published=_published(version="2.0.0", sha256="b" * 64),
             rings={
                 "broad": {
                     "version": "1.0.0",
@@ -333,7 +333,7 @@ class TestPlanPromotions:
     def test_app_without_update_entry_skips_rings(self, tmp_path):
         """Tests that rings are skipped when there is no update entry."""
         recipe = _write_recipe(tmp_path, rings=_RINGS, install_groups=["All Users"])
-        state_dir = _write_state(tmp_path, deployed=_deployed(update_id=None))
+        state_dir = _write_state(tmp_path, published=_published(update_id=None))
 
         actions = plan_promotions(recipe, state_dir=state_dir, now=NOW)
 
@@ -343,8 +343,8 @@ class TestPlanPromotions:
         """Tests that actions across apps are deterministically ordered."""
         _write_recipe(tmp_path, app_id="zeta-app", rings=_RINGS)
         _write_recipe(tmp_path, app_id="alpha-app", rings=_RINGS)
-        _write_state(tmp_path, app_id="zeta-app", deployed=_deployed())
-        state_dir = _write_state(tmp_path, app_id="alpha-app", deployed=_deployed())
+        _write_state(tmp_path, app_id="zeta-app", published=_published())
+        state_dir = _write_state(tmp_path, app_id="alpha-app", published=_published())
 
         actions = plan_promotions(tmp_path / "recipes", state_dir=state_dir, now=NOW)
 
@@ -355,7 +355,7 @@ class TestPlanPromotions:
         recipe = _write_recipe(tmp_path, rings=_RINGS)
         state_dir = _write_state(
             tmp_path,
-            deployed=_deployed(),
+            published=_published(),
             rings={
                 "pilot": {
                     "version": "1.0.0",
@@ -384,7 +384,7 @@ class TestPlanPromotions:
 
         deployment_dir = tmp_path / "customstate" / "deployment"
         state = create_default_deployment_state()
-        state["deployed"] = _deployed()
+        state["published"] = _published()
         save_deployment_state(state, deployment_state_path(deployment_dir, "test-app"))
 
         actions = plan_promotions(recipe, state_dir=None, now=NOW)
@@ -423,7 +423,7 @@ def _action(app_id: str = "a") -> dict[str, Any]:
         "type": "promote",
         "entry": "update",
         "version": "1.0",
-        "replaces": None,
+        "displaces": None,
         "from_ring": None,
         "from_ring_entered_at": None,
         "promote_after_days": None,
@@ -476,7 +476,7 @@ class TestWritePlanFiles:
             '"type"',
             '"entry"',
             '"version"',
-            '"replaces"',
+            '"displaces"',
             '"ring"',
             '"groups"',
             '"sha256"',

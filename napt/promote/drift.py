@@ -80,7 +80,7 @@ def _describe_target(target: dict[str, Any] | None, names: dict) -> str:
 def _referenced_shas(state: dict[str, Any]) -> set[str]:
     """Returns every release hash a deployment state file references."""
     shas: set[str] = set()
-    for section in ("deployed", "pending"):
+    for section in ("published", "pending"):
         entry = state.get(section) or {}
         if entry.get("sha256"):
             shas.add(entry["sha256"])

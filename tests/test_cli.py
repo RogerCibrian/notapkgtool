@@ -745,7 +745,7 @@ class TestCmdPromotePlan:
                 "type": "promote",
                 "entry": "update",
                 "version": "1.0.0",
-                "replaces": None,
+                "displaces": None,
                 "from_ring": None,
                 "from_ring_entered_at": None,
                 "promote_after_days": None,
@@ -827,7 +827,7 @@ class TestCmdStatus:
         )
 
         state = create_default_deployment_state()
-        state["deployed"] = {"version": "1.2.3", "sha256": "a"}
+        state["published"] = {"version": "1.2.3", "sha256": "a"}
         state["rings"] = {
             "pilot": {"version": "1.2.3", "sha256": "a", "entered_at": "x"}
         }

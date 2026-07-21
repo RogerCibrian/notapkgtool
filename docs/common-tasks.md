@@ -709,7 +709,7 @@ release has proven itself.
    review the files, or commit them and gate the apply on a pull request.
    Every action opens with a plain-English summary sentence and carries
    the details behind it — the release, the groups it will assign, the
-   version it replaces, and for a promotion out of a held ring, when the
+   version it displaces, and for a promotion out of a held ring, when the
    release entered it and the ring's bake threshold — so the files read
    as the review record.
 

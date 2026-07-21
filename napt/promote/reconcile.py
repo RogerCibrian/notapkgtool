@@ -14,7 +14,7 @@
 
 """Publication recovery for lost deployment state writebacks.
 
-A publish run records the pending-to-deployed transition in deployment
+A publish run records the pending-to-published transition in deployment
 state after uploading, but that record can be lost — most commonly when
 a CI runner uploads successfully and then fails to push the state commit
 (branch protection, network). The tenant then holds a fully published
@@ -26,7 +26,7 @@ Reconciliation closes that gap by re-deriving the record from tenant
 evidence: when every entry the app's ``build_types`` requires exists in
 Intune, stamped for the pending release's installer hash and with
 committed content, the publication demonstrably succeeded and
-``deployed`` is recorded exactly as the publish run would have. This
+``published`` is recorded exactly as the publish run would have. This
 trusts provenance stamps and committed content the same way idempotent
 upload adoption already does — no new trust is introduced.
 
@@ -37,7 +37,7 @@ rather than overriding an admin's tenant change.
 Finding kinds:
 
 - ``recovered``: The publication was fully committed in the tenant and
-    has been recorded as deployed.
+    has been recorded as published.
 - ``incomplete``: Some required entries are missing or their content was
     never committed; nothing is recorded — re-run publish to finish.
 """
@@ -51,7 +51,7 @@ from napt.logging import get_global_logger
 from napt.state import (
     deployment_state_path,
     load_deployment_state,
-    record_deployed,
+    record_published,
     save_deployment_state,
 )
 from napt.upload.graph import get_mobile_app
@@ -77,7 +77,7 @@ def reconcile_publications(
     For each app with a pending release, checks the tenant for stamped
     entries matching the pending installer hash. When every entry
     required by the app's ``build_types`` exists with committed content,
-    records the release as deployed (clearing the pending slot) exactly
+    records the release as published (clearing the pending slot) exactly
     as the original publish run would have. Partial evidence — some
     entries missing or uncommitted — is warned about but never recorded,
     because only a publish re-run can finish the upload.
@@ -144,17 +144,18 @@ def reconcile_publications(
 
         install_match = matches.get(ENTRY_INSTALL)
         update_match = matches.get(ENTRY_UPDATE)
-        record_deployed(
+        record_published(
             state,
             version=version,
             sha256=sha256,
             intune_app_id=install_match["id"] if install_match else None,
             intune_update_app_id=update_match["id"] if update_match else None,
         )
+        state["name"] = config["name"]
         save_deployment_state(state, state_path)
         detail = (
             f"recorded publication of {version} ({sha256[:12]}): all entries "
-            "are committed in the tenant but the deployed record was missing"
+            "are committed in the tenant but the published record was missing"
         )
         logger.info("PROMOTE", f"{app_id}: {detail}")
         findings.append({"app_id": app_id, "kind": "recovered", "detail": detail})

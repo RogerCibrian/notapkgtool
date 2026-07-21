@@ -579,10 +579,10 @@ def test_upload_hash_mismatch_aborts_before_graph(
         _run_upload(tmp_path, fake_metadata)
 
 
-def test_upload_matching_pending_records_deployed(
+def test_upload_matching_pending_records_published(
     tmp_path: Path, monkeypatch, fake_metadata
 ) -> None:
-    """Tests that a matching pending release transitions to deployed."""
+    """Tests that a matching pending release transitions to published."""
     monkeypatch.chdir(tmp_path)
     make_package_dir(tmp_path, installer_sha256="a" * 64)
     state_path = _seed_pending(tmp_path, sha256="a" * 64)
@@ -591,7 +591,7 @@ def test_upload_matching_pending_records_deployed(
 
     state = load_deployment_state(state_path)
     assert state["pending"] is None
-    assert state["deployed"] == {
+    assert state["published"] == {
         "version": "1.0.0",
         "sha256": "a" * 64,
         "intune_app_id": "intune-app-123",
@@ -611,14 +611,14 @@ def test_upload_without_pending_warns_and_records(
     assert "No pending release recorded" in capsys.readouterr().out
     state_path = deployment_state_path(tmp_path / "state" / "deployment", "test-app")
     state = load_deployment_state(state_path)
-    assert state["deployed"]["intune_app_id"] == "intune-app-123"
+    assert state["published"]["intune_app_id"] == "intune-app-123"
     assert state["pending"] is None
 
 
 def test_upload_app_only_records_null_update_id(
     tmp_path: Path, monkeypatch, fake_metadata
 ) -> None:
-    """Tests that app_only records a null update entry ID in deployed state."""
+    """Tests that app_only records a null update entry ID in published state."""
     monkeypatch.chdir(tmp_path)
     make_package_dir(tmp_path, installer_sha256="a" * 64)
 
@@ -626,8 +626,8 @@ def test_upload_app_only_records_null_update_id(
 
     state_path = deployment_state_path(tmp_path / "state" / "deployment", "test-app")
     state = load_deployment_state(state_path)
-    assert state["deployed"]["intune_app_id"] == "intune-app-123"
-    assert state["deployed"]["intune_update_app_id"] is None
+    assert state["published"]["intune_app_id"] == "intune-app-123"
+    assert state["published"]["intune_update_app_id"] is None
 
 
 # =============================================================================
@@ -675,10 +675,10 @@ def test_upload_adopts_committed_stamped_apps(
     assert result.intune_app_id == "existing-install"
     assert result.intune_update_app_id == "existing-update"
 
-    # Adoption still records the deployed release in state
+    # Adoption still records the published release in state
     state_path = deployment_state_path(tmp_path / "state" / "deployment", "test-app")
     state = load_deployment_state(state_path)
-    assert state["deployed"]["intune_app_id"] == "existing-install"
+    assert state["published"]["intune_app_id"] == "existing-install"
 
 
 def test_upload_recreates_uncommitted_stamped_app(

@@ -84,7 +84,7 @@ def discover_recipe(
     discovery flow (version-first registered strategy or ``url_download``),
     persists the result to the discovery cache, records the release as the
     pending publication candidate in deployment state when it differs from
-    the deployed version, and returns the public discovery result.
+    the published version, and returns the public discovery result.
 
     Args:
         recipe_path: Path to the recipe YAML file. Must exist and be
@@ -154,7 +154,7 @@ def discover_recipe(
             _save_app_cache(
                 cache_data, cache_file, app_id, strategy_name, result, logger
             )
-        _record_pending_release(state_dir, app_id, result, logger)
+        _record_pending_release(state_dir, app_id, app_name, result, logger)
 
     return DiscoverResult(
         app_name=app_name,
@@ -250,6 +250,7 @@ def _save_app_cache(
 def _record_pending_release(
     state_dir: Path,
     app_id: str,
+    name: str,
     result: StrategyResult,
     logger: Any,
 ) -> None:
@@ -268,11 +269,12 @@ def _record_pending_release(
         logger.verbose("STATE", "Pending release unchanged")
         return
 
+    state["name"] = name
     save_deployment_state(state, state_path)
     if action == "cleared":
         logger.info(
             "STATE",
-            "Pending release cleared (vendor serves the deployed version)",
+            "Pending release cleared (vendor serves the published version)",
         )
     elif action == "replaced":
         logger.info(
