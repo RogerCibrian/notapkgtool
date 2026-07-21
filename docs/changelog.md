@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-07-20
+
 ### Changed
 
 - **BREAKING: Per-app promotion plans** - `napt promote plan` now writes
@@ -21,9 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Plan actions now carry reviewer context: the app's display name,
         and for ring advancement, when the release entered the ring it is
         leaving and that ring's bake threshold
-    - Migration: none needed for state — plans are transient. Update
-        promotion workflows to watch `state/plans/**` instead of
-        `state/plan.json` (see the reference workflows in Common Tasks)
+    - The reference workflows in Common Tasks watch `state/plans/**`
 - **BREAKING: Plan files read at a glance** - Every planned action now
     opens with a plain-English `summary` sentence and names the Intune
     `entry` it touches (`install` or `update`) and the version it
@@ -33,28 +33,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         release one ring forward (`from_ring: null` marks a first
         rollout) and `assign` points new installs at it — replacing
         `enter_ring`, `advance_ring`, and `assign_install`
-    - The displaced version is deliberately called `displaces`, not
-        "replaces" or "supersedes": the displaced release loses the
-        assignment but stays in Intune for rollback per
-        `deployment.retain_versions`, and NAPT does not use Intune's
-        Win32 supersedence feature
+    - `displaces` means the older release loses the assignment but stays
+        in Intune for rollback per `deployment.retain_versions` — NAPT
+        never uses Intune's Win32 supersedence feature
     - `napt promote plan` and `apply` print the same summary sentences,
         so console output and plan files never disagree
-- **BREAKING: Deployment state files read at a glance** - The same
-    treatment as plan files, applied to the publish PR's review surface
+- **BREAKING: Deployment state files read at a glance** -
+    `state/deployment/<app-id>.json` now reads top-to-bottom as the
+    publish PR's review record
     - `deployed` is renamed `published`: publishing uploads a release to
         Intune without assigning it, and `napt promote` deploys it
-        through the rings afterwards — `pending` to `published` is the
-        publish verb's lifecycle
+        through the rings afterwards
     - Each file names its app once at the top: `app_id` (stamped from
         the filename; a copied or renamed state file is now rejected)
         and the recipe's display `name`, refreshed on every save
     - Keys follow reading order — lifecycle order at the top level,
         `version` first and hashes last inside blocks — instead of
         alphabetical
-    - Migration: add `"published"` (renamed from `"deployed"`) to
-        existing state files, or let the next writeback rewrite them;
-        the schema version is unchanged
 - **Reviewer-friendly GitOps PRs** - The reference workflows in Common
     Tasks now generate the review surface instead of one-line PRs
     - Publish PRs are titled `Publish <Name> <version>` with a fact
@@ -67,9 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         final ring is targeted
     - Titles and bodies regenerate on every refresh, so a superseding
         release never leaves a stale decision under review
-    - The promotion PR branch is now `napt/promote-plan` (matching
-        `napt promote plan`); delete a lingering `napt/promotion-plan`
-        branch when updating existing workflows
+    - The promotion PR branch is now `napt/promote-plan`, matching the
+        `napt promote plan` command
 - **Graph API calls retry transient failures** - Throttling (HTTP
     429/503/509, honoring Retry-After) and transient server or
     connection errors now retry with bounded exponential backoff across
@@ -492,6 +486,7 @@ Initial internal release.
 
 
 [Unreleased]: https://github.com/RogerCibrian/notapkgtool/compare/0.7.0...HEAD
+[0.9.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.8.0...0.9.0
 [0.8.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.7.0...0.8.0
 [0.7.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.5.1...0.6.0

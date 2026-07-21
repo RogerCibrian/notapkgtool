@@ -72,8 +72,8 @@ __all__ = [
 # Deterministic ordering of action types within one app's actions.
 _ACTION_ORDER = {"assign": 0, "promote": 1}
 
-# Schema version written to every plan file. Bump only with a migration
-# story: promote apply rejects plans stamped with a different version.
+# Schema version written to every plan file. Promote apply rejects
+# plans stamped with a different version.
 PLAN_SCHEMA_VERSION = 1
 
 

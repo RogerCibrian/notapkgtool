@@ -78,8 +78,8 @@ from typing import Any
 
 from napt.exceptions import StateError
 
-# Schema version written to every deployment state file. Bump only with
-# a migration story: loaders reject files stamped with a different version.
+# Schema version written to every deployment state file. Loaders reject
+# files stamped with a different version.
 DEPLOYMENT_STATE_SCHEMA_VERSION = 1
 
 # Reading order for serialization: identity, then the release lifecycle.
@@ -196,9 +196,7 @@ def load_deployment_state(state_path: Path) -> dict[str, Any]:
         raise StateError(
             f"Unsupported deployment state schema version {found!r} in "
             f"{state_path} (this NAPT release supports version "
-            f"{DEPLOYMENT_STATE_SCHEMA_VERSION}). Files from earlier "
-            f'pre-releases need "schemaVersion": '
-            f"{DEPLOYMENT_STATE_SCHEMA_VERSION} added."
+            f"{DEPLOYMENT_STATE_SCHEMA_VERSION})."
         )
 
     declared = state.get("app_id")
