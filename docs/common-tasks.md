@@ -839,7 +839,7 @@ Adapt names, schedules, and branch rules to your org.
   release in `state/deployment/<id>.json`; CI opens a per-app PR with
   that diff. The title carries the decision
   (`Publish Google Chrome 140.0.7339.128`) and the body is a generated
-  fact sheet: version, currently deployed version, installer URL,
+  fact sheet: version, currently published version, installer URL,
   SHA-256, what merging does, and how to hold or reject.
   Merging approves the release — a workflow builds, packages,
   and uploads it, with the hash gate guaranteeing the approved binary is
@@ -940,40 +940,31 @@ jobs:
           import sys
           from pathlib import Path
 
-          import yaml
-
           state_path = Path(sys.argv[1])
-          app_id = state_path.stem
           state = json.loads(state_path.read_text(encoding="utf-8"))
-          name = app_id
-          for recipe in Path("recipes").rglob("*.y*ml"):
-              try:
-                  data = yaml.safe_load(recipe.read_text(encoding="utf-8"))
-              except yaml.YAMLError:
-                  continue
-              if isinstance(data, dict) and data.get("id") == app_id:
-                  name = data.get("name") or app_id
-                  break
+          # The state file names its app; the filename backstops a
+          # file saved before any name was recorded.
+          name = state.get("name") or state_path.stem
           pending = state.get("pending")
-          deployed = state.get("deployed") or {}
+          published = state.get("published") or {}
           if pending is None:
               # Discovery cleared the pending slot: the vendor serves
-              # the already-deployed release. The diff only records it.
+              # the already-published release. The diff only records it.
               Path("pr-body.md").write_text(
                   f"**Name:** {name}\n\n"
                   "Discovery found the vendor serving the already-"
-                  "deployed release, so this diff only clears the "
+                  "published release, so this diff only clears the "
                   "app's pending slot. Merging records that; nothing "
                   "is published.\n",
                   encoding="utf-8",
               )
               print(f"Clear pending release for {name}")
               raise SystemExit
-          current = deployed.get("version") or "none - first deployment"
+          current = published.get("version") or "none - first deployment"
           Path("pr-body.md").write_text(
               f"**Name:** {name}\n"
               f"**New version:** {pending['version']}\n"
-              f"**Currently deployed:** {current}\n"
+              f"**Currently published:** {current}\n"
               f"**Installer:** {pending['url']}\n"
               f"**SHA-256:** `{pending['sha256']}`\n"
               "\n"

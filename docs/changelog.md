@@ -58,7 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Reviewer-friendly GitOps PRs** - The reference workflows in Common
     Tasks now generate the review surface instead of one-line PRs
     - Publish PRs are titled `Publish <Name> <version>` with a fact
-        sheet body: version, currently deployed version, installer URL,
+        sheet body: version, currently published version, installer URL,
         SHA-256, what merging does, and how to hold or reject
     - The promotion PR body opens with a risk line
         (`**This plan:** 2 to pilot, 1 to production`), lists every
