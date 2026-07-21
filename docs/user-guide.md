@@ -18,7 +18,7 @@ The discovery process finds the latest version and downloads the installer:
     - If version changed or file missing → Download installer
 5. **Extract Version** - Extracts version from installer (MSI ProductVersion) or uses discovered version
 6. **Update Cache** - Updates `cache/discovery.json` with new version, file path, SHA-256 hash, and ETag (if download occurred)
-7. **Record Pending Release** - Updates `state/deployment/{app_id}.json` with the discovered release as the pending publication candidate when it differs from the deployed version. The pending slot holds one candidate and the newest discovery wins.
+7. **Record Pending Release** - Updates `state/deployment/{app_id}.json` with the discovered release as the pending publication candidate when it differs from the published version. The pending slot holds one candidate and the newest discovery wins.
 
 **Output**: Downloaded installer in `downloads/` directory, updated discovery cache, updated deployment state
 
@@ -449,7 +449,7 @@ computes which releases are ready to promote through deployment rings
 nothing is eligible for it. Read-only unless `--reconcile` is passed.
 Besides the fields apply acts on, each action carries reviewer context:
 a plain-English summary sentence, the Intune entry it touches, the
-version it replaces, and — for a promotion out of a held ring — when
+version it displaces, and — for a promotion out of a held ring — when
 the release entered that ring and its bake threshold.
 
 `promote apply` executes the plans against Intune: assigns install
@@ -493,7 +493,7 @@ Both commands also recover **lost publication writebacks**: when an
 upload succeeded but the state commit recording it never landed (a CI
 push rejected by branch protection, a crashed runner), the tenant holds
 a fully published release that state still lists as pending. Recovery
-re-derives the deployed record from the same provenance-stamp evidence
+re-derives the published record from the same provenance-stamp evidence
 idempotent upload uses, and only when every entry of the release has
 committed content — a partially published release is warned about
 instead, since only a publish re-run can finish it. Apply reconciles
@@ -514,8 +514,9 @@ writeback commits — see
 
 ### napt status
 
-Shows deployment state across all apps: deployed version, pending release,
-and which version holds each ring. `--format json` for scripting.
+Shows deployment state across all apps: published version, pending
+release, and which version holds each ring. `--format json` for
+scripting.
 
 ```bash
 napt status [OPTIONS]
@@ -627,9 +628,9 @@ NAPT keeps two kinds of state with different purposes:
 - **Discovery cache** (`cache/discovery.json`) - A disposable optimization file tracking discovered versions, ETags, and download metadata.
 Deleting it costs one full re-download per app and nothing else.
 Safe to gitignore.
-- **Deployment state** (`state/deployment/<app_id>.json`) - Authoritative per-app records of what NAPT has published to Intune (`deployed`) and what is awaiting publication (`pending`).
+- **Deployment state** (`state/deployment/<app_id>.json`) - Authoritative per-app records of what NAPT has published to Intune (`published`) and what is awaiting publication (`pending`).
 Not regenerable.
-Written deterministically (sorted keys, no timestamps), so unchanged state produces byte-identical files and clean diffs — commit these files to version control if you want an auditable record or a PR-based review workflow.
+Written deterministically (fixed reading-order keys, no timestamps), so unchanged state produces byte-identical files and clean diffs — commit these files to version control if you want an auditable record or a PR-based review workflow.
 
 ### Discovery Cache
 
@@ -676,13 +677,19 @@ flowchart TD
 Each app gets its own file, `state/deployment/<app_id>.json`, so concurrent changes to different apps never conflict and each file's diff is scoped to one app.
 Every file carries a `schemaVersion` (currently 1); NAPT refuses files
 whose schemaVersion is missing or unsupported.
-A file holds four sections:
+A file names its app once at the top — `app_id` (which must match the
+filename; a copied or renamed file is rejected) and the recipe's display
+`name`, refreshed on every save — and holds five sections:
 
-- `deployed` - The version currently published to Intune, with its SHA-256 hash and Intune app IDs. Null until the first upload.
-- `pending` - The discovered release awaiting publication (version, SHA-256 hash, download URL). A single slot: a newer discovery replaces an unpublished candidate (newest wins), and discovering the already-deployed release clears it. Identity is the SHA-256 hash, so a vendor re-release of the same version with a different binary counts as new.
+- `published` - The release currently in Intune, with its SHA-256 hash and Intune app IDs. Null until the first upload. Publishing uploads the release without assigning it; `napt promote` deploys it through the rings afterwards.
+- `install_assigned` - The release the install entry is currently assigned to (the result of a promotion plan's `assign` action).
+- `pending` - The discovered release awaiting publication (version, download URL, SHA-256 hash). A single slot: a newer discovery replaces an unpublished candidate (newest wins), and discovering the already-published release clears it. Identity is the SHA-256 hash, so a vendor re-release of the same version with a different binary counts as new.
 - `rings` - Which version currently holds each deployment ring, with the timestamp it entered (written by `napt promote apply`).
-- `retained` - Superseded versions kept in Intune for rollback per `deployment.retain_versions` (written by `napt promote apply`).
+- `retained` - Displaced versions kept in Intune for rollback per `deployment.retain_versions` (written by `napt promote apply`).
 
+Keys follow reading order — lifecycle order at the top level, `version`
+first and hashes last inside blocks — because these files are what a
+publish PR diff shows its reviewer.
 `napt discover` records the pending candidate.
 Later pipeline stages consume it.
 
@@ -696,7 +703,7 @@ types, one per Intune entry: `promote` moves a release one ring forward
 (`from_ring: null` marks a first rollout into the first ring), and
 `assign` points new installs at the release.
 Every action opens with a plain-English `summary` and carries the
-details behind it — the entry touched, the version it replaces, bake
+details behind it — the entry touched, the version it displaces, bake
 timestamps — so the file diff reads on its own in review:
 
 ```json
@@ -706,11 +713,11 @@ timestamps — so the file diff reads on its own in review:
   "name": "Google Chrome",
   "actions": [
     {
-      "summary": "Promote 140.0.7339.128 from pilot to production, replacing 139.0.7258.155; it has held pilot since 2026-07-14 (threshold: 2 days).",
+      "summary": "Promote 140.0.7339.128 from pilot to production, displacing 139.0.7258.155; it has held pilot since 2026-07-14 (threshold: 2 days).",
       "type": "promote",
       "entry": "update",
       "version": "140.0.7339.128",
-      "replaces": "139.0.7258.155",
+      "displaces": "139.0.7258.155",
       "from_ring": "pilot",
       "from_ring_entered_at": "2026-07-14T07:12:03+00:00",
       "promote_after_days": 2,

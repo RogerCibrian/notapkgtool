@@ -20,21 +20,30 @@ the discovery cache, deployment state is not regenerable.
 
 Each app gets its own file, ``state/deployment/<recipe-id>.json``, so that
 concurrent changes to different apps never conflict and each file's diff
-is scoped to one app. A file holds four sections:
+is scoped to one app. A file names its app once at the top (``app_id``
+matching the filename, plus the recipe's display ``name``, refreshed on
+every save) and holds five sections:
 
-- ``deployed``: The version currently published to Intune, with its
-    SHA-256 hash and Intune app IDs. Null until the first upload.
+- ``published``: The release currently in Intune, with its SHA-256 hash
+    and Intune app IDs. Null until the first upload. Publishing uploads
+    the release without assigning it — ``napt promote`` deploys it
+    through the rings afterwards.
+- ``install_assigned``: The release the install entry is currently
+    assigned to (the result of a ``promote`` plan's ``assign`` action).
 - ``pending``: The discovered release awaiting publication, with version,
-    SHA-256 hash, and download URL. A single slot — a newer discovery
+    download URL, and SHA-256 hash. A single slot — a newer discovery
     replaces an unpublished candidate (newest wins). Null when nothing is
     awaiting publication.
 - ``rings``: Which version currently holds each deployment ring. Written
     by ``napt promote``.
-- ``retained``: Superseded versions kept in Intune for rollback.
+- ``retained``: Displaced versions kept in Intune for rollback.
 
-Serialization is deterministic (sorted keys, fixed indentation, no
-timestamps), so re-running a command that produces no logical change
-produces a byte-identical file and a clean git diff.
+Serialization is deterministic (fixed reading-order keys, fixed
+indentation, no timestamps), so re-running a command that produces no
+logical change produces a byte-identical file and a clean git diff.
+Keys follow reading order — lifecycle order at the top level, ``version``
+first and hashes last inside blocks — because these files are what a
+publish PR diff shows its reviewer.
 
 Example:
     Recording a discovered release:
@@ -73,6 +82,45 @@ from napt.exceptions import StateError
 # a migration story: loaders reject files stamped with a different version.
 DEPLOYMENT_STATE_SCHEMA_VERSION = 1
 
+# Reading order for serialization: identity, then the release lifecycle.
+_TOP_LEVEL_ORDER = (
+    "schemaVersion",
+    "app_id",
+    "name",
+    "published",
+    "install_assigned",
+    "pending",
+    "rings",
+    "retained",
+)
+_BLOCK_ORDERS = {
+    "published": ("version", "sha256", "intune_app_id", "intune_update_app_id"),
+    "install_assigned": ("version", "sha256"),
+    "pending": ("version", "url", "sha256"),
+}
+_RING_ENTRY_ORDER = ("version", "sha256", "entered_at")
+_RETAINED_ENTRY_ORDER = ("version", "sha256")
+
+
+def _in_reading_order(
+    mapping: dict[str, Any], order: tuple[str, ...]
+) -> dict[str, Any]:
+    """Returns a copy with known keys in reading order, then the rest.
+
+    Args:
+        mapping: The dict to reorder.
+        order: Keys to emit first, in this order, when present.
+
+    Returns:
+        A reordered shallow copy.
+
+    """
+    ordered = {key: mapping[key] for key in order if key in mapping}
+    ordered.update(
+        {key: value for key, value in mapping.items() if key not in ordered}
+    )
+    return ordered
+
 
 def deployment_state_path(state_dir: Path, recipe_id: str) -> Path:
     """Returns the deployment state file path for a recipe.
@@ -92,14 +140,18 @@ def deployment_state_path(state_dir: Path, recipe_id: str) -> Path:
 def create_default_deployment_state() -> dict[str, Any]:
     """Creates an empty deployment state structure.
 
+    The identity fields (``app_id``, ``name``) are stamped at save time —
+    ``app_id`` from the filename, ``name`` by whichever writer holds the
+    recipe configuration.
+
     Returns:
-        Deployment state with no deployed version, no pending release,
+        Deployment state with no published release, no pending release,
         no ring assignments, and no retained versions.
 
     """
     return {
         "schemaVersion": DEPLOYMENT_STATE_SCHEMA_VERSION,
-        "deployed": None,
+        "published": None,
         "pending": None,
         "rings": {},
         "retained": [],
@@ -120,8 +172,9 @@ def load_deployment_state(state_path: Path) -> dict[str, Any]:
         Deployment state dictionary.
 
     Raises:
-        StateError: If the file exists but contains invalid JSON, or its
-            schemaVersion is missing or unsupported. Deployment state is
+        StateError: If the file exists but contains invalid JSON, its
+            schemaVersion is missing or unsupported, or its declared
+            app_id disagrees with the filename. Deployment state is
             authoritative, so a corrupted file is never silently
             replaced.
 
@@ -147,15 +200,26 @@ def load_deployment_state(state_path: Path) -> dict[str, Any]:
             f'pre-releases need "schemaVersion": '
             f"{DEPLOYMENT_STATE_SCHEMA_VERSION} added."
         )
+
+    declared = state.get("app_id")
+    if declared is not None and declared != state_path.stem:
+        raise StateError(
+            f"Deployment state file {state_path} declares app_id "
+            f"{declared!r}, but its filename says {state_path.stem!r}. "
+            "The file was likely copied or renamed. Fix whichever is "
+            "wrong before continuing."
+        )
     return state
 
 
 def save_deployment_state(state: dict[str, Any], state_path: Path) -> None:
     """Saves deployment state for one app deterministically.
 
-    Creates parent directories if needed. Output is byte-identical for
-    logically identical state: keys are sorted, indentation is fixed at
-    2 spaces, and no timestamps or run-specific values are written.
+    Creates parent directories if needed. Stamps the schema version and
+    the ``app_id`` (from the filename, which is the identity). Output is
+    byte-identical for logically identical state: keys follow reading
+    order, indentation is fixed at 2 spaces, rings are sorted by name,
+    and no timestamps or run-specific values are written.
 
     Args:
         state: Deployment state dictionary to save.
@@ -166,10 +230,26 @@ def save_deployment_state(state: dict[str, Any], state_path: Path) -> None:
 
     """
     state["schemaVersion"] = DEPLOYMENT_STATE_SCHEMA_VERSION
+    state["app_id"] = state_path.stem
     state_path.parent.mkdir(parents=True, exist_ok=True)
 
+    ordered = _in_reading_order(state, _TOP_LEVEL_ORDER)
+    for block, order in _BLOCK_ORDERS.items():
+        if isinstance(ordered.get(block), dict):
+            ordered[block] = _in_reading_order(ordered[block], order)
+    if isinstance(ordered.get("rings"), dict):
+        ordered["rings"] = {
+            ring: _in_reading_order(entry, _RING_ENTRY_ORDER)
+            for ring, entry in sorted(ordered["rings"].items())
+        }
+    if isinstance(ordered.get("retained"), list):
+        ordered["retained"] = [
+            _in_reading_order(entry, _RETAINED_ENTRY_ORDER)
+            for entry in ordered["retained"]
+        ]
+
     with open(state_path, "w", encoding="utf-8") as f:
-        json.dump(state, f, indent=2, sort_keys=True)
+        json.dump(ordered, f, indent=2)
         f.write("\n")  # Trailing newline for git
 
 
@@ -182,7 +262,7 @@ def record_pending(
     """Records a discovered release as the pending publication candidate.
 
     The pending slot holds exactly one candidate and the newest discovery
-    wins: a release that differs from both the deployed version and the
+    wins: a release that differs from both the published release and the
     current pending candidate replaces the pending candidate. Identity is
     the SHA-256 hash, not the version string, so a vendor re-release of
     the same version with a different binary is treated as new.
@@ -196,15 +276,15 @@ def record_pending(
     Returns:
         A string naming the change made ("recorded" for a first candidate,
             "replaced" when a candidate was overwritten, "cleared" when the
-            vendor serves the already-deployed release), or
+            vendor serves the already-published release), or
             None when the state did not change.
 
     """
-    deployed = state.get("deployed")
+    published = state.get("published")
     pending = state.get("pending")
 
-    if deployed and deployed.get("sha256") == sha256:
-        # Vendor serves exactly what is deployed; nothing awaits publication.
+    if published and published.get("sha256") == sha256:
+        # Vendor serves exactly what is published; nothing awaits publication.
         if pending is not None:
             state["pending"] = None
             return "cleared"
@@ -221,18 +301,19 @@ def record_pending(
     return "replaced" if pending else "recorded"
 
 
-def record_deployed(
+def record_published(
     state: dict[str, Any],
     version: str,
     sha256: str,
     intune_app_id: str | None,
     intune_update_app_id: str | None,
 ) -> None:
-    """Records a successful publication as the deployed release.
+    """Records a successful publication as the published release.
 
-    Replaces the ``deployed`` section and clears the pending slot when the
-    pending candidate is the release that was just published. A pending
-    candidate with a different hash (a newer discovery) is left in place.
+    Replaces the ``published`` section and clears the pending slot when
+    the pending candidate is the release that was just published. A
+    pending candidate with a different hash (a newer discovery) is left
+    in place.
 
     Args:
         state: Deployment state dictionary to update in place.
@@ -244,7 +325,7 @@ def record_deployed(
             None when build_types is "app_only".
 
     """
-    state["deployed"] = {
+    state["published"] = {
         "version": version,
         "sha256": sha256,
         "intune_app_id": intune_app_id,
@@ -264,8 +345,9 @@ def summarize_deployment_states(deployment_dir: Path) -> list[dict[str, Any]]:
 
     Returns:
         One summary dict per app, sorted by app id, each with the app id,
-            deployed version, pending version, and a ring-to-version map.
-            Empty when the directory does not exist or holds no state.
+            published version, pending version, and a ring-to-version
+            map. Empty when the directory does not exist or holds no
+            state.
 
     Raises:
         StateError: On a corrupted deployment state file.
@@ -277,13 +359,13 @@ def summarize_deployment_states(deployment_dir: Path) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for path in sorted(deployment_dir.glob("*.json")):
         state = load_deployment_state(path)
-        deployed = state.get("deployed") or {}
+        published = state.get("published") or {}
         pending = state.get("pending") or {}
         rings = state.get("rings") or {}
         rows.append(
             {
                 "app_id": path.stem,
-                "deployed": deployed.get("version"),
+                "published": published.get("version"),
                 "pending": pending.get("version"),
                 "rings": {
                     name: entry.get("version") for name, entry in sorted(rings.items())

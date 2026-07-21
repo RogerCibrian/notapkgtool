@@ -43,7 +43,7 @@ def _write_pending_state(state_dir: Path, app_id: str, pending: dict) -> None:
     deployment_dir.mkdir(parents=True, exist_ok=True)
     state = {
         "schemaVersion": 1,
-        "deployed": None,
+        "published": None,
         "pending": pending,
         "rings": {},
         "retained": [],

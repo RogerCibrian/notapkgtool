@@ -143,7 +143,7 @@ class TestDetectDrift:
         config = _config(rings=_RINGS)
         deployment_dir = _write_state(
             tmp_path,
-            deployed={"version": "1.0.0", "sha256": "a" * 64},
+            published={"version": "1.0.0", "sha256": "a" * 64},
             rings=_HELD_PILOT,
         )
 
@@ -162,7 +162,7 @@ class TestDetectDrift:
         config = _config(rings=_RINGS)
         deployment_dir = _write_state(
             tmp_path,
-            deployed={"version": "1.0.0", "sha256": "a" * 64},
+            published={"version": "1.0.0", "sha256": "a" * 64},
             rings=_HELD_PILOT,
         )
 
@@ -182,7 +182,7 @@ class TestDetectDrift:
         config = _config(rings=_RINGS)
         deployment_dir = _write_state(
             tmp_path,
-            deployed={"version": "1.0.0", "sha256": "a" * 64},
+            published={"version": "1.0.0", "sha256": "a" * 64},
             rings=_HELD_PILOT,
         )
 
@@ -203,7 +203,7 @@ class TestDetectDrift:
         config = _config(rings=_RINGS)
         deployment_dir = _write_state(
             tmp_path,
-            deployed={"version": "1.0.0", "sha256": "a" * 64},
+            published={"version": "1.0.0", "sha256": "a" * 64},
             rings=_HELD_PILOT,
         )
 
@@ -230,7 +230,7 @@ class TestDetectDrift:
         config = _config(install_groups=["Pilot Devices"])
         deployment_dir = _write_state(
             tmp_path,
-            deployed={"version": "1.0.0", "sha256": "a" * 64},
+            published={"version": "1.0.0", "sha256": "a" * 64},
             # No install_assigned record: the apply writeback was lost.
         )
 
@@ -254,7 +254,7 @@ class TestDetectDrift:
         config = _config(rings=_RINGS)
         deployment_dir = _write_state(
             tmp_path,
-            deployed={"version": "1.0.0", "sha256": "a" * 64},
+            published={"version": "1.0.0", "sha256": "a" * 64},
             # No ring record: the apply writeback was lost.
         )
 
@@ -274,7 +274,7 @@ class TestDetectDrift:
         config = _config(install_groups=["Pilot Devices"])
         deployment_dir = _write_state(
             tmp_path,
-            deployed={"version": "1.0.0", "sha256": "a" * 64},
+            published={"version": "1.0.0", "sha256": "a" * 64},
         )
 
         findings = _detect(
@@ -295,7 +295,7 @@ class TestDetectDrift:
         config = _config(rings=_RINGS)
         deployment_dir = _write_state(
             tmp_path,
-            deployed={"version": "1.0.0", "sha256": "a" * 64},
+            published={"version": "1.0.0", "sha256": "a" * 64},
             rings=_HELD_PILOT,
         )
 
@@ -308,7 +308,7 @@ class TestDetectDrift:
         config = _config(rings=_RINGS)
         deployment_dir = _write_state(
             tmp_path,
-            deployed={"version": "2.0.0", "sha256": "b" * 64},
+            published={"version": "2.0.0", "sha256": "b" * 64},
         )
 
         findings = _detect(
@@ -343,7 +343,7 @@ class TestDetectDrift:
         config = _config(install_groups=["All Users"])
         deployment_dir = _write_state(
             tmp_path,
-            deployed={"version": "1.0.0", "sha256": "a" * 64},
+            published={"version": "1.0.0", "sha256": "a" * 64},
             install_assigned={"version": "1.0.0", "sha256": "a" * 64},
         )
 
@@ -363,7 +363,7 @@ class TestDetectDrift:
         config = _config(rings=[])  # all rings removed
         deployment_dir = _write_state(
             tmp_path,
-            deployed={"version": "1.0.0", "sha256": "a" * 64},
+            published={"version": "1.0.0", "sha256": "a" * 64},
             rings=_HELD_PILOT,
         )
 
