@@ -2790,7 +2790,7 @@
 </li>
 <li><strong>Extract Version</strong> - Extracts version from installer (MSI ProductVersion) or uses discovered version</li>
 <li><strong>Update Cache</strong> - Updates <code>cache/discovery.json</code> with new version, file path, SHA-256 hash, and ETag (if download occurred)</li>
-<li><strong>Record Pending Release</strong> - Updates <code>state/deployment/{app_id}.json</code> with the discovered release as the pending publication candidate when it differs from the deployed version. The pending slot holds one candidate and the newest discovery wins.</li>
+<li><strong>Record Pending Release</strong> - Updates <code>state/deployment/{app_id}.json</code> with the discovered release as the pending publication candidate when it differs from the published version. The pending slot holds one candidate and the newest discovery wins.</li>
 </ol>
 <p><strong>Output</strong>: Downloaded installer in <code>downloads/</code> directory, updated discovery cache, updated deployment state</p>
 <h3 id="build-process-napt-build">Build Process (<code>napt build</code>)</h3>
@@ -3224,7 +3224,7 @@ computes which releases are ready to promote through deployment rings
 nothing is eligible for it. Read-only unless <code>--reconcile</code> is passed.
 Besides the fields apply acts on, each action carries reviewer context:
 a plain-English summary sentence, the Intune entry it touches, the
-version it replaces, and — for a promotion out of a held ring — when
+version it displaces, and — for a promotion out of a held ring — when
 the release entered that ring and its bake threshold.</p>
 <p><code>promote apply</code> executes the plans against Intune: assigns install
 entries, promotes releases through rings, unassigns displaced releases,
@@ -3264,7 +3264,7 @@ whatever they produce.</p>
 upload succeeded but the state commit recording it never landed (a CI
 push rejected by branch protection, a crashed runner), the tenant holds
 a fully published release that state still lists as pending. Recovery
-re-derives the deployed record from the same provenance-stamp evidence
+re-derives the published record from the same provenance-stamp evidence
 idempotent upload uses, and only when every entry of the release has
 committed content — a partially published release is warned about
 instead, since only a publish re-run can finish it. Apply reconciles
@@ -3280,8 +3280,9 @@ promotable in the same run.</p>
 writeback commits — see
 <a href="../common-tasks/#automate-napt-with-github-actions">Automate NAPT with GitHub Actions</a>.</p>
 <h3 id="napt-status">napt status</h3>
-<p>Shows deployment state across all apps: deployed version, pending release,
-and which version holds each ring. <code>--format json</code> for scripting.</p>
+<p>Shows deployment state across all apps: published version, pending
+release, and which version holds each ring. <code>--format json</code> for
+scripting.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>napt<span class="w"> </span>status<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </span></code></pre></div>
 <h3 id="napt-upload">napt upload</h3>
@@ -3412,9 +3413,9 @@ Authentication is automatic — no configuration required.</p>
 <li><strong>Discovery cache</strong> (<code>cache/discovery.json</code>) - A disposable optimization file tracking discovered versions, ETags, and download metadata.
 Deleting it costs one full re-download per app and nothing else.
 Safe to gitignore.</li>
-<li><strong>Deployment state</strong> (<code>state/deployment/&lt;app_id&gt;.json</code>) - Authoritative per-app records of what NAPT has published to Intune (<code>deployed</code>) and what is awaiting publication (<code>pending</code>).
+<li><strong>Deployment state</strong> (<code>state/deployment/&lt;app_id&gt;.json</code>) - Authoritative per-app records of what NAPT has published to Intune (<code>published</code>) and what is awaiting publication (<code>pending</code>).
 Not regenerable.
-Written deterministically (sorted keys, no timestamps), so unchanged state produces byte-identical files and clean diffs — commit these files to version control if you want an auditable record or a PR-based review workflow.</li>
+Written deterministically (fixed reading-order keys, no timestamps), so unchanged state produces byte-identical files and clean diffs — commit these files to version control if you want an auditable record or a PR-based review workflow.</li>
 </ul>
 <h3 id="discovery-cache">Discovery Cache</h3>
 <p>The discovery cache avoids unnecessary downloads.
@@ -3452,14 +3453,20 @@ This version-based caching is critical for CI/CD with frequent scheduled checks,
 <p>Each app gets its own file, <code>state/deployment/&lt;app_id&gt;.json</code>, so concurrent changes to different apps never conflict and each file's diff is scoped to one app.
 Every file carries a <code>schemaVersion</code> (currently 1); NAPT refuses files
 whose schemaVersion is missing or unsupported.
-A file holds four sections:</p>
+A file names its app once at the top — <code>app_id</code> (which must match the
+filename; a copied or renamed file is rejected) and the recipe's display
+<code>name</code>, refreshed on every save — and holds five sections:</p>
 <ul>
-<li><code>deployed</code> - The version currently published to Intune, with its SHA-256 hash and Intune app IDs. Null until the first upload.</li>
-<li><code>pending</code> - The discovered release awaiting publication (version, SHA-256 hash, download URL). A single slot: a newer discovery replaces an unpublished candidate (newest wins), and discovering the already-deployed release clears it. Identity is the SHA-256 hash, so a vendor re-release of the same version with a different binary counts as new.</li>
+<li><code>published</code> - The release currently in Intune, with its SHA-256 hash and Intune app IDs. Null until the first upload. Publishing uploads the release without assigning it; <code>napt promote</code> deploys it through the rings afterwards.</li>
+<li><code>install_assigned</code> - The release the install entry is currently assigned to (the result of a promotion plan's <code>assign</code> action).</li>
+<li><code>pending</code> - The discovered release awaiting publication (version, download URL, SHA-256 hash). A single slot: a newer discovery replaces an unpublished candidate (newest wins), and discovering the already-published release clears it. Identity is the SHA-256 hash, so a vendor re-release of the same version with a different binary counts as new.</li>
 <li><code>rings</code> - Which version currently holds each deployment ring, with the timestamp it entered (written by <code>napt promote apply</code>).</li>
-<li><code>retained</code> - Superseded versions kept in Intune for rollback per <code>deployment.retain_versions</code> (written by <code>napt promote apply</code>).</li>
+<li><code>retained</code> - Displaced versions kept in Intune for rollback per <code>deployment.retain_versions</code> (written by <code>napt promote apply</code>).</li>
 </ul>
-<p><code>napt discover</code> records the pending candidate.
+<p>Keys follow reading order — lifecycle order at the top level, <code>version</code>
+first and hashes last inside blocks — because these files are what a
+publish PR diff shows its reviewer.
+<code>napt discover</code> records the pending candidate.
 Later pipeline stages consume it.</p>
 <h3 id="promotion-plan-files">Promotion plan files</h3>
 <p><code>napt promote plan</code> evaluates ring eligibility as a pure function of
@@ -3470,7 +3477,7 @@ types, one per Intune entry: <code>promote</code> moves a release one ring forwa
 (<code>from_ring: null</code> marks a first rollout into the first ring), and
 <code>assign</code> points new installs at the release.
 Every action opens with a plain-English <code>summary</code> and carries the
-details behind it — the entry touched, the version it replaces, bake
+details behind it — the entry touched, the version it displaces, bake
 timestamps — so the file diff reads on its own in review:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="p">{</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">&quot;schemaVersion&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
@@ -3478,11 +3485,11 @@ timestamps — so the file diff reads on its own in review:</p>
 </span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Google Chrome&quot;</span><span class="p">,</span>
 </span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">  </span><span class="nt">&quot;actions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 </span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">    </span><span class="p">{</span>
-</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">      </span><span class="nt">&quot;summary&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Promote 140.0.7339.128 from pilot to production, replacing 139.0.7258.155; it has held pilot since 2026-07-14 (threshold: 2 days).&quot;</span><span class="p">,</span>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">      </span><span class="nt">&quot;summary&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Promote 140.0.7339.128 from pilot to production, displacing 139.0.7258.155; it has held pilot since 2026-07-14 (threshold: 2 days).&quot;</span><span class="p">,</span>
 </span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;promote&quot;</span><span class="p">,</span>
 </span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="w">      </span><span class="nt">&quot;entry&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;update&quot;</span><span class="p">,</span>
 </span><span id="__span-14-10"><a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="w">      </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;140.0.7339.128&quot;</span><span class="p">,</span>
-</span><span id="__span-14-11"><a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="w">      </span><span class="nt">&quot;replaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;139.0.7258.155&quot;</span><span class="p">,</span>
+</span><span id="__span-14-11"><a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="w">      </span><span class="nt">&quot;displaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;139.0.7258.155&quot;</span><span class="p">,</span>
 </span><span id="__span-14-12"><a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a><span class="w">      </span><span class="nt">&quot;from_ring&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pilot&quot;</span><span class="p">,</span>
 </span><span id="__span-14-13"><a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a><span class="w">      </span><span class="nt">&quot;from_ring_entered_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-07-14T07:12:03+00:00&quot;</span><span class="p">,</span>
 </span><span id="__span-14-14"><a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a><span class="w">      </span><span class="nt">&quot;promote_after_days&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>

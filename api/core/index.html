@@ -1669,7 +1669,7 @@ which this module unwraps into state-cache fields and the public result.</p>
 discovery flow (version-first registered strategy or <code>url_download</code>),
 persists the result to the discovery cache, records the release as the
 pending publication candidate in deployment state when it differs from
-the deployed version, and returns the public discovery result.</p>
+the published version, and returns the public discovery result.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -1973,7 +1973,7 @@ either flow.</p>
 </span><span id="__span-0-84"><a id="__codelineno-0-84" name="__codelineno-0-84"></a><span class="sd">    discovery flow (version-first registered strategy or ``url_download``),</span>
 </span><span id="__span-0-85"><a id="__codelineno-0-85" name="__codelineno-0-85"></a><span class="sd">    persists the result to the discovery cache, records the release as the</span>
 </span><span id="__span-0-86"><a id="__codelineno-0-86" name="__codelineno-0-86"></a><span class="sd">    pending publication candidate in deployment state when it differs from</span>
-</span><span id="__span-0-87"><a id="__codelineno-0-87" name="__codelineno-0-87"></a><span class="sd">    the deployed version, and returns the public discovery result.</span>
+</span><span id="__span-0-87"><a id="__codelineno-0-87" name="__codelineno-0-87"></a><span class="sd">    the published version, and returns the public discovery result.</span>
 </span><span id="__span-0-88"><a id="__codelineno-0-88" name="__codelineno-0-88"></a>
 </span><span id="__span-0-89"><a id="__codelineno-0-89" name="__codelineno-0-89"></a><span class="sd">    Args:</span>
 </span><span id="__span-0-90"><a id="__codelineno-0-90" name="__codelineno-0-90"></a><span class="sd">        recipe_path: Path to the recipe YAML file. Must exist and be</span>
@@ -2043,7 +2043,7 @@ either flow.</p>
 </span><span id="__span-0-154"><a id="__codelineno-0-154" name="__codelineno-0-154"></a>            <span class="n">_save_app_cache</span><span class="p">(</span>
 </span><span id="__span-0-155"><a id="__codelineno-0-155" name="__codelineno-0-155"></a>                <span class="n">cache_data</span><span class="p">,</span> <span class="n">cache_file</span><span class="p">,</span> <span class="n">app_id</span><span class="p">,</span> <span class="n">strategy_name</span><span class="p">,</span> <span class="n">result</span><span class="p">,</span> <span class="n">logger</span>
 </span><span id="__span-0-156"><a id="__codelineno-0-156" name="__codelineno-0-156"></a>            <span class="p">)</span>
-</span><span id="__span-0-157"><a id="__codelineno-0-157" name="__codelineno-0-157"></a>        <span class="n">_record_pending_release</span><span class="p">(</span><span class="n">state_dir</span><span class="p">,</span> <span class="n">app_id</span><span class="p">,</span> <span class="n">result</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
+</span><span id="__span-0-157"><a id="__codelineno-0-157" name="__codelineno-0-157"></a>        <span class="n">_record_pending_release</span><span class="p">(</span><span class="n">state_dir</span><span class="p">,</span> <span class="n">app_id</span><span class="p">,</span> <span class="n">app_name</span><span class="p">,</span> <span class="n">result</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
 </span><span id="__span-0-158"><a id="__codelineno-0-158" name="__codelineno-0-158"></a>
 </span><span id="__span-0-159"><a id="__codelineno-0-159" name="__codelineno-0-159"></a>    <span class="k">return</span> <span class="n">DiscoverResult</span><span class="p">(</span>
 </span><span id="__span-0-160"><a id="__codelineno-0-160" name="__codelineno-0-160"></a>        <span class="n">app_name</span><span class="o">=</span><span class="n">app_name</span><span class="p">,</span>

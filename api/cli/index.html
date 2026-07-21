@@ -2109,7 +2109,7 @@ uses the configured discovery strategy to find the latest version,
 downloads the installer (or uses cached version via ETag), extracts
 version information, updates the discovery cache, and records the
 release as a pending publication candidate in deployment state when it
-differs from the deployed version.</p>
+differs from the published version.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2271,7 +2271,7 @@ traceback if verbose/debug.</p>
 </span><span id="__span-0-233"><a id="__codelineno-0-233" name="__codelineno-0-233"></a><span class="sd">    downloads the installer (or uses cached version via ETag), extracts</span>
 </span><span id="__span-0-234"><a id="__codelineno-0-234" name="__codelineno-0-234"></a><span class="sd">    version information, updates the discovery cache, and records the</span>
 </span><span id="__span-0-235"><a id="__codelineno-0-235" name="__codelineno-0-235"></a><span class="sd">    release as a pending publication candidate in deployment state when it</span>
-</span><span id="__span-0-236"><a id="__codelineno-0-236" name="__codelineno-0-236"></a><span class="sd">    differs from the deployed version.</span>
+</span><span id="__span-0-236"><a id="__codelineno-0-236" name="__codelineno-0-236"></a><span class="sd">    differs from the published version.</span>
 </span><span id="__span-0-237"><a id="__codelineno-0-237" name="__codelineno-0-237"></a>
 </span><span id="__span-0-238"><a id="__codelineno-0-238" name="__codelineno-0-238"></a><span class="sd">    Args:</span>
 </span><span id="__span-0-239"><a id="__codelineno-0-239" name="__codelineno-0-239"></a><span class="sd">        args: Parsed command-line arguments containing</span>
@@ -3788,7 +3788,7 @@ state directory, plan file, and flags.</p>
 
         <p>Handler for 'napt status' command.</p>
 <p>Aggregates all per-app deployment state files into one view: the
-deployed version, pending release, and which version holds each ring.</p>
+published version, pending release, and which version holds each ring.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -3910,7 +3910,7 @@ directory, output format, and flags.</p>
 </span><span id="__span-0-916"><a id="__codelineno-0-916" name="__codelineno-0-916"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Handler for &#39;napt status&#39; command.</span>
 </span><span id="__span-0-917"><a id="__codelineno-0-917" name="__codelineno-0-917"></a>
 </span><span id="__span-0-918"><a id="__codelineno-0-918" name="__codelineno-0-918"></a><span class="sd">    Aggregates all per-app deployment state files into one view: the</span>
-</span><span id="__span-0-919"><a id="__codelineno-0-919" name="__codelineno-0-919"></a><span class="sd">    deployed version, pending release, and which version holds each ring.</span>
+</span><span id="__span-0-919"><a id="__codelineno-0-919" name="__codelineno-0-919"></a><span class="sd">    published version, pending release, and which version holds each ring.</span>
 </span><span id="__span-0-920"><a id="__codelineno-0-920" name="__codelineno-0-920"></a>
 </span><span id="__span-0-921"><a id="__codelineno-0-921" name="__codelineno-0-921"></a><span class="sd">    Args:</span>
 </span><span id="__span-0-922"><a id="__codelineno-0-922" name="__codelineno-0-922"></a><span class="sd">        args: Parsed command-line arguments containing the state</span>
@@ -3945,11 +3945,11 @@ directory, output format, and flags.</p>
 </span><span id="__span-0-951"><a id="__codelineno-0-951" name="__codelineno-0-951"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No deployment state found in </span><span class="si">{</span><span class="n">deployment_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span><span id="__span-0-952"><a id="__codelineno-0-952" name="__codelineno-0-952"></a>        <span class="k">return</span> <span class="mi">0</span>
 </span><span id="__span-0-953"><a id="__codelineno-0-953" name="__codelineno-0-953"></a>
-</span><span id="__span-0-954"><a id="__codelineno-0-954" name="__codelineno-0-954"></a>    <span class="n">headers</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;App&quot;</span><span class="p">,</span> <span class="s2">&quot;Deployed&quot;</span><span class="p">,</span> <span class="s2">&quot;Pending&quot;</span><span class="p">,</span> <span class="s2">&quot;Rings&quot;</span><span class="p">)</span>
+</span><span id="__span-0-954"><a id="__codelineno-0-954" name="__codelineno-0-954"></a>    <span class="n">headers</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;App&quot;</span><span class="p">,</span> <span class="s2">&quot;Published&quot;</span><span class="p">,</span> <span class="s2">&quot;Pending&quot;</span><span class="p">,</span> <span class="s2">&quot;Rings&quot;</span><span class="p">)</span>
 </span><span id="__span-0-955"><a id="__codelineno-0-955" name="__codelineno-0-955"></a>    <span class="n">table</span> <span class="o">=</span> <span class="p">[</span>
 </span><span id="__span-0-956"><a id="__codelineno-0-956" name="__codelineno-0-956"></a>        <span class="p">(</span>
 </span><span id="__span-0-957"><a id="__codelineno-0-957" name="__codelineno-0-957"></a>            <span class="n">row</span><span class="p">[</span><span class="s2">&quot;app_id&quot;</span><span class="p">],</span>
-</span><span id="__span-0-958"><a id="__codelineno-0-958" name="__codelineno-0-958"></a>            <span class="n">row</span><span class="p">[</span><span class="s2">&quot;deployed&quot;</span><span class="p">]</span> <span class="ow">or</span> <span class="s2">&quot;-&quot;</span><span class="p">,</span>
+</span><span id="__span-0-958"><a id="__codelineno-0-958" name="__codelineno-0-958"></a>            <span class="n">row</span><span class="p">[</span><span class="s2">&quot;published&quot;</span><span class="p">]</span> <span class="ow">or</span> <span class="s2">&quot;-&quot;</span><span class="p">,</span>
 </span><span id="__span-0-959"><a id="__codelineno-0-959" name="__codelineno-0-959"></a>            <span class="n">row</span><span class="p">[</span><span class="s2">&quot;pending&quot;</span><span class="p">]</span> <span class="ow">or</span> <span class="s2">&quot;-&quot;</span><span class="p">,</span>
 </span><span id="__span-0-960"><a id="__codelineno-0-960" name="__codelineno-0-960"></a>            <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">ver</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">ver</span> <span class="ow">in</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;rings&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">())</span> <span class="ow">or</span> <span class="s2">&quot;-&quot;</span><span class="p">,</span>
 </span><span id="__span-0-961"><a id="__codelineno-0-961" name="__codelineno-0-961"></a>        <span class="p">)</span>
@@ -5306,7 +5306,7 @@ Use --force to backup existing files and create fresh ones.</p>
 </span><span id="__span-0-1569"><a id="__codelineno-0-1569" name="__codelineno-0-1569"></a>        <span class="s2">&quot;status&quot;</span><span class="p">,</span>
 </span><span id="__span-0-1570"><a id="__codelineno-0-1570" name="__codelineno-0-1570"></a>        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Show deployment state across all apps&quot;</span><span class="p">,</span>
 </span><span id="__span-0-1571"><a id="__codelineno-0-1571" name="__codelineno-0-1571"></a>        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
-</span><span id="__span-0-1572"><a id="__codelineno-0-1572" name="__codelineno-0-1572"></a>            <span class="s2">&quot;Aggregate per-app deployment state into one view: deployed &quot;</span>
+</span><span id="__span-0-1572"><a id="__codelineno-0-1572" name="__codelineno-0-1572"></a>            <span class="s2">&quot;Aggregate per-app deployment state into one view: published &quot;</span>
 </span><span id="__span-0-1573"><a id="__codelineno-0-1573" name="__codelineno-0-1573"></a>            <span class="s2">&quot;version, pending release, and ring positions.</span><span class="se">\n\n</span><span class="s2">&quot;</span>
 </span><span id="__span-0-1574"><a id="__codelineno-0-1574" name="__codelineno-0-1574"></a>            <span class="s2">&quot;Examples:</span><span class="se">\n</span><span class="s2">&quot;</span>
 </span><span id="__span-0-1575"><a id="__codelineno-0-1575" name="__codelineno-0-1575"></a>            <span class="s2">&quot;  napt status</span><span class="se">\n</span><span class="s2">&quot;</span>

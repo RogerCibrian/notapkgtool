@@ -2414,14 +2414,53 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong>BREAKING: Plan files read at a glance</strong> - Every planned action now
     opens with a plain-English <code>summary</code> sentence and names the Intune
     <code>entry</code> it touches (<code>install</code> or <code>update</code>) and the version it
-    <code>replaces</code>; the app's id and display name appear once at the top of
+    <code>displaces</code>; the app's id and display name appear once at the top of
     the file, and keys follow reading order instead of alphabetical<ul>
 <li>The action vocabulary now matches the feature: <code>promote</code> moves a
     release one ring forward (<code>from_ring: null</code> marks a first
     rollout) and <code>assign</code> points new installs at it — replacing
     <code>enter_ring</code>, <code>advance_ring</code>, and <code>assign_install</code></li>
+<li>The displaced version is deliberately called <code>displaces</code>, not
+    "replaces" or "supersedes": the displaced release loses the
+    assignment but stays in Intune for rollback per
+    <code>deployment.retain_versions</code>, and NAPT does not use Intune's
+    Win32 supersedence feature</li>
 <li><code>napt promote plan</code> and <code>apply</code> print the same summary sentences,
     so console output and plan files never disagree</li>
+</ul>
+</li>
+<li><strong>BREAKING: Deployment state files read at a glance</strong> - The same
+    treatment as plan files, applied to the publish PR's review surface<ul>
+<li><code>deployed</code> is renamed <code>published</code>: publishing uploads a release to
+    Intune without assigning it, and <code>napt promote</code> deploys it
+    through the rings afterwards — <code>pending</code> to <code>published</code> is the
+    publish verb's lifecycle</li>
+<li>Each file names its app once at the top: <code>app_id</code> (stamped from
+    the filename; a copied or renamed state file is now rejected)
+    and the recipe's display <code>name</code>, refreshed on every save</li>
+<li>Keys follow reading order — lifecycle order at the top level,
+    <code>version</code> first and hashes last inside blocks — instead of
+    alphabetical</li>
+<li>Migration: add <code>"published"</code> (renamed from <code>"deployed"</code>) to
+    existing state files, or let the next writeback rewrite them;
+    the schema version is unchanged</li>
+</ul>
+</li>
+<li><strong>Reviewer-friendly GitOps PRs</strong> - The reference workflows in Common
+    Tasks now generate the review surface instead of one-line PRs<ul>
+<li>Publish PRs are titled <code>Publish &lt;Name&gt; &lt;version&gt;</code> with a fact
+    sheet body: version, currently published version, installer URL,
+    SHA-256, what merging does, and how to hold or reject</li>
+<li>The promotion PR body opens with a risk line
+    (<code>**This plan:** 2 to pilot, 1 to production</code>), lists every
+    app's plan action summaries, embeds the plan run's drift
+    warnings, and carries a <code>promotes-to-production</code> label when the
+    final ring is targeted</li>
+<li>Titles and bodies regenerate on every refresh, so a superseding
+    release never leaves a stale decision under review</li>
+<li>The promotion PR branch is now <code>napt/promote-plan</code> (matching
+    <code>napt promote plan</code>); delete a lingering <code>napt/promotion-plan</code>
+    branch when updating existing workflows</li>
 </ul>
 </li>
 <li><strong>Graph API calls retry transient failures</strong> - Throttling (HTTP
