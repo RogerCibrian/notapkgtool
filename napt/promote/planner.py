@@ -22,10 +22,10 @@ file's change status to decide whether to open a review.
 
 Two action types are planned per app, one per Intune entry:
 
-- ``assign``: Point new installs at the deployed release — assign its
+- ``assign``: Point new installs at the published release — assign its
     install entry to the configured ``deployment.install`` groups,
     displacing the previous release's install assignment.
-- ``promote``: Move the deployed release one ring forward — assign its
+- ``promote``: Move the published release one ring forward — assign its
     update entry to the target ring's groups. ``from_ring: null`` marks
     a first rollout (the release enters the first ring); otherwise the
     release has held ``from_ring`` for at least that ring's
@@ -33,8 +33,8 @@ Two action types are planned per app, one per Intune entry:
 
 Every action carries a plain-English ``summary`` sentence plus the
 reviewer context behind it — the entry it touches, the version it
-replaces, and bake timestamps — so a committed plan file reads on its
-own in review.
+``displaces``, and bake timestamps — so a committed plan file reads on
+its own in review.
 
 A ring without ``promote_after_days`` never advances automatically —
 releases hold it until the configuration changes (the natural terminal
@@ -130,17 +130,17 @@ def _parse_entered_at(value: str, context: str) -> datetime:
     return parsed
 
 
-def _replacing(replaces: str | None) -> str:
-    """Returns the summary clause naming the replaced version, if any.
+def _displacing(displaces: str | None) -> str:
+    """Returns the summary clause naming the displaced version, if any.
 
     Args:
-        replaces: Version the action replaces, or None.
+        displaces: Version the action displaces, or None.
 
     Returns:
-        ``", replacing <version>"``, or an empty string.
+        ``", displacing <version>"``, or an empty string.
 
     """
-    return f", replacing {replaces}" if replaces else ""
+    return f", displacing {displaces}" if displaces else ""
 
 
 def _plan_app_actions(
@@ -153,7 +153,7 @@ def _plan_app_actions(
     Besides the fields apply keys on (app id, sha256, ring), every
     action carries reviewer context: a plain-English ``summary``
     sentence, the Intune ``entry`` it touches, the version it
-    ``replaces``, and — for a promotion out of a held ring — when the
+    ``displaces``, and — for a promotion out of a held ring — when the
     release entered that ring and the ring's bake threshold. Only
     values stable across runs are included (never clock-derived ones),
     preserving byte-identical plans for unchanged inputs.
@@ -171,14 +171,14 @@ def _plan_app_actions(
     app_id: str = config["id"]
     name: str = config["name"]
     deployment: dict[str, Any] = config["deployment"]
-    deployed = state.get("deployed")
+    published = state.get("published")
 
-    if not deployed:
+    if not published:
         return []
 
     actions: list[dict[str, Any]] = []
-    version: str = deployed["version"]
-    sha256: str = deployed["sha256"]
+    version: str = published["version"]
+    sha256: str = published["sha256"]
 
     # Install entry: assigned once per release, when groups are configured.
     # install_assigned records the release (version + sha256) whose install
@@ -187,13 +187,13 @@ def _plan_app_actions(
     install_cfg: dict[str, Any] = deployment["install"]
     install_assigned = state.get("install_assigned") or {}
     if (
-        deployed.get("intune_app_id")
+        published.get("intune_app_id")
         and install_cfg["groups"]
         and install_assigned.get("sha256") != sha256
     ):
         groups = list(install_cfg["groups"])
         intent: str = install_cfg["intent"]
-        replaces = install_assigned.get("version")
+        displaces = install_assigned.get("version")
         actions.append(
             {
                 "app_id": app_id,
@@ -201,12 +201,12 @@ def _plan_app_actions(
                 "summary": (
                     f"Point new installs at {version}: assign the install "
                     f"entry to {', '.join(groups)} ({intent})"
-                    f"{_replacing(replaces)}."
+                    f"{_displacing(displaces)}."
                 ),
                 "type": "assign",
                 "entry": "install",
                 "version": version,
-                "replaces": replaces,
+                "displaces": displaces,
                 "intent": intent,
                 "groups": groups,
                 "sha256": sha256,
@@ -215,7 +215,7 @@ def _plan_app_actions(
 
     # Update entry: rides the rings.
     rings_cfg: list[dict[str, Any]] = deployment["rings"]
-    if not rings_cfg or not deployed.get("intune_update_app_id"):
+    if not rings_cfg or not published.get("intune_update_app_id"):
         return actions
 
     rings_state: dict[str, Any] = state.get("rings", {})
@@ -230,7 +230,7 @@ def _plan_app_actions(
         first = rings_cfg[0]
         ring_name: str = first["name"]
         groups = list(first["groups"])
-        replaces = rings_state.get(ring_name, {}).get("version")
+        displaces = rings_state.get(ring_name, {}).get("version")
         actions.append(
             {
                 "app_id": app_id,
@@ -238,12 +238,12 @@ def _plan_app_actions(
                 "summary": (
                     f"Start rolling out {version}: assign the update entry "
                     f"to the {ring_name} ring ({', '.join(groups)})"
-                    f"{_replacing(replaces)}."
+                    f"{_displacing(displaces)}."
                 ),
                 "type": "promote",
                 "entry": "update",
                 "version": version,
-                "replaces": replaces,
+                "displaces": displaces,
                 "from_ring": None,
                 "from_ring_entered_at": None,
                 "promote_after_days": None,
@@ -273,7 +273,7 @@ def _plan_app_actions(
     next_ring = rings_cfg[furthest + 1]
     next_ring_name: str = next_ring["name"]
     groups = list(next_ring["groups"])
-    replaces = rings_state.get(next_ring_name, {}).get("version")
+    displaces = rings_state.get(next_ring_name, {}).get("version")
     day_word = "day" if days == 1 else "days"
     actions.append(
         {
@@ -281,14 +281,14 @@ def _plan_app_actions(
             "name": name,
             "summary": (
                 f"Promote {version} from {held_ring_name} to "
-                f"{next_ring_name}{_replacing(replaces)}; it has held "
+                f"{next_ring_name}{_displacing(displaces)}; it has held "
                 f"{held_ring_name} since {entered_at.date().isoformat()} "
                 f"(threshold: {days} {day_word})."
             ),
             "type": "promote",
             "entry": "update",
             "version": version,
-            "replaces": replaces,
+            "displaces": displaces,
             "from_ring": held_ring_name,
             "from_ring_entered_at": rings_state[held_ring_name]["entered_at"],
             "promote_after_days": days,

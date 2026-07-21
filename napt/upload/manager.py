@@ -47,7 +47,7 @@ from napt.results import UploadResult
 from napt.state import (
     deployment_state_path,
     load_deployment_state,
-    record_deployed,
+    record_published,
     save_deployment_state,
 )
 from napt.upload.auth import get_access_token
@@ -862,17 +862,18 @@ def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
             force=force,
         )
 
-    # Record the publication in deployment state: deployed version, hash,
-    # and Intune app IDs; a matching pending slot is cleared.
-    record_deployed(
+    # Record the publication in deployment state: published version,
+    # hash, and Intune app IDs; a matching pending slot is cleared.
+    record_published(
         state,
         version=version,
         sha256=installer_sha256,
         intune_app_id=intune_app_id,
         intune_update_app_id=intune_update_app_id,
     )
+    state["name"] = config["name"]
     save_deployment_state(state, state_path)
-    logger.info("STATE", f"Recorded deployed release {version} in {state_path}")
+    logger.info("STATE", f"Recorded published release {version} in {state_path}")
 
     logger.verbose("UPLOAD", "Upload complete")
 

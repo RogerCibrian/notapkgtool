@@ -19,7 +19,13 @@ SHA = "b" * 64
 
 
 def _configs(app_id: str = "test-app", build_types: str = "both") -> dict[str, Any]:
-    return {app_id: {"id": app_id, "intune": {"build_types": build_types}}}
+    return {
+        app_id: {
+            "id": app_id,
+            "name": f"App {app_id}",
+            "intune": {"build_types": build_types},
+        }
+    }
 
 
 def _write_pending(
@@ -56,7 +62,7 @@ class TestReconcilePublications:
 
     def test_recovers_fully_committed_publication(self, tmp_path):
         """Tests that a pending release with all entries committed in the
-        tenant is recorded as deployed."""
+        tenant is recorded as published."""
         state_path = _write_pending(tmp_path)
         apps = [
             _stamped("test-app", "install", SHA, "install-1"),
@@ -71,7 +77,7 @@ class TestReconcilePublications:
         assert [f["kind"] for f in findings] == ["recovered"]
         state = load_deployment_state(state_path)
         assert state["pending"] is None
-        assert state["deployed"] == {
+        assert state["published"] == {
             "version": "2.0.0",
             "sha256": SHA,
             "intune_app_id": "install-1",
@@ -93,8 +99,8 @@ class TestReconcilePublications:
 
         assert [f["kind"] for f in findings] == ["recovered"]
         state = load_deployment_state(state_path)
-        assert state["deployed"]["intune_app_id"] == "install-1"
-        assert state["deployed"]["intune_update_app_id"] is None
+        assert state["published"]["intune_app_id"] == "install-1"
+        assert state["published"]["intune_update_app_id"] is None
 
     def test_update_only_requires_only_update_entry(self, tmp_path):
         """Tests that build_types update_only recovers from the update entry
@@ -111,8 +117,8 @@ class TestReconcilePublications:
 
         assert [f["kind"] for f in findings] == ["recovered"]
         state = load_deployment_state(state_path)
-        assert state["deployed"]["intune_app_id"] is None
-        assert state["deployed"]["intune_update_app_id"] == "update-1"
+        assert state["published"]["intune_app_id"] is None
+        assert state["published"]["intune_update_app_id"] == "update-1"
 
     def test_missing_entry_warns_without_recording(self, tmp_path):
         """Tests that a missing required entry reports incomplete and leaves
@@ -128,7 +134,7 @@ class TestReconcilePublications:
         assert [f["kind"] for f in findings] == ["incomplete"]
         assert "no stamped update entry" in findings[0]["detail"]
         state = load_deployment_state(state_path)
-        assert state["deployed"] is None
+        assert state["published"] is None
         assert state["pending"]["sha256"] == SHA
 
     def test_uncommitted_content_warns_without_recording(self, tmp_path):
@@ -151,7 +157,7 @@ class TestReconcilePublications:
         assert [f["kind"] for f in findings] == ["incomplete"]
         assert "never committed" in findings[0]["detail"]
         state = load_deployment_state(state_path)
-        assert state["deployed"] is None
+        assert state["published"] is None
         assert state["pending"]["sha256"] == SHA
 
     def test_unpublished_pending_is_silent(self, tmp_path):
@@ -169,7 +175,7 @@ class TestReconcilePublications:
     def test_no_pending_is_silent(self, tmp_path):
         """Tests that an app without a pending release produces no findings."""
         state = create_default_deployment_state()
-        state["deployed"] = {
+        state["published"] = {
             "version": "1.0.0",
             "sha256": "a" * 64,
             "intune_app_id": "i",

@@ -22,7 +22,7 @@ independently.
 
 The core invariant: each ring holds at most one release of an app's Update
 entry — the newest release that has reached it. Promotion advances the
-deployed release into the next ring once it has held its current ring for
+published release into the next ring once it has held its current ring for
 the ring's ``promote_after_days``.
 
 Assignment drift — differences between what deployment state says should

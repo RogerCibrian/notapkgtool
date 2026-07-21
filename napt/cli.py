@@ -233,7 +233,7 @@ def cmd_discover(args: argparse.Namespace) -> int:
     downloads the installer (or uses cached version via ETag), extracts
     version information, updates the discovery cache, and records the
     release as a pending publication candidate in deployment state when it
-    differs from the deployed version.
+    differs from the published version.
 
     Args:
         args: Parsed command-line arguments containing
@@ -916,7 +916,7 @@ def cmd_status(args: argparse.Namespace) -> int:
     """Handler for 'napt status' command.
 
     Aggregates all per-app deployment state files into one view: the
-    deployed version, pending release, and which version holds each ring.
+    published version, pending release, and which version holds each ring.
 
     Args:
         args: Parsed command-line arguments containing the state
@@ -951,11 +951,11 @@ def cmd_status(args: argparse.Namespace) -> int:
         print(f"No deployment state found in {deployment_dir}")
         return 0
 
-    headers = ("App", "Deployed", "Pending", "Rings")
+    headers = ("App", "Published", "Pending", "Rings")
     table = [
         (
             row["app_id"],
-            row["deployed"] or "-",
+            row["published"] or "-",
             row["pending"] or "-",
             ", ".join(f"{name}={ver}" for name, ver in row["rings"].items()) or "-",
         )
@@ -1569,7 +1569,7 @@ def main() -> None:
         "status",
         help="Show deployment state across all apps",
         description=(
-            "Aggregate per-app deployment state into one view: deployed "
+            "Aggregate per-app deployment state into one view: published "
             "version, pending release, and ring positions.\n\n"
             "Examples:\n"
             "  napt status\n"

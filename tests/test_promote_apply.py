@@ -83,14 +83,14 @@ def _write_recipe(
 def _write_state(
     tmp_path: Path,
     app_id: str = "test-app",
-    deployed: dict[str, Any] | None = None,
+    published: dict[str, Any] | None = None,
     rings: dict[str, Any] | None = None,
     retained: list[dict[str, Any]] | None = None,
     install_assigned: str | None = None,
 ) -> Path:
     """Writes a deployment state file and returns its path."""
     state = create_default_deployment_state()
-    state["deployed"] = deployed
+    state["published"] = published
     if rings:
         state["rings"] = rings
     if retained:
@@ -102,7 +102,7 @@ def _write_state(
     return path
 
 
-def _deployed(version: str = "2.0.0", sha256: str = "b" * 64) -> dict[str, Any]:
+def _published(version: str = "2.0.0", sha256: str = "b" * 64) -> dict[str, Any]:
     return {
         "version": version,
         "sha256": sha256,
@@ -263,7 +263,7 @@ class TestApplyPromoteActions:
     def test_promote_assigns_and_records(self, tmp_path):
         """Tests that promoting into a ring assigns groups and writes state."""
         _write_recipe(tmp_path, rings=_RINGS)
-        state_path = _write_state(tmp_path, deployed=_deployed())
+        state_path = _write_state(tmp_path, published=_published())
         plan_path = _write_plan(tmp_path, [_promote_action()])
 
         summary, mocks = _run_apply(tmp_path, existing_apps=_tenant())
@@ -296,7 +296,7 @@ class TestApplyPromoteActions:
     def test_preserves_foreign_assignments(self, tmp_path):
         """Tests that admin-made assignments survive the assign call."""
         _write_recipe(tmp_path, rings=_RINGS)
-        _write_state(tmp_path, deployed=_deployed())
+        _write_state(tmp_path, published=_published())
         _write_plan(tmp_path, [_promote_action()])
         admin_assignment = {
             "id": "existing-1",
@@ -323,7 +323,7 @@ class TestApplyPromoteActions:
         _write_recipe(tmp_path, rings=_RINGS)
         state_path = _write_state(
             tmp_path,
-            deployed=_deployed(),
+            published=_published(),
             rings={
                 "pilot": {
                     "version": "1.0.0",
@@ -363,7 +363,7 @@ class TestApplyPromoteActions:
         _write_recipe(tmp_path, rings=_RINGS, retain_versions=1)
         _write_state(
             tmp_path,
-            deployed=_deployed(),
+            published=_published(),
             rings={
                 "pilot": {
                     "version": "1.0.0",
@@ -388,8 +388,8 @@ class TestApplyPromoteActions:
     def test_stale_action_skipped(self, tmp_path):
         """Tests that an action for a superseded release is skipped."""
         _write_recipe(tmp_path, rings=_RINGS)
-        _write_state(tmp_path, deployed=_deployed(version="3.0.0", sha256="c" * 64))
-        _write_plan(tmp_path, [_promote_action()])  # plans v2, deployed v3
+        _write_state(tmp_path, published=_published(version="3.0.0", sha256="c" * 64))
+        _write_plan(tmp_path, [_promote_action()])  # plans v2, published v3
 
         summary, mocks = _run_apply(tmp_path, existing_apps=_tenant())
 
@@ -403,7 +403,7 @@ class TestApplyPromoteActions:
         _write_recipe(tmp_path, rings=_RINGS)
         _write_state(
             tmp_path,
-            deployed=_deployed(),
+            published=_published(),
             rings={
                 "pilot": {
                     "version": "2.0.0",
@@ -423,7 +423,7 @@ class TestApplyPromoteActions:
     def test_missing_update_app_skipped(self, tmp_path):
         """Tests that a release without a stamped update entry is skipped."""
         _write_recipe(tmp_path, rings=_RINGS)
-        _write_state(tmp_path, deployed=_deployed())
+        _write_state(tmp_path, published=_published())
         _write_plan(tmp_path, [_promote_action()])
 
         summary, mocks = _run_apply(tmp_path, existing_apps=[])
@@ -435,7 +435,7 @@ class TestApplyPromoteActions:
     def test_failure_keeps_plan_file(self, tmp_path):
         """Tests that a Graph failure fails the app and keeps its plan file."""
         _write_recipe(tmp_path, rings=_RINGS)
-        _write_state(tmp_path, deployed=_deployed())
+        _write_state(tmp_path, published=_published())
         plan_path = _write_plan(tmp_path, [_promote_action()])
 
         summary, _ = _run_apply(
@@ -465,7 +465,7 @@ class TestApplyAssignActions:
     def test_assigns_and_records_release(self, tmp_path):
         """Tests that the install entry is assigned and recorded by sha."""
         _write_recipe(tmp_path, install_groups=["All Users"])
-        state_path = _write_state(tmp_path, deployed=_deployed())
+        state_path = _write_state(tmp_path, published=_published())
         _write_plan(tmp_path, [self._assign_action()])
 
         summary, mocks = _run_apply(tmp_path, existing_apps=_tenant())
@@ -491,7 +491,7 @@ class TestApplyAssignActions:
     def test_displaces_previous_install_assignment(self, tmp_path):
         """Tests that the previous release's install entry loses the groups."""
         _write_recipe(tmp_path, install_groups=["All Users"])
-        _write_state(tmp_path, deployed=_deployed(), install_assigned="a" * 64)
+        _write_state(tmp_path, published=_published(), install_assigned="a" * 64)
         _write_plan(tmp_path, [self._assign_action()])
         old_assignment = {
             "id": "x",
@@ -519,7 +519,7 @@ class TestApplyOrchestration:
     def test_bare_apply_plans_fresh(self, tmp_path):
         """Tests that apply without a plan file plans and applies."""
         _write_recipe(tmp_path, rings=_RINGS)
-        state_path = _write_state(tmp_path, deployed=_deployed())
+        state_path = _write_state(tmp_path, published=_published())
 
         summary, mocks = _run_apply(tmp_path, existing_apps=_tenant())
 
@@ -531,7 +531,7 @@ class TestApplyOrchestration:
     def test_nothing_to_apply(self, tmp_path):
         """Tests that no plan and no eligible actions is a clean no-op."""
         _write_recipe(tmp_path, rings=_RINGS)
-        _write_state(tmp_path, deployed=None)
+        _write_state(tmp_path, published=None)
 
         summary, mocks = _run_apply(tmp_path, existing_apps=[])
 
@@ -567,7 +567,7 @@ class TestApplyOrchestration:
         assert [a["type"] for a in summary["applied"]] == ["promote"]
         state = load_deployment_state(state_path)
         assert state["pending"] is None
-        assert state["deployed"]["intune_app_id"] == "install-new"
+        assert state["published"]["intune_app_id"] == "install-new"
         assert state["rings"]["pilot"]["sha256"] == "b" * 64
 
     def test_preflight_fails_app_with_zero_mutations(self, tmp_path):
@@ -575,7 +575,7 @@ class TestApplyOrchestration:
         from napt.exceptions import ConfigError
 
         _write_recipe(tmp_path, rings=_RINGS)
-        state_path = _write_state(tmp_path, deployed=_deployed())
+        state_path = _write_state(tmp_path, published=_published())
         plan_path = _write_plan(
             tmp_path,
             [
@@ -619,12 +619,12 @@ class TestApplyOrchestration:
         from napt.exceptions import ConfigError
 
         _write_recipe(tmp_path, rings=_RINGS)
-        _write_state(tmp_path, deployed=_deployed())  # deployed is b*64
+        _write_state(tmp_path, published=_published())  # published is b*64
         _write_plan(
             tmp_path,
             [
                 _promote_action(),  # live: Pilot Devices
-                # Stale: sha no longer deployed; its group was deleted
+                # Stale: sha no longer published; its group was deleted
                 # after the action originally applied.
                 {
                     "type": "promote",
@@ -652,7 +652,7 @@ class TestApplyOrchestration:
 
         assert [a["type"] for a in summary["applied"]] == ["promote"]
         assert [s["reason"] for s in summary["skipped"]] == [
-            "stale action - the deployed release has changed"
+            "stale action - the published release has changed"
         ]
 
     def test_failed_app_does_not_block_others(self, tmp_path):
@@ -661,8 +661,8 @@ class TestApplyOrchestration:
 
         _write_recipe(tmp_path, app_id="app-bad", rings=_RINGS)
         _write_recipe(tmp_path, app_id="app-good", rings=_RINGS)
-        _write_state(tmp_path, app_id="app-bad", deployed=_deployed())
-        good_state = _write_state(tmp_path, app_id="app-good", deployed=_deployed())
+        _write_state(tmp_path, app_id="app-bad", published=_published())
+        good_state = _write_state(tmp_path, app_id="app-good", published=_published())
         bad_action = _promote_action()
         bad_action["app_id"] = "app-bad"
         bad_action["groups"] = ["missing-group"]
@@ -699,8 +699,8 @@ class TestApplyOrchestration:
         """Tests that a Graph failure applying one app spares the others."""
         _write_recipe(tmp_path, app_id="app-bad", rings=_RINGS)
         _write_recipe(tmp_path, app_id="app-good", rings=_RINGS)
-        _write_state(tmp_path, app_id="app-bad", deployed=_deployed())
-        _write_state(tmp_path, app_id="app-good", deployed=_deployed())
+        _write_state(tmp_path, app_id="app-bad", published=_published())
+        _write_state(tmp_path, app_id="app-good", published=_published())
         bad_action = _promote_action()
         bad_action["app_id"] = "app-bad"
         good_action = _promote_action()
@@ -730,7 +730,7 @@ class TestApplyOrchestration:
     def test_unknown_app_in_plan_skipped(self, tmp_path):
         """Tests that a plan action without a matching recipe is skipped."""
         _write_recipe(tmp_path, rings=_RINGS)
-        _write_state(tmp_path, deployed=_deployed())
+        _write_state(tmp_path, published=_published())
         action = _promote_action()
         action["app_id"] = "ghost-app"
         _write_plan(tmp_path, [action])
@@ -833,7 +833,7 @@ class TestApplyDrift:
     def test_drift_findings_included_in_summary(self, tmp_path):
         """Tests that drift findings pass through to the summary."""
         _write_recipe(tmp_path, rings=_RINGS)
-        _write_state(tmp_path, deployed=_deployed())
+        _write_state(tmp_path, published=_published())
         finding = {"app_id": "test-app", "kind": "missing_assignment", "detail": "x"}
 
         summary, _ = _run_apply(

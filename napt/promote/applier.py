@@ -26,7 +26,7 @@ group or Graph error never strands the rest of the fleet's
 promotions.
 
 Every action is validated against current deployment state before
-executing (validate-then-act): stale actions — the deployed release
+executing (validate-then-act): stale actions — the published release
 changed since the plan was written, or the action already applied —
 are skipped with a warning instead of failing, so re-running apply
 after a partial failure is safe. Deployment state is saved after each
@@ -259,8 +259,11 @@ class _ApplyRun:
 
     def save_state(self, app_id: str) -> None:
         """Persists an app's deployment state after an applied action."""
+        state = self._states[app_id]
+        if app_id in self.configs:
+            state["name"] = self.configs[app_id]["name"]
         save_deployment_state(
-            self._states[app_id],
+            state,
             deployment_state_path(self.deployment_dir, app_id),
         )
 
@@ -298,7 +301,7 @@ def _retire_release(run: _ApplyRun, app_id: str, version: str, sha256: str) -> N
 
     The release joins the retained list (newest last). Releases beyond
     ``deployment.retain_versions`` have their stamped Intune apps
-    deleted, oldest first. The currently deployed release is never
+    deleted, oldest first. The currently published release is never
     deleted.
 
     Args:
@@ -320,11 +323,11 @@ def _retire_release(run: _ApplyRun, app_id: str, version: str, sha256: str) -> N
         )
 
     retain_limit: int = run.configs[app_id]["deployment"]["retain_versions"]
-    deployed = state.get("deployed") or {}
+    published = state.get("published") or {}
     while len(retained) > retain_limit:
         oldest = retained.pop(0)
-        if oldest.get("sha256") == deployed.get("sha256"):
-            continue  # Never delete the currently deployed release.
+        if oldest.get("sha256") == published.get("sha256"):
+            continue  # Never delete the currently published release.
         for entry_type in (ENTRY_INSTALL, ENTRY_UPDATE):
             app = find_stamped_app(
                 run.existing_apps, app_id, entry_type, oldest["sha256"]
@@ -361,9 +364,9 @@ def _action_skip_reason(run: _ApplyRun, action: dict[str, Any]) -> str | None:
         return "no recipe found for this app"
 
     state = run.state_for(app_id)
-    deployed = state.get("deployed") or {}
-    if deployed.get("sha256") != sha256:
-        return "stale action - the deployed release has changed"
+    published = state.get("published") or {}
+    if published.get("sha256") != sha256:
+        return "stale action - the published release has changed"
 
     if action["type"] == "assign":
         previous = state.get("install_assigned") or {}
