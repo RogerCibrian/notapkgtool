@@ -132,29 +132,31 @@ def test_get_access_token_reports_expired_session(user_dir, chain_fails) -> None
 # ---------------------------------------------------------------------------
 
 
-def test_resolve_auth_config_prefers_args_then_env_then_saved(
-    user_dir, monkeypatch
-) -> None:
-    """Tests the per-field precedence: explicit > env var > saved file."""
+def test_resolve_auth_config_prefers_args_over_saved(user_dir) -> None:
+    """Tests the per-field precedence: explicit argument > saved file."""
     assert resolve_auth_config() is None
 
     auth._save_auth_config(AuthConfig("saved-client", "saved-tenant"))
     assert resolve_auth_config() == AuthConfig("saved-client", "saved-tenant")
 
-    monkeypatch.setenv("AZURE_CLIENT_ID", "env-client")
-    assert resolve_auth_config() == AuthConfig("env-client", "saved-tenant")
-
     assert resolve_auth_config(tenant_id="arg-tenant") == AuthConfig(
-        "env-client", "arg-tenant"
+        "saved-client", "arg-tenant"
     )
 
 
-def test_resolve_auth_config_returns_none_when_incomplete(
-    user_dir, monkeypatch
-) -> None:
-    """Tests that a client ID without a tenant ID is not enough."""
+def test_resolve_auth_config_ignores_azure_env_vars(user_dir, monkeypatch) -> None:
+    """Tests that AZURE_* variables never configure interactive sign-in."""
     monkeypatch.setenv("AZURE_CLIENT_ID", "env-client")
+    monkeypatch.setenv("AZURE_TENANT_ID", "env-tenant")
     assert resolve_auth_config() is None
+
+    auth._save_auth_config(AuthConfig("saved-client", "saved-tenant"))
+    assert resolve_auth_config() == AuthConfig("saved-client", "saved-tenant")
+
+
+def test_resolve_auth_config_returns_none_when_incomplete(user_dir) -> None:
+    """Tests that a client ID without a tenant ID is not enough."""
+    assert resolve_auth_config(client_id="cid") is None
 
 
 def test_load_auth_config_rejects_malformed_file(user_dir) -> None:

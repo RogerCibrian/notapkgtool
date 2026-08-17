@@ -1584,8 +1584,7 @@ def main() -> None:
             "Sign in interactively and cache the session so later commands\n"
             "authenticate silently. Uses the Windows/macOS broker when\n"
             "available, otherwise the system browser.\n\n"
-            "The client and tenant IDs are remembered after the first login;\n"
-            "AZURE_CLIENT_ID / AZURE_TENANT_ID environment variables override them."
+            "The client and tenant IDs are remembered after the first login."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )

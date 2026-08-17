@@ -15,7 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         Company Portal) when available, otherwise the browser; `--no-broker`
         forces the browser
     - The client and tenant IDs given to the first `login` are remembered;
-        `AZURE_CLIENT_ID` / `AZURE_TENANT_ID` still override them
+        `AZURE_*` environment variables are for CI/CD credentials only and
+        no longer configure interactive sign-in
     - `status` shows which credential NAPT would use, the account, tenant,
         expiry, and Graph permissions it carries, and exits 1 naming any
         required permission that is missing

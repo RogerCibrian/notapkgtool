@@ -126,9 +126,8 @@ _HINT_SESSION_EXPIRED = (
 
 _HINT_NO_CLIENT_CONFIG = (
     "No app registration configured for interactive sign-in.\n\n"
-    "Run 'napt auth login --client-id <id> --tenant-id <id>' once; the IDs are\n"
-    "remembered for later logins. AZURE_CLIENT_ID and AZURE_TENANT_ID\n"
-    "environment variables take precedence when set.\n"
+    "Run: napt auth login --client-id <id> --tenant-id <id>\n"
+    "(The IDs are remembered for later logins.)\n"
 )
 
 _HINT_LOGIN_FAILED = (
@@ -266,9 +265,10 @@ def resolve_auth_config(
 ) -> AuthConfig | None:
     """Determines the app registration to use for interactive sign-in.
 
-    Precedence per field: explicit argument, then ``AZURE_CLIENT_ID`` /
-    ``AZURE_TENANT_ID`` environment variable, then the config saved by the
-    last `napt auth login`.
+    Per field, an explicit argument wins over the config saved by the last
+    `napt auth login`. ``AZURE_*`` environment variables are deliberately not
+    consulted: they describe a non-interactive credential, not which app a
+    person signs in to.
 
     Args:
         client_id: Explicit client ID (from ``--client-id``).
@@ -281,16 +281,8 @@ def resolve_auth_config(
         ConfigError: If a saved config file exists but is malformed.
     """
     saved = load_auth_config()
-    resolved_client = (
-        client_id
-        or os.environ.get("AZURE_CLIENT_ID")
-        or (saved.client_id if saved else None)
-    )
-    resolved_tenant = (
-        tenant_id
-        or os.environ.get("AZURE_TENANT_ID")
-        or (saved.tenant_id if saved else None)
-    )
+    resolved_client = client_id or (saved.client_id if saved else None)
+    resolved_tenant = tenant_id or (saved.tenant_id if saved else None)
     if resolved_client and resolved_tenant:
         return AuthConfig(client_id=resolved_client, tenant_id=resolved_tenant)
     return None
@@ -471,10 +463,8 @@ def login(
     don't need them repeated.
 
     Args:
-        client_id: App registration client ID; overrides ``AZURE_CLIENT_ID``
-            and the saved config.
-        tenant_id: Tenant ID; overrides ``AZURE_TENANT_ID`` and the saved
-            config.
+        client_id: App registration client ID; overrides the saved config.
+        tenant_id: Tenant ID; overrides the saved config.
         use_broker: Prefer the OS broker over a browser when available.
 
     Returns:

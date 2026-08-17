@@ -354,8 +354,10 @@ honoring device-based Conditional Access.
 Elsewhere — or with `--no-broker` — it opens your browser.
 Tokens are cached in the OS credential store (DPAPI, Keychain, or
 libsecret) and refreshed silently until the session expires or is revoked.
-`AZURE_CLIENT_ID` / `AZURE_TENANT_ID` environment variables override the
-remembered IDs.
+The `AZURE_*` environment variables play no part in interactive sign-in;
+they are how CI/CD supplies a credential (below), and when they are set
+they take precedence over your session — the same rule `gh` (`GH_TOKEN`)
+and `aws` (`AWS_ACCESS_KEY_ID`) follow.
 
 Check what you are holding at any time:
 
