@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`napt auth login` / `status` / `logout`** - Sign in to Microsoft Graph
+    once and let every later command authenticate silently
+    - `login` opens the Windows/macOS account picker (Web Account Manager /
+        Company Portal) when available, otherwise the browser; `--no-broker`
+        forces the browser
+    - The client and tenant IDs given to the first `login` are remembered;
+        `AZURE_CLIENT_ID` / `AZURE_TENANT_ID` still override them
+    - `status` shows which credential NAPT would use, the account, tenant,
+        expiry, and Graph permissions it carries, and exits 1 naming any
+        required permission that is missing
+    - Tokens are cached in the OS credential store (DPAPI, Keychain,
+        libsecret), never in plain files
+- **OIDC federation for CI/CD** - `AZURE_FEDERATED_TOKEN_FILE` (as set by
+    GitHub Actions `azure/login`) is now honored, so pipelines can run
+    without a client secret; documented as the recommended CI/CD setup
+
+### Changed
+
+- **BREAKING: Device code flow removed** - Interactive sign-in is now
+    `napt auth login` (authorization code + PKCE, or the OS broker). Device
+    code is the flow most often abused to bypass MFA and is increasingly
+    blocked by Microsoft-managed Conditional Access policies
+    - App registrations need the `http://localhost` and
+        `ms-appx-web://Microsoft.AAD.BrokerPlugin/<client-id>` redirect URIs
+        under **Mobile and desktop applications**; "Allow public client
+        flows" is no longer required
+    - `napt upload` and `napt promote` never open a browser; without a
+        credential they fail with `Not authenticated. Run 'napt auth login'`
+- **BREAKING: Managed identity removed** - `ManagedIdentityCredential` is
+    no longer tried; use a service principal or OIDC federation
+- Removed the unused `--tenant-id` option from `napt upload`
+
 ## [0.9.0] - 2026-07-20
 
 ### Changed

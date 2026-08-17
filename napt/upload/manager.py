@@ -679,11 +679,11 @@ def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
     The package directory is inferred as packages/{app.id}/{version}/.
     Run 'napt package' before calling this function.
 
-    Authentication is automatic — no configuration required:
+    Authentication needs no configuration file:
 
-    - Developers: set AZURE_CLIENT_ID and AZURE_TENANT_ID, complete device code flow
-    - CI/CD: set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID
-    - Azure-hosted runners: assign a managed identity to the resource
+    - Developers: run 'napt auth login' once
+    - CI/CD: set AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_CLIENT_SECRET, or use
+        OIDC federation
 
     Before any Graph call, the package's installer hash (from the build
     manifest) is verified against the pending release recorded in the app's

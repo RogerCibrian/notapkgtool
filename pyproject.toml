@@ -28,6 +28,11 @@ dependencies = [
     "jsonpath-ng>=1.6.1",
     "beautifulsoup4>=4.14.0",
     "azure-identity>=1.25.3",
+    "msal>=1.35.1",
+    "msal-extensions>=1.2.0",
+    # OS broker (Windows WAM / macOS Company Portal) for `napt auth login`.
+    # The native runtime only ships wheels for these platforms.
+    "msal[broker]>=1.35.1; sys_platform == 'win32' or sys_platform == 'darwin'",
 ]
 
 [project.scripts]

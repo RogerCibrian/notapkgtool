@@ -189,11 +189,11 @@ class AuthError(NAPTError):
 
     This exception is raised when there are problems with:
 
-    - azure-identity credential chain exhausted (all credential types
-        unavailable or failed)
+    - No credential available (no service principal / OIDC environment and
+        no session from 'napt auth login')
     - Graph API 401 Unauthorized or 403 Forbidden responses
-    - Device code flow timeout or user cancellation
-    - Invalid or missing credentials for the DeviceCodeCredential fallback
+    - Interactive sign-in failure, timeout, or cancellation
+    - A cached sign-in session that can no longer be refreshed
 
     Example:
         Catching auth errors:

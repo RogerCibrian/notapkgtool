@@ -11,6 +11,9 @@ import pytest
 
 from napt.cli import (
     _resolve_build_dir_from_recipe,
+    cmd_auth_login,
+    cmd_auth_logout,
+    cmd_auth_status,
     cmd_build,
     cmd_discover,
     cmd_init,
@@ -22,6 +25,7 @@ from napt.cli import (
     cmd_validate,
 )
 from napt.exceptions import AuthError, ConfigError, NetworkError, PackagingError
+from napt.upload.auth import AuthStatus
 
 
 def _args(**kwargs) -> argparse.Namespace:
@@ -556,6 +560,109 @@ class TestCmdUpload:
         recipe.touch()
         with patch("napt.cli.upload_package", side_effect=NetworkError("net")):
             assert cmd_upload(_args(recipe=str(recipe), force=False)) == 1
+
+
+# =============================================================================
+# cmd_auth_*
+# =============================================================================
+
+
+class TestCmdAuth:
+    """Tests for the 'napt auth' subcommand handlers."""
+
+    def test_login_prints_account_and_permissions(self, capsys):
+        """Tests that a successful login prints the signed-in status block."""
+        status = AuthStatus(
+            method="interactive (broker)",
+            account="admin@contoso.com",
+            tenant_id="tid",
+            client_id="cid",
+            permissions=["DeviceManagementApps.ReadWrite.All", "Group.Read.All"],
+        )
+        with patch("napt.cli.auth_login", return_value=status) as login:
+            code = cmd_auth_login(
+                _args(client_id="cid", tenant_id="tid", no_broker=True)
+            )
+        assert code == 0
+        assert login.call_args.kwargs["use_broker"] is False
+        out = capsys.readouterr().out
+        assert "[OK] Signed in as admin@contoso.com" in out
+        assert "interactive (broker)" in out
+        assert "[WARNING]" not in out
+
+    def test_login_warns_about_missing_permissions(self, capsys):
+        """Tests that a token lacking required permissions is flagged."""
+        status = AuthStatus(
+            method="interactive (browser)",
+            account="u@x",
+            permissions=["Group.Read.All"],
+            missing=["DeviceManagementApps.ReadWrite.All"],
+        )
+        with patch("napt.cli.auth_login", return_value=status):
+            code = cmd_auth_login(
+                _args(client_id=None, tenant_id=None, no_broker=False)
+            )
+        assert code == 0
+        out = capsys.readouterr().out
+        assert "Missing required permissions: DeviceManagementApps" in out
+
+    def test_login_auth_error_returns_one(self, capsys):
+        """Tests that AuthError from login is reported and returns 1."""
+        with patch("napt.cli.auth_login", side_effect=AuthError("no redirect uri")):
+            code = cmd_auth_login(
+                _args(client_id=None, tenant_id=None, no_broker=False)
+            )
+        assert code == 1
+        assert "Authentication error: no redirect uri" in capsys.readouterr().out
+
+    def test_logout_reports_removed_session(self, capsys):
+        """Tests that logout confirms when a session was removed."""
+        with patch("napt.cli.auth_logout", return_value=True):
+            assert cmd_auth_logout(_args()) == 0
+        assert "[OK] Signed out" in capsys.readouterr().out
+
+    def test_logout_reports_nothing_to_do(self, capsys):
+        """Tests that logout says so when no session was cached."""
+        with patch("napt.cli.auth_logout", return_value=False):
+            assert cmd_auth_logout(_args()) == 0
+        assert "No interactive session" in capsys.readouterr().out
+
+    def test_status_not_authenticated_returns_one(self, capsys):
+        """Tests that status exits 1 and points at login when unauthenticated."""
+        with patch("napt.cli.auth_status", return_value=None):
+            assert cmd_auth_status(_args()) == 1
+        out = capsys.readouterr().out
+        assert "Not authenticated" in out
+        assert "napt auth login" in out
+
+    def test_status_ok_returns_zero(self, capsys):
+        """Tests that a fully permissioned credential exits 0."""
+        status = AuthStatus(
+            method="service principal",
+            account="cid",
+            permissions=["DeviceManagementApps.ReadWrite.All", "Group.Read.All"],
+        )
+        with patch("napt.cli.auth_status", return_value=status):
+            assert cmd_auth_status(_args()) == 0
+        assert "service principal" in capsys.readouterr().out
+
+    def test_status_missing_permission_returns_one(self, capsys):
+        """Tests that a credential missing a required permission exits 1."""
+        status = AuthStatus(
+            method="service principal",
+            account="cid",
+            permissions=[],
+            missing=["DeviceManagementApps.ReadWrite.All", "Group.Read.All"],
+        )
+        with patch("napt.cli.auth_status", return_value=status):
+            assert cmd_auth_status(_args()) == 1
+        assert "[WARNING] Missing required permissions" in capsys.readouterr().out
+
+    def test_status_auth_error_returns_one(self, capsys):
+        """Tests that an expired session surfaces as an authentication error."""
+        with patch("napt.cli.auth_status", side_effect=AuthError("expired")):
+            assert cmd_auth_status(_args()) == 1
+        assert "Authentication error: expired" in capsys.readouterr().out
 
 
 # =============================================================================

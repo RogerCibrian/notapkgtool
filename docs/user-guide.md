@@ -247,7 +247,7 @@ Graph API. Run `napt package` before uploading.
    so what was recorded at discovery is byte-for-byte what ships.
    When no pending release is recorded, the upload proceeds with a warning,
    or fails when `deployment.require_pending` is enabled
-2. **Authenticate** - Tries three credential methods in order (see [Authentication](#authentication) below)
+2. **Authenticate** - Uses the CI/CD environment credential or the session from `napt auth login` (see [Authentication](#authentication) below)
 3. **Parse Package Metadata** - Reads encryption metadata from `Detection.xml` inside the `.intunewin` ZIP
 4–6. **Create, Upload, Commit (install entry)** - Creates the Win32 app record
    using the base app name and detection script only, uploads the encrypted
@@ -287,56 +287,119 @@ corresponding entry is not created
 
 #### Authentication
 
-`napt upload` requires a NAPT app registration in Microsoft Entra ID.
-See [App Registration Setup](#app-registration-setup) below.
-The authentication method is selected automatically based on environment
-variables:
+`napt upload`, `napt promote apply`, and `napt promote plan --reconcile`/`--check-drift`
+all need a Microsoft Graph token.
+NAPT resolves it the same way every time — `napt auth status` shows which
+source it picked:
 
 | Method | When it's used |
 |--------|---------------|
-| `EnvironmentCredential` | `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, and `AZURE_TENANT_ID` are set — service principal, recommended for CI/CD |
-| `ManagedIdentityCredential` | Running on an Azure VM, Container Instance, or pipeline agent with managed identity assigned — no env vars needed |
-| `DeviceCodeCredential` | `AZURE_CLIENT_ID` and `AZURE_TENANT_ID` are set (no secret), interactive terminal — prompts with a URL and code to authenticate in any browser |
+| Service principal (`EnvironmentCredential`) | `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_CLIENT_SECRET` (or `AZURE_CLIENT_CERTIFICATE_PATH`) are set — CI/CD |
+| Workload identity federation (`WorkloadIdentityCredential`) | `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_FEDERATED_TOKEN_FILE` are set — CI/CD with OIDC, e.g. GitHub Actions `azure/login`. Recommended over a client secret whenever your CI platform supports it |
+| Interactive session (`napt auth login`) | Nothing above is set and you have signed in on this machine — developers |
+
+NAPT never opens a browser on its own.
+If no credential is available, commands fail with
+`Not authenticated. Run 'napt auth login'`.
+This mirrors `az`/`gh`: sign in explicitly once, then everything else is
+silent.
+
+Device code flow is not supported.
+It is the flow most often abused to bypass MFA, and Microsoft-managed
+Conditional Access policies increasingly block it tenant-wide.
 
 #### App Registration Setup
 
-Create the app registration once per organization:
+Create the app registration once per organization.
+Two ways to do it:
+
+**Manual (Entra portal):**
 
 1. Go to [entra.microsoft.com](https://entra.microsoft.com) →
    **App registrations** → **New registration**
 2. Name it (e.g. "NAPT"), leave redirect URI blank, click **Register**
 3. Note the **Application (client) ID** and **Directory (tenant) ID**
 4. Go to **API permissions** → **Add a permission** →
-   **Microsoft Graph** → **Application permissions**
-5. Search for and add `DeviceManagementApps.ReadWrite.All`
-6. Also add `Group.Read.All` (application permission) — used to resolve
-   Entra ID group names in `deployment:` configuration to object IDs
-7. Also add the **Delegated** versions of both permissions
-   (for interactive device code auth)
-8. Click **Grant admin consent**
-9. Go to **Authentication** → **Advanced settings** →
-   set **Allow public client flows** to **Yes** → click **Save**
-   (required for device code flow)
+   **Microsoft Graph** → **Application permissions** → add
+   `DeviceManagementApps.ReadWrite.All` and `Group.Read.All`
+   (used by CI/CD; `Group.Read.All` resolves Entra ID group names in
+   `deployment:` configuration to object IDs)
+5. Repeat for **Delegated permissions** → add the same two
+   (used by interactive sign-in)
+6. Click **Grant admin consent**
+7. Go to **Authentication** → **Add a platform** →
+   **Mobile and desktop applications** and add these redirect URIs:
+    - `http://localhost` (browser sign-in)
+    - `ms-appx-web://Microsoft.AAD.BrokerPlugin/<Application (client) ID>`
+      (Windows broker sign-in)
+8. Leave **Allow public client flows** at **No** — NAPT does not use device
+   code flow
+
+**Automatic (`napt auth setup`):** planned for a later release — it will
+create the registration above through Graph, which needs an account holding
+the Application Administrator (or Global Administrator) role.
+Until then, use the manual steps.
 
 **Developer setup:**
 
-Set two environment variables — no client secret needed:
+Sign in once; the client and tenant IDs are remembered for later logins:
 
 ```bash
-export AZURE_CLIENT_ID="<Application (client) ID>"
-export AZURE_TENANT_ID="<Directory (tenant) ID>"
+napt auth login --client-id "<Application (client) ID>" --tenant-id "<Directory (tenant) ID>"
 ```
 
-On first run, NAPT prompts with a device code:
+On Windows and macOS this opens the OS account picker (Web Account
+Manager / Company Portal), signing you in with your work account and
+honoring device-based Conditional Access.
+Elsewhere — or with `--no-broker` — it opens your browser.
+Tokens are cached in the OS credential store (DPAPI, Keychain, or
+libsecret) and refreshed silently until the session expires or is revoked.
+`AZURE_CLIENT_ID` / `AZURE_TENANT_ID` environment variables override the
+remembered IDs.
+
+Check what you are holding at any time:
 
 ```console
-To sign in, use a web browser to open the page https://microsoft.com/devicelogin
-and enter the code ABCD1234 to authenticate.
+$ napt auth status
+Method:      interactive (broker)
+Account:     admin@contoso.com
+Tenant:      00000000-0000-0000-0000-000000000000
+Client ID:   11111111-1111-1111-1111-111111111111
+Expires:     2026-08-16T19:04:11+00:00
+Permissions: DeviceManagementApps.ReadWrite.All, Group.Read.All
 ```
 
-After consenting once, subsequent runs authenticate silently.
+`napt auth status` exits 1 when no credential is available or a required
+permission is missing, and names the missing permission.
+`napt auth logout` removes the cached session.
 
-**CI/CD setup:**
+**CI/CD setup — OIDC federation (recommended):**
+
+No secret to store or rotate.
+In the app registration, go to **Certificates & secrets** →
+**Federated credentials** → **Add credential** → **GitHub Actions deploying
+Azure resources**, and enter your organization, repository, and the entity
+(branch, environment, or tag) the workflow runs as.
+Then let `azure/login` mint the federated token before NAPT runs:
+
+```yaml
+permissions:
+  id-token: write
+  contents: read
+
+steps:
+  - uses: azure/login@v2
+    with:
+      client-id: ${{ secrets.AZURE_CLIENT_ID }}
+      tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+      allow-no-subscriptions: true
+  - run: napt upload recipes/Google/chrome.yaml
+```
+
+`azure/login` exports `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and
+`AZURE_FEDERATED_TOKEN_FILE`; NAPT picks them up automatically.
+
+**CI/CD setup — client secret:**
 
 Create a client secret under **Certificates & secrets** → **New client secret**.
 Set all three environment variables as pipeline secrets:
@@ -347,10 +410,8 @@ AZURE_CLIENT_SECRET="<client secret value>"
 AZURE_TENANT_ID="<Directory (tenant) ID>"
 ```
 
-**Azure managed identity:**
-
-No environment variables needed. Assign the managed identity the
-`DeviceManagementApps.ReadWrite.All` application permission in Entra ID.
+A certificate works the same way with `AZURE_CLIENT_CERTIFICATE_PATH`
+instead of `AZURE_CLIENT_SECRET`.
 
 ### Directory Structure
 
@@ -525,10 +586,22 @@ napt status [OPTIONS]
 ### napt upload
 
 Uploads the `.intunewin` package to Microsoft Intune via the Graph API.
-Authentication is automatic — no configuration required.
+Uses the CI/CD environment credential when set, otherwise the session from
+`napt auth login`.
 
 ```bash
 napt upload recipes/Google/chrome.yaml [OPTIONS]
+```
+
+### napt auth
+
+Manages the credential NAPT uses for Intune.
+See [Authentication](#authentication).
+
+```bash
+napt auth login [--client-id ID] [--tenant-id ID] [--no-broker]
+napt auth status
+napt auth logout
 ```
 
 ### Output Modes
