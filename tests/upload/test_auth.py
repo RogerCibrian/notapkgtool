@@ -13,6 +13,7 @@ from napt.exceptions import AuthError, ConfigError
 from napt.upload import auth
 from napt.upload.auth import (
     AuthConfig,
+    AuthStore,
     get_access_token,
     get_status,
     load_auth_config,
@@ -50,6 +51,15 @@ def chain_fails():
     cred.get_token.side_effect = ClientAuthenticationError("no cred")
     with patch("napt.upload.auth.get_credential", return_value=cred):
         yield cred
+
+
+def _remember(*configs: AuthConfig, active: str | None = None) -> None:
+    """Seeds the auth store with the given tenants; the last one is active."""
+    store = AuthStore(
+        active=active or configs[-1].tenant_id,
+        tenants={c.tenant_id: c for c in configs},
+    )
+    auth._save_auth_store(store)
 
 
 def _fake_app(
@@ -90,12 +100,13 @@ def test_get_access_token_tells_user_to_login_when_nothing_configured(
 
 def test_get_access_token_uses_cached_session(user_dir, chain_fails) -> None:
     """Tests that a cached interactive session is used silently."""
-    auth._save_auth_config(AuthConfig("cid", "tid"))
-    app = _fake_app(accounts=[{"username": "u"}], silent={"access_token": "cached"})
+    _remember(AuthConfig("cid", "tid", "u@x"))
+    app = _fake_app(accounts=[{"username": "u@x"}], silent={"access_token": "cached"})
 
     with patch("napt.upload.auth._build_public_client", return_value=app):
         assert get_access_token() == "cached"
 
+    app.get_accounts.assert_called_once_with(username="u@x")
     app.acquire_token_interactive.assert_not_called()
 
 
@@ -103,7 +114,7 @@ def test_get_access_token_never_opens_browser_without_session(
     user_dir, chain_fails
 ) -> None:
     """Tests that a configured app with no cached account fails instead of prompting."""
-    auth._save_auth_config(AuthConfig("cid", "tid"))
+    _remember(AuthConfig("cid", "tid", "u@x"))
     app = _fake_app(accounts=[])
 
     with patch("napt.upload.auth._build_public_client", return_value=app):
@@ -115,9 +126,9 @@ def test_get_access_token_never_opens_browser_without_session(
 
 def test_get_access_token_reports_expired_session(user_dir, chain_fails) -> None:
     """Tests that a session that can no longer refresh asks for a new login."""
-    auth._save_auth_config(AuthConfig("cid", "tid"))
+    _remember(AuthConfig("cid", "tid", "u@x"))
     app = _fake_app(
-        accounts=[{"username": "u"}],
+        accounts=[{"username": "u@x"}],
         silent={"error": "invalid_grant", "error_description": "AADSTS70008 expired"},
     )
 
@@ -132,15 +143,34 @@ def test_get_access_token_reports_expired_session(user_dir, chain_fails) -> None
 # ---------------------------------------------------------------------------
 
 
-def test_resolve_auth_config_prefers_args_over_saved(user_dir) -> None:
-    """Tests the per-field precedence: explicit argument > saved file."""
+def test_resolve_auth_config_uses_active_tenant_by_default(user_dir) -> None:
+    """Tests that the active tenant's client ID and username are used."""
     assert resolve_auth_config() is None
 
-    auth._save_auth_config(AuthConfig("saved-client", "saved-tenant"))
-    assert resolve_auth_config() == AuthConfig("saved-client", "saved-tenant")
+    _remember(AuthConfig("cid-a", "tid-a", "a@x"), AuthConfig("cid-b", "tid-b", "b@x"))
+    assert resolve_auth_config() == AuthConfig("cid-b", "tid-b", "b@x")
 
-    assert resolve_auth_config(tenant_id="arg-tenant") == AuthConfig(
-        "saved-client", "arg-tenant"
+
+def test_resolve_auth_config_switches_tenant_by_id(user_dir) -> None:
+    """Tests that --tenant-id alone selects a remembered tenant's settings."""
+    _remember(AuthConfig("cid-a", "tid-a", "a@x"), AuthConfig("cid-b", "tid-b", "b@x"))
+    assert resolve_auth_config(tenant_id="tid-a") == AuthConfig("cid-a", "tid-a", "a@x")
+
+
+def test_resolve_auth_config_unknown_tenant_needs_client_id(user_dir) -> None:
+    """Tests that a never-seen tenant needs an explicit client ID."""
+    _remember(AuthConfig("cid-a", "tid-a", "a@x"))
+    assert resolve_auth_config(tenant_id="tid-new") is None
+    assert resolve_auth_config(tenant_id="tid-new", client_id="cid-new") == AuthConfig(
+        "cid-new", "tid-new", None
+    )
+
+
+def test_resolve_auth_config_drops_username_when_client_changes(user_dir) -> None:
+    """Tests that a different app registration does not inherit the session."""
+    _remember(AuthConfig("cid-a", "tid-a", "a@x"))
+    assert resolve_auth_config(client_id="cid-other") == AuthConfig(
+        "cid-other", "tid-a", None
     )
 
 
@@ -150,8 +180,8 @@ def test_resolve_auth_config_ignores_azure_env_vars(user_dir, monkeypatch) -> No
     monkeypatch.setenv("AZURE_TENANT_ID", "env-tenant")
     assert resolve_auth_config() is None
 
-    auth._save_auth_config(AuthConfig("saved-client", "saved-tenant"))
-    assert resolve_auth_config() == AuthConfig("saved-client", "saved-tenant")
+    _remember(AuthConfig("saved-client", "saved-tenant", "s@x"))
+    assert resolve_auth_config() == AuthConfig("saved-client", "saved-tenant", "s@x")
 
 
 def test_resolve_auth_config_returns_none_when_incomplete(user_dir) -> None:
@@ -193,9 +223,64 @@ def test_login_saves_config_and_reports_permissions(user_dir) -> None:
     assert status.method == "interactive (browser)"
     assert status.account == "admin@contoso.com"
     assert status.missing == []
-    assert load_auth_config() == AuthConfig("cid", "tid")
+    assert load_auth_config() == AuthConfig("cid", "tid", "admin@contoso.com")
     kwargs = app.acquire_token_interactive.call_args.kwargs
     assert kwargs["parent_window_handle"] is None
+
+
+def test_login_reuses_valid_session_without_prompt(user_dir) -> None:
+    """Tests that switching to a signed-in tenant is silent."""
+    _remember(AuthConfig("cid-a", "tid-a", "a@x"), AuthConfig("cid-b", "tid-b", "b@x"))
+    token = _jwt({"preferred_username": "a@x", "tid": "tid-a"})
+    app = _fake_app(accounts=[{"username": "a@x"}], silent={"access_token": token})
+
+    with (
+        patch("napt.upload.auth._build_public_client", return_value=app),
+        patch("napt.upload.auth._broker_available", return_value=False),
+    ):
+        status = login(tenant_id="tid-a")
+
+    assert status.account == "a@x"
+    app.acquire_token_interactive.assert_not_called()
+    assert auth.load_auth_store().active == "tid-a"
+
+
+def test_login_prompts_when_cached_session_expired(user_dir) -> None:
+    """Tests that an unrefreshable session falls through to interactive."""
+    _remember(AuthConfig("cid", "tid", "u@x"))
+    token = _jwt({"preferred_username": "u@x"})
+    app = _fake_app(
+        accounts=[{"username": "u@x"}],
+        silent={"error": "invalid_grant", "error_description": "expired"},
+        interactive={"access_token": token},
+    )
+
+    with (
+        patch("napt.upload.auth._build_public_client", return_value=app),
+        patch("napt.upload.auth._broker_available", return_value=False),
+    ):
+        status = login()
+
+    assert status.account == "u@x"
+    app.acquire_token_interactive.assert_called_once()
+
+
+def test_login_keeps_other_tenants(user_dir) -> None:
+    """Tests that signing in to a new tenant preserves the others."""
+    _remember(AuthConfig("cid-a", "tid-a", "a@x"))
+    token = _jwt({"preferred_username": "b@x", "tid": "tid-b"})
+    app = _fake_app(interactive={"access_token": token})
+
+    with (
+        patch("napt.upload.auth._build_public_client", return_value=app),
+        patch("napt.upload.auth._broker_available", return_value=False),
+    ):
+        login(client_id="cid-b", tenant_id="tid-b")
+
+    store = auth.load_auth_store()
+    assert store.active == "tid-b"
+    assert store.tenants["tid-a"] == AuthConfig("cid-a", "tid-a", "a@x")
+    assert store.tenants["tid-b"] == AuthConfig("cid-b", "tid-b", "b@x")
 
 
 def test_login_uses_broker_when_available(user_dir) -> None:
@@ -253,23 +338,37 @@ def test_login_surfaces_msal_error(user_dir) -> None:
     assert load_auth_config() is None
 
 
-def test_logout_removes_all_accounts(user_dir) -> None:
-    """Tests that logout removes every cached account and keeps the config."""
-    auth._save_auth_config(AuthConfig("cid", "tid"))
-    (user_dir / "token_cache.bin").write_bytes(b"")
-    accounts = [{"username": "a"}, {"username": "b"}]
-    app = _fake_app(accounts=accounts)
+def test_logout_signs_out_active_tenant_only(user_dir) -> None:
+    """Tests that logout removes the active tenant's account and keeps its IDs."""
+    _remember(AuthConfig("cid-a", "tid-a", "a@x"), AuthConfig("cid-b", "tid-b", "b@x"))
+    app = _fake_app(accounts=[{"username": "b@x"}])
 
     with patch("napt.upload.auth._build_public_client", return_value=app):
-        assert logout() is True
+        assert logout() == ["tid-b"]
 
-    assert app.remove_account.call_count == 2
-    assert load_auth_config() == AuthConfig("cid", "tid")
+    app.get_accounts.assert_called_once_with(username="b@x")
+    app.remove_account.assert_called_once()
+    store = auth.load_auth_store()
+    assert store.tenants["tid-b"] == AuthConfig("cid-b", "tid-b", None)
+    assert store.tenants["tid-a"] == AuthConfig("cid-a", "tid-a", "a@x")
+    assert store.active == "tid-b"
 
 
-def test_logout_without_session_returns_false(user_dir) -> None:
+def test_logout_all_signs_out_every_tenant(user_dir) -> None:
+    """Tests that --all clears every remembered tenant's session."""
+    _remember(AuthConfig("cid-a", "tid-a", "a@x"), AuthConfig("cid-b", "tid-b", "b@x"))
+    app = _fake_app(accounts=[{"username": "x"}])
+
+    with patch("napt.upload.auth._build_public_client", return_value=app):
+        assert sorted(logout(all_tenants=True)) == ["tid-a", "tid-b"]
+
+    store = auth.load_auth_store()
+    assert all(c.username is None for c in store.tenants.values())
+
+
+def test_logout_without_session_returns_empty(user_dir) -> None:
     """Tests that logout is a no-op when nothing was ever cached."""
-    assert logout() is False
+    assert logout() == []
 
 
 def test_get_status_reports_service_principal(user_dir, monkeypatch) -> None:

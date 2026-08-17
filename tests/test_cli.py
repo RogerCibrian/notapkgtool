@@ -616,16 +616,49 @@ class TestCmdAuth:
         assert "Authentication error: no redirect uri" in capsys.readouterr().out
 
     def test_logout_reports_removed_session(self, capsys):
-        """Tests that logout confirms when a session was removed."""
-        with patch("napt.cli.auth_logout", return_value=True):
-            assert cmd_auth_logout(_args()) == 0
-        assert "[OK] Signed out" in capsys.readouterr().out
+        """Tests that logout confirms which tenants were signed out."""
+        with patch("napt.cli.auth_logout", return_value=["tid-a"]) as lo:
+            assert cmd_auth_logout(_args(all=False)) == 0
+        assert lo.call_args.kwargs["all_tenants"] is False
+        assert "[OK] Signed out of 1 tenant(s): tid-a" in capsys.readouterr().out
+
+    def test_logout_all_passes_flag(self, capsys):
+        """Tests that --all is forwarded to the auth module."""
+        with patch("napt.cli.auth_logout", return_value=["a", "b"]) as lo:
+            assert cmd_auth_logout(_args(all=True)) == 0
+        assert lo.call_args.kwargs["all_tenants"] is True
 
     def test_logout_reports_nothing_to_do(self, capsys):
         """Tests that logout says so when no session was cached."""
-        with patch("napt.cli.auth_logout", return_value=False):
-            assert cmd_auth_logout(_args()) == 0
+        with patch("napt.cli.auth_logout", return_value=[]):
+            assert cmd_auth_logout(_args(all=False)) == 0
         assert "No interactive session" in capsys.readouterr().out
+
+    def test_status_lists_known_tenants(self, capsys, tmp_path, monkeypatch):
+        """Tests that interactive status lists remembered tenants, marking the active."""
+        from napt.upload.auth import AuthConfig, AuthStore, _save_auth_store
+
+        monkeypatch.setenv("NAPT_USER_DIR", str(tmp_path))
+        _save_auth_store(
+            AuthStore(
+                active="tid-b",
+                tenants={
+                    "tid-a": AuthConfig("cid-a", "tid-a", "a@x"),
+                    "tid-b": AuthConfig("cid-b", "tid-b", "b@x"),
+                },
+            )
+        )
+        status = AuthStatus(
+            method="interactive (browser)",
+            account="b@x",
+            permissions=["DeviceManagementApps.ReadWrite.All", "Group.Read.All"],
+        )
+        with patch("napt.cli.auth_status", return_value=status):
+            assert cmd_auth_status(_args()) == 0
+        out = capsys.readouterr().out
+        assert "Known tenants:" in out
+        assert "* tid-b  b@x  client cid-b" in out
+        assert "  tid-a  a@x  client cid-a" in out
 
     def test_status_not_authenticated_returns_one(self, capsys):
         """Tests that status exits 1 and points at login when unauthenticated."""

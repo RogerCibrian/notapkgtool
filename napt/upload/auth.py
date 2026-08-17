@@ -28,11 +28,13 @@ Non-interactive (CI/CD):
         CI platform supports it: no secret to store or rotate.
 
 Interactive (a person at a terminal):
-    3. A session established earlier with `napt auth login`. Tokens are
-        cached by MSAL in an OS-encrypted store (DPAPI on Windows, Keychain on
-        macOS, libsecret on Linux) and refreshed silently; the browser or
-        Windows/macOS broker is only opened by `napt auth login` itself,
-        never by `napt upload`.
+    3. The active tenant's session established earlier with
+        `napt auth login`. Tokens are cached by MSAL in an OS-encrypted store
+        (DPAPI on Windows, Keychain on macOS, libsecret on Linux) and
+        refreshed silently; the browser or Windows/macOS broker is only
+        opened by `napt auth login` itself, never by `napt upload`. Several
+        tenants can be signed in at once; `napt auth login --tenant-id`
+        switches the active one.
 
 `napt auth login` uses the authorization code flow with PKCE against a
 loopback redirect, or -- on Windows and macOS when the MSAL broker runtime is
@@ -82,12 +84,14 @@ from napt.exceptions import AuthError, ConfigError
 __all__ = [
     "AuthConfig",
     "AuthStatus",
+    "AuthStore",
     "GRAPH_SCOPES",
     "REQUIRED_PERMISSIONS",
     "get_access_token",
     "get_credential",
     "get_status",
     "load_auth_config",
+    "load_auth_store",
     "login",
     "logout",
     "resolve_auth_config",
@@ -149,15 +153,34 @@ _HINT_LOGIN_FAILED = (
 
 @dataclass(frozen=True)
 class AuthConfig:
-    """App registration used for interactive sign-in.
+    """One tenant's interactive sign-in settings.
 
     Attributes:
-        client_id: Application (client) ID of the NAPT app registration.
+        client_id: Application (client) ID of the NAPT app registration in
+            this tenant.
         tenant_id: Directory (tenant) ID the sign-in is scoped to.
+        username: Account that signed in last (UPN), or ``None`` before the
+            first login. Selects the right cached account when several
+            tenants are signed in.
     """
 
     client_id: str
     tenant_id: str
+    username: str | None = None
+
+
+@dataclass
+class AuthStore:
+    """Everything `napt auth login` remembers, keyed by tenant.
+
+    Attributes:
+        active: Tenant ID that commands use, or ``None`` before the first
+            login.
+        tenants: Known tenants by tenant ID.
+    """
+
+    active: str | None = None
+    tenants: dict[str, AuthConfig] = field(default_factory=dict)
 
 
 @dataclass
@@ -224,68 +247,96 @@ def _token_cache_path() -> Path:
     return _user_data_dir() / _TOKEN_CACHE_FILENAME
 
 
-def load_auth_config() -> AuthConfig | None:
-    """Reads the app registration saved by a previous `napt auth login`.
+def load_auth_store() -> AuthStore:
+    """Reads what previous `napt auth login` runs remembered.
 
     Returns:
-        The saved config, or ``None`` when no login has been run yet.
+        The saved store, empty when no login has been run yet.
 
     Raises:
         ConfigError: If the file exists but is unreadable or malformed.
     """
     path = _auth_config_path()
     if not path.exists():
-        return None
+        return AuthStore()
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        return AuthConfig(client_id=data["client_id"], tenant_id=data["tenant_id"])
-    except (OSError, ValueError, KeyError, TypeError) as err:
+        tenants = {
+            tenant_id: AuthConfig(
+                client_id=entry["client_id"],
+                tenant_id=tenant_id,
+                username=entry.get("username"),
+            )
+            for tenant_id, entry in data.get("tenants", {}).items()
+        }
+        return AuthStore(active=data.get("active"), tenants=tenants)
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as err:
         raise ConfigError(
             f"Cannot read saved auth config {path}: {err}. "
             "Delete the file and run 'napt auth login' again."
         ) from err
 
 
-def _save_auth_config(config: AuthConfig) -> Path:
+def _save_auth_store(store: AuthStore) -> Path:
     path = _auth_config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(
-            {"client_id": config.client_id, "tenant_id": config.tenant_id},
-            indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
+    payload = {
+        "active": store.active,
+        "tenants": {
+            tenant_id: {"client_id": cfg.client_id, "username": cfg.username}
+            for tenant_id, cfg in store.tenants.items()
+        },
+    }
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     return path
+
+
+def load_auth_config() -> AuthConfig | None:
+    """Returns the active tenant's sign-in settings, or ``None``.
+
+    Raises:
+        ConfigError: If the saved auth config is malformed.
+    """
+    store = load_auth_store()
+    if store.active is None:
+        return None
+    return store.tenants.get(store.active)
 
 
 def resolve_auth_config(
     client_id: str | None = None, tenant_id: str | None = None
 ) -> AuthConfig | None:
-    """Determines the app registration to use for interactive sign-in.
+    """Determines the tenant and app registration for interactive sign-in.
 
-    Per field, an explicit argument wins over the config saved by the last
-    `napt auth login`. ``AZURE_*`` environment variables are deliberately not
-    consulted: they describe a non-interactive credential, not which app a
-    person signs in to.
+    The tenant is ``tenant_id`` or the active one from the last login. The
+    client ID is ``client_id`` or the one remembered for that tenant. The
+    remembered username carries over only when the client ID is unchanged,
+    since a different app registration means a different cached session.
+    ``AZURE_*`` environment variables are deliberately not consulted: they
+    describe a non-interactive credential, not which app a person signs in
+    to.
 
     Args:
         client_id: Explicit client ID (from ``--client-id``).
         tenant_id: Explicit tenant ID (from ``--tenant-id``).
 
     Returns:
-        The resolved config, or ``None`` if either field is still unknown.
+        The resolved config, or ``None`` if the tenant or client ID is still
+        unknown.
 
     Raises:
         ConfigError: If a saved config file exists but is malformed.
     """
-    saved = load_auth_config()
-    resolved_client = client_id or (saved.client_id if saved else None)
-    resolved_tenant = tenant_id or (saved.tenant_id if saved else None)
-    if resolved_client and resolved_tenant:
-        return AuthConfig(client_id=resolved_client, tenant_id=resolved_tenant)
-    return None
+    store = load_auth_store()
+    tenant = tenant_id or store.active
+    if not tenant:
+        return None
+    known = store.tenants.get(tenant)
+    client = client_id or (known.client_id if known else None)
+    if not client:
+        return None
+    username = known.username if known and known.client_id == client else None
+    return AuthConfig(client_id=client, tenant_id=tenant, username=username)
 
 
 # ---------------------------------------------------------------------------
@@ -423,14 +474,17 @@ def _msal_error(result: dict[str, Any]) -> str:
 
 
 def _acquire_silent(config: AuthConfig, *, use_broker: bool) -> str | None:
-    """Returns a cached/refreshed token for the saved session, or ``None``.
+    """Returns a cached/refreshed token for the tenant's session, or ``None``.
 
-    ``None`` means no account is cached. An account whose session can no
-    longer be refreshed raises AuthError instead, since that needs a new
-    login rather than a different credential.
+    ``None`` means no session for this tenant is cached (no login yet, or a
+    different app registration than the one signed in with). A session that
+    can no longer be refreshed raises AuthError instead, since that needs a
+    new login rather than a different credential.
     """
+    if config.username is None:
+        return None
     app = _build_public_client(config, use_broker=use_broker)
-    accounts = app.get_accounts()
+    accounts = app.get_accounts(username=config.username)
     if not accounts:
         return None
     result = app.acquire_token_silent_with_error(GRAPH_SCOPES, account=accounts[0])
@@ -441,11 +495,23 @@ def _acquire_silent(config: AuthConfig, *, use_broker: bool) -> str | None:
 
 
 def _interactive_config() -> AuthConfig | None:
-    """The interactive app registration, or ``None`` when unconfigured."""
+    """The active tenant's sign-in settings, or ``None`` when unconfigured."""
     try:
         return resolve_auth_config()
     except ConfigError:
         return None
+
+
+def _interactive_method(broker: bool) -> str:
+    return "interactive (broker)" if broker else "interactive (browser)"
+
+
+def _remember(config: AuthConfig) -> Path:
+    """Records ``config`` as the active tenant and returns the file path."""
+    store = load_auth_store()
+    store.tenants[config.tenant_id] = config
+    store.active = config.tenant_id
+    return _save_auth_store(store)
 
 
 def login(
@@ -454,22 +520,24 @@ def login(
     tenant_id: str | None = None,
     use_broker: bool = True,
 ) -> AuthStatus:
-    """Signs a user in interactively and persists the session.
+    """Signs in to a tenant and makes it the active one.
 
-    Opens the platform broker (Windows/macOS, when the MSAL broker runtime is
-    installed and ``use_broker`` is true) or the system browser, then stores
-    the resulting account in NAPT's encrypted token cache so later commands
-    authenticate silently. Also saves the client/tenant IDs so future logins
-    don't need them repeated.
+    If the tenant already has a usable cached session, it is reused silently
+    -- so ``napt auth login --tenant-id <id>`` switches between signed-in
+    tenants without a prompt. Otherwise the platform broker (Windows/macOS,
+    when the MSAL broker runtime is installed and ``use_broker`` is true) or
+    the system browser opens, and the resulting account is stored in NAPT's
+    encrypted token cache. The tenant, client ID, and signed-in username are
+    remembered so later logins need no arguments.
 
     Args:
-        client_id: App registration client ID; overrides the saved config.
-        tenant_id: Tenant ID; overrides the saved config.
+        client_id: App registration client ID; overrides the one remembered
+            for the tenant.
+        tenant_id: Tenant ID; defaults to the active tenant.
         use_broker: Prefer the OS broker over a browser when available.
 
     Returns:
-        Status of the newly acquired token, including any missing
-        permissions.
+        Status of the token now in use, including any missing permissions.
 
     Raises:
         AuthError: If no app registration is configured or the sign-in fails.
@@ -484,6 +552,21 @@ def login(
         raise AuthError(_HINT_NO_CLIENT_CONFIG)
 
     broker = use_broker and _broker_available()
+
+    try:
+        cached = _acquire_silent(config, use_broker=broker)
+    except AuthError as err:
+        logger.verbose("AUTH", f"Cached session unusable, signing in again: {err}")
+        cached = None
+    if cached is not None:
+        _remember(config)
+        logger.info(
+            "AUTH",
+            f"Reusing signed-in session for {config.username} "
+            f"in tenant {config.tenant_id}",
+        )
+        return _status_from_token(cached, _interactive_method(broker))
+
     app = _build_public_client(config, use_broker=broker)
     logger.verbose(
         "AUTH",
@@ -513,39 +596,67 @@ def login(
     if "access_token" not in result:
         raise AuthError(f"{_HINT_LOGIN_FAILED}Details: {_msal_error(result)}")
 
-    saved_to = _save_auth_config(config)
-    logger.verbose("AUTH", f"Saved app registration to {saved_to}")
-
-    method = "interactive (broker)" if broker else "interactive (browser)"
-    status = _status_from_token(result["access_token"], method)
+    status = _status_from_token(result["access_token"], _interactive_method(broker))
+    claims = result.get("id_token_claims")
+    username = (
+        claims.get("preferred_username") if isinstance(claims, dict) else None
+    ) or status.account
     if not status.account:
-        claims = result.get("id_token_claims")
-        if isinstance(claims, dict):
-            status.account = claims.get("preferred_username")
+        status.account = username
+
+    saved_to = _remember(
+        AuthConfig(
+            client_id=config.client_id,
+            tenant_id=config.tenant_id,
+            username=username,
+        )
+    )
+    logger.verbose("AUTH", f"Saved sign-in settings to {saved_to}")
     return status
 
 
-def logout() -> bool:
-    """Removes the cached interactive session.
+def logout(*, all_tenants: bool = False) -> list[str]:
+    """Removes cached interactive sessions.
 
-    Signs every cached account out of NAPT's token cache (and the OS broker,
-    when it was used). The saved client/tenant IDs are kept so the next
+    Signs the active tenant's account out of NAPT's token cache (and the OS
+    broker, when it was used). With ``all_tenants``, every remembered tenant
+    is signed out. Client and tenant IDs are kept so the next
     `napt auth login` needs no arguments.
 
+    Args:
+        all_tenants: Sign out of every remembered tenant, not just the
+            active one.
+
     Returns:
-        True if a session was removed, False if none was cached.
+        Tenant IDs that had a session removed (empty if none was cached).
 
     Raises:
         ConfigError: If the saved auth config is malformed.
     """
-    config = resolve_auth_config()
-    if config is None or not _token_cache_path().exists():
-        return False
-    app = _build_public_client(config, use_broker=_broker_available())
-    accounts = app.get_accounts()
-    for account in accounts:
-        app.remove_account(account)
-    return bool(accounts)
+    store = load_auth_store()
+    if all_tenants:
+        targets = list(store.tenants.values())
+    else:
+        active = store.tenants.get(store.active or "")
+        targets = [active] if active else []
+
+    signed_out: list[str] = []
+    broker = _broker_available()
+    for config in targets:
+        if config.username is None:
+            continue
+        app = _build_public_client(config, use_broker=broker)
+        accounts = app.get_accounts(username=config.username)
+        for account in accounts:
+            app.remove_account(account)
+        store.tenants[config.tenant_id] = AuthConfig(
+            client_id=config.client_id, tenant_id=config.tenant_id
+        )
+        if accounts:
+            signed_out.append(config.tenant_id)
+    if targets:
+        _save_auth_store(store)
+    return signed_out
 
 
 def get_status() -> AuthStatus | None:
@@ -576,9 +687,7 @@ def get_status() -> AuthStatus | None:
     token = _acquire_silent(config, use_broker=broker)
     if token is None:
         return None
-    return _status_from_token(
-        token, "interactive (broker)" if broker else "interactive (browser)"
-    )
+    return _status_from_token(token, _interactive_method(broker))
 
 
 def get_access_token() -> str:

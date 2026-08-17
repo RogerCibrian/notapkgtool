@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `status` shows which credential NAPT would use, the account, tenant,
         expiry, and Graph permissions it carries, and exits 1 naming any
         required permission that is missing
+    - Multiple tenants are remembered; `login --tenant-id <id>` switches
+        between signed-in tenants without a prompt, and `logout --all`
+        clears them all
     - Tokens are cached in the OS credential store (DPAPI, Keychain,
         libsecret), never in plain files
 - **OIDC federation for CI/CD** - `AZURE_FEDERATED_TOKEN_FILE` (as set by

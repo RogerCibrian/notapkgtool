@@ -117,6 +117,7 @@ from napt.upload.auth import (
     AuthStatus,
     get_access_token,
     get_status as auth_status,
+    load_auth_store,
     login as auth_login,
     logout as auth_logout,
 )
@@ -997,6 +998,23 @@ def _print_auth_status(status: AuthStatus) -> None:
         )
 
 
+def _print_known_tenants() -> None:
+    """Lists tenants remembered by 'napt auth login', marking the active one."""
+    try:
+        store = load_auth_store()
+    except ConfigError:
+        return
+    if not store.tenants:
+        return
+    print()
+    print("Known tenants:")
+    for tenant_id, cfg in store.tenants.items():
+        marker = "*" if tenant_id == store.active else " "
+        who = cfg.username or "(signed out)"
+        print(f"  {marker} {tenant_id}  {who}  client {cfg.client_id}")
+    print("  (* = active; switch with 'napt auth login --tenant-id <id>')")
+
+
 def cmd_auth_login(args: argparse.Namespace) -> int:
     """Handler for 'napt auth login' command.
 
@@ -1038,11 +1056,12 @@ def cmd_auth_login(args: argparse.Namespace) -> int:
 def cmd_auth_logout(args: argparse.Namespace) -> int:
     """Handler for 'napt auth logout' command.
 
-    Removes the cached interactive session. The saved client and tenant IDs
-    are kept for the next login.
+    Removes the active tenant's cached session, or every tenant's with
+    --all. Client and tenant IDs are kept for the next login.
 
     Args:
-        args: Parsed command-line arguments containing debug flags.
+        args: Parsed command-line arguments containing the --all flag and
+            debug flags.
 
     Returns:
         Exit code (0 for success, 1 for failure).
@@ -1052,7 +1071,7 @@ def cmd_auth_logout(args: argparse.Namespace) -> int:
     set_global_logger(logger)
 
     try:
-        removed = auth_logout()
+        removed = auth_logout(all_tenants=args.all)
     except (AuthError, ConfigError) as err:
         print(f"Authentication error: {err}")
         if args.verbose or args.debug:
@@ -1062,7 +1081,10 @@ def cmd_auth_logout(args: argparse.Namespace) -> int:
         return 1
 
     if removed:
-        print("[OK] Signed out. Run 'napt auth login' to sign in again.")
+        print(
+            f"[OK] Signed out of {len(removed)} tenant(s): {', '.join(removed)}. "
+            "Run 'napt auth login' to sign in again."
+        )
     else:
         print("No interactive session to sign out of.")
     return 0
@@ -1101,9 +1123,12 @@ def cmd_auth_status(args: argparse.Namespace) -> int:
         print("  CI/CD:        set AZURE_CLIENT_ID, AZURE_TENANT_ID and either")
         print("                AZURE_CLIENT_SECRET / AZURE_CLIENT_CERTIFICATE_PATH,")
         print("                or use OIDC federation")
+        _print_known_tenants()
         return 1
 
     _print_auth_status(status)
+    if status.method.startswith("interactive"):
+        _print_known_tenants()
     return 0 if not status.missing else 1
 
 
@@ -1584,7 +1609,9 @@ def main() -> None:
             "Sign in interactively and cache the session so later commands\n"
             "authenticate silently. Uses the Windows/macOS broker when\n"
             "available, otherwise the system browser.\n\n"
-            "The client and tenant IDs are remembered after the first login."
+            "The tenant, client ID, and account are remembered after the first\n"
+            "login. Pass --tenant-id to switch between signed-in tenants (no\n"
+            "prompt when that tenant's session is still valid)."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -1596,7 +1623,7 @@ def main() -> None:
     parser_auth_login.add_argument(
         "--tenant-id",
         default=None,
-        help="Directory (tenant) ID",
+        help="Directory (tenant) ID (defaults to the active tenant)",
     )
     parser_auth_login.add_argument(
         "--no-broker",
@@ -1620,7 +1647,15 @@ def main() -> None:
     parser_auth_logout = auth_sub.add_parser(
         "logout",
         help="Remove the cached interactive session",
-        description="Sign out of the cached interactive session.",
+        description=(
+            "Sign out of the active tenant's cached session (or every "
+            "tenant's with --all)."
+        ),
+    )
+    parser_auth_logout.add_argument(
+        "--all",
+        action="store_true",
+        help="Sign out of every remembered tenant",
     )
     parser_auth_logout.add_argument(
         "-v",

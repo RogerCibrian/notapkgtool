@@ -373,7 +373,21 @@ Permissions: DeviceManagementApps.ReadWrite.All, Group.Read.All
 
 `napt auth status` exits 1 when no credential is available or a required
 permission is missing, and names the missing permission.
-`napt auth logout` removes the cached session.
+`napt auth logout` signs out of the active tenant (`--all` for every tenant);
+the IDs stay remembered.
+
+**Multiple tenants:**
+
+Sign in to each tenant once with its own client ID.
+NAPT remembers every tenant you have signed in to and which one is active;
+`napt auth status` lists them.
+Switch with just the tenant ID — no prompt as long as that tenant's session
+is still valid:
+
+```bash
+napt auth login --client-id "<prod client ID>" --tenant-id "<prod tenant ID>"   # first time
+napt auth login --tenant-id "<dev tenant ID>"                                    # switch back, silent
+```
 
 **CI/CD setup — OIDC federation (recommended):**
 
