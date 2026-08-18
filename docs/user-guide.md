@@ -332,11 +332,6 @@ Two ways to do it:
     - `http://localhost` (browser sign-in)
     - `ms-appx-web://Microsoft.AAD.BrokerPlugin/<Application (client) ID>`
       (Windows broker sign-in)
-8. Under **Advanced settings**, set **Allow public client flows** to **No**
-   and save.
-   NAPT does not use device code flow, and leaving it enabled lets device
-   code be used against this app registration.
-   Registrations created for earlier NAPT versions have it set to **Yes**.
 
 **Automatic (`napt auth setup`):** planned for a later release — it will
 create the registration above through Graph, which needs an account holding
