@@ -498,11 +498,10 @@ admin consent, and add the `http://localhost` and
 Sign in once with the IDs from the app registration:
 
 ```bash
-napt auth login --client-id "<Application (client) ID>" --tenant-id "<Directory (tenant) ID>"
+napt auth login --tenant-id "<Directory (tenant) ID>" --client-id "<Application (client) ID>"
 ```
 
-On Windows and macOS the OS account picker opens; elsewhere your browser
-does.
+On Windows the OS account picker opens; elsewhere your browser does.
 The IDs are remembered, so later sessions are just `napt auth login`, and
 `napt upload` / `napt promote` run silently until the session expires.
 `napt auth status` shows the account, tenant, and permissions in use;

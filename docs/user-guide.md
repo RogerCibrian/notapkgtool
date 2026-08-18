@@ -332,8 +332,11 @@ Two ways to do it:
     - `http://localhost` (browser sign-in)
     - `ms-appx-web://Microsoft.AAD.BrokerPlugin/<Application (client) ID>`
       (Windows broker sign-in)
-8. Leave **Allow public client flows** at **No** — NAPT does not use device
-   code flow
+8. Under **Advanced settings**, set **Allow public client flows** to **No**
+   and save.
+   NAPT does not use device code flow, and leaving it enabled lets device
+   code be used against this app registration.
+   Registrations created for earlier NAPT versions have it set to **Yes**.
 
 **Automatic (`napt auth setup`):** planned for a later release — it will
 create the registration above through Graph, which needs an account holding
@@ -345,13 +348,15 @@ Until then, use the manual steps.
 Sign in once; the client and tenant IDs are remembered for later logins:
 
 ```bash
-napt auth login --client-id "<Application (client) ID>" --tenant-id "<Directory (tenant) ID>"
+napt auth login --tenant-id "<Directory (tenant) ID>" --client-id "<Application (client) ID>"
 ```
 
-On Windows and macOS this opens the OS account picker (Web Account
-Manager / Company Portal), signing you in with your work account and
-honoring device-based Conditional Access.
+On Windows this opens the OS account picker (Web Account Manager),
+signing you in with your work account, honoring device-based Conditional
+Access, and keeping the refresh token device-bound.
 Elsewhere — or with `--no-broker` — it opens your browser.
+The broker needs an interactive Windows session: from a scheduled task,
+service, `runas`, or SSH session, use a service principal or OIDC instead.
 Tokens are cached in the OS credential store (DPAPI, Keychain, or
 libsecret) and refreshed silently until the session expires or is revoked.
 The `AZURE_*` environment variables play no part in interactive sign-in;
@@ -385,7 +390,7 @@ Switch with just the tenant ID — no prompt as long as that tenant's session
 is still valid:
 
 ```bash
-napt auth login --client-id "<prod client ID>" --tenant-id "<prod tenant ID>"   # first time
+napt auth login --tenant-id "<prod tenant ID>" --client-id "<prod client ID>"   # first time
 napt auth login --tenant-id "<dev tenant ID>"                                    # switch back, silent
 ```
 
@@ -615,7 +620,7 @@ Manages the credential NAPT uses for Intune.
 See [Authentication](#authentication).
 
 ```bash
-napt auth login [--client-id ID] [--tenant-id ID] [--no-broker]
+napt auth login [--tenant-id ID] [--client-id ID] [--no-broker]
 napt auth status
 napt auth logout
 ```

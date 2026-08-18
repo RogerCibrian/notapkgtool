@@ -31,16 +31,18 @@ Interactive (a person at a terminal):
     3. The active tenant's session established earlier with
         `napt auth login`. Tokens are cached by MSAL in an OS-encrypted store
         (DPAPI on Windows, Keychain on macOS, libsecret on Linux) and
-        refreshed silently; the browser or Windows/macOS broker is only
+        refreshed silently; the browser or Windows broker is only
         opened by `napt auth login` itself, never by `napt upload`. Several
         tenants can be signed in at once; `napt auth login --tenant-id`
         switches the active one.
 
 `napt auth login` uses the authorization code flow with PKCE against a
-loopback redirect, or -- on Windows and macOS when the MSAL broker runtime is
-installed -- the platform broker (Web Account Manager / Company Portal),
-which gives single sign-on with the signed-in OS account and honors
-device-based Conditional Access.
+loopback redirect, or -- on Windows, when the MSAL broker runtime is
+installed -- the Web Account Manager (WAM) broker, which gives single
+sign-on with accounts known to Windows, honors device-based Conditional
+Access, and keeps refresh tokens device-bound. The broker needs an
+interactive Windows session; scheduled tasks, services, and SSH sessions
+should use a service principal or OIDC instead.
 
 Requires a NAPT app registration in Microsoft Entra ID with the
 `DeviceManagementApps.ReadWrite.All` and `Group.Read.All` Microsoft Graph
@@ -130,7 +132,7 @@ _HINT_SESSION_EXPIRED = (
 
 _HINT_NO_CLIENT_CONFIG = (
     "No app registration configured for interactive sign-in.\n\n"
-    "Run: napt auth login --client-id <id> --tenant-id <id>\n"
+    "Run: napt auth login --tenant-id <id> --client-id <id>\n"
     "(The IDs are remembered for later logins.)\n"
 )
 
@@ -148,6 +150,15 @@ _HINT_LOGIN_FAILED = (
     "  - Browser showed 'localhost refused to connect': the sign-in took\n"
     "    longer than the listener waited, or a proxy is not bypassing\n"
     "    localhost. Retry, or retry with --no-broker / without a proxy.\n"
+)
+
+_HINT_LOGIN_CANCELED = (
+    "Sign-in was canceled before it completed.\n\n"
+    "If the sign-in window showed an error such as AADSTS500113 or\n"
+    "AADSTS50011, the app registration is missing a redirect URI: add\n"
+    "http://localhost and ms-appx-web://Microsoft.AAD.BrokerPlugin/<client-id>\n"
+    "under Authentication -> Mobile and desktop applications, then retry.\n"
+    "Otherwise just run 'napt auth login' again.\n"
 )
 
 
@@ -304,7 +315,7 @@ def load_auth_config() -> AuthConfig | None:
 
 
 def resolve_auth_config(
-    client_id: str | None = None, tenant_id: str | None = None
+    tenant_id: str | None = None, client_id: str | None = None
 ) -> AuthConfig | None:
     """Determines the tenant and app registration for interactive sign-in.
 
@@ -317,8 +328,8 @@ def resolve_auth_config(
     to.
 
     Args:
-        client_id: Explicit client ID (from ``--client-id``).
         tenant_id: Explicit tenant ID (from ``--tenant-id``).
+        client_id: Explicit client ID (from ``--client-id``).
 
     Returns:
         The resolved config, or ``None`` if the tenant or client ID is still
@@ -430,8 +441,8 @@ def _describe_noninteractive_method() -> str:
 
 
 def _broker_available() -> bool:
-    """Whether the MSAL broker runtime is importable on this platform."""
-    if sys.platform not in ("win32", "darwin"):
+    """Whether the Windows broker (WAM) runtime is importable."""
+    if sys.platform != "win32":
         return False
     try:
         import pymsalruntime  # noqa: F401  # pyright: ignore[reportMissingImports]
@@ -463,7 +474,6 @@ def _build_public_client(
         authority=f"{_AUTHORITY_BASE}/{config.tenant_id}",
         token_cache=_build_token_cache(),
         enable_broker_on_windows=use_broker,
-        enable_broker_on_mac=use_broker,
     )
 
 
@@ -516,24 +526,24 @@ def _remember(config: AuthConfig) -> Path:
 
 def login(
     *,
-    client_id: str | None = None,
     tenant_id: str | None = None,
+    client_id: str | None = None,
     use_broker: bool = True,
 ) -> AuthStatus:
     """Signs in to a tenant and makes it the active one.
 
     If the tenant already has a usable cached session, it is reused silently
     -- so ``napt auth login --tenant-id <id>`` switches between signed-in
-    tenants without a prompt. Otherwise the platform broker (Windows/macOS,
-    when the MSAL broker runtime is installed and ``use_broker`` is true) or
-    the system browser opens, and the resulting account is stored in NAPT's
+    tenants without a prompt. Otherwise the Windows broker (when the MSAL
+    broker runtime is installed and ``use_broker`` is true) or the system
+    browser opens, and the resulting account is stored in NAPT's
     encrypted token cache. The tenant, client ID, and signed-in username are
     remembered so later logins need no arguments.
 
     Args:
+        tenant_id: Tenant ID; defaults to the active tenant.
         client_id: App registration client ID; overrides the one remembered
             for the tenant.
-        tenant_id: Tenant ID; defaults to the active tenant.
         use_broker: Prefer the OS broker over a browser when available.
 
     Returns:
@@ -547,7 +557,7 @@ def login(
 
     logger = get_global_logger()
 
-    config = resolve_auth_config(client_id, tenant_id)
+    config = resolve_auth_config(tenant_id, client_id)
     if config is None:
         raise AuthError(_HINT_NO_CLIENT_CONFIG)
 
@@ -594,7 +604,14 @@ def login(
         raise AuthError(f"{_HINT_LOGIN_FAILED}Details: {err}") from err
 
     if "access_token" not in result:
-        raise AuthError(f"{_HINT_LOGIN_FAILED}Details: {_msal_error(result)}")
+        logger.debug("AUTH", f"MSAL interactive response: {result}")
+        detail = _msal_error(result)
+        if result.get("correlation_id"):
+            detail += f" (correlation_id {result['correlation_id']})"
+        # _broker_status is a pymsalruntime enum; compare by name.
+        canceled = str(result.get("_broker_status", "")).endswith("Status_UserCanceled")
+        hint = _HINT_LOGIN_CANCELED if canceled else _HINT_LOGIN_FAILED
+        raise AuthError(f"{hint}Details: {detail}")
 
     status = _status_from_token(result["access_token"], _interactive_method(broker))
     claims = result.get("id_token_claims")

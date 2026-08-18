@@ -11,9 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`napt auth login` / `status` / `logout`** - Sign in to Microsoft Graph
     once and let every later command authenticate silently
-    - `login` opens the Windows/macOS account picker (Web Account Manager /
-        Company Portal) when available, otherwise the browser; `--no-broker`
-        forces the browser
+    - `login` opens the Windows account picker (Web Account Manager) when
+        available, otherwise the browser; `--no-broker` forces the browser
     - The client and tenant IDs given to the first `login` are remembered;
         `AZURE_*` environment variables are for CI/CD credentials only and
         no longer configure interactive sign-in
@@ -37,8 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     blocked by Microsoft-managed Conditional Access policies
     - App registrations need the `http://localhost` and
         `ms-appx-web://Microsoft.AAD.BrokerPlugin/<client-id>` redirect URIs
-        under **Mobile and desktop applications**; "Allow public client
-        flows" is no longer required
+        under **Mobile and desktop applications**; set "Allow public client
+        flows" to No
     - `napt upload` and `napt promote` never open a browser; without a
         credential they fail with `Not authenticated. Run 'napt auth login'`
 - **BREAKING: Managed identity removed** - `ManagedIdentityCredential` is

@@ -1588,7 +1588,7 @@ def main() -> None:
         description=(
             "Manage the credential NAPT uses for Intune.\n\n"
             "Examples:\n"
-            "  napt auth login --client-id <id> --tenant-id <id>\n"
+            "  napt auth login --tenant-id <id> --client-id <id>\n"
             "  napt auth login\n"
             "  napt auth status\n"
             "  napt auth logout\n\n"
@@ -1607,7 +1607,7 @@ def main() -> None:
         help="Sign in interactively (browser or OS broker)",
         description=(
             "Sign in interactively and cache the session so later commands\n"
-            "authenticate silently. Uses the Windows/macOS broker when\n"
+            "authenticate silently. Uses the Windows broker (WAM) when\n"
             "available, otherwise the system browser.\n\n"
             "The tenant, client ID, and account are remembered after the first\n"
             "login. Pass --tenant-id to switch between signed-in tenants (no\n"
@@ -1616,14 +1616,17 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser_auth_login.add_argument(
-        "--client-id",
-        default=None,
-        help="Application (client) ID of the NAPT app registration",
-    )
-    parser_auth_login.add_argument(
         "--tenant-id",
         default=None,
         help="Directory (tenant) ID (defaults to the active tenant)",
+    )
+    parser_auth_login.add_argument(
+        "--client-id",
+        default=None,
+        help=(
+            "Application (client) ID of the NAPT app registration "
+            "(needed the first time you sign in to a tenant)"
+        ),
     )
     parser_auth_login.add_argument(
         "--no-broker",

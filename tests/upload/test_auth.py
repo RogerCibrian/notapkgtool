@@ -401,3 +401,29 @@ def test_status_handles_opaque_token() -> None:
     assert status.account is None
     assert status.permissions == []
     assert set(status.missing) == set(auth.REQUIRED_PERMISSIONS)
+
+
+def test_login_canceled_in_broker_explains_hidden_error(user_dir) -> None:
+    """Tests that a WAM cancel points at the redirect-URI cause shown in the window."""
+
+    class _Status:
+        def __str__(self) -> str:
+            return "Response_Status.Status_UserCanceled"
+
+    app = _fake_app(
+        interactive={
+            "error": "broker_error",
+            "error_description": "User canceled the flow. Status: ...",
+            "_broker_status": _Status(),
+            "correlation_id": "abc-123",
+        }
+    )
+    with (
+        patch("napt.upload.auth._build_public_client", return_value=app),
+        patch("napt.upload.auth._broker_available", return_value=True),
+    ):
+        with pytest.raises(AuthError, match="canceled") as exc:
+            login(client_id="cid", tenant_id="tid")
+    msg = str(exc.value)
+    assert "AADSTS500113" in msg
+    assert "correlation_id abc-123" in msg
