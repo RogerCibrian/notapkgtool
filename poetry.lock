@@ -1062,7 +1062,7 @@ description = "The MSALRuntime Python Interop Package"
 optional = false
 python-versions = ">=3.6"
 groups = ["main"]
-markers = "(platform_system == \"Windows\" or platform_system == \"Darwin\" or platform_system == \"Linux\") and (sys_platform == \"win32\" or sys_platform == \"darwin\")"
+markers = "(platform_system == \"Windows\" or platform_system == \"Darwin\" or platform_system == \"Linux\") and sys_platform == \"win32\""
 files = [
     {file = "pymsalruntime-0.20.6-cp310-cp310-macosx_15_0_arm64.whl", hash = "sha256:c5b61c4117b8f0f3738527a631434f4a5f0aef0d1a4a362af1c2e90a153323f6"},
     {file = "pymsalruntime-0.20.6-cp310-cp310-macosx_15_0_x86_64.whl", hash = "sha256:0ed68ca808fb50f5d31c664955f0750675d55386a1adb20500587d30fb1c7cd5"},
@@ -1479,4 +1479,4 @@ watchmedo = ["PyYAML (>=3.10)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11"
-content-hash = "e0674b36ff842ff368199f7f626fb52319062e922f1244cb4e296809b3155d52"
+content-hash = "491da7ea777e08a50369b16f4c4bb4b3a5f39c81f893d4db704897f63b348719"
