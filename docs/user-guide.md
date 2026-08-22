@@ -354,6 +354,9 @@ The broker needs an interactive Windows session: from a scheduled task,
 service, `runas`, or SSH session, use a service principal or OIDC instead.
 Tokens are cached in the OS credential store (DPAPI, Keychain, or
 libsecret) and refreshed silently until the session expires or is revoked.
+The remembered tenants and the cache live under `%LOCALAPPDATA%\napt`
+(Windows), `~/Library/Application Support/napt` (macOS), or
+`~/.config/napt` (Linux); set `NAPT_USER_DIR` to relocate them.
 The `AZURE_*` environment variables play no part in interactive sign-in;
 they are how CI/CD supplies a credential (below), and when they are set
 they take precedence over your session — the same rule `gh` (`GH_TOKEN`)

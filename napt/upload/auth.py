@@ -733,6 +733,7 @@ def logout(*, all_tenants: bool = False) -> list[str]:
         Tenant IDs that had a session removed (empty if none was cached).
 
     Raises:
+        AuthError: If the OS-encrypted token cache cannot be opened.
         ConfigError: If the saved auth config is malformed.
     """
     store = load_auth_store()
