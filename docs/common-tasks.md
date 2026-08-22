@@ -485,41 +485,37 @@ Upload a packaged app to Microsoft Intune. Requires `napt package` to have run f
 
 ### App Registration Setup (one time per organization)
 
-1. Go to [entra.microsoft.com](https://entra.microsoft.com) →
-   **App registrations** → **New registration**
-2. Name it (e.g. "NAPT"), leave redirect URI blank, click **Register**
-3. Note the **Application (client) ID** and **Directory (tenant) ID**
-4. Go to **API permissions** → **Add a permission** →
-   **Microsoft Graph** → **Application permissions**
-5. Search for and add `DeviceManagementApps.ReadWrite.All`
-6. Repeat for **Delegated permissions** → add `DeviceManagementApps.ReadWrite.All`
-7. Click **Grant admin consent**
-8. Go to **Authentication** → **Advanced settings** →
-   set **Allow public client flows** to **Yes** → click **Save**
-   (required for device code flow)
+Follow [App Registration Setup](user-guide.md#app-registration-setup) in the
+user guide.
+In short: register an app, add `DeviceManagementApps.ReadWrite.All` and
+`Group.Read.All` as both application and delegated Graph permissions, grant
+admin consent, and add the `http://localhost` and
+`ms-appx-web://Microsoft.AAD.BrokerPlugin/<client-id>` redirect URIs under
+**Mobile and desktop applications**.
 
 ### Developer Setup (one time)
 
-Set two environment variables using the IDs from app registration setup:
+Sign in once with the IDs from the app registration:
 
 ```bash
-export AZURE_CLIENT_ID="<Application (client) ID>"
-export AZURE_TENANT_ID="<Directory (tenant) ID>"
+napt auth login --tenant-id "<Directory (tenant) ID>" --client-id "<Application (client) ID>"
 ```
 
-On first run, NAPT prompts for authentication in the browser:
-
-```console
-To sign in, use a web browser to open the page https://microsoft.com/devicelogin
-and enter the code ABCD1234 to authenticate.
-```
-
-After consenting once, subsequent runs authenticate silently.
+On Windows the OS account picker opens; elsewhere your browser does.
+The IDs are remembered, so later sessions are just `napt auth login`, and
+`napt upload` / `napt promote` run silently until the session expires.
+`napt auth status` shows the account, tenant, and permissions in use;
+`napt auth logout` clears the session.
 
 ### CI/CD Setup (one time)
 
-Create a client secret: **Certificates & secrets** → **New client secret**.
-Add all three as pipeline secrets:
+Prefer OIDC federation when your platform supports it (GitHub Actions does):
+add a federated credential to the app registration and let `azure/login`
+mint the token — no secret to store or rotate.
+See [CI/CD setup — OIDC federation](user-guide.md#app-registration-setup).
+
+Otherwise create a client secret (**Certificates & secrets** → **New client
+secret**) and add all three as pipeline secrets:
 
 ```bash
 AZURE_CLIENT_ID="<Application (client) ID>"
@@ -579,10 +575,27 @@ napt upload recipes/Google/chrome.yaml
 
 ### CI/CD Setup
 
-Set these environment variables in your CI/CD pipeline:
+With OIDC federation (recommended):
 
 ```yaml
 # GitHub Actions example
+permissions:
+  id-token: write
+  contents: read
+
+steps:
+  - uses: azure/login@v2
+    with:
+      client-id: ${{ secrets.AZURE_CLIENT_ID }}
+      tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+      allow-no-subscriptions: true
+  - name: Upload to Intune
+    run: napt upload recipes/Google/chrome.yaml
+```
+
+With a client secret:
+
+```yaml
 - name: Upload to Intune
   env:
     AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -591,8 +604,8 @@ Set these environment variables in your CI/CD pipeline:
   run: napt upload recipes/Google/chrome.yaml
 ```
 
-The app registration must have the `DeviceManagementApps.ReadWrite.All`
-Microsoft Graph API permission.
+The app registration must have the `DeviceManagementApps.ReadWrite.All` and
+`Group.Read.All` Microsoft Graph application permissions.
 
 ### Override Publisher and Description
 
@@ -867,8 +880,10 @@ Two consequences to set up once:
   token with bypass rights.
 - `[skip ci]` keeps the writeback from re-triggering workflows.
 
-**Secrets.** `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, and
-`AZURE_TENANT_ID` for the app registration
+**Secrets.** `AZURE_CLIENT_ID` and `AZURE_TENANT_ID` for the app
+registration, plus either a federated credential (OIDC, recommended — swap
+the `env:` block in the examples below for an `azure/login` step) or
+`AZURE_CLIENT_SECRET`
 (see [App Registration Setup](user-guide.md#app-registration-setup)).
 
 **Recommended org.yaml hardening:**

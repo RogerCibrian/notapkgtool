@@ -869,10 +869,11 @@ files = [
 [package.dependencies]
 cryptography = ">=2.5,<51"
 PyJWT = {version = ">=1.0.0,<3", extras = ["crypto"]}
+pymsalruntime = {version = ">=0.20,<0.21", optional = true, markers = "python_version >= \"3.9\" and (platform_system == \"Windows\" or platform_system == \"Darwin\" or platform_system == \"Linux\") and extra == \"broker\""}
 requests = ">=2.0.0,<3"
 
 [package.extras]
-broker = ["pymsalruntime (>=0.20,<0.21) ; python_version >= \"3.9\" and platform_system == \"Darwin\"", "pymsalruntime (>=0.20,<0.21) ; python_version >= \"3.9\" and platform_system == \"Linux\"", "pymsalruntime (>=0.20,<0.21) ; python_version >= \"3.9\" and platform_system == \"Windows\""]
+broker = ["pymsalruntime (>=0.20,<0.21) ; python_version >= \"3.9\" and (platform_system == \"Windows\" or platform_system == \"Darwin\" or platform_system == \"Linux\")", "pymsalruntime (>=0.20,<0.21) ; python_version >= \"3.9\" and platform_system == \"Darwin\"", "pymsalruntime (>=0.20,<0.21) ; python_version >= \"3.9\" and platform_system == \"Linux\""]
 
 [[package]]
 name = "msal-extensions"
@@ -1053,6 +1054,51 @@ pyyaml = "*"
 
 [package.extras]
 extra = ["pygments (>=2.19.1)"]
+
+[[package]]
+name = "pymsalruntime"
+version = "0.20.6"
+description = "The MSALRuntime Python Interop Package"
+optional = false
+python-versions = ">=3.6"
+groups = ["main"]
+markers = "(platform_system == \"Windows\" or platform_system == \"Darwin\" or platform_system == \"Linux\") and sys_platform == \"win32\""
+files = [
+    {file = "pymsalruntime-0.20.6-cp310-cp310-macosx_15_0_arm64.whl", hash = "sha256:c5b61c4117b8f0f3738527a631434f4a5f0aef0d1a4a362af1c2e90a153323f6"},
+    {file = "pymsalruntime-0.20.6-cp310-cp310-macosx_15_0_x86_64.whl", hash = "sha256:0ed68ca808fb50f5d31c664955f0750675d55386a1adb20500587d30fb1c7cd5"},
+    {file = "pymsalruntime-0.20.6-cp310-cp310-manylinux_2_24_x86_64.whl", hash = "sha256:9b443733cdbb85965eb5681158e72b33ed07e96ef68f5d1ecde303af2c5a1c3a"},
+    {file = "pymsalruntime-0.20.6-cp310-cp310-manylinux_2_35_x86_64.whl", hash = "sha256:a9763b5fccd532da1bf4bca351d127b560e6ede622c311857d4213e09c056e6d"},
+    {file = "pymsalruntime-0.20.6-cp310-cp310-win32.whl", hash = "sha256:9e58d9163fe04d7299a8e64b9490e0d750156cd2b9e297b45d167897f74c2260"},
+    {file = "pymsalruntime-0.20.6-cp310-cp310-win_amd64.whl", hash = "sha256:0c8b4f2e04f262e3703731337ab597f0642c0535231cb0384470b6f0218ae89f"},
+    {file = "pymsalruntime-0.20.6-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:ac54865d761124b774ffac4c19dcbbd85f44b1fa30beebdb6b4d01bd9b7f4c49"},
+    {file = "pymsalruntime-0.20.6-cp311-cp311-macosx_11_0_x86_64.whl", hash = "sha256:583a6174f1bd4b625493ff262beef771d6aca1e95cd5e2515f76ef994fdf9985"},
+    {file = "pymsalruntime-0.20.6-cp311-cp311-manylinux_2_24_x86_64.whl", hash = "sha256:6aeb3f18a01cad487b08a91d2eddda37d8ba758e5d9b2d014180fad62e890a25"},
+    {file = "pymsalruntime-0.20.6-cp311-cp311-manylinux_2_35_x86_64.whl", hash = "sha256:6544f1eb50b31c45cff3a85cc7c41085124ee3a94be5b0dfaebc5e769499aedc"},
+    {file = "pymsalruntime-0.20.6-cp311-cp311-win32.whl", hash = "sha256:0a8cf16bf7582bd5dfb99fa9602b9cfe5e3d3d614fb4f830813a461957d3b5d8"},
+    {file = "pymsalruntime-0.20.6-cp311-cp311-win_amd64.whl", hash = "sha256:354be5d1fae5e2432510190a9f85b2fa5c11ea589bbb2b7696c02967fb03b352"},
+    {file = "pymsalruntime-0.20.6-cp311-cp311-win_arm64.whl", hash = "sha256:e2b8161950529dc8b392dcbf8ffee2e9ac1c2c0f2d21c1c3732f7e3a17a1cf5b"},
+    {file = "pymsalruntime-0.20.6-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:bd3dfa0345ff8cd36e8c625e382911acc244c6011421cacd6915aff99c424969"},
+    {file = "pymsalruntime-0.20.6-cp312-cp312-macosx_11_0_x86_64.whl", hash = "sha256:8bf4cf41dac35607291b0e96094112afe037b1da87f3a8d297d440e7b504a925"},
+    {file = "pymsalruntime-0.20.6-cp312-cp312-manylinux_2_24_x86_64.whl", hash = "sha256:c73d067faffc36b415cc3fad717703621c038a8a80555d5047f98e74a517a10a"},
+    {file = "pymsalruntime-0.20.6-cp312-cp312-manylinux_2_35_x86_64.whl", hash = "sha256:27092c9ff824cb1ab87bd246329a2923bd0309f8466ccd993aa61a3a0864ef34"},
+    {file = "pymsalruntime-0.20.6-cp312-cp312-win32.whl", hash = "sha256:8680badb652d00c894f478cd6df01c750fdaaaf3d21b35897e158ee05ccf3983"},
+    {file = "pymsalruntime-0.20.6-cp312-cp312-win_amd64.whl", hash = "sha256:6b07eba5a99b755939157d5cab536d20d29718f28c6adf1ecf3b8753232082c1"},
+    {file = "pymsalruntime-0.20.6-cp312-cp312-win_arm64.whl", hash = "sha256:90eca0ea2563354b9d34fd9fed71f344c18fb4cdb3c6c0dcaf055d9e424cb30a"},
+    {file = "pymsalruntime-0.20.6-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:07ea98667e9607084b5bec103558f296fe936966dc6fc7e9a76bad11df6b87bf"},
+    {file = "pymsalruntime-0.20.6-cp313-cp313-macosx_11_0_x86_64.whl", hash = "sha256:b1e46f3a34b9fdd1fb8239337b698f39f97a7e0025cd7e36f41c67aa8492e0ad"},
+    {file = "pymsalruntime-0.20.6-cp313-cp313-manylinux_2_24_x86_64.whl", hash = "sha256:933934e2af37e8473b3388be9fd84df3bcabf30daacb27a22618e8d1368c5c9b"},
+    {file = "pymsalruntime-0.20.6-cp313-cp313-manylinux_2_35_x86_64.whl", hash = "sha256:6273f1051d967079ddd266cfee5e38d5d596cc0d92824c368cea1dbfd4f47326"},
+    {file = "pymsalruntime-0.20.6-cp313-cp313-win32.whl", hash = "sha256:979c0d76ba8f5162b0e2128deb304c39b1e392120537302c56fd87aa856dc0dd"},
+    {file = "pymsalruntime-0.20.6-cp313-cp313-win_amd64.whl", hash = "sha256:2b8c6cfbb097175b0d8a2630aa3d2a86d583a6bb075917a775af0a177580dd92"},
+    {file = "pymsalruntime-0.20.6-cp313-cp313-win_arm64.whl", hash = "sha256:8ca988f5308f4c17a6cf85d14550015a1e17dc4e898e22698d040d3af2bee693"},
+    {file = "pymsalruntime-0.20.6-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:b135a282d3357edbf52b380c40f0cf9967946c0c7b009d65e78f7d5fee714541"},
+    {file = "pymsalruntime-0.20.6-cp314-cp314-macosx_11_0_x86_64.whl", hash = "sha256:696faefab49f8de8144f2946b6efc1b0190fd15fb341c5ee89b5d3b9595e5722"},
+    {file = "pymsalruntime-0.20.6-cp314-cp314-manylinux_2_24_x86_64.whl", hash = "sha256:4abf78ad63e8d4e302033eaed4349ff8f3d75157e92cf39f5173a042990b807d"},
+    {file = "pymsalruntime-0.20.6-cp314-cp314-manylinux_2_35_x86_64.whl", hash = "sha256:e4f92fafb39654abd13d6f1ca9fd20f51c7c6af86cd402b9daf6c8ec2b94e8c0"},
+    {file = "pymsalruntime-0.20.6-cp314-cp314-win32.whl", hash = "sha256:306bc0c0d673216820d10d591fefb05835543ae3487562f8493f16615ff72618"},
+    {file = "pymsalruntime-0.20.6-cp314-cp314-win_amd64.whl", hash = "sha256:eee01ce18b3e8b0212415859b020d7aef9b53dcd16c226f2ad035147c3ff04ae"},
+    {file = "pymsalruntime-0.20.6-cp314-cp314-win_arm64.whl", hash = "sha256:7deb8783c7f033c9ffaa1965e2b2be10bc236615c878be473f78aa5fc5ad20ba"},
+]
 
 [[package]]
 name = "pyright"
@@ -1433,4 +1479,4 @@ watchmedo = ["PyYAML (>=3.10)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11"
-content-hash = "64a058a9ac8f0d410259ac292f23aacd09e7c8e2071656a5c0a01a5f4e4bca9b"
+content-hash = "491da7ea777e08a50369b16f4c4bb4b3a5f39c81f893d4db704897f63b348719"

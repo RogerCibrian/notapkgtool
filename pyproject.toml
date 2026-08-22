@@ -28,6 +28,10 @@ dependencies = [
     "jsonpath-ng>=1.6.1",
     "beautifulsoup4>=4.14.0",
     "azure-identity>=1.25.3",
+    "msal>=1.35.1",
+    "msal-extensions>=1.2.0",
+    # Windows broker (Web Account Manager) for `napt auth login`.
+    "msal[broker]>=1.35.1; sys_platform == 'win32'",
 ]
 
 [project.scripts]

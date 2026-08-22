@@ -25,6 +25,7 @@ Commands:
     build: Build PSADT package from recipe
     package: Create .intunewin package for Intune (recipe-based)
     upload: Upload .intunewin package to Microsoft Intune
+    auth: Sign in to Microsoft Graph and inspect credentials
     promote: Plan and apply deployment ring promotion
     status: Show deployment state across all apps
 
@@ -112,7 +113,14 @@ from napt.promote import (
 )
 from napt.state import summarize_deployment_states
 from napt.upload import upload_package
-from napt.upload.auth import get_access_token
+from napt.upload.auth import (
+    AuthStatus,
+    get_access_token,
+    get_status as auth_status,
+    load_auth_store,
+    login as auth_login,
+    logout as auth_logout,
+)
 from napt.upload.graph import list_mobile_apps
 from napt.validation import validate_recipe
 
@@ -563,9 +571,8 @@ def cmd_upload(args: argparse.Namespace) -> int:
 
     Uploads the .intunewin package for a recipe to Microsoft Intune via the
     Graph API. Infers the package path from the recipe's app ID. Authentication
-    is automatic: tries EnvironmentCredential (AZURE_CLIENT_ID +
-    AZURE_CLIENT_SECRET + AZURE_TENANT_ID), ManagedIdentityCredential, and
-    DeviceCodeCredential (browser login) in that order.
+    uses service principal / OIDC environment variables when set, otherwise
+    the session saved by 'napt auth login'.
 
     Args:
         args: Parsed command-line arguments containing recipe path and
@@ -578,9 +585,8 @@ def cmd_upload(args: argparse.Namespace) -> int:
         Run 'napt package' before this command to create the .intunewin file.
         Re-running an upload adopts existing NAPT-stamped apps instead of
         creating duplicates; --force re-sends metadata and content to them.
-        Developers: set AZURE_CLIENT_ID and AZURE_TENANT_ID, then complete
-        the device code flow when prompted.
-        Set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID for CI/CD.
+        Developers: run 'napt auth login' once. CI/CD: set AZURE_CLIENT_ID,
+        AZURE_TENANT_ID and AZURE_CLIENT_SECRET, or use OIDC federation.
 
     """
     # Configure global logger
@@ -971,6 +977,161 @@ def cmd_status(args: argparse.Namespace) -> int:
         print("  ".join(cell.ljust(widths[i]) for i, cell in enumerate(line)))
 
     return 0
+
+
+def _print_auth_status(status: AuthStatus) -> None:
+    """Prints one credential's status block for 'napt auth status'/'login'."""
+    print(f"Method:      {status.method}")
+    print(f"Account:     {status.account or '(unknown)'}")
+    print(f"Tenant:      {status.tenant_id or '(unknown)'}")
+    print(f"Client ID:   {status.client_id or '(unknown)'}")
+    if status.expires_at is not None:
+        print(f"Expires:     {status.expires_at.isoformat(timespec='seconds')}")
+    print(f"Permissions: {', '.join(status.permissions) or '(none)'}")
+    if status.missing:
+        print()
+        print(f"[WARNING] Missing required permissions: {', '.join(status.missing)}")
+        print(
+            "          Add them to the app registration (application permissions "
+            "for CI/CD,\n          delegated for interactive use) and grant admin "
+            "consent."
+        )
+
+
+def _print_known_tenants() -> None:
+    """Lists tenants remembered by 'napt auth login', marking the active one."""
+    try:
+        store = load_auth_store()
+    except ConfigError:
+        return
+    if not store.tenants:
+        return
+    print()
+    print("Known tenants:")
+    for tenant_id, cfg in store.tenants.items():
+        marker = "*" if tenant_id == store.active else " "
+        print(f"  {marker} {cfg.label or '(name unknown)'}")
+        print(f"      Account:   {cfg.username or '(signed out)'}")
+        print(f"      Tenant ID: {tenant_id}")
+        print(f"      Client ID: {cfg.client_id}")
+    print("  (* = active; switch with 'napt auth login --tenant-id <id or domain>')")
+
+
+def cmd_auth_login(args: argparse.Namespace) -> int:
+    """Handler for 'napt auth login' command.
+
+    Signs in interactively through the OS broker or the browser and caches
+    the session so later commands authenticate silently.
+
+    Args:
+        args: Parsed command-line arguments containing optional client and
+            tenant IDs and the --no-broker flag.
+
+    Returns:
+        Exit code (0 for success, 1 for failure).
+
+    """
+    logger = get_logger(verbose=args.verbose, debug=args.debug)
+    set_global_logger(logger)
+
+    try:
+        status = auth_login(
+            client_id=args.client_id,
+            tenant_id=args.tenant_id,
+            use_broker=not args.no_broker,
+        )
+    except (AuthError, ConfigError) as err:
+        print(f"Authentication error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+
+    print()
+    print(f"[OK] Signed in as {status.account or '(unknown account)'}")
+    print()
+    _print_auth_status(status)
+    return 0
+
+
+def cmd_auth_logout(args: argparse.Namespace) -> int:
+    """Handler for 'napt auth logout' command.
+
+    Removes the active tenant's cached session, or every tenant's with
+    --all. Client and tenant IDs are kept for the next login.
+
+    Args:
+        args: Parsed command-line arguments containing the --all flag and
+            debug flags.
+
+    Returns:
+        Exit code (0 for success, 1 for failure).
+
+    """
+    logger = get_logger(verbose=args.verbose, debug=args.debug)
+    set_global_logger(logger)
+
+    try:
+        removed = auth_logout(all_tenants=args.all)
+    except (AuthError, ConfigError) as err:
+        print(f"Authentication error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+
+    if removed:
+        print(
+            f"[OK] Signed out of {len(removed)} tenant(s): {', '.join(removed)}. "
+            "Run 'napt auth login' to sign in again."
+        )
+    else:
+        print("No interactive session to sign out of.")
+    return 0
+
+
+def cmd_auth_status(args: argparse.Namespace) -> int:
+    """Handler for 'napt auth status' command.
+
+    Shows which credential NAPT would use right now -- the same resolution
+    'napt upload' performs -- and flags missing Graph permissions.
+
+    Args:
+        args: Parsed command-line arguments containing debug flags.
+
+    Returns:
+        Exit code (0 when a credential is available, 1 otherwise).
+
+    """
+    logger = get_logger(verbose=args.verbose, debug=args.debug)
+    set_global_logger(logger)
+
+    try:
+        status = auth_status()
+    except (AuthError, ConfigError) as err:
+        print(f"Authentication error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+
+    if status is None:
+        print("Not authenticated.")
+        print()
+        print("  Interactive:  run 'napt auth login'")
+        print("  CI/CD:        set AZURE_CLIENT_ID, AZURE_TENANT_ID and either")
+        print("                AZURE_CLIENT_SECRET / AZURE_CLIENT_CERTIFICATE_PATH,")
+        print("                or use OIDC federation")
+        _print_known_tenants()
+        return 1
+
+    _print_auth_status(status)
+    if status.method.startswith("interactive"):
+        _print_known_tenants()
+    return 0 if not status.missing else 1
 
 
 def cmd_init(args: argparse.Namespace) -> int:
@@ -1384,13 +1545,12 @@ def main() -> None:
         description=(
             "Upload the most recent .intunewin package for a recipe to "
             "Microsoft Intune via the Graph API.\n\n"
-            "Authentication is automatic — tried in this order:\n"
-            "  1. AZURE_CLIENT_ID + AZURE_CLIENT_SECRET + AZURE_TENANT_ID env vars\n"
-            "  2. Managed identity (Azure VMs, GitHub Actions OIDC)\n"
-            "  3. Device code flow (browser login — set AZURE_CLIENT_ID + AZURE_TENANT_ID)\n\n"
+            "Authentication:\n"
+            "  CI/CD:       AZURE_CLIENT_ID + AZURE_TENANT_ID + AZURE_CLIENT_SECRET,\n"
+            "               or OIDC federation (azure/login)\n"
+            "  Interactive: run 'napt auth login' once\n\n"
             "Examples:\n"
             "  napt upload recipes/Google/chrome.yaml\n"
-            "  napt upload recipes/Google/chrome.yaml --tenant-id <id>\n"
             "  napt upload recipes/Google/chrome.yaml --verbose\n\n"
             "See docs for auth setup and full configuration guide."
         ),
@@ -1399,11 +1559,6 @@ def main() -> None:
     parser_upload.add_argument(
         "recipe",
         help="Path to the recipe YAML file",
-    )
-    parser_upload.add_argument(
-        "--tenant-id",
-        default=None,
-        help="Azure AD tenant ID (overrides defaults/org.yaml)",
     )
     parser_upload.add_argument(
         "--force",
@@ -1427,6 +1582,127 @@ def main() -> None:
         help="Show detailed debugging output (implies --verbose)",
     )
     parser_upload.set_defaults(func=cmd_upload)
+
+    # 'auth' command with subcommands
+    parser_auth = subparsers.add_parser(
+        "auth",
+        help="Sign in to Microsoft Graph and inspect credentials",
+        description=(
+            "Manage the credential NAPT uses for Intune.\n\n"
+            "Examples:\n"
+            "  napt auth login --tenant-id <id> --client-id <id>\n"
+            "  napt auth login\n"
+            "  napt auth status\n"
+            "  napt auth logout\n\n"
+            "See docs for app registration setup."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    auth_sub = parser_auth.add_subparsers(
+        dest="subcommand",
+        help="Auth subcommands",
+        required=True,
+    )
+
+    parser_auth_login = auth_sub.add_parser(
+        "login",
+        help="Sign in interactively (browser or OS broker)",
+        description=(
+            "Sign in interactively and cache the session so later commands\n"
+            "authenticate silently. Uses the Windows broker (WAM) when\n"
+            "available, otherwise the system browser.\n\n"
+            "The tenant, client ID, and account are remembered after the first\n"
+            "login. Pass --tenant-id to switch between signed-in tenants (no\n"
+            "prompt when that tenant's session is still valid)."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser_auth_login.add_argument(
+        "--tenant-id",
+        default=None,
+        help=(
+            "Directory (tenant) ID, or the default domain of a tenant you have "
+            "signed in to before (defaults to the active tenant)"
+        ),
+    )
+    parser_auth_login.add_argument(
+        "--client-id",
+        default=None,
+        help=(
+            "Application (client) ID of the NAPT app registration "
+            "(needed the first time you sign in to a tenant)"
+        ),
+    )
+    parser_auth_login.add_argument(
+        "--no-broker",
+        action="store_true",
+        help="Use the browser even when the OS broker is available",
+    )
+    parser_auth_login.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Show progress and high-level status updates",
+    )
+    parser_auth_login.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="Show detailed debugging output (implies --verbose)",
+    )
+    parser_auth_login.set_defaults(func=cmd_auth_login)
+
+    parser_auth_logout = auth_sub.add_parser(
+        "logout",
+        help="Remove the cached interactive session",
+        description=(
+            "Sign out of the active tenant's cached session (or every "
+            "tenant's with --all)."
+        ),
+    )
+    parser_auth_logout.add_argument(
+        "--all",
+        action="store_true",
+        help="Sign out of every remembered tenant",
+    )
+    parser_auth_logout.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Show progress and high-level status updates",
+    )
+    parser_auth_logout.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="Show detailed debugging output (implies --verbose)",
+    )
+    parser_auth_logout.set_defaults(func=cmd_auth_logout)
+
+    parser_auth_status = auth_sub.add_parser(
+        "status",
+        help="Show which credential NAPT would use and its permissions",
+        description=(
+            "Show the credential NAPT would use right now (the same resolution\n"
+            "'napt upload' performs), the account and tenant it belongs to, and\n"
+            "the Graph permissions it carries. Exits 1 when no credential is\n"
+            "available or a required permission is missing."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser_auth_status.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Show progress and high-level status updates",
+    )
+    parser_auth_status.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="Show detailed debugging output (implies --verbose)",
+    )
+    parser_auth_status.set_defaults(func=cmd_auth_status)
 
     # 'promote' command with subcommands
     parser_promote = subparsers.add_parser(

@@ -17,16 +17,15 @@
 This module provides the complete upload pipeline for deploying Win32 LOB apps
 to Microsoft Intune via the Graph API.
 
-Authentication is automatic — no configuration file required:
+Authentication needs no configuration file:
 
-- Developers: set AZURE_CLIENT_ID and AZURE_TENANT_ID, then complete the device code flow in a browser (DeviceCodeCredential)
-- CI/CD: set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID (EnvironmentCredential)
-- Azure-hosted runners: assign a managed identity to the resource (ManagedIdentityCredential)
+- Developers: run `napt auth login` once (browser or OS broker); later commands use the cached session silently
+- CI/CD: set AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_CLIENT_SECRET (EnvironmentCredential), or use OIDC federation (WorkloadIdentityCredential)
 
 Modules:
     manager - Upload orchestration (load config, auth, upload flow).
     graph - Graph API and Azure Blob Storage HTTP calls.
-    auth - Azure credential chain via azure-identity.
+    auth - Credential resolution (azure-identity chain, MSAL interactive session).
     intunewin - .intunewin ZIP parser (reads Detection.xml encryption metadata).
 
 Example:
