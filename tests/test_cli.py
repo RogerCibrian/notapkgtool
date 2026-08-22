@@ -659,8 +659,16 @@ class TestCmdAuth:
             assert cmd_auth_status(_args()) == 0
         out = capsys.readouterr().out
         assert "Known tenants:" in out
-        assert "    a.com (A)       a@x  tid-a  client cid-a" in out
-        assert "  * (name unknown)  b@x  tid-b  client cid-b" in out
+        assert (
+            "    A (a.com)\n"
+            "      Account:   a@x\n"
+            "      Tenant ID: tid-a\n"
+            "      Client ID: cid-a\n"
+            "  * (name unknown)\n"
+            "      Account:   b@x\n"
+            "      Tenant ID: tid-b\n"
+            "      Client ID: cid-b\n"
+        ) in out
 
     def test_status_not_authenticated_returns_one(self, capsys):
         """Tests that status exits 1 and points at login when unauthenticated."""

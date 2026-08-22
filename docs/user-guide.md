@@ -371,8 +371,15 @@ Expires:     2026-08-16T19:04:11+00:00
 Permissions: DeviceManagementApps.ReadWrite.All, Group.Read.All
 
 Known tenants:
-  * contoso.com (Contoso)  admin@contoso.com  00000000-0000-0000-0000-000000000000  client 11111111-1111-1111-1111-111111111111
-  (* = active; switch with 'napt auth login --tenant-id <id>')
+  * Contoso (contoso.com)
+      Account:   admin@contoso.com
+      Tenant ID: 00000000-0000-0000-0000-000000000000
+      Client ID: 11111111-1111-1111-1111-111111111111
+    Contoso Dev (contosodev.onmicrosoft.com)
+      Account:   (signed out)
+      Tenant ID: 22222222-2222-2222-2222-222222222222
+      Client ID: 33333333-3333-3333-3333-333333333333
+  (* = active; switch with 'napt auth login --tenant-id <id or domain>')
 ```
 
 The tenant's default domain and display name are looked up once at login
@@ -390,12 +397,12 @@ the IDs stay remembered.
 Sign in to each tenant once with its own client ID.
 NAPT remembers every tenant you have signed in to and which one is active;
 `napt auth status` lists them.
-Switch with just the tenant ID — no prompt as long as that tenant's session
-is still valid:
+Switch with just the tenant ID — or its default domain, once known — with
+no prompt as long as that tenant's session is still valid:
 
 ```bash
 napt auth login --tenant-id "<prod tenant ID>" --client-id "<prod client ID>"   # first time
-napt auth login --tenant-id "<dev tenant ID>"                                    # switch back, silent
+napt auth login --tenant-id contosodev.onmicrosoft.com                           # switch back, silent
 ```
 
 **CI/CD setup — OIDC federation (recommended):**

@@ -190,10 +190,10 @@ class AuthConfig:
 
     @property
     def label(self) -> str | None:
-        """Human-readable tenant label: ``"contoso.com (Contoso)"``, or ``None``."""
+        """Human-readable tenant label: ``"Contoso (contoso.com)"``, or ``None``."""
         if self.domain and self.display_name:
-            return f"{self.domain} ({self.display_name})"
-        return self.domain or self.display_name
+            return f"{self.display_name} ({self.domain})"
+        return self.display_name or self.domain
 
 
 @dataclass
@@ -342,16 +342,19 @@ def resolve_auth_config(
 ) -> AuthConfig | None:
     """Determines the tenant and app registration for interactive sign-in.
 
-    The tenant is ``tenant_id`` or the active one from the last login. The
-    client ID is ``client_id`` or the one remembered for that tenant. The
-    remembered username carries over only when the client ID is unchanged,
-    since a different app registration means a different cached session.
+    The tenant is ``tenant_id`` or the active one from the last login;
+    ``tenant_id`` may also be the default domain of a remembered tenant
+    (``contoso.com``), which is mapped back to its ID. The client ID is
+    ``client_id`` or the one remembered for that tenant. The remembered
+    username carries over only when the client ID is unchanged, since a
+    different app registration means a different cached session.
     ``AZURE_*`` environment variables are deliberately not consulted: they
     describe a non-interactive credential, not which app a person signs in
     to.
 
     Args:
-        tenant_id: Explicit tenant ID (from ``--tenant-id``).
+        tenant_id: Explicit tenant ID or remembered domain (from
+            ``--tenant-id``).
         client_id: Explicit client ID (from ``--client-id``).
 
     Returns:
@@ -365,6 +368,11 @@ def resolve_auth_config(
     tenant = tenant_id or store.active
     if not tenant:
         return None
+    if tenant not in store.tenants:
+        by_domain = {
+            cfg.domain.lower(): tid for tid, cfg in store.tenants.items() if cfg.domain
+        }
+        tenant = by_domain.get(tenant.lower(), tenant)
     known = store.tenants.get(tenant)
     client = client_id or (known.client_id if known else None)
     if not client:
@@ -401,9 +409,11 @@ def _decode_claims(token: str) -> dict[str, Any]:
 
 def _status_from_token(token: str, method: str) -> AuthStatus:
     claims = _decode_claims(token)
-    scopes = str(claims.get("scp", "")).split()
-    roles = list(claims.get("roles") or [])
-    permissions = sorted(set(scopes) | set(roles))
+    # OIDC scopes MSAL requests on every sign-in; not Graph permissions.
+    oidc = {"openid", "profile", "email", "offline_access"}
+    scopes = set(str(claims.get("scp", "")).split()) - oidc
+    roles = set(claims.get("roles") or [])
+    permissions = sorted(scopes | roles)
     account = (
         claims.get("preferred_username")
         or claims.get("upn")

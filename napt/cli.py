@@ -1008,23 +1008,13 @@ def _print_known_tenants() -> None:
         return
     print()
     print("Known tenants:")
-    rows = [
-        (
-            "*" if tenant_id == store.active else " ",
-            cfg.label or "(name unknown)",
-            cfg.username or "(signed out)",
-            tenant_id,
-            cfg.client_id,
-        )
-        for tenant_id, cfg in store.tenants.items()
-    ]
-    widths = [max(len(row[col]) for row in rows) for col in range(1, 4)]
-    for marker, label, who, tenant_id, client_id in rows:
-        print(
-            f"  {marker} {label.ljust(widths[0])}  {who.ljust(widths[1])}  "
-            f"{tenant_id.ljust(widths[2])}  client {client_id}"
-        )
-    print("  (* = active; switch with 'napt auth login --tenant-id <id>')")
+    for tenant_id, cfg in store.tenants.items():
+        marker = "*" if tenant_id == store.active else " "
+        print(f"  {marker} {cfg.label or '(name unknown)'}")
+        print(f"      Account:   {cfg.username or '(signed out)'}")
+        print(f"      Tenant ID: {tenant_id}")
+        print(f"      Client ID: {cfg.client_id}")
+    print("  (* = active; switch with 'napt auth login --tenant-id <id or domain>')")
 
 
 def cmd_auth_login(args: argparse.Namespace) -> int:
@@ -1630,7 +1620,10 @@ def main() -> None:
     parser_auth_login.add_argument(
         "--tenant-id",
         default=None,
-        help="Directory (tenant) ID (defaults to the active tenant)",
+        help=(
+            "Directory (tenant) ID, or the default domain of a tenant you have "
+            "signed in to before (defaults to the active tenant)"
+        ),
     )
     parser_auth_login.add_argument(
         "--client-id",

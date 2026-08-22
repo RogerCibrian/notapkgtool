@@ -460,7 +460,7 @@ def test_login_stores_tenant_domain_and_name(user_dir) -> None:
     assert saved is not None
     assert saved.domain == "contoso.com"
     assert saved.display_name == "Contoso"
-    assert saved.label == "contoso.com (Contoso)"
+    assert saved.label == "Contoso (contoso.com)"
     assert get.call_args.kwargs["headers"]["Authorization"] == f"Bearer {token}"
 
 
@@ -494,4 +494,19 @@ def test_logout_keeps_tenant_label(user_dir) -> None:
         logout()
     saved = auth.load_auth_store().tenants["tid"]
     assert saved.username is None
-    assert saved.label == "x.com (X)"
+    assert saved.label == "X (x.com)"
+
+
+def test_resolve_auth_config_accepts_domain_for_tenant(user_dir) -> None:
+    """Tests that --tenant-id may be a remembered tenant's default domain."""
+    _remember(
+        AuthConfig("cid-a", "tid-a", "a@x", domain="a.com", display_name="A"),
+        AuthConfig("cid-b", "tid-b", "b@x", domain="b.com", display_name="B"),
+    )
+    resolved = resolve_auth_config(tenant_id="A.com")
+    assert resolved is not None
+    assert resolved.tenant_id == "tid-a"
+    assert resolved.client_id == "cid-a"
+    assert resolved.username == "a@x"
+    # Unknown domains are passed through untouched so the error names them.
+    assert resolve_auth_config(tenant_id="nope.com") is None
