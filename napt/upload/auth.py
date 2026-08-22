@@ -80,6 +80,7 @@ from azure.identity import (
 )
 import msal
 import msal_extensions
+import requests
 
 from napt.exceptions import AuthError, ConfigError
 
@@ -111,6 +112,7 @@ logging.getLogger("azure.identity").setLevel(logging.ERROR)
 REQUIRED_PERMISSIONS = ("DeviceManagementApps.ReadWrite.All", "Group.Read.All")
 
 _AUTHORITY_BASE = "https://login.microsoftonline.com"
+_GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 _AUTH_CONFIG_FILENAME = "auth.json"
 _TOKEN_CACHE_FILENAME = "token_cache.bin"
 
@@ -173,11 +175,25 @@ class AuthConfig:
         username: Account that signed in last (UPN), or ``None`` before the
             first login. Selects the right cached account when several
             tenants are signed in.
+        domain: The tenant's default verified domain (e.g. ``contoso.com``),
+            looked up from Graph at login; ``None`` when the lookup was not
+            possible.
+        display_name: The tenant's organization display name, looked up
+            alongside ``domain``.
     """
 
     client_id: str
     tenant_id: str
     username: str | None = None
+    domain: str | None = None
+    display_name: str | None = None
+
+    @property
+    def label(self) -> str | None:
+        """Human-readable tenant label: ``"contoso.com (Contoso)"``, or ``None``."""
+        if self.domain and self.display_name:
+            return f"{self.domain} ({self.display_name})"
+        return self.domain or self.display_name
 
 
 @dataclass
@@ -277,6 +293,8 @@ def load_auth_store() -> AuthStore:
                 client_id=entry["client_id"],
                 tenant_id=tenant_id,
                 username=entry.get("username"),
+                domain=entry.get("domain"),
+                display_name=entry.get("display_name"),
             )
             for tenant_id, entry in data.get("tenants", {}).items()
         }
@@ -294,7 +312,12 @@ def _save_auth_store(store: AuthStore) -> Path:
     payload = {
         "active": store.active,
         "tenants": {
-            tenant_id: {"client_id": cfg.client_id, "username": cfg.username}
+            tenant_id: {
+                "client_id": cfg.client_id,
+                "username": cfg.username,
+                "domain": cfg.domain,
+                "display_name": cfg.display_name,
+            }
             for tenant_id, cfg in store.tenants.items()
         },
     }
@@ -347,7 +370,13 @@ def resolve_auth_config(
     if not client:
         return None
     username = known.username if known and known.client_id == client else None
-    return AuthConfig(client_id=client, tenant_id=tenant, username=username)
+    return AuthConfig(
+        client_id=client,
+        tenant_id=tenant,
+        username=username,
+        domain=known.domain if known else None,
+        display_name=known.display_name if known else None,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -524,6 +553,53 @@ def _remember(config: AuthConfig) -> Path:
     return _save_auth_store(store)
 
 
+def _lookup_tenant(token: str) -> tuple[str | None, str | None]:
+    """Fetches the tenant's default domain and display name from Graph.
+
+    Best effort: needs the delegated ``User.Read`` permission (present on
+    new app registrations by default). Any failure yields ``(None, None)``
+    rather than blocking sign-in -- the label is a convenience for
+    `napt auth status`, never a source of truth.
+
+    Returns:
+        ``(domain, display_name)`` with either element ``None`` when unknown.
+    """
+    from napt.logging import get_global_logger
+
+    logger = get_global_logger()
+    try:
+        response = requests.get(
+            f"{_GRAPH_BASE}/organization?$select=displayName,verifiedDomains",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=15,
+        )
+        response.raise_for_status()
+        orgs = response.json().get("value") or []
+    except (requests.RequestException, ValueError) as err:
+        logger.verbose("AUTH", f"Tenant name lookup skipped: {err}")
+        return None, None
+    if not orgs:
+        return None, None
+    org = orgs[0]
+    domains = org.get("verifiedDomains") or []
+    default = next((d.get("name") for d in domains if d.get("isDefault")), None)
+    return default, org.get("displayName") or None
+
+
+def _with_tenant_label(config: AuthConfig, token: str) -> AuthConfig:
+    """Fills in the tenant label from Graph when ``config`` lacks one."""
+    if config.domain or config.display_name:
+        return config
+    domain, display_name = _lookup_tenant(token)
+    return AuthConfig(
+        client_id=config.client_id,
+        tenant_id=config.tenant_id,
+        username=config.username,
+        domain=domain,
+        display_name=display_name,
+    )
+
+
 def login(
     *,
     tenant_id: str | None = None,
@@ -569,7 +645,7 @@ def login(
         logger.verbose("AUTH", f"Cached session unusable, signing in again: {err}")
         cached = None
     if cached is not None:
-        _remember(config)
+        _remember(_with_tenant_label(config, cached))
         logger.info(
             "AUTH",
             f"Reusing signed-in session for {config.username} "
@@ -621,13 +697,12 @@ def login(
     if not status.account:
         status.account = username
 
-    saved_to = _remember(
-        AuthConfig(
-            client_id=config.client_id,
-            tenant_id=config.tenant_id,
-            username=username,
-        )
+    signed_in = AuthConfig(
+        client_id=config.client_id,
+        tenant_id=config.tenant_id,
+        username=username,
     )
+    saved_to = _remember(_with_tenant_label(signed_in, result["access_token"]))
     logger.verbose("AUTH", f"Saved sign-in settings to {saved_to}")
     return status
 
@@ -667,7 +742,10 @@ def logout(*, all_tenants: bool = False) -> list[str]:
         for account in accounts:
             app.remove_account(account)
         store.tenants[config.tenant_id] = AuthConfig(
-            client_id=config.client_id, tenant_id=config.tenant_id
+            client_id=config.client_id,
+            tenant_id=config.tenant_id,
+            domain=config.domain,
+            display_name=config.display_name,
         )
         if accounts:
             signed_out.append(config.tenant_id)

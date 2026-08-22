@@ -643,7 +643,9 @@ class TestCmdAuth:
             AuthStore(
                 active="tid-b",
                 tenants={
-                    "tid-a": AuthConfig("cid-a", "tid-a", "a@x"),
+                    "tid-a": AuthConfig(
+                        "cid-a", "tid-a", "a@x", domain="a.com", display_name="A"
+                    ),
                     "tid-b": AuthConfig("cid-b", "tid-b", "b@x"),
                 },
             )
@@ -657,8 +659,8 @@ class TestCmdAuth:
             assert cmd_auth_status(_args()) == 0
         out = capsys.readouterr().out
         assert "Known tenants:" in out
-        assert "* tid-b  b@x  client cid-b" in out
-        assert "  tid-a  a@x  client cid-a" in out
+        assert "    a.com (A)       a@x  tid-a  client cid-a" in out
+        assert "  * (name unknown)  b@x  tid-b  client cid-b" in out
 
     def test_status_not_authenticated_returns_one(self, capsys):
         """Tests that status exits 1 and points at login when unauthenticated."""

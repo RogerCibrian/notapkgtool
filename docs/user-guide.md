@@ -369,8 +369,17 @@ Tenant:      00000000-0000-0000-0000-000000000000
 Client ID:   11111111-1111-1111-1111-111111111111
 Expires:     2026-08-16T19:04:11+00:00
 Permissions: DeviceManagementApps.ReadWrite.All, Group.Read.All
+
+Known tenants:
+  * contoso.com (Contoso)  admin@contoso.com  00000000-0000-0000-0000-000000000000  client 11111111-1111-1111-1111-111111111111
+  (* = active; switch with 'napt auth login --tenant-id <id>')
 ```
 
+The tenant's default domain and display name are looked up once at login
+through the delegated `User.Read` permission, which new app registrations
+carry by default.
+Without it the tenant is listed as `(name unknown)` — sign-in itself is
+unaffected.
 `napt auth status` exits 1 when no credential is available or a required
 permission is missing, and names the missing permission.
 `napt auth logout` signs out of the active tenant (`--all` for every tenant);

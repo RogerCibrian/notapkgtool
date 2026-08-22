@@ -427,3 +427,71 @@ def test_login_canceled_in_broker_explains_hidden_error(user_dir) -> None:
     msg = str(exc.value)
     assert "AADSTS500113" in msg
     assert "correlation_id abc-123" in msg
+
+
+def _org_response(
+    domains: list[dict] | None, name: str | None = "Contoso"
+) -> MagicMock:
+    resp = MagicMock()
+    resp.json.return_value = {
+        "value": [{"displayName": name, "verifiedDomains": domains or []}]
+    }
+    return resp
+
+
+def test_login_stores_tenant_domain_and_name(user_dir) -> None:
+    """Tests that a successful login records the default domain and display name."""
+    token = _jwt({"preferred_username": "a@contoso.com", "tid": "tid"})
+    app = _fake_app(interactive={"access_token": token})
+    org = _org_response(
+        [
+            {"name": "contoso.onmicrosoft.com", "isInitial": True, "isDefault": False},
+            {"name": "contoso.com", "isInitial": False, "isDefault": True},
+        ]
+    )
+    with (
+        patch("napt.upload.auth._build_public_client", return_value=app),
+        patch("napt.upload.auth._broker_available", return_value=False),
+        patch("napt.upload.auth.requests.get", return_value=org) as get,
+    ):
+        login(client_id="cid", tenant_id="tid")
+
+    saved = load_auth_config()
+    assert saved is not None
+    assert saved.domain == "contoso.com"
+    assert saved.display_name == "Contoso"
+    assert saved.label == "contoso.com (Contoso)"
+    assert get.call_args.kwargs["headers"]["Authorization"] == f"Bearer {token}"
+
+
+def test_login_without_user_read_leaves_label_empty(user_dir) -> None:
+    """Tests that a Graph 403 on /organization never blocks or mislabels login."""
+    import requests as _requests
+
+    token = _jwt({"preferred_username": "a@msp.com"})
+    app = _fake_app(interactive={"access_token": token})
+    with (
+        patch("napt.upload.auth._build_public_client", return_value=app),
+        patch("napt.upload.auth._broker_available", return_value=False),
+        patch(
+            "napt.upload.auth.requests.get",
+            side_effect=_requests.HTTPError("403 Forbidden"),
+        ),
+    ):
+        status = login(client_id="cid", tenant_id="tid")
+
+    assert status.account == "a@msp.com"
+    saved = load_auth_config()
+    assert saved is not None
+    assert saved.label is None  # no UPN-domain guess
+
+
+def test_logout_keeps_tenant_label(user_dir) -> None:
+    """Tests that signing out clears the account but keeps the tenant label."""
+    _remember(AuthConfig("cid", "tid", "u@x", domain="x.com", display_name="X"))
+    app = _fake_app(accounts=[{"username": "u@x"}])
+    with patch("napt.upload.auth._build_public_client", return_value=app):
+        logout()
+    saved = auth.load_auth_store().tenants["tid"]
+    assert saved.username is None
+    assert saved.label == "x.com (X)"

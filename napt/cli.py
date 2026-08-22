@@ -1008,10 +1008,22 @@ def _print_known_tenants() -> None:
         return
     print()
     print("Known tenants:")
-    for tenant_id, cfg in store.tenants.items():
-        marker = "*" if tenant_id == store.active else " "
-        who = cfg.username or "(signed out)"
-        print(f"  {marker} {tenant_id}  {who}  client {cfg.client_id}")
+    rows = [
+        (
+            "*" if tenant_id == store.active else " ",
+            cfg.label or "(name unknown)",
+            cfg.username or "(signed out)",
+            tenant_id,
+            cfg.client_id,
+        )
+        for tenant_id, cfg in store.tenants.items()
+    ]
+    widths = [max(len(row[col]) for row in rows) for col in range(1, 4)]
+    for marker, label, who, tenant_id, client_id in rows:
+        print(
+            f"  {marker} {label.ljust(widths[0])}  {who.ljust(widths[1])}  "
+            f"{tenant_id.ljust(widths[2])}  client {client_id}"
+        )
     print("  (* = active; switch with 'napt auth login --tenant-id <id>')")
 
 
