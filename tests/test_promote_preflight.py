@@ -76,9 +76,7 @@ class TestUnresolvableGroups:
 
     def test_actions_without_groups_are_skipped(self):
         """Tests that actions with no groups key produce no lookups."""
-        with patch(
-            "napt.promote.preflight.resolve_assignment_target"
-        ) as resolve_mock:
+        with patch("napt.promote.preflight.resolve_assignment_target") as resolve_mock:
             failures = unresolvable_groups(TOKEN, [{"type": "odd_action"}])
 
         assert failures == []

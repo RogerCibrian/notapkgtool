@@ -763,9 +763,7 @@ class TestLoadPlanFile:
     def test_missing_app_id_raises(self, tmp_path):
         """Tests that a plan without a declared app id raises StateError."""
         plan_path = tmp_path / "plan.json"
-        plan_path.write_text(
-            '{"schemaVersion": 1, "actions": []}', encoding="utf-8"
-        )
+        plan_path.write_text('{"schemaVersion": 1, "actions": []}', encoding="utf-8")
 
         with pytest.raises(StateError, match="Corrupted plan file"):
             load_plan_file(plan_path)
@@ -794,9 +792,7 @@ class TestLoadPlanFile:
         """Tests that the file's app id and name are injected into actions."""
         plan_path = tmp_path / "plan.json"
         action = {
-            key: value
-            for key, value in _promote_action().items()
-            if key != "app_id"
+            key: value for key, value in _promote_action().items() if key != "app_id"
         }
         plan_path.write_text(
             json.dumps(

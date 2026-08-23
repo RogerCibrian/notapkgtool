@@ -417,8 +417,7 @@ def _action(app_id: str = "a") -> dict[str, Any]:
         "app_id": app_id,
         "name": f"App {app_id}",
         "summary": (
-            "Start rolling out 1.0: assign the update entry to the "
-            "pilot ring (g)."
+            "Start rolling out 1.0: assign the update entry to the pilot ring (g)."
         ),
         "type": "promote",
         "entry": "update",
