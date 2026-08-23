@@ -20,7 +20,7 @@ to Microsoft Intune via the Graph API.
 Authentication needs no configuration file:
 
 - Developers: run `napt auth login` once (browser or OS broker); later commands use the cached session silently
-- CI/CD: set AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_CLIENT_SECRET (EnvironmentCredential), or use OIDC federation (WorkloadIdentityCredential)
+- CI/CD: set AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_CLIENT_SECRET (EnvironmentCredential), or sign in with an OIDC login step such as GitHub Actions `azure/login` (AzureCliCredential)
 
 Modules:
     manager - Upload orchestration (load config, auth, upload flow).

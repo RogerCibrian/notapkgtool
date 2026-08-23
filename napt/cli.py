@@ -1134,7 +1134,7 @@ def cmd_auth_status(args: argparse.Namespace) -> int:
         print("  Interactive:  run 'napt auth login'")
         print("  CI/CD:        set AZURE_CLIENT_ID, AZURE_TENANT_ID and either")
         print("                AZURE_CLIENT_SECRET / AZURE_CLIENT_CERTIFICATE_PATH,")
-        print("                or use OIDC federation")
+        print("                or sign in with 'az login' (e.g. azure/login in CI)")
         _print_known_tenants()
         return 1
 
