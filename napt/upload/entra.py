@@ -659,7 +659,7 @@ def setup_app_registration(spec: SetupSpec) -> SetupResult:
     Signs an administrator in, then finds or creates the application,
     adds any missing redirect URIs and Graph permissions, ensures the
     service principal exists with admin consent for every permission, and
-    adds the GitHub federated credential when requested. Finally records
+    adds the OIDC federated credential when requested. Finally records
     the tenant and client ID as the active tenant for `napt auth login`.
 
     Args:

@@ -152,7 +152,7 @@ def test_spec_requires_issuer_and_subject_together() -> None:
 
 
 def test_setup_creates_everything_in_a_fresh_tenant(user_dir, bootstrap) -> None:
-    """Tests the full create path: app, redirect patch, SP, both consents."""
+    """Tests that a fresh tenant gets the full create path: app, URIs, SP, consents."""
     graph = FakeGraph(
         {
             ("GET", "/servicePrincipals"): [

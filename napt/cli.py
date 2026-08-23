@@ -1177,7 +1177,7 @@ def cmd_auth_setup(args: argparse.Namespace) -> int:
 
     Args:
         args: Parsed command-line arguments containing the tenant ID,
-            optional name, client ID, GitHub OIDC settings, and flags.
+            optional name, client ID, federated credential settings, and flags.
 
     Returns:
         Exit code (0 for success, 1 for failure).
