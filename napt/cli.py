@@ -1225,7 +1225,10 @@ def cmd_auth_setup(args: argparse.Namespace) -> int:
         print("          redirect URIs, Microsoft Graph permissions, and admin")
         print("          consent, and stamps the registration's internal notes;")
         print("          it never removes existing settings.")
-        print("          Use --name to create a separate registration instead.")
+        print(
+            "          To create a new registration instead, re-run with "
+            f"--name <a name other than '{result.display_name}'>."
+        )
         return 1
 
     if result.adopted:
@@ -1835,14 +1838,16 @@ def main() -> None:
         "setup",
         help="Create or complete the NAPT app registration in a tenant",
         description=(
-            "Create the NAPT app registration in Microsoft Entra ID, or bring\n"
-            "an existing one up to spec: redirect URIs, Microsoft Graph\n"
-            "permissions (application and delegated), service principal, and\n"
-            "admin consent. Optionally trusts a GitHub repository through OIDC\n"
-            "so CI/CD needs no client secret.\n\n"
-            "Signs in through the browser as an account holding the\n"
-            "Application Administrator or Global Administrator role; that\n"
-            "session is not kept. Safe to re-run: only missing pieces are added.\n\n"
+            "Create the NAPT app registration in Microsoft Entra ID, or bring an\n"
+            "existing one up to spec: redirect URIs, Microsoft Graph permissions\n"
+            "(application and delegated), service principal, and admin consent.\n"
+            "Optionally adds a federated credential so a CI/CD platform can obtain\n"
+            "tokens through OIDC without a client secret.\n\n"
+            "Requires an account holding at least the Application Administrator\n"
+            "role. NAPT does not store that account or its tokens (your browser\n"
+            "may keep its own sign-in). Re-running is safe: NAPT compares the\n"
+            "registration with what this version needs and adds what is missing,\n"
+            "never removing anything.\n\n"
             "Examples:\n"
             "  napt auth setup --tenant-id <id>\n"
             "  napt auth setup --tenant-id <id> \\\n"

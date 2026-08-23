@@ -340,7 +340,7 @@ napt auth setup --tenant-id "<Directory (tenant) ID>"
 ```
 
 Signs you in through the browser as an account holding the
-**Application Administrator** (or Global Administrator) role and does
+**Application Administrator** role (or higher) and does
 everything in the manual list through Microsoft Graph: creates the
 registration (or finds one named `NAPT` — `--name` / `--client-id` to
 target another), adds the redirect URIs and the application + delegated
@@ -367,7 +367,8 @@ Add `--federated-issuer` and `--federated-subject` to also create the
 federated credential for [OIDC CI/CD](#app-registration-setup) in the same
 run; the values come from your CI platform's OIDC documentation.
 The administrator sign-in uses the Microsoft Graph Command Line Tools app
-(the same one `Connect-MgGraph` uses) and is never persisted by NAPT.
+(the same one `Connect-MgGraph` uses); NAPT does not store that account or
+its tokens, though your browser may keep its own sign-in.
 If your tenant blocks that app, `--print-only` prints the portal checklist
 with the exact values for someone to click through instead.
 

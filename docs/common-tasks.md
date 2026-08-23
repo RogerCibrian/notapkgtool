@@ -485,7 +485,7 @@ Upload a packaged app to Microsoft Intune. Requires `napt package` to have run f
 
 ### App Registration Setup (one time per organization)
 
-Fastest path, as an Application Administrator:
+Fastest path, as at least an Application Administrator:
 
 ```bash
 napt auth setup --tenant-id "<Directory (tenant) ID>"            # portal-free

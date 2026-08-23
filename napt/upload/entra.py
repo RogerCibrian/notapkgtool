@@ -35,9 +35,9 @@ complete registration changes nothing.
 
 The run is bootstrapped with a short-lived token from the Microsoft Graph
 Command Line Tools first-party application -- the same one `Connect-MgGraph`
-uses -- requested in the browser and kept in memory only. It needs an
-account holding the Application Administrator (or Global Administrator)
-role; NAPT never persists that account's session.
+uses -- requested in the browser and held in memory only. It needs an
+account holding at least the Application Administrator role. NAPT does not
+store that account or its tokens; the browser may keep its own sign-in.
 
 Redirect URIs and permissions are always written to the application object,
 never to the service principal, where a directory sync could drop them.
@@ -125,8 +125,8 @@ _REPLICATION_WAIT = 5.0
 _HINT_BOOTSTRAP_FAILED = (
     "Could not sign in to create the app registration.\n\n"
     "This step signs in with the Microsoft Graph Command Line Tools app and\n"
-    "needs an account holding the Application Administrator or Global\n"
-    "Administrator role. If your tenant blocks that app, use\n"
+    "needs an account holding at least the Application Administrator\n"
+    "role. If your tenant blocks that app, use\n"
     "'napt auth setup --print-only' and complete the steps in the portal.\n"
 )
 

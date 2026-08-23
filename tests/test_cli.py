@@ -738,6 +738,10 @@ class TestCmdAuth:
         assert "[WARNING] Found existing registration 'NAPT' (cid)" in out
         assert "Re-run with --adopt" in out
         assert "never removes existing settings" in out
+        assert (
+            "To create a new registration instead, re-run with "
+            "--name <a name other than 'NAPT'>." in out
+        )
 
     def test_setup_reports_adoption(self, capsys):
         """Tests that --adopt is forwarded and an adopted registration is announced."""
