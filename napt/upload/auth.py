@@ -23,18 +23,24 @@ Non-interactive (CI/CD):
     1. EnvironmentCredential -- service principal via AZURE_CLIENT_ID,
         AZURE_TENANT_ID and either AZURE_CLIENT_SECRET or
         AZURE_CLIENT_CERTIFICATE_PATH.
-    2. WorkloadIdentityCredential -- federated (OIDC) identity, e.g. GitHub
-        Actions with `azure/login`. Recommended over client secrets when the
-        CI platform supports it: no secret to store or rotate.
 
 Interactive (a person at a terminal):
-    3. The active tenant's session established earlier with
+    2. The active tenant's session established earlier with
         `napt auth login`. Tokens are cached by MSAL in an OS-encrypted store
         (DPAPI on Windows, Keychain on macOS, libsecret on Linux) and
         refreshed silently; the browser or Windows broker is only
         opened by `napt auth login` itself, never by `napt upload`. Several
         tenants can be signed in at once; `napt auth login --tenant-id`
         switches the active one.
+
+CI/CD through a login step:
+    3. AzureCliCredential -- an existing `az login` session signed in as a
+        service principal, which is what OIDC login steps such as GitHub
+        Actions `azure/login` leave behind. Recommended over client secrets
+        when the CI platform supports it: no secret to store or rotate.
+        Last in the chain so a developer's `napt auth login` always wins,
+        and a session signed in as a person is refused rather than used,
+        since its token belongs to the Azure CLI's own application.
 
 `napt auth login` uses the authorization code flow with PKCE against a
 loopback redirect, or -- on Windows, when the MSAL broker runtime is
@@ -73,11 +79,7 @@ import sys
 from typing import Any
 
 from azure.core.exceptions import ClientAuthenticationError
-from azure.identity import (
-    ChainedTokenCredential,
-    EnvironmentCredential,
-    WorkloadIdentityCredential,
-)
+from azure.identity import AzureCliCredential, EnvironmentCredential
 import msal
 import msal_extensions
 import requests
@@ -108,7 +110,7 @@ GRAPH_SCOPES = ["https://graph.microsoft.com/.default"]
 logging.getLogger("azure.identity").setLevel(logging.ERROR)
 
 # Graph permissions NAPT needs, whether granted as application permissions
-# (service principal, workload identity) or delegated permissions (interactive).
+# (service principal, Azure CLI session) or delegated permissions (interactive).
 REQUIRED_PERMISSIONS = ("DeviceManagementApps.ReadWrite.All", "Group.Read.All")
 
 _AUTHORITY_BASE = "https://login.microsoftonline.com"
@@ -124,7 +126,14 @@ _HINT_NOT_LOGGED_IN = (
     "  Interactive:  run 'napt auth login'\n"
     "  CI/CD:        set AZURE_CLIENT_ID, AZURE_TENANT_ID and either\n"
     "                AZURE_CLIENT_SECRET / AZURE_CLIENT_CERTIFICATE_PATH,\n"
-    "                or use OIDC federation (WorkloadIdentityCredential)\n"
+    "                or sign in with 'az login' (e.g. azure/login in CI)\n"
+)
+
+_HINT_AZURE_CLI_USER = (
+    "Found an Azure CLI session signed in as a user. NAPT uses Azure CLI\n"
+    "sessions only for service principals (CI/CD, e.g. azure/login with the\n"
+    "NAPT app registration's client ID). For interactive use, run\n"
+    "'napt auth login'.\n"
 )
 
 _HINT_SESSION_EXPIRED = (
@@ -442,36 +451,49 @@ def _status_from_token(token: str, method: str) -> AuthStatus:
 # ---------------------------------------------------------------------------
 
 
-def get_credential() -> ChainedTokenCredential:
-    """Builds the non-interactive credential chain.
+def get_credential() -> EnvironmentCredential:
+    """Builds the service principal credential from environment variables.
 
-    Service principal (environment variables), then workload identity
-    federation (only when its ``AZURE_FEDERATED_TOKEN_FILE`` etc. variables
-    are present). Both use the `.default` scope, suitable for application
-    permissions.
+    Reads ``AZURE_CLIENT_ID``, ``AZURE_TENANT_ID`` and either
+    ``AZURE_CLIENT_SECRET`` or ``AZURE_CLIENT_CERTIFICATE_PATH``, and uses
+    the `.default` scope, suitable for application permissions.
 
     Returns:
-        A ChainedTokenCredential for non-interactive authentication.
+        The environment-backed credential; acquiring a token from it fails
+        with ClientAuthenticationError when the variables are not all set.
     """
-    credentials: list[Any] = [EnvironmentCredential()]
-    if all(
-        os.environ.get(var)
-        for var in (
-            "AZURE_TENANT_ID",
-            "AZURE_CLIENT_ID",
-            "AZURE_FEDERATED_TOKEN_FILE",
-        )
-    ):
-        credentials.append(WorkloadIdentityCredential())
-    return ChainedTokenCredential(*credentials)
+    return EnvironmentCredential()
 
 
 def _describe_noninteractive_method() -> str:
-    if os.environ.get("AZURE_CLIENT_SECRET") or os.environ.get(
-        "AZURE_CLIENT_CERTIFICATE_PATH"
-    ):
-        return "service principal"
-    return "workload identity (OIDC)"
+    if os.environ.get("AZURE_CLIENT_CERTIFICATE_PATH"):
+        return "service principal (certificate)"
+    return "service principal"
+
+
+def _azure_cli_token() -> str | None:
+    """Returns a Graph token from an ``az login`` service principal session.
+
+    ``None`` covers every way the Azure CLI can be unavailable: not
+    installed, not signed in, or unable to issue a token for Graph. A
+    session signed in as a person is refused: its token is issued to the
+    Azure CLI's own application, so Entra and Intune would attribute NAPT's
+    actions to that app rather than the NAPT registration.
+
+    Raises:
+        AuthError: If the Azure CLI is signed in as a user.
+    """
+    try:
+        token = AzureCliCredential().get_token(*GRAPH_SCOPES).token
+    except ClientAuthenticationError:
+        return None
+    claims = _decode_claims(token)
+    is_app_only = claims.get("idtyp") == "app" or (
+        "scp" not in claims and bool(claims.get("roles"))
+    )
+    if not is_app_only:
+        raise AuthError(_HINT_AZURE_CLI_USER)
+    return token
 
 
 # ---------------------------------------------------------------------------
@@ -787,13 +809,16 @@ def get_status() -> AuthStatus | None:
         pass
 
     config = _interactive_config()
-    if config is None:
-        return None
-    broker = _broker_available()
-    token = _acquire_silent(config, use_broker=broker)
-    if token is None:
-        return None
-    return _status_from_token(token, _interactive_method(broker))
+    if config is not None:
+        broker = _broker_available()
+        token = _acquire_silent(config, use_broker=broker)
+        if token is not None:
+            return _status_from_token(token, _interactive_method(broker))
+
+    token = _azure_cli_token()
+    if token is not None:
+        return _status_from_token(token, "azure cli")
+    return None
 
 
 def get_access_token() -> str:
@@ -801,8 +826,9 @@ def get_access_token() -> str:
 
     Tries the non-interactive chain from
     [get_credential][napt.upload.auth.get_credential] first, then the session
-    saved by `napt auth login`. Never opens a browser: an interactive user
-    who has not logged in is told to run `napt auth login`.
+    saved by `napt auth login`, then an existing Azure CLI (`az login`)
+    session. Never opens a browser: an interactive user who has not logged
+    in is told to run `napt auth login`.
 
     Returns:
         Bearer token string for use in Authorization headers.
@@ -831,5 +857,9 @@ def get_access_token() -> str:
         token = _acquire_silent(config, use_broker=_broker_available())
         if token is not None:
             return token
+
+    token = _azure_cli_token()
+    if token is not None:
+        return token
 
     raise AuthError(_HINT_NOT_LOGGED_IN)

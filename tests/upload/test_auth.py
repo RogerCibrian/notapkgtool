@@ -49,7 +49,11 @@ def chain_fails():
     """Makes the non-interactive azure-identity chain report no credential."""
     cred = MagicMock()
     cred.get_token.side_effect = ClientAuthenticationError("no cred")
-    with patch("napt.upload.auth.get_credential", return_value=cred):
+    with (
+        patch("napt.upload.auth.get_credential", return_value=cred),
+        # Keep the developer's real `az login` session out of the tests.
+        patch("napt.upload.auth._azure_cli_token", return_value=None),
+    ):
         yield cred
 
 
@@ -510,3 +514,76 @@ def test_resolve_auth_config_accepts_domain_for_tenant(user_dir) -> None:
     assert resolved.username == "a@x"
     # Unknown domains are passed through untouched so the error names them.
     assert resolve_auth_config(tenant_id="nope.com") is None
+
+
+# ---------------------------------------------------------------------------
+# Azure CLI session (OIDC login steps in CI)
+# ---------------------------------------------------------------------------
+
+
+def test_get_access_token_falls_back_to_azure_cli(user_dir, chain_fails) -> None:
+    """Tests that an az login session is used when nothing else is configured."""
+    with patch("napt.upload.auth._azure_cli_token", return_value="cli-token"):
+        assert get_access_token() == "cli-token"
+
+
+def test_napt_session_wins_over_azure_cli(user_dir, chain_fails) -> None:
+    """Tests that a developer's napt auth login beats a stray az login."""
+    _remember(AuthConfig("cid", "tid", "u@x"))
+    app = _fake_app(accounts=[{"username": "u@x"}], silent={"access_token": "napt"})
+    with (
+        patch("napt.upload.auth._build_public_client", return_value=app),
+        patch("napt.upload.auth._azure_cli_token", return_value="cli-token") as cli,
+    ):
+        assert get_access_token() == "napt"
+    cli.assert_not_called()
+
+
+def test_get_status_reports_azure_cli(user_dir, chain_fails) -> None:
+    """Tests that status names the Azure CLI as the source and decodes its token."""
+    token = _jwt(
+        {"appid": "cid", "tid": "tid", "roles": list(auth.REQUIRED_PERMISSIONS)}
+    )
+    with patch("napt.upload.auth._azure_cli_token", return_value=token):
+        status = get_status()
+    assert status is not None
+    assert status.method == "azure cli"
+    assert status.missing == []
+
+
+def test_azure_cli_token_is_none_when_unavailable() -> None:
+    """Tests that a missing or signed-out Azure CLI yields None, not an error."""
+    cred = MagicMock()
+    cred.get_token.side_effect = ClientAuthenticationError("az not found")
+    with patch("napt.upload.auth.AzureCliCredential", return_value=cred):
+        assert auth._azure_cli_token() is None
+
+
+def _cli_cred(token: str) -> MagicMock:
+    access = MagicMock()
+    access.token = token
+    cred = MagicMock()
+    cred.get_token.return_value = access
+    return cred
+
+
+def test_azure_cli_token_accepts_service_principal_session() -> None:
+    """Tests that an app-only az session (azure/login in CI) is used."""
+    token = _jwt({"idtyp": "app", "appid": "cid", "roles": ["Group.Read.All"]})
+    with patch("napt.upload.auth.AzureCliCredential", return_value=_cli_cred(token)):
+        assert auth._azure_cli_token() == token
+
+
+def test_azure_cli_token_refuses_user_session() -> None:
+    """Tests that a person's az login is refused with a pointer to napt auth login."""
+    token = _jwt(
+        {
+            "idtyp": "user",
+            "preferred_username": "dev@x",
+            "scp": "DeviceManagementApps.ReadWrite.All Group.Read.All",
+        }
+    )
+    with patch("napt.upload.auth.AzureCliCredential", return_value=_cli_cred(token)):
+        with pytest.raises(AuthError, match="signed in as a user") as exc:
+            auth._azure_cli_token()
+    assert "napt auth login" in str(exc.value)

@@ -121,6 +121,16 @@ from napt.upload.auth import (
     login as auth_login,
     logout as auth_logout,
 )
+from napt.upload.entra import (
+    APPLICATION_PERMISSIONS,
+    BROKER_REDIRECT_TEMPLATE,
+    DELEGATED_PERMISSIONS,
+    FEDERATED_AUDIENCE_DEFAULT,
+    LOCALHOST_REDIRECT,
+    SPEC_VERSION,
+    SetupSpec,
+    setup_app_registration,
+)
 from napt.upload.graph import list_mobile_apps
 from napt.validation import validate_recipe
 
@@ -1124,7 +1134,7 @@ def cmd_auth_status(args: argparse.Namespace) -> int:
         print("  Interactive:  run 'napt auth login'")
         print("  CI/CD:        set AZURE_CLIENT_ID, AZURE_TENANT_ID and either")
         print("                AZURE_CLIENT_SECRET / AZURE_CLIENT_CERTIFICATE_PATH,")
-        print("                or use OIDC federation")
+        print("                or sign in with 'az login' (e.g. azure/login in CI)")
         _print_known_tenants()
         return 1
 
@@ -1132,6 +1142,125 @@ def cmd_auth_status(args: argparse.Namespace) -> int:
     if status.method.startswith("interactive"):
         _print_known_tenants()
     return 0 if not status.missing else 1
+
+
+def _print_setup_checklist(spec: SetupSpec) -> None:
+    """Prints the portal steps equivalent to what 'napt auth setup' automates."""
+    client_id = spec.client_id or "<Application (client) ID>"
+    print(f"App registration checklist for tenant {spec.tenant_id}:")
+    print()
+    print("  1. Entra admin center -> App registrations -> New registration")
+    print(f"     Name: {spec.display_name}; accounts in this directory only")
+    print("  2. Authentication -> Add a platform -> Mobile and desktop applications")
+    print(f"     - {LOCALHOST_REDIRECT}")
+    print(f"     - {BROKER_REDIRECT_TEMPLATE.format(client_id=client_id)}")
+    print("  3. API permissions -> Add a permission -> Microsoft Graph")
+    print(f"     Application: {', '.join(APPLICATION_PERMISSIONS)}")
+    print(f"     Delegated:   {', '.join(DELEGATED_PERMISSIONS)}")
+    print("  4. Grant admin consent")
+    if spec.federated_subject:
+        print("  5. Certificates & secrets -> Federated credentials -> Add credential")
+        print(f"     Name:     {spec.federated_credential_name}")
+        print(f"     Issuer:   {spec.federated_issuer}")
+        print(f"     Subject:  {spec.federated_subject}")
+        print(f"     Audience: {spec.federated_audience}")
+    print()
+    print("Then: napt auth login --tenant-id <tenant id> --client-id <client id>")
+
+
+def cmd_auth_setup(args: argparse.Namespace) -> int:
+    """Handler for 'napt auth setup' command.
+
+    Creates or completes the NAPT app registration in a tenant through
+    Microsoft Graph, or with --print-only prints the equivalent portal
+    checklist without signing in.
+
+    Args:
+        args: Parsed command-line arguments containing the tenant ID,
+            optional name, client ID, federated credential settings, and flags.
+
+    Returns:
+        Exit code (0 for success, 1 for failure).
+
+    """
+    logger = get_logger(verbose=args.verbose, debug=args.debug)
+    set_global_logger(logger)
+
+    try:
+        spec = SetupSpec(
+            tenant_id=args.tenant_id,
+            display_name=args.name,
+            client_id=args.client_id,
+            federated_issuer=args.federated_issuer,
+            federated_subject=args.federated_subject,
+            federated_audience=args.federated_audience,
+            federated_name=args.federated_name,
+            adopt=args.adopt,
+        )
+    except ConfigError as err:
+        print(f"Error: {err}")
+        return 1
+
+    if args.print_only:
+        _print_setup_checklist(spec)
+        return 0
+
+    try:
+        result = setup_app_registration(spec)
+    except (AuthError, ConfigError, NetworkError) as err:
+        print(f"Error: {err}")
+        if args.verbose or args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+
+    print()
+    if result.needs_adopt:
+        print(
+            f"[WARNING] Found existing registration '{result.display_name}' "
+            f"({result.client_id}) that NAPT did not create."
+        )
+        print("          Re-run with --adopt to manage it. Adopting adds NAPT's")
+        print("          redirect URIs, Microsoft Graph permissions, and admin")
+        print("          consent, and stamps the registration's internal notes;")
+        print("          it never removes existing settings.")
+        print(
+            "          To create a new registration instead, re-run with "
+            f"--name <a name other than '{result.display_name}'>."
+        )
+        return 1
+
+    if result.adopted:
+        print(
+            f"[OK] Adopted '{result.display_name}' ({result.client_id}) -- "
+            f"stamped as napt/v1 spec={SPEC_VERSION}. Changes made:"
+        )
+    elif result.changes:
+        print("[OK] App registration is ready. Changes made:")
+    else:
+        print(
+            f"[OK] App registration '{result.display_name}' is at spec "
+            f"{SPEC_VERSION}; nothing to change."
+        )
+    for change in result.changes:
+        print(f"  - {change}")
+    print()
+    print(f"Name:       {result.display_name}")
+    print(f"Tenant ID:  {result.tenant_id}")
+    print(f"Client ID:  {result.client_id}")
+    print()
+    print("Next steps:")
+    print("  Interactive: napt auth login")
+    print("  CI/CD:       set AZURE_TENANT_ID and AZURE_CLIENT_ID to the values above")
+    if spec.federated_subject:
+        print("               and let your CI platform's OIDC login mint the token")
+        print("               (e.g. azure/login on GitHub Actions) -- no secret needed")
+    else:
+        print("               plus AZURE_CLIENT_SECRET, or re-run with")
+        print("               --federated-issuer/--federated-subject to add an OIDC")
+        print("               federated credential instead")
+    return 0
 
 
 def cmd_init(args: argparse.Namespace) -> int:
@@ -1590,6 +1719,7 @@ def main() -> None:
         description=(
             "Manage the credential NAPT uses for Intune.\n\n"
             "Examples:\n"
+            "  napt auth setup --tenant-id <id>\n"
             "  napt auth login --tenant-id <id> --client-id <id>\n"
             "  napt auth login\n"
             "  napt auth status\n"
@@ -1703,6 +1833,101 @@ def main() -> None:
         help="Show detailed debugging output (implies --verbose)",
     )
     parser_auth_status.set_defaults(func=cmd_auth_status)
+
+    parser_auth_setup = auth_sub.add_parser(
+        "setup",
+        help="Create or complete the NAPT app registration in a tenant",
+        description=(
+            "Create the NAPT app registration in Microsoft Entra ID, or bring an\n"
+            "existing one up to spec: redirect URIs, Microsoft Graph permissions\n"
+            "(application and delegated), service principal, and admin consent.\n"
+            "Optionally adds a federated credential so a CI/CD platform can obtain\n"
+            "tokens through OIDC without a client secret.\n\n"
+            "Requires an account holding at least the Application Administrator\n"
+            "role. NAPT does not store that account or its tokens (your browser\n"
+            "may keep its own sign-in). Re-running is safe: NAPT compares the\n"
+            "registration with what this version needs and adds what is missing,\n"
+            "never removing anything.\n\n"
+            "Examples:\n"
+            "  napt auth setup --tenant-id <id>\n"
+            "  napt auth setup --tenant-id <id> \\\n"
+            "      --federated-issuer https://token.actions.githubusercontent.com \\\n"
+            "      --federated-subject repo:contoso/intune-apps:ref:refs/heads/main\n"
+            "  napt auth setup --tenant-id <id> --print-only"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser_auth_setup.add_argument(
+        "--tenant-id",
+        required=True,
+        help="Directory (tenant) ID to provision in",
+    )
+    parser_auth_setup.add_argument(
+        "--name",
+        default="NAPT",
+        help="Display name of the app registration to find or create (default: NAPT)",
+    )
+    parser_auth_setup.add_argument(
+        "--client-id",
+        default=None,
+        help="Bring this existing registration up to spec instead of matching by name",
+    )
+    parser_auth_setup.add_argument(
+        "--federated-issuer",
+        default=None,
+        metavar="URL",
+        help=(
+            "OIDC issuer of a CI platform to trust, e.g. "
+            "https://token.actions.githubusercontent.com (requires --federated-subject)"
+        ),
+    )
+    parser_auth_setup.add_argument(
+        "--federated-subject",
+        default=None,
+        metavar="SUBJECT",
+        help=(
+            "Subject claim the platform presents for the trusted workflow, in the "
+            "platform's format, e.g. repo:owner/name:ref:refs/heads/main"
+        ),
+    )
+    parser_auth_setup.add_argument(
+        "--federated-audience",
+        default=FEDERATED_AUDIENCE_DEFAULT,
+        metavar="AUDIENCE",
+        help=f"Audience claim (default: {FEDERATED_AUDIENCE_DEFAULT})",
+    )
+    parser_auth_setup.add_argument(
+        "--federated-name",
+        default=None,
+        metavar="NAME",
+        help="Name of the federated credential (default: derived from the subject)",
+    )
+    parser_auth_setup.add_argument(
+        "--adopt",
+        action="store_true",
+        help=(
+            "Manage a registration matched by name that NAPT did not create "
+            "(adds what is missing, never removes anything)"
+        ),
+    )
+    parser_auth_setup.add_argument(
+        "--print-only",
+        action="store_true",
+        help="Print the portal checklist instead of changing anything",
+    )
+    parser_auth_setup.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Show progress and high-level status updates",
+    )
+    parser_auth_setup.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="Show detailed debugging output (implies --verbose)",
+    )
+    parser_auth_setup.set_defaults(func=cmd_auth_setup)
 
     # 'promote' command with subcommands
     parser_promote = subparsers.add_parser(
