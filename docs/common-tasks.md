@@ -485,8 +485,20 @@ Upload a packaged app to Microsoft Intune. Requires `napt package` to have run f
 
 ### App Registration Setup (one time per organization)
 
-Follow [App Registration Setup](user-guide.md#app-registration-setup) in the
-user guide.
+Fastest path, as an Application Administrator:
+
+```bash
+napt auth setup --tenant-id "<Directory (tenant) ID>"            # portal-free
+
+# Also trust a CI platform through OIDC (GitHub Actions, main branch shown):
+napt auth setup --tenant-id "<Directory (tenant) ID>" \
+  --federated-issuer https://token.actions.githubusercontent.com \
+  --federated-subject repo:owner/intune-apps:ref:refs/heads/main
+```
+
+To do it by hand, follow
+[App Registration Setup](user-guide.md#app-registration-setup) in the user
+guide (or run `napt auth setup ... --print-only` for the checklist).
 In short: register an app, add `DeviceManagementApps.ReadWrite.All` and
 `Group.Read.All` as both application and delegated Graph permissions, grant
 admin consent, and add the `http://localhost` and

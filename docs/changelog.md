@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`napt auth setup`** - Create the NAPT app registration in a tenant
+    without touching the portal: signs in as an administrator, then creates
+    (or completes) the registration with its redirect URIs, application and
+    delegated Graph permissions, service principal, and admin consent
+    - `--federated-issuer` / `--federated-subject` (plus optional
+        `--federated-audience` and `--federated-name`) also add a federated
+        credential for OIDC-based CI/CD, so no client secret is needed; the
+        values come from your CI platform's OIDC documentation
+    - Stamps the registration's internal notes with
+        `napt/v1 spec=<n> version=<napt version> provisioned=<date>`; admin
+        notes below the stamp are preserved
+    - Safe to re-run: compares the registration against what the installed
+        NAPT needs and adds only what is missing, so updating after a NAPT
+        release is the same command. `--name` and `--client-id` target an
+        existing registration
+    - A name match without a NAPT stamp is reported and left untouched
+        until `--adopt` is given; nothing existing is ever removed
+    - `--print-only` prints the equivalent portal checklist for tenants
+        where the automated path is not allowed
 - **`napt auth login` / `status` / `logout`** - Sign in to Microsoft Graph
     once and let every later command authenticate silently
     - `login` opens the Windows account picker (Web Account Manager) when

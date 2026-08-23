@@ -333,10 +333,43 @@ Two ways to do it:
     - `ms-appx-web://Microsoft.AAD.BrokerPlugin/<Application (client) ID>`
       (Windows broker sign-in)
 
-**Automatic (`napt auth setup`):** planned for a later release — it will
-create the registration above through Graph, which needs an account holding
-the Application Administrator (or Global Administrator) role.
-Until then, use the manual steps.
+**Automatic (`napt auth setup`):**
+
+```bash
+napt auth setup --tenant-id "<Directory (tenant) ID>"
+```
+
+Signs you in through the browser as an account holding the
+**Application Administrator** (or Global Administrator) role and does
+everything in the manual list through Microsoft Graph: creates the
+registration (or finds one named `NAPT` — `--name` / `--client-id` to
+target another), adds the redirect URIs and the application + delegated
+permissions, creates the service principal, and grants admin consent.
+It then remembers the tenant and client ID so the next step is just
+`napt auth login`.
+
+The registration is stamped in its **Internal notes** (Branding &
+properties) with a provenance line such as
+`napt/v1 spec=1 version=0.10.0 provisioned=2026-08-18`; any notes an
+administrator adds below it are preserved.
+Re-running is safe: NAPT compares the registration against what the
+installed version needs and adds only what is missing — so when a NAPT
+release needs a new permission, updating is just running `napt auth setup`
+again.
+A registration that matches by name but carries no stamp (one made in the
+portal, for example) is not touched until you pass `--adopt`, which adds
+NAPT's redirect URIs, Graph permissions, and admin consent to it and
+stamps it; nothing existing is ever removed.
+Naming the registration explicitly with `--client-id` counts as that
+consent.
+
+Add `--federated-issuer` and `--federated-subject` to also create the
+federated credential for [OIDC CI/CD](#app-registration-setup) in the same
+run; the values come from your CI platform's OIDC documentation.
+The administrator sign-in uses the Microsoft Graph Command Line Tools app
+(the same one `Connect-MgGraph` uses) and is never persisted by NAPT.
+If your tenant blocks that app, `--print-only` prints the portal checklist
+with the exact values for someone to click through instead.
 
 **Developer setup:**
 
@@ -411,10 +444,19 @@ napt auth login --tenant-id contosodev.onmicrosoft.com                          
 **CI/CD setup — OIDC federation (recommended):**
 
 No secret to store or rotate.
-In the app registration, go to **Certificates & secrets** →
-**Federated credentials** → **Add credential** → **GitHub Actions deploying
-Azure resources**, and enter your organization, repository, and the entity
-(branch, environment, or tag) the workflow runs as.
+Create a federated credential on the app registration that trusts your CI
+platform's OIDC issuer for the workflow that runs NAPT.
+For GitHub Actions on the `main` branch:
+
+```bash
+napt auth setup --tenant-id "<Directory (tenant) ID>" \
+  --federated-issuer https://token.actions.githubusercontent.com \
+  --federated-subject repo:owner/name:ref:refs/heads/main
+```
+
+Other platforms use their own subject format (see their OIDC
+documentation); by hand, the same values go under **Certificates & secrets**
+→ **Federated credentials** → **Add credential** → **Other issuer**.
 Then let `azure/login` mint the federated token before NAPT runs:
 
 ```yaml
