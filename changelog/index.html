@@ -2472,6 +2472,27 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.7.0...HEAD">Unreleased</a></h2>
 <h3 id="added">Added</h3>
 <ul>
+<li><strong><code>napt auth setup</code></strong> - Create the NAPT app registration in a tenant
+    without touching the portal: signs in as an administrator, then creates
+    (or completes) the registration with its redirect URIs, application and
+    delegated Graph permissions, service principal, and admin consent<ul>
+<li><code>--federated-issuer</code> / <code>--federated-subject</code> (plus optional
+    <code>--federated-audience</code> and <code>--federated-name</code>) also add a federated
+    credential for OIDC-based CI/CD, so no client secret is needed; the
+    values come from your CI platform's OIDC documentation</li>
+<li>Stamps the registration's internal notes with
+    <code>napt/v1 spec=&lt;n&gt; version=&lt;napt version&gt; provisioned=&lt;date&gt;</code>; admin
+    notes below the stamp are preserved</li>
+<li>Safe to re-run: compares the registration against what the installed
+    NAPT needs and adds only what is missing, so updating after a NAPT
+    release is the same command. <code>--name</code> and <code>--client-id</code> target an
+    existing registration</li>
+<li>A name match without a NAPT stamp is reported and left untouched
+    until <code>--adopt</code> is given; nothing existing is ever removed</li>
+<li><code>--print-only</code> prints the equivalent portal checklist for tenants
+    where the automated path is not allowed</li>
+</ul>
+</li>
 <li><strong><code>napt auth login</code> / <code>status</code> / <code>logout</code></strong> - Sign in to Microsoft Graph
     once and let every later command authenticate silently<ul>
 <li><code>login</code> opens the Windows account picker (Web Account Manager) when
@@ -2489,9 +2510,12 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
     libsecret), never in plain files</li>
 </ul>
 </li>
-<li><strong>OIDC federation for CI/CD</strong> - <code>AZURE_FEDERATED_TOKEN_FILE</code> (as set by
-    GitHub Actions <code>azure/login</code>) is now honored, so pipelines can run
-    without a client secret; documented as the recommended CI/CD setup</li>
+<li><strong>OIDC federation for CI/CD</strong> - An Azure CLI session signed in as a
+    service principal (what OIDC login steps such as GitHub Actions
+    <code>azure/login</code> leave behind) is now honored, so pipelines can run
+    without a client secret; documented as the recommended CI/CD setup.
+    A CLI signed in as a person is refused so Intune activity is always
+    attributed to the NAPT registration</li>
 </ul>
 <h3 id="changed">Changed</h3>
 <ul>
