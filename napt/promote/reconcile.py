@@ -137,9 +137,7 @@ def reconcile_publications(
                 f"published: {'; '.join(problems)} - re-run publish to finish"
             )
             logger.warning("PROMOTE", f"{app_id}: {detail}")
-            findings.append(
-                {"app_id": app_id, "kind": "incomplete", "detail": detail}
-            )
+            findings.append({"app_id": app_id, "kind": "incomplete", "detail": detail})
             continue
 
         install_match = matches.get(ENTRY_INSTALL)

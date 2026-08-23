@@ -116,9 +116,7 @@ def _in_reading_order(
 
     """
     ordered = {key: mapping[key] for key in order if key in mapping}
-    ordered.update(
-        {key: value for key, value in mapping.items() if key not in ordered}
-    )
+    ordered.update({key: value for key, value in mapping.items() if key not in ordered})
     return ordered
 
 

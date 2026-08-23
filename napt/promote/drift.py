@@ -189,9 +189,7 @@ def _configured_targets(
     for ring in deployment["rings"]:
         for group in ring["groups"]:
             try:
-                target = resolve_assignment_target(
-                    access_token, group, group_id_cache
-                )
+                target = resolve_assignment_target(access_token, group, group_id_cache)
             except ConfigError:
                 continue
             key = _target_key(target)
@@ -373,5 +371,3 @@ def detect_drift(
 
     findings.sort(key=lambda f: (f["app_id"], f["kind"], f["detail"]))
     return findings
-
-

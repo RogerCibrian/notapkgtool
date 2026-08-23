@@ -69,9 +69,7 @@ class TestReconcilePublications:
             _stamped("test-app", "update", SHA, "update-1"),
         ]
 
-        with patch(
-            "napt.promote.reconcile.get_mobile_app", side_effect=_committed
-        ):
+        with patch("napt.promote.reconcile.get_mobile_app", side_effect=_committed):
             findings = reconcile_publications(TOKEN, _configs(), tmp_path, apps)
 
         assert [f["kind"] for f in findings] == ["recovered"]
@@ -90,9 +88,7 @@ class TestReconcilePublications:
         state_path = _write_pending(tmp_path)
         apps = [_stamped("test-app", "install", SHA, "install-1")]
 
-        with patch(
-            "napt.promote.reconcile.get_mobile_app", side_effect=_committed
-        ):
+        with patch("napt.promote.reconcile.get_mobile_app", side_effect=_committed):
             findings = reconcile_publications(
                 TOKEN, _configs(build_types="app_only"), tmp_path, apps
             )
@@ -108,9 +104,7 @@ class TestReconcilePublications:
         state_path = _write_pending(tmp_path)
         apps = [_stamped("test-app", "update", SHA, "update-1")]
 
-        with patch(
-            "napt.promote.reconcile.get_mobile_app", side_effect=_committed
-        ):
+        with patch("napt.promote.reconcile.get_mobile_app", side_effect=_committed):
             findings = reconcile_publications(
                 TOKEN, _configs(build_types="update_only"), tmp_path, apps
             )
@@ -126,9 +120,7 @@ class TestReconcilePublications:
         state_path = _write_pending(tmp_path)
         apps = [_stamped("test-app", "install", SHA, "install-1")]
 
-        with patch(
-            "napt.promote.reconcile.get_mobile_app", side_effect=_committed
-        ):
+        with patch("napt.promote.reconcile.get_mobile_app", side_effect=_committed):
             findings = reconcile_publications(TOKEN, _configs(), tmp_path, apps)
 
         assert [f["kind"] for f in findings] == ["incomplete"]
@@ -181,9 +173,7 @@ class TestReconcilePublications:
             "intune_app_id": "i",
             "intune_update_app_id": "u",
         }
-        save_deployment_state(
-            state, deployment_state_path(tmp_path, "test-app")
-        )
+        save_deployment_state(state, deployment_state_path(tmp_path, "test-app"))
         apps = [_stamped("test-app", "install", "a" * 64, "install-1")]
 
         with patch("napt.promote.reconcile.get_mobile_app") as get_mock:
