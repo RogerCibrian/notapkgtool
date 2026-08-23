@@ -13,6 +13,7 @@ from napt.cli import (
     _resolve_build_dir_from_recipe,
     cmd_auth_login,
     cmd_auth_logout,
+    cmd_auth_setup,
     cmd_auth_status,
     cmd_build,
     cmd_discover,
@@ -706,6 +707,134 @@ class TestCmdAuth:
         with patch("napt.cli.auth_status", side_effect=AuthError("expired")):
             assert cmd_auth_status(_args()) == 1
         assert "Authentication error: expired" in capsys.readouterr().out
+
+    @staticmethod
+    def _setup_args(**overrides):
+        defaults = {
+            "tenant_id": "tid",
+            "name": "NAPT",
+            "client_id": None,
+            "federated_issuer": None,
+            "federated_subject": None,
+            "federated_audience": "api://AzureADTokenExchange",
+            "federated_name": None,
+            "adopt": False,
+            "print_only": False,
+        }
+        defaults.update(overrides)
+        return _args(**defaults)
+
+    def test_setup_warns_and_exits_one_when_adopt_is_needed(self, capsys):
+        """Tests that an unstamped name match prints the adopt warning and fails."""
+        from napt.upload.entra import SetupResult
+
+        result = SetupResult(
+            tenant_id="tid", client_id="cid", display_name="NAPT", needs_adopt=True
+        )
+        with patch("napt.cli.setup_app_registration", return_value=result) as setup:
+            assert cmd_auth_setup(self._setup_args()) == 1
+        assert setup.call_args.args[0].adopt is False
+        out = capsys.readouterr().out
+        assert "[WARNING] Found existing registration 'NAPT' (cid)" in out
+        assert "Re-run with --adopt" in out
+        assert "never removes existing settings" in out
+
+    def test_setup_reports_adoption(self, capsys):
+        """Tests that --adopt is forwarded and an adopted registration is announced."""
+        from napt.upload.entra import SPEC_VERSION, SetupResult
+
+        result = SetupResult(
+            tenant_id="tid",
+            client_id="cid",
+            display_name="NAPT",
+            adopted=True,
+            changes=["Stamped internal notes: napt/v1 spec=1 version=x"],
+        )
+        with patch("napt.cli.setup_app_registration", return_value=result) as setup:
+            assert cmd_auth_setup(self._setup_args(adopt=True)) == 0
+        assert setup.call_args.args[0].adopt is True
+        out = capsys.readouterr().out
+        assert (
+            f"[OK] Adopted 'NAPT' (cid) -- stamped as napt/v1 spec={SPEC_VERSION}"
+            in (out)
+        )
+
+    def test_setup_reports_changes_and_next_steps(self, capsys):
+        """Tests that a provisioning run lists its changes and the IDs to use."""
+        from napt.upload.entra import SetupResult
+
+        result = SetupResult(
+            tenant_id="tid",
+            client_id="cid",
+            display_name="NAPT",
+            created=True,
+            changes=["Created app registration 'NAPT'", "Created service principal"],
+        )
+        with patch("napt.cli.setup_app_registration", return_value=result) as setup:
+            assert (
+                cmd_auth_setup(
+                    self._setup_args(
+                        federated_issuer="https://issuer", federated_subject="sub"
+                    )
+                )
+                == 0
+            )
+        spec = setup.call_args.args[0]
+        assert spec.tenant_id == "tid"
+        assert spec.federated_issuer == "https://issuer"
+        assert spec.federated_subject == "sub"
+        out = capsys.readouterr().out
+        assert "[OK] App registration is ready" in out
+        assert "  - Created service principal" in out
+        assert "Client ID:  cid" in out
+        assert "OIDC login mint the token" in out
+
+    def test_setup_rejects_half_specified_federated_credential(self, capsys):
+        """Tests that --federated-issuer without --federated-subject fails early."""
+        with patch("napt.cli.setup_app_registration") as setup:
+            code = cmd_auth_setup(self._setup_args(federated_issuer="https://issuer"))
+        assert code == 1
+        setup.assert_not_called()
+        assert "both an issuer and a subject" in capsys.readouterr().out
+
+    def test_setup_reports_nothing_to_change(self, capsys):
+        """Tests that a complete registration is reported as already done."""
+        from napt.upload.entra import SetupResult
+
+        result = SetupResult(tenant_id="tid", client_id="cid", display_name="NAPT")
+        with patch("napt.cli.setup_app_registration", return_value=result):
+            assert cmd_auth_setup(self._setup_args()) == 0
+        out = capsys.readouterr().out
+        assert "is at spec 1; nothing to change" in out
+        assert "--federated-issuer/--federated-subject" in out
+
+    def test_setup_print_only_never_calls_graph(self, capsys):
+        """Tests that --print-only prints the checklist without signing in."""
+        with patch("napt.cli.setup_app_registration") as setup:
+            code = cmd_auth_setup(
+                self._setup_args(
+                    print_only=True,
+                    client_id="cid",
+                    federated_issuer="https://issuer",
+                    federated_subject="repo:o/r:ref:refs/heads/main",
+                )
+            )
+        assert code == 0
+        setup.assert_not_called()
+        out = capsys.readouterr().out
+        assert "ms-appx-web://Microsoft.AAD.BrokerPlugin/cid" in out
+        assert "DeviceManagementApps.ReadWrite.All" in out
+        assert "Issuer:   https://issuer" in out
+        assert "Subject:  repo:o/r:ref:refs/heads/main" in out
+        assert "Audience: api://AzureADTokenExchange" in out
+
+    def test_setup_error_returns_one(self, capsys):
+        """Tests that setup failures are reported and return 1."""
+        with patch(
+            "napt.cli.setup_app_registration", side_effect=ConfigError("ambiguous")
+        ):
+            assert cmd_auth_setup(self._setup_args()) == 1
+        assert "Error: ambiguous" in capsys.readouterr().out
 
 
 # =============================================================================

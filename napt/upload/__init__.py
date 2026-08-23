@@ -26,6 +26,7 @@ Modules:
     manager - Upload orchestration (load config, auth, upload flow).
     graph - Graph API and Azure Blob Storage HTTP calls.
     auth - Credential resolution (azure-identity chain, MSAL interactive session).
+    entra - App registration provisioning for `napt auth setup`.
     intunewin - .intunewin ZIP parser (reads Detection.xml encryption metadata).
 
 Example:
