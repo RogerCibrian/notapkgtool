@@ -43,9 +43,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         clears them all
     - Tokens are cached in the OS credential store (DPAPI, Keychain,
         libsecret), never in plain files
-- **OIDC federation for CI/CD** - `AZURE_FEDERATED_TOKEN_FILE` (as set by
-    GitHub Actions `azure/login`) is now honored, so pipelines can run
-    without a client secret; documented as the recommended CI/CD setup
+- **OIDC federation for CI/CD** - An existing Azure CLI session (what OIDC
+    login steps such as GitHub Actions `azure/login` leave behind) is now
+    honored, so pipelines can run without a client secret; documented as
+    the recommended CI/CD setup
 
 ### Changed
 

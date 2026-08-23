@@ -590,19 +590,24 @@ napt upload recipes/Google/chrome.yaml
 With OIDC federation (recommended):
 
 ```yaml
-# GitHub Actions example
+# GitHub Actions example; the federated credential is scoped to the
+# "intune" environment, so only jobs that declare it receive tokens
 permissions:
   id-token: write
   contents: read
 
-steps:
-  - uses: azure/login@v2
-    with:
-      client-id: ${{ secrets.AZURE_CLIENT_ID }}
-      tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-      allow-no-subscriptions: true
-  - name: Upload to Intune
-    run: napt upload recipes/Google/chrome.yaml
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    environment: intune
+    steps:
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+      - name: Upload to Intune
+        run: napt upload recipes/Google/chrome.yaml
 ```
 
 With a client secret:

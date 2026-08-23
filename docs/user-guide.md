@@ -295,14 +295,12 @@ source it picked:
 | Method | When it's used |
 |--------|---------------|
 | Service principal (`EnvironmentCredential`) | `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_CLIENT_SECRET` (or `AZURE_CLIENT_CERTIFICATE_PATH`) are set — CI/CD |
-| Workload identity federation (`WorkloadIdentityCredential`) | `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_FEDERATED_TOKEN_FILE` are set — CI/CD with OIDC, e.g. GitHub Actions `azure/login`. Recommended over a client secret whenever your CI platform supports it |
 | Interactive session (`napt auth login`) | Nothing above is set and you have signed in on this machine — developers |
+| Azure CLI (`AzureCliCredential`) | Nothing above applies and `az login` has been run in this environment — CI/CD with OIDC through a login step such as GitHub Actions `azure/login`. Recommended over a client secret whenever your CI platform supports it |
 
 NAPT never opens a browser on its own.
 If no credential is available, commands fail with
 `Not authenticated. Run 'napt auth login'`.
-This mirrors `az`/`gh`: sign in explicitly once, then everything else is
-silent.
 
 #### App Registration Setup
 
@@ -389,8 +387,7 @@ The remembered tenants and the cache live under `%LOCALAPPDATA%\napt`
 `~/.config/napt` (Linux); set `NAPT_USER_DIR` to relocate them.
 The `AZURE_*` environment variables play no part in interactive sign-in;
 they are how CI/CD supplies a credential (below), and when they are set
-they take precedence over your session — the same rule `gh` (`GH_TOKEN`)
-and `aws` (`AWS_ACCESS_KEY_ID`) follow.
+they take precedence over your session.
 
 Check what you are holding at any time:
 
@@ -443,35 +440,51 @@ napt auth login --tenant-id contosodev.onmicrosoft.com                          
 No secret to store or rotate.
 Create a federated credential on the app registration that trusts your CI
 platform's OIDC issuer for the workflow that runs NAPT.
-For GitHub Actions on the `main` branch:
+Scope it to a deployment environment rather than a branch, so only the
+jobs that declare that environment — the ones that touch Intune — can
+obtain tokens; merges to `main` stay gated by your branch protection and
+PR review as usual.
+For GitHub Actions and an environment named `intune`:
 
 ```bash
 napt auth setup --tenant-id "<Directory (tenant) ID>" \
   --federated-issuer https://token.actions.githubusercontent.com \
-  --federated-subject repo:owner/name:ref:refs/heads/main
+  --federated-subject "repo:owner@<owner id>/name@<repository id>:environment:intune"
 ```
 
+Use the subject your repository actually emits.
+GitHub's immutable format above embeds the owner and repository IDs so a
+renamed or recreated repository cannot inherit the trust; repositories
+created or renamed after 2026-07-15 emit it by default, older ones until
+opted in emit `repo:owner/name:environment:intune`.
+See [Migrate GitHub Actions federated credentials to immutable subjects](https://learn.microsoft.com/en-us/entra/workload-id/workload-identities-github-immutable-subjects)
+and GitHub's OIDC reference for the IDs and the opt-in.
 Other platforms use their own subject format (see their OIDC
 documentation); by hand, the same values go under **Certificates & secrets**
 → **Federated credentials** → **Add credential** → **Other issuer**.
-Then let `azure/login` mint the federated token before NAPT runs:
+Then sign in with `azure/login` before NAPT runs:
 
 ```yaml
 permissions:
   id-token: write
   contents: read
 
-steps:
-  - uses: azure/login@v2
-    with:
-      client-id: ${{ secrets.AZURE_CLIENT_ID }}
-      tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-      allow-no-subscriptions: true
-  - run: napt upload recipes/Google/chrome.yaml
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    environment: intune
+    steps:
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+      - run: napt upload recipes/Google/chrome.yaml
 ```
 
-`azure/login` exports `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and
-`AZURE_FEDERATED_TOKEN_FILE`; NAPT picks them up automatically.
+`azure/login` exchanges the workflow's OIDC token for an Azure CLI session;
+NAPT then obtains its Graph token from that session (`AzureCliCredential`),
+so the job needs no `AZURE_*` variables at all.
 
 **CI/CD setup — client secret:**
 
