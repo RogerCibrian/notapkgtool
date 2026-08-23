@@ -304,10 +304,6 @@ If no credential is available, commands fail with
 This mirrors `az`/`gh`: sign in explicitly once, then everything else is
 silent.
 
-Device code flow is not supported.
-It is the flow most often abused to bypass MFA, and Microsoft-managed
-Conditional Access policies increasingly block it tenant-wide.
-
 #### App Registration Setup
 
 Create the app registration once per organization.
