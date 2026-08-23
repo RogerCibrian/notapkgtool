@@ -34,11 +34,13 @@ Interactive (a person at a terminal):
         switches the active one.
 
 CI/CD through a login step:
-    3. AzureCliCredential -- an existing `az login` session, which is what
-        OIDC login steps such as GitHub Actions `azure/login` leave behind.
-        Recommended over client secrets when the CI platform supports it:
-        no secret to store or rotate. Last in the chain so a developer's
-        `napt auth login` always wins over a stray Azure CLI session.
+    3. AzureCliCredential -- an existing `az login` session signed in as a
+        service principal, which is what OIDC login steps such as GitHub
+        Actions `azure/login` leave behind. Recommended over client secrets
+        when the CI platform supports it: no secret to store or rotate.
+        Last in the chain so a developer's `napt auth login` always wins,
+        and a session signed in as a person is refused rather than used,
+        since its token belongs to the Azure CLI's own application.
 
 `napt auth login` uses the authorization code flow with PKCE against a
 loopback redirect, or -- on Windows, when the MSAL broker runtime is
@@ -125,6 +127,13 @@ _HINT_NOT_LOGGED_IN = (
     "  CI/CD:        set AZURE_CLIENT_ID, AZURE_TENANT_ID and either\n"
     "                AZURE_CLIENT_SECRET / AZURE_CLIENT_CERTIFICATE_PATH,\n"
     "                or sign in with 'az login' (e.g. azure/login in CI)\n"
+)
+
+_HINT_AZURE_CLI_USER = (
+    "Found an Azure CLI session signed in as a user. NAPT uses Azure CLI\n"
+    "sessions only for service principals (CI/CD, e.g. azure/login with the\n"
+    "NAPT app registration's client ID). For interactive use, run\n"
+    "'napt auth login'.\n"
 )
 
 _HINT_SESSION_EXPIRED = (
@@ -463,15 +472,28 @@ def _describe_noninteractive_method() -> str:
 
 
 def _azure_cli_token() -> str | None:
-    """Returns a Graph token from an existing ``az login`` session, or ``None``.
+    """Returns a Graph token from an ``az login`` service principal session.
 
     ``None`` covers every way the Azure CLI can be unavailable: not
-    installed, not signed in, or unable to issue a token for Graph.
+    installed, not signed in, or unable to issue a token for Graph. A
+    session signed in as a person is refused: its token is issued to the
+    Azure CLI's own application, so Entra and Intune would attribute NAPT's
+    actions to that app rather than the NAPT registration.
+
+    Raises:
+        AuthError: If the Azure CLI is signed in as a user.
     """
     try:
-        return AzureCliCredential().get_token(*GRAPH_SCOPES).token
+        token = AzureCliCredential().get_token(*GRAPH_SCOPES).token
     except ClientAuthenticationError:
         return None
+    claims = _decode_claims(token)
+    is_app_only = claims.get("idtyp") == "app" or (
+        "scp" not in claims and bool(claims.get("roles"))
+    )
+    if not is_app_only:
+        raise AuthError(_HINT_AZURE_CLI_USER)
+    return token
 
 
 # ---------------------------------------------------------------------------

@@ -296,7 +296,7 @@ source it picked:
 |--------|---------------|
 | Service principal (`EnvironmentCredential`) | `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_CLIENT_SECRET` (or `AZURE_CLIENT_CERTIFICATE_PATH`) are set — CI/CD |
 | Interactive session (`napt auth login`) | Nothing above is set and you have signed in on this machine — developers |
-| Azure CLI (`AzureCliCredential`) | Nothing above applies and `az login` has been run in this environment — CI/CD with OIDC through a login step such as GitHub Actions `azure/login`. Recommended over a client secret whenever your CI platform supports it |
+| Azure CLI (`AzureCliCredential`) | Nothing above applies and the Azure CLI is signed in as a service principal — CI/CD with OIDC through a login step such as GitHub Actions `azure/login`. Recommended over a client secret whenever your CI platform supports it. A CLI signed in as a person is refused, since its tokens belong to the Azure CLI's own application, not the NAPT registration |
 
 NAPT never opens a browser on its own.
 If no credential is available, commands fail with

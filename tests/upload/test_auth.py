@@ -557,3 +557,33 @@ def test_azure_cli_token_is_none_when_unavailable() -> None:
     cred.get_token.side_effect = ClientAuthenticationError("az not found")
     with patch("napt.upload.auth.AzureCliCredential", return_value=cred):
         assert auth._azure_cli_token() is None
+
+
+def _cli_cred(token: str) -> MagicMock:
+    access = MagicMock()
+    access.token = token
+    cred = MagicMock()
+    cred.get_token.return_value = access
+    return cred
+
+
+def test_azure_cli_token_accepts_service_principal_session() -> None:
+    """Tests that an app-only az session (azure/login in CI) is used."""
+    token = _jwt({"idtyp": "app", "appid": "cid", "roles": ["Group.Read.All"]})
+    with patch("napt.upload.auth.AzureCliCredential", return_value=_cli_cred(token)):
+        assert auth._azure_cli_token() == token
+
+
+def test_azure_cli_token_refuses_user_session() -> None:
+    """Tests that a person's az login is refused with a pointer to napt auth login."""
+    token = _jwt(
+        {
+            "idtyp": "user",
+            "preferred_username": "dev@x",
+            "scp": "DeviceManagementApps.ReadWrite.All Group.Read.All",
+        }
+    )
+    with patch("napt.upload.auth.AzureCliCredential", return_value=_cli_cred(token)):
+        with pytest.raises(AuthError, match="signed in as a user") as exc:
+            auth._azure_cli_token()
+    assert "napt auth login" in str(exc.value)

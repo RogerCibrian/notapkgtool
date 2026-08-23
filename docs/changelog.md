@@ -43,10 +43,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         clears them all
     - Tokens are cached in the OS credential store (DPAPI, Keychain,
         libsecret), never in plain files
-- **OIDC federation for CI/CD** - An existing Azure CLI session (what OIDC
-    login steps such as GitHub Actions `azure/login` leave behind) is now
-    honored, so pipelines can run without a client secret; documented as
-    the recommended CI/CD setup
+- **OIDC federation for CI/CD** - An Azure CLI session signed in as a
+    service principal (what OIDC login steps such as GitHub Actions
+    `azure/login` leave behind) is now honored, so pipelines can run
+    without a client secret; documented as the recommended CI/CD setup.
+    A CLI signed in as a person is refused so Intune activity is always
+    attributed to the NAPT registration
 
 ### Changed
 
