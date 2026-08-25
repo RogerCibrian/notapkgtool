@@ -64,12 +64,15 @@ import base64
 from pathlib import Path
 import re
 import time
+from typing import TYPE_CHECKING
 
 import requests
 
 from napt.exceptions import ConfigError, NetworkError
 from napt.graph.client import GRAPH_BASE, auth_headers, graph_request, json_headers
-from napt.upload.intunewin import IntunewinMetadata
+
+if TYPE_CHECKING:
+    from napt.upload.intunewin import IntunewinMetadata
 
 __all__ = [
     "VIRTUAL_TARGETS",
