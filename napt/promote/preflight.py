@@ -33,7 +33,7 @@ from __future__ import annotations
 from typing import Any
 
 from napt.exceptions import ConfigError
-from napt.upload.graph import resolve_assignment_target
+from napt.graph.intune import resolve_assignment_target
 
 __all__ = ["unresolvable_groups"]
 

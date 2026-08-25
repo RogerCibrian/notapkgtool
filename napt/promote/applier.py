@@ -51,7 +51,16 @@ import json
 from pathlib import Path
 from typing import Any
 
+from napt.auth.credentials import get_access_token
 from napt.exceptions import ConfigError, NetworkError, StateError
+from napt.graph.intune import (
+    assign_app,
+    build_assignment,
+    delete_mobile_app,
+    get_app_assignments,
+    list_mobile_apps,
+    resolve_assignment_target,
+)
 from napt.logging import get_global_logger
 from napt.promote.drift import detect_drift
 from napt.promote.planner import (
@@ -66,15 +75,6 @@ from napt.state import (
     deployment_state_path,
     load_deployment_state,
     save_deployment_state,
-)
-from napt.upload.auth import get_access_token
-from napt.upload.graph import (
-    assign_app,
-    build_assignment,
-    delete_mobile_app,
-    get_app_assignments,
-    list_mobile_apps,
-    resolve_assignment_target,
 )
 from napt.upload.stamp import ENTRY_INSTALL, ENTRY_UPDATE, find_stamped_app
 

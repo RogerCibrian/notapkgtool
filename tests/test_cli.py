@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from napt.auth.credentials import AuthStatus
 from napt.cli import (
     _resolve_build_dir_from_recipe,
     cmd_auth_login,
@@ -26,7 +27,6 @@ from napt.cli import (
     cmd_validate,
 )
 from napt.exceptions import AuthError, ConfigError, NetworkError, PackagingError
-from napt.upload.auth import AuthStatus
 
 
 def _args(**kwargs) -> argparse.Namespace:
@@ -637,7 +637,7 @@ class TestCmdAuth:
 
     def test_status_lists_known_tenants(self, capsys, tmp_path, monkeypatch):
         """Tests that interactive status lists remembered tenants, marking the active."""
-        from napt.upload.auth import AuthConfig, AuthStore, _save_auth_store
+        from napt.auth.credentials import AuthConfig, AuthStore, _save_auth_store
 
         monkeypatch.setenv("NAPT_USER_DIR", str(tmp_path))
         _save_auth_store(
@@ -726,7 +726,7 @@ class TestCmdAuth:
 
     def test_setup_warns_and_exits_one_when_adopt_is_needed(self, capsys):
         """Tests that an unstamped name match prints the adopt warning and fails."""
-        from napt.upload.entra import SetupResult
+        from napt.auth.registration import SetupResult
 
         result = SetupResult(
             tenant_id="tid", client_id="cid", display_name="NAPT", needs_adopt=True
@@ -745,7 +745,7 @@ class TestCmdAuth:
 
     def test_setup_reports_adoption(self, capsys):
         """Tests that --adopt is forwarded and an adopted registration is announced."""
-        from napt.upload.entra import SPEC_VERSION, SetupResult
+        from napt.auth.registration import SPEC_VERSION, SetupResult
 
         result = SetupResult(
             tenant_id="tid",
@@ -765,7 +765,7 @@ class TestCmdAuth:
 
     def test_setup_reports_changes_and_next_steps(self, capsys):
         """Tests that a provisioning run lists its changes and the IDs to use."""
-        from napt.upload.entra import SetupResult
+        from napt.auth.registration import SetupResult
 
         result = SetupResult(
             tenant_id="tid",
@@ -803,7 +803,7 @@ class TestCmdAuth:
 
     def test_setup_reports_nothing_to_change(self, capsys):
         """Tests that a complete registration is reported as already done."""
-        from napt.upload.entra import SetupResult
+        from napt.auth.registration import SetupResult
 
         result = SetupResult(tenant_id="tid", client_id="cid", display_name="NAPT")
         with patch("napt.cli.setup_app_registration", return_value=result):

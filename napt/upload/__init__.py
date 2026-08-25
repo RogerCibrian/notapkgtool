@@ -15,19 +15,13 @@
 """Intune upload operations for NAPT.
 
 This module provides the complete upload pipeline for deploying Win32 LOB apps
-to Microsoft Intune via the Graph API.
-
-Authentication needs no configuration file:
-
-- Developers: run `napt auth login` once (browser or OS broker); later commands use the cached session silently
-- CI/CD: set AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_CLIENT_SECRET (EnvironmentCredential), or sign in with an OIDC login step such as GitHub Actions `azure/login` (AzureCliCredential)
+to Microsoft Intune via the Graph API. Authentication comes from
+[napt.auth][] and the Graph calls from [napt.graph][].
 
 Modules:
     manager - Upload orchestration (load config, auth, upload flow).
-    graph - Graph API and Azure Blob Storage HTTP calls.
-    auth - Credential resolution (azure-identity chain, MSAL interactive session).
-    entra - App registration provisioning for `napt auth setup`.
     intunewin - .intunewin ZIP parser (reads Detection.xml encryption metadata).
+    stamp - Provenance stamp written to the Intune app's notes field.
 
 Example:
     Upload a packaged app to Intune:

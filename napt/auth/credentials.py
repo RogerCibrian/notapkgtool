@@ -16,7 +16,7 @@
 
 Every command that talks to Intune (`napt upload`, `napt promote apply`,
 `napt promote plan --reconcile/--check-drift`) calls
-[get_access_token][napt.upload.auth.get_access_token] once. The token comes
+[get_access_token][napt.auth.credentials.get_access_token] once. The token comes
 from the first source that works:
 
 Non-interactive (CI/CD):
@@ -58,7 +58,7 @@ use). See the authentication documentation for setup instructions.
 Example:
     Acquiring a token for Graph API:
         ```python
-        from napt.upload.auth import get_access_token
+        from napt.auth.credentials import get_access_token
 
         token = get_access_token()
         headers = {"Authorization": f"Bearer {token}"}
@@ -87,10 +87,12 @@ import requests
 from napt.exceptions import AuthError, ConfigError
 
 __all__ = [
+    "AUTHORITY_BASE",
     "AuthConfig",
     "AuthStatus",
     "AuthStore",
     "GRAPH_SCOPES",
+    "LOGIN_TIMEOUT",
     "REQUIRED_PERMISSIONS",
     "get_access_token",
     "get_credential",
@@ -99,6 +101,8 @@ __all__ = [
     "load_auth_store",
     "login",
     "logout",
+    "msal_error",
+    "remember_tenant",
     "resolve_auth_config",
 ]
 
@@ -113,13 +117,13 @@ logging.getLogger("azure.identity").setLevel(logging.ERROR)
 # (service principal, Azure CLI session) or delegated permissions (interactive).
 REQUIRED_PERMISSIONS = ("DeviceManagementApps.ReadWrite.All", "Group.Read.All")
 
-_AUTHORITY_BASE = "https://login.microsoftonline.com"
+AUTHORITY_BASE = "https://login.microsoftonline.com"
 _GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 _AUTH_CONFIG_FILENAME = "auth.json"
 _TOKEN_CACHE_FILENAME = "token_cache.bin"
 
 # Seconds `napt auth login` waits for the browser round-trip before giving up.
-_LOGIN_TIMEOUT = 300
+LOGIN_TIMEOUT = 300
 
 _HINT_NOT_LOGGED_IN = (
     "Not authenticated.\n\n"
@@ -532,13 +536,22 @@ def _build_public_client(
 ) -> msal.PublicClientApplication:
     return msal.PublicClientApplication(
         config.client_id,
-        authority=f"{_AUTHORITY_BASE}/{config.tenant_id}",
+        authority=f"{AUTHORITY_BASE}/{config.tenant_id}",
         token_cache=_build_token_cache(),
         enable_broker_on_windows=use_broker,
     )
 
 
-def _msal_error(result: dict[str, Any]) -> str:
+def msal_error(result: dict[str, Any]) -> str:
+    """Summarizes a failed MSAL token result as ``code: first line``.
+
+    Args:
+        result: The dict MSAL returns when no access token was issued.
+
+    Returns:
+        The error code followed by the first line of its description.
+
+    """
     code = result.get("error", "unknown_error")
     description = str(result.get("error_description", "")).splitlines()
     return f"{code}: {description[0]}" if description else str(code)
@@ -560,7 +573,7 @@ def _acquire_silent(config: AuthConfig, *, use_broker: bool) -> str | None:
         return None
     result = app.acquire_token_silent_with_error(GRAPH_SCOPES, account=accounts[0])
     if not result or "access_token" not in result:
-        detail = _msal_error(result) if result else "no token"
+        detail = msal_error(result) if result else "no token"
         raise AuthError(f"{_HINT_SESSION_EXPIRED}Details: {detail}")
     return result["access_token"]
 
@@ -577,8 +590,17 @@ def _interactive_method(broker: bool) -> str:
     return "interactive (broker)" if broker else "interactive (browser)"
 
 
-def _remember(config: AuthConfig) -> Path:
-    """Records ``config`` as the active tenant and returns the file path."""
+def remember_tenant(config: AuthConfig) -> Path:
+    """Records ``config`` in the auth store as the active tenant.
+
+    Args:
+        config: Tenant and client settings to store; replaces any entry
+            for the same tenant.
+
+    Returns:
+        Path of the auth store file that was written.
+
+    """
     store = load_auth_store()
     store.tenants[config.tenant_id] = config
     store.active = config.tenant_id
@@ -677,7 +699,7 @@ def login(
         logger.verbose("AUTH", f"Cached session unusable, signing in again: {err}")
         cached = None
     if cached is not None:
-        _remember(_with_tenant_label(config, cached))
+        remember_tenant(_with_tenant_label(config, cached))
         logger.info(
             "AUTH",
             f"Reusing signed-in session for {config.username} "
@@ -702,7 +724,7 @@ def login(
         result = app.acquire_token_interactive(
             GRAPH_SCOPES,
             prompt="select_account",
-            timeout=_LOGIN_TIMEOUT,
+            timeout=LOGIN_TIMEOUT,
             parent_window_handle=(
                 msal.PublicClientApplication.CONSOLE_WINDOW_HANDLE if broker else None
             ),
@@ -713,7 +735,7 @@ def login(
 
     if "access_token" not in result:
         logger.debug("AUTH", f"MSAL interactive response: {result}")
-        detail = _msal_error(result)
+        detail = msal_error(result)
         if result.get("correlation_id"):
             detail += f" (correlation_id {result['correlation_id']})"
         # _broker_status is a pymsalruntime enum; compare by name.
@@ -734,7 +756,7 @@ def login(
         tenant_id=config.tenant_id,
         username=username,
     )
-    saved_to = _remember(_with_tenant_label(signed_in, result["access_token"]))
+    saved_to = remember_tenant(_with_tenant_label(signed_in, result["access_token"]))
     logger.verbose("AUTH", f"Saved sign-in settings to {saved_to}")
     return status
 
@@ -790,7 +812,7 @@ def logout(*, all_tenants: bool = False) -> list[str]:
 def get_status() -> AuthStatus | None:
     """Reports which credential NAPT would use right now, or ``None``.
 
-    Resolves a token exactly as [get_access_token][napt.upload.auth.get_access_token]
+    Resolves a token exactly as [get_access_token][napt.auth.credentials.get_access_token]
     does -- so the answer reflects what `napt upload` will do -- and
     decodes it for display.
 
@@ -825,7 +847,7 @@ def get_access_token() -> str:
     """Acquires a Microsoft Graph access token.
 
     Tries the non-interactive chain from
-    [get_credential][napt.upload.auth.get_credential] first, then the session
+    [get_credential][napt.auth.credentials.get_credential] first, then the session
     saved by `napt auth login`, then an existing Azure CLI (`az login`)
     session. Never opens a browser: an interactive user who has not logged
     in is told to run `napt auth login`.
@@ -840,7 +862,7 @@ def get_access_token() -> str:
     Example:
         Get a token and use it in a request:
             ```python
-            from napt.upload.auth import get_access_token
+            from napt.auth.credentials import get_access_token
 
             token = get_access_token()
             headers = {"Authorization": f"Bearer {token}"}

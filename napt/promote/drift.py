@@ -49,11 +49,11 @@ from pathlib import Path
 from typing import Any
 
 from napt.exceptions import ConfigError
-from napt.state import deployment_state_path, load_deployment_state
-from napt.upload.graph import (
+from napt.graph.intune import (
     get_app_assignments,
     resolve_assignment_target,
 )
+from napt.state import deployment_state_path, load_deployment_state
 from napt.upload.stamp import ENTRY_INSTALL, ENTRY_UPDATE, parse_stamp
 
 __all__ = ["detect_drift"]

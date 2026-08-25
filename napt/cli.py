@@ -87,6 +87,24 @@ from pathlib import Path
 import sys
 from typing import Any
 
+from napt.auth.credentials import (
+    AuthStatus,
+    get_access_token,
+    get_status as auth_status,
+    load_auth_store,
+    login as auth_login,
+    logout as auth_logout,
+)
+from napt.auth.registration import (
+    APPLICATION_PERMISSIONS,
+    BROKER_REDIRECT_TEMPLATE,
+    DELEGATED_PERMISSIONS,
+    FEDERATED_AUDIENCE_DEFAULT,
+    LOCALHOST_REDIRECT,
+    SPEC_VERSION,
+    SetupSpec,
+    setup_app_registration,
+)
 from napt.build import build_package, create_intunewin
 from napt.config import load_effective_config
 from napt.config.defaults import ORG_YAML_TEMPLATE
@@ -99,6 +117,7 @@ from napt.exceptions import (
     PackagingError,
     StateError,
 )
+from napt.graph.intune import list_mobile_apps
 from napt.logging import get_logger, set_global_logger
 from napt.promote import (
     apply_plan,
@@ -113,25 +132,6 @@ from napt.promote import (
 )
 from napt.state import summarize_deployment_states
 from napt.upload import upload_package
-from napt.upload.auth import (
-    AuthStatus,
-    get_access_token,
-    get_status as auth_status,
-    load_auth_store,
-    login as auth_login,
-    logout as auth_logout,
-)
-from napt.upload.entra import (
-    APPLICATION_PERMISSIONS,
-    BROKER_REDIRECT_TEMPLATE,
-    DELEGATED_PERMISSIONS,
-    FEDERATED_AUDIENCE_DEFAULT,
-    LOCALHOST_REDIRECT,
-    SPEC_VERSION,
-    SetupSpec,
-    setup_app_registration,
-)
-from napt.upload.graph import list_mobile_apps
 from napt.validation import validate_recipe
 
 
