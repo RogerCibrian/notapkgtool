@@ -21,7 +21,6 @@ to Microsoft Intune via the Graph API. Authentication comes from
 Modules:
     manager - Upload orchestration (load config, auth, upload flow).
     intunewin - .intunewin ZIP parser (reads Detection.xml encryption metadata).
-    stamp - Provenance stamp written to the Intune app's notes field.
 
 Example:
     Upload a packaged app to Intune:

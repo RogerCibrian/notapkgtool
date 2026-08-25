@@ -55,7 +55,7 @@ from napt.state import (
     record_published,
     save_deployment_state,
 )
-from napt.upload.stamp import ENTRY_INSTALL, ENTRY_UPDATE, find_stamped_app
+from napt.state.stamp import ENTRY_INSTALL, ENTRY_UPDATE, find_stamped_app
 
 __all__ = ["reconcile_publications"]
 
