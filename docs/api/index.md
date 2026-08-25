@@ -48,13 +48,13 @@ napt/
 │   └── release.py              # PSADT release download and caching
 │
 ├── state/                   # State persistence
-│   ├── cache.py                # Discovery cache (disposable optimization)
-│   └── deployment.py           # Per-app deployment state (authoritative)
+│   ├── cache.py                # Disposable cache of discovered versions and ETags
+│   ├── deployment.py           # Authoritative per-app record of published and pending releases
+│   └── stamp.py                # Provenance stamp linking Intune apps to deployment state
 │
 ├── upload/                  # Intune upload pipeline
 │   ├── manager.py              # Upload orchestration
-│   ├── intunewin.py            # .intunewin package parser
-│   └── stamp.py                # Provenance stamp in the Intune app's notes
+│   └── intunewin.py            # .intunewin package parser
 │
 └── versioning/              # Version extraction and comparison
     ├── keys.py                 # Version key extraction (DiscoveredVersion)

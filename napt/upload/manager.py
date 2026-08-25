@@ -63,13 +63,13 @@ from napt.state import (
     record_published,
     save_deployment_state,
 )
-from napt.upload.intunewin import extract_encrypted_payload, parse_intunewin
-from napt.upload.stamp import (
+from napt.state.stamp import (
     ENTRY_INSTALL,
     ENTRY_UPDATE,
     build_stamp,
     find_stamped_app,
 )
+from napt.upload.intunewin import extract_encrypted_payload, parse_intunewin
 
 __all__ = ["upload_package"]
 

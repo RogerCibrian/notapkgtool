@@ -27,6 +27,11 @@ This package holds two kinds of state with opposite philosophies:
     Serialized deterministically so unchanged state produces byte-identical
     files and clean diffs.
 
+The provenance stamp ([napt.state.stamp][]) is the join between deployment
+state and Intune: a machine-parseable line in each published app's notes
+field that marks the app as NAPT-managed and ties it to the publish
+instance recorded here.
+
 Cache tracking is enabled by default and can be disabled with the
 --stateless flag, which also disables deployment state writes.
 
