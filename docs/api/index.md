@@ -18,6 +18,10 @@ napt/
 ├── results.py               # Public API return types (dataclasses)
 ├── validation.py            # Recipe validation logic
 │
+├── auth/                    # Microsoft Entra ID authentication
+│   ├── credentials.py          # Token resolution and the napt auth login session
+│   └── registration.py         # App registration provisioning (napt auth setup)
+│
 ├── build/                   # PSADT package building
 │   ├── manager.py              # Package building orchestration
 │   ├── packager.py             # .intunewin package creation
@@ -36,6 +40,10 @@ napt/
 ├── download/                # HTTP file downloads
 │   └── download.py             # HTTP downloads with ETag support
 │
+├── graph/                   # Microsoft Graph client
+│   ├── client.py               # HTTP transport with retry and error mapping
+│   └── intune.py               # Win32 app upload, queries, and assignments
+│
 ├── psadt/                   # PSADT release management
 │   └── release.py              # PSADT release download and caching
 │
@@ -45,9 +53,8 @@ napt/
 │
 ├── upload/                  # Intune upload pipeline
 │   ├── manager.py              # Upload orchestration
-│   ├── graph.py                # Graph API and Azure Blob Storage calls
-│   ├── auth.py                 # Azure credential chain (env, managed identity, CLI, device code)
-│   └── intunewin.py            # .intunewin package parser
+│   ├── intunewin.py            # .intunewin package parser
+│   └── stamp.py                # Provenance stamp in the Intune app's notes
 │
 └── versioning/              # Version extraction and comparison
     ├── keys.py                 # Version key extraction (DiscoveredVersion)
@@ -112,6 +119,8 @@ Result (dataclass)
 - [Discovery API](discovery.md) - Discovery strategy implementations
 - [Build API](build.md) - Package building functions
 - [Upload API](upload.md) - Intune upload pipeline
+- [Auth API](auth.md) - Entra ID sign-in and app registration
+- [Graph API](graph.md) - Microsoft Graph transport and Intune calls
 - [Config API](config.md) - Configuration loading
 - [Exceptions API](exceptions.md) - Exception hierarchy
 

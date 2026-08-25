@@ -15,7 +15,7 @@
 """Entra ID app registration provisioning for `napt auth setup`.
 
 Creates -- or brings up to spec -- the app registration that
-[napt.upload.auth][] signs in with, so an administrator never has to click
+[napt.auth.credentials][] signs in with, so an administrator never has to click
 through the portal:
 
 - The application object with `http://localhost` and the Windows broker
@@ -53,16 +53,16 @@ import time
 import msal
 
 from napt import __version__
-from napt.exceptions import AuthError, ConfigError, NetworkError
-from napt.upload.auth import (
-    _AUTHORITY_BASE,
-    _LOGIN_TIMEOUT,
+from napt.auth.credentials import (
+    AUTHORITY_BASE,
+    LOGIN_TIMEOUT,
     AuthConfig,
-    _msal_error,
-    _remember,
     load_auth_store,
+    msal_error,
+    remember_tenant,
 )
-from napt.upload.graph import _graph_request, _json_headers
+from napt.exceptions import AuthError, ConfigError, NetworkError
+from napt.graph.client import graph_request, json_headers
 
 __all__ = [
     "BROKER_REDIRECT_TEMPLATE",
@@ -264,17 +264,17 @@ def _bootstrap_token(tenant_id: str) -> str:
     """
     app = msal.PublicClientApplication(
         _GRAPH_CLI_TOOLS_CLIENT_ID,
-        authority=f"{_AUTHORITY_BASE}/{tenant_id}",
+        authority=f"{AUTHORITY_BASE}/{tenant_id}",
     )
     print("Opening your browser to sign in as an administrator...")
     try:
         result = app.acquire_token_interactive(
-            _BOOTSTRAP_SCOPES, prompt="select_account", timeout=_LOGIN_TIMEOUT
+            _BOOTSTRAP_SCOPES, prompt="select_account", timeout=LOGIN_TIMEOUT
         )
     except Exception as err:  # MSAL surfaces transport failures as raw errors
         raise AuthError(f"{_HINT_BOOTSTRAP_FAILED}Details: {err}") from err
     if "access_token" not in result:
-        raise AuthError(f"{_HINT_BOOTSTRAP_FAILED}Details: {_msal_error(result)}")
+        raise AuthError(f"{_HINT_BOOTSTRAP_FAILED}Details: {msal_error(result)}")
     return result["access_token"]
 
 
@@ -284,22 +284,22 @@ def _bootstrap_token(tenant_id: str) -> str:
 
 
 def _get(token: str, path: str, context: str) -> dict:
-    return _graph_request("GET", f"{_GRAPH_V1}{path}", context, _json_headers(token))
+    return graph_request("GET", f"{_GRAPH_V1}{path}", context, json_headers(token))
 
 
 def _post(token: str, path: str, body: dict, context: str) -> dict:
-    return _graph_request(
+    return graph_request(
         "POST",
         f"{_GRAPH_V1}{path}",
         context,
-        _json_headers(token),
+        json_headers(token),
         json=body,
         idempotent=False,
     )
 
 
 def _patch(token: str, path: str, body: dict, context: str) -> None:
-    _graph_request("PATCH", f"{_GRAPH_V1}{path}", context, _json_headers(token), body)
+    graph_request("PATCH", f"{_GRAPH_V1}{path}", context, json_headers(token), body)
 
 
 def _post_after_replication(token: str, path: str, body: dict, context: str) -> dict:
@@ -678,7 +678,7 @@ def setup_app_registration(spec: SetupSpec) -> SetupResult:
     Example:
         Provision a tenant and trust a CI workflow through OIDC:
             ```python
-            from napt.upload.entra import SetupSpec, setup_app_registration
+            from napt.auth.registration import SetupSpec, setup_app_registration
 
             result = setup_app_registration(
                 SetupSpec(
@@ -716,8 +716,10 @@ def setup_app_registration(spec: SetupSpec) -> SetupResult:
     # Keep an existing session for this tenant when the client ID is unchanged.
     known = load_auth_store().tenants.get(spec.tenant_id)
     if known is not None and known.client_id == result.client_id:
-        _remember(known)
+        remember_tenant(known)
     else:
-        _remember(AuthConfig(client_id=result.client_id, tenant_id=spec.tenant_id))
+        remember_tenant(
+            AuthConfig(client_id=result.client_id, tenant_id=spec.tenant_id)
+        )
     logger.verbose("AUTH", "Saved tenant and client ID for 'napt auth login'")
     return result

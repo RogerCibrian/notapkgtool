@@ -13,6 +13,7 @@ import pytest
 import yaml
 
 from napt.exceptions import NetworkError, StateError
+from napt.graph.intune import VIRTUAL_TARGETS
 from napt.promote import apply_plan, load_plan_file, plan_path_for
 from napt.state import (
     create_default_deployment_state,
@@ -20,7 +21,6 @@ from napt.state import (
     load_deployment_state,
     save_deployment_state,
 )
-from napt.upload.graph import VIRTUAL_TARGETS
 
 NOW = datetime(2026, 7, 8, 12, 0, 0, tzinfo=UTC)
 

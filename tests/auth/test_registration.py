@@ -1,4 +1,4 @@
-"""Tests for napt.upload.entra."""
+"""Tests for napt.auth.registration."""
 
 from __future__ import annotations
 
@@ -6,10 +6,10 @@ from unittest.mock import patch
 
 import pytest
 
+from napt.auth import credentials, registration
+from napt.auth.credentials import AuthConfig, AuthStore
+from napt.auth.registration import SetupSpec, setup_app_registration
 from napt.exceptions import AuthError, ConfigError, NetworkError
-from napt.upload import auth, entra
-from napt.upload.auth import AuthConfig, AuthStore
-from napt.upload.entra import SetupSpec, setup_app_registration
 
 GRAPH_SP_ID = "graph-sp"
 ROLE_IDS = {"DeviceManagementApps.ReadWrite.All": "role-dm", "Group.Read.All": "role-g"}
@@ -34,8 +34,8 @@ def _graph_sp_response() -> dict:
     }
 
 
-def _stamp(spec: int = entra.SPEC_VERSION, version: str | None = None) -> str:
-    version = version or entra.__version__
+def _stamp(spec: int = registration.SPEC_VERSION, version: str | None = None) -> str:
+    version = version or registration.__version__
     return f"napt/v1 spec={spec} version={version} provisioned=2026-08-18"
 
 
@@ -48,20 +48,20 @@ def _complete_app(app_id: str = "cid", object_id: str = "obj") -> dict:
         "notes": _stamp(),
         "publicClient": {
             "redirectUris": [
-                entra.LOCALHOST_REDIRECT,
-                entra.BROKER_REDIRECT_TEMPLATE.format(client_id=app_id),
+                registration.LOCALHOST_REDIRECT,
+                registration.BROKER_REDIRECT_TEMPLATE.format(client_id=app_id),
             ]
         },
         "requiredResourceAccess": [
             {
-                "resourceAppId": entra._MS_GRAPH_APP_ID,
+                "resourceAppId": registration._MS_GRAPH_APP_ID,
                 "resourceAccess": [
                     {"id": ROLE_IDS[p], "type": "Role"}
-                    for p in entra.APPLICATION_PERMISSIONS
+                    for p in registration.APPLICATION_PERMISSIONS
                 ]
                 + [
                     {"id": SCOPE_IDS[p], "type": "Scope"}
-                    for p in entra.DELEGATED_PERMISSIONS
+                    for p in registration.DELEGATED_PERMISSIONS
                 ],
             }
         ],
@@ -69,7 +69,7 @@ def _complete_app(app_id: str = "cid", object_id: str = "obj") -> dict:
 
 
 class FakeGraph:
-    """Routes _graph_request calls to canned responses and records writes."""
+    """Routes graph_request calls to canned responses and records writes."""
 
     def __init__(self, responses: dict[tuple[str, str], dict | list[dict]]):
         # Keys are (method, path-after-v1.0 up to '?'); values are a dict, or a
@@ -78,7 +78,7 @@ class FakeGraph:
         self.calls: list[tuple[str, str, dict | None]] = []
 
     def __call__(self, method, url, context, headers, json=None, **kwargs):
-        path = url.replace(entra._GRAPH_V1, "").split("?")[0]
+        path = url.replace(registration._GRAPH_V1, "").split("?")[0]
         self.calls.append((method, path, json))
         key = (method, path)
         if key not in self.responses:
@@ -100,14 +100,14 @@ def user_dir(tmp_path, monkeypatch):
 
 @pytest.fixture
 def bootstrap():
-    with patch("napt.upload.entra._bootstrap_token", return_value="tok") as b:
+    with patch("napt.auth.registration._bootstrap_token", return_value="tok") as b:
         yield b
 
 
 def _run(graph: FakeGraph, spec: SetupSpec):
     with (
-        patch("napt.upload.entra._graph_request", graph),
-        patch("napt.upload.entra.time.sleep"),
+        patch("napt.auth.registration.graph_request", graph),
+        patch("napt.auth.registration.time.sleep"),
     ):
         return setup_app_registration(spec)
 
@@ -125,7 +125,7 @@ def test_spec_federated_credential_name_is_derived_or_given() -> None:
         federated_subject="repo:o/r:ref:refs/heads/main",
     )
     assert derived.federated_credential_name == "napt-repo-o-r-ref-refs-heads-main"
-    assert derived.federated_audience == entra.FEDERATED_AUDIENCE_DEFAULT
+    assert derived.federated_audience == registration.FEDERATED_AUDIENCE_DEFAULT
 
     given = SetupSpec(
         tenant_id="t",
@@ -181,9 +181,9 @@ def test_setup_creates_everything_in_a_fresh_tenant(user_dir, bootstrap) -> None
     )
     assert create is not None
     assert create["signInAudience"] == "AzureADMyOrg"
-    assert create["publicClient"]["redirectUris"] == [entra.LOCALHOST_REDIRECT]
+    assert create["publicClient"]["redirectUris"] == [registration.LOCALHOST_REDIRECT]
     access = create["requiredResourceAccess"][0]
-    assert access["resourceAppId"] == entra._MS_GRAPH_APP_ID
+    assert access["resourceAppId"] == registration._MS_GRAPH_APP_ID
     assert {(a["id"], a["type"]) for a in access["resourceAccess"]} == {
         ("role-dm", "Role"),
         ("role-g", "Role"),
@@ -212,12 +212,12 @@ def test_setup_creates_everything_in_a_fresh_tenant(user_dir, bootstrap) -> None
     grant = next(j for m, p, j in graph.writes() if p == "/oauth2PermissionGrants")
     assert grant is not None
     assert grant["consentType"] == "AllPrincipals"
-    assert grant["scope"].split() == list(entra.DELEGATED_PERMISSIONS)
+    assert grant["scope"].split() == list(registration.DELEGATED_PERMISSIONS)
 
     # Nothing touches the service principal's redirect URIs or permissions.
     assert not any(p == "/servicePrincipals/sp" for _, p, _ in graph.writes())
 
-    store = auth.load_auth_store()
+    store = credentials.load_auth_store()
     assert store.active == "tid"
     assert store.tenants["tid"] == AuthConfig("new-cid", "tid")
     assert len(result.changes) >= 5
@@ -269,7 +269,7 @@ def test_setup_adds_only_what_is_missing(user_dir, bootstrap) -> None:
     # Only the application roles were declared; delegated scopes are missing.
     app["requiredResourceAccess"] = [
         {
-            "resourceAppId": entra._MS_GRAPH_APP_ID,
+            "resourceAppId": registration._MS_GRAPH_APP_ID,
             "resourceAccess": [
                 {"id": "role-dm", "type": "Role"},
                 {"id": "role-g", "type": "Role"},
@@ -314,7 +314,7 @@ def test_setup_adds_only_what_is_missing(user_dir, bootstrap) -> None:
     graph_access = next(
         r
         for r in app_patch["requiredResourceAccess"]
-        if r["resourceAppId"] == entra._MS_GRAPH_APP_ID
+        if r["resourceAppId"] == registration._MS_GRAPH_APP_ID
     )
     assert {(a["id"], a["type"]) for a in graph_access["resourceAccess"]} == {
         ("role-dm", "Role"),
@@ -333,14 +333,14 @@ def test_setup_adds_only_what_is_missing(user_dir, bootstrap) -> None:
         j for m, p, j in graph.writes() if p == "/oauth2PermissionGrants/grant"
     )
     assert grant_patch is not None
-    assert grant_patch["scope"].split() == sorted(entra.DELEGATED_PERMISSIONS)
+    assert grant_patch["scope"].split() == sorted(registration.DELEGATED_PERMISSIONS)
     assert any("redirect" in c.lower() for c in result.changes)
     assert any("delegated" in c.lower() for c in result.changes)
 
 
 def test_setup_keeps_existing_session_for_same_client(user_dir, bootstrap) -> None:
     """Tests that re-running setup does not sign out a tenant already logged in."""
-    auth._save_auth_store(
+    credentials._save_auth_store(
         AuthStore(
             active="tid",
             tenants={"tid": AuthConfig("cid", "tid", "me@x", "x.com", "X")},
@@ -360,12 +360,14 @@ def test_setup_keeps_existing_session_for_same_client(user_dir, bootstrap) -> No
                 ]
             },
             ("GET", "/oauth2PermissionGrants"): {
-                "value": [{"id": "g", "scope": " ".join(entra.DELEGATED_PERMISSIONS)}]
+                "value": [
+                    {"id": "g", "scope": " ".join(registration.DELEGATED_PERMISSIONS)}
+                ]
             },
         }
     )
     _run(graph, SetupSpec(tenant_id="tid"))
-    assert auth.load_auth_store().tenants["tid"] == AuthConfig(
+    assert credentials.load_auth_store().tenants["tid"] == AuthConfig(
         "cid", "tid", "me@x", "x.com", "X"
     )
 
@@ -428,7 +430,9 @@ def test_bootstrap_failure_is_an_auth_error(user_dir) -> None:
             }
         },
     )()
-    with patch("napt.upload.entra.msal.PublicClientApplication", return_value=fake_app):
+    with patch(
+        "napt.auth.registration.msal.PublicClientApplication", return_value=fake_app
+    ):
         with pytest.raises(AuthError, match="access_denied") as exc:
             setup_app_registration(SetupSpec(tenant_id="tid"))
     assert "--print-only" in str(exc.value)
@@ -446,7 +450,7 @@ def test_consent_retries_until_service_principal_replicates(
     attempts = {"n": 0}
 
     def flaky_graph(method, url, context, headers, json=None, **kwargs):
-        path = url.replace(entra._GRAPH_V1, "").split("?")[0]
+        path = url.replace(registration._GRAPH_V1, "").split("?")[0]
         if (method, path) == ("POST", "/servicePrincipals/sp/appRoleAssignments"):
             attempts["n"] += 1
             if attempts["n"] == 1:
@@ -461,7 +465,10 @@ def test_consent_retries_until_service_principal_replicates(
                 },
                 ("GET", "/oauth2PermissionGrants"): {
                     "value": [
-                        {"id": "g", "scope": " ".join(entra.DELEGATED_PERMISSIONS)}
+                        {
+                            "id": "g",
+                            "scope": " ".join(registration.DELEGATED_PERMISSIONS),
+                        }
                     ]
                 },
             }
@@ -470,14 +477,14 @@ def test_consent_retries_until_service_principal_replicates(
     # Second /servicePrincipals GET must return the NAPT SP; FakeGraph above is
     # rebuilt per call, so answer it explicitly.
     def graph(method, url, context, headers, json=None, **kwargs):
-        path = url.replace(entra._GRAPH_V1, "").split("?")[0]
+        path = url.replace(registration._GRAPH_V1, "").split("?")[0]
         if (method, path) == ("GET", "/servicePrincipals") and "appId eq 'cid'" in url:
             return {"value": [{"id": "sp"}]}
         return flaky_graph(method, url, context, headers, json, **kwargs)
 
     with (
-        patch("napt.upload.entra._graph_request", graph),
-        patch("napt.upload.entra.time.sleep") as sleep,
+        patch("napt.auth.registration.graph_request", graph),
+        patch("napt.auth.registration.time.sleep") as sleep,
     ):
         result = setup_app_registration(SetupSpec(tenant_id="tid"))
 
@@ -506,7 +513,9 @@ def test_setup_adds_federated_credential_once(user_dir, bootstrap) -> None:
                 ]
             },
             ("GET", "/oauth2PermissionGrants"): {
-                "value": [{"id": "g", "scope": " ".join(entra.DELEGATED_PERMISSIONS)}]
+                "value": [
+                    {"id": "g", "scope": " ".join(registration.DELEGATED_PERMISSIONS)}
+                ]
             },
         }
 
@@ -536,7 +545,7 @@ def test_setup_adds_federated_credential_once(user_dir, bootstrap) -> None:
         "name": "github-prod",
         "issuer": issuer,
         "subject": subject,
-        "audiences": [entra.FEDERATED_AUDIENCE_DEFAULT],
+        "audiences": [registration.FEDERATED_AUDIENCE_DEFAULT],
         "description": "NAPT CI/CD (OIDC)",
     }
     assert any("federated" in c for c in result.changes)
@@ -574,7 +583,9 @@ def _existing_tenant_responses(app: dict) -> dict:
             ]
         },
         ("GET", "/oauth2PermissionGrants"): {
-            "value": [{"id": "g", "scope": " ".join(entra.DELEGATED_PERMISSIONS)}]
+            "value": [
+                {"id": "g", "scope": " ".join(registration.DELEGATED_PERMISSIONS)}
+            ]
         },
     }
 
@@ -584,15 +595,15 @@ def test_stamp_round_trip_preserves_admin_notes() -> None:
     notes = (
         "Owned by Endpoint team\nnapt/v1 spec=0 version=0.9.0 provisioned=2026-01-01\n"
     )
-    parsed = entra._parse_stamp(notes)
+    parsed = registration._parse_stamp(notes)
     assert parsed == {"spec": "0", "version": "0.9.0", "date": "2026-01-01"}
 
-    updated = entra._with_stamp(notes)
+    updated = registration._with_stamp(notes)
     lines = updated.splitlines()
-    assert lines[0].startswith(f"napt/v1 spec={entra.SPEC_VERSION} version=")
+    assert lines[0].startswith(f"napt/v1 spec={registration.SPEC_VERSION} version=")
     assert lines[1:] == ["Owned by Endpoint team"]
-    assert entra._parse_stamp(None) is None
-    assert entra._parse_stamp("napt/v1 spec=x") is None
+    assert registration._parse_stamp(None) is None
+    assert registration._parse_stamp("napt/v1 spec=x") is None
 
 
 def test_setup_create_writes_stamp(user_dir, bootstrap) -> None:
@@ -615,9 +626,9 @@ def test_setup_create_writes_stamp(user_dir, bootstrap) -> None:
         j for m, p, j in graph.writes() if (m, p) == ("POST", "/applications")
     )
     assert create is not None
-    assert entra._parse_stamp(create["notes"]) == {
-        "spec": str(entra.SPEC_VERSION),
-        "version": entra.__version__,
+    assert registration._parse_stamp(create["notes"]) == {
+        "spec": str(registration.SPEC_VERSION),
+        "version": registration.__version__,
         "date": create["notes"].split("provisioned=")[1],
     }
 
@@ -634,7 +645,7 @@ def test_setup_refuses_unstamped_name_match_without_adopt(user_dir, bootstrap) -
     assert result.client_id == "cid"
     assert result.changes == []
     assert graph.writes() == []
-    assert auth.load_auth_store().active is None  # nothing remembered either
+    assert credentials.load_auth_store().active is None  # nothing remembered either
 
 
 def test_setup_adopts_unstamped_registration_with_flag(user_dir, bootstrap) -> None:
@@ -653,12 +664,12 @@ def test_setup_adopts_unstamped_registration_with_flag(user_dir, bootstrap) -> N
     assert patch is not None
     assert list(patch) == ["notes"]  # nothing else needed changing
     assert patch["notes"].splitlines()[1] == "Created by hand"
-    assert entra._parse_stamp(patch["notes"]) is not None
+    assert registration._parse_stamp(patch["notes"]) is not None
     assert result.changes == [
-        f"Stamped internal notes: napt/v1 spec={entra.SPEC_VERSION} "
-        f"version={entra.__version__}"
+        f"Stamped internal notes: napt/v1 spec={registration.SPEC_VERSION} "
+        f"version={registration.__version__}"
     ]
-    assert auth.load_auth_store().active == "tid"
+    assert credentials.load_auth_store().active == "tid"
 
 
 def test_setup_explicit_client_id_implies_adopt(user_dir, bootstrap) -> None:
@@ -687,4 +698,4 @@ def test_setup_restamps_outdated_spec(user_dir, bootstrap) -> None:
         j for m, p, j in graph.writes() if (m, p) == ("PATCH", "/applications/obj")
     )
     assert patch is not None and list(patch) == ["notes"]
-    assert f"spec={entra.SPEC_VERSION}" in patch["notes"]
+    assert f"spec={registration.SPEC_VERSION}" in patch["notes"]

@@ -39,19 +39,11 @@ from pathlib import Path
 import tempfile
 from typing import Any
 
+from napt.auth.credentials import get_access_token
 from napt.build.icons import MAX_ICON_BYTES
 from napt.config import load_effective_config
 from napt.exceptions import ConfigError, PackagingError
-from napt.logging import get_global_logger
-from napt.results import UploadResult
-from napt.state import (
-    deployment_state_path,
-    load_deployment_state,
-    record_published,
-    save_deployment_state,
-)
-from napt.upload.auth import get_access_token
-from napt.upload.graph import (
+from napt.graph.intune import (
     commit_content_version,
     commit_content_version_file,
     create_content_version,
@@ -62,6 +54,14 @@ from napt.upload.graph import (
     list_mobile_apps,
     update_win32_app,
     upload_to_azure_blob,
+)
+from napt.logging import get_global_logger
+from napt.results import UploadResult
+from napt.state import (
+    deployment_state_path,
+    load_deployment_state,
+    record_published,
+    save_deployment_state,
 )
 from napt.upload.intunewin import extract_encrypted_payload, parse_intunewin
 from napt.upload.stamp import (

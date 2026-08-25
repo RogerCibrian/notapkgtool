@@ -47,6 +47,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from napt.graph.intune import get_mobile_app
 from napt.logging import get_global_logger
 from napt.state import (
     deployment_state_path,
@@ -54,7 +55,6 @@ from napt.state import (
     record_published,
     save_deployment_state,
 )
-from napt.upload.graph import get_mobile_app
 from napt.upload.stamp import ENTRY_INSTALL, ENTRY_UPDATE, find_stamped_app
 
 __all__ = ["reconcile_publications"]
