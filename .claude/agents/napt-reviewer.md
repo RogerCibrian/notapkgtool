@@ -63,6 +63,7 @@ Review the diff against the rules in these CLAUDE.md sections:
 - **`Exceptions`** — is each `raise` using the right type for the error domain? Is public API using custom types and private helpers using built-ins?
 - **`results.py Scope`** — only public API return types allowed in `napt/results.py`
 - **`Console Output`** — ASCII-only applies to print(), logger, CLI strings (not docstrings / comments / JSON / YAML)
+- **`CLI Structure`** — strict one module per top-level command under `napt/cli/` (`napt/cli/<command>.py` owns its `cmd_*` handlers and `register(subparsers)` hook); `__init__.py` assembles and dispatches only. Flag any new command added outside its own module, two commands sharing a module, or command logic growing in `__init__.py`.
 
 ### Project principles
 

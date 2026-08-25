@@ -181,6 +181,14 @@ Domain types and internal types stay co-located with their logic.
 
 ---
 
+## CLI Structure
+
+**Strict one module per top-level command.** `napt/cli/<command>.py` owns everything about `napt <command>`: its `cmd_*` handler(s), its parser definition in a `register(subparsers)` hook, and any helpers only that command uses. `napt/cli/__init__.py` only assembles the top-level parser, calls each module's `register`, and dispatches — no command logic there.
+
+**Adding a command:** create `napt/cli/<command>.py` with `cmd_<command>` and `register`, call `register` from `main()` in `__init__.py`, and add `tests/cli/test_<command>.py`. A command with subcommands (`auth`, `promote`) still gets exactly one module. Never combine two commands in one module.
+
+---
+
 ## Documentation
 
 Update docs when code changes affect user-facing behavior.
