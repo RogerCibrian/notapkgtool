@@ -9,7 +9,6 @@ NAPT's codebase structure matches the module organization. Here's the file struc
 ```
 napt/
 ├── __init__.py              # Package initialization and public API exports
-├── cli.py                   # Command-line interface
 ├── core.py                  # Main public API functions (orchestration)
 ├── detection.py             # Detection script generation for Intune Win32 apps
 ├── requirements.py          # Requirements script generation for Intune Update entries
@@ -26,6 +25,17 @@ napt/
 │   ├── manager.py              # Package building orchestration
 │   ├── packager.py             # .intunewin package creation
 │   └── template.py             # PSADT template generation
+│
+├── cli/                     # Command-line interface (one module per command)
+│   ├── auth.py                 # napt auth login/logout/status/setup
+│   ├── build.py                # napt build
+│   ├── discover.py             # napt discover
+│   ├── init.py                 # napt init
+│   ├── package.py              # napt package
+│   ├── promote.py              # napt promote plan/apply
+│   ├── status.py               # napt status
+│   ├── upload.py               # napt upload
+│   └── validate.py             # napt validate
 │
 ├── config/                  # Configuration loading
 │   └── loader.py               # 3-layer configuration system
@@ -87,7 +97,7 @@ Result (dataclass)
 
 ## Quick Start
 
-- **Extending the CLI:** See [`cli.py`](cli.md) for command registration patterns
+- **Extending the CLI:** See [`cli/`](cli.md) for command registration patterns
 - **Adding discovery strategies:** Implement `DiscoveryStrategy` protocol from [`discovery/base.py`](discovery.md)
 
 ## Key Concepts
@@ -110,7 +120,7 @@ Result (dataclass)
 ## Extending NAPT
 
 - **New discovery strategy:** Implement `DiscoveryStrategy`, register with `register_strategy()`, add to `discovery/__init__.py`
-- **New CLI command:** Add parser in `cli.py`, create `cmd_<name>()` handler, register with `set_defaults()`
+- **New CLI command:** Create `napt/cli/<command>.py` with the `cmd_<name>()` handler and a `register(subparsers)` hook, call `register` from `main()` in `napt/cli/__init__.py`, and add `tests/cli/test_<command>.py` (strict one module per command)
 - **New config option:** Update schema in `config/loader.py`, add validation in `validation.py`, document in recipe schema
 
 ## See Also
