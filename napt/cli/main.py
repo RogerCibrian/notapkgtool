@@ -23,7 +23,6 @@ pyproject.toml.
 from __future__ import annotations
 
 import argparse
-from importlib.metadata import version
 import sys
 
 from napt.cli import (
@@ -37,6 +36,7 @@ from napt.cli import (
     upload,
     validate,
 )
+from napt.version import get_version
 
 
 def main() -> None:
@@ -53,7 +53,7 @@ def main() -> None:
     parser.add_argument(
         "--version",
         action="version",
-        version=f"napt {version('napt')}",
+        version=f"napt {get_version()}",
     )
 
     subparsers = parser.add_subparsers(

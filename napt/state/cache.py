@@ -69,8 +69,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from napt import __version__
 from napt.exceptions import StateError
+from napt.version import get_version
 
 
 def cache_file_path(config: dict[str, Any]) -> Path:
@@ -317,7 +317,7 @@ def create_default_cache() -> dict[str, Any]:
     """
     return {
         "metadata": {
-            "napt_version": __version__,
+            "napt_version": get_version(),
             "schema_version": "2",
             "last_updated": datetime.now(UTC).isoformat(),
         },

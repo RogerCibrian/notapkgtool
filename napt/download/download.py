@@ -90,9 +90,9 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from napt import __version__
 from napt.exceptions import ConfigError, NetworkError, NotModifiedError
 from napt.results import DownloadResult
+from napt.version import get_version
 
 # Stream size per chunk (1 MiB). Tune up/down if needed.
 DEFAULT_CHUNK = 1024 * 1024
@@ -177,7 +177,8 @@ def make_session() -> requests.Session:
     s.headers.update(
         {
             "User-Agent": (
-                f"napt/{__version__} (+https://github.com/RogerCibrian/notapkgtool)"
+                f"napt/{get_version()} "
+                f"(+https://github.com/RogerCibrian/notapkgtool)"
             ),
             # Request the raw, uncompressed representation to keep ETags stable
             # across runs and avoid spurious 200s when a CDN flips to gzip.

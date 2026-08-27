@@ -52,7 +52,6 @@ import time
 
 import msal
 
-from napt import __version__
 from napt.auth.credentials import (
     AUTHORITY_BASE,
     LOGIN_TIMEOUT,
@@ -63,6 +62,7 @@ from napt.auth.credentials import (
 )
 from napt.exceptions import AuthError, ConfigError, NetworkError
 from napt.graph.client import graph_request, json_headers
+from napt.version import get_version
 
 __all__ = [
     "BROKER_REDIRECT_TEMPLATE",
@@ -222,7 +222,8 @@ class SetupResult:
 def _render_stamp() -> str:
     today = datetime.now(UTC).date().isoformat()
     return (
-        f"{_STAMP_PREFIX} spec={SPEC_VERSION} version={__version__} provisioned={today}"
+        f"{_STAMP_PREFIX} spec={SPEC_VERSION} "
+        f"version={get_version()} provisioned={today}"
     )
 
 
@@ -477,7 +478,7 @@ def _ensure_application(
             logger.info(
                 "AUTH",
                 f"Registration is at spec {result.previous_spec}; NAPT "
-                f"{__version__} expects spec {SPEC_VERSION}. Updating.",
+                f"{get_version()} expects spec {SPEC_VERSION}. Updating.",
             )
 
     patch: dict = {}
@@ -500,12 +501,12 @@ def _ensure_application(
     if (
         stamp is None
         or stamp["spec"] != str(SPEC_VERSION)
-        or stamp["version"] != __version__
+        or stamp["version"] != get_version()
     ):
         patch["notes"] = _with_stamp(app.get("notes"))
         result.changes.append(
             f"Stamped internal notes: {_STAMP_PREFIX} spec={SPEC_VERSION} "
-            f"version={__version__}"
+            f"version={get_version()}"
         )
 
     if patch:
