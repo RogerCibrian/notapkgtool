@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://rogercibrian.github.io/notapkgtool/api/auth/">
       
       
-        <link rel="prev" href="../validation/">
+        <link rel="prev" href="../version/">
       
       
         <link rel="next" href="../build/">
@@ -790,6 +790,34 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../version/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    version
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -1134,10 +1162,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_8" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_9" >
         
           
-          <label class="md-nav__link" for="__nav_4_8" id="__nav_4_8_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_9" id="__nav_4_9_label" tabindex="0">
             
   
   
@@ -1155,8 +1183,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_8">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_9">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1360,10 +1388,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_10" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_11" >
         
           
-          <label class="md-nav__link" for="__nav_4_10" id="__nav_4_10_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_11" id="__nav_4_11_label" tabindex="0">
             
   
   
@@ -1381,8 +1409,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_10_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_10">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_11">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -5091,8 +5119,7 @@ does not exist, or Graph reports unexpected permission data.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>napt/auth/registration.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-656">656</a></span>
-<span class="normal"><a href="#__codelineno-0-657">657</a></span>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-657">657</a></span>
 <span class="normal"><a href="#__codelineno-0-658">658</a></span>
 <span class="normal"><a href="#__codelineno-0-659">659</a></span>
 <span class="normal"><a href="#__codelineno-0-660">660</a></span>
@@ -5160,76 +5187,77 @@ does not exist, or Graph reports unexpected permission data.</p>
 <span class="normal"><a href="#__codelineno-0-722">722</a></span>
 <span class="normal"><a href="#__codelineno-0-723">723</a></span>
 <span class="normal"><a href="#__codelineno-0-724">724</a></span>
-<span class="normal"><a href="#__codelineno-0-725">725</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-656"><a id="__codelineno-0-656" name="__codelineno-0-656"></a><span class="k">def</span><span class="w"> </span><span class="nf">setup_app_registration</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">SetupSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SetupResult</span><span class="p">:</span>
-</span><span id="__span-0-657"><a id="__codelineno-0-657" name="__codelineno-0-657"></a><span class="w">    </span><span class="sd">"""Creates or completes the NAPT app registration in a tenant.</span>
-</span><span id="__span-0-658"><a id="__codelineno-0-658" name="__codelineno-0-658"></a>
-</span><span id="__span-0-659"><a id="__codelineno-0-659" name="__codelineno-0-659"></a><span class="sd">    Signs an administrator in, then finds or creates the application,</span>
-</span><span id="__span-0-660"><a id="__codelineno-0-660" name="__codelineno-0-660"></a><span class="sd">    adds any missing redirect URIs and Graph permissions, ensures the</span>
-</span><span id="__span-0-661"><a id="__codelineno-0-661" name="__codelineno-0-661"></a><span class="sd">    service principal exists with admin consent for every permission, and</span>
-</span><span id="__span-0-662"><a id="__codelineno-0-662" name="__codelineno-0-662"></a><span class="sd">    adds the OIDC federated credential when requested. Finally records</span>
-</span><span id="__span-0-663"><a id="__codelineno-0-663" name="__codelineno-0-663"></a><span class="sd">    the tenant and client ID as the active tenant for `napt auth login`.</span>
-</span><span id="__span-0-664"><a id="__codelineno-0-664" name="__codelineno-0-664"></a>
-</span><span id="__span-0-665"><a id="__codelineno-0-665" name="__codelineno-0-665"></a><span class="sd">    Args:</span>
-</span><span id="__span-0-666"><a id="__codelineno-0-666" name="__codelineno-0-666"></a><span class="sd">        spec: What to provision.</span>
-</span><span id="__span-0-667"><a id="__codelineno-0-667" name="__codelineno-0-667"></a>
-</span><span id="__span-0-668"><a id="__codelineno-0-668" name="__codelineno-0-668"></a><span class="sd">    Returns:</span>
-</span><span id="__span-0-669"><a id="__codelineno-0-669" name="__codelineno-0-669"></a><span class="sd">        The registration's IDs and the list of changes made.</span>
-</span><span id="__span-0-670"><a id="__codelineno-0-670" name="__codelineno-0-670"></a>
-</span><span id="__span-0-671"><a id="__codelineno-0-671" name="__codelineno-0-671"></a><span class="sd">    Raises:</span>
-</span><span id="__span-0-672"><a id="__codelineno-0-672" name="__codelineno-0-672"></a><span class="sd">        AuthError: If the administrator sign-in fails or lacks the rights</span>
-</span><span id="__span-0-673"><a id="__codelineno-0-673" name="__codelineno-0-673"></a><span class="sd">            to manage applications.</span>
-</span><span id="__span-0-674"><a id="__codelineno-0-674" name="__codelineno-0-674"></a><span class="sd">        ConfigError: If the display name is ambiguous, a given client ID</span>
-</span><span id="__span-0-675"><a id="__codelineno-0-675" name="__codelineno-0-675"></a><span class="sd">            does not exist, or Graph reports unexpected permission data.</span>
-</span><span id="__span-0-676"><a id="__codelineno-0-676" name="__codelineno-0-676"></a><span class="sd">        NetworkError: On Graph API failures.</span>
-</span><span id="__span-0-677"><a id="__codelineno-0-677" name="__codelineno-0-677"></a>
-</span><span id="__span-0-678"><a id="__codelineno-0-678" name="__codelineno-0-678"></a><span class="sd">    Example:</span>
-</span><span id="__span-0-679"><a id="__codelineno-0-679" name="__codelineno-0-679"></a><span class="sd">        Provision a tenant and trust a CI workflow through OIDC:</span>
-</span><span id="__span-0-680"><a id="__codelineno-0-680" name="__codelineno-0-680"></a><span class="sd">            ```python</span>
-</span><span id="__span-0-681"><a id="__codelineno-0-681" name="__codelineno-0-681"></a><span class="sd">            from napt.auth.registration import SetupSpec, setup_app_registration</span>
-</span><span id="__span-0-682"><a id="__codelineno-0-682" name="__codelineno-0-682"></a>
-</span><span id="__span-0-683"><a id="__codelineno-0-683" name="__codelineno-0-683"></a><span class="sd">            result = setup_app_registration(</span>
-</span><span id="__span-0-684"><a id="__codelineno-0-684" name="__codelineno-0-684"></a><span class="sd">                SetupSpec(</span>
-</span><span id="__span-0-685"><a id="__codelineno-0-685" name="__codelineno-0-685"></a><span class="sd">                    tenant_id="&lt;tenant id&gt;",</span>
-</span><span id="__span-0-686"><a id="__codelineno-0-686" name="__codelineno-0-686"></a><span class="sd">                    federated_issuer="https://token.actions.githubusercontent.com",</span>
-</span><span id="__span-0-687"><a id="__codelineno-0-687" name="__codelineno-0-687"></a><span class="sd">                    federated_subject="repo:contoso/intune-apps:ref:refs/heads/main",</span>
-</span><span id="__span-0-688"><a id="__codelineno-0-688" name="__codelineno-0-688"></a><span class="sd">                )</span>
-</span><span id="__span-0-689"><a id="__codelineno-0-689" name="__codelineno-0-689"></a><span class="sd">            )</span>
-</span><span id="__span-0-690"><a id="__codelineno-0-690" name="__codelineno-0-690"></a><span class="sd">            print(result.client_id, result.changes)</span>
-</span><span id="__span-0-691"><a id="__codelineno-0-691" name="__codelineno-0-691"></a><span class="sd">            ```</span>
-</span><span id="__span-0-692"><a id="__codelineno-0-692" name="__codelineno-0-692"></a>
-</span><span id="__span-0-693"><a id="__codelineno-0-693" name="__codelineno-0-693"></a><span class="sd">    """</span>
-</span><span id="__span-0-694"><a id="__codelineno-0-694" name="__codelineno-0-694"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">napt.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_global_logger</span>
-</span><span id="__span-0-695"><a id="__codelineno-0-695" name="__codelineno-0-695"></a>
-</span><span id="__span-0-696"><a id="__codelineno-0-696" name="__codelineno-0-696"></a>    <span class="n">logger</span> <span class="o">=</span> <span class="n">get_global_logger</span><span class="p">()</span>
-</span><span id="__span-0-697"><a id="__codelineno-0-697" name="__codelineno-0-697"></a>    <span class="n">token</span> <span class="o">=</span> <span class="n">_bootstrap_token</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">tenant_id</span><span class="p">)</span>
-</span><span id="__span-0-698"><a id="__codelineno-0-698" name="__codelineno-0-698"></a>
-</span><span id="__span-0-699"><a id="__codelineno-0-699" name="__codelineno-0-699"></a>    <span class="n">roles</span><span class="p">,</span> <span class="n">scopes</span><span class="p">,</span> <span class="n">graph_sp_id</span> <span class="o">=</span> <span class="n">_graph_permission_ids</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
-</span><span id="__span-0-700"><a id="__codelineno-0-700" name="__codelineno-0-700"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">SetupResult</span><span class="p">(</span>
-</span><span id="__span-0-701"><a id="__codelineno-0-701" name="__codelineno-0-701"></a>        <span class="n">tenant_id</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">tenant_id</span><span class="p">,</span> <span class="n">client_id</span><span class="o">=</span><span class="s2">""</span><span class="p">,</span> <span class="n">display_name</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">display_name</span>
-</span><span id="__span-0-702"><a id="__codelineno-0-702" name="__codelineno-0-702"></a>    <span class="p">)</span>
-</span><span id="__span-0-703"><a id="__codelineno-0-703" name="__codelineno-0-703"></a>
-</span><span id="__span-0-704"><a id="__codelineno-0-704" name="__codelineno-0-704"></a>    <span class="n">app</span> <span class="o">=</span> <span class="n">_ensure_application</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">spec</span><span class="p">,</span> <span class="n">roles</span><span class="p">,</span> <span class="n">scopes</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
-</span><span id="__span-0-705"><a id="__codelineno-0-705" name="__codelineno-0-705"></a>    <span class="n">result</span><span class="o">.</span><span class="n">client_id</span> <span class="o">=</span> <span class="n">app</span><span class="p">[</span><span class="s2">"appId"</span><span class="p">]</span>
-</span><span id="__span-0-706"><a id="__codelineno-0-706" name="__codelineno-0-706"></a>    <span class="n">result</span><span class="o">.</span><span class="n">display_name</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"displayName"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">spec</span><span class="o">.</span><span class="n">display_name</span>
-</span><span id="__span-0-707"><a id="__codelineno-0-707" name="__codelineno-0-707"></a>    <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">needs_adopt</span><span class="p">:</span>
-</span><span id="__span-0-708"><a id="__codelineno-0-708" name="__codelineno-0-708"></a>        <span class="k">return</span> <span class="n">result</span>
-</span><span id="__span-0-709"><a id="__codelineno-0-709" name="__codelineno-0-709"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"AUTH"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"App registration: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">display_name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">client_id</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
-</span><span id="__span-0-710"><a id="__codelineno-0-710" name="__codelineno-0-710"></a>
-</span><span id="__span-0-711"><a id="__codelineno-0-711" name="__codelineno-0-711"></a>    <span class="n">sp_id</span> <span class="o">=</span> <span class="n">_ensure_service_principal</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
-</span><span id="__span-0-712"><a id="__codelineno-0-712" name="__codelineno-0-712"></a>    <span class="n">_ensure_app_role_consent</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">sp_id</span><span class="p">,</span> <span class="n">graph_sp_id</span><span class="p">,</span> <span class="n">roles</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
-</span><span id="__span-0-713"><a id="__codelineno-0-713" name="__codelineno-0-713"></a>    <span class="n">_ensure_delegated_consent</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">sp_id</span><span class="p">,</span> <span class="n">graph_sp_id</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
-</span><span id="__span-0-714"><a id="__codelineno-0-714" name="__codelineno-0-714"></a>    <span class="n">_ensure_federated_credential</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">spec</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
-</span><span id="__span-0-715"><a id="__codelineno-0-715" name="__codelineno-0-715"></a>
-</span><span id="__span-0-716"><a id="__codelineno-0-716" name="__codelineno-0-716"></a>    <span class="c1"># Keep an existing session for this tenant when the client ID is unchanged.</span>
-</span><span id="__span-0-717"><a id="__codelineno-0-717" name="__codelineno-0-717"></a>    <span class="n">known</span> <span class="o">=</span> <span class="n">load_auth_store</span><span class="p">()</span><span class="o">.</span><span class="n">tenants</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">tenant_id</span><span class="p">)</span>
-</span><span id="__span-0-718"><a id="__codelineno-0-718" name="__codelineno-0-718"></a>    <span class="k">if</span> <span class="n">known</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">known</span><span class="o">.</span><span class="n">client_id</span> <span class="o">==</span> <span class="n">result</span><span class="o">.</span><span class="n">client_id</span><span class="p">:</span>
-</span><span id="__span-0-719"><a id="__codelineno-0-719" name="__codelineno-0-719"></a>        <span class="n">remember_tenant</span><span class="p">(</span><span class="n">known</span><span class="p">)</span>
-</span><span id="__span-0-720"><a id="__codelineno-0-720" name="__codelineno-0-720"></a>    <span class="k">else</span><span class="p">:</span>
-</span><span id="__span-0-721"><a id="__codelineno-0-721" name="__codelineno-0-721"></a>        <span class="n">remember_tenant</span><span class="p">(</span>
-</span><span id="__span-0-722"><a id="__codelineno-0-722" name="__codelineno-0-722"></a>            <span class="n">AuthConfig</span><span class="p">(</span><span class="n">client_id</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">client_id</span><span class="p">,</span> <span class="n">tenant_id</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">tenant_id</span><span class="p">)</span>
-</span><span id="__span-0-723"><a id="__codelineno-0-723" name="__codelineno-0-723"></a>        <span class="p">)</span>
-</span><span id="__span-0-724"><a id="__codelineno-0-724" name="__codelineno-0-724"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"AUTH"</span><span class="p">,</span> <span class="s2">"Saved tenant and client ID for 'napt auth login'"</span><span class="p">)</span>
-</span><span id="__span-0-725"><a id="__codelineno-0-725" name="__codelineno-0-725"></a>    <span class="k">return</span> <span class="n">result</span>
+<span class="normal"><a href="#__codelineno-0-725">725</a></span>
+<span class="normal"><a href="#__codelineno-0-726">726</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-657"><a id="__codelineno-0-657" name="__codelineno-0-657"></a><span class="k">def</span><span class="w"> </span><span class="nf">setup_app_registration</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">SetupSpec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SetupResult</span><span class="p">:</span>
+</span><span id="__span-0-658"><a id="__codelineno-0-658" name="__codelineno-0-658"></a><span class="w">    </span><span class="sd">"""Creates or completes the NAPT app registration in a tenant.</span>
+</span><span id="__span-0-659"><a id="__codelineno-0-659" name="__codelineno-0-659"></a>
+</span><span id="__span-0-660"><a id="__codelineno-0-660" name="__codelineno-0-660"></a><span class="sd">    Signs an administrator in, then finds or creates the application,</span>
+</span><span id="__span-0-661"><a id="__codelineno-0-661" name="__codelineno-0-661"></a><span class="sd">    adds any missing redirect URIs and Graph permissions, ensures the</span>
+</span><span id="__span-0-662"><a id="__codelineno-0-662" name="__codelineno-0-662"></a><span class="sd">    service principal exists with admin consent for every permission, and</span>
+</span><span id="__span-0-663"><a id="__codelineno-0-663" name="__codelineno-0-663"></a><span class="sd">    adds the OIDC federated credential when requested. Finally records</span>
+</span><span id="__span-0-664"><a id="__codelineno-0-664" name="__codelineno-0-664"></a><span class="sd">    the tenant and client ID as the active tenant for `napt auth login`.</span>
+</span><span id="__span-0-665"><a id="__codelineno-0-665" name="__codelineno-0-665"></a>
+</span><span id="__span-0-666"><a id="__codelineno-0-666" name="__codelineno-0-666"></a><span class="sd">    Args:</span>
+</span><span id="__span-0-667"><a id="__codelineno-0-667" name="__codelineno-0-667"></a><span class="sd">        spec: What to provision.</span>
+</span><span id="__span-0-668"><a id="__codelineno-0-668" name="__codelineno-0-668"></a>
+</span><span id="__span-0-669"><a id="__codelineno-0-669" name="__codelineno-0-669"></a><span class="sd">    Returns:</span>
+</span><span id="__span-0-670"><a id="__codelineno-0-670" name="__codelineno-0-670"></a><span class="sd">        The registration's IDs and the list of changes made.</span>
+</span><span id="__span-0-671"><a id="__codelineno-0-671" name="__codelineno-0-671"></a>
+</span><span id="__span-0-672"><a id="__codelineno-0-672" name="__codelineno-0-672"></a><span class="sd">    Raises:</span>
+</span><span id="__span-0-673"><a id="__codelineno-0-673" name="__codelineno-0-673"></a><span class="sd">        AuthError: If the administrator sign-in fails or lacks the rights</span>
+</span><span id="__span-0-674"><a id="__codelineno-0-674" name="__codelineno-0-674"></a><span class="sd">            to manage applications.</span>
+</span><span id="__span-0-675"><a id="__codelineno-0-675" name="__codelineno-0-675"></a><span class="sd">        ConfigError: If the display name is ambiguous, a given client ID</span>
+</span><span id="__span-0-676"><a id="__codelineno-0-676" name="__codelineno-0-676"></a><span class="sd">            does not exist, or Graph reports unexpected permission data.</span>
+</span><span id="__span-0-677"><a id="__codelineno-0-677" name="__codelineno-0-677"></a><span class="sd">        NetworkError: On Graph API failures.</span>
+</span><span id="__span-0-678"><a id="__codelineno-0-678" name="__codelineno-0-678"></a>
+</span><span id="__span-0-679"><a id="__codelineno-0-679" name="__codelineno-0-679"></a><span class="sd">    Example:</span>
+</span><span id="__span-0-680"><a id="__codelineno-0-680" name="__codelineno-0-680"></a><span class="sd">        Provision a tenant and trust a CI workflow through OIDC:</span>
+</span><span id="__span-0-681"><a id="__codelineno-0-681" name="__codelineno-0-681"></a><span class="sd">            ```python</span>
+</span><span id="__span-0-682"><a id="__codelineno-0-682" name="__codelineno-0-682"></a><span class="sd">            from napt.auth.registration import SetupSpec, setup_app_registration</span>
+</span><span id="__span-0-683"><a id="__codelineno-0-683" name="__codelineno-0-683"></a>
+</span><span id="__span-0-684"><a id="__codelineno-0-684" name="__codelineno-0-684"></a><span class="sd">            result = setup_app_registration(</span>
+</span><span id="__span-0-685"><a id="__codelineno-0-685" name="__codelineno-0-685"></a><span class="sd">                SetupSpec(</span>
+</span><span id="__span-0-686"><a id="__codelineno-0-686" name="__codelineno-0-686"></a><span class="sd">                    tenant_id="&lt;tenant id&gt;",</span>
+</span><span id="__span-0-687"><a id="__codelineno-0-687" name="__codelineno-0-687"></a><span class="sd">                    federated_issuer="https://token.actions.githubusercontent.com",</span>
+</span><span id="__span-0-688"><a id="__codelineno-0-688" name="__codelineno-0-688"></a><span class="sd">                    federated_subject="repo:contoso/intune-apps:ref:refs/heads/main",</span>
+</span><span id="__span-0-689"><a id="__codelineno-0-689" name="__codelineno-0-689"></a><span class="sd">                )</span>
+</span><span id="__span-0-690"><a id="__codelineno-0-690" name="__codelineno-0-690"></a><span class="sd">            )</span>
+</span><span id="__span-0-691"><a id="__codelineno-0-691" name="__codelineno-0-691"></a><span class="sd">            print(result.client_id, result.changes)</span>
+</span><span id="__span-0-692"><a id="__codelineno-0-692" name="__codelineno-0-692"></a><span class="sd">            ```</span>
+</span><span id="__span-0-693"><a id="__codelineno-0-693" name="__codelineno-0-693"></a>
+</span><span id="__span-0-694"><a id="__codelineno-0-694" name="__codelineno-0-694"></a><span class="sd">    """</span>
+</span><span id="__span-0-695"><a id="__codelineno-0-695" name="__codelineno-0-695"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">napt.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_global_logger</span>
+</span><span id="__span-0-696"><a id="__codelineno-0-696" name="__codelineno-0-696"></a>
+</span><span id="__span-0-697"><a id="__codelineno-0-697" name="__codelineno-0-697"></a>    <span class="n">logger</span> <span class="o">=</span> <span class="n">get_global_logger</span><span class="p">()</span>
+</span><span id="__span-0-698"><a id="__codelineno-0-698" name="__codelineno-0-698"></a>    <span class="n">token</span> <span class="o">=</span> <span class="n">_bootstrap_token</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">tenant_id</span><span class="p">)</span>
+</span><span id="__span-0-699"><a id="__codelineno-0-699" name="__codelineno-0-699"></a>
+</span><span id="__span-0-700"><a id="__codelineno-0-700" name="__codelineno-0-700"></a>    <span class="n">roles</span><span class="p">,</span> <span class="n">scopes</span><span class="p">,</span> <span class="n">graph_sp_id</span> <span class="o">=</span> <span class="n">_graph_permission_ids</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
+</span><span id="__span-0-701"><a id="__codelineno-0-701" name="__codelineno-0-701"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">SetupResult</span><span class="p">(</span>
+</span><span id="__span-0-702"><a id="__codelineno-0-702" name="__codelineno-0-702"></a>        <span class="n">tenant_id</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">tenant_id</span><span class="p">,</span> <span class="n">client_id</span><span class="o">=</span><span class="s2">""</span><span class="p">,</span> <span class="n">display_name</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">display_name</span>
+</span><span id="__span-0-703"><a id="__codelineno-0-703" name="__codelineno-0-703"></a>    <span class="p">)</span>
+</span><span id="__span-0-704"><a id="__codelineno-0-704" name="__codelineno-0-704"></a>
+</span><span id="__span-0-705"><a id="__codelineno-0-705" name="__codelineno-0-705"></a>    <span class="n">app</span> <span class="o">=</span> <span class="n">_ensure_application</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">spec</span><span class="p">,</span> <span class="n">roles</span><span class="p">,</span> <span class="n">scopes</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+</span><span id="__span-0-706"><a id="__codelineno-0-706" name="__codelineno-0-706"></a>    <span class="n">result</span><span class="o">.</span><span class="n">client_id</span> <span class="o">=</span> <span class="n">app</span><span class="p">[</span><span class="s2">"appId"</span><span class="p">]</span>
+</span><span id="__span-0-707"><a id="__codelineno-0-707" name="__codelineno-0-707"></a>    <span class="n">result</span><span class="o">.</span><span class="n">display_name</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"displayName"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">spec</span><span class="o">.</span><span class="n">display_name</span>
+</span><span id="__span-0-708"><a id="__codelineno-0-708" name="__codelineno-0-708"></a>    <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">needs_adopt</span><span class="p">:</span>
+</span><span id="__span-0-709"><a id="__codelineno-0-709" name="__codelineno-0-709"></a>        <span class="k">return</span> <span class="n">result</span>
+</span><span id="__span-0-710"><a id="__codelineno-0-710" name="__codelineno-0-710"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"AUTH"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"App registration: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">display_name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">client_id</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+</span><span id="__span-0-711"><a id="__codelineno-0-711" name="__codelineno-0-711"></a>
+</span><span id="__span-0-712"><a id="__codelineno-0-712" name="__codelineno-0-712"></a>    <span class="n">sp_id</span> <span class="o">=</span> <span class="n">_ensure_service_principal</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+</span><span id="__span-0-713"><a id="__codelineno-0-713" name="__codelineno-0-713"></a>    <span class="n">_ensure_app_role_consent</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">sp_id</span><span class="p">,</span> <span class="n">graph_sp_id</span><span class="p">,</span> <span class="n">roles</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+</span><span id="__span-0-714"><a id="__codelineno-0-714" name="__codelineno-0-714"></a>    <span class="n">_ensure_delegated_consent</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">sp_id</span><span class="p">,</span> <span class="n">graph_sp_id</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+</span><span id="__span-0-715"><a id="__codelineno-0-715" name="__codelineno-0-715"></a>    <span class="n">_ensure_federated_credential</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">app</span><span class="p">,</span> <span class="n">spec</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+</span><span id="__span-0-716"><a id="__codelineno-0-716" name="__codelineno-0-716"></a>
+</span><span id="__span-0-717"><a id="__codelineno-0-717" name="__codelineno-0-717"></a>    <span class="c1"># Keep an existing session for this tenant when the client ID is unchanged.</span>
+</span><span id="__span-0-718"><a id="__codelineno-0-718" name="__codelineno-0-718"></a>    <span class="n">known</span> <span class="o">=</span> <span class="n">load_auth_store</span><span class="p">()</span><span class="o">.</span><span class="n">tenants</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">tenant_id</span><span class="p">)</span>
+</span><span id="__span-0-719"><a id="__codelineno-0-719" name="__codelineno-0-719"></a>    <span class="k">if</span> <span class="n">known</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">known</span><span class="o">.</span><span class="n">client_id</span> <span class="o">==</span> <span class="n">result</span><span class="o">.</span><span class="n">client_id</span><span class="p">:</span>
+</span><span id="__span-0-720"><a id="__codelineno-0-720" name="__codelineno-0-720"></a>        <span class="n">remember_tenant</span><span class="p">(</span><span class="n">known</span><span class="p">)</span>
+</span><span id="__span-0-721"><a id="__codelineno-0-721" name="__codelineno-0-721"></a>    <span class="k">else</span><span class="p">:</span>
+</span><span id="__span-0-722"><a id="__codelineno-0-722" name="__codelineno-0-722"></a>        <span class="n">remember_tenant</span><span class="p">(</span>
+</span><span id="__span-0-723"><a id="__codelineno-0-723" name="__codelineno-0-723"></a>            <span class="n">AuthConfig</span><span class="p">(</span><span class="n">client_id</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">client_id</span><span class="p">,</span> <span class="n">tenant_id</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">tenant_id</span><span class="p">)</span>
+</span><span id="__span-0-724"><a id="__codelineno-0-724" name="__codelineno-0-724"></a>        <span class="p">)</span>
+</span><span id="__span-0-725"><a id="__codelineno-0-725" name="__codelineno-0-725"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"AUTH"</span><span class="p">,</span> <span class="s2">"Saved tenant and client ID for 'napt auth login'"</span><span class="p">)</span>
+</span><span id="__span-0-726"><a id="__codelineno-0-726" name="__codelineno-0-726"></a>    <span class="k">return</span> <span class="n">result</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>
