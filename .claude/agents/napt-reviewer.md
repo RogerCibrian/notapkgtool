@@ -64,7 +64,7 @@ Review the diff against the rules in these CLAUDE.md sections:
 - **`results.py Scope`** — only public API return types allowed in `napt/results.py`
 - **`Console Output`** — ASCII-only applies to print(), logger, CLI strings (not docstrings / comments / JSON / YAML)
 - **`CLI Structure`** — strict one module per top-level command under `napt/cli/` (`napt/cli/<command>.py` owns its `cmd_*` handlers and `register(subparsers)` hook); `main.py` assembles and dispatches only. Flag any new command added outside its own module, two commands sharing a module, or command logic growing in `main.py` or `__init__.py`.
-- **`Imports`** — package `__init__.py` files are docstring-only; names are imported from their defining module (`from napt.state.cache import load_cache`, never `from napt.state import load_cache`). Flag new re-exports in any `__init__.py` and new imports that name a package instead of the defining module. Consult the section for the three sanctioned exceptions.
+- **`Imports`** — package `__init__.py` files are docstring-only; names are imported from their defining module (`from napt.state.cache import load_cache`, never `from napt.state import load_cache`). Flag new re-exports in any `__init__.py` and new imports that name a package instead of the defining module. Consult the section for the sanctioned exception (`napt/__init__.py` metadata dunders).
 
 ### Project principles
 

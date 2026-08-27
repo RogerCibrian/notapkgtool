@@ -9,7 +9,8 @@ import requests_mock
 
 from napt.discovery.api_github import ApiGithubStrategy
 from napt.discovery.api_json import ApiJsonStrategy
-from napt.discovery.base import RemoteVersion, get_strategy, register_strategy
+from napt.discovery.base import RemoteVersion
+from napt.discovery.registry import get_strategy
 from napt.discovery.url_download import run_url_download
 from napt.discovery.web_scrape import WebScrapeStrategy
 from napt.exceptions import ConfigError, NetworkError
@@ -17,7 +18,7 @@ from napt.versioning.msi import MSIMetadata
 
 
 class TestStrategyRegistry:
-    """Tests for discovery strategy registration and lookup."""
+    """Tests for discovery strategy registry lookup."""
 
     def test_get_api_github_strategy(self):
         """Tests that api_github strategy can be retrieved from the registry."""
@@ -34,23 +35,15 @@ class TestStrategyRegistry:
         with pytest.raises(ConfigError, match="Unknown discovery strategy"):
             get_strategy("url_download")
 
-    def test_register_custom_strategy(self):
-        """Tests that a custom strategy can be registered and retrieved."""
+    def test_get_api_json_strategy(self):
+        """Tests that api_json strategy can be retrieved from the registry."""
+        strategy = get_strategy("api_json")
+        assert isinstance(strategy, ApiJsonStrategy)
 
-        class CustomStrategy:
-            def discover(self, app_config):
-                return RemoteVersion(
-                    version="1.0.0",
-                    download_url="https://example.com/installer.msi",
-                    source="custom",
-                )
-
-            def validate_config(self, app_config):
-                return []
-
-        register_strategy("custom_test", CustomStrategy)
-        strategy = get_strategy("custom_test")
-        assert isinstance(strategy, CustomStrategy)
+    def test_get_web_scrape_strategy(self):
+        """Tests that web_scrape strategy can be retrieved from the registry."""
+        strategy = get_strategy("web_scrape")
+        assert isinstance(strategy, WebScrapeStrategy)
 
 
 class TestUrlDownloadFlow:
