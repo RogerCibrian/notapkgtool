@@ -61,7 +61,7 @@ from typing import Any
 import requests
 
 from napt.discovery.base import RemoteVersion
-from napt.download import make_session
+from napt.download.download import make_session
 from napt.exceptions import ConfigError, NetworkError
 
 from .base import register_strategy

@@ -53,7 +53,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from napt.download import download_file
+from napt.download.download import download_file
 from napt.exceptions import ConfigError, NetworkError, NotModifiedError
 from napt.versioning.msi import extract_msi_metadata
 

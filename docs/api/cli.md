@@ -2,6 +2,8 @@
 
 ::: napt.cli
 
+::: napt.cli.main
+
 ::: napt.cli.auth
 
 ::: napt.cli.build

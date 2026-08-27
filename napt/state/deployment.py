@@ -49,7 +49,7 @@ Example:
     Recording a discovered release:
         ```python
         from pathlib import Path
-        from napt.state import (
+        from napt.state.deployment import (
             deployment_state_path,
             load_deployment_state,
             record_pending,

@@ -55,10 +55,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from napt.config import load_effective_config
+from napt.config.loader import load_effective_config
 from napt.exceptions import ConfigError, StateError
 from napt.logging import get_global_logger
-from napt.state import deployment_state_path, load_deployment_state
+from napt.state.deployment import deployment_state_path, load_deployment_state
 
 __all__ = [
     "load_recipe_configs",

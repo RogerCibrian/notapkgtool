@@ -14,8 +14,9 @@ import yaml
 
 from napt.exceptions import NetworkError, StateError
 from napt.graph.intune import VIRTUAL_TARGETS
-from napt.promote import apply_plan, load_plan_file, plan_path_for
-from napt.state import (
+from napt.promote.applier import apply_plan, load_plan_file
+from napt.promote.planner import plan_path_for
+from napt.state.deployment import (
     create_default_deployment_state,
     deployment_state_path,
     load_deployment_state,

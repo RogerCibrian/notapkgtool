@@ -22,7 +22,7 @@ Example:
     Upload a packaged app to Intune:
         ```python
         from pathlib import Path
-        from napt.upload import upload_package
+        from napt.upload.manager import upload_package
 
         result = upload_package(Path("recipes/Google/chrome.yaml"))
         print(f"Created Intune app: {result.intune_app_id}")
@@ -41,7 +41,7 @@ from typing import Any
 
 from napt.auth.credentials import get_access_token
 from napt.build.icons import MAX_ICON_BYTES
-from napt.config import load_effective_config
+from napt.config.loader import load_effective_config
 from napt.exceptions import ConfigError, PackagingError
 from napt.graph.intune import (
     commit_content_version,
@@ -57,7 +57,7 @@ from napt.graph.intune import (
 )
 from napt.logging import get_global_logger
 from napt.results import UploadResult
-from napt.state import (
+from napt.state.deployment import (
     deployment_state_path,
     load_deployment_state,
     record_published,
@@ -729,7 +729,7 @@ def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
         Upload and print the resulting Intune app IDs:
             ```python
             from pathlib import Path
-            from napt.upload import upload_package
+            from napt.upload.manager import upload_package
 
             result = upload_package(Path("recipes/Google/chrome.yaml"))
             print(f"Install app ID: {result.intune_app_id}")

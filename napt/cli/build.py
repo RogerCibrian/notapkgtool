@@ -23,7 +23,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from napt.build import build_package
+from napt.build.manager import build_package
 from napt.exceptions import ConfigError, NAPTError, NetworkError, PackagingError
 from napt.logging import get_logger, set_global_logger
 

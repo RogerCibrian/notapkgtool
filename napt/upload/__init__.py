@@ -26,7 +26,7 @@ Example:
     Upload a packaged app to Intune:
         ```python
         from pathlib import Path
-        from napt.upload import upload_package
+        from napt.upload.manager import upload_package
 
         result = upload_package(Path("recipes/Google/chrome.yaml"))
         print(f"Intune app ID: {result.intune_app_id}")
@@ -34,7 +34,3 @@ Example:
         ```
 
 """
-
-from .manager import upload_package
-
-__all__ = ["upload_package"]

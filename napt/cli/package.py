@@ -22,8 +22,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from napt.build import create_intunewin
-from napt.config import load_effective_config
+from napt.build.packager import create_intunewin
+from napt.config.loader import load_effective_config
 from napt.exceptions import ConfigError, NAPTError, NetworkError, PackagingError
 from napt.logging import get_logger, set_global_logger
 

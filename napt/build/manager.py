@@ -28,7 +28,7 @@ Example:
     Basic usage:
         ```python
         from pathlib import Path
-        from napt.build import build_package
+        from napt.build.manager import build_package
 
         result = build_package(
             recipe_path=Path("recipes/Google/chrome.yaml"),
@@ -62,11 +62,11 @@ from napt.build.registry_scripts import (
     generate_detection_script,
     generate_requirements_script,
 )
-from napt.config import load_effective_config
+from napt.config.loader import load_effective_config
 from napt.exceptions import ConfigError, PackagingError
-from napt.psadt import get_psadt_release
+from napt.psadt.release import get_psadt_release
 from napt.results import BuildResult
-from napt.state import deployment_state_path, load_deployment_state
+from napt.state.deployment import deployment_state_path, load_deployment_state
 from napt.versioning.msi import (
     MSIMetadata,
     extract_msi_metadata,
@@ -196,7 +196,7 @@ def _get_installer_version(
 
     # Non-MSI/MSIX: fall back to discovery cache
     if cache_file and cache_file.exists():
-        from napt.state import load_cache
+        from napt.state.cache import load_cache
 
         logger.verbose("BUILD", "Using version from discovery cache")
         cache_data = load_cache(cache_file)
@@ -274,7 +274,7 @@ def _find_installer_file(
     # Strategy 2: Extract filename from discovery cache URL (for web_scrape, etc.)
     if cache_file and cache_file.exists():
         try:
-            from napt.state import load_cache
+            from napt.state.cache import load_cache
 
             cache_data = load_cache(cache_file)
             app_entry = cache_data.get("apps", {}).get(app_id, {})
@@ -1338,7 +1338,7 @@ def build_package(
         "update_only" generates detection and requirements.
     """
     from napt.logging import get_global_logger
-    from napt.state import cache_file_path
+    from napt.state.cache import cache_file_path
 
     logger = get_global_logger()
     # Load configuration

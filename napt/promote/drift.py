@@ -53,7 +53,7 @@ from napt.graph.intune import (
     get_app_assignments,
     resolve_assignment_target,
 )
-from napt.state import deployment_state_path, load_deployment_state
+from napt.state.deployment import deployment_state_path, load_deployment_state
 from napt.state.stamp import ENTRY_INSTALL, ENTRY_UPDATE, parse_stamp
 
 __all__ = ["detect_drift"]

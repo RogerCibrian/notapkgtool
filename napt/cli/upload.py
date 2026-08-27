@@ -31,7 +31,7 @@ from napt.exceptions import (
     PackagingError,
 )
 from napt.logging import get_logger, set_global_logger
-from napt.upload import upload_package
+from napt.upload.manager import upload_package
 
 
 def cmd_upload(args: argparse.Namespace) -> int:

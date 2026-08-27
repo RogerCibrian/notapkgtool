@@ -34,17 +34,17 @@ from napt.exceptions import (
 )
 from napt.graph.intune import list_mobile_apps
 from napt.logging import get_logger, set_global_logger
-from napt.promote import (
-    apply_plan,
-    detect_drift,
+from napt.promote.applier import apply_plan
+from napt.promote.drift import detect_drift
+from napt.promote.planner import (
     load_recipe_configs,
     plan_promotions,
     plans_dir_for,
-    reconcile_publications,
     resolve_state_dir,
-    unresolvable_groups,
     write_plan_files,
 )
+from napt.promote.preflight import unresolvable_groups
+from napt.promote.reconcile import reconcile_publications
 
 
 def _describe_action(action: dict[str, Any]) -> str:

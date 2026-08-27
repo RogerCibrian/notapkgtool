@@ -17,23 +17,6 @@
 Provides robust HTTP(S) file download with conditional requests, retry logic,
 atomic writes, and integrity verification.
 
-Example:
-    Basic usage:
-        ```python
-        from pathlib import Path
-        from napt.download import download_file
-
-        result = download_file(
-            url="https://example.com/installer.msi",
-            destination_folder=Path("./downloads/my-app"),
-        )
-        print(f"Downloaded to {result.file_path} with hash {result.sha256}")
-        ```
-
+Modules:
+    download - HTTP downloads with ETag support (download_file, make_session).
 """
-
-from napt.exceptions import NotModifiedError
-
-from .download import download_file, make_session
-
-__all__ = ["download_file", "make_session", "NotModifiedError"]

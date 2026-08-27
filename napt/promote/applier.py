@@ -71,7 +71,7 @@ from napt.promote.planner import (
 )
 from napt.promote.preflight import unresolvable_groups
 from napt.promote.reconcile import reconcile_publications
-from napt.state import (
+from napt.state.deployment import (
     deployment_state_path,
     load_deployment_state,
     save_deployment_state,
