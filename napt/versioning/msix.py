@@ -31,18 +31,6 @@ Extracted Fields:
     - Properties.DisplayName: Human-readable application name
     - Properties.PublisherDisplayName: Publisher display string
 
-Example:
-    Extract metadata from an MSIX file:
-        ```python
-        from napt.versioning.msix import extract_msix_metadata
-
-        metadata = extract_msix_metadata("Slack.msix")
-        print(f"{metadata.display_name} {metadata.version} ({metadata.architecture})")
-        # Slack 4.49.81.0 (x64)
-        print(f"Identity: {metadata.identity_name}")
-        # com.tinyspeck.slackdesktop
-        ```
-
 Note:
     This is pure file introspection; no network calls are made. Works
     cross-platform with no external dependencies.

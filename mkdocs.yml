@@ -97,7 +97,7 @@ nav:
     - config: api/config.md
     - discovery:
       - discovery: api/discovery.md
-      - manager: api/core.md
+      - manager: api/discovery-manager.md
     - download: api/download.md
     - graph: api/graph.md
     - psadt: api/psadt.md

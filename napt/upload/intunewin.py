@@ -25,20 +25,6 @@ following structure:
 
 This module extracts the encryption metadata from Detection.xml and provides
 utilities for extracting the encrypted payload for upload to Azure Blob Storage.
-
-Example:
-    Parse metadata and extract payload:
-        ```python
-        from pathlib import Path
-        from napt.upload.intunewin import parse_intunewin, extract_encrypted_payload
-
-        metadata = parse_intunewin(
-            Path("packages/napt-chrome/Invoke-AppDeployToolkit.intunewin")
-        )
-        print(f"Encrypted file: {metadata.encrypted_file_name}")
-        print(f"Encryption key: {metadata.encryption_key}")
-        ```
-
 """
 
 from __future__ import annotations

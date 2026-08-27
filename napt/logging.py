@@ -27,35 +27,6 @@ The logger supports six output levels:
 - Verbose: Only printed when verbose mode is enabled
 - Debug: Only printed when debug mode is enabled (implies verbose)
 
-Example:
-    Configure global logger:
-        ```python
-        from napt.logging import get_logger, set_global_logger
-
-        logger = get_logger(verbose=True, debug=False)
-        set_global_logger(logger)
-        ```
-
-    Use in a module:
-        ```python
-        from napt.logging import get_logger
-
-        logger = get_logger()
-        logger.step(1, 4, "Loading configuration...")
-        logger.info("PACKAGE", "Removing previous package: 144.0.0")
-        logger.warning("DETECTION", "Could not extract MSI metadata")
-        logger.progress("DOWNLOAD", "42%")
-        logger.verbose("STATE", "Loaded state from file")
-        logger.debug("VERSION", "Trying backend: msilib...")
-        ```
-
-    Use with dependency injection:
-
-        def my_function(logger=None):
-            if logger is None:
-                logger = get_logger()
-            logger.verbose("MODULE", "Processing...")
-
 Note:
     The CLI configures the global logger when commands are executed. The
     default logger is non-verbose, so verbose and debug messages are
@@ -235,7 +206,7 @@ def set_global_logger(logger: Logger) -> None:
             ```
 
     Note:
-        This affects all library functions that use get_logger() without
+        This affects every NAPT module that calls get_logger() without
         passing a logger instance. For better isolation, pass logger
         instances directly to functions instead of using the global logger.
     """

@@ -34,28 +34,4 @@ instance recorded here.
 
 Cache tracking is enabled by default and can be disabled with the
 --stateless flag, which also disables deployment state writes.
-
-Example:
-    Reading the discovery cache:
-        ```python
-        from pathlib import Path
-        from napt.state.cache import load_cache
-
-        data = load_cache(Path("cache/discovery.json"))
-        entry = data.get("apps", {}).get("napt-chrome")
-        ```
-
-    Reading deployment state:
-        ```python
-        from pathlib import Path
-        from napt.state.deployment import (
-            deployment_state_path,
-            load_deployment_state,
-        )
-
-        path = deployment_state_path(Path("state/deployment"), "napt-chrome")
-        state = load_deployment_state(path)
-        pending = state.get("pending")
-        ```
-
 """

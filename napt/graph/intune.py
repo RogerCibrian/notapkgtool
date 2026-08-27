@@ -33,29 +33,6 @@ All functions take an access_token as the first argument. Obtain one via
 through [graph_request][napt.graph.client.graph_request] and inherit its
 retry behavior; Azure Blob PUTs carry their own retry tuned for
 SAS-propagation 403s.
-
-Example:
-    Full upload flow:
-        ```python
-        from pathlib import Path
-        from napt.auth.credentials import get_access_token
-        from napt.graph.intune import (
-            create_win32_app, create_content_version,
-            create_content_version_file, upload_to_azure_blob,
-            commit_content_version_file, commit_content_version,
-        )
-        from napt.upload.intunewin import parse_intunewin
-
-        token = get_access_token()
-        metadata = parse_intunewin(Path("packages/napt-chrome/144.0.7559.110/Invoke-AppDeployToolkit.intunewin"))
-        app_id = create_win32_app(token, app_metadata)
-        cv_id = create_content_version(token, app_id)
-        file_id, sas_uri = create_content_version_file(token, app_id, cv_id, metadata)
-        upload_to_azure_blob(sas_uri, Path("/tmp/IntunePackage.intunewin"))
-        commit_content_version_file(token, app_id, cv_id, file_id, metadata)
-        commit_content_version(token, app_id, cv_id)
-        ```
-
 """
 
 from __future__ import annotations

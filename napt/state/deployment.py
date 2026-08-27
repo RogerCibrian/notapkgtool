@@ -44,30 +44,6 @@ logical change produces a byte-identical file and a clean git diff.
 Keys follow reading order — lifecycle order at the top level, ``version``
 first and hashes last inside blocks — because these files are what a
 publish PR diff shows its reviewer.
-
-Example:
-    Recording a discovered release:
-        ```python
-        from pathlib import Path
-        from napt.state.deployment import (
-            deployment_state_path,
-            load_deployment_state,
-            record_pending,
-            save_deployment_state,
-        )
-
-        path = deployment_state_path(Path("state/deployment"), "napt-chrome")
-        state = load_deployment_state(path)
-        action = record_pending(
-            state,
-            version="130.0.0",
-            sha256="abc123...",
-            url="https://dl.google.com/chrome.msi",
-        )
-        if action:
-            save_deployment_state(state, path)
-        ```
-
 """
 
 from __future__ import annotations

@@ -17,30 +17,6 @@
 This module defines a custom exception hierarchy for distinguishing between
 different types of errors. All exceptions inherit from NAPTError, allowing
 callers to catch all NAPT errors with a single except clause if needed.
-
-Example:
-    Catching specific error types:
-        ```python
-        from napt.discovery.manager import discover_recipe
-        from napt.exceptions import ConfigError, NetworkError
-
-        try:
-            result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
-        except ConfigError as e:
-            print(f"Configuration error: {e}")
-        except NetworkError as e:
-            print(f"Network error: {e}")
-        ```
-
-    Catching all NAPT errors:
-        ```python
-        from napt.exceptions import NAPTError
-
-        try:
-            result = discover_recipe(Path("recipe.yaml"), Path("./downloads"))
-        except NAPTError as e:
-            print(f"NAPT error: {e}")
-        ```
 """
 
 from __future__ import annotations

@@ -28,16 +28,6 @@ Installation Requirements:
 - Linux/macOS: Install the msitools package (``apt-get install msitools``,
     ``dnf install msitools``, or ``brew install msitools``).
 
-Example:
-    Extract metadata including architecture:
-        ```python
-        from napt.versioning.msi import extract_msi_metadata
-
-        metadata = extract_msi_metadata("chrome.msi")
-        print(f"{metadata.product_name} {metadata.product_version} ({metadata.architecture})")
-        # Google Chrome 144.0.7559.110 (x64)
-        ```
-
 Note:
     This is pure file introspection; no network calls are made. The PowerShell
     COM backend reads both the Property table (ProductName, ProductVersion) and

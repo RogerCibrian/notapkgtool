@@ -25,8 +25,8 @@ NAPT provides:
 - Automatic update policies (version-based, hash-based, or combined)
 - PSADT package generation with Template_v4
 - .intunewin package creation for Intune deployment
-- Direct upload to Microsoft Intune (planned)
-- Deployment wave/ring management (planned)
+- Direct upload to Microsoft Intune
+- Ring-based deployment promotion with drift detection
 
 Quick Start:
 Validate recipe syntax:

@@ -54,16 +54,6 @@ Requires a NAPT app registration in Microsoft Entra ID with the
 `DeviceManagementApps.ReadWrite.All` and `Group.Read.All` Microsoft Graph
 permissions (application permissions for CI/CD, delegated for interactive
 use). See the authentication documentation for setup instructions.
-
-Example:
-    Acquiring a token for Graph API:
-        ```python
-        from napt.auth.credentials import get_access_token
-
-        token = get_access_token()
-        headers = {"Authorization": f"Bearer {token}"}
-        ```
-
 """
 
 from __future__ import annotations

@@ -25,23 +25,6 @@ Key Features:
 - Extract releases to cache directory
 - Version resolution ("latest" keyword support)
 
-Example:
-    Get and cache PSADT releases:
-        ```python
-        from pathlib import Path
-        from napt.psadt.release import get_psadt_release, is_psadt_cached
-
-        # Get latest PSADT
-        psadt_dir = get_psadt_release("latest", Path("cache/psadt"))
-
-        # Get specific version
-        psadt_dir = get_psadt_release("4.1.7", Path("cache/psadt"))
-
-        # Check if cached
-        if is_psadt_cached("4.1.7", Path("cache/psadt")):
-            print("Already cached!")
-        ```
-
 Note:
     - Reuses notapkgtool.discovery.api_github for API calls
     - Caches releases by version: cache/psadt/{version}/

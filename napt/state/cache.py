@@ -32,34 +32,6 @@ Key Features:
 - Version change detection for version-first strategies
 - Robust error handling (corrupted files, missing data)
 - Auto-creation of cache files and directories
-
-Example:
-    High-level API with DiscoveryCache:
-        ```python
-        from pathlib import Path
-        from napt.state.cache import DiscoveryCache
-
-        cache = DiscoveryCache(Path("cache/discovery.json"))
-        cache.load()
-
-        # Get entry for conditional requests
-        entry = cache.get_cache("napt-chrome")
-
-        # Update after discovery
-        cache.update_cache("napt-chrome", version="130.0.0", ...)
-        cache.save()
-        ```
-
-    Low-level API with functions:
-        ```python
-        from pathlib import Path
-        from napt.state.cache import load_cache, save_cache
-
-        data = load_cache(Path("cache/discovery.json"))
-        # ... modify cache dict ...
-        save_cache(data, Path("cache/discovery.json"))
-        ```
-
 """
 
 from __future__ import annotations

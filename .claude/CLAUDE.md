@@ -86,6 +86,8 @@ Example:
         ```
 ```
 
+**Example sections belong to functions and classes only.** Module docstrings never carry `Example:` sections or Python code fences — NAPT is a CLI, and a module-level Python quick-start is library documentation for a consumer that doesn't exist. Put the example on the specific function or class whose contract it demonstrates. CLI examples (`$ napt ...`) in module docstrings are fine.
+
 **Bullet lists in sections:** Indent 4 spaces. In main description: no extra indent, blank line before list.
 
 **Collapsible box (intentional only):** No blank line + 4-space indented bullets:
@@ -165,7 +167,7 @@ All `napt/**/*.py` files require before docstring:
 | `PackagingError` | PSADT errors, MSI extraction, build failures |
 | `StateError` | Corrupted or invalid persisted state (`state/`, `cache/`) |
 
-**Public API / user-facing:** Use custom exceptions. **Private helpers / bugs:** Use built-in.
+**User-facing errors (anything a napt command surfaces):** Use custom exceptions. **Private helpers / bugs:** Use built-in.
 
 **Always chain:** `raise ConfigError(...) from err`
 
@@ -175,7 +177,7 @@ All `napt/**/*.py` files require before docstring:
 
 ## results.py Scope
 
-`napt/results.py` is for **public API return types only** (`DiscoverResult`, `BuildResult`, `PackageResult`, `ValidationResult`).
+`napt/results.py` is for **the result types napt commands return** — one dataclass per command's underlying operation (`napt discover` → `DiscoverResult`, `napt build` → `BuildResult`, `napt package` → `PackageResult`, `napt upload` → `UploadResult`, `napt validate` → `ValidationResult`), plus `DownloadResult` from the shared download step.
 
 Domain types and internal types stay co-located with their logic.
 
