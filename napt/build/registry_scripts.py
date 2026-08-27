@@ -48,30 +48,6 @@ Logging:
         size (default: 3MB)
     - Format: CMTrace for compatibility with Intune diagnostics
 
-Example:
-    Generate detection and requirements scripts:
-        ```python
-        from pathlib import Path
-        from napt.build.registry_scripts import (
-            DetectionConfig,
-            RequirementsConfig,
-            generate_detection_script,
-            generate_requirements_script,
-        )
-
-        det_config = DetectionConfig(
-            app_name="Google Chrome",
-            version="131.0.6778.86",
-        )
-        generate_detection_script(det_config, Path("detection.ps1"))
-
-        req_config = RequirementsConfig(
-            app_name="Google Chrome",
-            version="131.0.6778.86",
-        )
-        generate_requirements_script(req_config, Path("requirements.ps1"))
-        ```
-
 Note:
     Scripts are saved as siblings to the packagefiles directory to prevent
     them from being included in the .intunewin package. They should be

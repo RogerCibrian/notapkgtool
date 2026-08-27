@@ -28,21 +28,6 @@ Validation Checks:
 - intune.detection fields are valid (types, values, unknown field warnings)
 - psadt.app_vars only contains user-settable keys
 - logging section fields are valid
-
-Example:
-    Validate a recipe and handle results:
-        ```python
-        from pathlib import Path
-        from napt.validation import validate_recipe
-
-        result = validate_recipe(Path("recipes/Google/chrome.yaml"))
-        if result.status == "valid":
-            print(f"Recipe is valid with {result.app_count} app(s)")
-        else:
-            for error in result.errors:
-                print(f"Error: {error}")
-        ```
-
 """
 
 from __future__ import annotations

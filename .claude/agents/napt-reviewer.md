@@ -58,10 +58,10 @@ For each category below, consult the referenced CLAUDE.md section for the author
 
 Review the diff against the rules in these CLAUDE.md sections:
 
-- **`Docstrings`** — section order, descriptive mood, section-specific rules (`Note:` singular, `Example:` format, complex `Returns:` indentation, dataclass `Returns:` style, module docstring format)
+- **`Docstrings`** — section order, descriptive mood, section-specific rules (`Note:` singular, `Example:` format, complex `Returns:` indentation, dataclass `Returns:` style, module docstring format). `Example:` sections belong to functions and classes only — flag any module docstring that gains a Python code fence (CLI `$ napt ...` examples in module docstrings are fine).
 - **`Logging Levels`** — is each new log call at the right level for what it communicates? (main test: "what happened" vs. "how it happened")
-- **`Exceptions`** — is each `raise` using the right type for the error domain? Is public API using custom types and private helpers using built-ins?
-- **`results.py Scope`** — only public API return types allowed in `napt/results.py`
+- **`Exceptions`** — is each `raise` using the right type for the error domain? Are errors a napt command surfaces using custom types and private helpers using built-ins?
+- **`results.py Scope`** — `napt/results.py` holds only the result types napt commands return (one dataclass per command's underlying operation, plus the shared `DownloadResult`)
 - **`Console Output`** — ASCII-only applies to print(), logger, CLI strings (not docstrings / comments / JSON / YAML)
 - **`CLI Structure`** — strict one module per top-level command under `napt/cli/` (`napt/cli/<command>.py` owns its `cmd_*` handlers and `register(subparsers)` hook); `main.py` assembles and dispatches only. Flag any new command added outside its own module, two commands sharing a module, or command logic growing in `main.py` or `__init__.py`.
 - **`Imports`** — package `__init__.py` files are docstring-only; names are imported from their defining module (`from napt.state.cache import load_cache`, never `from napt.state import load_cache`). Flag new re-exports in any `__init__.py` and new imports that name a package instead of the defining module. There are no sanctioned exceptions — `napt/__init__.py` is docstring-only too, and the version comes from `napt.version.get_version()` (a cached `importlib.metadata` lookup), never a `__version__` dunder.
@@ -97,7 +97,7 @@ Consider whether the changes in this diff will create future pain: maintenance b
 
 Only flag concerns that follow **directly from what this diff is changing** — not unrelated hypotheticals or "you could also build X." If you can't name the specific line or construct that creates the future cost, skip it.
 
-Severity: typically `[SUGGESTION]`. Escalate to `[BLOCKING]` when the change would lock in a design that actively conflicts with stated project direction (e.g. adding backcompat fallback, adding git/CI logic to napt, introducing a result type to `results.py` that isn't a public API return).
+Severity: typically `[SUGGESTION]`. Escalate to `[BLOCKING]` when the change would lock in a design that actively conflicts with stated project direction (e.g. adding backcompat fallback, adding git/CI logic to napt, introducing a result type to `results.py` that no napt command returns).
 
 ## Step 5 — Output format
 

@@ -34,16 +34,6 @@ Backend Priority (MSI only):
 - Windows: PowerShell COM (Windows Installer COM API, always available)
 - Linux/macOS: msiinfo/msiextract (from the msitools package)
 
-Example:
-    Extract an icon from an installer:
-        ```python
-        from napt.build.icons import extract_icon_png
-
-        result = extract_icon_png("chrome.msi")
-        if result.png is not None:
-            print(f"Got a {result.width}px icon from {result.detail}")
-        ```
-
 Note:
     Icon extraction is best-effort by design. The public entry point
     [extract_icon_png][napt.build.icons.extract_icon_png] never raises; a

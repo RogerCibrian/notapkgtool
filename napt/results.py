@@ -12,31 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Public API return types for NAPT.
+"""Result types returned by napt commands.
 
-This module defines dataclasses for return values from public API functions.
-These types represent the results of operations like discovery, building,
-packaging, and validation.
+Each dataclass here is what a ``napt`` command's underlying operation
+returns: ``napt discover`` produces a DiscoverResult, ``napt build`` a
+BuildResult, ``napt package`` a PackageResult, ``napt upload`` an
+UploadResult, and ``napt validate`` a ValidationResult. The one
+exception is DownloadResult, which comes from the shared download step
+the discovery stage builds on. Command handlers consume these results
+to render console output and choose exit codes; tests assert against
+them.
 
 All dataclasses are frozen (immutable) to prevent accidental mutation of
 return values.
 
-Example:
-    Using result types:
-        ```python
-        from pathlib import Path
-        from napt.discovery.manager import discover_recipe
-        from napt.results import DiscoverResult
-
-        result: DiscoverResult = discover_recipe(
-            Path("recipes/Google/chrome.yaml"),
-            Path("./downloads")
-        )
-        print(result.version)  # Attribute access, not dict access
-        ```
-
 Note:
-    Only public API return types belong in this module. Domain types
+    Only results that napt commands surface belong in this module. Domain types
     (like DiscoveredVersion) and internal types (like LoadContext) should
     remain co-located with their related logic.
 """

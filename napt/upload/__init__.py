@@ -21,16 +21,4 @@ to Microsoft Intune via the Graph API. Authentication comes from
 Modules:
     manager - Upload orchestration (load config, auth, upload flow).
     intunewin - .intunewin ZIP parser (reads Detection.xml encryption metadata).
-
-Example:
-    Upload a packaged app to Intune:
-        ```python
-        from pathlib import Path
-        from napt.upload.manager import upload_package
-
-        result = upload_package(Path("recipes/Google/chrome.yaml"))
-        print(f"Intune app ID: {result.intune_app_id}")
-        print(f"Version: {result.version}")
-        ```
-
 """

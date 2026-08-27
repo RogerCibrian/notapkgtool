@@ -17,18 +17,6 @@
 Coordinates the full upload pipeline: loading recipe config, inferring the
 package path, authenticating, parsing the .intunewin file, building app
 metadata, and executing the Graph API upload flow.
-
-Example:
-    Upload a packaged app to Intune:
-        ```python
-        from pathlib import Path
-        from napt.upload.manager import upload_package
-
-        result = upload_package(Path("recipes/Google/chrome.yaml"))
-        print(f"Created Intune app: {result.intune_app_id}")
-        print(f"App: {result.app_name} {result.version}")
-        ```
-
 """
 
 from __future__ import annotations

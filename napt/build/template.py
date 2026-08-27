@@ -24,24 +24,6 @@ Design Principles:
     - Preserve PSADT's structure and comments
     - Support dynamic values (AppScriptDate, discovered version)
     - Merge org defaults with recipe overrides
-
-Example:
-    Basic usage:
-        ```python
-        from pathlib import Path
-        from napt.build.template import generate_invoke_script
-
-        script = generate_invoke_script(
-            template_path=Path("cache/psadt/4.1.7/Invoke-AppDeployToolkit.ps1"),
-            config=recipe_config,
-            version="141.0.7390.123",
-            psadt_version="4.1.7",
-            architecture="x64",
-            installer_filename="installer.msi",
-        )
-
-        Path("builds/app/version/Invoke-AppDeployToolkit.ps1").write_text(script)
-        ```
 """
 
 from __future__ import annotations

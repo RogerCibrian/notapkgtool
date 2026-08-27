@@ -56,25 +56,6 @@ Logging:
     - Fallback locations mirror the registry-based scripts
     - Format: CMTrace for compatibility with Intune diagnostics
 
-Example:
-    Generate MSIX detection script:
-        ```python
-        from pathlib import Path
-        from napt.build.msix_scripts import (
-            MSIXDetectionConfig,
-            generate_msix_detection_script,
-        )
-
-        config = MSIXDetectionConfig(
-            identity_name="com.tinyspeck.slackdesktop",
-            version="4.49.81.0",
-        )
-        script_path = generate_msix_detection_script(
-            config=config,
-            output_path=Path("builds/slack/4.49.81.0/Slack-4.49.81.0-Detection.ps1"),
-        )
-        ```
-
 Note:
     Detection and requirements scripts are saved as siblings to the
     packagefiles directory to prevent them from being included in the

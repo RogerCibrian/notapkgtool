@@ -500,8 +500,9 @@ logging.
 - Configurable via `intune.detection` and `logging` sections in defaults or
   recipe
 
-**Related**: Implemented in `napt/detection.py`, `napt/requirements.py`, and
-integrated into the build process in `napt/build/manager.py`.
+**Related**: Implemented in `napt/build/registry_scripts.py` (and
+`napt/build/msix_scripts.py` for MSIX packages), integrated into the build
+process in `napt/build/manager.py`.
 See [User Guide - Detection and Requirements Scripts](user-guide.md#detection-and-requirements-scripts)
 and [Recipe Reference - Intune Configuration](recipe-reference.md#intune-configuration).
 

@@ -23,20 +23,6 @@ Design Principles:
     - Invoke-AppDeployToolkit.ps1 is generated from template (not copied)
     - Build directories are versioned: {app_id}/{version}/
     - Branding applied by replacing files in root Assets/ directory (v4 structure)
-
-Example:
-    Basic usage:
-        ```python
-        from pathlib import Path
-        from napt.build.manager import build_package
-
-        result = build_package(
-            recipe_path=Path("recipes/Google/chrome.yaml"),
-            downloads_dir=Path("downloads"),
-        )
-
-        print(f"Built: {result.build_dir}")
-        ```
 """
 
 from __future__ import annotations

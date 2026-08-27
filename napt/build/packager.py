@@ -22,20 +22,6 @@ Design Principles:
     - Package output is named by IntuneWinAppUtil.exe: Invoke-AppDeployToolkit.intunewin
     - Build directory can optionally be cleaned after packaging
     - Tool is downloaded from Microsoft's official GitHub repository
-
-Example:
-    Basic usage:
-        ```python
-        from pathlib import Path
-        from napt.build.packager import create_intunewin
-
-        result = create_intunewin(
-            build_dir=Path("builds/napt-chrome/141.0.7390.123"),
-            output_dir=Path("packages")
-        )
-
-        print(f"Package: {result.package_path}")
-        ```
 """
 
 from __future__ import annotations

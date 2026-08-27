@@ -30,48 +30,6 @@ Behavior:
 
 DEFAULT_CHUNK (1 MiB) is the stream chunk size.
 
-Example:
-    Basic download:
-        ```python
-        from pathlib import Path
-        from napt.download.download import download_file
-
-        result = download_file(
-            url="https://example.com/installer.msi",
-            destination_folder=Path("./downloads/my-app"),
-        )
-        print(f"Downloaded to {result.file_path}")
-        print(f"SHA-256: {result.sha256}")
-        ```
-
-    Conditional download (avoid re-downloading):
-        ```python
-        from napt.exceptions import NotModifiedError
-
-        try:
-            result = download_file(
-                url="https://example.com/installer.msi",
-                destination_folder=Path("./downloads/my-app"),
-                etag=previous_etag,
-            )
-        except NotModifiedError:
-            print("File unchanged, using cached version")
-        ```
-
-    Checksum validation:
-        ```python
-        from napt.exceptions import NetworkError
-
-        try:
-            result = download_file(
-                url="https://example.com/installer.msi",
-                destination_folder=Path("./downloads/my-app"),
-                expected_sha256="abc123...",
-            )
-        except NetworkError as e:
-            print(f"Checksum mismatch: {e}")
-        ```
-
 Note:
     CDNs compute representation-specific ETags, so requesting gzip vs
     identity can yield different ETags for the same content. Forcing

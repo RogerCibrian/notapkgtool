@@ -25,22 +25,6 @@ transient server errors, and connection drops -- with bounded exponential
 backoff before raising. Resource-creating POSTs retry only unambiguous
 throttling responses, so a lost reply to a processed create is never
 resubmitted as a duplicate.
-
-Example:
-    Reading a resource:
-        ```python
-        from napt.auth.credentials import get_access_token
-        from napt.graph.client import GRAPH_BASE, auth_headers, graph_request
-
-        token = get_access_token()
-        app = graph_request(
-            "GET",
-            f"{GRAPH_BASE}/deviceAppManagement/mobileApps/<id>",
-            "get app",
-            headers=auth_headers(token),
-        )
-        ```
-
 """
 
 from __future__ import annotations

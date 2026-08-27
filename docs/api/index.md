@@ -1,6 +1,6 @@
 # Developer Reference
 
-Overview of NAPT's codebase structure, architecture, and key concepts for developers extending or integrating with NAPT.
+Overview of NAPT's codebase structure, architecture, and key concepts for contributors.
 
 ## Code Organization
 
@@ -9,12 +9,9 @@ NAPT's codebase structure matches the module organization. Here's the file struc
 ```
 napt/
 ├── __init__.py              # Package overview docstring
-├── core.py                  # Main public API functions (orchestration)
-├── detection.py             # Detection script generation for Intune Win32 apps
-├── requirements.py          # Requirements script generation for Intune Update entries
 ├── exceptions.py            # Exception hierarchy
 ├── logging.py               # Logging configuration
-├── results.py               # Public API return types (dataclasses)
+├── results.py               # Result dataclasses returned by napt commands
 ├── validation.py            # Recipe validation logic
 ├── version.py               # NAPT's own version, read from package metadata
 │
@@ -70,8 +67,9 @@ napt/
 │   └── intunewin.py            # .intunewin package parser
 │
 └── versioning/              # Version extraction and comparison
-    ├── keys.py                 # Version key extraction (DiscoveredVersion)
-    └── msi.py                  # MSI version extraction backends
+    ├── compare.py              # Version comparison (is_newer)
+    ├── msi.py                  # MSI metadata extraction backends
+    └── msix.py                 # MSIX metadata extraction (AppxManifest)
 ```
 
 ### Data Flow
@@ -80,8 +78,6 @@ napt/
 Recipe YAML
     ↓
 [config/loader.py] Load and merge configuration
-    ↓
-[core.py] Orchestrate workflow
     ↓
 [discovery/] Discover version and download
     ↓
@@ -100,7 +96,7 @@ Result (dataclass)
 
 ## Quick Start
 
-- **Extending the CLI:** See [`cli/`](cli.md) for command registration patterns
+- **Adding a CLI command:** See [`cli/`](cli.md) for command registration patterns
 - **Adding discovery strategies:** Implement `DiscoveryStrategy` protocol from [`discovery/base.py`](discovery.md)
 
 ## Key Concepts
@@ -108,8 +104,8 @@ Result (dataclass)
 - **Discovery Strategies:** Protocol-based, stateless, listed in an explicit registry table (api_github, api_json, web_scrape). All return a `RemoteVersion` from configuration alone. The orchestrator runs the result through `resolve_with_cache` to skip the download when the version is unchanged. `url_download` is a separate flow (not a registered strategy) because it must download the file to determine the version.
 - **Configuration:** 3-layer system (org → vendor → recipe) with deep merging
 - **State Management:** Two kinds with opposite philosophies — the disposable discovery cache (`cache/discovery.json`) for download optimization, and authoritative per-app deployment state (`state/deployment/<id>.json`) recording what is published and pending
-- **Exceptions:** All NAPT domain errors use custom exceptions inheriting from `NAPTError` (ConfigError, NetworkError, PackagingError) - allows catching all NAPT errors or specific types
-- **Return Types:** Frozen dataclasses from `results.py` for public API functions only (type-safe, immutable returns)
+- **Exceptions:** All NAPT domain errors use custom exceptions inheriting from `NAPTError` (ConfigError, NetworkError, PackagingError, StateError, AuthError) - allows catching all NAPT errors or specific types
+- **Return Types:** Frozen dataclasses from `results.py`, one per napt command's underlying operation (type-safe, immutable returns)
 
 ## Design Principles
 
@@ -120,7 +116,7 @@ Result (dataclass)
 - Exception-based error handling
 - Immutable configuration
 
-## Extending NAPT
+## Common contributor tasks
 
 - **New discovery strategy:** Implement `DiscoveryStrategy` in a new module under `discovery/`, then add it to the table in `discovery/registry.py`
 - **New CLI command:** Create `napt/cli/<command>.py` with the `cmd_<name>()` handler and a `register(subparsers)` hook, call `register` from `main()` in `napt/cli/main.py`, and add `tests/cli/test_<command>.py` (strict one module per command)
@@ -128,7 +124,7 @@ Result (dataclass)
 
 ## See Also
 
-- [Core API](core.md) - Main orchestration functions
+- [Discovery manager](discovery-manager.md) - Discovery orchestration
 - [Discovery API](discovery.md) - Discovery strategy implementations
 - [Build API](build.md) - Package building functions
 - [Upload API](upload.md) - Intune upload pipeline

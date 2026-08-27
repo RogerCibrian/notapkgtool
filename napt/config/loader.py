@@ -62,30 +62,6 @@ Error Handling:
         or invalid structure
     - All errors are chained with "from err" for better debugging
 
-Example:
-    Basic usage:
-        ```python
-        from pathlib import Path
-        from napt.config.loader import load_effective_config
-
-        cfg = load_effective_config(Path("recipes/Google/chrome.yaml"))
-        print(cfg["name"])  # Output: Google Chrome
-        ```
-
-    Access merged defaults:
-        ```python
-        psadt_release = cfg["psadt"]["release"]
-        print(psadt_release)  # Output: latest
-        ```
-
-    Override vendor detection:
-        ```python
-        cfg = load_effective_config(
-            Path("recipes/Google/chrome.yaml"),
-            vendor="CustomVendor"
-        )
-        ```
-
 Note:
     - Code defaults are always applied first (NAPT works without config files)
     - The loader walks upward from the recipe to find defaults/org.yaml
