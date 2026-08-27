@@ -1770,32 +1770,33 @@
 </span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>├── discovery/               # Discovery strategies
 </span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>│   ├── api_github.py           # GitHub Releases API strategy
 </span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>│   ├── api_json.py             # Generic JSON API strategy
-</span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>│   ├── base.py                 # Strategy protocol and registry
-</span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>│   ├── url_download.py         # Direct URL download strategy
-</span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>│   └── web_scrape.py           # Web scraping strategy
-</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>│
-</span><span id="__span-0-42"><a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a>├── download/                # HTTP file downloads
-</span><span id="__span-0-43"><a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>│   └── download.py             # HTTP downloads with ETag support
-</span><span id="__span-0-44"><a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a>│
-</span><span id="__span-0-45"><a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>├── graph/                   # Microsoft Graph client
-</span><span id="__span-0-46"><a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>│   ├── client.py               # HTTP transport with retry and error mapping
-</span><span id="__span-0-47"><a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>│   └── intune.py               # Win32 app upload, queries, and assignments
-</span><span id="__span-0-48"><a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a>│
-</span><span id="__span-0-49"><a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a>├── psadt/                   # PSADT release management
-</span><span id="__span-0-50"><a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a>│   └── release.py              # PSADT release download and caching
-</span><span id="__span-0-51"><a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a>│
-</span><span id="__span-0-52"><a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a>├── state/                   # State persistence
-</span><span id="__span-0-53"><a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a>│   ├── cache.py                # Disposable cache of discovered versions and ETags
-</span><span id="__span-0-54"><a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a>│   ├── deployment.py           # Authoritative per-app record of published and pending releases
-</span><span id="__span-0-55"><a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a>│   └── stamp.py                # Provenance stamp linking Intune apps to deployment state
-</span><span id="__span-0-56"><a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a>│
-</span><span id="__span-0-57"><a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a>├── upload/                  # Intune upload pipeline
-</span><span id="__span-0-58"><a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a>│   ├── manager.py              # Upload orchestration
-</span><span id="__span-0-59"><a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a>│   └── intunewin.py            # .intunewin package parser
-</span><span id="__span-0-60"><a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a>│
-</span><span id="__span-0-61"><a id="__codelineno-0-61" name="__codelineno-0-61" href="#__codelineno-0-61"></a>└── versioning/              # Version extraction and comparison
-</span><span id="__span-0-62"><a id="__codelineno-0-62" name="__codelineno-0-62" href="#__codelineno-0-62"></a>    ├── keys.py                 # Version key extraction (DiscoveredVersion)
-</span><span id="__span-0-63"><a id="__codelineno-0-63" name="__codelineno-0-63" href="#__codelineno-0-63"></a>    └── msi.py                  # MSI version extraction backends
+</span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>│   ├── base.py                 # Strategy protocol and shared helpers
+</span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>│   ├── registry.py             # Strategy name-to-class table
+</span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>│   ├── url_download.py         # Direct URL download strategy
+</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>│   └── web_scrape.py           # Web scraping strategy
+</span><span id="__span-0-42"><a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a>│
+</span><span id="__span-0-43"><a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>├── download/                # HTTP file downloads
+</span><span id="__span-0-44"><a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a>│   └── download.py             # HTTP downloads with ETag support
+</span><span id="__span-0-45"><a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>│
+</span><span id="__span-0-46"><a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>├── graph/                   # Microsoft Graph client
+</span><span id="__span-0-47"><a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>│   ├── client.py               # HTTP transport with retry and error mapping
+</span><span id="__span-0-48"><a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a>│   └── intune.py               # Win32 app upload, queries, and assignments
+</span><span id="__span-0-49"><a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a>│
+</span><span id="__span-0-50"><a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a>├── psadt/                   # PSADT release management
+</span><span id="__span-0-51"><a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a>│   └── release.py              # PSADT release download and caching
+</span><span id="__span-0-52"><a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a>│
+</span><span id="__span-0-53"><a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a>├── state/                   # State persistence
+</span><span id="__span-0-54"><a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a>│   ├── cache.py                # Disposable cache of discovered versions and ETags
+</span><span id="__span-0-55"><a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a>│   ├── deployment.py           # Authoritative per-app record of published and pending releases
+</span><span id="__span-0-56"><a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a>│   └── stamp.py                # Provenance stamp linking Intune apps to deployment state
+</span><span id="__span-0-57"><a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a>│
+</span><span id="__span-0-58"><a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a>├── upload/                  # Intune upload pipeline
+</span><span id="__span-0-59"><a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a>│   ├── manager.py              # Upload orchestration
+</span><span id="__span-0-60"><a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a>│   └── intunewin.py            # .intunewin package parser
+</span><span id="__span-0-61"><a id="__codelineno-0-61" name="__codelineno-0-61" href="#__codelineno-0-61"></a>│
+</span><span id="__span-0-62"><a id="__codelineno-0-62" name="__codelineno-0-62" href="#__codelineno-0-62"></a>└── versioning/              # Version extraction and comparison
+</span><span id="__span-0-63"><a id="__codelineno-0-63" name="__codelineno-0-63" href="#__codelineno-0-63"></a>    ├── keys.py                 # Version key extraction (DiscoveredVersion)
+</span><span id="__span-0-64"><a id="__codelineno-0-64" name="__codelineno-0-64" href="#__codelineno-0-64"></a>    └── msi.py                  # MSI version extraction backends
 </span></code></pre></div>
 <h3 id="data-flow">Data Flow</h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Recipe YAML
@@ -1825,7 +1826,7 @@
 </ul>
 <h2 id="key-concepts">Key Concepts</h2>
 <ul>
-<li><strong>Discovery Strategies:</strong> Protocol-based, stateless, registered in global registry (api_github, api_json, web_scrape). All return a <code>RemoteVersion</code> from configuration alone. The orchestrator runs the result through <code>resolve_with_cache</code> to skip the download when the version is unchanged. <code>url_download</code> is a separate flow (not a registered strategy) because it must download the file to determine the version.</li>
+<li><strong>Discovery Strategies:</strong> Protocol-based, stateless, listed in an explicit registry table (api_github, api_json, web_scrape). All return a <code>RemoteVersion</code> from configuration alone. The orchestrator runs the result through <code>resolve_with_cache</code> to skip the download when the version is unchanged. <code>url_download</code> is a separate flow (not a registered strategy) because it must download the file to determine the version.</li>
 <li><strong>Configuration:</strong> 3-layer system (org → vendor → recipe) with deep merging</li>
 <li><strong>State Management:</strong> Two kinds with opposite philosophies — the disposable discovery cache (<code>cache/discovery.json</code>) for download optimization, and authoritative per-app deployment state (<code>state/deployment/&lt;id&gt;.json</code>) recording what is published and pending</li>
 <li><strong>Exceptions:</strong> All NAPT domain errors use custom exceptions inheriting from <code>NAPTError</code> (ConfigError, NetworkError, PackagingError) - allows catching all NAPT errors or specific types</li>
@@ -1842,7 +1843,7 @@
 </ul>
 <h2 id="extending-napt">Extending NAPT</h2>
 <ul>
-<li><strong>New discovery strategy:</strong> Implement <code>DiscoveryStrategy</code>, register with <code>register_strategy()</code>, add to <code>discovery/__init__.py</code></li>
+<li><strong>New discovery strategy:</strong> Implement <code>DiscoveryStrategy</code> in a new module under <code>discovery/</code>, then add it to the table in <code>discovery/registry.py</code></li>
 <li><strong>New CLI command:</strong> Create <code>napt/cli/&lt;command&gt;.py</code> with the <code>cmd_&lt;name&gt;()</code> handler and a <code>register(subparsers)</code> hook, call <code>register</code> from <code>main()</code> in <code>napt/cli/main.py</code>, and add <code>tests/cli/test_&lt;command&gt;.py</code> (strict one module per command)</li>
 <li><strong>New config option:</strong> Update schema in <code>config/loader.py</code>, add validation in <code>validation.py</code>, document in recipe schema</li>
 </ul>
