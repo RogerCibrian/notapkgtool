@@ -1744,7 +1744,7 @@ metadata, and executing the Graph API upload flow.</p>
   <summary>Example</summary>
   <p>Upload a packaged app to Intune:
     <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">napt.upload</span><span class="w"> </span><span class="kn">import</span> <span class="n">upload_package</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">napt.upload.manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">upload_package</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">result</span> <span class="o">=</span> <span class="n">upload_package</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">"recipes/Google/chrome.yaml"</span><span class="p">))</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Created Intune app: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">intune_app_id</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
@@ -1929,7 +1929,7 @@ Run 'napt package' to create or recreate the package.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="            NetworkError (napt.exceptions.NetworkError)" href="../exceptions/#napt.exceptions.NetworkError">NetworkError</a></code>
+                  <code><span title="NetworkError">NetworkError</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -1968,7 +1968,7 @@ deployment.require_pending is enabled.</p>
   <summary>Example</summary>
   <p>Upload and print the resulting Intune app IDs:
     <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">napt.upload</span><span class="w"> </span><span class="kn">import</span> <span class="n">upload_package</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">napt.upload.manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">upload_package</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">result</span> <span class="o">=</span> <span class="n">upload_package</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">"recipes/Google/chrome.yaml"</span><span class="p">))</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Install app ID: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">intune_app_id</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
@@ -2265,7 +2265,7 @@ deployment.require_pending is enabled.</p>
 </span><span id="__span-0-729"><a id="__codelineno-0-729" name="__codelineno-0-729"></a><span class="sd">        Upload and print the resulting Intune app IDs:</span>
 </span><span id="__span-0-730"><a id="__codelineno-0-730" name="__codelineno-0-730"></a><span class="sd">            ```python</span>
 </span><span id="__span-0-731"><a id="__codelineno-0-731" name="__codelineno-0-731"></a><span class="sd">            from pathlib import Path</span>
-</span><span id="__span-0-732"><a id="__codelineno-0-732" name="__codelineno-0-732"></a><span class="sd">            from napt.upload import upload_package</span>
+</span><span id="__span-0-732"><a id="__codelineno-0-732" name="__codelineno-0-732"></a><span class="sd">            from napt.upload.manager import upload_package</span>
 </span><span id="__span-0-733"><a id="__codelineno-0-733" name="__codelineno-0-733"></a>
 </span><span id="__span-0-734"><a id="__codelineno-0-734" name="__codelineno-0-734"></a><span class="sd">            result = upload_package(Path("recipes/Google/chrome.yaml"))</span>
 </span><span id="__span-0-735"><a id="__codelineno-0-735" name="__codelineno-0-735"></a><span class="sd">            print(f"Install app ID: {result.intune_app_id}")</span>

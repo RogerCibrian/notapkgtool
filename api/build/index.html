@@ -1678,7 +1678,7 @@ packages from recipes and downloaded installers.</p>
   <summary>Example</summary>
   <p>Basic usage:
     <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">napt.build</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_package</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">napt.build.manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_package</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">result</span> <span class="o">=</span> <span class="n">build_package</span><span class="p">(</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">recipe_path</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">"recipes/Google/chrome.yaml"</span><span class="p">),</span>
@@ -2393,7 +2393,7 @@ generates detection and requirements, "app_only" generates only detection,
 </span><span id="__span-0-1338"><a id="__codelineno-0-1338" name="__codelineno-0-1338"></a><span class="sd">        "update_only" generates detection and requirements.</span>
 </span><span id="__span-0-1339"><a id="__codelineno-0-1339" name="__codelineno-0-1339"></a><span class="sd">    """</span>
 </span><span id="__span-0-1340"><a id="__codelineno-0-1340" name="__codelineno-0-1340"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">napt.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_global_logger</span>
-</span><span id="__span-0-1341"><a id="__codelineno-0-1341" name="__codelineno-0-1341"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">napt.state</span><span class="w"> </span><span class="kn">import</span> <span class="n">cache_file_path</span>
+</span><span id="__span-0-1341"><a id="__codelineno-0-1341" name="__codelineno-0-1341"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">napt.state.cache</span><span class="w"> </span><span class="kn">import</span> <span class="n">cache_file_path</span>
 </span><span id="__span-0-1342"><a id="__codelineno-0-1342" name="__codelineno-0-1342"></a>
 </span><span id="__span-0-1343"><a id="__codelineno-0-1343" name="__codelineno-0-1343"></a>    <span class="n">logger</span> <span class="o">=</span> <span class="n">get_global_logger</span><span class="p">()</span>
 </span><span id="__span-0-1344"><a id="__codelineno-0-1344" name="__codelineno-0-1344"></a>    <span class="c1"># Load configuration</span>
