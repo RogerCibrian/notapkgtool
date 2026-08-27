@@ -193,10 +193,9 @@ Domain types and internal types stay co-located with their logic.
 
 **Package `__init__.py` files are docstring-only — no re-exports.** Import every name from its defining module: `from napt.state.cache import load_cache`, never `from napt.state import load_cache`. This keeps the import graph equal to the real dependencies, makes circular imports through package inits structurally impossible, and keeps CLI startup from loading subsystems a command doesn't use.
 
-Exceptions:
+Exception:
 
 - `napt/__init__.py` — package metadata dunders (`__version__`, ...) only.
-- `napt/discovery/__init__.py` — imports the strategy modules so they self-register; no name re-exports.
 
 ---
 

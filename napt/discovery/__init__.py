@@ -12,22 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Discovery package: registry, strategies, and orchestration.
+"""Discovery package: strategies, registry, and orchestration.
 
 Two flows feed into
 [discover_recipe][napt.discovery.manager.discover_recipe]:
 
-- **Registered strategies** (api_github, api_json, web_scrape) implement
-    [DiscoveryStrategy][napt.discovery.base.DiscoveryStrategy] — they
-    discover a version and its download URL without touching the file.
-    The orchestrator runs the result through
+- **Version-first strategies** (api_github, api_json, web_scrape)
+    implement [DiscoveryStrategy][napt.discovery.base.DiscoveryStrategy]
+    — they discover a version and its download URL without touching the
+    file. The orchestrator looks them up in the explicit table in
+    [napt.discovery.registry][] and runs the result through
     [resolve_with_cache][napt.discovery.base.resolve_with_cache] to
     decide whether to skip the download.
 - **url_download** is a separate flow at
     [run_url_download][napt.discovery.url_download.run_url_download]. It
     downloads the file with HTTP conditional requests and extracts the
-    version from the file's metadata. It is not a registered strategy
-    because it cannot determine the version without the file.
+    version from the file's metadata. It is not in the registry because
+    it cannot determine the version without the file.
 
 The discovery orchestrator dispatches to one of the two flows based
 on the recipe's ``discovery.strategy`` value.
@@ -41,13 +42,3 @@ Built-in strategies:
         parses a vendor download page for both fields.
 
 """
-
-# Importing a strategy module runs its register_strategy() call. This is
-# the one side effect a NAPT package __init__ carries: importing anything
-# under napt.discovery guarantees the built-in strategies are registered
-# before get_strategy() runs. No names are re-exported.
-from . import (
-    api_github,  # noqa: F401
-    api_json,  # noqa: F401
-    web_scrape,  # noqa: F401
-)

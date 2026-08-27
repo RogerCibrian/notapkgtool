@@ -44,7 +44,8 @@ napt/
 ├── discovery/               # Discovery strategies
 │   ├── api_github.py           # GitHub Releases API strategy
 │   ├── api_json.py             # Generic JSON API strategy
-│   ├── base.py                 # Strategy protocol and registry
+│   ├── base.py                 # Strategy protocol and shared helpers
+│   ├── registry.py             # Strategy name-to-class table
 │   ├── url_download.py         # Direct URL download strategy
 │   └── web_scrape.py           # Web scraping strategy
 │
@@ -103,7 +104,7 @@ Result (dataclass)
 
 ## Key Concepts
 
-- **Discovery Strategies:** Protocol-based, stateless, registered in global registry (api_github, api_json, web_scrape). All return a `RemoteVersion` from configuration alone. The orchestrator runs the result through `resolve_with_cache` to skip the download when the version is unchanged. `url_download` is a separate flow (not a registered strategy) because it must download the file to determine the version.
+- **Discovery Strategies:** Protocol-based, stateless, listed in an explicit registry table (api_github, api_json, web_scrape). All return a `RemoteVersion` from configuration alone. The orchestrator runs the result through `resolve_with_cache` to skip the download when the version is unchanged. `url_download` is a separate flow (not a registered strategy) because it must download the file to determine the version.
 - **Configuration:** 3-layer system (org → vendor → recipe) with deep merging
 - **State Management:** Two kinds with opposite philosophies — the disposable discovery cache (`cache/discovery.json`) for download optimization, and authoritative per-app deployment state (`state/deployment/<id>.json`) recording what is published and pending
 - **Exceptions:** All NAPT domain errors use custom exceptions inheriting from `NAPTError` (ConfigError, NetworkError, PackagingError) - allows catching all NAPT errors or specific types
@@ -120,7 +121,7 @@ Result (dataclass)
 
 ## Extending NAPT
 
-- **New discovery strategy:** Implement `DiscoveryStrategy`, register with `register_strategy()`, add to `discovery/__init__.py`
+- **New discovery strategy:** Implement `DiscoveryStrategy` in a new module under `discovery/`, then add it to the table in `discovery/registry.py`
 - **New CLI command:** Create `napt/cli/<command>.py` with the `cmd_<name>()` handler and a `register(subparsers)` hook, call `register` from `main()` in `napt/cli/main.py`, and add `tests/cli/test_<command>.py` (strict one module per command)
 - **New config option:** Update schema in `config/loader.py`, add validation in `validation.py`, document in recipe schema
 

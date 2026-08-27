@@ -52,7 +52,7 @@ from typing import Any
 
 import yaml
 
-from napt.discovery.base import get_strategy
+from napt.discovery.registry import get_strategy
 from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
 from napt.results import ValidationResult

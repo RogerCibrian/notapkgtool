@@ -2,6 +2,8 @@
 
 ::: napt.discovery.base
 
+::: napt.discovery.registry
+
 ::: napt.discovery.url_download
 
 ::: napt.discovery.web_scrape
