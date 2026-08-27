@@ -1,4 +1,4 @@
-"""Tests for napt.upload.auth."""
+"""Tests for napt.auth.credentials."""
 
 from __future__ import annotations
 
@@ -9,9 +9,8 @@ from unittest.mock import MagicMock, patch
 from azure.core.exceptions import ClientAuthenticationError
 import pytest
 
-from napt.exceptions import AuthError, ConfigError
-from napt.upload import auth
-from napt.upload.auth import (
+from napt.auth import credentials
+from napt.auth.credentials import (
     AuthConfig,
     AuthStore,
     get_access_token,
@@ -21,6 +20,7 @@ from napt.upload.auth import (
     logout,
     resolve_auth_config,
 )
+from napt.exceptions import AuthError, ConfigError
 
 
 def _jwt(claims: dict) -> str:
@@ -49,7 +49,11 @@ def chain_fails():
     """Makes the non-interactive azure-identity chain report no credential."""
     cred = MagicMock()
     cred.get_token.side_effect = ClientAuthenticationError("no cred")
-    with patch("napt.upload.auth.get_credential", return_value=cred):
+    with (
+        patch("napt.auth.credentials.get_credential", return_value=cred),
+        # Keep the developer's real `az login` session out of the tests.
+        patch("napt.auth.credentials._azure_cli_token", return_value=None),
+    ):
         yield cred
 
 
@@ -59,7 +63,7 @@ def _remember(*configs: AuthConfig, active: str | None = None) -> None:
         active=active or configs[-1].tenant_id,
         tenants={c.tenant_id: c for c in configs},
     )
-    auth._save_auth_store(store)
+    credentials._save_auth_store(store)
 
 
 def _fake_app(
@@ -86,7 +90,7 @@ def test_get_access_token_returns_token_when_chain_succeeds() -> None:
     cred = MagicMock()
     cred.get_token.return_value = mock_token
 
-    with patch("napt.upload.auth.get_credential", return_value=cred):
+    with patch("napt.auth.credentials.get_credential", return_value=cred):
         assert get_access_token() == "test-bearer-token"
 
 
@@ -103,7 +107,7 @@ def test_get_access_token_uses_cached_session(user_dir, chain_fails) -> None:
     _remember(AuthConfig("cid", "tid", "u@x"))
     app = _fake_app(accounts=[{"username": "u@x"}], silent={"access_token": "cached"})
 
-    with patch("napt.upload.auth._build_public_client", return_value=app):
+    with patch("napt.auth.credentials._build_public_client", return_value=app):
         assert get_access_token() == "cached"
 
     app.get_accounts.assert_called_once_with(username="u@x")
@@ -117,7 +121,7 @@ def test_get_access_token_never_opens_browser_without_session(
     _remember(AuthConfig("cid", "tid", "u@x"))
     app = _fake_app(accounts=[])
 
-    with patch("napt.upload.auth._build_public_client", return_value=app):
+    with patch("napt.auth.credentials._build_public_client", return_value=app):
         with pytest.raises(AuthError, match="napt auth login"):
             get_access_token()
 
@@ -132,7 +136,7 @@ def test_get_access_token_reports_expired_session(user_dir, chain_fails) -> None
         silent={"error": "invalid_grant", "error_description": "AADSTS70008 expired"},
     )
 
-    with patch("napt.upload.auth._build_public_client", return_value=app):
+    with patch("napt.auth.credentials._build_public_client", return_value=app):
         with pytest.raises(AuthError, match="invalid_grant") as excinfo:
             get_access_token()
     assert "napt auth login" in str(excinfo.value)
@@ -215,8 +219,8 @@ def test_login_saves_config_and_reports_permissions(user_dir) -> None:
     app = _fake_app(interactive={"access_token": token})
 
     with (
-        patch("napt.upload.auth._build_public_client", return_value=app),
-        patch("napt.upload.auth._broker_available", return_value=False),
+        patch("napt.auth.credentials._build_public_client", return_value=app),
+        patch("napt.auth.credentials._broker_available", return_value=False),
     ):
         status = login(client_id="cid", tenant_id="tid")
 
@@ -235,14 +239,14 @@ def test_login_reuses_valid_session_without_prompt(user_dir) -> None:
     app = _fake_app(accounts=[{"username": "a@x"}], silent={"access_token": token})
 
     with (
-        patch("napt.upload.auth._build_public_client", return_value=app),
-        patch("napt.upload.auth._broker_available", return_value=False),
+        patch("napt.auth.credentials._build_public_client", return_value=app),
+        patch("napt.auth.credentials._broker_available", return_value=False),
     ):
         status = login(tenant_id="tid-a")
 
     assert status.account == "a@x"
     app.acquire_token_interactive.assert_not_called()
-    assert auth.load_auth_store().active == "tid-a"
+    assert credentials.load_auth_store().active == "tid-a"
 
 
 def test_login_prompts_when_cached_session_expired(user_dir) -> None:
@@ -256,8 +260,8 @@ def test_login_prompts_when_cached_session_expired(user_dir) -> None:
     )
 
     with (
-        patch("napt.upload.auth._build_public_client", return_value=app),
-        patch("napt.upload.auth._broker_available", return_value=False),
+        patch("napt.auth.credentials._build_public_client", return_value=app),
+        patch("napt.auth.credentials._broker_available", return_value=False),
     ):
         status = login()
 
@@ -272,12 +276,12 @@ def test_login_keeps_other_tenants(user_dir) -> None:
     app = _fake_app(interactive={"access_token": token})
 
     with (
-        patch("napt.upload.auth._build_public_client", return_value=app),
-        patch("napt.upload.auth._broker_available", return_value=False),
+        patch("napt.auth.credentials._build_public_client", return_value=app),
+        patch("napt.auth.credentials._broker_available", return_value=False),
     ):
         login(client_id="cid-b", tenant_id="tid-b")
 
-    store = auth.load_auth_store()
+    store = credentials.load_auth_store()
     assert store.active == "tid-b"
     assert store.tenants["tid-a"] == AuthConfig("cid-a", "tid-a", "a@x")
     assert store.tenants["tid-b"] == AuthConfig("cid-b", "tid-b", "b@x")
@@ -289,8 +293,8 @@ def test_login_uses_broker_when_available(user_dir) -> None:
     app = _fake_app(interactive={"access_token": token})
 
     with (
-        patch("napt.upload.auth._build_public_client", return_value=app) as build,
-        patch("napt.upload.auth._broker_available", return_value=True),
+        patch("napt.auth.credentials._build_public_client", return_value=app) as build,
+        patch("napt.auth.credentials._broker_available", return_value=True),
     ):
         status = login(client_id="cid", tenant_id="tid")
 
@@ -306,8 +310,8 @@ def test_login_no_broker_flag_forces_browser(user_dir) -> None:
     app = _fake_app(interactive={"access_token": _jwt({})})
 
     with (
-        patch("napt.upload.auth._build_public_client", return_value=app) as build,
-        patch("napt.upload.auth._broker_available", return_value=True),
+        patch("napt.auth.credentials._build_public_client", return_value=app) as build,
+        patch("napt.auth.credentials._broker_available", return_value=True),
     ):
         login(client_id="cid", tenant_id="tid", use_broker=False)
 
@@ -329,8 +333,8 @@ def test_login_surfaces_msal_error(user_dir) -> None:
         }
     )
     with (
-        patch("napt.upload.auth._build_public_client", return_value=app),
-        patch("napt.upload.auth._broker_available", return_value=False),
+        patch("napt.auth.credentials._build_public_client", return_value=app),
+        patch("napt.auth.credentials._broker_available", return_value=False),
     ):
         with pytest.raises(AuthError, match="invalid_client: AADSTS50011") as exc:
             login(client_id="cid", tenant_id="tid")
@@ -343,12 +347,12 @@ def test_logout_signs_out_active_tenant_only(user_dir) -> None:
     _remember(AuthConfig("cid-a", "tid-a", "a@x"), AuthConfig("cid-b", "tid-b", "b@x"))
     app = _fake_app(accounts=[{"username": "b@x"}])
 
-    with patch("napt.upload.auth._build_public_client", return_value=app):
+    with patch("napt.auth.credentials._build_public_client", return_value=app):
         assert logout() == ["tid-b"]
 
     app.get_accounts.assert_called_once_with(username="b@x")
     app.remove_account.assert_called_once()
-    store = auth.load_auth_store()
+    store = credentials.load_auth_store()
     assert store.tenants["tid-b"] == AuthConfig("cid-b", "tid-b", None)
     assert store.tenants["tid-a"] == AuthConfig("cid-a", "tid-a", "a@x")
     assert store.active == "tid-b"
@@ -359,10 +363,10 @@ def test_logout_all_signs_out_every_tenant(user_dir) -> None:
     _remember(AuthConfig("cid-a", "tid-a", "a@x"), AuthConfig("cid-b", "tid-b", "b@x"))
     app = _fake_app(accounts=[{"username": "x"}])
 
-    with patch("napt.upload.auth._build_public_client", return_value=app):
+    with patch("napt.auth.credentials._build_public_client", return_value=app):
         assert sorted(logout(all_tenants=True)) == ["tid-a", "tid-b"]
 
-    store = auth.load_auth_store()
+    store = credentials.load_auth_store()
     assert all(c.username is None for c in store.tenants.values())
 
 
@@ -381,7 +385,7 @@ def test_get_status_reports_service_principal(user_dir, monkeypatch) -> None:
     cred = MagicMock()
     cred.get_token.return_value = token
 
-    with patch("napt.upload.auth.get_credential", return_value=cred):
+    with patch("napt.auth.credentials.get_credential", return_value=cred):
         status = get_status()
 
     assert status is not None
@@ -397,10 +401,10 @@ def test_get_status_returns_none_when_unauthenticated(user_dir, chain_fails) -> 
 
 def test_status_handles_opaque_token() -> None:
     """Tests that an undecodable token still yields a status object."""
-    status = auth._status_from_token("not-a-jwt", "service principal")
+    status = credentials._status_from_token("not-a-jwt", "service principal")
     assert status.account is None
     assert status.permissions == []
-    assert set(status.missing) == set(auth.REQUIRED_PERMISSIONS)
+    assert set(status.missing) == set(credentials.REQUIRED_PERMISSIONS)
 
 
 def test_login_canceled_in_broker_explains_hidden_error(user_dir) -> None:
@@ -419,8 +423,8 @@ def test_login_canceled_in_broker_explains_hidden_error(user_dir) -> None:
         }
     )
     with (
-        patch("napt.upload.auth._build_public_client", return_value=app),
-        patch("napt.upload.auth._broker_available", return_value=True),
+        patch("napt.auth.credentials._build_public_client", return_value=app),
+        patch("napt.auth.credentials._broker_available", return_value=True),
     ):
         with pytest.raises(AuthError, match="canceled") as exc:
             login(client_id="cid", tenant_id="tid")
@@ -450,9 +454,9 @@ def test_login_stores_tenant_domain_and_name(user_dir) -> None:
         ]
     )
     with (
-        patch("napt.upload.auth._build_public_client", return_value=app),
-        patch("napt.upload.auth._broker_available", return_value=False),
-        patch("napt.upload.auth.requests.get", return_value=org) as get,
+        patch("napt.auth.credentials._build_public_client", return_value=app),
+        patch("napt.auth.credentials._broker_available", return_value=False),
+        patch("napt.auth.credentials.requests.get", return_value=org) as get,
     ):
         login(client_id="cid", tenant_id="tid")
 
@@ -471,10 +475,10 @@ def test_login_without_user_read_leaves_label_empty(user_dir) -> None:
     token = _jwt({"preferred_username": "a@msp.com"})
     app = _fake_app(interactive={"access_token": token})
     with (
-        patch("napt.upload.auth._build_public_client", return_value=app),
-        patch("napt.upload.auth._broker_available", return_value=False),
+        patch("napt.auth.credentials._build_public_client", return_value=app),
+        patch("napt.auth.credentials._broker_available", return_value=False),
         patch(
-            "napt.upload.auth.requests.get",
+            "napt.auth.credentials.requests.get",
             side_effect=_requests.HTTPError("403 Forbidden"),
         ),
     ):
@@ -490,9 +494,9 @@ def test_logout_keeps_tenant_label(user_dir) -> None:
     """Tests that signing out clears the account but keeps the tenant label."""
     _remember(AuthConfig("cid", "tid", "u@x", domain="x.com", display_name="X"))
     app = _fake_app(accounts=[{"username": "u@x"}])
-    with patch("napt.upload.auth._build_public_client", return_value=app):
+    with patch("napt.auth.credentials._build_public_client", return_value=app):
         logout()
-    saved = auth.load_auth_store().tenants["tid"]
+    saved = credentials.load_auth_store().tenants["tid"]
     assert saved.username is None
     assert saved.label == "X (x.com)"
 
@@ -510,3 +514,82 @@ def test_resolve_auth_config_accepts_domain_for_tenant(user_dir) -> None:
     assert resolved.username == "a@x"
     # Unknown domains are passed through untouched so the error names them.
     assert resolve_auth_config(tenant_id="nope.com") is None
+
+
+# ---------------------------------------------------------------------------
+# Azure CLI session (OIDC login steps in CI)
+# ---------------------------------------------------------------------------
+
+
+def test_get_access_token_falls_back_to_azure_cli(user_dir, chain_fails) -> None:
+    """Tests that an az login session is used when nothing else is configured."""
+    with patch("napt.auth.credentials._azure_cli_token", return_value="cli-token"):
+        assert get_access_token() == "cli-token"
+
+
+def test_napt_session_wins_over_azure_cli(user_dir, chain_fails) -> None:
+    """Tests that a developer's napt auth login beats a stray az login."""
+    _remember(AuthConfig("cid", "tid", "u@x"))
+    app = _fake_app(accounts=[{"username": "u@x"}], silent={"access_token": "napt"})
+    with (
+        patch("napt.auth.credentials._build_public_client", return_value=app),
+        patch(
+            "napt.auth.credentials._azure_cli_token", return_value="cli-token"
+        ) as cli,
+    ):
+        assert get_access_token() == "napt"
+    cli.assert_not_called()
+
+
+def test_get_status_reports_azure_cli(user_dir, chain_fails) -> None:
+    """Tests that status names the Azure CLI as the source and decodes its token."""
+    token = _jwt(
+        {"appid": "cid", "tid": "tid", "roles": list(credentials.REQUIRED_PERMISSIONS)}
+    )
+    with patch("napt.auth.credentials._azure_cli_token", return_value=token):
+        status = get_status()
+    assert status is not None
+    assert status.method == "azure cli"
+    assert status.missing == []
+
+
+def test_azure_cli_token_is_none_when_unavailable() -> None:
+    """Tests that a missing or signed-out Azure CLI yields None, not an error."""
+    cred = MagicMock()
+    cred.get_token.side_effect = ClientAuthenticationError("az not found")
+    with patch("napt.auth.credentials.AzureCliCredential", return_value=cred):
+        assert credentials._azure_cli_token() is None
+
+
+def _cli_cred(token: str) -> MagicMock:
+    access = MagicMock()
+    access.token = token
+    cred = MagicMock()
+    cred.get_token.return_value = access
+    return cred
+
+
+def test_azure_cli_token_accepts_service_principal_session() -> None:
+    """Tests that an app-only az session (azure/login in CI) is used."""
+    token = _jwt({"idtyp": "app", "appid": "cid", "roles": ["Group.Read.All"]})
+    with patch(
+        "napt.auth.credentials.AzureCliCredential", return_value=_cli_cred(token)
+    ):
+        assert credentials._azure_cli_token() == token
+
+
+def test_azure_cli_token_refuses_user_session() -> None:
+    """Tests that a person's az login is refused with a pointer to napt auth login."""
+    token = _jwt(
+        {
+            "idtyp": "user",
+            "preferred_username": "dev@x",
+            "scp": "DeviceManagementApps.ReadWrite.All Group.Read.All",
+        }
+    )
+    with patch(
+        "napt.auth.credentials.AzureCliCredential", return_value=_cli_cred(token)
+    ):
+        with pytest.raises(AuthError, match="signed in as a user") as exc:
+            credentials._azure_cli_token()
+    assert "napt auth login" in str(exc.value)

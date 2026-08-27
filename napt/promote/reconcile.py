@@ -47,15 +47,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from napt.graph.intune import get_mobile_app
 from napt.logging import get_global_logger
-from napt.state import (
+from napt.state.deployment import (
     deployment_state_path,
     load_deployment_state,
     record_published,
     save_deployment_state,
 )
-from napt.upload.graph import get_mobile_app
-from napt.upload.stamp import ENTRY_INSTALL, ENTRY_UPDATE, find_stamped_app
+from napt.state.stamp import ENTRY_INSTALL, ENTRY_UPDATE, find_stamped_app
 
 __all__ = ["reconcile_publications"]
 
@@ -137,9 +137,7 @@ def reconcile_publications(
                 f"published: {'; '.join(problems)} - re-run publish to finish"
             )
             logger.warning("PROMOTE", f"{app_id}: {detail}")
-            findings.append(
-                {"app_id": app_id, "kind": "incomplete", "detail": detail}
-            )
+            findings.append({"app_id": app_id, "kind": "incomplete", "detail": detail})
             continue
 
         install_match = matches.get(ENTRY_INSTALL)

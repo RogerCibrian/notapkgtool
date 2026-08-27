@@ -12,36 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""PSADT package building for NAPT.
+
+Builds PSAppDeployToolkit packages from recipes and downloaded installers:
+PSADT release management, script generation, file copying, and branding
+application.
+
+Modules:
+    manager - Package building orchestration (build_package).
+    packager - .intunewin package creation (create_intunewin).
+    template - Invoke-AppDeployToolkit.ps1 generation.
+    icons - Icon extraction from installers.
+    registry_scripts - Detection/requirements script generation (registry).
+    msix_scripts - Detection/requirements script generation (MSIX).
 """
-PSADT package building for NAPT.
-
-This module handles building PSAppDeployToolkit packages from recipes and
-downloaded installers. It orchestrates PSADT release management, script
-generation, file copying, and branding application.
-
-Example:
-    from pathlib import Path
-    from napt.build import build_package, create_intunewin
-
-    # Build PSADT package
-    build_result = build_package(
-        recipe_path=Path("recipes/Google/chrome.yaml"),
-        downloads_dir=Path("downloads"),
-        verbose=True
-    )
-
-    print(f"Built: {build_result.build_dir}")
-
-    # Create .intunewin
-    package_result = create_intunewin(
-        build_dir=build_result.build_dir,
-        verbose=True
-    )
-
-    print(f"Package: {package_result.package_path}")
-"""
-
-from .manager import build_package
-from .packager import create_intunewin
-
-__all__ = ["build_package", "create_intunewin"]

@@ -46,7 +46,7 @@ import subprocess
 
 import requests
 
-from napt.download import make_session
+from napt.download.download import make_session
 from napt.exceptions import ConfigError, NetworkError, PackagingError
 from napt.results import PackageResult
 

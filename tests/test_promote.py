@@ -11,13 +11,13 @@ import pytest
 import yaml
 
 from napt.exceptions import ConfigError, StateError
-from napt.promote import (
+from napt.promote.planner import (
     plan_path_for,
     plan_promotions,
     resolve_state_dir,
     write_plan_files,
 )
-from napt.state import (
+from napt.state.deployment import (
     create_default_deployment_state,
     deployment_state_path,
     save_deployment_state,
@@ -417,8 +417,7 @@ def _action(app_id: str = "a") -> dict[str, Any]:
         "app_id": app_id,
         "name": f"App {app_id}",
         "summary": (
-            "Start rolling out 1.0: assign the update entry to the "
-            "pilot ring (g)."
+            "Start rolling out 1.0: assign the update entry to the pilot ring (g)."
         ),
         "type": "promote",
         "entry": "update",

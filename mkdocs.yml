@@ -86,6 +86,7 @@ nav:
     - logging: api/logging.md
     - results: api/results.md
     - validation: api/validation.md
+    - auth: api/auth.md
     - build:
       - manager: api/build.md
       - template: api/template.md
@@ -97,6 +98,7 @@ nav:
       - discovery: api/discovery.md
       - manager: api/core.md
     - download: api/download.md
+    - graph: api/graph.md
     - psadt: api/psadt.md
     - state: api/state.md
     - upload: api/upload.md

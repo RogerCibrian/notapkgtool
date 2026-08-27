@@ -32,31 +32,11 @@ on ``plan --check-drift``, and is always reported, never corrected.
 Publications whose deployment state writeback was lost (e.g. a failed CI
 push after a successful upload) are recovered from tenant evidence on
 every apply and on ``plan --reconcile``.
+
+Modules:
+    planner - Plan computation and plan file writing.
+    applier - Plan execution against Intune.
+    preflight - Group resolution validation before assignment.
+    drift - Assignment drift detection.
+    reconcile - Lost publication writeback recovery.
 """
-
-from .applier import apply_plan, load_plan_file
-from .drift import detect_drift
-from .planner import (
-    load_recipe_configs,
-    plan_path_for,
-    plan_promotions,
-    plans_dir_for,
-    resolve_state_dir,
-    write_plan_files,
-)
-from .preflight import unresolvable_groups
-from .reconcile import reconcile_publications
-
-__all__ = [
-    "apply_plan",
-    "detect_drift",
-    "load_plan_file",
-    "load_recipe_configs",
-    "plan_path_for",
-    "plan_promotions",
-    "plans_dir_for",
-    "reconcile_publications",
-    "resolve_state_dir",
-    "unresolvable_groups",
-    "write_plan_files",
-]

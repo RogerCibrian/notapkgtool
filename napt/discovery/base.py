@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Discovery strategy protocol, registry, and shared helpers.
+"""Discovery strategy protocol and shared helpers.
 
 A *discovery strategy* answers a single question: "what is the latest
 version of this app, and where can it be downloaded from?" Strategies
@@ -36,37 +36,13 @@ Design Philosophy:
         matched structurally; no inheritance is required.
     - Strategies are pure functions of configuration. They have no state,
         no I/O of files, and no awareness of the cache.
-    - Registration is a side effect of importing each strategy module.
+    - Dispatch is an explicit name-to-class table in
+        [napt.discovery.registry][].
     - The [resolve_with_cache][napt.discovery.base.resolve_with_cache]
         helper turns a [RemoteVersion][napt.discovery.base.RemoteVersion]
         into a [StrategyResult][napt.discovery.base.StrategyResult] by
         checking the cache and downloading if needed. Strategies don't
         call it themselves; the orchestrator does.
-
-Example:
-    Adding a new strategy to the codebase:
-        ```python
-        from napt.discovery.base import (
-            RemoteVersion, register_strategy,
-        )
-
-        class GitlabReleasesStrategy:
-            def discover(self, app_config):
-                # Query GitLab API and parse the response...
-                return RemoteVersion(
-                    version="1.2.3",
-                    download_url="https://gitlab.example.com/.../installer.msi",
-                    source="gitlab_releases",
-                )
-
-            def validate_config(self, app_config):
-                errors = []
-                if "project" not in app_config.get("discovery", {}):
-                    errors.append("Missing required field: discovery.project")
-                return errors
-
-        register_strategy("gitlab_releases", GitlabReleasesStrategy)
-        ```
 
 """
 
@@ -76,10 +52,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-from napt.download import download_file
-from napt.exceptions import ConfigError
+from napt.download.download import download_file
 from napt.logging import get_global_logger
-from napt.versioning import is_newer
+from napt.versioning.compare import is_newer
 
 
 @dataclass(frozen=True)
@@ -182,60 +157,6 @@ class DiscoveryStrategy(Protocol):
 
         """
         ...
-
-
-_STRATEGY_REGISTRY: dict[str, type[DiscoveryStrategy]] = {}
-
-
-def register_strategy(name: str, strategy_class: type[DiscoveryStrategy]) -> None:
-    """Registers a discovery strategy by name in the global registry.
-
-    Strategies call this at module import time so they're available when
-    the orchestrator looks them up. Registering the same name twice
-    overwrites the previous entry (intentional, to allow test
-    monkey-patching).
-
-    Args:
-        name: Strategy name. This is the value used in recipe YAML files
-            under ``discovery.strategy``. Use lowercase with underscores.
-        strategy_class: Class implementing
-            [DiscoveryStrategy][napt.discovery.base.DiscoveryStrategy].
-            Type checkers verify protocol compliance statically.
-
-    Note:
-        ``url_download`` is intentionally not registered here. It runs
-        through a separate code path in the orchestrator because it
-        downloads the file before it can determine the version, which
-        does not fit the version-first contract.
-
-    """
-    _STRATEGY_REGISTRY[name] = strategy_class
-
-
-def get_strategy(name: str) -> DiscoveryStrategy:
-    """Returns a discovery strategy instance by name from the registry.
-
-    Strategies are instantiated on-demand because they are stateless. The
-    strategy's module must already be imported for registration to have
-    happened.
-
-    Args:
-        name: Registered strategy name. Case-sensitive.
-
-    Returns:
-        New instance of the requested strategy.
-
-    Raises:
-        ConfigError: If the name is not registered. The message lists
-            the available strategies for troubleshooting.
-
-    """
-    if name not in _STRATEGY_REGISTRY:
-        available = ", ".join(_STRATEGY_REGISTRY.keys())
-        raise ConfigError(
-            f"Unknown discovery strategy: {name!r}. Available: {available or '(none)'}"
-        )
-    return _STRATEGY_REGISTRY[name]()
 
 
 def resolve_with_cache(

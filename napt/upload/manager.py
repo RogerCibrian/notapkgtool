@@ -22,7 +22,7 @@ Example:
     Upload a packaged app to Intune:
         ```python
         from pathlib import Path
-        from napt.upload import upload_package
+        from napt.upload.manager import upload_package
 
         result = upload_package(Path("recipes/Google/chrome.yaml"))
         print(f"Created Intune app: {result.intune_app_id}")
@@ -39,19 +39,11 @@ from pathlib import Path
 import tempfile
 from typing import Any
 
+from napt.auth.credentials import get_access_token
 from napt.build.icons import MAX_ICON_BYTES
-from napt.config import load_effective_config
+from napt.config.loader import load_effective_config
 from napt.exceptions import ConfigError, PackagingError
-from napt.logging import get_global_logger
-from napt.results import UploadResult
-from napt.state import (
-    deployment_state_path,
-    load_deployment_state,
-    record_published,
-    save_deployment_state,
-)
-from napt.upload.auth import get_access_token
-from napt.upload.graph import (
+from napt.graph.intune import (
     commit_content_version,
     commit_content_version_file,
     create_content_version,
@@ -63,13 +55,21 @@ from napt.upload.graph import (
     update_win32_app,
     upload_to_azure_blob,
 )
-from napt.upload.intunewin import extract_encrypted_payload, parse_intunewin
-from napt.upload.stamp import (
+from napt.logging import get_global_logger
+from napt.results import UploadResult
+from napt.state.deployment import (
+    deployment_state_path,
+    load_deployment_state,
+    record_published,
+    save_deployment_state,
+)
+from napt.state.stamp import (
     ENTRY_INSTALL,
     ENTRY_UPDATE,
     build_stamp,
     find_stamped_app,
 )
+from napt.upload.intunewin import extract_encrypted_payload, parse_intunewin
 
 __all__ = ["upload_package"]
 
@@ -729,7 +729,7 @@ def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
         Upload and print the resulting Intune app IDs:
             ```python
             from pathlib import Path
-            from napt.upload import upload_package
+            from napt.upload.manager import upload_package
 
             result = upload_package(Path("recipes/Google/chrome.yaml"))
             print(f"Install app ID: {result.intune_app_id}")

@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 import yaml
 
-from napt.promote import detect_drift
-from napt.state import (
+from napt.promote.drift import detect_drift
+from napt.state.deployment import (
     create_default_deployment_state,
     deployment_state_path,
     save_deployment_state,
@@ -40,7 +40,7 @@ def _config(
     install_groups: list[str] | None = None,
 ) -> dict[str, Any]:
     """Builds an effective config via the real loader for realism."""
-    from napt.config import load_effective_config
+    from napt.config.loader import load_effective_config
 
     deployment: dict[str, Any] = {}
     if rings is not None:

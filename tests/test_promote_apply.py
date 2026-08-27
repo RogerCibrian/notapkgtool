@@ -13,14 +13,15 @@ import pytest
 import yaml
 
 from napt.exceptions import NetworkError, StateError
-from napt.promote import apply_plan, load_plan_file, plan_path_for
-from napt.state import (
+from napt.graph.intune import VIRTUAL_TARGETS
+from napt.promote.applier import apply_plan, load_plan_file
+from napt.promote.planner import plan_path_for
+from napt.state.deployment import (
     create_default_deployment_state,
     deployment_state_path,
     load_deployment_state,
     save_deployment_state,
 )
-from napt.upload.graph import VIRTUAL_TARGETS
 
 NOW = datetime(2026, 7, 8, 12, 0, 0, tzinfo=UTC)
 
@@ -763,9 +764,7 @@ class TestLoadPlanFile:
     def test_missing_app_id_raises(self, tmp_path):
         """Tests that a plan without a declared app id raises StateError."""
         plan_path = tmp_path / "plan.json"
-        plan_path.write_text(
-            '{"schemaVersion": 1, "actions": []}', encoding="utf-8"
-        )
+        plan_path.write_text('{"schemaVersion": 1, "actions": []}', encoding="utf-8")
 
         with pytest.raises(StateError, match="Corrupted plan file"):
             load_plan_file(plan_path)
@@ -794,9 +793,7 @@ class TestLoadPlanFile:
         """Tests that the file's app id and name are injected into actions."""
         plan_path = tmp_path / "plan.json"
         action = {
-            key: value
-            for key, value in _promote_action().items()
-            if key != "app_id"
+            key: value for key, value in _promote_action().items() if key != "app_id"
         }
         plan_path.write_text(
             json.dumps(

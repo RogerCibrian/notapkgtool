@@ -49,12 +49,12 @@ from pathlib import Path
 from typing import Any
 
 from napt.exceptions import ConfigError
-from napt.state import deployment_state_path, load_deployment_state
-from napt.upload.graph import (
+from napt.graph.intune import (
     get_app_assignments,
     resolve_assignment_target,
 )
-from napt.upload.stamp import ENTRY_INSTALL, ENTRY_UPDATE, parse_stamp
+from napt.state.deployment import deployment_state_path, load_deployment_state
+from napt.state.stamp import ENTRY_INSTALL, ENTRY_UPDATE, parse_stamp
 
 __all__ = ["detect_drift"]
 
@@ -189,9 +189,7 @@ def _configured_targets(
     for ring in deployment["rings"]:
         for group in ring["groups"]:
             try:
-                target = resolve_assignment_target(
-                    access_token, group, group_id_cache
-                )
+                target = resolve_assignment_target(access_token, group, group_id_cache)
             except ConfigError:
                 continue
             key = _target_key(target)
@@ -373,5 +371,3 @@ def detect_drift(
 
     findings.sort(key=lambda f: (f["app_id"], f["kind"], f["detail"]))
     return findings
-
-

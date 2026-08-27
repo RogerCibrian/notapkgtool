@@ -29,7 +29,7 @@ Example:
     Get and cache PSADT releases:
         ```python
         from pathlib import Path
-        from napt.psadt import get_psadt_release, is_psadt_cached
+        from napt.psadt.release import get_psadt_release, is_psadt_cached
 
         # Get latest PSADT
         psadt_dir = get_psadt_release("latest", Path("cache/psadt"))
@@ -58,7 +58,7 @@ import zipfile
 
 import requests
 
-from napt.download import make_session
+from napt.download.download import make_session
 from napt.exceptions import NetworkError, PackagingError
 
 PSADT_REPO = "PSAppDeployToolkit/PSAppDeployToolkit"

@@ -51,22 +51,17 @@ from typing import Any
 
 from napt import __version__
 from napt.config.loader import load_effective_config
-from napt.discovery.base import (
-    StrategyResult,
-    get_strategy,
-    resolve_with_cache,
-)
+from napt.discovery.base import StrategyResult, resolve_with_cache
+from napt.discovery.registry import get_strategy
 from napt.discovery.url_download import run_url_download
 from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
 from napt.results import DiscoverResult
-from napt.state import (
-    cache_file_path,
+from napt.state.cache import cache_file_path, load_cache, save_cache
+from napt.state.deployment import (
     deployment_state_path,
-    load_cache,
     load_deployment_state,
     record_pending,
-    save_cache,
     save_deployment_state,
 )
 

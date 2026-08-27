@@ -66,7 +66,7 @@ Example:
     Basic usage:
         ```python
         from pathlib import Path
-        from napt.config import load_effective_config
+        from napt.config.loader import load_effective_config
 
         cfg = load_effective_config(Path("recipes/Google/chrome.yaml"))
         print(cfg["name"])  # Output: Google Chrome

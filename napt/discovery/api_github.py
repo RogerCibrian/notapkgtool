@@ -61,10 +61,8 @@ from typing import Any
 import requests
 
 from napt.discovery.base import RemoteVersion
-from napt.download import make_session
+from napt.download.download import make_session
 from napt.exceptions import ConfigError, NetworkError
-
-from .base import register_strategy
 
 # Strategy-specific defaults for optional recipe fields.
 _DEFAULT_VERSION_PATTERN = r"v?([0-9.]+)"
@@ -329,7 +327,3 @@ class ApiGithubStrategy:
                     errors.append(f"Invalid version_pattern regex: {err}")
 
         return errors
-
-
-# Register this strategy when the module is imported
-register_strategy("api_github", ApiGithubStrategy)

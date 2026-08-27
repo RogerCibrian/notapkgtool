@@ -14,7 +14,7 @@ import pytest
 from napt.config.defaults import DEFAULT_CONFIG
 from napt.config.loader import _deep_merge_dicts
 from napt.exceptions import NetworkError, PackagingError
-from napt.state import (
+from napt.state.deployment import (
     create_default_deployment_state,
     deployment_state_path,
     load_deployment_state,

@@ -16,19 +16,21 @@ import json
 import pytest
 
 from napt.exceptions import StateError
-from napt.state import (
+from napt.state.cache import (
     DiscoveryCache,
+    create_default_cache,
+    load_cache,
+    save_cache,
+)
+from napt.state.deployment import (
     create_default_deployment_state,
     deployment_state_path,
-    load_cache,
     load_deployment_state,
     record_pending,
     record_published,
-    save_cache,
     save_deployment_state,
     summarize_deployment_states,
 )
-from napt.state.cache import create_default_cache
 
 
 class TestCacheFileOperations:

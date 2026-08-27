@@ -79,10 +79,8 @@ from bs4 import BeautifulSoup
 import requests
 
 from napt.discovery.base import RemoteVersion
-from napt.download import make_session
+from napt.download.download import make_session
 from napt.exceptions import ConfigError, NetworkError
-
-from .base import register_strategy
 
 # Strategy-specific defaults for optional recipe fields.
 _DEFAULT_VERSION_FORMAT = "{0}"
@@ -350,7 +348,3 @@ class WebScrapeStrategy:
                 errors.append("discovery.version_format cannot be empty")
 
         return errors
-
-
-# Register this strategy when the module is imported
-register_strategy("web_scrape", WebScrapeStrategy)

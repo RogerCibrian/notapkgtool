@@ -21,6 +21,7 @@ import yaml
 
 from napt.config.defaults import DEFAULT_CONFIG
 from napt.config.loader import _deep_merge_dicts
+from napt.upload.intunewin import IntunewinMetadata
 
 
 @pytest.fixture
@@ -176,6 +177,23 @@ def fake_brand_pack(tmp_path: Path) -> tuple[Path, dict[str, Any]]:
     return brand_dir, config
 
 
+@pytest.fixture
+def fake_metadata() -> IntunewinMetadata:
+    """Return a sample IntunewinMetadata for use in graph and upload tests."""
+    return IntunewinMetadata(
+        encrypted_file_name="IntunePackage.intunewin",
+        unencrypted_content_size=12345,
+        file_digest="dGVzdGRpZ2VzdA==",
+        file_digest_algorithm="SHA256",
+        encryption_key="dGVzdGVuY3J5cHRpb25rZXk=",
+        mac_key="dGVzdG1hY2tleQ==",
+        init_vector="dGVzdGl2",
+        mac="dGVzdG1hYw==",
+        profile_identifier="ProfileVersion1",
+        encrypted_file_size=22,
+    )
+
+
 # =============================================================================
 # Integration Test Fixtures (Real Data, Cached)
 # =============================================================================
@@ -222,7 +240,7 @@ def real_psadt_template(real_psadt_cache_dir: Path) -> Path:
 
     # Only download if not already cached
     if not version_dir.exists():
-        from napt.psadt import get_psadt_release
+        from napt.psadt.release import get_psadt_release
 
         # Download real PSADT (this is expensive, runs once per session)
         get_psadt_release(version, real_psadt_cache_dir)

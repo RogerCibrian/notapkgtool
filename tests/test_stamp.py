@@ -1,11 +1,11 @@
-"""Tests for napt.upload.stamp."""
+"""Tests for napt.state.stamp."""
 
 from __future__ import annotations
 
 import pytest
 
 from napt.exceptions import ConfigError
-from napt.upload.stamp import (
+from napt.state.stamp import (
     NOTES_MAX_LENGTH,
     build_stamp,
     parse_stamp,

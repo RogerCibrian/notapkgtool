@@ -37,7 +37,7 @@ Example:
     High-level API with DiscoveryCache:
         ```python
         from pathlib import Path
-        from napt.state import DiscoveryCache
+        from napt.state.cache import DiscoveryCache
 
         cache = DiscoveryCache(Path("cache/discovery.json"))
         cache.load()
@@ -53,7 +53,7 @@ Example:
     Low-level API with functions:
         ```python
         from pathlib import Path
-        from napt.state import load_cache, save_cache
+        from napt.state.cache import load_cache, save_cache
 
         data = load_cache(Path("cache/discovery.json"))
         # ... modify cache dict ...

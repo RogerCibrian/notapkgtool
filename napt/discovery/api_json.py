@@ -76,10 +76,8 @@ from jsonpath_ng import parse as jsonpath_parse
 import requests
 
 from napt.discovery.base import RemoteVersion
-from napt.download import make_session
+from napt.download.download import make_session
 from napt.exceptions import ConfigError, NetworkError
-
-from .base import register_strategy
 
 # Strategy-specific defaults for optional recipe fields.
 _DEFAULT_METHOD = "GET"
@@ -325,7 +323,3 @@ class ApiJsonStrategy:
             errors.append("discovery.body must be a dictionary")
 
         return errors
-
-
-# Register this strategy when the module is imported
-register_strategy("api_json", ApiJsonStrategy)

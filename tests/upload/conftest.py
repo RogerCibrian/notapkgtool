@@ -9,11 +9,7 @@ import zipfile
 
 import pytest
 
-from napt.upload.intunewin import (
-    DETECTION_XML_PATH,
-    ENCRYPTED_PAYLOAD_PATH,
-    IntunewinMetadata,
-)
+from napt.upload.intunewin import DETECTION_XML_PATH, ENCRYPTED_PAYLOAD_PATH
 
 _DETECTION_XML = """\
 <?xml version="1.0" encoding="utf-8"?>
@@ -89,20 +85,3 @@ def fake_intunewin(tmp_path: Path) -> Path:
     path = tmp_path / "Invoke-AppDeployToolkit.intunewin"
     path.write_bytes(make_intunewin_bytes())
     return path
-
-
-@pytest.fixture
-def fake_metadata() -> IntunewinMetadata:
-    """Return a sample IntunewinMetadata for use in graph and manager tests."""
-    return IntunewinMetadata(
-        encrypted_file_name="IntunePackage.intunewin",
-        unencrypted_content_size=12345,
-        file_digest="dGVzdGRpZ2VzdA==",
-        file_digest_algorithm="SHA256",
-        encryption_key="dGVzdGVuY3J5cHRpb25rZXk=",
-        mac_key="dGVzdG1hY2tleQ==",
-        init_vector="dGVzdGl2",
-        mac="dGVzdG1hYw==",
-        profile_identifier="ProfileVersion1",
-        encrypted_file_size=22,
-    )

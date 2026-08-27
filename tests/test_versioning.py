@@ -15,7 +15,7 @@ from __future__ import annotations
 import pytest
 
 from napt.exceptions import ConfigError
-from napt.versioning import compare, is_newer, version_key
+from napt.versioning.compare import compare, is_newer, version_key
 from napt.versioning.msi import _architecture_from_template
 
 
