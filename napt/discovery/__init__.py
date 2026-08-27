@@ -42,12 +42,12 @@ Built-in strategies:
 
 """
 
+# Importing a strategy module runs its register_strategy() call. This is
+# the one side effect a NAPT package __init__ carries: importing anything
+# under napt.discovery guarantees the built-in strategies are registered
+# before get_strategy() runs. No names are re-exported.
 from . import (
     api_github,  # noqa: F401
     api_json,  # noqa: F401
     web_scrape,  # noqa: F401
 )
-from .base import DiscoveryStrategy, get_strategy
-from .manager import discover_recipe
-
-__all__ = ["DiscoveryStrategy", "discover_recipe", "get_strategy"]

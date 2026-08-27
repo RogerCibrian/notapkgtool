@@ -14,28 +14,18 @@
 
 """Configuration loading and management for NAPT.
 
-This module provides tools for loading, merging, and validating YAML-based
-configuration files with a layered approach:
+Loads, merges, and validates YAML-based configuration files with a layered
+approach:
 
-  - Organization-wide defaults (defaults/org.yaml)
-  - Vendor-specific defaults (defaults/vendors/{Vendor}.yaml)
-  - Recipe-specific configuration (recipes/{Vendor}/{app}.yaml)
+- Organization-wide defaults (defaults/org.yaml)
+- Vendor-specific defaults (defaults/vendors/{Vendor}.yaml)
+- Recipe-specific configuration (recipes/{Vendor}/{app}.yaml)
 
 The loader performs deep merging where dicts are merged recursively and
 lists/scalars are replaced (last wins). Relative paths are resolved against
 the recipe file location for relocatability.
 
-Example:
-    Basic usage:
-        ```python
-        from pathlib import Path
-        from napt.config import load_effective_config
-
-        config = load_effective_config(Path("recipes/Google/chrome.yaml"))
-        print(config["name"])  # "Google Chrome"
-        ```
+Modules:
+    loader: The 3-layer configuration loader (load_effective_config).
+    defaults: Built-in default configuration and the org.yaml template.
 """
-
-from .loader import load_effective_config
-
-__all__ = ["load_effective_config"]

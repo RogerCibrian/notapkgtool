@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 import pytest
 
-from napt.psadt import (
+from napt.psadt.release import (
     fetch_latest_psadt_version,
     get_psadt_release,
     is_psadt_cached,

@@ -25,7 +25,7 @@ from pathlib import Path
 
 from napt.exceptions import ConfigError, StateError
 from napt.logging import get_logger, set_global_logger
-from napt.state import summarize_deployment_states
+from napt.state.deployment import summarize_deployment_states
 
 
 def cmd_status(args: argparse.Namespace) -> int:

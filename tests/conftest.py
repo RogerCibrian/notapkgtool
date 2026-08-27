@@ -240,7 +240,7 @@ def real_psadt_template(real_psadt_cache_dir: Path) -> Path:
 
     # Only download if not already cached
     if not version_dir.exists():
-        from napt.psadt import get_psadt_release
+        from napt.psadt.release import get_psadt_release
 
         # Download real PSADT (this is expensive, runs once per session)
         get_psadt_release(version, real_psadt_cache_dir)

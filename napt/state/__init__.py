@@ -39,7 +39,7 @@ Example:
     Reading the discovery cache:
         ```python
         from pathlib import Path
-        from napt.state import load_cache
+        from napt.state.cache import load_cache
 
         data = load_cache(Path("cache/discovery.json"))
         entry = data.get("apps", {}).get("napt-chrome")
@@ -48,7 +48,10 @@ Example:
     Reading deployment state:
         ```python
         from pathlib import Path
-        from napt.state import deployment_state_path, load_deployment_state
+        from napt.state.deployment import (
+            deployment_state_path,
+            load_deployment_state,
+        )
 
         path = deployment_state_path(Path("state/deployment"), "napt-chrome")
         state = load_deployment_state(path)
@@ -56,35 +59,3 @@ Example:
         ```
 
 """
-
-from .cache import (
-    DiscoveryCache,
-    cache_file_path,
-    create_default_cache,
-    load_cache,
-    save_cache,
-)
-from .deployment import (
-    create_default_deployment_state,
-    deployment_state_path,
-    load_deployment_state,
-    record_pending,
-    record_published,
-    save_deployment_state,
-    summarize_deployment_states,
-)
-
-__all__ = [
-    "DiscoveryCache",
-    "cache_file_path",
-    "create_default_cache",
-    "create_default_deployment_state",
-    "deployment_state_path",
-    "load_cache",
-    "load_deployment_state",
-    "record_pending",
-    "record_published",
-    "save_cache",
-    "save_deployment_state",
-    "summarize_deployment_states",
-]

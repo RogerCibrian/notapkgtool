@@ -24,7 +24,7 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-from napt.config import load_effective_config
+from napt.config.loader import load_effective_config
 from napt.logging import get_logger, set_global_logger
 from napt.validation import validate_recipe
 

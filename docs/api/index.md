@@ -27,6 +27,7 @@ napt/
 │   └── template.py             # PSADT template generation
 │
 ├── cli/                     # Command-line interface (one module per command)
+│   ├── main.py                 # Parser assembly and dispatch
 │   ├── auth.py                 # napt auth login/logout/status/setup
 │   ├── build.py                # napt build
 │   ├── discover.py             # napt discover
@@ -120,7 +121,7 @@ Result (dataclass)
 ## Extending NAPT
 
 - **New discovery strategy:** Implement `DiscoveryStrategy`, register with `register_strategy()`, add to `discovery/__init__.py`
-- **New CLI command:** Create `napt/cli/<command>.py` with the `cmd_<name>()` handler and a `register(subparsers)` hook, call `register` from `main()` in `napt/cli/__init__.py`, and add `tests/cli/test_<command>.py` (strict one module per command)
+- **New CLI command:** Create `napt/cli/<command>.py` with the `cmd_<name>()` handler and a `register(subparsers)` hook, call `register` from `main()` in `napt/cli/main.py`, and add `tests/cli/test_<command>.py` (strict one module per command)
 - **New config option:** Update schema in `config/loader.py`, add validation in `validation.py`, document in recipe schema
 
 ## See Also

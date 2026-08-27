@@ -49,7 +49,7 @@ from typing import Any
 
 from napt.graph.intune import get_mobile_app
 from napt.logging import get_global_logger
-from napt.state import (
+from napt.state.deployment import (
     deployment_state_path,
     load_deployment_state,
     record_published,

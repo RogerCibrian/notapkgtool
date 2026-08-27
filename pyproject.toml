@@ -35,7 +35,7 @@ dependencies = [
 ]
 
 [project.scripts]
-napt = "napt.cli:main"
+napt = "napt.cli.main:main"
 
 [project.urls]
 Documentation = "https://rogercibrian.github.io/notapkgtool"

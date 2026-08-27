@@ -34,7 +34,7 @@ Example:
     Basic download:
         ```python
         from pathlib import Path
-        from napt.download import download_file
+        from napt.download.download import download_file
 
         result = download_file(
             url="https://example.com/installer.msi",

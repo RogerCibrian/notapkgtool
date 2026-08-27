@@ -183,9 +183,20 @@ Domain types and internal types stay co-located with their logic.
 
 ## CLI Structure
 
-**Strict one module per top-level command.** `napt/cli/<command>.py` owns everything about `napt <command>`: its `cmd_*` handler(s), its parser definition in a `register(subparsers)` hook, and any helpers only that command uses. `napt/cli/__init__.py` only assembles the top-level parser, calls each module's `register`, and dispatches — no command logic there.
+**Strict one module per top-level command.** `napt/cli/<command>.py` owns everything about `napt <command>`: its `cmd_*` handler(s), its parser definition in a `register(subparsers)` hook, and any helpers only that command uses. `napt/cli/main.py` only assembles the top-level parser, calls each module's `register`, and dispatches — no command logic there.
 
-**Adding a command:** create `napt/cli/<command>.py` with `cmd_<command>` and `register`, call `register` from `main()` in `__init__.py`, and add `tests/cli/test_<command>.py`. A command with subcommands (`auth`, `promote`) still gets exactly one module. Never combine two commands in one module.
+**Adding a command:** create `napt/cli/<command>.py` with `cmd_<command>` and `register`, call `register` from `main()` in `napt/cli/main.py`, and add `tests/cli/test_<command>.py`. A command with subcommands (`auth`, `promote`) still gets exactly one module. Never combine two commands in one module.
+
+---
+
+## Imports
+
+**Package `__init__.py` files are docstring-only — no re-exports.** Import every name from its defining module: `from napt.state.cache import load_cache`, never `from napt.state import load_cache`. This keeps the import graph equal to the real dependencies, makes circular imports through package inits structurally impossible, and keeps CLI startup from loading subsystems a command doesn't use.
+
+Exceptions:
+
+- `napt/__init__.py` — package metadata dunders (`__version__`, ...) only.
+- `napt/discovery/__init__.py` — imports the strategy modules so they self-register; no name re-exports.
 
 ---
 

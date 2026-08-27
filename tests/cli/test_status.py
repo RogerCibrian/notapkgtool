@@ -11,7 +11,7 @@ class TestCmdStatus:
 
     def test_table_lists_apps(self, tmp_path, capsys):
         """Tests that the text table lists each app with its versions."""
-        from napt.state import (
+        from napt.state.deployment import (
             create_default_deployment_state,
             deployment_state_path,
             save_deployment_state,
@@ -39,7 +39,7 @@ class TestCmdStatus:
         """Tests that JSON output parses and carries the summary."""
         import json as json_module
 
-        from napt.state import (
+        from napt.state.deployment import (
             create_default_deployment_state,
             deployment_state_path,
             save_deployment_state,

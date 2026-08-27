@@ -76,10 +76,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-from napt.download import download_file
+from napt.download.download import download_file
 from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
-from napt.versioning import is_newer
+from napt.versioning.compare import is_newer
 
 
 @dataclass(frozen=True)

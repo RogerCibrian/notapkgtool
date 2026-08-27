@@ -14,6 +14,6 @@
 
 """Runs the NAPT CLI when invoked as `python -m napt.cli`."""
 
-from napt.cli import main
+from napt.cli.main import main
 
 main()

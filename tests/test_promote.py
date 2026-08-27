@@ -11,13 +11,13 @@ import pytest
 import yaml
 
 from napt.exceptions import ConfigError, StateError
-from napt.promote import (
+from napt.promote.planner import (
     plan_path_for,
     plan_promotions,
     resolve_state_dir,
     write_plan_files,
 )
-from napt.state import (
+from napt.state.deployment import (
     create_default_deployment_state,
     deployment_state_path,
     save_deployment_state,

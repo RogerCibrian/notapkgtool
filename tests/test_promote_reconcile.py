@@ -7,7 +7,7 @@ from typing import Any
 from unittest.mock import patch
 
 from napt.promote.reconcile import reconcile_publications
-from napt.state import (
+from napt.state.deployment import (
     create_default_deployment_state,
     deployment_state_path,
     load_deployment_state,
