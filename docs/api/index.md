@@ -8,7 +8,7 @@ NAPT's codebase structure matches the module organization. Here's the file struc
 
 ```
 napt/
-├── __init__.py              # Package initialization and public API exports
+├── __init__.py              # Package overview docstring
 ├── core.py                  # Main public API functions (orchestration)
 ├── detection.py             # Detection script generation for Intune Win32 apps
 ├── requirements.py          # Requirements script generation for Intune Update entries
@@ -16,6 +16,7 @@ napt/
 ├── logging.py               # Logging configuration
 ├── results.py               # Public API return types (dataclasses)
 ├── validation.py            # Recipe validation logic
+├── version.py               # NAPT's own version, read from package metadata
 │
 ├── auth/                    # Microsoft Entra ID authentication
 │   ├── credentials.py          # Token resolution and the napt auth login session

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.metadata
 from unittest.mock import patch
 
 import pytest
@@ -35,7 +36,7 @@ def _graph_sp_response() -> dict:
 
 
 def _stamp(spec: int = registration.SPEC_VERSION, version: str | None = None) -> str:
-    version = version or registration.__version__
+    version = version or importlib.metadata.version("napt")
     return f"napt/v1 spec={spec} version={version} provisioned=2026-08-18"
 
 
@@ -628,7 +629,7 @@ def test_setup_create_writes_stamp(user_dir, bootstrap) -> None:
     assert create is not None
     assert registration._parse_stamp(create["notes"]) == {
         "spec": str(registration.SPEC_VERSION),
-        "version": registration.__version__,
+        "version": importlib.metadata.version("napt"),
         "date": create["notes"].split("provisioned=")[1],
     }
 
@@ -667,7 +668,7 @@ def test_setup_adopts_unstamped_registration_with_flag(user_dir, bootstrap) -> N
     assert registration._parse_stamp(patch["notes"]) is not None
     assert result.changes == [
         f"Stamped internal notes: napt/v1 spec={registration.SPEC_VERSION} "
-        f"version={registration.__version__}"
+        f"version={importlib.metadata.version('napt')}"
     ]
     assert credentials.load_auth_store().active == "tid"
 

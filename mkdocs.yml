@@ -86,6 +86,7 @@ nav:
     - logging: api/logging.md
     - results: api/results.md
     - validation: api/validation.md
+    - version: api/version.md
     - auth: api/auth.md
     - build:
       - manager: api/build.md

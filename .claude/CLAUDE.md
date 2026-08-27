@@ -191,11 +191,9 @@ Domain types and internal types stay co-located with their logic.
 
 ## Imports
 
-**Package `__init__.py` files are docstring-only — no re-exports.** Import every name from its defining module: `from napt.state.cache import load_cache`, never `from napt.state import load_cache`. This keeps the import graph equal to the real dependencies, makes circular imports through package inits structurally impossible, and keeps CLI startup from loading subsystems a command doesn't use.
+**Package `__init__.py` files are docstring-only — no re-exports, no exceptions.** Import every name from its defining module: `from napt.state.cache import load_cache`, never `from napt.state import load_cache`. This keeps the import graph equal to the real dependencies, makes circular imports through package inits structurally impossible, and keeps CLI startup from loading subsystems a command doesn't use.
 
-Exception:
-
-- `napt/__init__.py` — package metadata dunders (`__version__`, ...) only.
+The package version is not defined in code — `pyproject.toml` is the single source. Read it at runtime with `get_version()` from `napt/version.py` (a cached `importlib.metadata` lookup); never add a `__version__` dunder.
 
 ---
 
@@ -237,7 +235,7 @@ See `docs/branching.md` for full workflow. PR template at `.github/PULL_REQUEST_
 
 **PRs:** Title in conventional commit format. Use `gh pr create` to create PRs from CLI. PR descriptions should describe what changed and why, not include setup instructions or how-to guides.
 
-**Releases:** Run `/release X.Y.Z`. Phase 1 opens the release PR (version bumps in `pyproject.toml` + `napt/__init__.py`, changelog promotion). Phase 2 (after the PR is squash-merged) tags and publishes the GitHub release. The skill includes the release notes template ([Semver 2.0.0](https://semver.org/spec/v2.0.0.html), no `v` prefix).
+**Releases:** Run `/release X.Y.Z`. Phase 1 opens the release PR (version bump in `pyproject.toml`, changelog promotion). Phase 2 (after the PR is squash-merged) tags and publishes the GitHub release. The skill includes the release notes template ([Semver 2.0.0](https://semver.org/spec/v2.0.0.html), no `v` prefix).
 
 ---
 

@@ -49,7 +49,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from napt import __version__
 from napt.config.loader import load_effective_config
 from napt.discovery.base import StrategyResult, resolve_with_cache
 from napt.discovery.registry import get_strategy
@@ -64,6 +63,7 @@ from napt.state.deployment import (
     record_pending,
     save_deployment_state,
 )
+from napt.version import get_version
 
 
 def discover_recipe(
@@ -176,7 +176,7 @@ def _load_cache(
     except FileNotFoundError:
         logger.verbose("STATE", f"Cache file not found, will create: {cache_file}")
         return {
-            "metadata": {"napt_version": __version__, "schema_version": "2"},
+            "metadata": {"napt_version": get_version(), "schema_version": "2"},
             "apps": {},
         }
     except Exception as err:
@@ -230,7 +230,7 @@ def _save_app_cache(
 
     cache_data.setdefault("apps", {})[app_id] = cache_entry
     cache_data["metadata"] = {
-        "napt_version": __version__,
+        "napt_version": get_version(),
         "last_updated": datetime.now(UTC).isoformat(),
         "schema_version": "2",
     }

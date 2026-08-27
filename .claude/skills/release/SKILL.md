@@ -1,6 +1,6 @@
 ---
 name: release
-description: Prepare and ship a NAPT release. Phase 1 opens the release PR (version bumps + changelog promotion). Phase 2 (after merge) tags and publishes the GitHub release. Detects phase automatically.
+description: Prepare and ship a NAPT release. Phase 1 opens the release PR (version bump + changelog promotion). Phase 2 (after merge) tags and publishes the GitHub release. Detects phase automatically.
 disable-model-invocation: true
 user-invocable: true
 allowed-tools: Bash(git *) Bash(*python* -m *) Bash(gh *) Read Edit Write Glob Grep
@@ -60,9 +60,10 @@ bump and changelog promotion — nothing from an unrelated feature branch can le
    ```
    If anything fails, stop and report. Do not continue.
 
-5. **Bump version in two places** — both must match exactly:
-   - `pyproject.toml` → `version = "X.Y.Z"` under `[project]`
-   - `napt/__init__.py` → `__version__ = "X.Y.Z"`
+5. **Bump the version** in `pyproject.toml` → `version = "X.Y.Z"` under `[project]`.
+   This is the single source of truth — runtime code reads it via
+   `napt.version.get_version()` (a cached `importlib.metadata` lookup), so no
+   other file changes.
 
 6. **Promote changelog** in `docs/changelog.md`:
    - Rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD` (today's date in absolute form, not "today")
@@ -71,7 +72,7 @@ bump and changelog promotion — nothing from an unrelated feature branch can le
 
 7. **Stage and commit** specific files only:
    ```
-   git add pyproject.toml napt/__init__.py docs/changelog.md
+   git add pyproject.toml docs/changelog.md
    git commit -m "chore: Prepare release X.Y.Z"
    ```
 
@@ -81,14 +82,13 @@ bump and changelog promotion — nothing from an unrelated feature branch can le
    git push -u origin chore/prepare-release-X.Y.Z
    gh pr create --title "chore: Prepare release X.Y.Z" --body "$(cat <<'EOF'
    ## Description
-   Release PR for NAPT X.Y.Z. Bumps version in `pyproject.toml` and `napt/__init__.py`, promotes the `[Unreleased]` section of `docs/changelog.md` to `[X.Y.Z]`, and adds a fresh empty `[Unreleased]` section.
+   Release PR for NAPT X.Y.Z. Bumps the version in `pyproject.toml`, promotes the `[Unreleased]` section of `docs/changelog.md` to `[X.Y.Z]`, and adds a fresh empty `[Unreleased]` section.
 
    ## Motivation
    Cuts the X.Y.Z release.
 
    ## Changes
    - Bump `pyproject.toml` version to X.Y.Z
-   - Bump `napt/__init__.py` `__version__` to X.Y.Z
    - Promote `[Unreleased]` to `[X.Y.Z] - YYYY-MM-DD` in `docs/changelog.md`
    - Add comparison link `[X.Y.Z]: ...compare/PREV...X.Y.Z`
 
@@ -121,8 +121,8 @@ the release commit, so it works from whatever branch you happen to be standing o
    subject starts with `chore: Prepare release X.Y.Z`. If none is found, stop and report —
    the merge subject may have been edited at merge time; ask the user which commit to tag.
 
-2. **Verify version files at that commit.** `git show <sha>:pyproject.toml` and
-   `git show <sha>:napt/__init__.py` must both show X.Y.Z. If not, stop and report.
+2. **Verify the version at that commit.** `git show <sha>:pyproject.toml` must show
+   X.Y.Z under `[project]`. If not, stop and report.
 
 3. **Tag the release commit and push the tag:**
    ```

@@ -43,15 +43,3 @@ For full CLI documentation:
 
 For more details, see the individual module docstrings.
 """
-
-__version__ = "0.9.0"
-__author__ = "Roger Cibrian"
-__license__ = "Apache-2.0"
-__description__ = "Not a Pkg Tool - Windows/Intune packaging with PSADT"
-
-__all__ = [
-    "__author__",
-    "__description__",
-    "__license__",
-    "__version__",
-]
