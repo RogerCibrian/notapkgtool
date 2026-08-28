@@ -78,8 +78,6 @@ from napt.state.deployment import (
 )
 from napt.state.stamp import ENTRY_INSTALL, ENTRY_UPDATE, find_stamped_app
 
-__all__ = ["apply_plan", "load_plan_file"]
-
 # Ring assignments target the Update entry, which is gated to devices
 # with an older release installed — always a required install.
 _RING_INTENT = "required"

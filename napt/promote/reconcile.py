@@ -57,8 +57,6 @@ from napt.state.deployment import (
 )
 from napt.state.stamp import ENTRY_INSTALL, ENTRY_UPDATE, find_stamped_app
 
-__all__ = ["reconcile_publications"]
-
 _REQUIRED_ENTRIES = {
     "both": (ENTRY_INSTALL, ENTRY_UPDATE),
     "app_only": (ENTRY_INSTALL,),

@@ -12,7 +12,7 @@ from napt.exceptions import ConfigError, NetworkError
 from napt.graph.client import GRAPH_BASE
 from napt.graph.intune import (
     assign_app,
-    build_group_assignment,
+    build_assignment,
     commit_content_version,
     commit_content_version_file,
     create_content_version,
@@ -375,7 +375,15 @@ def test_get_app_assignments_returns_value() -> None:
 
 def test_assign_app_posts_full_set() -> None:
     """Tests that assign_app posts the complete assignment list."""
-    assignments = [build_group_assignment(GROUP_ID, "required")]
+    assignments = [
+        build_assignment(
+            {
+                "@odata.type": "#microsoft.graph.groupAssignmentTarget",
+                "groupId": GROUP_ID,
+            },
+            "required",
+        )
+    ]
     with req_mock.Mocker() as m:
         m.post(_ASSIGN_URL, status_code=200)
         assign_app(TOKEN, APP_ID, assignments)
@@ -383,9 +391,15 @@ def test_assign_app_posts_full_set() -> None:
     assert body == {"mobileAppAssignments": assignments}
 
 
-def test_build_group_assignment_shape() -> None:
+def test_build_assignment_shape() -> None:
     """Tests the mobileAppAssignment payload structure."""
-    result = build_group_assignment(GROUP_ID, "available")
+    result = build_assignment(
+        {
+            "@odata.type": "#microsoft.graph.groupAssignmentTarget",
+            "groupId": GROUP_ID,
+        },
+        "available",
+    )
 
     assert result == {
         "@odata.type": "#microsoft.graph.mobileAppAssignment",

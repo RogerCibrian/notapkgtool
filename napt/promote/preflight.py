@@ -35,8 +35,6 @@ from typing import Any
 from napt.exceptions import ConfigError
 from napt.graph.intune import resolve_assignment_target
 
-__all__ = ["unresolvable_groups"]
-
 
 def unresolvable_groups(
     access_token: str,

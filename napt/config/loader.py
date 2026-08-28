@@ -75,7 +75,6 @@ Note:
 from __future__ import annotations
 
 import copy
-from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -84,20 +83,6 @@ import yaml
 
 from napt.config.defaults import DEFAULT_CONFIG
 from napt.exceptions import ConfigError
-
-
-@dataclass(frozen=True)
-class LoadContext:
-    """Metadata describing how the config was resolved.
-
-    Useful for debugging and logging.
-    """
-
-    recipe_path: Path
-    defaults_root: Path | None
-    vendor_name: str | None
-    org_defaults_path: Path | None
-    vendor_defaults_path: Path | None
 
 
 def _load_yaml_file(p: Path) -> Any:

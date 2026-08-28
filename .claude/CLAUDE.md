@@ -49,6 +49,12 @@ Use **ruff** + **black**. Fix all errors before committing. Never ignore errors.
 
 **Line length:** 88 chars max. Break with parentheses or multiple lines.
 
+**Dead code:** **vulture** detects unreferenced code. It scans `napt/` only — never `tests/`, so test references can't keep a corpse alive. Configuration is in `[tool.vulture]`. A finding means either delete the code or add a commented entry to `vulture_whitelist.py`; never raise the confidence threshold (unused functions score 60, so a higher floor blinds the check).
+
+```powershell
+.venv\Scripts\python.exe -m vulture
+```
+
 ---
 
 ## Type Checking

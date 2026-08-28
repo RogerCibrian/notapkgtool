@@ -16,12 +16,7 @@ import json
 import pytest
 
 from napt.exceptions import StateError
-from napt.state.cache import (
-    DiscoveryCache,
-    create_default_cache,
-    load_cache,
-    save_cache,
-)
+from napt.state.cache import load_cache, save_cache
 from napt.state.deployment import (
     create_default_deployment_state,
     deployment_state_path,
@@ -35,16 +30,6 @@ from napt.state.deployment import (
 
 class TestCacheFileOperations:
     """Tests for loading and saving discovery cache files."""
-
-    def test_create_default_cache(self):
-        """Tests that the default cache structure is empty with metadata."""
-        data = create_default_cache()
-
-        assert "metadata" in data
-        assert "apps" in data
-        assert data["metadata"]["schema_version"] == "2"
-        assert isinstance(data["apps"], dict)
-        assert len(data["apps"]) == 0
 
     def test_save_and_load_cache(self, tmp_path):
         """Tests round-trip save and load."""
@@ -89,7 +74,7 @@ class TestCacheFileOperations:
     def test_save_creates_parent_directory(self, tmp_path):
         """Tests that save creates parent directories if needed."""
         cache_file = tmp_path / "nested" / "dir" / "discovery.json"
-        data = create_default_cache()
+        data = {"metadata": {"schema_version": "2"}, "apps": {}}
 
         save_cache(data, cache_file)
 
@@ -108,168 +93,6 @@ class TestCacheFileOperations:
         assert "  " in content
         # Should have trailing newline
         assert content.endswith("\n")
-
-
-class TestDiscoveryCache:
-    """Tests for DiscoveryCache class."""
-
-    def test_init(self, tmp_path):
-        """Tests DiscoveryCache initialization."""
-        cache_file = tmp_path / "discovery.json"
-        cache = DiscoveryCache(cache_file)
-
-        assert cache.cache_file == cache_file
-        assert isinstance(cache.data, dict)
-
-    def test_load_creates_default_if_missing(self, tmp_path):
-        """Tests that load creates default cache if file doesn't exist."""
-        cache_file = tmp_path / "new_discovery.json"
-        cache = DiscoveryCache(cache_file)
-
-        data = cache.load()
-
-        assert cache_file.exists()
-        assert "metadata" in data
-        assert "apps" in data
-
-    def test_load_existing_file(self, tmp_path):
-        """Tests loading existing cache file."""
-        cache_file = tmp_path / "discovery.json"
-        initial_data = {
-            "metadata": {"napt_version": "0.1.0"},
-            "apps": {
-                "test-app": {
-                    "url": "https://vendor.com/app.msi",
-                    "sha256": "abc123",
-                    "known_version": "1.2.3",
-                }
-            },
-        }
-        save_cache(initial_data, cache_file)
-
-        cache = DiscoveryCache(cache_file)
-        data = cache.load()
-
-        assert data["apps"]["test-app"]["known_version"] == "1.2.3"
-
-    def test_load_corrupted_file_creates_backup(self, tmp_path):
-        """Tests that corrupted file is backed up and replaced."""
-        cache_file = tmp_path / "discovery.json"
-        cache_file.write_text("corrupted JSON{{{", encoding="utf-8")
-
-        cache = DiscoveryCache(cache_file)
-
-        with pytest.raises(StateError, match="Corrupted cache file"):
-            cache.load()
-
-        # Should create backup
-        backup_file = tmp_path / "discovery.json.backup"
-        assert backup_file.exists()
-        assert backup_file.read_text(encoding="utf-8") == "corrupted JSON{{{"
-
-        # Should create new clean cache file
-        assert cache_file.exists()
-        new_data = load_cache(cache_file)
-        assert "apps" in new_data
-
-    def test_save_updates_timestamp(self, tmp_path):
-        """Tests that save updates last_updated timestamp."""
-        cache_file = tmp_path / "discovery.json"
-        cache = DiscoveryCache(cache_file)
-        cache.data = create_default_cache()
-
-        cache.save()
-
-        loaded = load_cache(cache_file)
-        assert "last_updated" in loaded["metadata"]
-
-    def test_get_cache_existing(self, tmp_path):
-        """Tests getting cache entry for existing recipe."""
-        cache_file = tmp_path / "discovery.json"
-        cache = DiscoveryCache(cache_file)
-        cache.data = {
-            "metadata": {},
-            "apps": {
-                "test-app": {
-                    "url": "https://vendor.com/app.msi",
-                    "etag": 'W/"abc123"',
-                    "sha256": "def456",
-                    "known_version": "1.2.3",
-                }
-            },
-        }
-
-        entry = cache.get_cache("test-app")
-
-        assert entry is not None
-        assert entry["known_version"] == "1.2.3"
-        assert entry["etag"] == 'W/"abc123"'
-        assert entry["url"] == "https://vendor.com/app.msi"
-
-    def test_get_cache_missing(self, tmp_path):
-        """Tests getting cache entry for non-existent recipe returns None."""
-        cache_file = tmp_path / "discovery.json"
-        cache = DiscoveryCache(cache_file)
-        cache.data = {"metadata": {}, "apps": {}}
-
-        entry = cache.get_cache("nonexistent-app")
-
-        assert entry is None
-
-    def test_update_cache(self, tmp_path):
-        """Tests updating cache entry for a recipe."""
-        cache_file = tmp_path / "discovery.json"
-        cache = DiscoveryCache(cache_file)
-        cache.data = create_default_cache()
-
-        cache.update_cache(
-            recipe_id="test-app",
-            url="https://vendor.com/file.msi",
-            sha256="abc123",
-            etag='W/"xyz789"',
-            last_modified="Mon, 28 Oct 2024 10:00:00 GMT",
-            known_version="2.0.0",
-            strategy="url_download",
-        )
-
-        entry = cache.get_cache("test-app")
-        assert entry["known_version"] == "2.0.0"
-        assert entry["url"] == "https://vendor.com/file.msi"
-        assert entry["etag"] == 'W/"xyz789"'
-        assert entry["last_modified"] == "Mon, 28 Oct 2024 10:00:00 GMT"
-        assert entry["sha256"] == "abc123"
-        assert entry["strategy"] == "url_download"
-
-    def test_has_version_changed_true(self, tmp_path):
-        """Tests version change detection when version differs."""
-        cache_file = tmp_path / "discovery.json"
-        cache = DiscoveryCache(cache_file)
-        cache.data = {
-            "metadata": {},
-            "apps": {"test-app": {"known_version": "1.0.0"}},
-        }
-
-        assert cache.has_version_changed("test-app", "2.0.0") is True
-
-    def test_has_version_changed_false(self, tmp_path):
-        """Tests version change detection when version same."""
-        cache_file = tmp_path / "discovery.json"
-        cache = DiscoveryCache(cache_file)
-        cache.data = {
-            "metadata": {},
-            "apps": {"test-app": {"known_version": "1.0.0"}},
-        }
-
-        assert cache.has_version_changed("test-app", "1.0.0") is False
-
-    def test_has_version_changed_no_cache(self, tmp_path):
-        """Tests version change detection with no cached version."""
-        cache_file = tmp_path / "discovery.json"
-        cache = DiscoveryCache(cache_file)
-        cache.data = {"metadata": {}, "apps": {}}
-
-        # No cache means version changed
-        assert cache.has_version_changed("test-app", "1.0.0") is True
 
 
 class TestDeploymentStateFiles:

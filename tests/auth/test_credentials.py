@@ -15,7 +15,6 @@ from napt.auth.credentials import (
     AuthStore,
     get_access_token,
     get_status,
-    load_auth_config,
     login,
     logout,
     resolve_auth_config,
@@ -27,6 +26,14 @@ def _jwt(claims: dict) -> str:
     """Builds an unsigned JWT-shaped string carrying the given claims."""
     payload = base64.urlsafe_b64encode(json.dumps(claims).encode()).rstrip(b"=")
     return f"eyJhbGciOiJub25lIn0.{payload.decode()}.sig"
+
+
+def _active_config() -> AuthConfig | None:
+    """Returns the active tenant's saved config, or None."""
+    store = credentials.load_auth_store()
+    if store.active is None:
+        return None
+    return store.tenants.get(store.active)
 
 
 @pytest.fixture
@@ -193,11 +200,11 @@ def test_resolve_auth_config_returns_none_when_incomplete(user_dir) -> None:
     assert resolve_auth_config(client_id="cid") is None
 
 
-def test_load_auth_config_rejects_malformed_file(user_dir) -> None:
+def test_load_auth_store_rejects_malformed_file(user_dir) -> None:
     """Tests that a corrupt auth.json raises ConfigError with a remedy."""
     (user_dir / "auth.json").write_text("{not json", encoding="utf-8")
     with pytest.raises(ConfigError, match="napt auth login"):
-        load_auth_config()
+        credentials.load_auth_store()
 
 
 # ---------------------------------------------------------------------------
@@ -227,7 +234,7 @@ def test_login_saves_config_and_reports_permissions(user_dir) -> None:
     assert status.method == "interactive (browser)"
     assert status.account == "admin@contoso.com"
     assert status.missing == []
-    assert load_auth_config() == AuthConfig("cid", "tid", "admin@contoso.com")
+    assert _active_config() == AuthConfig("cid", "tid", "admin@contoso.com")
     kwargs = app.acquire_token_interactive.call_args.kwargs
     assert kwargs["parent_window_handle"] is None
 
@@ -339,7 +346,7 @@ def test_login_surfaces_msal_error(user_dir) -> None:
         with pytest.raises(AuthError, match="invalid_client: AADSTS50011") as exc:
             login(client_id="cid", tenant_id="tid")
     assert "redirect URI" in str(exc.value)
-    assert load_auth_config() is None
+    assert _active_config() is None
 
 
 def test_logout_signs_out_active_tenant_only(user_dir) -> None:
@@ -460,7 +467,7 @@ def test_login_stores_tenant_domain_and_name(user_dir) -> None:
     ):
         login(client_id="cid", tenant_id="tid")
 
-    saved = load_auth_config()
+    saved = _active_config()
     assert saved is not None
     assert saved.domain == "contoso.com"
     assert saved.display_name == "Contoso"
@@ -485,7 +492,7 @@ def test_login_without_user_read_leaves_label_empty(user_dir) -> None:
         status = login(client_id="cid", tenant_id="tid")
 
     assert status.account == "a@msp.com"
-    saved = load_auth_config()
+    saved = _active_config()
     assert saved is not None
     assert saved.label is None  # no UPN-domain guess
 

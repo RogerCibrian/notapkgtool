@@ -25,8 +25,8 @@ Implements the full upload flow for a Win32 LOB app:
 
 Also provides app queries used for reconciliation (list_mobile_apps,
 get_mobile_app, update_win32_app) and group-based assignment plumbing
-(resolve_group_id, get_app_assignments, build_group_assignment,
-assign_app) used by deployment promotion.
+(resolve_group_id, resolve_assignment_target, get_app_assignments,
+build_assignment, assign_app) used by deployment promotion.
 
 All functions take an access_token as the first argument. Obtain one via
 [get_access_token][napt.auth.credentials.get_access_token]. Graph calls go
@@ -50,26 +50,6 @@ from napt.graph.client import GRAPH_BASE, auth_headers, graph_request, json_head
 
 if TYPE_CHECKING:
     from napt.upload.intunewin import IntunewinMetadata
-
-__all__ = [
-    "VIRTUAL_TARGETS",
-    "assign_app",
-    "build_assignment",
-    "build_group_assignment",
-    "create_win32_app",
-    "create_content_version",
-    "create_content_version_file",
-    "delete_mobile_app",
-    "get_app_assignments",
-    "get_mobile_app",
-    "list_mobile_apps",
-    "resolve_assignment_target",
-    "resolve_group_id",
-    "update_win32_app",
-    "upload_to_azure_blob",
-    "commit_content_version_file",
-    "commit_content_version",
-]
 
 WIN32_LOB_APP_TYPE = "#microsoft.graph.win32LobApp"
 
@@ -266,26 +246,6 @@ def build_assignment(target: dict, intent: str) -> dict:
         "intent": intent,
         "target": target,
     }
-
-
-def build_group_assignment(group_id: str, intent: str) -> dict:
-    """Builds a mobileAppAssignment payload targeting one Entra ID group.
-
-    Args:
-        group_id: Object ID of the target group.
-        intent: Assignment intent, "available" or "required".
-
-    Returns:
-        A mobileAppAssignment dict for use with assign_app.
-
-    """
-    return build_assignment(
-        {
-            "@odata.type": "#microsoft.graph.groupAssignmentTarget",
-            "groupId": group_id,
-        },
-        intent,
-    )
 
 
 def assign_app(access_token: str, app_id: str, assignments: list[dict]) -> None:

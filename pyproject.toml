@@ -66,6 +66,7 @@ mkdocs-material = "^9.6.23"
 mkdocstrings = "^0.30.1"
 mkdocstrings-python = "^1.18.2"
 griffe = "^1.14.0"  # pin to 1.x: mkdocstrings-python 1.x doesn't declare upper bound on griffe (https://github.com/mkdocstrings/python/issues), and griffe 2.x renamed/removed exports it relies on
+vulture = "^2.16"
 
 # -----------------------------
 # Formatting (Black)
@@ -112,6 +113,17 @@ venvPath = "."
 venv = ".venv"
 pythonVersion = "3.11"
 typeCheckingMode = "standard"
+
+# -----------------------------
+# Dead Code (Vulture)
+# -----------------------------
+[tool.vulture]
+# Scan production code only — tests referencing a symbol must never count as
+# keeping it alive. Default confidence is intentional: unused functions and
+# classes score 60, so any min_confidence above that would miss exactly the
+# dead code this check exists to catch. False positives go in
+# vulture_whitelist.py, not a higher threshold.
+paths = ["napt", "vulture_whitelist.py"]
 
 # -----------------------------
 # Pytest
