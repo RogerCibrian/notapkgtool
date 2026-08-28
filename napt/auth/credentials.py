@@ -76,26 +76,6 @@ import requests
 
 from napt.exceptions import AuthError, ConfigError
 
-__all__ = [
-    "AUTHORITY_BASE",
-    "AuthConfig",
-    "AuthStatus",
-    "AuthStore",
-    "GRAPH_SCOPES",
-    "LOGIN_TIMEOUT",
-    "REQUIRED_PERMISSIONS",
-    "get_access_token",
-    "get_credential",
-    "get_status",
-    "load_auth_config",
-    "load_auth_store",
-    "login",
-    "logout",
-    "msal_error",
-    "remember_tenant",
-    "resolve_auth_config",
-]
-
 GRAPH_SCOPES = ["https://graph.microsoft.com/.default"]
 
 # azure-identity logs a WARNING every time the non-interactive chain comes up
@@ -326,18 +306,6 @@ def _save_auth_store(store: AuthStore) -> Path:
     }
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     return path
-
-
-def load_auth_config() -> AuthConfig | None:
-    """Returns the active tenant's sign-in settings, or ``None``.
-
-    Raises:
-        ConfigError: If the saved auth config is malformed.
-    """
-    store = load_auth_store()
-    if store.active is None:
-        return None
-    return store.tenants.get(store.active)
 
 
 def resolve_auth_config(

@@ -59,8 +59,6 @@ from napt.state.stamp import (
 )
 from napt.upload.intunewin import extract_encrypted_payload, parse_intunewin
 
-__all__ = ["upload_package"]
-
 # Intune return codes for PSADT deployments.
 # 0    - success: clean install/uninstall
 # 1707 - success: removal succeeded (used by some uninstallers)

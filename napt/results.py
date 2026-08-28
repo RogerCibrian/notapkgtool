@@ -28,7 +28,7 @@ return values.
 
 Note:
     Only results that napt commands surface belong in this module. Domain types
-    (like DiscoveredVersion) and internal types (like LoadContext) should
+    (like MSIMetadata) and internal types (like StrategyResult) should
     remain co-located with their related logic.
 """
 

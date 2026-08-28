@@ -42,9 +42,6 @@ from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
 from napt.results import ValidationResult
 
-__all__ = ["validate_config", "validate_recipe"]
-
-
 # Schema for the intune.detection subsection
 _INTUNE_DETECTION_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
     "display_name": (str, None, "display name for registry lookup"),

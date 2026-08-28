@@ -56,8 +56,6 @@ from napt.graph.intune import (
 from napt.state.deployment import deployment_state_path, load_deployment_state
 from napt.state.stamp import ENTRY_INSTALL, ENTRY_UPDATE, parse_stamp
 
-__all__ = ["detect_drift"]
-
 
 def _target_key(target: dict[str, Any] | None) -> tuple[str, str]:
     """Returns a comparable identity for an assignment target."""
