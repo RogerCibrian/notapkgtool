@@ -58,14 +58,13 @@ include = [
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.3"
 pyright = "^1.1.408"
-ruff = "^0.15.20"
+ruff = "^0.16.5"
 black = "^26.3.1"
 requests-mock = "^1.12.1"
 mkdocs = "^1.6.1"
 mkdocs-material = "^9.6.23"
-mkdocstrings = "^0.30.1"
-mkdocstrings-python = "^1.18.2"
-griffe = "^1.14.0"  # pin to 1.x: mkdocstrings-python 1.x doesn't declare upper bound on griffe (https://github.com/mkdocstrings/python/issues), and griffe 2.x renamed/removed exports it relies on
+mkdocstrings = "^1.0.6"
+mkdocstrings-python = "^2.0.7"
 vulture = "^2.16"
 
 # -----------------------------
