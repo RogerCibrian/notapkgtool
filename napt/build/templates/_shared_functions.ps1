@@ -3,7 +3,7 @@ function Write-CMTraceLog {
     param(
         [string]$Message,
         [string]$Component = $script:ComponentName,
-        [string]$Type = "INFO"  # "INFO", "WARNING", "ERROR", "DEBUG"
+        [string]$Type = "INFO"  # "INFO", "WARNING", "ERROR"
     )
 
     $LogFile = $script:LogFilePath
@@ -13,12 +13,11 @@ function Write-CMTraceLog {
     }
 
     # Convert string log level to CMTrace numeric type
-    # 1=Info, 2=Warning, 3=Error, 4=Debug
+    # 1=Info, 2=Warning, 3=Error
     $TypeNumber = switch ($Type.ToUpper()) {
         "INFO" { 1 }
         "WARNING" { 2 }
         "ERROR" { 3 }
-        "DEBUG" { 4 }
         default { 1 }  # Default to INFO if unknown
     }
 

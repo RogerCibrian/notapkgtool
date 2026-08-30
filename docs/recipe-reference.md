@@ -956,34 +956,15 @@ the User Guide for how scripts work and how to configure them in Intune.
 ## Logging Configuration
 
 The `logging` section controls on-device logging for detection and requirements scripts.
+Logs are written in CMTrace format (compatible with the Configuration Manager Trace Log
+Tool).
 
 ```yaml
 logging:
-  log_format: "cmtrace"   # Optional: log format
-  log_level: "INFO"       # Optional: minimum log level
   log_rotation_mb: 3      # Optional: max log file size in MB
 ```
 
-These settings are typically configured in `defaults/org.yaml` rather than per-recipe.
-
-### log_format
-
-**Type:** `string`
-**Required:** No
-**Default:** `"cmtrace"`
-**Allowed values:** `"cmtrace"`
-
-Log format for detection and requirements scripts. Currently only CMTrace format is supported
-(compatible with Configuration Manager Trace Log Tool).
-
-### log_level
-
-**Type:** `string`
-**Required:** No
-**Default:** `"INFO"`
-**Allowed values:** `"INFO"`, `"WARNING"`, `"ERROR"`, `"DEBUG"`
-
-Minimum log level for detection and requirements scripts. Controls verbosity of log output.
+This setting is typically configured in `defaults/org.yaml` rather than per-recipe.
 
 ### log_rotation_mb
 

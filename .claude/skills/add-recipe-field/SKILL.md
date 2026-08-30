@@ -31,7 +31,7 @@ Tell the user which category you've assigned and why before writing any code.
 
 ## Step 2: Implement per the category checklist
 
-**Org-policy** (e.g., `run_as_account`, `log_format`, `build_types`):
+**Org-policy** (e.g., `run_as_account`, `log_rotation_mb`, `build_types`):
 - [ ] Add to `DEFAULT_CONFIG` in `napt/config/defaults.py`
 - [ ] Add to `ORG_YAML_TEMPLATE` in `napt/config/defaults.py`
 - [ ] Add validation in `napt/validation.py`

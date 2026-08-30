@@ -751,8 +751,6 @@ discovery:
   strategy: url_download
   url: "https://example.com/app.msi"
 logging:
-  log_format: "cmtrace"
-  log_level: "INFO"
   log_rotation_mb: 5
 """)
 
@@ -761,8 +759,8 @@ logging:
         assert result.status == "valid"
         assert len(result.errors) == 0
 
-    def test_logging_invalid_log_level(self, tmp_path):
-        """Test that invalid log_level value is detected."""
+    def test_logging_unknown_field_warning(self, tmp_path):
+        """Tests that a removed or unknown logging field generates a warning."""
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 apiVersion: napt/v1
@@ -772,15 +770,13 @@ discovery:
   strategy: url_download
   url: "https://example.com/app.msi"
 logging:
-  log_level: "VERBOSE"
+  log_level: "INFO"
 """)
 
         result = validate_recipe(recipe)
 
-        assert result.status == "invalid"
-        assert any(
-            "log_level" in err and "Invalid value" in err for err in result.errors
-        )
+        assert result.status == "valid"
+        assert any("Unknown field 'log_level'" in warn for warn in result.warnings)
 
     def test_logging_invalid_log_rotation_type(self, tmp_path):
         """Test that invalid log_rotation_mb type is detected."""

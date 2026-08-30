@@ -32,8 +32,6 @@ class TestMSIXDetectionConfig:
         assert config.identity_name == "com.tinyspeck.slackdesktop"
         assert config.app_name == "Slack"
         assert config.version == "4.49.81.0"
-        assert config.log_format == "cmtrace"
-        assert config.log_level == "INFO"
         assert config.log_rotation_mb == 3
         assert config.exact_match is False
         assert config.app_id == ""
@@ -45,14 +43,12 @@ class TestMSIXDetectionConfig:
             identity_name="com.example.app",
             app_name="Example",
             version="1.0.0.0",
-            log_level="DEBUG",
             exact_match=True,
             app_id="napt-example",
             install_scope="user",
         )
 
         assert config.identity_name == "com.example.app"
-        assert config.log_level == "DEBUG"
         assert config.exact_match is True
         assert config.app_id == "napt-example"
         assert config.install_scope == "user"
@@ -72,8 +68,6 @@ class TestMSIXRequirementsConfig:
         assert config.identity_name == "com.tinyspeck.slackdesktop"
         assert config.app_name == "Slack"
         assert config.version == "4.49.81.0"
-        assert config.log_format == "cmtrace"
-        assert config.log_level == "INFO"
         assert config.log_rotation_mb == 3
         assert config.app_id == ""
         assert config.install_scope == "system"

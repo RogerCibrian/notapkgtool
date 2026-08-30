@@ -99,8 +99,6 @@ DEFAULT_CONFIG: dict[str, Any] = {
     # On-device script logging settings.
     # Controls log behavior of detection and requirements scripts on endpoints.
     "logging": {
-        "log_format": "cmtrace",
-        "log_level": "INFO",
         "log_rotation_mb": 3,
     },
     # IntuneWinAppUtil.exe version pinning.
@@ -197,9 +195,7 @@ apiVersion: napt/v1
 
 # logging:
 #   # On-device logging for detection and requirements scripts
-#   log_format: "cmtrace"  # cmtrace or legacy
-#   log_level: "INFO"      # DEBUG, INFO, WARNING, ERROR
-#   log_rotation_mb: 3
+#   log_rotation_mb: 3  # max log size in MB before rotation (2-file scheme)
 
 # directories:
 #   # Output directories for each pipeline stage
