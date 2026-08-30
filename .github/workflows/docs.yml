@@ -23,11 +23,12 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install Poetry
+        run: pipx install poetry
+
       - name: Install dependencies
-        run: |
-          pip install mkdocs mkdocs-material 'mkdocstrings[python]' ruff
+        run: poetry install --with dev
 
       - name: Build and deploy documentation
-        run: |
-          mkdocs gh-deploy --force
+        run: poetry run mkdocs gh-deploy --force --strict
 
