@@ -1271,28 +1271,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#log_format" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        log_format
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#log_level" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        log_level
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#log_rotation_mb" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3096,28 +3074,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#log_format" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        log_format
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#log_level" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        log_level
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#log_rotation_mb" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -4096,26 +4052,13 @@ output and embeds them as inline PowerShell rules in the Intune app record.</p>
 <p>See <a href="../user-guide/#detection-and-requirements-scripts">Detection and Requirements Scripts</a> in
 the User Guide for how scripts work and how to configure them in Intune.</p>
 <h2 id="logging-configuration">Logging Configuration</h2>
-<p>The <code>logging</code> section controls on-device logging for detection and requirements scripts.</p>
+<p>The <code>logging</code> section controls on-device logging for detection and requirements scripts.
+Logs are written in CMTrace format (compatible with the Configuration Manager Trace Log
+Tool).</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="nt">logging</span><span class="p">:</span>
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span><span class="nt">log_format</span><span class="p">:</span><span class="w"> </span><span class="s">"cmtrace"</span><span class="w">   </span><span class="c1"># Optional: log format</span>
-</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">  </span><span class="nt">log_level</span><span class="p">:</span><span class="w"> </span><span class="s">"INFO"</span><span class="w">       </span><span class="c1"># Optional: minimum log level</span>
-</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">  </span><span class="nt">log_rotation_mb</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span><span class="w">      </span><span class="c1"># Optional: max log file size in MB</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span><span class="nt">log_rotation_mb</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span><span class="w">      </span><span class="c1"># Optional: max log file size in MB</span>
 </span></code></pre></div>
-<p>These settings are typically configured in <code>defaults/org.yaml</code> rather than per-recipe.</p>
-<h3 id="log_format">log_format</h3>
-<p><strong>Type:</strong> <code>string</code>
-<strong>Required:</strong> No
-<strong>Default:</strong> <code>"cmtrace"</code>
-<strong>Allowed values:</strong> <code>"cmtrace"</code></p>
-<p>Log format for detection and requirements scripts. Currently only CMTrace format is supported
-(compatible with Configuration Manager Trace Log Tool).</p>
-<h3 id="log_level">log_level</h3>
-<p><strong>Type:</strong> <code>string</code>
-<strong>Required:</strong> No
-<strong>Default:</strong> <code>"INFO"</code>
-<strong>Allowed values:</strong> <code>"INFO"</code>, <code>"WARNING"</code>, <code>"ERROR"</code>, <code>"DEBUG"</code></p>
-<p>Minimum log level for detection and requirements scripts. Controls verbosity of log output.</p>
+<p>This setting is typically configured in <code>defaults/org.yaml</code> rather than per-recipe.</p>
 <h3 id="log_rotation_mb">log_rotation_mb</h3>
 <p><strong>Type:</strong> <code>integer</code>
 <strong>Required:</strong> No
