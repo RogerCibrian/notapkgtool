@@ -32,8 +32,6 @@ class TestDetectionConfig:
 
         assert config.app_name == "Test App"
         assert config.version == "1.0.0"
-        assert config.log_format == "cmtrace"
-        assert config.log_level == "INFO"
         assert config.log_rotation_mb == 3
         assert config.exact_match is False
         assert config.app_id == ""
@@ -46,8 +44,6 @@ class TestDetectionConfig:
         config = DetectionConfig(
             app_name="Custom App",
             version="2.5.0",
-            log_format="cmtrace",
-            log_level="DEBUG",
             log_rotation_mb=10,
             exact_match=True,
             app_id="custom-app",
@@ -56,7 +52,6 @@ class TestDetectionConfig:
 
         assert config.app_name == "Custom App"
         assert config.version == "2.5.0"
-        assert config.log_level == "DEBUG"
         assert config.log_rotation_mb == 10
         assert config.exact_match is True
         assert config.app_id == "custom-app"

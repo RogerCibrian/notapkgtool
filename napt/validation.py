@@ -85,8 +85,6 @@ _INTUNE_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
 
 # Schema for the logging: section
 _LOGGING_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
-    "log_format": (str, ["cmtrace"], "log format"),
-    "log_level": (str, ["INFO", "WARNING", "ERROR", "DEBUG"], "log level"),
     "log_rotation_mb": (int, None, "log rotation size in MB"),
 }
 
@@ -388,7 +386,7 @@ def _validate_logging_section(
 ) -> None:
     """Validate the top-level logging: section.
 
-    Validates log_format, log_level, and log_rotation_mb fields.
+    Validates the log_rotation_mb field.
 
     Args:
         recipe: The full recipe dictionary.

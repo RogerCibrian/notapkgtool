@@ -69,9 +69,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-LogFormat = Literal["cmtrace"]
-LogLevel = Literal["INFO", "WARNING", "ERROR", "DEBUG"]
-
 
 @dataclass(frozen=True)
 class MSIXDetectionConfig:
@@ -83,8 +80,6 @@ class MSIXDetectionConfig:
         app_name: Human-readable application name for logging and
             component identification.
         version: Expected version string to match.
-        log_format: Log format (currently only "cmtrace" supported).
-        log_level: Minimum log level (INFO, WARNING, ERROR, DEBUG).
         log_rotation_mb: Maximum log file size in MB before rotation.
         exact_match: If True, version must match exactly. If False,
             minimum version comparison (installed >= expected).
@@ -97,8 +92,6 @@ class MSIXDetectionConfig:
     identity_name: str
     app_name: str
     version: str
-    log_format: LogFormat = "cmtrace"
-    log_level: LogLevel = "INFO"
     log_rotation_mb: int = 3
     exact_match: bool = False
     app_id: str = ""
@@ -116,8 +109,6 @@ class MSIXRequirementsConfig:
             component identification.
         version: Target version string (requirement met if
             installed < this).
-        log_format: Log format (currently only "cmtrace" supported).
-        log_level: Minimum log level (INFO, WARNING, ERROR, DEBUG).
         log_rotation_mb: Maximum log file size in MB before rotation.
         app_id: Application ID (used for fallback identification).
         install_scope: Whether to query per-user (``"user"``) or
@@ -128,8 +119,6 @@ class MSIXRequirementsConfig:
     identity_name: str
     app_name: str
     version: str
-    log_format: LogFormat = "cmtrace"
-    log_level: LogLevel = "INFO"
     log_rotation_mb: int = 3
     app_id: str = ""
     install_scope: Literal["system", "user"] = "system"

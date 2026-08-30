@@ -61,9 +61,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-LogFormat = Literal["cmtrace"]
-LogLevel = Literal["INFO", "WARNING", "ERROR", "DEBUG"]
-
 # Type alias for architecture values
 ArchitectureMode = Literal["x86", "x64", "arm64", "any"]
 
@@ -75,8 +72,6 @@ class DetectionConfig:
     Attributes:
         app_name: Application name to search for in registry DisplayName.
         version: Expected version string to match.
-        log_format: Log format (currently only "cmtrace" supported).
-        log_level: Minimum log level (INFO, WARNING, ERROR, DEBUG).
         log_rotation_mb: Maximum log file size in MB before rotation.
         exact_match: If True, version must match exactly. If False, minimum
             version comparison (remote >= expected).
@@ -98,8 +93,6 @@ class DetectionConfig:
 
     app_name: str
     version: str
-    log_format: LogFormat = "cmtrace"
-    log_level: LogLevel = "INFO"
     log_rotation_mb: int = 3
     exact_match: bool = False
     app_id: str = ""
@@ -115,8 +108,6 @@ class RequirementsConfig:
     Attributes:
         app_name: Application name to search for in registry DisplayName.
         version: Target version string (requirement met if installed < this).
-        log_format: Log format (currently only "cmtrace" supported).
-        log_level: Minimum log level (INFO, WARNING, ERROR, DEBUG).
         log_rotation_mb: Maximum log file size in MB before rotation.
         app_id: Application ID (used for fallback if app_name sanitization
             results in empty string).
@@ -136,8 +127,6 @@ class RequirementsConfig:
 
     app_name: str
     version: str
-    log_format: LogFormat = "cmtrace"
-    log_level: LogLevel = "INFO"
     log_rotation_mb: int = 3
     app_id: str = ""
     is_msi_installer: bool = False

@@ -30,8 +30,6 @@ class TestRequirementsConfig:
 
         assert config.app_name == "Test App"
         assert config.version == "1.0.0"
-        assert config.log_format == "cmtrace"
-        assert config.log_level == "INFO"
         assert config.log_rotation_mb == 3
         assert config.app_id == ""
         assert config.expected_architecture == "any"
@@ -42,15 +40,12 @@ class TestRequirementsConfig:
         config = RequirementsConfig(
             app_name="Custom App",
             version="2.5.0",
-            log_format="cmtrace",
-            log_level="DEBUG",
             log_rotation_mb=10,
             app_id="custom-app",
         )
 
         assert config.app_name == "Custom App"
         assert config.version == "2.5.0"
-        assert config.log_level == "DEBUG"
         assert config.log_rotation_mb == 10
         assert config.app_id == "custom-app"
 

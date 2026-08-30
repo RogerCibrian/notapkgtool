@@ -52,6 +52,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING: `logging.log_format` and `logging.log_level` recipe fields
+    removed** - The fields never had any effect: generated detection and
+    requirements scripts always log in CMTrace format and always log every
+    message. Remove them from recipes and `defaults/org.yaml` (leftovers
+    produce an unknown-field warning from `napt validate`);
+    `logging.log_rotation_mb` is unchanged and still works
 - **BREAKING: Device code flow removed** - Interactive sign-in is now
     `napt auth login` (authorization code + PKCE, or the OS broker). Device
     code is the flow most often abused to bypass MFA and is increasingly

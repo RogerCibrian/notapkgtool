@@ -312,7 +312,7 @@ discovery:
         assert config["psadt"]["release"] == "latest"
         assert config["directories"]["build"] == "builds"
         assert config["intune"]["build_types"] == "both"
-        assert config["logging"]["log_format"] == "cmtrace"
+        assert config["logging"]["log_rotation_mb"] == 3
 
     def test_org_yaml_overrides_code_defaults(self, tmp_test_dir):
         """Tests that org.yaml values override code defaults."""
@@ -324,8 +324,6 @@ discovery:
 apiVersion: napt/v1
 psadt:
   release: "4.0.0"
-logging:
-  log_format: "cmtrace"
 """)
 
         recipe_path = tmp_test_dir / "recipe.yaml"
@@ -357,7 +355,7 @@ discovery:
         assert "build" in DEFAULT_CONFIG["directories"]
         assert "icons" in DEFAULT_CONFIG["directories"]
         assert "build_types" in DEFAULT_CONFIG["intune"]
-        assert "log_format" in DEFAULT_CONFIG["logging"]
+        assert "log_rotation_mb" in DEFAULT_CONFIG["logging"]
 
     def test_org_yaml_template_covers_all_sections(self):
         """Tests that ORG_YAML_TEMPLATE mentions all DEFAULT_CONFIG sections.
@@ -381,7 +379,7 @@ discovery:
             ("directories", "icons"),
             ("intune", "build_types"),
             ("intune", "detection"),
-            ("logging", "log_format"),
+            ("logging", "log_rotation_mb"),
             ("intunewin", "release"),
         ]
 
