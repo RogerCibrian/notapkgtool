@@ -36,9 +36,8 @@ Configuration Fields:
         First match wins. Case-sensitive by default; prefix with ``(?i)``
         for case-insensitive matching.
     - **version_pattern** (optional): Regex for extracting the version
-        from the release tag. Uses a named group ``(?P<version>...)`` or
-        capture group 1 if present, otherwise the full match. Default:
-        ``v?([0-9.]+)``.
+        from the release tag. Uses capture group 1 if present, otherwise
+        the full match. Default: ``v?([0-9.]+)``.
     - **prerelease** (optional, default false): When true, includes
         pre-release versions; otherwise the latest release must be stable.
     - **token** (optional): GitHub personal access token. Raises the API
@@ -200,11 +199,8 @@ class ApiGithubStrategy:
                     f"tag {tag_name!r}"
                 )
 
-            # Try to get named capture group 'version' first, else use group 1,
-            # else full match
-            if "version" in pattern.groupindex:
-                version_str = match.group("version")
-            elif pattern.groups > 0:
+            # Capture group 1 if present, else the full match
+            if pattern.groups > 0:
                 version_str = match.group(1)
             else:
                 version_str = match.group(0)

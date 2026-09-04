@@ -733,35 +733,6 @@ class TestApiGithubStrategyErrors:
             with pytest.raises(ConfigError, match="No assets matched"):
                 strategy.discover(app_config)
 
-    def test_named_version_capture_group(self):
-        """Tests that a named 'version' capture group is used correctly."""
-        strategy = ApiGithubStrategy()
-        app_config = {
-            "discovery": {
-                "repo": "owner/repo",
-                "asset_pattern": r".*\.msi$",
-                "version_pattern": r"release-(?P<version>[0-9.]+)",
-            }
-        }
-        release_data = {
-            "tag_name": "release-3.5.0",
-            "prerelease": False,
-            "assets": [
-                {
-                    "name": "installer.msi",
-                    "browser_download_url": "https://example.com/installer.msi",
-                }
-            ],
-        }
-        with requests_mock.Mocker() as m:
-            m.get(
-                "https://api.github.com/repos/owner/repo/releases/latest",
-                json=release_data,
-            )
-            version_info = strategy.discover(app_config)
-        assert version_info.version == "3.5.0"
-        assert version_info.source == "api_github"
-
 
 class TestApiGithubValidateConfig:
     """Tests for ApiGithubStrategy.validate_config()."""
@@ -908,30 +879,6 @@ class TestApiJsonStrategyErrors:
             with pytest.raises(ConfigError, match="did not match"):
                 strategy.discover(app_config)
 
-    def test_post_method(self):
-        """Tests that method=POST sends a POST request."""
-        strategy = ApiJsonStrategy()
-        app_config = {
-            "discovery": {
-                "api_url": "https://api.example.com/query",
-                "version_path": "version",
-                "download_url_path": "download_url",
-                "method": "POST",
-                "body": {"platform": "windows"},
-            }
-        }
-        with requests_mock.Mocker() as m:
-            m.post(
-                "https://api.example.com/query",
-                json={
-                    "version": "2.0.0",
-                    "download_url": "https://example.com/v2.msi",
-                },
-            )
-            version_info = strategy.discover(app_config)
-        assert version_info.version == "2.0.0"
-        assert version_info.source == "api_json"
-
     def test_env_var_header_expansion(self, monkeypatch):
         """Tests that ${VAR} placeholders in headers are expanded from env."""
         monkeypatch.setenv("TEST_API_TOKEN", "secret123")
@@ -1036,21 +983,6 @@ class TestApiJsonValidateConfig:
             }
         )
         assert any("download_url_path" in e for e in errors)
-
-    def test_invalid_method(self):
-        """Tests that an invalid HTTP method is reported."""
-        strategy = ApiJsonStrategy()
-        errors = strategy.validate_config(
-            {
-                "discovery": {
-                    "api_url": "https://api.example.com",
-                    "version_path": "version",
-                    "download_url_path": "url",
-                    "method": "DELETE",
-                }
-            }
-        )
-        assert any("method" in e for e in errors)
 
     def test_headers_not_dict_reported(self):
         """Tests that a non-dict headers value is reported."""

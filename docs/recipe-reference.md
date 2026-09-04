@@ -576,7 +576,6 @@ intune:
   run_as_32_bit: false                               # Optional: run in 32-bit context
   description: "App description for Intune portal"  # Optional: app description
   publisher: "Vendor Name"                           # Optional: publisher name override
-  category: "Productivity"                           # Optional: Intune app category
   privacy_url: "https://vendor.com/privacy"          # Optional: privacy information URL
   info_url: "https://vendor.com"                     # Optional: information URL
   logo_path: "brand-packs/logos/app.png"             # Optional: path to app icon
