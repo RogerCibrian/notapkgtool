@@ -1720,10 +1720,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#when-to-use-each-strategy" class="md-nav__link">
+  <a href="#merging" class="md-nav__link">
     <span class="md-ellipsis">
       
-        When to Use Each Strategy
+        Merging
       
     </span>
   </a>
@@ -1883,7 +1883,7 @@
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>git<span class="w"> </span>pull<span class="w"> </span>origin<span class="w"> </span>main
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># Create your feature branch</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feature/your-feature-name
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feat/your-feature-name
 </span></code></pre></div>
 <h3 id="2-during-development">2. During Development</h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Make changes, commit frequently</span>
@@ -1891,7 +1891,7 @@
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"feat: add your feature"</span>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># Push your branch</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>feature/your-feature-name
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>feat/your-feature-name
 </span></code></pre></div>
 <h3 id="3-create-pull-request">3. Create Pull Request</h3>
 <ol>
@@ -1907,20 +1907,21 @@
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>git<span class="w"> </span>pull<span class="w"> </span>origin<span class="w"> </span>main
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># Delete your local feature branch</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>git<span class="w"> </span>branch<span class="w"> </span>-d<span class="w"> </span>feature/your-feature-name
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>git<span class="w"> </span>branch<span class="w"> </span>-d<span class="w"> </span>feat/your-feature-name
 </span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
 </span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="c1"># Remote branch is usually auto-deleted by GitHub</span>
 </span></code></pre></div>
 <h2 id="branch-management">Branch Management</h2>
 <h3 id="branch-structure">Branch Structure</h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>main (always deployable)
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>├── feature/add-rpm-support
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>├── bugfix/fix-version-parsing
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>├── feat/add-rpm-support
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>├── fix/version-parsing
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>├── docs/update-installation-guide
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>└── refactor/simplify-config-loader
 </span></code></pre></div>
 <h3 id="branch-naming-convention">Branch Naming Convention</h3>
 <p>Use descriptive names with type prefixes:</p>
+<p>The prefix is the conventional commit type the PR will squash to:</p>
 <table>
 <thead>
 <tr>
@@ -1931,14 +1932,14 @@
 </thead>
 <tbody>
 <tr>
-<td><code>feature/</code></td>
+<td><code>feat/</code></td>
 <td>New features or enhancements</td>
-<td><code>feature/add-rpm-support</code></td>
+<td><code>feat/add-rpm-support</code></td>
 </tr>
 <tr>
-<td><code>bugfix/</code></td>
+<td><code>fix/</code></td>
 <td>Bug fixes</td>
-<td><code>bugfix/fix-version-parsing</code></td>
+<td><code>fix/version-parsing</code></td>
 </tr>
 <tr>
 <td><code>docs/</code></td>
@@ -1961,12 +1962,14 @@
 <td><code>chore/update-dependencies</code></td>
 </tr>
 <tr>
-<td><code>hotfix/</code></td>
-<td>Urgent production fixes</td>
-<td><code>hotfix/security-patch</code></td>
+<td><code>perf/</code></td>
+<td>Performance improvements</td>
+<td><code>perf/parallel-downloads</code></td>
 </tr>
 </tbody>
 </table>
+<p><code>feature/</code> and <code>bugfix/</code> also appear in the history and are accepted, but
+prefer the short forms so the branch name and the squash commit type match.</p>
 <h3 id="naming-rules">Naming Rules</h3>
 <ul>
 <li>Use lowercase with hyphens</li>
@@ -1975,15 +1978,15 @@
 <li>No issue numbers in branch names (use commit messages instead)</li>
 </ul>
 <p><strong>Good Examples:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>feature/add-exe-version-extraction
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>bugfix/fix-download-resume-logic
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>feat/add-exe-version-extraction
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>fix/download-resume-logic
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>docs/add-cross-platform-examples
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>refactor/simplify-config-loader
 </span></code></pre></div></p>
 <p><strong>Bad Examples:</strong>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>my-branch              # No type prefix
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>feature/stuff          # Not descriptive
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>Feature/My_Branch      # Wrong case
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>feat/stuff             # Not descriptive
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>Feat/My_Branch         # Wrong case
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>fix-bug                # Too generic
 </span></code></pre></div></p>
 <h2 id="commit-guidelines">Commit Guidelines</h2>
@@ -2061,8 +2064,9 @@
 <h2 id="pull-request-process">Pull Request Process</h2>
 <p>When creating a PR, the <a href="https://github.com/RogerCibrian/notapkgtool/blob/main/.github/PULL_REQUEST_TEMPLATE.md">PR template</a> auto-populates with sections for Description, Motivation, Changes, Testing, and Checklist.</p>
 <h2 id="merge-strategy">Merge Strategy</h2>
-<p><strong>Default: Squash and Merge</strong></p>
-<p>NAPT uses <strong>squash and merge</strong> for most Pull Requests to maintain a clean, readable history in <code>main</code>.</p>
+<p><strong>Squash and Merge, always</strong></p>
+<p>NAPT uses <strong>squash and merge</strong> for every Pull Request, including release
+PRs, to maintain a clean, readable history in <code>main</code>.</p>
 <h3 id="why-squash-and-merge">Why Squash and Merge?</h3>
 <ul>
 <li>✅ <strong>Clean history</strong>: One commit per feature/fix in <code>main</code></li>
@@ -2071,14 +2075,7 @@
 <li>✅ <strong>Better changelogs</strong>: No noise from "WIP" or "fix typo" commits</li>
 <li>✅ <strong>Simple bisecting</strong>: Each commit represents a complete, working change</li>
 </ul>
-<h3 id="when-to-use-each-strategy">When to Use Each Strategy</h3>
-<p><strong>Squash and Merge (Default - 95% of PRs)</strong></p>
-<p>Use for:
-- Feature additions
-- Bug fixes
-- Documentation updates
-- Refactoring
-- Chores and maintenance</p>
+<h3 id="merging">Merging</h3>
 <p>When merging on GitHub:
 1. Click "Squash and merge"
 2. Edit the commit message to follow conventional commit format
@@ -2094,15 +2091,9 @@
 </span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
 </span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>Closes #42
 </span></code></pre></div></p>
-<p><strong>Regular Merge (Exceptional Cases)</strong></p>
-<p>Use only when:
-- Multiple authors need attribution for distinct contributions
-- Release PRs where version bump history should be preserved
-- Large features with logically separate commits worth keeping</p>
-<p><strong>Example scenarios:</strong>
-- Version bump PRs (preserve "bump version" + "update changelog" as separate commits)
-- Community contributions with multiple meaningful commits
-- Complex refactors where commit-by-commit history aids debugging</p>
+<p>Release PRs are no exception: <code>/release</code> makes a single
+<code>chore: Prepare release X.Y.Z</code> commit (version bump plus changelog
+promotion), and that squashes like any other PR.</p>
 <h3 id="workflow">Workflow</h3>
 <ol>
 <li><strong>Before creating PR</strong>: Clean up your branch commits if needed</li>
@@ -2120,14 +2111,14 @@
 <h2 id="troubleshooting-scenarios">Troubleshooting &amp; Scenarios</h2>
 <h3 id="multiple-related-changes">Multiple Related Changes</h3>
 <p>If changes are closely related, keep in one branch:
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>feature/add-exe-support
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>feat/add-exe-support
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>├──<span class="w"> </span>Add<span class="w"> </span>EXE<span class="w"> </span>parsing<span class="w"> </span>module
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>├──<span class="w"> </span>Add<span class="w"> </span>tests
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span>└──<span class="w"> </span>Update<span class="w"> </span>documentation
 </span></code></pre></div></p>
 <p>If changes are independent, use separate branches:
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>feature/add-exe-support
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>feature/add-rpm-support
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>feat/add-exe-support
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>feat/add-rpm-support
 </span></code></pre></div></p>
 <h3 id="long-running-features">Long-Running Features</h3>
 <p>For features taking multiple days/weeks:
@@ -2140,11 +2131,11 @@
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Branch from main</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>git<span class="w"> </span>checkout<span class="w"> </span>main
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>git<span class="w"> </span>pull<span class="w"> </span>origin<span class="w"> </span>main
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>hotfix/fix-security-vulnerability
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>fix/security-vulnerability
 </span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>
 </span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="c1"># Fix, test, and push</span>
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>git<span class="w"> </span>commit<span class="w"> </span>-am<span class="w"> </span><span class="s2">"fix: patch security vulnerability"</span>
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>hotfix/fix-security-vulnerability
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>git<span class="w"> </span>commit<span class="w"> </span>-am<span class="w"> </span><span class="s2">"fix: Patch security vulnerability"</span>
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>fix/security-vulnerability
 </span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>
 </span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="c1"># Create PR with high priority</span>
 </span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="c1"># Fast-track review and merge</span>
@@ -2155,8 +2146,9 @@
 <li>Create small, focused branches with single purpose</li>
 <li>Commit early and often with clear messages</li>
 <li>Keep branches short-lived (merge within 1 week)</li>
-<li>Run tests before pushing (<code>pytest tests/</code>)</li>
-<li>Format code before committing (<code>black napt/</code>)</li>
+<li>Run the full check sequence before committing: <code>ruff check --fix</code>,
+  <code>black</code>, <code>pyright</code>, <code>vulture</code>, then <code>pytest tests/</code> (the <code>/ship</code> skill
+  runs all of these in order)</li>
 <li>Update branch with <code>main</code> if it's behind</li>
 <li>Delete branches after merging</li>
 </ul>
@@ -2170,7 +2162,6 @@
 <li>Don't include unrelated changes in one PR</li>
 </ul>
 <hr />
-<p><strong>Last Updated</strong>: 2025-11-18</p>
 <p><strong>Strategy</strong>: GitHub Flow with Squash and Merge</p>
 
 

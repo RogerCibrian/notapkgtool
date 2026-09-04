@@ -2898,12 +2898,12 @@
 <li><strong>Update Cache</strong> - Updates <code>cache/discovery.json</code> with new version, file path, SHA-256 hash, and ETag (if download occurred)</li>
 <li><strong>Record Pending Release</strong> - Updates <code>state/deployment/{app_id}.json</code> with the discovered release as the pending publication candidate when it differs from the published version. The pending slot holds one candidate and the newest discovery wins.</li>
 </ol>
-<p><strong>Output</strong>: Downloaded installer in <code>downloads/</code> directory, updated discovery cache, updated deployment state</p>
+<p><strong>Output</strong>: Downloaded installer in <code>downloads/{app_id}/</code>, updated discovery cache, updated deployment state</p>
 <h3 id="build-process-napt-build">Build Process (<code>napt build</code>)</h3>
 <p>The build process creates a complete PSADT package from the recipe and downloaded installer:</p>
 <ol>
 <li><strong>Load Configuration</strong> - Merges configuration layers (org → vendor → recipe)</li>
-<li><strong>Find Installer</strong> - Locates installer in <code>downloads/</code> directory (tries URL filename, then app name/id, then most recent). Supports <code>.msi</code>, <code>.exe</code>, and <code>.msix</code> files</li>
+<li><strong>Find Installer</strong> - Locates installer in <code>downloads/{app_id}/</code> (tries the recipe URL filename, then the filename recorded in the discovery cache or pending release, then an app name/id match, then the most recent file). Supports <code>.msi</code>, <code>.exe</code>, and <code>.msix</code> files</li>
 <li><strong>Extract Version</strong> - Extracts version from installer file (MSI from ProductVersion, MSIX from AppxManifest.xml), otherwise uses discovery cache version</li>
 <li><strong>Get PSADT Release</strong> - Downloads/caches PSADT Template_v4 from GitHub if not already cached</li>
 <li><strong>Create Build Directory</strong> - Creates versioned directory using discovered app version: <code>builds/{app_id}/{version}/</code></li>
@@ -2928,7 +2928,7 @@
 </ul>
 </li>
 <li><strong>Copy Installer</strong> - Copies downloaded installer file to <code>Files/</code> directory:<ul>
-<li>Source: <code>downloads/{installer_filename}</code></li>
+<li>Source: <code>downloads/{app_id}/{installer_filename}</code></li>
 <li>Destination: <code>builds/{app_id}/{version}/Files/{installer_filename}</code></li>
 <li>Installer is accessible in scripts via <code>$($adtSession.DirFiles)</code> (PSADT 4.x)</li>
 </ul>
@@ -2994,9 +2994,9 @@ identity name instead of registry scanning; which store is queried depends on
 <li>
 <p><strong>Architecture filtering:</strong></p>
 <ul>
-<li>Controls which registry views are checked based on the <code>AppArch</code> value from <code>psadt.app_vars</code> in the recipe</li>
-<li><strong>MSI installers:</strong> AppArch is automatically extracted from MSI package metadata during discovery (no manual configuration needed)</li>
-<li><strong>Non-MSI installers:</strong> AppArch must be explicitly specified in <code>intune.detection</code> (e.g., <code>architecture: "x64"</code>)</li>
+<li>Controls which registry views are checked based on the installer architecture NAPT resolves at build time (NAPT sets <code>AppArch</code> in the generated script; it is not a recipe <code>app_vars</code> key)</li>
+<li><strong>MSI installers:</strong> architecture is extracted from MSI package metadata (no manual configuration needed)</li>
+<li><strong>Non-MSI installers:</strong> architecture must be specified in <code>intune.detection</code> (e.g., <code>architecture: "x64"</code>)</li>
 <li><strong>Architecture values:</strong><ul>
 <li><code>x64</code> / <code>arm64</code>: Checks only 64-bit registry view (ARM64 uses 64-bit registry)</li>
 <li><code>x86</code>: Checks only 32-bit registry view</li>
@@ -3067,8 +3067,9 @@ identity name instead of registry scanning; which store is queried depends on
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>builds/napt-chrome/144.0.7559.110/
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  ├── packagefiles/                                 # PSADT package (packaged into .intunewin)
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  │   └── ...
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  ├── Google-Chrome-144.0.7559.110-Detection.ps1    # Detection script
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  └── Google-Chrome-144.0.7559.110-Requirements.ps1 # Requirements script (if generated)
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  ├── Google-Chrome_144.0.7559.110-Detection.ps1    # Detection script
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  ├── Google-Chrome_144.0.7559.110-Requirements.ps1 # Requirements script (if generated)
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  └── build-manifest.json                           # Installer hash and metadata
 </span></code></pre></div>
 <p><strong>Configuration:</strong> See <a href="../recipe-reference/#intune-configuration">Recipe Reference - Intune Configuration</a> for <code>intune.detection</code> and <code>intune.build_types</code> options.</p>
 <h3 id="app-icons">App icons</h3>
@@ -3138,9 +3139,10 @@ recipe's app:</p>
 <li>Previous version directory for this app is removed automatically</li>
 </ul>
 </li>
-<li><strong>Copy Detection Scripts</strong> - Copies <code>*-Detection.ps1</code> and <code>*-Requirements.ps1</code>
-   from the build version directory into <code>packages/{app_id}/{version}/</code> so that
-   <code>napt upload</code> is self-contained and does not need access to the builds directory</li>
+<li><strong>Copy Detection Scripts</strong> - Copies <code>*-Detection.ps1</code>, <code>*-Requirements.ps1</code>,
+   and <code>build-manifest.json</code> from the build version directory into
+   <code>packages/{app_id}/{version}/</code> so that <code>napt upload</code> is self-contained and
+   does not need access to the builds directory</li>
 <li><strong>Optional Cleanup</strong> - If <code>--clean-source</code> flag is used, removes the build
    version directory after successful packaging</li>
 </ol>
@@ -3220,8 +3222,9 @@ source it picked:</p>
 </tbody>
 </table>
 <p>NAPT never opens a browser on its own.
-If no credential is available, commands fail with
-<code>Not authenticated. Run 'napt auth login'</code>.</p>
+If no credential is available, commands fail with <code>Not authenticated.</code>
+followed by a hint for each option: run <code>napt auth login</code> interactively, or
+set the <code>AZURE_*</code> variables or sign in with <code>az login</code> for CI/CD.</p>
 <h4 id="app-registration-setup">App Registration Setup</h4>
 <p>Create the app registration once per organization.
 Two ways to do it:</p>
@@ -3294,7 +3297,8 @@ Tokens are cached in the OS credential store (DPAPI, Keychain, or
 libsecret) and refreshed silently until the session expires or is revoked.
 The remembered tenants and the cache live under <code>%LOCALAPPDATA%\napt</code>
 (Windows), <code>~/Library/Application Support/napt</code> (macOS), or
-<code>~/.config/napt</code> (Linux); set <code>NAPT_USER_DIR</code> to relocate them.
+<code>$XDG_CONFIG_HOME/napt</code> falling back to <code>~/.config/napt</code> (Linux); set
+<code>NAPT_USER_DIR</code> to relocate them.
 The <code>AZURE_*</code> environment variables play no part in interactive sign-in;
 they are how CI/CD supplies a credential (below), and when they are set
 they take precedence over your session.</p>
@@ -3391,38 +3395,41 @@ instead of <code>AZURE_CLIENT_SECRET</code>.</p>
 <h3 id="directory-structure">Directory Structure</h3>
 <p>After a complete workflow, your directory structure looks like:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>downloads/
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>  └── googlechromestandaloneenterprise64.msi
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>builds/
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>  └── napt-chrome/
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>      └── 142.0.7444.163/
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>          ├── packagefiles/                # PSADT package contents
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>          │   ├── PSAppDeployToolkit/      # PSADT module (from template)
-</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>          │   ├── PSAppDeployToolkit.Extensions/
-</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>          │   ├── Assets/                  # Custom branding (if configured)
-</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>          │   ├── Config/
-</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>          │   ├── Strings/
-</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>          │   ├── Files/                   # Installer copied here
-</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>          │   │   └── googlechromestandaloneenterprise64.msi
-</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>          │   ├── SupportFiles/            # Empty (for additional files)
-</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>          │   ├── Invoke-AppDeployToolkit.ps1  # Generated script
-</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>          │   └── Invoke-AppDeployToolkit.exe  # From template
-</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>          ├── Google-Chrome-142.0.7444.163-Detection.ps1
-</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>          └── Google-Chrome-142.0.7444.163-Requirements.ps1
-</span><span id="__span-8-20"><a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>
-</span><span id="__span-8-21"><a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>packages/
-</span><span id="__span-8-22"><a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>  └── napt-chrome/
-</span><span id="__span-8-23"><a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a>      └── 142.0.7444.163/                              # One version kept at a time
-</span><span id="__span-8-24"><a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a>          ├── Invoke-AppDeployToolkit.intunewin        # Encrypted package
-</span><span id="__span-8-25"><a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>          ├── Google-Chrome-142.0.7444.163-Detection.ps1    # Copied by napt package
-</span><span id="__span-8-26"><a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a>          └── Google-Chrome-142.0.7444.163-Requirements.ps1 # Copied by napt package
-</span><span id="__span-8-27"><a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a>
-</span><span id="__span-8-28"><a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a>cache/
-</span><span id="__span-8-29"><a id="__codelineno-8-29" name="__codelineno-8-29" href="#__codelineno-8-29"></a>  └── discovery.json                       # Discovery cache (disposable)
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>  └── napt-chrome/
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>      └── googlechromestandaloneenterprise64.msi
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>builds/
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>  └── napt-chrome/
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>      └── 142.0.7444.163/
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>          ├── packagefiles/                # PSADT package contents
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>          │   ├── PSAppDeployToolkit/      # PSADT module (from template)
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>          │   ├── PSAppDeployToolkit.Extensions/
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>          │   ├── Assets/                  # Custom branding (if configured)
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>          │   ├── Config/
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>          │   ├── Strings/
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>          │   ├── Files/                   # Installer copied here
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>          │   │   └── googlechromestandaloneenterprise64.msi
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>          │   ├── SupportFiles/            # Empty (for additional files)
+</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>          │   ├── Invoke-AppDeployToolkit.ps1  # Generated script
+</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>          │   └── Invoke-AppDeployToolkit.exe  # From template
+</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>          ├── Google-Chrome_142.0.7444.163-Detection.ps1
+</span><span id="__span-8-20"><a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>          ├── Google-Chrome_142.0.7444.163-Requirements.ps1
+</span><span id="__span-8-21"><a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>          └── build-manifest.json              # Installer hash and metadata
+</span><span id="__span-8-22"><a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>
+</span><span id="__span-8-23"><a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a>packages/
+</span><span id="__span-8-24"><a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a>  └── napt-chrome/
+</span><span id="__span-8-25"><a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>      └── 142.0.7444.163/                              # One version kept at a time
+</span><span id="__span-8-26"><a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a>          ├── Invoke-AppDeployToolkit.intunewin        # Encrypted package
+</span><span id="__span-8-27"><a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a>          ├── Google-Chrome_142.0.7444.163-Detection.ps1    # Copied by napt package
+</span><span id="__span-8-28"><a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a>          ├── Google-Chrome_142.0.7444.163-Requirements.ps1 # Copied by napt package
+</span><span id="__span-8-29"><a id="__codelineno-8-29" name="__codelineno-8-29" href="#__codelineno-8-29"></a>          └── build-manifest.json                      # Copied by napt package; read by napt upload
 </span><span id="__span-8-30"><a id="__codelineno-8-30" name="__codelineno-8-30" href="#__codelineno-8-30"></a>
-</span><span id="__span-8-31"><a id="__codelineno-8-31" name="__codelineno-8-31" href="#__codelineno-8-31"></a>state/
-</span><span id="__span-8-32"><a id="__codelineno-8-32" name="__codelineno-8-32" href="#__codelineno-8-32"></a>  └── deployment/
-</span><span id="__span-8-33"><a id="__codelineno-8-33" name="__codelineno-8-33" href="#__codelineno-8-33"></a>      └── napt-chrome.json                 # Deployment state (authoritative)
+</span><span id="__span-8-31"><a id="__codelineno-8-31" name="__codelineno-8-31" href="#__codelineno-8-31"></a>cache/
+</span><span id="__span-8-32"><a id="__codelineno-8-32" name="__codelineno-8-32" href="#__codelineno-8-32"></a>  └── discovery.json                       # Discovery cache (disposable)
+</span><span id="__span-8-33"><a id="__codelineno-8-33" name="__codelineno-8-33" href="#__codelineno-8-33"></a>
+</span><span id="__span-8-34"><a id="__codelineno-8-34" name="__codelineno-8-34" href="#__codelineno-8-34"></a>state/
+</span><span id="__span-8-35"><a id="__codelineno-8-35" name="__codelineno-8-35" href="#__codelineno-8-35"></a>  └── deployment/
+</span><span id="__span-8-36"><a id="__codelineno-8-36" name="__codelineno-8-36" href="#__codelineno-8-36"></a>      └── napt-chrome.json                 # Deployment state (authoritative)
 </span></code></pre></div>
 <h2 id="commands-reference">Commands Reference</h2>
 <blockquote>
@@ -3511,6 +3518,7 @@ promotable in the same run.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>napt<span class="w"> </span>promote<span class="w"> </span>plan<span class="w"> </span><span class="o">[</span>RECIPE_OR_DIR<span class="o">]</span><span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>napt<span class="w"> </span>promote<span class="w"> </span>plan<span class="w"> </span>--check-drift<span class="w"> </span>--reconcile
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>napt<span class="w"> </span>promote<span class="w"> </span>apply<span class="w"> </span><span class="o">[</span>RECIPE_OR_DIR<span class="o">]</span><span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>napt<span class="w"> </span>promote<span class="w"> </span>apply<span class="w"> </span>--plan-file<span class="w"> </span>state/plans/&lt;id&gt;.json
 </span></code></pre></div>
 <p>For the full review-gated CI setup — publish PRs, promotion PRs, and
 writeback commits — see
@@ -3530,9 +3538,10 @@ Uses the CI/CD environment credential when set, otherwise the session from
 <h3 id="napt-auth">napt auth</h3>
 <p>Manages the credential NAPT uses for Intune.
 See <a href="#authentication">Authentication</a>.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>napt<span class="w"> </span>auth<span class="w"> </span>login<span class="w"> </span><span class="o">[</span>--tenant-id<span class="w"> </span>ID<span class="o">]</span><span class="w"> </span><span class="o">[</span>--client-id<span class="w"> </span>ID<span class="o">]</span><span class="w"> </span><span class="o">[</span>--no-broker<span class="o">]</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>napt<span class="w"> </span>auth<span class="w"> </span>status
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>napt<span class="w"> </span>auth<span class="w"> </span><span class="nb">logout</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>napt<span class="w"> </span>auth<span class="w"> </span>setup<span class="w"> </span>--tenant-id<span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>napt<span class="w"> </span>auth<span class="w"> </span>login<span class="w"> </span><span class="o">[</span>--tenant-id<span class="w"> </span>ID<span class="o">]</span><span class="w"> </span><span class="o">[</span>--client-id<span class="w"> </span>ID<span class="o">]</span><span class="w"> </span><span class="o">[</span>--no-broker<span class="o">]</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>napt<span class="w"> </span>auth<span class="w"> </span>status
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>napt<span class="w"> </span>auth<span class="w"> </span><span class="nb">logout</span>
 </span></code></pre></div>
 <h3 id="output-modes">Output Modes</h3>
 <p>All commands support verbosity flags to control output detail:</p>
@@ -3554,7 +3563,7 @@ See <a href="#authentication">Authentication</a>.</p>
 </tr>
 <tr>
 <td><code>--debug</code> or <code>-d</code></td>
-<td>All verbose output, plus full YAML config dumps (org/vendor/recipe/merged), backend selection details, and regex match groups</td>
+<td>All verbose output, plus full YAML config dumps (org/vendor/recipe/merged), backend selection details, and raw API responses</td>
 </tr>
 </tbody>
 </table>
@@ -3644,7 +3653,8 @@ See <a href="#authentication">Authentication</a>.</p>
 <h3 id="quick-reference">Quick Reference</h3>
 <ul>
 <li><strong>Top-level fields:</strong> <code>apiVersion</code> (required), <code>name</code> (required), <code>id</code> (required),
-  <code>discovery</code> (required), <code>psadt</code> (required), <code>intune</code> (optional), <code>logging</code> (optional)</li>
+  <code>discovery</code> (required), <code>psadt</code> (optional for MSI and MSIX; EXE installers need
+  <code>psadt.install</code> and <code>psadt.uninstall</code>), <code>intune</code> (optional), <code>logging</code> (optional)</li>
 <li><strong>Discovery strategies:</strong> See <a href="#discovery-strategies">Discovery Strategies</a> section above for strategy selection and examples</li>
 <li><strong>PSADT scripts:</strong> NAPT substitutes <code>{{discovered_version}}</code> and <code>{{installer_filename}}</code> at build time (these are not PowerShell variables); <code>${UPPERCASE}</code> env vars work only in <code>discovery.token</code>/<code>discovery.headers</code>; use <code>$($adtSession.DirFiles)</code> for the files directory path (PSADT 4.x)</li>
 </ul>
@@ -4002,7 +4012,7 @@ its own subdirectory, so switching versions just downloads once and caches both.
 </span></code></pre></div>
 <h2 id="best-practices">Best Practices</h2>
 <h3 id="recipe-organization">Recipe Organization</h3>
-<p>Organize recipes by vendor: <code>recipes/&lt;Vendor&gt;/&lt;app&gt;.yaml</code>. NAPT automatically detects vendor from directory structure and loads <code>defaults/vendors/&lt;Vendor&gt;.yaml</code> if it exists.</p>
+<p>Organize recipes by vendor: <code>recipes/&lt;Vendor&gt;/&lt;app&gt;.yaml</code>. NAPT detects the vendor from the recipe's parent directory name (falling back to <code>psadt.app_vars.AppVendor</code>) and loads <code>defaults/vendors/&lt;Vendor&gt;.yaml</code> if it exists.</p>
 <h3 id="state-management">State Management</h3>
 <p><strong>Production:</strong> Keep state tracking enabled (default), use version control for deployment state files, run on schedule to detect updates, use <code>--verbose</code> in CI/CD.</p>
 <p><strong>Development:</strong> Use <code>--stateless</code> for testing, <code>--debug</code> for troubleshooting, delete the discovery cache to force re-discovery.</p>
@@ -4020,11 +4030,11 @@ its own subdirectory, so switching versions just downloads once and caches both.
 </span><span id="__span-33-3"><a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a>brew<span class="w"> </span>install<span class="w"> </span>msitools<span class="w">           </span><span class="c1"># macOS</span>
 </span></code></pre></div>
 <p><strong>Problem</strong>: Discovery cache corrupted</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="c1"># NAPT automatically creates backup</span>
-</span><span id="__span-34-2"><a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a><span class="c1"># Backup saved to: cache/discovery.json.backup</span>
-</span><span id="__span-34-3"><a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a>
-</span><span id="__span-34-4"><a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a><span class="c1"># Force re-download</span>
-</span><span id="__span-34-5"><a id="__codelineno-34-5" name="__codelineno-34-5" href="#__codelineno-34-5"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/app.yaml<span class="w"> </span>--stateless
+<p>NAPT logs a warning and continues without cache tracking for that run; the
+corrupted file is left in place. The cache is disposable, so delete it and
+rediscover:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a>rm<span class="w"> </span>cache/discovery.json
+</span><span id="__span-34-2"><a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/app.yaml
 </span></code></pre></div>
 <p><strong>Problem</strong>: GitHub API rate limit</p>
 <blockquote>
