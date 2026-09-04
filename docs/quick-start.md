@@ -194,26 +194,22 @@ App Count:   1
 ```console
 $ napt discover recipes/Google/chrome.yaml
 Discovering version for recipe: /path/to/recipes/Google/chrome.yaml
-Output directory: /path/to/downloads
 
 [1/4] Loading configuration...
 [2/4] Discovering version...
-[3/4] Discovering version...
-[4/4] Downloading installer...
-download progress: 0%
-...
-download progress: 100%
-[1/1] Download complete: /path/to/downloads/googlechromestandaloneenterprise64.msi (abc123...) in 25.5s
+[3/4] Fetching installer...
+[DOWNLOAD] 100%
+[4/4] Updating state...
 ======================================================================
 DISCOVERY RESULTS
 ======================================================================
 App Name:        Google Chrome
 App ID:          napt-chrome
 Strategy:        url_download
-Version:         144.0.7559.110
+Version:         <version>
 Version Source:  msi
-File Path:       /path/to/downloads/googlechromestandaloneenterprise64.msi
-SHA-256:         abc123...
+File Path:       /path/to/downloads/napt-chrome/googlechromestandaloneenterprise64.msi
+SHA-256:         <sha256>
 Status:          success
 ======================================================================
 
@@ -225,7 +221,6 @@ Status:          success
 ```console
 $ napt build recipes/Google/chrome.yaml
 Building PSADT package for recipe: /path/to/recipes/Google/chrome.yaml
-Downloads directory: /path/to/downloads
 
 [1/8] Loading configuration...
 [2/8] Finding installer...
@@ -240,9 +235,9 @@ BUILD RESULTS
 ======================================================================
 App Name:        Google Chrome
 App ID:          napt-chrome
-Version:         144.0.7559.110
-PSADT Version:   4.1.8
-Build Directory: builds/napt-chrome/144.0.7559.110/packagefiles
+Version:         <version>
+PSADT Version:   <psadt version>
+Build Directory: /path/to/builds/napt-chrome/<version>/packagefiles
 Status:          success
 ======================================================================
 
@@ -253,7 +248,8 @@ Status:          success
 
 ```console
 $ napt package recipes/Google/chrome.yaml
-Creating .intunewin package from: /path/to/builds/napt-chrome/144.0.7559.110
+Creating .intunewin package from: /path/to/builds/napt-chrome/<version>
+Output directory: /path/to/packages
 
 [1/5] Verifying build structure...
 [2/5] Getting IntuneWinAppUtil tool...
@@ -264,35 +260,38 @@ Creating .intunewin package from: /path/to/builds/napt-chrome/144.0.7559.110
 PACKAGE RESULTS
 ======================================================================
 App ID:          napt-chrome
-Version:         144.0.7559.110
-Package Path:    /path/to/packages/napt-chrome/144.0.7559.110/Invoke-AppDeployToolkit.intunewin
-Build Directory: /path/to/builds/napt-chrome/144.0.7559.110
+Version:         <version>
+Package Path:    /path/to/packages/napt-chrome/<version>/Invoke-AppDeployToolkit.intunewin
+Build Directory: /path/to/builds/napt-chrome/<version>
 Status:          success
 ======================================================================
 
 [SUCCESS] .intunewin package created successfully!
 ```
 
-**Result:** Ready-to-upload .intunewin file in `packages/napt-chrome/144.0.7559.110/`
+**Result:** Ready-to-upload .intunewin file in `packages/napt-chrome/<version>/`
 
 ### Quick Check Workflow
 
 Check if a new version is available (skips re-downloading if unchanged):
 
 ```bash
-# Discover with verbose output to see what happens
-napt discover recipes/Google/chrome.yaml --verbose
+napt discover recipes/Google/chrome.yaml
 ```
 
-If the version hasn't changed since the last run and the file exists, you'll see:
+If the installer hasn't changed since the last run, the fetch step reports a
+cache hit instead of downloading:
+
 ```
-[1/4] Checking cached version...
-[2/4] Version unchanged (144.0.7559.110)
-[3/4] File exists, skipping download
-[4/4] Using cached file: downloads/googlechromestandaloneenterprise64.msi
+[3/4] Fetching installer...
+[CACHE] File not modified (HTTP 304), using cached version
 ```
 
-**Note:** This requires having run `napt discover` at least once before to create the cached version.
+For `url_download` recipes the vendor's `ETag`/`Last-Modified` headers decide
+this; the other strategies compare the discovered version to the cached one.
+
+**Note:** This requires having run `napt discover` at least once before to
+populate `cache/discovery.json`.
 
 ### Clean Build Workflow
 
@@ -322,6 +321,7 @@ For step-by-step guides on common workflows, see [Common Tasks](common-tasks.md)
 
 Now that you have NAPT installed and understand the basic commands, explore:
 
+- **[Deploy to Intune](common-tasks.md#deploy-to-intune)** - Set up authentication with `napt auth`, upload the package with `napt upload`, and roll it out with `napt promote`
 - **[Common Tasks](common-tasks.md)** - Step-by-step guides for common workflows
 - **[User Guide](user-guide.md)** - Learn about discovery strategies, configuration, and advanced features
 - **[Creating Recipes](user-guide.md#discovery-strategies)** - Write your own application recipes

@@ -13,7 +13,7 @@ id: "napt-app-id"          # Required: Unique identifier
 discovery:                  # Required: How to find and download the installer
   strategy: api_github
   # ... strategy-specific fields
-psadt:                      # Required: PowerShell deployment configuration
+psadt:                      # Optional for MSI/MSIX; EXE needs install and uninstall
   install: |
     # ...
   uninstall: |
@@ -43,9 +43,11 @@ Display name for the application. Used in PSADT dialogs and package metadata.
 
 **Type:** `string`
 **Required:** Yes
-**Format:** Lowercase, alphanumeric, hyphens only (e.g., `napt-chrome`, `napt-git`)
+**Convention:** Lowercase, alphanumeric, hyphens (e.g., `napt-chrome`, `napt-git`)
 
-Unique identifier for the application. Used to generate:
+Unique identifier for the application. `napt validate` only checks that it is a
+non-empty string, but keep it filesystem-safe because it becomes a directory
+name. Used to generate:
 
 - Build directory names: `builds/{id}/{version}/`
 - Package names: `packages/{id}/Invoke-AppDeployToolkit.intunewin`
@@ -72,7 +74,7 @@ discovery:
   strategy: api_github
   repo: "owner/repository"          # Required: GitHub repository in owner/repo format
   asset_pattern: ".*\\.exe$"        # Required: Regex pattern to match installer filename
-  version_pattern: "v?([0-9.]+)"    # Required: Regex pattern to extract version from Git tag
+  version_pattern: "v?([0-9.]+)"    # Optional: Regex pattern to extract version from Git tag
   token: "${GITHUB_TOKEN}"          # Optional: GitHub personal access token
 ```
 
@@ -102,7 +104,8 @@ matched against asset filenames from the GitHub Releases API.
 #### version_pattern
 
 **Type:** `string` (regex)
-**Required:** Yes
+**Required:** No
+**Default:** `"v?([0-9.]+)"`
 
 Regular expression pattern to extract version from the Git tag. Should include capture groups
 for version components.
@@ -126,6 +129,18 @@ substitution (e.g., `"${GITHUB_TOKEN}"`) for security.
 
 - Avoid GitHub API rate limits (60 requests/hour unauthenticated, 5000/hour authenticated)
 - Access private repositories
+
+#### prerelease
+
+**Type:** `boolean`
+**Required:** No
+**Default:** `false`
+
+Whether a release marked as a pre-release on GitHub may be selected. NAPT always
+looks at the most recent release only; when it is a pre-release and this field
+is `false`, discovery fails with an error rather than walking back to an older
+stable release. Set to `true` for projects whose latest release is routinely a
+pre-release.
 
 **How it works:** Queries GitHub Releases API, finds the latest release, matches assets using
 `asset_pattern`, extracts version from tag using `version_pattern`.
@@ -236,7 +251,7 @@ is available.
 discovery:
   strategy: web_scrape
   page_url: "https://vendor.com/download"           # Required: URL of vendor download page
-  link_selector: 'a[href$=".msi"]'                  # Required: CSS selector to find download link
+  link_selector: 'a[href$=".msi"]'                  # One of link_selector or link_pattern
   version_pattern: "app-(\\d+\\.\\d+)\\.msi"        # Required: Regex to extract version from URL
   version_format: "{0}"                              # Optional: Format string for captured groups
 ```
@@ -251,9 +266,10 @@ URL of the vendor download page that contains links to installer files.
 #### link_selector
 
 **Type:** `string` (CSS selector)
-**Required:** Yes
+**Required:** One of `link_selector` or `link_pattern`
 
 CSS selector to find the download link on the page. Uses standard CSS selector syntax.
+Preferred over `link_pattern` when the page structure allows it.
 
 **Examples:**
 - `'a[href$=".msi"]'` - Matches links ending in `.msi`
@@ -263,6 +279,26 @@ CSS selector to find the download link on the page. Uses standard CSS selector s
 
 **Note:** The selector should match exactly one link. If multiple links match, the first match
 is used.
+
+#### link_pattern
+
+**Type:** `string` (regex)
+**Required:** One of `link_selector` or `link_pattern`
+
+Regular expression applied to the raw page HTML to find the download link when
+a CSS selector cannot pin it down (for example, a URL embedded in a script
+block). Must contain exactly one capture group around the link URL; the first
+match is used.
+
+**Example:**
+
+```yaml
+discovery:
+  strategy: web_scrape
+  page_url: "https://vendor.example.com/downloads"
+  link_pattern: 'href="(/files/app-v[0-9.]+-x64\.msi)"'
+  version_pattern: "app-v([0-9.]+)-x64"
+```
 
 #### version_pattern
 
@@ -294,8 +330,9 @@ string syntax with `{0}`, `{1}`, etc. for capture groups.
 - `"{1}.{0}"` - Reverses order: `"01"` + `"25"` → `"01.25"`
 - `"v{0}"` - Prefixes version: `"2.51.2"` → `"v2.51.2"`
 
-**How it works:** Downloads HTML from `page_url`, finds link using CSS selector, extracts
-version from URL using regex pattern, formats version using `version_format` if provided.
+**How it works:** Downloads HTML from `page_url`, finds the link using `link_selector` (CSS)
+or `link_pattern` (regex), extracts the version from the URL using `version_pattern`, and
+formats it using `version_format` if provided.
 
 ## PSADT Configuration
 
@@ -317,7 +354,7 @@ psadt:
 
 **Type:** `string`
 **Required:** No
-**Default:** `"latest"` (from organization defaults)
+**Default:** `"latest"`
 
 PSADT release version to use. Can be:
 
@@ -325,6 +362,32 @@ PSADT release version to use. Can be:
 - Specific version: `"4.1.7"` - Use a specific PSADT version
 
 **Note:** Typically set in organization defaults (`defaults/org.yaml`) rather than per-recipe.
+
+### brand_pack
+
+**Type:** `object`
+**Required:** No
+**Default:** None (PSADT's default assets are used)
+
+Replaces PSADT's default dialog assets (logo, banner) with your organization's
+files in every build. Set in `defaults/org.yaml` rather than per-recipe.
+
+```yaml
+psadt:
+  brand_pack:
+    path: brand-packs/my-company        # Folder holding your assets
+    mappings:
+      - source: "AppIcon.*"             # Glob, relative to path
+        target: "Assets/AppIcon"        # Destination in the build, without extension
+      - source: "Banner.Classic.*"
+        target: "Assets/Banner.Classic"
+```
+
+- `path` is resolved relative to the directory containing `defaults/` (or the
+  recipe's directory when there is none). A path that does not exist is
+  skipped with a verbose log line rather than an error.
+- Each mapping copies the first file matching `source` to `target`, appending
+  the source file's extension. Mappings whose glob matches nothing are skipped.
 
 ### app_vars
 
@@ -339,8 +402,10 @@ PSADT application variables set in the generated `Invoke-AppDeployToolkit.ps1` f
 - `AppName`: Display name shown in PSADT dialogs
 - `AppVersion`: Application version (use `{{discovered_version}}` for auto-substitution)
 - `AppVendor`: Vendor name (typically set in vendor defaults)
-- `AppArch`: Architecture (`x64`, `x86`, or `All`)
 - `AppLang`: Application language
+
+NAPT sets `AppArch` itself from the installer architecture; `napt validate`
+rejects it as an `app_vars` key.
 
 **Build-time variables:** NAPT substitutes `{{discovered_version}}` (the version
 discovered by NAPT) and `{{installer_filename}}` (the exact filename of the downloaded
@@ -577,6 +642,7 @@ intune:
 Minimum Windows 10/11 feature update required to install the app, enforced during Intune
 assignment. Format: `"Windows10_<release>"` or `"Windows11_<release>"` where release is
 the feature update name (e.g., `"Windows10_21H2"`, `"Windows10_22H2"`, `"Windows11_23H2"`).
+Older four-digit release names are also accepted (e.g., `"Windows10_1809"`).
 
 ### install_command
 
@@ -703,14 +769,6 @@ App description displayed in the Intune portal and Company Portal app.
 
 Publisher name shown in Intune and the Company Portal. Override when the directory name doesn't
 match the official publisher name.
-
-### category
-
-**Type:** `string`
-**Required:** No
-**Default:** None
-
-Intune app category. Must match an existing category name in your Intune tenant.
 
 ### privacy_url
 
@@ -952,6 +1010,30 @@ output and embeds them as inline PowerShell rules in the Intune app record.
 
 See [Detection and Requirements Scripts](user-guide.md#detection-and-requirements-scripts) in
 the User Guide for how scripts work and how to configure them in Intune.
+
+## IntuneWinAppUtil Configuration
+
+The `intunewin` section controls the Microsoft packaging tool `napt package`
+uses. Set in `defaults/org.yaml`; it is not a per-recipe setting.
+
+```yaml
+intunewin:
+  release: "latest"   # Optional: IntuneWinAppUtil.exe release
+```
+
+### release
+
+**Type:** `string`
+**Required:** No
+**Default:** `"latest"`
+
+Which `IntuneWinAppUtil.exe` release to download and run. Can be:
+
+- `"latest"` - Use the latest release from Microsoft's GitHub repository
+- Specific version: `"1.8.6"` - Pin to a known-good release for reproducible packaging
+
+Each release is cached independently under `cache/tools/{version}/`, so changing
+the pin never overwrites a previously downloaded tool.
 
 ## Logging Configuration
 
