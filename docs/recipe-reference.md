@@ -1,10 +1,10 @@
-# Recipe Reference
+# Recipe reference
 
 Complete documentation of all recipe fields, options, and configuration patterns. Use this as a reference when writing recipes.
 
 > **Tip:** For practical examples and workflows, see [Common Tasks](common-tasks.md). For strategy selection guidance, see [Discovery Strategies](user-guide.md#discovery-strategies) in the User Guide.
 
-## Top-Level Fields
+## Top-level fields
 
 ```yaml
 apiVersion: napt/v1        # Required: Recipe format version
@@ -54,7 +54,7 @@ name. Used to generate:
 
 **Naming Convention:** Use `napt-` prefix followed by application name (e.g., `napt-chrome`, `napt-git`).
 
-## Discovery Configuration
+## Discovery configuration
 
 The `discovery` section defines how NAPT finds and downloads the installer. The structure
 depends on the chosen `strategy`.
@@ -63,7 +63,7 @@ depends on the chosen `strategy`.
 
 - `strategy`: Required. One of: `api_github`, `api_json`, `url_download`, `web_scrape`
 
-### api_github Strategy
+### api_github strategy
 
 **Best for:** Open-source projects on GitHub with releases and semantic versioned tags.
 
@@ -145,7 +145,7 @@ pre-release.
 **How it works:** Queries GitHub Releases API, finds the latest release, matches assets using
 `asset_pattern`, extracts version from tag using `version_pattern`.
 
-### api_json Strategy
+### api_json strategy
 
 **Best for:** Vendors with JSON REST APIs, cloud services with version endpoints, or APIs
 requiring authentication.
@@ -211,7 +211,7 @@ headers:
 **How it works:** Makes HTTP GET request to `api_url`, extracts version using `version_path`,
 extracts download URL using `download_url_path`. Supports nested JSON paths.
 
-### url_download Strategy
+### url_download strategy
 
 **Best for:** Vendors with stable download URLs and MSI installers with embedded ProductVersion.
 
@@ -240,7 +240,7 @@ automatically extract ProductVersion. No configuration needed. Other file types 
 supported for version extraction — use a version-first strategy (api_github, api_json,
 web_scrape) instead.
 
-### web_scrape Strategy
+### web_scrape strategy
 
 **Best for:** Vendors with download pages listing installers when no direct download URL or API
 is available.
@@ -334,7 +334,7 @@ string syntax with `{0}`, `{1}`, etc. for capture groups.
 or `link_pattern` (regex), extracts the version from the URL using `version_pattern`, and
 formats it using `version_format` if provided.
 
-## PSADT Configuration
+## PSADT configuration
 
 The `psadt` section defines PowerShell deployment scripts and PSADT variables:
 
@@ -556,7 +556,7 @@ uninstall: |
   Uninstall-ADTApplication -Name "Application Name"
 ```
 
-## Intune Configuration
+## Intune configuration
 
 The `intune` section configures Win32 app settings for Intune packaging and upload.
 
@@ -1010,7 +1010,7 @@ output and embeds them as inline PowerShell rules in the Intune app record.
 See [Detection and Requirements Scripts](user-guide.md#detection-and-requirements-scripts) in
 the User Guide for how scripts work and how to configure them in Intune.
 
-## IntuneWinAppUtil Configuration
+## IntuneWinAppUtil configuration
 
 The `intunewin` section controls the Microsoft packaging tool `napt package`
 uses. Set in `defaults/org.yaml`; it is not a per-recipe setting.
@@ -1034,7 +1034,7 @@ Which `IntuneWinAppUtil.exe` release to download and run. Can be:
 Each release is cached independently under `cache/tools/{version}/`, so changing
 the pin never overwrites a previously downloaded tool.
 
-## Logging Configuration
+## Logging configuration
 
 The `logging` section controls on-device logging for detection and requirements scripts.
 Logs are written in CMTrace format (compatible with the Configuration Manager Trace Log
@@ -1062,7 +1062,7 @@ it does not exist and verifying write access). If that fails (e.g., permissions)
 to `C:\ProgramData\NAPT\` (system) or `%LOCALAPPDATA%\NAPT\` (user). If both fail, a warning is
 written to stderr and the script runs without a log file.
 
-## Deployment Configuration
+## Deployment configuration
 
 The `deployment` section controls upload strictness and deployment promotion.
 These settings are org policy — configure them in `defaults/org.yaml` and
@@ -1151,7 +1151,7 @@ How many superseded versions stay in Intune for rollback before deletion.
 `0` deletes a version as soon as it holds no rings.
 Enforced by `napt promote apply`; only NAPT-stamped apps are ever deleted.
 
-## Variable Substitution
+## Variable substitution
 
 Recipes use two distinct substitution mechanisms with different syntax.
 
@@ -1192,7 +1192,7 @@ psadt:
     Start-ADTProcess -FilePath "{{installer_filename}}" -ArgumentList "/S"
 ```
 
-### Setting Environment Variables
+### Setting environment variables
 
 **Windows (PowerShell):**
 ```powershell
@@ -1212,7 +1212,7 @@ export GITHUB_TOKEN="your_token_here"
 **Note:** For CI/CD, set environment variables in your pipeline configuration (GitHub Actions,
 Azure DevOps, etc.).
 
-## Complete Example
+## Complete example
 
 ```yaml
 apiVersion: napt/v1
@@ -1241,7 +1241,7 @@ psadt:
     Uninstall-ADTApplication -Name "Example Application"
 ```
 
-## See Also
+## See also
 
 - [Common Tasks](common-tasks.md) - Practical workflows and examples
 - [Discovery Strategies](user-guide.md#discovery-strategies) - Strategy selection guide

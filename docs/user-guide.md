@@ -1,12 +1,12 @@
-# User Guide
+# User guide
 
 This guide covers NAPT's key features, configuration system, and advanced usage patterns.
 
-## How NAPT Works
+## How NAPT works
 
 NAPT automates the complete workflow from version discovery to Intune package creation. Understanding how each step works helps you troubleshoot issues and customize recipes effectively.
 
-### Discovery Process (`napt discover`)
+### Discovery process (`napt discover`)
 
 The discovery process finds the latest version and downloads the installer:
 
@@ -22,7 +22,7 @@ The discovery process finds the latest version and downloads the installer:
 
 **Output**: Downloaded installer in `downloads/{app_id}/`, updated discovery cache, updated deployment state
 
-### Build Process (`napt build`)
+### Build process (`napt build`)
 
 The build process creates a complete PSADT package from the recipe and downloaded installer:
 
@@ -59,7 +59,7 @@ The build process creates a complete PSADT package from the recipe and downloade
 
 **Output**: Complete PSADT package in `builds/{app_id}/{version}/` with detection script always present, and requirements script when `build_types` is `both` or `update_only`.
 
-#### Detection and Requirements Scripts
+#### Detection and requirements scripts
 
 NAPT generates PowerShell scripts used by Intune Win32 app entries to check installation state:
 
@@ -205,7 +205,7 @@ build time:
 Icon resolution order at upload: `intune.logo_path` (if set), then
 `icons/{id}.png`, then no icon with a warning.
 
-### Package Process (`napt package`)
+### Package process (`napt package`)
 
 The package process creates a `.intunewin` file from a PSADT build for the
 recipe's app:
@@ -237,7 +237,7 @@ recipe's app:
 ready for `napt upload`. Only one version is kept on disk per app at a time —
 packaging a new version removes the previous one automatically.
 
-### Upload Process (`napt upload`)
+### Upload process (`napt upload`)
 
 The upload process publishes a packaged app to Microsoft Intune via the
 Graph API. Run `napt package` before uploading.
@@ -306,7 +306,7 @@ If no credential is available, commands fail with `Not authenticated.`
 followed by a hint for each option: run `napt auth login` interactively, or
 set the `AZURE_*` variables or sign in with `az login` for CI/CD.
 
-#### App Registration Setup
+#### App registration setup
 
 Create the app registration once per organization.
 Two ways to do it:
@@ -505,7 +505,7 @@ AZURE_TENANT_ID="<Directory (tenant) ID>"
 A certificate works the same way with `AZURE_CLIENT_CERTIFICATE_PATH`
 instead of `AZURE_CLIENT_SECRET`.
 
-### Directory Structure
+### Directory structure
 
 After a complete workflow, your directory structure looks like:
 
@@ -548,7 +548,7 @@ state/
       └── napt-chrome.json                 # Deployment state (authoritative)
 ```
 
-## Commands Reference
+## Commands reference
 
 > **💡 Tip:** All commands support `--help` (or `-h`) to show detailed usage, options, and examples. Try `napt discover --help` to see what's available.
 
@@ -701,7 +701,7 @@ napt auth status
 napt auth logout
 ```
 
-### Output Modes
+### Output modes
 
 All commands support verbosity flags to control output detail:
 
@@ -713,11 +713,11 @@ All commands support verbosity flags to control output detail:
 
 Debug mode includes all verbose output plus deep diagnostic information. Use `--verbose` for normal troubleshooting and `--debug` when you need to understand exactly what NAPT is doing internally.
 
-## Discovery Strategies
+## Discovery strategies
 
 Discovery strategies are the core mechanism for obtaining application installers and extracting version information.
 
-### Available Strategies
+### Available strategies
 
 | Strategy | Version Source | Use Case | Unchanged Version Detection Speed |
 |----------|---------------|----------|---------------------|
@@ -728,7 +728,7 @@ Discovery strategies are the core mechanism for obtaining application installers
 
 > **Note:** For complete configuration examples and field documentation for each strategy, see [Recipe Reference](recipe-reference.md).
 
-### Decision Guide
+### Decision guide
 
 Use this flowchart to choose the right strategy:
 
@@ -745,14 +745,14 @@ flowchart TD
 
 **Performance Note**: Version-first strategies (everything except url_download) can skip downloads entirely when versions haven't changed, making them ideal for scheduled CI/CD checks.
 
-## Recipe Basics
+## Recipe basics
 
 A recipe file defines how to discover, download, and package an application. Recipes are YAML files that specify:
 
 - **Discovery strategy** - How to find the latest version and download URL
 - **PSADT configuration** - PowerShell deployment scripts and variables
 
-### Basic Structure
+### Basic structure
 
 ```yaml
 apiVersion: napt/v1    # Recipe format version
@@ -778,7 +778,7 @@ intune:                # Optional: Intune-specific settings
     architecture: "x64"               # Required for EXE installers
 ```
 
-### Quick Reference
+### Quick reference
 
 - **Top-level fields:** `apiVersion` (required), `name` (required), `id` (required),
   `discovery` (required), `psadt` (optional for MSI and MSIX; EXE installers need
@@ -786,13 +786,13 @@ intune:                # Optional: Intune-specific settings
 - **Discovery strategies:** See [Discovery Strategies](#discovery-strategies) section above for strategy selection and examples
 - **PSADT scripts:** NAPT substitutes `{{discovered_version}}` and `{{installer_filename}}` at build time (these are not PowerShell variables); `${UPPERCASE}` env vars work only in `discovery.token`/`discovery.headers`; use `$($adtSession.DirFiles)` for the files directory path (PSADT 4.x)
 
-### Complete Documentation
+### Complete documentation
 
 For complete field documentation, all options, and detailed examples, see the [Recipe Reference](recipe-reference.md) page.
 
 For practical workflows and copy-paste examples, see [Common Tasks](common-tasks.md).
 
-## State Management & Caching
+## State management & caching
 
 NAPT keeps two kinds of state with different purposes:
 
@@ -803,7 +803,7 @@ Safe to gitignore.
 Not regenerable.
 Written deterministically (fixed reading-order keys, no timestamps), so unchanged state produces byte-identical files and clean diffs — commit these files to version control if you want an auditable record or a PR-based review workflow.
 
-### Discovery Cache
+### Discovery cache
 
 The discovery cache avoids unnecessary downloads.
 This version-based caching is critical for CI/CD with frequent scheduled checks, providing fast feedback when applications haven't changed.
@@ -843,7 +843,7 @@ flowchart TD
 
 **Note:** The cache is updated after every discovery run, even when skipping downloads. This updates the `last_updated` timestamp and confirms the cached version is still current.
 
-### Deployment State
+### Deployment state
 
 Each app gets its own file, `state/deployment/<app_id>.json`, so concurrent changes to different apps never conflict and each file's diff is scoped to one app.
 Every file carries a `schemaVersion` (currently 1); NAPT refuses files
@@ -914,7 +914,7 @@ To hold one app's promotions during review, delete its plan file; the
 other apps' plans are unaffected, and the next plan run re-proposes
 whatever is still eligible.
 
-### Default Behavior (Stateful)
+### Default behavior (stateful)
 
 ```bash
 # Cache and deployment state tracking enabled by default
@@ -924,7 +924,7 @@ napt discover recipes/Google/chrome.yaml
 # Creates/updates: state/deployment/napt-chrome.json
 ```
 
-### Stateless Mode
+### Stateless mode
 
 ```bash
 # Disable the discovery cache and deployment state writes for one-off checks
@@ -934,12 +934,12 @@ napt discover recipes/Google/chrome.yaml --stateless
 # Useful for ad-hoc checks that should leave no trace
 ```
 
-## Configuration Layers
+## Configuration layers
 
 NAPT uses a layered configuration system that promotes DRY (Don't Repeat Yourself) principles.
 All defaults live in code; configuration files are optional overrides.
 
-### How Configuration Works
+### How configuration works
 
 ```
 Code defaults (always complete)     <- baseline, ships with napt
@@ -959,7 +959,7 @@ recipe.yaml                         <- recipe-specific overrides
 - Old configs never break when NAPT adds new features
 - Any setting can be overridden at any layer — org, vendor, or recipe
 
-### The Three Override Layers
+### The three override layers
 
 1. **Organization defaults** (`defaults/org.yaml`) - Base overrides for all apps.
 Optional; only needed if you want to customize settings organization-wide.
@@ -1000,7 +1000,7 @@ psadt:
 # AppVendor will be "Google LLC" (from vendor defaults)
 ```
 
-### Directory Flag Defaults
+### Directory flag defaults
 
 All directory flags follow the same pattern: CLI flag overrides config;
 config overrides the built-in default.
@@ -1053,7 +1053,7 @@ napt discover recipes/Google/chrome.yaml --output-dir /tmp/downloads
 napt build recipes/Google/chrome.yaml --downloads-dir /tmp/downloads
 ```
 
-### IntuneWinAppUtil Release Pinning
+### IntuneWinAppUtil release pinning
 
 By default NAPT always resolves `"latest"` for `IntuneWinAppUtil.exe` by querying
 the GitHub releases API and caching the resolved version.
@@ -1075,11 +1075,11 @@ intunewin:
   release: "latest"  # default; resolves via GitHub API on each run if not cached
 ```
 
-## Cross-Platform Support
+## Cross-platform support
 
 **NAPT is a Windows tool** for Microsoft Intune packaging. Develop on any platform, package on Windows.
 
-### Platform Compatibility Matrix
+### Platform compatibility matrix
 
 | Platform | Discover & Download | Build | Package |
 |----------|---------------------|-------|---------|
@@ -1087,13 +1087,13 @@ intunewin:
 | **Linux** | ✅ | ✅ | ⚫ Windows Only |
 | **macOS** | ✅ | ✅ | ⚫ Windows Only |
 
-### Why Windows for Packaging?
+### Why Windows for packaging?
 
 The `napt package` command uses Microsoft's [IntuneWinAppUtil.exe](https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool), which is a Windows-only .NET application. This is the official tool for creating .intunewin packages.
 
-### Recommended Workflows
+### Recommended workflows
 
-#### Workflow 1: All-Windows (Simplest)
+#### Workflow 1: all-Windows (simplest)
 ```bash
 # Run everything on Windows
 napt discover recipes/Google/chrome.yaml
@@ -1101,7 +1101,7 @@ napt build recipes/Google/chrome.yaml
 napt package recipes/Google/chrome.yaml
 ```
 
-#### Workflow 2: Mixed Platform Development
+#### Workflow 2: mixed platform development
 ```bash
 # On Linux/macOS: Discovery and build
 napt discover recipes/Google/chrome.yaml
@@ -1112,13 +1112,13 @@ napt build recipes/Google/chrome.yaml
 napt package recipes/Google/chrome.yaml
 ```
 
-## Best Practices
+## Best practices
 
-### Recipe Organization
+### Recipe organization
 
 Organize recipes by vendor: `recipes/<Vendor>/<app>.yaml`. NAPT detects the vendor from the recipe's parent directory name (falling back to `psadt.app_vars.AppVendor`) and loads `defaults/vendors/<Vendor>.yaml` if it exists.
 
-### State Management
+### State management
 
 **Production:** Keep state tracking enabled (default), use version control for deployment state files, run on schedule to detect updates, use `--verbose` in CI/CD.
 
@@ -1136,7 +1136,7 @@ fi
 
 ## Troubleshooting
 
-### Common Issues
+### Common issues
 
 **Problem**: MSI extraction fails on Linux/macOS
 

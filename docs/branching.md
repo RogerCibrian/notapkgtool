@@ -1,19 +1,19 @@
-# Branching Strategy
+# Branching strategy
 
 NAPT uses **GitHub Flow** - a simple, branch-based workflow that keeps `main` always deployable.
 
-## Core Principles
+## Core principles
 
 1. **`main` branch is always stable** - Production-ready code only
 2. **Feature branches for all work** - Every change starts from a branch
 3. **Pull Requests for review** - All changes reviewed before merging
 4. **Merge frequently** - Keep branches short-lived (< 1 week ideal)
 
-## Quick Start
+## Quick start
 
 The most common workflow for making changes:
 
-### 1. Start New Work
+### 1. Start new work
 
 ```bash
 # Always start from updated main
@@ -24,7 +24,7 @@ git pull origin main
 git checkout -b feat/your-feature-name
 ```
 
-### 2. During Development
+### 2. During development
 
 ```bash
 # Make changes, commit frequently
@@ -35,7 +35,7 @@ git commit -m "feat: add your feature"
 git push origin feat/your-feature-name
 ```
 
-### 3. Create Pull Request
+### 3. Create pull request
 
 1. Push your branch to GitHub
 2. Create a Pull Request on GitHub
@@ -43,7 +43,7 @@ git push origin feat/your-feature-name
 4. Request review from maintainers
 5. Address any feedback
 
-### 4. After Merge
+### 4. After merge
 
 ```bash
 # Update your local main
@@ -56,9 +56,9 @@ git branch -d feat/your-feature-name
 # Remote branch is usually auto-deleted by GitHub
 ```
 
-## Branch Management
+## Branch management
 
-### Branch Structure
+### Branch structure
 
 ```
 main (always deployable)
@@ -68,7 +68,7 @@ main (always deployable)
 └── refactor/simplify-config-loader
 ```
 
-### Branch Naming Convention
+### Branch naming convention
 
 Use descriptive names with type prefixes:
 
@@ -87,7 +87,7 @@ The prefix is the conventional commit type the PR will squash to:
 `feature/` and `bugfix/` also appear in the history and are accepted, but
 prefer the short forms so the branch name and the squash commit type match.
 
-### Naming Rules
+### Naming rules
 
 - Use lowercase with hyphens
 - Be descriptive but concise (3-6 words)
@@ -110,9 +110,9 @@ Feat/My_Branch         # Wrong case
 fix-bug                # Too generic
 ```
 
-## Commit Guidelines
+## Commit guidelines
 
-### Commit Message Format
+### Commit message format
 
 Use conventional commit format for clarity:
 
@@ -122,7 +122,7 @@ Use conventional commit format for clarity:
 [optional body]
 ```
 
-### Commit Types
+### Commit types
 
 | Type | Purpose | Example |
 |------|---------|---------|
@@ -134,7 +134,7 @@ Use conventional commit format for clarity:
 | `chore` | Maintenance | `chore: update Poetry dependencies` |
 | `perf` | Performance | `perf: optimize version comparison` |
 
-### Commit Guidelines
+### Commit guidelines
 
 - Use imperative mood: "add" not "added" or "adds"
 - Keep subject line under 50 characters
@@ -156,18 +156,18 @@ git commit -m "Fix bug"               # No type prefix
 git commit -m "WIP"                   # Too vague
 ```
 
-## Pull Request Process
+## Pull request process
 
 When creating a PR, the [PR template](https://github.com/RogerCibrian/notapkgtool/blob/main/.github/PULL_REQUEST_TEMPLATE.md) auto-populates with sections for Description, Motivation, Changes, Testing, and Checklist.
 
-## Merge Strategy
+## Merge strategy
 
 **Squash and Merge, always**
 
 NAPT uses **squash and merge** for every Pull Request, including release
 PRs, to maintain a clean, readable history in `main`.
 
-### Why Squash and Merge?
+### Why squash and merge?
 
 - ✅ **Clean history**: One commit per feature/fix in `main`
 - ✅ **Conventional commits**: Each merge becomes a properly formatted commit
@@ -213,10 +213,10 @@ promotion), and that squashes like any other PR.
 - Use conventional commit prefixes in PR titles for easy squashing
 - If you accidentally use wrong merge method, you can revert and redo
 
-## Troubleshooting & Scenarios
+## Troubleshooting & scenarios
 
 
-### Multiple Related Changes
+### Multiple related changes
 
 If changes are closely related, keep in one branch:
 ```bash
@@ -232,7 +232,7 @@ feat/add-exe-support
 feat/add-rpm-support
 ```
 
-### Long-Running Features
+### Long-running features
 
 For features taking multiple days/weeks:
 1. Keep branch updated with `main` regularly
@@ -240,7 +240,7 @@ For features taking multiple days/weeks:
 3. Use draft PRs to show progress
 4. Consider feature flags for incomplete features
 
-### Urgent Hotfixes
+### Urgent hotfixes
 
 For critical production issues:
 ```bash
@@ -257,7 +257,7 @@ git push origin fix/security-vulnerability
 # Fast-track review and merge
 ```
 
-## Best Practices & Quality Checks
+## Best practices & quality checks
 
 ### DO ✅
 

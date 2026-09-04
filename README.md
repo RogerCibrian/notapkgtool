@@ -30,7 +30,7 @@ Packaging applications for Microsoft Intune with PSAppDeployToolkit (PSADT) typi
 
 This manual workflow is repetitive, difficult to automate in CI/CD pipelines, lacks version tracking, and requires re-doing most of the work for every update. NAPT automates this entire workflow with YAML-based recipes and automatic version tracking.
 
-### Key Features
+### Key features
 
 - ✅ **Automatic version tracking** - Automatic discovery from MSI, EXE, URLs, or APIs with caching to skip unnecessary downloads
 - ✅ **YAML-based recipes** - Define app packaging once with layered configuration (Organization → Vendor → Recipe)
@@ -38,7 +38,7 @@ This manual workflow is repetitive, difficult to automate in CI/CD pipelines, la
 - ✅ **Cross-platform workflow** - Run on Windows, Linux, and macOS (packaging requires Windows)
 - ✅ **Direct Intune upload** - Upload to Microsoft Intune via the Graph API, no portal required
 
-## Cross-Platform Support
+## Cross-platform support
 
 | Feature | Windows | Linux/macOS |
 |---------|---------|-------------|
@@ -47,13 +47,13 @@ This manual workflow is repetitive, difficult to automate in CI/CD pipelines, la
 | Intune Packaging | ✅ | ⚫ Windows Only |
 | Intune Upload | ✅ | ✅ |
 
-See the [Cross-Platform Support](https://rogercibrian.github.io/notapkgtool/user-guide/#cross-platform-support) section for platform-specific workflows.
+See the [Cross-platform support](https://rogercibrian.github.io/notapkgtool/user-guide/#cross-platform-support) section for platform-specific workflows.
 
-## Getting Started
+## Getting started
 
 See the [Quick Start Guide](https://rogercibrian.github.io/notapkgtool/quick-start/) for installation and setup.
 
-## Creating Recipes
+## Creating recipes
 
 Recipes are YAML configuration files that define how to discover, download, and package applications.
 

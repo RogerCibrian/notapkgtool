@@ -1,8 +1,8 @@
-# Developer Reference
+# Developer reference
 
 Overview of NAPT's codebase structure, architecture, and key concepts for contributors.
 
-## Code Organization
+## Code organization
 
 NAPT's codebase structure matches the module organization. Here's the file structure:
 
@@ -72,7 +72,7 @@ napt/
     └── msix.py                 # MSIX metadata extraction (AppxManifest)
 ```
 
-### Data Flow
+### Data flow
 
 ```
 Recipe YAML
@@ -94,12 +94,12 @@ Recipe YAML
 Result (dataclass)
 ```
 
-## Quick Start
+## Quick start
 
 - **Adding a CLI command:** See [`cli/`](cli.md) for command registration patterns
 - **Adding discovery strategies:** Implement `DiscoveryStrategy` protocol from [`discovery/base.py`](discovery.md)
 
-## Key Concepts
+## Key concepts
 
 - **Discovery Strategies:** Protocol-based, stateless, listed in an explicit registry table (api_github, api_json, web_scrape). All return a `RemoteVersion` from configuration alone. The orchestrator runs the result through `resolve_with_cache` to skip the download when the version is unchanged. `url_download` is a separate flow (not a registered strategy) because it must download the file to determine the version.
 - **Configuration:** 3-layer system (org → vendor → recipe) with deep merging
@@ -107,7 +107,7 @@ Result (dataclass)
 - **Exceptions:** All NAPT domain errors use custom exceptions inheriting from `NAPTError` (ConfigError, NetworkError, PackagingError, StateError, AuthError) - allows catching all NAPT errors or specific types
 - **Return Types:** Frozen dataclasses from `results.py`, one per napt command's underlying operation (type-safe, immutable returns)
 
-## Design Principles
+## Design principles
 
 - Single Responsibility per module
 - Protocol-based interfaces (typing.Protocol)
@@ -122,7 +122,7 @@ Result (dataclass)
 - **New CLI command:** Create `napt/cli/<command>.py` with the `cmd_<name>()` handler and a `register(subparsers)` hook, call `register` from `main()` in `napt/cli/main.py`, and add `tests/cli/test_<command>.py` (strict one module per command)
 - **New config option:** Update schema in `config/loader.py`, add validation in `validation.py`, document in recipe schema
 
-## See Also
+## See also
 
 - [Discovery manager](discovery-manager.md) - Discovery orchestration
 - [Discovery API](discovery.md) - Discovery strategy implementations

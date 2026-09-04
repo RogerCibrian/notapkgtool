@@ -1,4 +1,4 @@
-# Quick Start Guide
+# Quick start guide
 
 ## Installation
 
@@ -7,9 +7,9 @@
 - Python 3.11 or higher
 - Git
 
-### Choose Your Installation Method
+### Choose your installation method
 
-#### Option 1: pip (For Using NAPT)
+#### Option 1: pip (for using NAPT)
 
 Best for users who want to use the tool.
 
@@ -29,7 +29,7 @@ pip install napt
 napt --version
 ```
 
-#### Option 2: Poetry (For Development)
+#### Option 2: Poetry (for development)
 
 Best for contributing to NAPT.
 
@@ -52,7 +52,7 @@ poetry install
 napt --version
 ```
 
-### Platform Requirements
+### Platform requirements
 
 NAPT runs on Windows, Linux, and macOS with the following requirements:
 
@@ -81,11 +81,11 @@ sudo dnf install msitools
 brew install msitools
 ```
 
-See the [Cross-Platform Support](user-guide.md#cross-platform-support) section for platform-specific workflows.
+See the [Cross-platform support](user-guide.md#cross-platform-support) section for platform-specific workflows.
 
-## Basic Usage
+## Basic usage
 
-### Command-Line Options
+### Command-line options
 
 All NAPT commands support these helpful flags:
 
@@ -95,7 +95,7 @@ All NAPT commands support these helpful flags:
 
 Example: `napt discover --help` or `napt build --verbose`
 
-### Initialize a New Project
+### Initialize a new project
 
 Set up the recommended directory structure for a new NAPT project:
 
@@ -117,7 +117,7 @@ This creates:
 - `defaults/vendors/` - Directory for vendor-specific defaults
 - `state/deployment/` - Per-app deployment state files
 
-### Validate a Recipe
+### Validate a recipe
 
 Quick validation checks syntax and configuration without downloading anything:
 
@@ -125,7 +125,7 @@ Quick validation checks syntax and configuration without downloading anything:
 napt validate recipes/Google/chrome.yaml
 ```
 
-### Discover Latest Version
+### Discover latest version
 
 Download the installer and extract version information:
 
@@ -141,7 +141,7 @@ napt discover recipes/Google/chrome.yaml --output-dir ./cache
 napt discover recipes/Google/chrome.yaml --stateless
 ```
 
-### Build PSADT Package
+### Build PSADT package
 
 Create a complete PSADT package ready for deployment:
 
@@ -153,7 +153,7 @@ napt build recipes/Google/chrome.yaml
 napt build recipes/Google/chrome.yaml --downloads-dir ./downloads --output-dir ./builds
 ```
 
-### Create .intunewin Package
+### Create .intunewin package
 
 Package the PSADT build for Microsoft Intune:
 
@@ -165,9 +165,9 @@ napt package recipes/Google/chrome.yaml
 napt package recipes/Google/chrome.yaml --output-dir ./packages --clean-source
 ```
 
-## Example Workflows
+## Example workflows
 
-### Complete Workflow: Recipe to Package
+### Complete workflow: recipe to package
 
 Here's a complete workflow from recipe validation to Intune package:
 
@@ -271,7 +271,7 @@ Status:          success
 
 **Result:** Ready-to-upload .intunewin file in `packages/napt-chrome/<version>/`
 
-### Quick Check Workflow
+### Quick check workflow
 
 Check if a new version is available (skips re-downloading if unchanged):
 
@@ -293,7 +293,7 @@ this; the other strategies compare the discovered version to the cached one.
 **Note:** This requires having run `napt discover` at least once before to
 populate `cache/discovery.json`.
 
-### Clean Build Workflow
+### Clean build workflow
 
 Force a fresh download and rebuild:
 
@@ -308,7 +308,7 @@ napt build recipes/Google/chrome.yaml --output-dir ./my-builds
 napt package recipes/Google/chrome.yaml --clean-source
 ```
 
-## Common Tasks
+## Common tasks
 
 For step-by-step guides on common workflows, see [Common Tasks](common-tasks.md):
 
@@ -317,7 +317,7 @@ For step-by-step guides on common workflows, see [Common Tasks](common-tasks.md)
 - Create a recipe for a JSON API endpoint
 - Troubleshoot discovery failures
 
-## What's Next?
+## What's next?
 
 Now that you have NAPT installed and understand the basic commands, explore:
 
