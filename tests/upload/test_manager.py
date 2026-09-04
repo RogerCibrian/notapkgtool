@@ -217,6 +217,58 @@ def test_upload_package_propagates_network_error(
             upload_package(recipe_path)
 
 
+def test_upload_package_honors_directories_package(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that upload reads from directories.package, not a fixed packages/."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path / "artifacts")  # -> artifacts/packages/test-app/1.0.0
+
+    recipe_path = tmp_path / "recipes" / "Vendor" / "test-app.yaml"
+    recipe_path.parent.mkdir(parents=True)
+    recipe_path.touch()
+
+    patches = _patch_graph()
+    config = _fake_config(
+        build_types="app_only",
+        overrides={"directories": {"package": "artifacts/packages"}},
+    )
+
+    with (
+        patch("napt.upload.manager.load_effective_config", return_value=config),
+        patch("napt.upload.manager.get_access_token", return_value="fake-token"),
+        patch("napt.upload.manager.parse_intunewin", return_value=fake_metadata),
+        patch("napt.upload.manager.list_mobile_apps", return_value=[]),
+        patch(
+            "napt.upload.manager.extract_encrypted_payload",
+            return_value=tmp_path / "payload",
+        ),
+        patch(
+            "napt.upload.manager.create_win32_app",
+            side_effect=patches["create_win32_app"],
+        ),
+        patch(
+            "napt.upload.manager.create_content_version",
+            side_effect=patches["create_content_version"],
+        ),
+        patch(
+            "napt.upload.manager.create_content_version_file",
+            side_effect=patches["create_content_version_file"],
+        ),
+        patch("napt.upload.manager.upload_to_azure_blob"),
+        patch("napt.upload.manager.commit_content_version_file"),
+        patch("napt.upload.manager.commit_content_version"),
+    ):
+        result = upload_package(recipe_path)
+
+    assert result.status == "success"
+    assert (
+        Path(result.package_path)
+        .resolve()
+        .is_relative_to((tmp_path / "artifacts").resolve())
+    )
+
+
 class TestResolveLargeIcon:
     """Tests for _resolve_large_icon resolution order."""
 

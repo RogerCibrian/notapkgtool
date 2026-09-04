@@ -52,6 +52,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`napt build` fails early for EXE recipes without scripts** - An EXE
+    installer whose recipe lacks `psadt.install` or `psadt.uninstall` now
+    stops the build with a clear error instead of producing a package with
+    empty install and uninstall sections
 - **BREAKING: `logging.log_format` and `logging.log_level` recipe fields
     removed** - The fields never had any effect: generated detection and
     requirements scripts always log in CMTrace format and always log every
@@ -73,6 +77,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BREAKING: Managed identity removed** - `ManagedIdentityCredential` is
     no longer tried; use a service principal or OIDC federation
 - Removed the unused `--tenant-id` option from `napt upload`
+
+### Fixed
+
+- `napt upload` now honors `directories.package` instead of always looking
+    in `packages/`, so a custom package directory in `defaults/org.yaml` no
+    longer breaks upload with "No package found"
 
 ## [0.9.0] - 2026-07-20
 

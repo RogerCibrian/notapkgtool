@@ -29,12 +29,36 @@ from napt.build.manager import (
     _extract_app_icon,
     _find_installer_file,
     _get_installer_version,
+    _require_exe_scripts,
     _write_build_manifest,
 )
 from napt.exceptions import ConfigError
 from napt.versioning.msi import MSIMetadata
 
 # All tests in this file are unit tests (fast, mocked)
+
+
+class TestRequireExeScripts:
+    """Tests for the EXE install/uninstall script requirement."""
+
+    def test_both_scripts_present_passes(self):
+        """Tests that a recipe with both scripts is accepted."""
+        config = {"psadt": {"install": "Start-ADTProcess", "uninstall": "Remove"}}
+        _require_exe_scripts(config)
+
+    def test_missing_install_raises(self):
+        """Tests that a missing install script names the field."""
+        config = {"psadt": {"uninstall": "Remove"}}
+        with pytest.raises(ConfigError, match=r"psadt\.install required for EXE"):
+            _require_exe_scripts(config)
+
+    def test_blank_scripts_name_both_fields(self):
+        """Tests that blank scripts are treated as missing and both are named."""
+        config = {"psadt": {"install": "   ", "uninstall": ""}}
+        with pytest.raises(
+            ConfigError, match=r"psadt\.install and psadt\.uninstall required"
+        ):
+            _require_exe_scripts(config)
 
 
 def _write_pending_state(state_dir: Path, app_id: str, pending: dict) -> None:

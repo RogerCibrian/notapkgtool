@@ -112,15 +112,16 @@ _ARCH_MAP: dict[str, str | None] = {
 }
 
 
-def _infer_package_dir(app_id: str) -> tuple[Path, str]:
+def _infer_package_dir(packages_dir: Path, app_id: str) -> tuple[Path, str]:
     """Find the versioned package directory and .intunewin file for an app.
 
-    Scans packages/{app_id}/ for a single version subdirectory created by
-    'napt package'. The package directory is self-contained: it holds the
+    Scans {packages_dir}/{app_id}/ for a single version subdirectory created
+    by 'napt package'. The package directory is self-contained: it holds the
     .intunewin file and the detection/requirements scripts copied during
     packaging, so upload does not need to access the builds directory.
 
     Args:
+        packages_dir: Root packages directory (``directories.package``).
         app_id: Application identifier (from recipe app.id).
 
     Returns:
@@ -133,11 +134,11 @@ def _infer_package_dir(app_id: str) -> tuple[Path, str]:
             .intunewin file is missing from the version directory.
 
     """
-    app_package_dir = Path("packages") / app_id
+    app_package_dir = packages_dir / app_id
 
     if not app_package_dir.exists():
         raise ConfigError(
-            f"No package found for '{app_id}' in packages/. "
+            f"No package found for '{app_id}' in {packages_dir}. "
             "Run 'napt package' first."
         )
 
@@ -474,10 +475,6 @@ def _build_app_metadata(
     if large_icon is not None:
         payload["largeIcon"] = large_icon
 
-    # TODO: categories require a lookup against GET /deviceAppManagement/
-    # mobileAppCategories to resolve names to IDs before the POST.
-    # Source: intune.category
-
     return payload
 
 
@@ -740,7 +737,8 @@ def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
     # Step 1: Locate the package directory
     total_steps = 9 if build_types == "both" else 6
     logger.step(1, total_steps, "Locating .intunewin package...")
-    package_path, version = _infer_package_dir(app_id)
+    packages_dir = Path(config["directories"]["package"])
+    package_path, version = _infer_package_dir(packages_dir, app_id)
     logger.verbose("UPLOAD", f"Package: {package_path}")
     logger.verbose("UPLOAD", f"Version: {version}")
 

@@ -1168,6 +1168,33 @@ def _apply_msi_commands(
     )
 
 
+def _require_exe_scripts(config: dict[str, Any]) -> None:
+    """Checks that an EXE recipe supplies its own install and uninstall scripts.
+
+    MSI and MSIX installers carry enough metadata to auto-generate the
+    commands; EXE installers do not, so the recipe must provide both.
+
+    Args:
+        config: Effective configuration for the recipe.
+
+    Raises:
+        ConfigError: If ``psadt.install`` or ``psadt.uninstall`` is missing
+            or blank.
+    """
+    psadt_scripts = config["psadt"]
+    missing = [
+        key
+        for key in ("install", "uninstall")
+        if not str(psadt_scripts.get(key) or "").strip()
+    ]
+    if missing:
+        raise ConfigError(
+            f"psadt.{' and psadt.'.join(missing)} required for EXE "
+            "installers: NAPT can only auto-generate install and "
+            "uninstall commands for MSI and MSIX packages"
+        )
+
+
 def _extract_app_icon(
     config: dict[str, Any], installer_file: Path, app_id: str
 ) -> None:
@@ -1364,6 +1391,7 @@ def build_package(
                 "installers. Set intune.detection.architecture in the "
                 "recipe. Allowed values: x86, x64, arm64, any"
             )
+        _require_exe_scripts(config)
 
     # Extract the app icon for Intune (best-effort; warns instead of failing)
     _extract_app_icon(config, installer_file, app_id)

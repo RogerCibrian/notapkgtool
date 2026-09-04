@@ -74,7 +74,6 @@ _INTUNE_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
     "run_as_32_bit": (bool, None, "run installer and scripts in 32-bit context"),
     "description": (str, None, "app description for Intune portal"),
     "publisher": (str, None, "publisher name override"),
-    "category": (str, None, "Intune app category"),
     "privacy_url": (str, None, "privacy information URL"),
     "info_url": (str, None, "information URL"),
     "logo_path": (str, None, "path to app icon file"),

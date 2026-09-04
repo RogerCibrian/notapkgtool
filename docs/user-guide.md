@@ -242,8 +242,9 @@ packaging a new version removes the previous one automatically.
 The upload process publishes a packaged app to Microsoft Intune via the
 Graph API. Run `napt package` before uploading.
 
-1. **Locate Package** - Scans `packages/{app_id}/` for the versioned subdirectory
-   created by `napt package` and reads `Invoke-AppDeployToolkit.intunewin` from it.
+1. **Locate Package** - Scans `packages/{app_id}/` (`directories.package`)
+   for the versioned subdirectory created by `napt package` and reads
+   `Invoke-AppDeployToolkit.intunewin` from it.
    Verifies the package's installer hash (from the build manifest) against the
    pending release in the app's deployment state — a mismatch aborts the upload,
    so what was recorded at discovery is byte-for-byte what ships.

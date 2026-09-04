@@ -24,14 +24,9 @@ Recipe Example:
       api_url: "https://vendor.example.com/api/latest"  # required
       version_path: "version"                           # required, JSONPath
       download_url_path: "download_url"                 # required, JSONPath
-      method: "GET"                                     # optional, GET or POST
       headers:                                          # optional
         Authorization: "Bearer ${API_TOKEN}"
         Accept: "application/json"
-      body:                                             # optional, POST only
-        platform: "windows"
-        arch: "x64"
-      timeout: 30                                       # optional, seconds
     ```
 
     Nested response, with auth header:
@@ -52,17 +47,12 @@ Configuration Fields:
         ``"release.version"``).
     - **download_url_path** (required): JSONPath expression locating
         the installer download URL in the response.
-    - **method** (optional, default ``"GET"``): ``"GET"`` or ``"POST"``.
     - **headers** (optional): HTTP headers to send. Values support
         ``${ENV_VAR}`` expansion.
-    - **body** (optional): Dict sent as a JSON body. Only used when
-        ``method: POST``.
-    - **timeout** (optional, default 30): Request timeout in seconds.
 
 Note:
     JSONPath uses the ``jsonpath-ng`` library. Environment-variable
     expansion (``${VAR}``) is applied to string values in ``headers``.
-    POST bodies are always sent as ``application/json``.
 
 """
 
@@ -79,10 +69,6 @@ from napt.discovery.base import RemoteVersion
 from napt.download.download import make_session
 from napt.exceptions import ConfigError, NetworkError
 
-# Strategy-specific defaults for optional recipe fields.
-_DEFAULT_METHOD = "GET"
-_DEFAULT_TIMEOUT = 30
-
 
 class ApiJsonStrategy:
     """Discovery strategy for JSON API endpoints."""
@@ -90,16 +76,14 @@ class ApiJsonStrategy:
     def discover(self, app_config: dict[str, Any]) -> RemoteVersion:
         """Discovers version and download URL from a JSON API endpoint.
 
-        Calls the configured ``api_url`` and extracts the version and
-        download URL using JSONPath expressions. The HTTP method,
-        headers, and body are configurable so the same strategy works
-        for GET and POST endpoints.
+        Sends a GET request to the configured ``api_url`` and extracts
+        the version and download URL using JSONPath expressions.
 
         Args:
             app_config: Merged recipe configuration dict containing
                 ``discovery.api_url``, ``discovery.version_path``, and
-                ``discovery.download_url_path``, plus optional
-                ``method``, ``headers``, and ``body`` fields.
+                ``discovery.download_url_path``, plus an optional
+                ``headers`` field.
 
         Returns:
             Discovered version, download URL, and ``"api_json"`` as
@@ -135,17 +119,10 @@ class ApiJsonStrategy:
             )
 
         # Optional configuration
-        method = source.get("method", _DEFAULT_METHOD).upper()
-        if method not in ("GET", "POST"):
-            raise ConfigError(f"Invalid method: {method!r}. Must be 'GET' or 'POST'")
-
         headers = source.get("headers", {})
-        body = source.get("body", {})
-        timeout = source.get("timeout", _DEFAULT_TIMEOUT)
 
         logger.verbose("DISCOVERY", "Strategy: api_json (version-first)")
         logger.verbose("DISCOVERY", f"API URL: {api_url}")
-        logger.verbose("DISCOVERY", f"Method: {method}")
         logger.verbose("DISCOVERY", f"Version path: {version_path}")
         logger.verbose("DISCOVERY", f"Download URL path: {download_url_path}")
 
@@ -169,19 +146,11 @@ class ApiJsonStrategy:
             else:
                 expanded_headers[key] = value
 
-        # Make API request
-        logger.verbose("DISCOVERY", f"Calling API: {method} {api_url}")
+        # Make API request (the shared session retries transient failures)
+        logger.verbose("DISCOVERY", f"Calling API: GET {api_url}")
         try:
-            # GETs retry transient failures through the shared session;
-            # POSTs are sent once (a vendor API's idempotency is unknown).
             with make_session() as session:
-                response = session.request(
-                    method,
-                    api_url,
-                    headers=expanded_headers,
-                    json=body if method == "POST" else None,
-                    timeout=timeout,
-                )
+                response = session.get(api_url, headers=expanded_headers, timeout=30)
         except requests.exceptions.RequestException as err:
             raise NetworkError(f"Failed to call API: {err}") from err
 
@@ -309,17 +278,7 @@ class ApiJsonStrategy:
                 errors.append(f"Invalid download_url_path JSONPath: {err}")
 
         # Optional fields validation
-        if "method" in source:
-            method = source["method"]
-            if not isinstance(method, str):
-                errors.append("discovery.method must be a string")
-            elif method.upper() not in ["GET", "POST"]:
-                errors.append("discovery.method must be 'GET' or 'POST'")
-
         if "headers" in source and not isinstance(source["headers"], dict):
             errors.append("discovery.headers must be a dictionary")
-
-        if "body" in source and not isinstance(source["body"], dict):
-            errors.append("discovery.body must be a dictionary")
 
         return errors
