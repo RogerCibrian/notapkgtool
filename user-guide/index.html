@@ -3153,8 +3153,9 @@ packaging a new version removes the previous one automatically.</p>
 <p>The upload process publishes a packaged app to Microsoft Intune via the
 Graph API. Run <code>napt package</code> before uploading.</p>
 <ol>
-<li><strong>Locate Package</strong> - Scans <code>packages/{app_id}/</code> for the versioned subdirectory
-   created by <code>napt package</code> and reads <code>Invoke-AppDeployToolkit.intunewin</code> from it.
+<li><strong>Locate Package</strong> - Scans <code>packages/{app_id}/</code> (<code>directories.package</code>)
+   for the versioned subdirectory created by <code>napt package</code> and reads
+   <code>Invoke-AppDeployToolkit.intunewin</code> from it.
    Verifies the package's installer hash (from the build manifest) against the
    pending release in the app's deployment state — a mismatch aborts the upload,
    so what was recorded at discovery is byte-for-byte what ships.
