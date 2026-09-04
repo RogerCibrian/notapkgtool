@@ -1,4 +1,4 @@
-# NAPT Roadmap
+# NAPT roadmap
 
 ## Philosophy
 
@@ -19,7 +19,7 @@ This roadmap is a living document showing potential future directions for NAPT. 
 
 ---
 
-## Quick Reference
+## Quick reference
 
 | Feature | Status | Category | Complexity | Value |
 |---------|--------|----------|------------|-------|
@@ -50,13 +50,13 @@ This roadmap is a living document showing potential future directions for NAPT. 
 
 ---
 
-## Active Work
+## Active work
 
 _Nothing currently in progress._
 
 ---
 
-## Future Ideas (By Category)
+## Future ideas (by category)
 
 > **Note:** Categories are organized by how they impact users:
 >
@@ -64,9 +64,9 @@ _Nothing currently in progress._
 > - **Code Quality & Validation**: Tools that validate and improve recipe quality, including syntax checking, linting, and best practices enforcement.
 > - **Technical Enhancements**: Internal improvements and infrastructure enhancements that improve performance, add backend capabilities, or optimize the tool's operation.
 
-### User-Facing Features
+### User-facing features
 
-#### Intune App Categorization & Scope Tags
+#### Intune app categorization & scope tags
 
 **Status**: 💡 Idea
 **Complexity**: Medium (1-3 days)
@@ -88,7 +88,7 @@ tag names must be resolved via `GET /deviceManagement/roleScopeTags`.
 - Requires two additional Graph API calls per upload (one per lookup type)
 - Error handling needed when a name doesn't match any tenant entry
 
-#### Pre/Post Install/Uninstall Script Support
+#### Pre/Post install/uninstall script support
 
 **Status**: 💡 Idea
 **Complexity**: Low (few hours to 1 day)
@@ -108,7 +108,7 @@ each deployment phase.
 
 **Related**: PSADT already has these phases in the template structure
 
-#### Enhanced CLI Help Menu
+#### Enhanced CLI help menu
 
 **Status**: 💡 Idea
 **Complexity**: Low (few hours to 1 day)
@@ -129,7 +129,7 @@ information, examples, and better organization.
 
 **Related**: CLI help currently minimal, relies on online documentation
 
-#### Configurable Install-Entry Cutover Ring
+#### Configurable install-entry cutover ring
 
 **Status**: 💡 Idea
 **Complexity**: Medium (1-3 days)
@@ -164,9 +164,9 @@ the old one and updates right away.
 Bounded by the bake time of rings before the cutover point, so small
 with a pilot-sized first ring.
 
-### Code Quality & Validation
+### Code quality & validation
 
-#### PowerShell Validation
+#### PowerShell validation
 
 **Status**: 💡 Idea
 **Complexity**: High (3-5 days)
@@ -185,7 +185,7 @@ to catch errors before deployment.
 **Related**: Overlaps with Recipe Linting & Best Practices below; syntax
 checking is the narrower first step.
 
-#### Recipe Linting & Best Practices
+#### Recipe linting & best practices
 
 **Status**: 💡 Idea
 **Complexity**: High (3-5 days)
@@ -205,7 +205,7 @@ style guide enforcement.
 - Suggests improvements (e.g., use Uninstall-ADTApplication)
 - Warns about unknown fields (e.g., deprecated keys from old schema versions)
 
-#### Prerelease Version Ranking in Detection Scripts
+#### Prerelease version ranking in detection scripts
 
 **Status**: 💡 Idea
 **Complexity**: Medium (1-3 days)
@@ -231,7 +231,7 @@ Semver-style ordering would treat prereleases as older than the release.
 **Related**: First iteration shipped with non-numeric segments counted as 0
 and a CMTrace warning when decoration is stripped
 
-#### Typed Config with Dataclasses
+#### Typed config with dataclasses
 
 **Status**: 💡 Idea
 **Complexity**: Medium (1-3 days)
@@ -255,9 +255,9 @@ development time.
 - Schema should be stable (post-1.0 or when churn slows)
 - Current dict approach works well for rapid iteration
 
-### Technical Enhancements
+### Technical enhancements
 
-#### EXE Version Extraction
+#### EXE version extraction
 
 **Status**: 💡 Idea
 **Complexity**: High (3-5 days)
@@ -274,7 +274,7 @@ headers for .exe installers.
 **Related**: `url_download` only extracts versions from MSI installers today
 and raises `ConfigError` for other extensions when no version is discoverable.
 
-#### Parallel Package Building
+#### Parallel package building
 
 **Status**: 💡 Idea
 **Complexity**: Medium (1-3 days)
@@ -290,7 +290,7 @@ multi-app workflows.
 - Improves CI/CD pipeline performance
 - Progress reporting for multiple concurrent builds
 
-#### Minify Scripts at Intune Upload
+#### Minify scripts at Intune upload
 
 **Status**: 💡 Idea
 **Complexity**: Medium (1-3 days)
@@ -323,13 +323,13 @@ signing)
 
 ---
 
-## Declined / Won't Implement
+## Declined / won't implement
 
 ---
 
-## Recently Completed
+## Recently completed
 
-#### `napt auth setup` Command
+#### `napt auth setup` command
 
 **Status**: ✅ Completed
 **Complexity**: Medium
@@ -357,7 +357,7 @@ Shipped alongside `napt auth login`, `status`, and `logout`.
 
 ---
 
-#### IntuneWinAppUtil Version Pinning
+#### IntuneWinAppUtil version pinning
 
 **Status**: ✅ Completed
 **Complexity**: Low
@@ -372,7 +372,7 @@ builds are reproducible against a known-good tool version.
 
 ---
 
-#### Deployment Wave Management
+#### Deployment wave management
 
 **Status**: ✅ Completed
 **Complexity**: Very High
@@ -411,7 +411,7 @@ republish with re-applied assignments) are deliberate follow-ups.
 
 ---
 
-#### Recipe Schema Redesign
+#### Recipe schema redesign
 
 **Status**: ✅ Completed
 **Complexity**: High
@@ -441,7 +441,7 @@ All changes were breaking and landed on branch `refactor/recipe-schema-redesign`
 
 ---
 
-#### Unrecognized Config Field Warnings
+#### Unrecognized config field warnings
 
 **Status**: ✅ Completed
 **Complexity**: Low
@@ -456,7 +456,7 @@ Typo detection suggests similar field names (e.g., "Did you mean
 
 ---
 
-#### Microsoft Intune Upload
+#### Microsoft Intune upload
 
 **Status**: ✅ Completed
 **Complexity**: High
@@ -471,7 +471,7 @@ Authentication now goes through `napt auth login` for developers and the
 
 ---
 
-#### Detection Script Generation
+#### Detection script generation
 
 **Status**: ✅ Completed
 **Complexity**: High

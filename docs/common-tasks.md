@@ -1,14 +1,14 @@
-# Common Tasks
+# Common tasks
 
 Step-by-step guides for common NAPT workflows. Each task includes complete, working examples you can copy and adapt.
 
 > **💡 Tip:** Need help with a specific command? Use `napt <command> --help` to see all options and examples. For instance, `napt discover --help` shows discovery command details.
 
-## Initialize a New NAPT Project
+## Initialize a new NAPT project
 
 Set up the recommended directory structure for a new NAPT project.
 
-### Quick Setup
+### Quick setup
 
 ```bash
 # Create and enter project directory
@@ -44,7 +44,7 @@ Created (4):
 [SUCCESS] Project initialized!
 ```
 
-### What Gets Created
+### What gets created
 
 ```
 my-intune-packages/
@@ -56,7 +56,7 @@ my-intune-packages/
     └── deployment/           # Per-app deployment state (written by discover, upload, promote)
 ```
 
-### Handling Existing Files
+### Handling existing files
 
 NAPT safely skips existing files by default:
 
@@ -122,7 +122,7 @@ Skipped (3):
 [SUCCESS] Project initialized!
 ```
 
-### Next Steps After Init
+### Next steps after init
 
 1. **Edit organization defaults** (optional):
    ```bash
@@ -142,7 +142,7 @@ Skipped (3):
    napt discover recipes/Google/chrome.yaml --verbose
    ```
 
-## Create a Recipe for a GitHub Release App
+## Create a recipe for a GitHub release app
 
 Use this when the application is hosted on GitHub with releases.
 
@@ -196,7 +196,7 @@ napt discover recipes/Git/git.yaml --verbose
 - `version_pattern`: Regex to extract version from tag
 - `install`/`uninstall`: PowerShell deployment scripts
 
-## Create a Recipe for a Vendor Download Page
+## Create a recipe for a vendor download page
 
 Use this when the vendor has a download page listing installers (no API available).
 
@@ -258,7 +258,7 @@ napt discover recipes/7-Zip/7zip-x64-msi.yaml --verbose
   - `display_name`: Pattern with wildcards to match the installed app name
   - `override_msi_display_name`: Set to `true` to override MSI's versioned DisplayName
 
-## Create a Recipe for a JSON API Endpoint
+## Create a recipe for a JSON API endpoint
 
 Use this when the vendor provides a JSON API with version and download URL.
 
@@ -316,7 +316,7 @@ napt discover recipes/Vendor/app.yaml --verbose
 - `download_url_path`: JSONPath to download URL field
 - `headers`: Optional authentication headers
 
-## Create a Recipe for an MSIX Installer
+## Create a recipe for an MSIX installer
 
 Use this when the application distributes an `.msix` installer. NAPT extracts
 metadata from `AppxManifest.xml` and auto-generates install/uninstall commands.
@@ -395,7 +395,7 @@ psadt:
     Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq "Vendor.App" } | Remove-AppxProvisionedPackage -Online
 ```
 
-## Create a Recipe for a Fixed Download URL
+## Create a recipe for a fixed download URL
 
 Use this when the vendor has a stable download URL (like Chrome enterprise MSI).
 
@@ -434,11 +434,11 @@ napt discover recipes/Google/chrome.yaml --verbose
 
 **Note:** MSI files (`.msi` extension) are automatically detected and versions are extracted from the MSI ProductVersion property. Install/uninstall commands are auto-generated from the MSI (set `psadt.override_msi_commands: true` for custom commands). No additional configuration needed.
 
-## Handle Authentication Tokens
+## Handle authentication tokens
 
 Many APIs require authentication. Here's how to handle tokens securely.
 
-### Environment Variables (Recommended)
+### Environment variables (recommended)
 
 1. **Set token in environment:**
    ```powershell
@@ -468,7 +468,7 @@ Many APIs require authentication. Here's how to handle tokens securely.
      run: napt discover recipes/Vendor/app.yaml
    ```
 
-### Recipe-Level Tokens (Less Secure)
+### Recipe-level tokens (less secure)
 
 If you must store tokens in recipes (not recommended for production):
 
@@ -481,7 +481,7 @@ discovery:
 
 **Security best practice:** Always use environment variables or CI/CD secrets, never commit tokens to version control.
 
-## Test Recipes Before Production
+## Test recipes before production
 
 Validate and test recipes thoroughly before using in production.
 
@@ -527,7 +527,7 @@ Validate and test recipes thoroughly before using in production.
 
 Upload a packaged app to Microsoft Intune. Requires `napt package` to have run first.
 
-### App Registration Setup (one time per organization)
+### App registration setup (one time per organization)
 
 Fastest path, as at least an Application Administrator:
 
@@ -549,7 +549,7 @@ admin consent, and add the `http://localhost` and
 `ms-appx-web://Microsoft.AAD.BrokerPlugin/<client-id>` redirect URIs under
 **Mobile and desktop applications**.
 
-### Developer Setup (one time)
+### Developer setup (one time)
 
 Sign in once with the IDs from the app registration:
 
@@ -563,7 +563,7 @@ The IDs are remembered, so later sessions are just `napt auth login`, and
 `napt auth status` shows the account, tenant, and permissions in use;
 `napt auth logout` clears the session.
 
-### CI/CD Setup (one time)
+### CI/CD setup (one time)
 
 Prefer OIDC federation when your platform supports it (GitHub Actions does):
 add a federated credential to the app registration and let `azure/login`
@@ -579,7 +579,7 @@ AZURE_CLIENT_SECRET="<client secret value>"
 AZURE_TENANT_ID="<Directory (tenant) ID>"
 ```
 
-### Upload an App
+### Upload an app
 
 ```bash
 napt upload recipes/Google/chrome.yaml
@@ -621,7 +621,7 @@ With the default `intune.build_types: "both"`, the install entry and the
 `[Update]` entry are each created, uploaded, and committed (nine steps).
 `app_only` or `update_only` runs six.
 
-### Full Pipeline Example
+### Full pipeline example
 
 ```bash
 # 1. Check for new version (skips download if unchanged)
@@ -637,7 +637,7 @@ napt package recipes/Google/chrome.yaml
 napt upload recipes/Google/chrome.yaml
 ```
 
-### CI/CD Setup
+### CI/CD setup
 
 With OIDC federation (recommended):
 
@@ -676,7 +676,7 @@ With a client secret:
 The app registration must have the `DeviceManagementApps.ReadWrite.All` and
 `Group.Read.All` Microsoft Graph application permissions.
 
-### Override Publisher and Description
+### Override publisher and description
 
 By default, the publisher is inferred from the vendor directory name
 (e.g., `recipes/Google/` → `"Google"`). Override per-recipe with the
@@ -702,7 +702,7 @@ psadt:
   # ... rest of recipe
 ```
 
-### Override Upload Behavior
+### Override upload behavior
 
 Control how Intune handles installation, restarts, and script execution
 per-recipe using the `intune:` section.
@@ -1425,7 +1425,7 @@ jobs:
   could run on Linux with `msitools` installed for MSI version
   extraction.
 
-## Update Existing Recipes
+## Update existing recipes
 
 When a recipe needs changes (new version format, different download URL, etc.).
 
@@ -1460,7 +1460,7 @@ When a recipe needs changes (new version format, different download URL, etc.).
    napt upload recipes/Vendor/app.yaml
    ```
 
-## Troubleshoot Discovery Failures
+## Troubleshoot discovery failures
 
 Common issues and solutions when `napt discover` fails.
 
@@ -1557,7 +1557,7 @@ napt discover recipes/app.yaml --stateless
 **Note:** Deployment state files (`state/deployment/`) are authoritative and are never auto-replaced.
 If one is corrupted, fix the JSON or restore the file from a backup.
 
-## What's Next?
+## What's next?
 
 - **[User Guide](user-guide.md)** - Deep dive into discovery strategies, state management, and configuration
 - **[Creating Recipes](user-guide.md#discovery-strategies)** - Detailed strategy configuration guides

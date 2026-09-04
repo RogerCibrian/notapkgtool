@@ -74,12 +74,12 @@ plugins:
 
 nav:
   - Home: index.md
-  - Quick Start: quick-start.md
-  - User Guide:
-    - User Guide: user-guide.md
-    - Common Tasks: common-tasks.md
-    - Recipe Reference: recipe-reference.md
-  - Developer Reference:
+  - Quick start: quick-start.md
+  - User guide:
+    - User guide: user-guide.md
+    - Common tasks: common-tasks.md
+    - Recipe reference: recipe-reference.md
+  - Developer reference:
     - Overview: api/index.md
     - cli: api/cli.md
     - exceptions: api/exceptions.md

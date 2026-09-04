@@ -2,9 +2,9 @@
 
 Thank you for your interest in contributing to NAPT! We welcome ideas and feedback.
 
-## How to Contribute
+## How to contribute
 
-### Feature Ideas
+### Feature ideas
 
 Have an idea for NAPT? We'd love to hear it!
 
@@ -30,7 +30,7 @@ Have feedback, questions, or encountered issues? We'd love to hear from you!
 
 Have questions about using NAPT? Open a GitHub Discussion - we're happy to help!
 
-## Code Contributions
+## Code contributions
 
 We're currently not accepting code contributions. NAPT is still in active development and has not reached 1.0 yet. The project is evolving rapidly with frequent changes to APIs, schemas, configuration formats, and internal structure.
 
