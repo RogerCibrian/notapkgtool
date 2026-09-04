@@ -32,7 +32,7 @@ Have questions about using NAPT? Open a GitHub Discussion - we're happy to help!
 
 ## Code Contributions
 
-We're currently not accepting code contributions. NAPT is still in active development and has not been officially released yet. The project is evolving rapidly with frequent changes to APIs, schemas, configuration formats, and internal structure.
+We're currently not accepting code contributions. NAPT is still in active development and has not reached 1.0 yet. The project is evolving rapidly with frequent changes to APIs, schemas, configuration formats, and internal structure.
 
 This means:
 
@@ -41,7 +41,7 @@ This means:
 - Breaking changes are common and backward compatibility is not maintained
 - Code contributions would likely require significant maintenance as the codebase evolves
 
-**Once NAPT is officially released**, we'll be open to code contributions and will establish contribution guidelines. Until then, your ideas and feedback are incredibly valuable and help shape the direction of the project.
+**Once NAPT reaches 1.0**, we'll be open to code contributions and will establish contribution guidelines. Until then, your ideas and feedback are incredibly valuable and help shape the direction of the project.
 
 If you're interested in contributing code in the future, please reach out via GitHub Discussion first to discuss the current state and future plans.
 

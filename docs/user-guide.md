@@ -20,14 +20,14 @@ The discovery process finds the latest version and downloads the installer:
 6. **Update Cache** - Updates `cache/discovery.json` with new version, file path, SHA-256 hash, and ETag (if download occurred)
 7. **Record Pending Release** - Updates `state/deployment/{app_id}.json` with the discovered release as the pending publication candidate when it differs from the published version. The pending slot holds one candidate and the newest discovery wins.
 
-**Output**: Downloaded installer in `downloads/` directory, updated discovery cache, updated deployment state
+**Output**: Downloaded installer in `downloads/{app_id}/`, updated discovery cache, updated deployment state
 
 ### Build Process (`napt build`)
 
 The build process creates a complete PSADT package from the recipe and downloaded installer:
 
 1. **Load Configuration** - Merges configuration layers (org → vendor → recipe)
-2. **Find Installer** - Locates installer in `downloads/` directory (tries URL filename, then app name/id, then most recent). Supports `.msi`, `.exe`, and `.msix` files
+2. **Find Installer** - Locates installer in `downloads/{app_id}/` (tries the recipe URL filename, then the filename recorded in the discovery cache or pending release, then an app name/id match, then the most recent file). Supports `.msi`, `.exe`, and `.msix` files
 3. **Extract Version** - Extracts version from installer file (MSI from ProductVersion, MSIX from AppxManifest.xml), otherwise uses discovery cache version
 4. **Get PSADT Release** - Downloads/caches PSADT Template_v4 from GitHub if not already cached
 5. **Create Build Directory** - Creates versioned directory using discovered app version: `builds/{app_id}/{version}/`
@@ -48,7 +48,7 @@ The build process creates a complete PSADT package from the recipe and downloade
     - Sets dynamic values (AppScriptDate, discovered version, PSADT version)
     - Preserves PSADT's structure and comments
 8. **Copy Installer** - Copies downloaded installer file to `Files/` directory:
-    - Source: `downloads/{installer_filename}`
+    - Source: `downloads/{app_id}/{installer_filename}`
     - Destination: `builds/{app_id}/{version}/Files/{installer_filename}`
     - Installer is accessible in scripts via `$($adtSession.DirFiles)` (PSADT 4.x)
 9. **Apply Branding** - Replaces PSADT default assets with custom branding (if configured):
@@ -96,9 +96,9 @@ identity name instead of registry scanning; which store is queried depends on
     - **Non-MSI installers (permissive):** Match any registry entry (MSI or non-MSI) to handle EXE installers that run embedded MSIs internally.
 
 - **Architecture filtering:**
-    - Controls which registry views are checked based on the `AppArch` value from `psadt.app_vars` in the recipe
-    - **MSI installers:** AppArch is automatically extracted from MSI package metadata during discovery (no manual configuration needed)
-    - **Non-MSI installers:** AppArch must be explicitly specified in `intune.detection` (e.g., `architecture: "x64"`)
+    - Controls which registry views are checked based on the installer architecture NAPT resolves at build time (NAPT sets `AppArch` in the generated script; it is not a recipe `app_vars` key)
+    - **MSI installers:** architecture is extracted from MSI package metadata (no manual configuration needed)
+    - **Non-MSI installers:** architecture must be specified in `intune.detection` (e.g., `architecture: "x64"`)
     - **Architecture values:**
         - `x64` / `arm64`: Checks only 64-bit registry view (ARM64 uses 64-bit registry)
         - `x86`: Checks only 32-bit registry view
@@ -152,8 +152,9 @@ Scripts are saved as siblings to the `packagefiles/` directory and are NOT inclu
 builds/napt-chrome/144.0.7559.110/
   ├── packagefiles/                                 # PSADT package (packaged into .intunewin)
   │   └── ...
-  ├── Google-Chrome-144.0.7559.110-Detection.ps1    # Detection script
-  └── Google-Chrome-144.0.7559.110-Requirements.ps1 # Requirements script (if generated)
+  ├── Google-Chrome_144.0.7559.110-Detection.ps1    # Detection script
+  ├── Google-Chrome_144.0.7559.110-Requirements.ps1 # Requirements script (if generated)
+  └── build-manifest.json                           # Installer hash and metadata
 ```
 
 **Configuration:** See [Recipe Reference - Intune Configuration](recipe-reference.md#intune-configuration) for `intune.detection` and `intune.build_types` options.
@@ -225,9 +226,10 @@ recipe's app:
     - Input: `packagefiles/` subdirectory of the build (PSADT structure)
     - Output: `Invoke-AppDeployToolkit.intunewin` in `packages/{app_id}/{version}/`
     - Previous version directory for this app is removed automatically
-5. **Copy Detection Scripts** - Copies `*-Detection.ps1` and `*-Requirements.ps1`
-   from the build version directory into `packages/{app_id}/{version}/` so that
-   `napt upload` is self-contained and does not need access to the builds directory
+5. **Copy Detection Scripts** - Copies `*-Detection.ps1`, `*-Requirements.ps1`,
+   and `build-manifest.json` from the build version directory into
+   `packages/{app_id}/{version}/` so that `napt upload` is self-contained and
+   does not need access to the builds directory
 6. **Optional Cleanup** - If `--clean-source` flag is used, removes the build
    version directory after successful packaging
 
@@ -299,8 +301,9 @@ source it picked:
 | Azure CLI (`AzureCliCredential`) | Nothing above applies and the Azure CLI is signed in as a service principal — CI/CD with OIDC through a login step such as GitHub Actions `azure/login`. Recommended over a client secret whenever your CI platform supports it. A CLI signed in as a person is refused, since its tokens belong to the Azure CLI's own application, not the NAPT registration |
 
 NAPT never opens a browser on its own.
-If no credential is available, commands fail with
-`Not authenticated. Run 'napt auth login'`.
+If no credential is available, commands fail with `Not authenticated.`
+followed by a hint for each option: run `napt auth login` interactively, or
+set the `AZURE_*` variables or sign in with `az login` for CI/CD.
 
 #### App Registration Setup
 
@@ -384,7 +387,8 @@ Tokens are cached in the OS credential store (DPAPI, Keychain, or
 libsecret) and refreshed silently until the session expires or is revoked.
 The remembered tenants and the cache live under `%LOCALAPPDATA%\napt`
 (Windows), `~/Library/Application Support/napt` (macOS), or
-`~/.config/napt` (Linux); set `NAPT_USER_DIR` to relocate them.
+`$XDG_CONFIG_HOME/napt` falling back to `~/.config/napt` (Linux); set
+`NAPT_USER_DIR` to relocate them.
 The `AZURE_*` environment variables play no part in interactive sign-in;
 they are how CI/CD supplies a credential (below), and when they are set
 they take precedence over your session.
@@ -506,7 +510,8 @@ After a complete workflow, your directory structure looks like:
 
 ```
 downloads/
-  └── googlechromestandaloneenterprise64.msi
+  └── napt-chrome/
+      └── googlechromestandaloneenterprise64.msi
 
 builds/
   └── napt-chrome/
@@ -522,15 +527,17 @@ builds/
           │   ├── SupportFiles/            # Empty (for additional files)
           │   ├── Invoke-AppDeployToolkit.ps1  # Generated script
           │   └── Invoke-AppDeployToolkit.exe  # From template
-          ├── Google-Chrome-142.0.7444.163-Detection.ps1
-          └── Google-Chrome-142.0.7444.163-Requirements.ps1
+          ├── Google-Chrome_142.0.7444.163-Detection.ps1
+          ├── Google-Chrome_142.0.7444.163-Requirements.ps1
+          └── build-manifest.json              # Installer hash and metadata
 
 packages/
   └── napt-chrome/
       └── 142.0.7444.163/                              # One version kept at a time
           ├── Invoke-AppDeployToolkit.intunewin        # Encrypted package
-          ├── Google-Chrome-142.0.7444.163-Detection.ps1    # Copied by napt package
-          └── Google-Chrome-142.0.7444.163-Requirements.ps1 # Copied by napt package
+          ├── Google-Chrome_142.0.7444.163-Detection.ps1    # Copied by napt package
+          ├── Google-Chrome_142.0.7444.163-Requirements.ps1 # Copied by napt package
+          └── build-manifest.json                      # Copied by napt package; read by napt upload
 
 cache/
   └── discovery.json                       # Discovery cache (disposable)
@@ -654,6 +661,7 @@ promotable in the same run.
 napt promote plan [RECIPE_OR_DIR] [OPTIONS]
 napt promote plan --check-drift --reconcile
 napt promote apply [RECIPE_OR_DIR] [OPTIONS]
+napt promote apply --plan-file state/plans/<id>.json
 ```
 
 For the full review-gated CI setup — publish PRs, promotion PRs, and
@@ -686,6 +694,7 @@ Manages the credential NAPT uses for Intune.
 See [Authentication](#authentication).
 
 ```bash
+napt auth setup --tenant-id ID [OPTIONS]
 napt auth login [--tenant-id ID] [--client-id ID] [--no-broker]
 napt auth status
 napt auth logout
@@ -699,7 +708,7 @@ All commands support verbosity flags to control output detail:
 |------|---------------|
 | (none) | Clean output with step indicators (e.g., `[1/4]`) and progress |
 | `--verbose` or `-v` | All of the above, plus HTTP requests/responses, file operations, SHA-256 hashes, and configuration loading |
-| `--debug` or `-d` | All verbose output, plus full YAML config dumps (org/vendor/recipe/merged), backend selection details, and regex match groups |
+| `--debug` or `-d` | All verbose output, plus full YAML config dumps (org/vendor/recipe/merged), backend selection details, and raw API responses |
 
 Debug mode includes all verbose output plus deep diagnostic information. Use `--verbose` for normal troubleshooting and `--debug` when you need to understand exactly what NAPT is doing internally.
 
@@ -771,7 +780,8 @@ intune:                # Optional: Intune-specific settings
 ### Quick Reference
 
 - **Top-level fields:** `apiVersion` (required), `name` (required), `id` (required),
-  `discovery` (required), `psadt` (required), `intune` (optional), `logging` (optional)
+  `discovery` (required), `psadt` (optional for MSI and MSIX; EXE installers need
+  `psadt.install` and `psadt.uninstall`), `intune` (optional), `logging` (optional)
 - **Discovery strategies:** See [Discovery Strategies](#discovery-strategies) section above for strategy selection and examples
 - **PSADT scripts:** NAPT substitutes `{{discovered_version}}` and `{{installer_filename}}` at build time (these are not PowerShell variables); `${UPPERCASE}` env vars work only in `discovery.token`/`discovery.headers`; use `$($adtSession.DirFiles)` for the files directory path (PSADT 4.x)
 
@@ -1105,7 +1115,7 @@ napt package recipes/Google/chrome.yaml
 
 ### Recipe Organization
 
-Organize recipes by vendor: `recipes/<Vendor>/<app>.yaml`. NAPT automatically detects vendor from directory structure and loads `defaults/vendors/<Vendor>.yaml` if it exists.
+Organize recipes by vendor: `recipes/<Vendor>/<app>.yaml`. NAPT detects the vendor from the recipe's parent directory name (falling back to `psadt.app_vars.AppVendor`) and loads `defaults/vendors/<Vendor>.yaml` if it exists.
 
 ### State Management
 
@@ -1137,12 +1147,13 @@ brew install msitools           # macOS
 
 **Problem**: Discovery cache corrupted
 
-```bash
-# NAPT automatically creates backup
-# Backup saved to: cache/discovery.json.backup
+NAPT logs a warning and continues without cache tracking for that run; the
+corrupted file is left in place. The cache is disposable, so delete it and
+rediscover:
 
-# Force re-download
-napt discover recipes/app.yaml --stateless
+```bash
+rm cache/discovery.json
+napt discover recipes/app.yaml
 ```
 
 **Problem**: GitHub API rate limit

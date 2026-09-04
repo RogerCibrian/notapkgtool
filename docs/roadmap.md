@@ -25,8 +25,9 @@ This roadmap is a living document showing potential future directions for NAPT. 
 |---------|--------|----------|------------|-------|
 | Recipe Schema Redesign | ✅ Completed | User-Facing | High | High |
 | Microsoft Intune Upload | ✅ Completed | User-Facing | High | Very High |
-| `napt auth setup` Command | 💡 Idea | User-Facing | Low | High |
+| `napt auth setup` Command | ✅ Completed | User-Facing | Medium | High |
 | Deployment Wave Management | ✅ Completed | User-Facing | Very High | High |
+| Detection Script Generation | ✅ Completed | User-Facing | High | High |
 | Pre/Post Install/Uninstall Script Support | 💡 Idea | User-Facing | Low | Medium |
 | Enhanced CLI Help Menu | 💡 Idea | User-Facing | Low | Medium |
 | Intune App Categorization & Scope Tags | 💡 Idea | User-Facing | Medium | Medium |
@@ -38,13 +39,13 @@ This roadmap is a living document showing potential future directions for NAPT. 
 | Typed Config with Dataclasses | 💡 Idea | Code Quality | Medium | Medium |
 | EXE Version Extraction | 💡 Idea | Technical | High | Medium |
 | Parallel Package Building | 💡 Idea | Technical | Medium | Medium |
-| IntuneWinAppUtil Version Tracking | 💡 Idea | Technical | Low | Low |
+| IntuneWinAppUtil Version Pinning | ✅ Completed | Technical | Low | Low |
 | Minify Scripts at Intune Upload | 💡 Idea | Technical | Medium | Medium |
 
 **Summary:**
 
-- ✅ **Completed**: 4
-- 💡 **Ideas**: 14
+- ✅ **Completed**: 7
+- 💡 **Ideas**: 11
 - **Total**: 18 features
 
 ---
@@ -65,41 +66,15 @@ _Nothing currently in progress._
 
 ### User-Facing Features
 
-#### `napt auth setup` Command
-
-**Status**: 💡 Idea
-**Complexity**: Low (few hours to 1 day)
-**Value**: High
-
-**Description**: Automates app registration creation in Microsoft Entra ID
-using the Azure CLI.
-Runs `az ad app create`, adds `DeviceManagementApps.ReadWrite.All` application
-and delegated permissions, grants admin consent, and outputs the `AZURE_CLIENT_ID`
-and `AZURE_TENANT_ID` values to set.
-Creates a natural namespace for future `napt auth status` and `napt auth logout`
-subcommands.
-
-**Benefits**:
-
-- Reduces one-time setup from a multi-step portal workflow to a single command
-- Requires only `az login` as a prerequisite — no portal navigation needed
-- Outputs exact env vars to set, eliminating copy-paste errors
-- Enables future auth management subcommands
-
-**Prerequisites**:
-
-- Azure CLI installed and authenticated with an account that can create app
-  registrations
-
 #### Intune App Categorization & Scope Tags
 
 **Status**: 💡 Idea
 **Complexity**: Medium (1-3 days)
 **Value**: Medium
 
-**Description**: Expose `intune.category` and `intune.role_scope_tag_ids` as
+**Description**: Add `intune.category` and `intune.role_scope_tag_ids` as
 recipe fields.
-Both require a Graph API lookup before the app POST — category names must be
+Both require a Graph API lookup before the app POST: category names must be
 resolved to IDs via `GET /deviceAppManagement/mobileAppCategories`, and scope
 tag names must be resolved via `GET /deviceManagement/roleScopeTags`.
 
@@ -107,8 +82,6 @@ tag names must be resolved via `GET /deviceManagement/roleScopeTags`.
 
 - Categorized apps are easier to find in the Intune portal and Company Portal
 - Scope tags enable RBAC so only authorized admins can see/manage an app
-- Both fields are already stubbed in validation but produce no effect until
-  implemented
 
 **Dependencies**:
 
@@ -209,7 +182,8 @@ to catch errors before deployment.
 - Better developer experience
 - Reduces debugging time during deployment
 
-**Related**: TODO in `napt/build/packager.py` - discovered during testing
+**Related**: Overlaps with Recipe Linting & Best Practices below; syntax
+checking is the narrower first step.
 
 #### Recipe Linting & Best Practices
 
@@ -297,7 +271,8 @@ headers for .exe installers.
 - Enables version discovery for applications distributed as EXE
 - Useful for vendors who don't provide version in URL or API
 
-**Related**: Mentioned in `napt/discovery/url_download.py` docstring
+**Related**: `url_download` only extracts versions from MSI installers today
+and raises `ConfigError` for other extensions when no version is discoverable.
 
 #### Parallel Package Building
 
@@ -314,25 +289,6 @@ multi-app workflows.
 - Reduces time for monthly update cycles
 - Improves CI/CD pipeline performance
 - Progress reporting for multiple concurrent builds
-
-#### IntuneWinAppUtil Version Tracking
-
-**Status**: 💡 Idea
-**Complexity**: Low (few hours to 1 day)
-**Value**: Low
-
-**Description**: Track version of IntuneWinAppUtil.exe in cache metadata
-instead of always using latest from master, allowing pinning to specific
-commits/releases and optional configuration for tool version/source.
-
-**Benefits**:
-
-- Reproducible builds (pin to known-good version)
-- Control over tool updates
-- Better for air-gapped environments
-- Auto-detect when tool updates are available
-
-**Related**: TODO in `napt/build/packager.py:47`
 
 #### Minify Scripts at Intune Upload
 
@@ -357,11 +313,12 @@ Optional: PowerShell-invoked AST-based minifier for greater reduction.
 
 **Dependencies**:
 
-- Requires Intune upload implementation (or a separate "prepare for upload"
-  step that emits minified content)
+- Hooks into the existing `napt upload` path where detection and
+  requirements scripts are read from `packages/` and embedded in the
+  Graph payload
 
 **Related**: Intune default policy limit is 4 MB total; NAPT detection +
-requirements scripts are ~40 KB per app (~70–100 apps depending on code
+requirements scripts are ~40 KB per app (~70-100 apps depending on code
 signing)
 
 ---
@@ -371,6 +328,49 @@ signing)
 ---
 
 ## Recently Completed
+
+#### `napt auth setup` Command
+
+**Status**: ✅ Completed
+**Complexity**: Medium
+**Value**: High
+
+**Description**: `napt auth setup --tenant-id <id>` creates the NAPT app
+registration in Microsoft Entra ID directly through Microsoft Graph (no
+Azure CLI dependency), or brings an existing one up to spec: redirect URIs,
+application and delegated Graph permissions, service principal, and admin
+consent.
+Shipped alongside `napt auth login`, `status`, and `logout`.
+
+**Notes**:
+
+- Re-running is safe: compares the registration with what the installed
+  NAPT version needs and adds only what is missing, never removing anything
+- `--federated-issuer` / `--federated-subject` add a federated credential
+  so CI/CD can authenticate through OIDC without a client secret
+- Registrations are stamped with a provenance note; an unstamped name
+  match is left untouched unless `--adopt` is given
+- `--print-only` prints the equivalent portal checklist for tenants where
+  the automated path is not allowed
+
+**Related**: See [User Guide - App Registration Setup](user-guide.md#app-registration-setup).
+
+---
+
+#### IntuneWinAppUtil Version Pinning
+
+**Status**: ✅ Completed
+**Complexity**: Low
+**Value**: Low
+
+**Description**: `intunewin.release` in `defaults/org.yaml` pins the
+`IntuneWinAppUtil.exe` release `napt package` downloads (default `latest`).
+Each release is cached independently under `cache/tools/{version}/`, so
+builds are reproducible against a known-good tool version.
+
+**Related**: Shipped in 0.5.0. See [User Guide - Package Process](user-guide.md#package-process-napt-package).
+
+---
 
 #### Deployment Wave Management
 
@@ -464,11 +464,10 @@ Typo detection suggests similar field names (e.g., "Did you mean
 
 **Description**: `napt upload <recipe>` uploads `.intunewin` packages directly
 to Microsoft Intune via the Graph API.
-Authentication is automatic via `azure-identity` (`EnvironmentCredential` →
-`ManagedIdentityCredential` → `DeviceCodeCredential`).
 Detection and requirements scripts are embedded inline from build output.
-Developers set `AZURE_CLIENT_ID` and `AZURE_TENANT_ID` and complete the device
-code flow; CI/CD sets all three `AZURE_*` env vars.
+Authentication now goes through `napt auth login` for developers and the
+`AZURE_*` environment variables or Azure CLI for CI/CD; see
+[User Guide - Authentication](user-guide.md#authentication).
 
 ---
 

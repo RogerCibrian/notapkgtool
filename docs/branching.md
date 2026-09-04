@@ -21,7 +21,7 @@ git checkout main
 git pull origin main
 
 # Create your feature branch
-git checkout -b feature/your-feature-name
+git checkout -b feat/your-feature-name
 ```
 
 ### 2. During Development
@@ -32,7 +32,7 @@ git add .
 git commit -m "feat: add your feature"
 
 # Push your branch
-git push origin feature/your-feature-name
+git push origin feat/your-feature-name
 ```
 
 ### 3. Create Pull Request
@@ -51,7 +51,7 @@ git checkout main
 git pull origin main
 
 # Delete your local feature branch
-git branch -d feature/your-feature-name
+git branch -d feat/your-feature-name
 
 # Remote branch is usually auto-deleted by GitHub
 ```
@@ -62,8 +62,8 @@ git branch -d feature/your-feature-name
 
 ```
 main (always deployable)
-├── feature/add-rpm-support
-├── bugfix/fix-version-parsing
+├── feat/add-rpm-support
+├── fix/version-parsing
 ├── docs/update-installation-guide
 └── refactor/simplify-config-loader
 ```
@@ -72,15 +72,20 @@ main (always deployable)
 
 Use descriptive names with type prefixes:
 
+The prefix is the conventional commit type the PR will squash to:
+
 | Prefix | Purpose | Example |
 |--------|---------|---------|
-| `feature/` | New features or enhancements | `feature/add-rpm-support` |
-| `bugfix/` | Bug fixes | `bugfix/fix-version-parsing` |
+| `feat/` | New features or enhancements | `feat/add-rpm-support` |
+| `fix/` | Bug fixes | `fix/version-parsing` |
 | `docs/` | Documentation updates | `docs/update-installation-guide` |
 | `refactor/` | Code improvements (no behavior change) | `refactor/simplify-config-loader` |
 | `test/` | Test additions/improvements | `test/add-integration-tests` |
 | `chore/` | Maintenance tasks | `chore/update-dependencies` |
-| `hotfix/` | Urgent production fixes | `hotfix/security-patch` |
+| `perf/` | Performance improvements | `perf/parallel-downloads` |
+
+`feature/` and `bugfix/` also appear in the history and are accepted, but
+prefer the short forms so the branch name and the squash commit type match.
 
 ### Naming Rules
 
@@ -91,8 +96,8 @@ Use descriptive names with type prefixes:
 
 **Good Examples:**
 ```
-feature/add-exe-version-extraction
-bugfix/fix-download-resume-logic
+feat/add-exe-version-extraction
+fix/download-resume-logic
 docs/add-cross-platform-examples
 refactor/simplify-config-loader
 ```
@@ -100,8 +105,8 @@ refactor/simplify-config-loader
 **Bad Examples:**
 ```
 my-branch              # No type prefix
-feature/stuff          # Not descriptive
-Feature/My_Branch      # Wrong case
+feat/stuff             # Not descriptive
+Feat/My_Branch         # Wrong case
 fix-bug                # Too generic
 ```
 
@@ -157,9 +162,10 @@ When creating a PR, the [PR template](https://github.com/RogerCibrian/notapkgtoo
 
 ## Merge Strategy
 
-**Default: Squash and Merge**
+**Squash and Merge, always**
 
-NAPT uses **squash and merge** for most Pull Requests to maintain a clean, readable history in `main`.
+NAPT uses **squash and merge** for every Pull Request, including release
+PRs, to maintain a clean, readable history in `main`.
 
 ### Why Squash and Merge?
 
@@ -169,16 +175,7 @@ NAPT uses **squash and merge** for most Pull Requests to maintain a clean, reada
 - ✅ **Better changelogs**: No noise from "WIP" or "fix typo" commits
 - ✅ **Simple bisecting**: Each commit represents a complete, working change
 
-### When to Use Each Strategy
-
-**Squash and Merge (Default - 95% of PRs)**
-
-Use for:
-- Feature additions
-- Bug fixes
-- Documentation updates
-- Refactoring
-- Chores and maintenance
+### Merging
 
 When merging on GitHub:
 1. Click "Squash and merge"
@@ -198,17 +195,9 @@ feat: add RPM version extraction support
 Closes #42
 ```
 
-**Regular Merge (Exceptional Cases)**
-
-Use only when:
-- Multiple authors need attribution for distinct contributions
-- Release PRs where version bump history should be preserved
-- Large features with logically separate commits worth keeping
-
-**Example scenarios:**
-- Version bump PRs (preserve "bump version" + "update changelog" as separate commits)
-- Community contributions with multiple meaningful commits
-- Complex refactors where commit-by-commit history aids debugging
+Release PRs are no exception: `/release` makes a single
+`chore: Prepare release X.Y.Z` commit (version bump plus changelog
+promotion), and that squashes like any other PR.
 
 ### Workflow
 
@@ -231,7 +220,7 @@ Use only when:
 
 If changes are closely related, keep in one branch:
 ```bash
-feature/add-exe-support
+feat/add-exe-support
   ├── Add EXE parsing module
   ├── Add tests
   └── Update documentation
@@ -239,8 +228,8 @@ feature/add-exe-support
 
 If changes are independent, use separate branches:
 ```bash
-feature/add-exe-support
-feature/add-rpm-support
+feat/add-exe-support
+feat/add-rpm-support
 ```
 
 ### Long-Running Features
@@ -258,11 +247,11 @@ For critical production issues:
 # Branch from main
 git checkout main
 git pull origin main
-git checkout -b hotfix/fix-security-vulnerability
+git checkout -b fix/security-vulnerability
 
 # Fix, test, and push
-git commit -am "fix: patch security vulnerability"
-git push origin hotfix/fix-security-vulnerability
+git commit -am "fix: Patch security vulnerability"
+git push origin fix/security-vulnerability
 
 # Create PR with high priority
 # Fast-track review and merge
@@ -275,8 +264,9 @@ git push origin hotfix/fix-security-vulnerability
 - Create small, focused branches with single purpose
 - Commit early and often with clear messages
 - Keep branches short-lived (merge within 1 week)
-- Run tests before pushing (`pytest tests/`)
-- Format code before committing (`black napt/`)
+- Run the full check sequence before committing: `ruff check --fix`,
+  `black`, `pyright`, `vulture`, then `pytest tests/` (the `/ship` skill
+  runs all of these in order)
 - Update branch with `main` if it's behind
 - Delete branches after merging
 
@@ -290,7 +280,5 @@ git push origin hotfix/fix-security-vulnerability
 - Don't include unrelated changes in one PR
 
 ---
-
-**Last Updated**: 2025-11-18
 
 **Strategy**: GitHub Flow with Squash and Merge

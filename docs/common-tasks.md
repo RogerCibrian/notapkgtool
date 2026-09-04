@@ -26,13 +26,22 @@ $ napt init
 Initializing NAPT project in: /path/to/my-intune-packages
 
 [1/2] Creating directory structure...
-      Created: recipes/
-      Created: defaults/vendors/
-
 [2/2] Creating configuration files...
-      Created: defaults/org.yaml
 
-Done! Project initialized.
+======================================================================
+INITIALIZATION RESULTS
+======================================================================
+Project Root:    /path/to/my-intune-packages
+
+Created (4):
+  [OK] recipes/
+  [OK] defaults/vendors/
+  [OK] state/deployment/
+  [OK] defaults/org.yaml
+
+======================================================================
+
+[SUCCESS] Project initialized!
 ```
 
 ### What Gets Created
@@ -42,7 +51,9 @@ my-intune-packages/
 ├── defaults/
 │   ├── org.yaml              # Organization-wide defaults (commented template)
 │   └── vendors/              # Vendor-specific overrides (empty)
-└── recipes/                  # Your recipe files go here
+├── recipes/                  # Your recipe files go here
+└── state/
+    └── deployment/           # Per-app deployment state (written by discover, upload, promote)
 ```
 
 ### Handling Existing Files
@@ -54,13 +65,24 @@ $ napt init
 Initializing NAPT project in: /path/to/existing-project
 
 [1/2] Creating directory structure...
-      Skipped: recipes/ (already exists)
-      Skipped: defaults/vendors/ (already exists)
-
 [2/2] Creating configuration files...
-      Skipped: defaults/org.yaml (already exists)
 
-Done! Project initialized.
+======================================================================
+INITIALIZATION RESULTS
+======================================================================
+Project Root:    /path/to/existing-project
+
+Skipped (4):
+  [SKIP] recipes/
+  [SKIP] defaults/vendors/
+  [SKIP] state/deployment/
+  [SKIP] defaults/org.yaml
+
+======================================================================
+
+Note: Existing files were preserved. Use --force to overwrite.
+
+[SUCCESS] Project initialized!
 ```
 
 To overwrite existing files (with automatic backup):
@@ -69,13 +91,35 @@ To overwrite existing files (with automatic backup):
 napt init --force
 ```
 
-This backs up existing files before replacing them:
+This backs up `defaults/org.yaml` before replacing it (directories are never
+touched):
 
 ```console
 $ napt init --force
+Initializing NAPT project in: /path/to/existing-project
+
+[1/2] Creating directory structure...
 [2/2] Creating configuration files...
-      Backed up: defaults/org.yaml -> defaults/org.yaml.backup
-      Created: defaults/org.yaml
+
+======================================================================
+INITIALIZATION RESULTS
+======================================================================
+Project Root:    /path/to/existing-project
+
+Created (1):
+  [OK] defaults/org.yaml
+
+Backed Up (1):
+  [OK] defaults/org.yaml -> org.yaml.backup
+
+Skipped (3):
+  [SKIP] recipes/
+  [SKIP] defaults/vendors/
+  [SKIP] state/deployment/
+
+======================================================================
+
+[SUCCESS] Project initialized!
 ```
 
 ### Next Steps After Init
@@ -200,8 +244,8 @@ psadt:
 2. Validate and test:
 
 ```bash
-napt validate recipes/7-Zip/7zip.yaml
-napt discover recipes/7-Zip/7zip.yaml --verbose
+napt validate recipes/7-Zip/7zip-x64-msi.yaml
+napt discover recipes/7-Zip/7zip-x64-msi.yaml --verbose
 ```
 
 **What to customize:**
@@ -465,7 +509,7 @@ Validate and test recipes thoroughly before using in production.
 5. **Verify build structure:**
    ```bash
    # Check PSADT files are present
-   ls builds/napt-app/*/Invoke-AppDeployToolkit.ps1
+   ls builds/napt-app/*/packagefiles/Invoke-AppDeployToolkit.ps1
    ```
 
 6. **Test packaging:**
@@ -545,29 +589,37 @@ napt upload recipes/Google/chrome.yaml
 
 ```console
 $ napt upload recipes/Google/chrome.yaml
-Uploading 'Google Chrome' (napt-chrome) to Intune...
+Uploading package for recipe: /path/to/recipes/Google/chrome.yaml
 
-[1/6] Locating .intunewin package...
-[2/6] Authenticating with Azure...
-[3/6] Parsing package metadata...
-[4/6] Creating Intune app record for 'Google Chrome' 144.0.7559.110...
-[5/6] Uploading to Azure Blob Storage...
-upload progress: 100%
-[6/6] Committing content version...
-
+[1/9] Locating .intunewin package...
+[2/9] Authenticating with Azure...
+[3/9] Parsing package metadata...
+[4/9] Creating app record for 'Google Chrome'...
+[UPLOAD] Created Intune app: <app id>
+[5/9] Uploading to Azure Blob Storage...
+[6/9] Committing content version...
+[7/9] Creating app record for '[Update] Google Chrome'...
+[UPLOAD] Created Intune app: <update id>
+[8/9] Uploading to Azure Blob Storage...
+[9/9] Committing content version...
 ======================================================================
 UPLOAD RESULTS
 ======================================================================
-App ID:        napt-chrome
-App Name:      Google Chrome
-Version:       144.0.7559.110
-Intune App ID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-Package:       packages/napt-chrome/144.0.7559.110/Invoke-AppDeployToolkit.intunewin
-Status:        success
+App ID:          napt-chrome
+App Name:        Google Chrome
+Version:         <version>
+Intune Win32 App ID:    <app id>
+Intune Win32 Update ID: <update id>
+Package:         /path/to/packages/napt-chrome/<version>/Invoke-AppDeployToolkit.intunewin
+Status:          success
 ======================================================================
 
-[SUCCESS] App uploaded to Intune successfully!
+[SUCCESS] Package uploaded to Intune successfully!
 ```
+
+With the default `intune.build_types: "both"`, the install entry and the
+`[Update]` entry are each created, uploaded, and committed (nine steps).
+`app_only` or `update_only` runs six.
 
 ### Full Pipeline Example
 
@@ -1131,14 +1183,16 @@ binary the runner provides, so a cache can never ship the wrong bytes.
 
 The restore step in the discover workflow serves a second purpose:
 bandwidth.
-`napt discover` records each vendor's `ETag`/`Last-Modified` headers in
-`cache/discovery.json` and sends them as conditional request headers on
-the next run; when the vendor answers HTTP 304, the previously
-downloaded installer is reused without transferring a byte.
-A fresh runner starts with neither the header cache nor the files, so
-restoring `cache/` and `downloads/` from the last run is what lets the
-scheduled discover skip re-downloading installers that have not changed
-— which adds up quickly for recipe sets full of large installers.
+`napt discover` skips the download when the installer has not changed:
+`url_download` recipes record the vendor's `ETag`/`Last-Modified` headers
+in `cache/discovery.json` and send them as conditional request headers
+on the next run, reusing the file when the vendor answers HTTP 304;
+`api_github`, `api_json`, and `web_scrape` recipes compare the discovered
+version against the cached one and skip the download on a match.
+Either way, a fresh runner starts with neither the cache nor the files,
+so restoring `cache/` and `downloads/` from the last run is what lets
+the scheduled discover skip re-downloading installers that have not
+changed, which adds up quickly for recipe sets full of large installers.
 Keep the `path` lists of the save and restore steps identical:
 `actions/cache` makes the path list part of the cache version, so a
 mismatched list reads as a silent cache miss.
@@ -1410,7 +1464,7 @@ When a recipe needs changes (new version format, different download URL, etc.).
 
 Common issues and solutions when `napt discover` fails.
 
-### Issue: "Strategy not found"
+### Issue: "Unknown discovery strategy"
 
 **Problem:** Recipe uses a strategy that doesn't exist or isn't registered.
 
@@ -1484,15 +1538,17 @@ Common issues and solutions when `napt discover` fails.
 
 **Solution:**
 
-NAPT automatically handles cache corruption:
+NAPT logs `Failed to load discovery cache` as a warning and continues without
+cache tracking for that run. The corrupted file is left in place, so the warning
+repeats until you fix it. The cache is disposable: delete it and rediscover.
 
-1. Creates backup of corrupted file: `cache/discovery.json.backup`
+```bash
+rm cache/discovery.json
+napt discover recipes/app.yaml
+```
 
-2. Creates a fresh cache file automatically
-
-3. Reports the issue with an error message
-
-The cache is already fixed - just run your command again. Alternatively, use `--stateless` to bypass state tracking temporarily:
+To bypass cache and state tracking for a single run without touching the file,
+use `--stateless`:
 
 ```bash
 napt discover recipes/app.yaml --stateless
