@@ -73,7 +73,12 @@ class TestEndToEndWorkflow:
                     product_name="", product_version="1.2.3", architecture="x64"
                 )
 
-                result = discover_recipe(recipe_path, output_dir)
+                result = discover_recipe(
+                    recipe_path,
+                    output_dir,
+                    cache_file=tmp_test_dir / "cache.json",
+                    state_dir=tmp_test_dir / "state",
+                )
 
         # Verify complete workflow results
         assert result.app_name == "Test App"
@@ -117,7 +122,12 @@ class TestConfigAndDiscoveryIntegration:
                     product_name="", product_version="1.0.0", architecture="x64"
                 )
 
-                result = discover_recipe(recipe_path, tmp_test_dir)
+                result = discover_recipe(
+                    recipe_path,
+                    tmp_test_dir,
+                    cache_file=tmp_test_dir / "cache.json",
+                    state_dir=tmp_test_dir / "state",
+                )
 
                 # Verify config was properly passed to discovery
                 assert result.version == "1.0.0"
@@ -145,7 +155,12 @@ class TestErrorPropagation:
             from napt.exceptions import NetworkError
 
             with pytest.raises(NetworkError, match="download failed"):
-                discover_recipe(recipe_path, tmp_test_dir)
+                discover_recipe(
+                    recipe_path,
+                    tmp_test_dir,
+                    cache_file=tmp_test_dir / "cache.json",
+                    state_dir=tmp_test_dir / "state",
+                )
 
     def test_version_extraction_error_propagates(self, tmp_test_dir, create_yaml_file):
         """Test that version extraction errors propagate with context."""
@@ -173,4 +188,9 @@ class TestErrorPropagation:
                 mock_extract.side_effect = NetworkError("Invalid MSI")
 
                 with pytest.raises(NetworkError, match="Failed to extract"):
-                    discover_recipe(recipe_path, tmp_test_dir)
+                    discover_recipe(
+                        recipe_path,
+                        tmp_test_dir,
+                        cache_file=tmp_test_dir / "cache.json",
+                        state_dir=tmp_test_dir / "state",
+                    )

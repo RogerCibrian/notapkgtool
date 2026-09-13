@@ -45,7 +45,12 @@ class TestDiscoverRecipe:
                 download_url="https://example.com/test.msi",
                 cached=False,
             )
-            result = discover_recipe(recipe_path, tmp_test_dir)
+            result = discover_recipe(
+                recipe_path,
+                tmp_test_dir,
+                cache_file=tmp_test_dir / "cache.json",
+                state_dir=tmp_test_dir / "state",
+            )
 
         assert result.app_name == "Test App"
         assert result.app_id == "test-app"
@@ -62,7 +67,12 @@ class TestDiscoverRecipe:
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
 
         with pytest.raises(ConfigError, match="Missing required field: discovery"):
-            discover_recipe(recipe_path, tmp_test_dir)
+            discover_recipe(
+                recipe_path,
+                tmp_test_dir,
+                cache_file=tmp_test_dir / "cache.json",
+                state_dir=tmp_test_dir / "state",
+            )
 
     def test_discover_recipe_missing_strategy_raises(
         self, tmp_test_dir, create_yaml_file
@@ -77,7 +87,12 @@ class TestDiscoverRecipe:
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
 
         with pytest.raises(ConfigError, match="strategy"):
-            discover_recipe(recipe_path, tmp_test_dir)
+            discover_recipe(
+                recipe_path,
+                tmp_test_dir,
+                cache_file=tmp_test_dir / "cache.json",
+                state_dir=tmp_test_dir / "state",
+            )
 
     def test_discover_recipe_unknown_strategy_raises(
         self, tmp_test_dir, create_yaml_file
@@ -92,7 +107,12 @@ class TestDiscoverRecipe:
         recipe_path = create_yaml_file("recipe.yaml", recipe_data)
 
         with pytest.raises(ConfigError, match="Unknown discovery strategy"):
-            discover_recipe(recipe_path, tmp_test_dir)
+            discover_recipe(
+                recipe_path,
+                tmp_test_dir,
+                cache_file=tmp_test_dir / "cache.json",
+                state_dir=tmp_test_dir / "state",
+            )
 
     def test_discover_recipe_missing_file_raises(self, tmp_test_dir):
         """Test that missing recipe file raises error."""
