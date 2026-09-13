@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-09-12
+
 ### Added
 
 - **`napt auth setup`** - Create the NAPT app registration in a tenant
@@ -73,7 +75,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         to **Yes** for earlier NAPT versions can go back to the default
         **No**, which blocks device code against the app
     - `napt upload` and `napt promote` never open a browser; without a
-        credential they fail with `Not authenticated. Run 'napt auth login'`
+        credential they fail with `Not authenticated.` and a hint to run
+        `napt auth login`
 - **BREAKING: Managed identity removed** - `ManagedIdentityCredential` is
     no longer tried; use a service principal or OIDC federation
 - Removed the unused `--tenant-id` option from `napt upload`
@@ -562,7 +565,8 @@ Initial internal release.
 - **Robust Downloads** - Retry logic, atomic writes, SHA-256 verification, and conditional requests
 
 
-[Unreleased]: https://github.com/RogerCibrian/notapkgtool/compare/0.7.0...HEAD
+[Unreleased]: https://github.com/RogerCibrian/notapkgtool/compare/0.10.0...HEAD
+[0.10.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.9.0...0.10.0
 [0.9.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.8.0...0.9.0
 [0.8.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.7.0...0.8.0
 [0.7.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.6.0...0.7.0
