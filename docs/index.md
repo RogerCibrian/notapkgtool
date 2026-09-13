@@ -8,7 +8,7 @@
 
 ## Overview
 
-NAPT is a Python-based CLI tool that automates the entire workflow for packaging Windows applications and deploying them to Microsoft Intune. It runs on Windows, Linux, and macOS, though packaging (.intunewin creation) requires Windows.
+NAPT is a Python CLI. It runs on Windows, Linux, and macOS, though packaging (.intunewin creation) requires Windows.
 
 ### Why NAPT?
 
@@ -20,32 +20,21 @@ Packaging applications for Microsoft Intune with PSAppDeployToolkit (PSADT) typi
 
 3. **Create detection and requirements scripts** - Write PowerShell detection and requirements logic, test thoroughly, maintain version checks. Must update for each new version.
 
-4. **Package as .intunewin** - Run IntuneWinAppUtil.exe manually, manage paths, handle errors. Tedious and error-prone.
+4. **Package as .intunewin** - Run IntuneWinAppUtil.exe manually, manage paths, handle errors.
 
 5. **Upload to Intune** - Upload package via portal, fill metadata, configure app info and requirements manually.
 
 6. **Configure deployment** - Set up rollout assignments manually for each version.
 
-This manual workflow is repetitive, difficult to automate in CI/CD pipelines, lacks version tracking, and requires re-doing most of the work for every update. NAPT automates this entire workflow with YAML-based recipes and automatic version tracking.
+NAPT replaces this with YAML-based recipes and automatic version tracking.
 
 ### Key features
 
-- ✅ **Automatic version tracking** - Automatic discovery from MSI, EXE, URLs, or APIs with caching to skip unnecessary downloads
-- ✅ **YAML-based recipes** - Define app packaging once with layered configuration (Organization → Vendor → Recipe)
-- ✅ **Automated PSADT packaging** - Generate Intune-ready packages with detection and requirements scripts, no manual template editing
-- ✅ **Cross-platform workflow** - Run on Windows, Linux, and macOS (packaging requires Windows)
-- ✅ **Direct Intune upload** - Upload to Microsoft Intune via the Graph API, no portal required
-
-## Cross-platform support
-
-| Feature | Windows | Linux/macOS |
-|---------|---------|-------------|
-| Discovery & Download | ✅ | ✅ |
-| PSADT Package Building | ✅ | ✅ |
-| Intune Packaging | ✅ | ⚫ Windows Only |
-| Intune Upload | ✅ | ✅ |
-
-See the [Cross-platform support](user-guide.md#cross-platform-support) section for platform-specific workflows.
+- **Automatic version tracking** - Discovery from MSI, EXE, URLs, or APIs with caching to skip unnecessary downloads
+- **YAML-based recipes** - Define app packaging once with layered configuration (Organization → Vendor → Recipe)
+- **Automated PSADT packaging** - Generate Intune-ready packages with detection and requirements scripts, no manual template editing
+- **Cross-platform workflow** - Run on Windows, Linux, and macOS (packaging requires Windows)
+- **Direct Intune upload** - Upload to Microsoft Intune via the Graph API, no portal required
 
 ## Getting started
 
@@ -70,7 +59,7 @@ NAPT supports multiple discovery strategies (url_download, web_scrape, api_githu
 
 ## Contributing
 
-Ideas and feedback are welcome! See [Contributing](contributing.md) for guidelines.
+Ideas and feedback are welcome. See [Contributing](contributing.md) for guidelines.
 
 ## License
 

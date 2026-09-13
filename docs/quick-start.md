@@ -11,8 +11,6 @@
 
 #### Option 1: pip (for using NAPT)
 
-Best for users who want to use the tool.
-
 ```powershell
 # Create a project directory
 mkdir napt-workspace
@@ -31,9 +29,7 @@ napt --version
 
 #### Option 2: Poetry (for development)
 
-Best for contributing to NAPT.
-
-> ℹ️ **Note:** Clones the main branch so you're working with the latest code.
+> **Note:** Clones the main branch, so you're working with the latest code.
 
 **Prerequisites:** Poetry must be installed. See [Poetry Installation Guide](https://python-poetry.org/docs/#installation)
 
@@ -54,21 +50,8 @@ napt --version
 
 ### Platform requirements
 
-NAPT runs on Windows, Linux, and macOS with the following requirements:
-
-#### Windows
-
-- No additional dependencies required
-- All features supported (discovery, building, packaging)
-- Uses native PowerShell COM API for MSI extraction
-
-#### Linux/macOS
-
-- **Required:** msitools for MSI version extraction
-- **Limitation:** Cannot create .intunewin packages (requires Windows)
-- Supports discovery and building features
-
-Install msitools:
+Windows needs nothing extra. Linux and macOS need `msitools` for MSI version
+extraction and cannot create .intunewin packages (that step requires Windows):
 
 ```bash
 # Debian/Ubuntu
@@ -81,13 +64,14 @@ sudo dnf install msitools
 brew install msitools
 ```
 
-See the [Cross-platform support](user-guide.md#cross-platform-support) section for platform-specific workflows.
+See [Cross-platform support](user-guide.md#cross-platform-support) for the
+mixed-platform workflow.
 
 ## Basic usage
 
 ### Command-line options
 
-All NAPT commands support these helpful flags:
+All commands support:
 
 - `--help` or `-h` - Show detailed help and examples for any command
 - `--verbose` - Show progress details and additional information
@@ -141,6 +125,9 @@ napt discover recipes/Google/chrome.yaml --output-dir ./cache
 napt discover recipes/Google/chrome.yaml --stateless
 ```
 
+Re-running `napt discover` skips the download when nothing changed; the fetch
+step reports `[CACHE] File not modified` instead.
+
 ### Build PSADT package
 
 Create a complete PSADT package ready for deployment:
@@ -165,13 +152,9 @@ napt package recipes/Google/chrome.yaml
 napt package recipes/Google/chrome.yaml --output-dir ./packages --clean-source
 ```
 
-## Example workflows
+## Complete workflow: recipe to package
 
-### Complete workflow: recipe to package
-
-Here's a complete workflow from recipe validation to Intune package:
-
-#### 1. Validate recipe
+### 1. Validate recipe
 
 ```console
 $ napt validate recipes/Google/chrome.yaml
@@ -189,7 +172,7 @@ App Count:   1
 [SUCCESS] Recipe is valid!
 ```
 
-#### 2. Discover and download latest version
+### 2. Discover and download latest version
 
 ```console
 $ napt discover recipes/Google/chrome.yaml
@@ -216,7 +199,7 @@ Status:          success
 [SUCCESS] Version discovered successfully!
 ```
 
-#### 3. Build PSADT package
+### 3. Build PSADT package
 
 ```console
 $ napt build recipes/Google/chrome.yaml
@@ -244,7 +227,7 @@ Status:          success
 [SUCCESS] PSADT package built successfully!
 ```
 
-#### 4. Create .intunewin package
+### 4. Create .intunewin package
 
 ```console
 $ napt package recipes/Google/chrome.yaml
@@ -271,59 +254,10 @@ Status:          success
 
 **Result:** Ready-to-upload .intunewin file in `packages/napt-chrome/<version>/`
 
-### Quick check workflow
-
-Check if a new version is available (skips re-downloading if unchanged):
-
-```bash
-napt discover recipes/Google/chrome.yaml
-```
-
-If the installer hasn't changed since the last run, the fetch step reports a
-cache hit instead of downloading:
-
-```
-[3/4] Fetching installer...
-[CACHE] File not modified (HTTP 304), using cached version
-```
-
-For `url_download` recipes the vendor's `ETag`/`Last-Modified` headers decide
-this; the other strategies compare the discovered version to the cached one.
-
-**Note:** This requires having run `napt discover` at least once before to
-populate `cache/discovery.json`.
-
-### Clean build workflow
-
-Force a fresh download and rebuild:
-
-```bash
-# Always download (ignore cache)
-napt discover recipes/Google/chrome.yaml --stateless
-
-# Build with custom output
-napt build recipes/Google/chrome.yaml --output-dir ./my-builds
-
-# Package and clean up source
-napt package recipes/Google/chrome.yaml --clean-source
-```
-
-## Common tasks
-
-For step-by-step guides on common workflows, see [Common Tasks](common-tasks.md):
-
-- Create a recipe for a GitHub release app
-- Create a recipe for a vendor download page
-- Create a recipe for a JSON API endpoint
-- Troubleshoot discovery failures
-
 ## What's next?
 
-Now that you have NAPT installed and understand the basic commands, explore:
-
 - **[Deploy to Intune](common-tasks.md#deploy-to-intune)** - Set up authentication with `napt auth`, upload the package with `napt upload`, and roll it out with `napt promote`
-- **[Common Tasks](common-tasks.md)** - Step-by-step guides for common workflows
-- **[User Guide](user-guide.md)** - Learn about discovery strategies, configuration, and advanced features
-- **[Creating Recipes](user-guide.md#discovery-strategies)** - Write your own application recipes
+- **[Common Tasks](common-tasks.md)** - Step-by-step guides, including a recipe walkthrough for each discovery strategy
+- **[User Guide](user-guide.md)** - How each command works, configuration layers, and state
 - **[Examples](https://github.com/RogerCibrian/notapkgtool/tree/main/recipes)** - Browse example recipes for Chrome, Git, and more
 

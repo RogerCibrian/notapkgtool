@@ -1,10 +1,9 @@
 # User guide
 
-This guide covers NAPT's key features, configuration system, and advanced usage patterns.
+This guide covers how each command works, authentication, state, and the
+configuration layers.
 
 ## How NAPT works
-
-NAPT automates the complete workflow from version discovery to Intune package creation. Understanding how each step works helps you troubleshoot issues and customize recipes effectively.
 
 ### Discovery process (`napt discover`)
 
@@ -43,7 +42,7 @@ The build process creates a complete PSADT package from the recipe and downloade
     - `Invoke-AppDeployToolkit.ps1` - Template script (will be overwritten)
 7. **Generate Deployment Script** - Generates `Invoke-AppDeployToolkit.ps1` from template:
     - Substitutes PSADT variables (`$appVendor`, `$appName`, `$appVersion`, etc.) from recipe configuration
-    - Inserts install script from `psadt.install` field (for MSI, auto-generates install/uninstall commands from the MSI metadata — exact filename and ProductName — unless `override_msi_commands: true`; for MSIX, auto-generates them from the manifest based on `intune.run_as_account` unless `override_msix_commands: true`)
+    - Inserts install script from `psadt.install` field (for MSI, auto-generates install/uninstall commands from the MSI metadata, the exact filename and ProductName, unless `override_msi_commands: true`; for MSIX, auto-generates them from the manifest based on `intune.run_as_account` unless `override_msix_commands: true`)
     - Inserts uninstall script from `psadt.uninstall` field
     - Sets dynamic values (AppScriptDate, discovered version, PSADT version)
     - Preserves PSADT's structure and comments
@@ -103,7 +102,6 @@ identity name instead of registry scanning; which store is queried depends on
         - `x64` / `arm64`: Checks only 64-bit registry view (ARM64 uses 64-bit registry)
         - `x86`: Checks only 32-bit registry view
         - `any` (default if not specified): Checks both 64-bit and 32-bit views for maximum compatibility
-    - Uses explicit `RegistryView` API for deterministic behavior regardless of PowerShell process bitness
     - Prevents false matches when both 32-bit and 64-bit versions of the same software are installed
 
 - **MSIX detection (AppX package-based):**
@@ -118,9 +116,7 @@ identity name instead of registry scanning; which store is queried depends on
 
 - **Logging:**
     - **Format:** CMTrace format for compatibility with Intune diagnostics tools
-    - **Primary locations:**
-        - System context: `C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\`
-        - User context: `C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\`
+    - **Primary location** (both contexts): `C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\`
         - Detection: `NAPTDetections.log` (system) / `NAPTDetectionsUser.log` (user)
         - Requirements: `NAPTRequirements.log` (system) / `NAPTRequirementsUser.log` (user)
     - **Fallback locations** (used if primary location fails):
@@ -136,13 +132,11 @@ identity name instead of registry scanning; which store is queried depends on
     - Version check: Compares installed version to expected version
     - Match modes: Exact match (installed = expected) or minimum version (installed >= expected)
     - Exit codes: Exit 0 if installed and meets requirement, exit 1 otherwise
-    - Used by: Both App and Update entries in Intune
 - **Requirements script** - Determines if an installed application needs to be updated:
     - Version check: Determines if installed version < target version
     - Output: Writes "Required" to stdout if update needed, nothing otherwise
     - Exit codes: Always exits 0 (allows Intune to evaluate stdout)
     - Intune configuration: Requirement rule with output type String, operator Equals, value "Required"
-    - Used by: Update entry only (to determine if update is applicable)
 
 **Output location and packaging:**
 
@@ -192,18 +186,12 @@ Extraction rules:
 
 Like `downloads/` and `builds/`, the icons directory is a machine-local
 output directory (gitignored); each machine extracts its own icons at
-build time:
-
-- **NAPT never overwrites an existing icon file.** To replace an
-  extracted icon on this machine, drop your PNG at `icons/{id}.png`
-- To force re-extraction (for example after a vendor rebrand), delete the
-  file and rebuild
-- To pin a curated icon that travels with the recipe repo, set
-  `intune.logo_path` instead — it skips extraction entirely and always
-  wins at upload
+build time, and NAPT never overwrites an existing icon file.
 
 Icon resolution order at upload: `intune.logo_path` (if set), then
 `icons/{id}.png`, then no icon with a warning.
+To replace or pin an icon, see
+[Set a custom app icon](common-tasks.md#set-a-custom-app-icon).
 
 ### Package process (`napt package`)
 
@@ -234,7 +222,7 @@ recipe's app:
    version directory after successful packaging
 
 **Output**: `.intunewin` and detection scripts in `packages/{app_id}/{version}/`,
-ready for `napt upload`. Only one version is kept on disk per app at a time —
+ready for `napt upload`. Only one version is kept on disk per app at a time:
 packaging a new version removes the previous one automatically.
 
 ### Upload process (`napt upload`)
@@ -246,7 +234,7 @@ Graph API. Run `napt package` before uploading.
    for the versioned subdirectory created by `napt package` and reads
    `Invoke-AppDeployToolkit.intunewin` from it.
    Verifies the package's installer hash (from the build manifest) against the
-   pending release in the app's deployment state — a mismatch aborts the upload,
+   pending release in the app's deployment state; a mismatch aborts the upload,
    so what was recorded at discovery is byte-for-byte what ships.
    When no pending release is recorded, the upload proceeds with a warning,
    or fails when `deployment.require_pending` is enabled
@@ -277,7 +265,7 @@ content was never committed (a crashed previous run) gets a fresh content
 upload, and only missing entries are created.
 Apps without a NAPT stamp are never touched.
 
-Adoption keeps the matched app exactly as it is — it does not re-send
+Adoption keeps the matched app exactly as it is: it does not re-send
 metadata or package content, since the match key is the installer binary.
 If you changed the recipe or package without a new installer release
 (PSADT commands, detection settings, icon), pass `--force` to update the
@@ -292,14 +280,14 @@ corresponding entry is not created
 
 `napt upload`, `napt promote apply`, and `napt promote plan --reconcile`/`--check-drift`
 all need a Microsoft Graph token.
-NAPT resolves it the same way every time — `napt auth status` shows which
+NAPT resolves it the same way every time; `napt auth status` shows which
 source it picked:
 
 | Method | When it's used |
 |--------|---------------|
-| Service principal (`EnvironmentCredential`) | `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_CLIENT_SECRET` (or `AZURE_CLIENT_CERTIFICATE_PATH`) are set — CI/CD |
-| Interactive session (`napt auth login`) | Nothing above is set and you have signed in on this machine — developers |
-| Azure CLI (`AzureCliCredential`) | Nothing above applies and the Azure CLI is signed in as a service principal — CI/CD with OIDC through a login step such as GitHub Actions `azure/login`. Recommended over a client secret whenever your CI platform supports it. A CLI signed in as a person is refused, since its tokens belong to the Azure CLI's own application, not the NAPT registration |
+| Service principal (`EnvironmentCredential`) | `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_CLIENT_SECRET` (or `AZURE_CLIENT_CERTIFICATE_PATH`) are set (CI/CD) |
+| Interactive session (`napt auth login`) | Nothing above is set and you have signed in on this machine (developers) |
+| Azure CLI (`AzureCliCredential`) | Nothing above applies and the Azure CLI is signed in as a service principal (CI/CD with OIDC through a login step such as GitHub Actions `azure/login`). Recommended over a client secret whenever your CI platform supports it. A CLI signed in as a person is refused, since its tokens belong to the Azure CLI's own application, not the NAPT registration |
 
 NAPT never opens a browser on its own.
 If no credential is available, commands fail with `Not authenticated.`
@@ -340,7 +328,7 @@ napt auth setup --tenant-id "<Directory (tenant) ID>"
 Signs you in through the browser as an account holding the
 **Application Administrator** role (or higher) and does
 everything in the manual list through Microsoft Graph: creates the
-registration (or finds one named `NAPT` — `--name` / `--client-id` to
+registration (or finds one named `NAPT`; use `--name` or `--client-id` to
 target another), adds the redirect URIs and the application + delegated
 permissions, creates the service principal, and grants admin consent.
 It then remembers the tenant and client ID so the next step is just
@@ -351,7 +339,7 @@ properties) with a provenance line such as
 `napt/v1 spec=1 version=0.10.0 provisioned=2026-08-18`; any notes an
 administrator adds below it are preserved.
 Re-running is safe: NAPT compares the registration against what the
-installed version needs and adds only what is missing — so when a NAPT
+installed version needs and adds only what is missing, so when a NAPT
 release needs a new permission, updating is just running `napt auth setup`
 again.
 A registration that matches by name but carries no stamp (one made in the
@@ -362,7 +350,7 @@ Naming the registration explicitly with `--client-id` counts as that
 consent.
 
 Add `--federated-issuer` and `--federated-subject` to also create the
-federated credential for [OIDC CI/CD](#app-registration-setup) in the same
+federated credential for OIDC CI/CD (below) in the same
 run; the values come from your CI platform's OIDC documentation.
 The administrator sign-in uses the Microsoft Graph Command Line Tools app
 (the same one `Connect-MgGraph` uses); NAPT does not store that account or
@@ -381,7 +369,7 @@ napt auth login --tenant-id "<Directory (tenant) ID>" --client-id "<Application 
 On Windows this opens the OS account picker (Web Account Manager),
 signing you in with your work account, honoring device-based Conditional
 Access, and keeping the refresh token device-bound.
-Elsewhere — or with `--no-broker` — it opens your browser.
+Elsewhere, or with `--no-broker`, it opens your browser.
 The broker needs an interactive Windows session: from a scheduled task,
 service, `runas`, or SSH session, use a service principal or OIDC instead.
 Tokens are cached in the OS credential store (DPAPI, Keychain, or
@@ -420,7 +408,7 @@ Known tenants:
 The tenant's default domain and display name are looked up once at login
 through the delegated `User.Read` permission, which new app registrations
 carry by default.
-Without it the tenant is listed as `(name unknown)` — sign-in itself is
+Without it the tenant is listed as `(name unknown)`; sign-in itself is
 unaffected.
 `napt auth status` exits 1 when no credential is available or a required
 permission is missing, and names the missing permission.
@@ -432,7 +420,7 @@ the IDs stay remembered.
 Sign in to each tenant once with its own client ID.
 NAPT remembers every tenant you have signed in to and which one is active;
 `napt auth status` lists them.
-Switch with just the tenant ID — or its default domain, once known — with
+Switch with just the tenant ID (or its default domain, once known) with
 no prompt as long as that tenant's session is still valid:
 
 ```bash
@@ -440,13 +428,13 @@ napt auth login --tenant-id "<prod tenant ID>" --client-id "<prod client ID>"   
 napt auth login --tenant-id contosodev.onmicrosoft.com                           # switch back, silent
 ```
 
-**CI/CD setup — OIDC federation (recommended):**
+**CI/CD setup, OIDC federation (recommended):**
 
 No secret to store or rotate.
 Create a federated credential on the app registration that trusts your CI
 platform's OIDC issuer for the workflow that runs NAPT.
 Scope it to a deployment environment rather than a branch, so only the
-jobs that declare that environment — the ones that touch Intune — can
+jobs that declare that environment (the ones that touch Intune) can
 obtain tokens; merges to `main` stay gated by your branch protection and
 PR review as usual.
 For GitHub Actions and an environment named `intune`:
@@ -491,7 +479,7 @@ jobs:
 NAPT then obtains its Graph token from that session (`AzureCliCredential`),
 so the job needs no `AZURE_*` variables at all.
 
-**CI/CD setup — client secret:**
+**CI/CD setup, client secret:**
 
 Create a client secret under **Certificates & secrets** → **New client secret**.
 Set all three environment variables as pipeline secrets:
@@ -550,7 +538,7 @@ state/
 
 ## Commands reference
 
-> **💡 Tip:** All commands support `--help` (or `-h`) to show detailed usage, options, and examples. Try `napt discover --help` to see what's available.
+> **Tip:** All commands support `--help` (or `-h`) for detailed usage, options, and examples.
 
 ### napt init
 
@@ -588,7 +576,7 @@ napt build recipes/Google/chrome.yaml [OPTIONS]
 
 Creates a `.intunewin` package for a recipe's build. The build directory is
 inferred automatically from the recipe's app ID. Without `--version`, packages
-the most recent build. Only one version is kept on disk per app — previous
+the most recent build. Only one version is kept on disk per app; previous
 package directories are removed automatically.
 
 ```bash
@@ -605,7 +593,7 @@ computes which releases are ready to promote through deployment rings
 nothing is eligible for it. Read-only unless `--reconcile` is passed.
 Besides the fields apply acts on, each action carries reviewer context:
 a plain-English summary sentence, the Intune entry it touches, the
-version it displaces, and — for a promotion out of a held ring — when
+version it displaces, and, for a promotion out of a held ring, when
 the release entered that ring and its bake threshold.
 
 `promote apply` executes the plans against Intune: assigns install
@@ -613,14 +601,14 @@ entries, promotes releases through rings, unassigns displaced releases,
 and retires them per `deployment.retain_versions`. It consumes every plan
 file in `state/plans/` when any exist (removing each after its app
 applies fully) and plans fresh otherwise. Each app's plan is an
-independent unit — one app's failure keeps its plan file for retry and
+independent unit: one app's failure keeps its plan file for retry and
 never blocks the others. Stale or already-applied actions are skipped
 with a warning, so re-running after a partial failure is safe.
-Assignments NAPT does not manage — admin-made groups, all-device
-targets, exclusions — are always preserved.
+Assignments NAPT does not manage (admin-made groups, all-device
+targets, exclusions) are always preserved.
 
 Both commands report **assignment drift**: every discrepancy between what
-deployment state says should be assigned and what Intune actually has —
+deployment state says should be assigned and what Intune actually has:
 removed or changed NAPT assignments, unrecorded or foreign assignments
 on NAPT-managed apps, releases missing from the tenant, and stamped apps
 no state file references. An assignment NAPT has no record of making is
@@ -630,19 +618,19 @@ converges, or an admin pre-empting configured policy), while one
 matching no configured target is reported as *unexpected* (typically
 admin-made). Drift is warned about and never corrected. Apply checks
 automatically; plan checks with `--check-drift` (which needs Graph
-credentials — without the flag, plan stays fully offline).
+credentials; without the flag, plan stays fully offline).
 
 Both commands also **validate plan groups**. Authenticated plan runs
 (`--check-drift` or `--reconcile`) resolve every group named in the
-computed plan and fail — writing no plan files — when one does not
+computed plan and fail, writing no plan files, when one does not
 resolve, so a plan with a group typo never becomes a reviewable
 promotion PR. Apply preflights each app's actions the same way before
 executing any of them, so an unresolvable group fails that app with
 zero tenant mutations instead of stranding a half-applied plan; fix
 the configuration and re-plan. A dead group referenced only by stale
 or already-applied actions never blocks an app, so re-running after a
-partial failure stays safe. Offline plans skip validation —
-warning when they produce actions — and the apply preflight backstops
+partial failure stays safe. Offline plans skip validation
+(warning when they produce actions) and the apply preflight backstops
 whatever they produce.
 
 Both commands also recover **lost publication writebacks**: when an
@@ -651,7 +639,7 @@ push rejected by branch protection, a crashed runner), the tenant holds
 a fully published release that state still lists as pending. Recovery
 re-derives the published record from the same provenance-stamp evidence
 idempotent upload uses, and only when every entry of the release has
-committed content — a partially published release is warned about
+committed content; a partially published release is warned about
 instead, since only a publish re-run can finish it. Apply reconciles
 automatically; plan reconciles with `--reconcile` (which needs Graph
 credentials and, unlike the rest of plan, writes deployment state).
@@ -665,8 +653,8 @@ napt promote apply [RECIPE_OR_DIR] [OPTIONS]
 napt promote apply --plan-file state/plans/<id>.json
 ```
 
-For the full review-gated CI setup — publish PRs, promotion PRs, and
-writeback commits — see
+For the full review-gated CI setup (publish PRs, promotion PRs, and
+writeback commits) see
 [Automate NAPT with GitHub Actions](common-tasks.md#automate-napt-with-github-actions).
 
 ### napt status
@@ -711,11 +699,11 @@ All commands support verbosity flags to control output detail:
 | `--verbose` or `-v` | All of the above, plus HTTP requests/responses, file operations, SHA-256 hashes, and configuration loading |
 | `--debug` or `-d` | All verbose output, plus full YAML config dumps (org/vendor/recipe/merged), backend selection details, and raw API responses |
 
-Debug mode includes all verbose output plus deep diagnostic information. Use `--verbose` for normal troubleshooting and `--debug` when you need to understand exactly what NAPT is doing internally.
+Use `--verbose` for normal troubleshooting and `--debug` when you need to see exactly what NAPT is doing internally.
 
 ## Discovery strategies
 
-Discovery strategies are the core mechanism for obtaining application installers and extracting version information.
+Discovery strategies determine how NAPT finds installers and extracts version info.
 
 ### Available strategies
 
@@ -743,54 +731,13 @@ flowchart TD
     DirectURL -->|No| Scrape[web_scrape<br/>Scrape vendor page for link]
 ```
 
-**Performance Note**: Version-first strategies (everything except url_download) can skip downloads entirely when versions haven't changed, making them ideal for scheduled CI/CD checks.
-
 ## Recipe basics
 
-A recipe file defines how to discover, download, and package an application. Recipes are YAML files that specify:
-
-- **Discovery strategy** - How to find the latest version and download URL
-- **PSADT configuration** - PowerShell deployment scripts and variables
-
-### Basic structure
-
-```yaml
-apiVersion: napt/v1    # Recipe format version
-name: "Application Name"  # Display name
-id: "napt-app-id"      # Unique identifier
-
-discovery:             # Discovery configuration
-  strategy: api_github  # One of: api_github, api_json, url_download, web_scrape
-  # ... strategy-specific fields
-
-psadt:                 # PSADT configuration
-  app_vars:
-    AppName: "Application Name"
-    AppVersion: "{{discovered_version}}"
-  install: |           # Installation script
-    # PowerShell code here
-  uninstall: |         # Uninstallation script
-    # PowerShell code here
-
-intune:                # Optional: Intune-specific settings
-  detection:
-    display_name: "Application Name"  # Required for EXE installers
-    architecture: "x64"               # Required for EXE installers
-```
-
-### Quick reference
-
-- **Top-level fields:** `apiVersion` (required), `name` (required), `id` (required),
-  `discovery` (required), `psadt` (optional for MSI and MSIX; EXE installers need
-  `psadt.install` and `psadt.uninstall`), `intune` (optional), `logging` (optional)
-- **Discovery strategies:** See [Discovery Strategies](#discovery-strategies) section above for strategy selection and examples
-- **PSADT scripts:** NAPT substitutes `{{discovered_version}}` and `{{installer_filename}}` at build time (these are not PowerShell variables); `${UPPERCASE}` env vars work only in `discovery.token`/`discovery.headers`; use `$($adtSession.DirFiles)` for the files directory path (PSADT 4.x)
-
-### Complete documentation
-
-For complete field documentation, all options, and detailed examples, see the [Recipe Reference](recipe-reference.md) page.
-
-For practical workflows and copy-paste examples, see [Common Tasks](common-tasks.md).
+A recipe is a YAML file that says how to discover, download, and package one
+application: a discovery strategy, PSADT scripts and variables, and optional
+Intune settings.
+Every field is documented in the [Recipe Reference](recipe-reference.md);
+worked examples for each strategy are in [Common Tasks](common-tasks.md).
 
 ## State management & caching
 
@@ -801,12 +748,11 @@ Deleting it costs one full re-download per app and nothing else.
 Safe to gitignore.
 - **Deployment state** (`state/deployment/<app_id>.json`) - Authoritative per-app records of what NAPT has published to Intune (`published`) and what is awaiting publication (`pending`).
 Not regenerable.
-Written deterministically (fixed reading-order keys, no timestamps), so unchanged state produces byte-identical files and clean diffs — commit these files to version control if you want an auditable record or a PR-based review workflow.
+Written deterministically (fixed reading-order keys, no timestamps), so unchanged state produces byte-identical files and clean diffs. Commit these files to version control if you want an auditable record or a PR-based review workflow.
 
 ### Discovery cache
 
-The discovery cache avoids unnecessary downloads.
-This version-based caching is critical for CI/CD with frequent scheduled checks, providing fast feedback when applications haven't changed.
+The discovery cache avoids unnecessary downloads, which matters most for CI/CD running frequent scheduled checks.
 
 NAPT uses two caching approaches depending on the discovery strategy:
 
@@ -848,9 +794,9 @@ flowchart TD
 Each app gets its own file, `state/deployment/<app_id>.json`, so concurrent changes to different apps never conflict and each file's diff is scoped to one app.
 Every file carries a `schemaVersion` (currently 1); NAPT refuses files
 whose schemaVersion is missing or unsupported.
-A file names its app once at the top — `app_id` (which must match the
+A file names its app once at the top with `app_id` (which must match the
 filename; a copied or renamed file is rejected) and the recipe's display
-`name`, refreshed on every save — and holds five sections:
+`name` (refreshed on every save), then holds five sections:
 
 - `published` - The release currently in Intune, with its SHA-256 hash and Intune app IDs. Null until the first upload. Publishing uploads the release without assigning it; `napt promote` deploys it through the rings afterwards.
 - `install_assigned` - The release the install entry is currently assigned to (the result of a promotion plan's `assign` action).
@@ -858,8 +804,8 @@ filename; a copied or renamed file is rejected) and the recipe's display
 - `rings` - Which version currently holds each deployment ring, with the timestamp it entered (written by `napt promote apply`).
 - `retained` - Displaced versions kept in Intune for rollback per `deployment.retain_versions` (written by `napt promote apply`).
 
-Keys follow reading order — lifecycle order at the top level, `version`
-first and hashes last inside blocks — because these files are what a
+Keys follow reading order (lifecycle order at the top level, `version`
+first and hashes last inside blocks) because these files are what a
 publish PR diff shows its reviewer.
 `napt discover` records the pending candidate.
 Later pipeline stages consume it.
@@ -874,8 +820,8 @@ types, one per Intune entry: `promote` moves a release one ring forward
 (`from_ring: null` marks a first rollout into the first ring), and
 `assign` points new installs at the release.
 Every action opens with a plain-English `summary` and carries the
-details behind it — the entry touched, the version it displaces, bake
-timestamps — so the file diff reads on its own in review:
+details behind it (the entry touched, the version it displaces, bake
+timestamps) so the file diff reads on its own in review:
 
 ```json
 {
@@ -903,12 +849,12 @@ timestamps — so the file diff reads on its own in review:
 An app's plan file exists exactly when that app has eligible actions: a
 plan run that finds nothing for an app removes its stale plan file.
 Each file's git status is therefore the per-app CI signal that a
-promotion review is needed — no special exit codes (`napt` always exits
+promotion review is needed; there are no special exit codes (`napt` always exits
 0 on success, 1 on error).
 Plan output is deterministic, so re-running plan against unchanged state
 produces byte-identical files.
-`napt promote apply` executes each plan as an allowlist — entries that no
-longer validate against current state are skipped, never improvised — and
+`napt promote apply` executes each plan as an allowlist (entries that no
+longer validate against current state are skipped, never improvised) and
 removes each file after its app applies fully.
 To hold one app's promotions during review, delete its plan file; the
 other apps' plans are unaffected, and the next plan run re-proposes
@@ -936,7 +882,7 @@ napt discover recipes/Google/chrome.yaml --stateless
 
 ## Configuration layers
 
-NAPT uses a layered configuration system that promotes DRY (Don't Repeat Yourself) principles.
+NAPT layers configuration so you don't repeat settings across recipes.
 All defaults live in code; configuration files are optional overrides.
 
 ### How configuration works
@@ -957,7 +903,7 @@ recipe.yaml                         <- recipe-specific overrides
 - Config files only override what you need to change
 - Missing fields always fall back to code defaults
 - Old configs never break when NAPT adds new features
-- Any setting can be overridden at any layer — org, vendor, or recipe
+- Any setting can be overridden at any layer: org, vendor, or recipe
 
 ### The three override layers
 
@@ -1004,7 +950,6 @@ psadt:
 
 All directory flags follow the same pattern: CLI flag overrides config;
 config overrides the built-in default.
-This is the same pattern used by tools like `npm`, `pytest`, and `ruff`.
 
 Each command reads from the previous command's output directory and writes
 to its own:
@@ -1021,7 +966,7 @@ to its own:
 | `napt package` | `--builds-dir` | Where to find the build | `directories.build` | `builds` |
 | `napt package` | `--output-dir` | Where to save packages | `directories.package` | `packages` |
 
-Note that input and output share a config key across adjacent commands —
+Input and output share a config key across adjacent commands:
 `discover --output-dir` and `build --downloads-dir` both read from
 `directories.discover`, so the output of one is automatically
 the input of the next without extra configuration.
@@ -1053,27 +998,8 @@ napt discover recipes/Google/chrome.yaml --output-dir /tmp/downloads
 napt build recipes/Google/chrome.yaml --downloads-dir /tmp/downloads
 ```
 
-### IntuneWinAppUtil release pinning
-
-By default NAPT always resolves `"latest"` for `IntuneWinAppUtil.exe` by querying
-the GitHub releases API and caching the resolved version.
-To pin to a specific release for reproducible builds, set `intunewin.release` in
-`defaults/org.yaml`:
-
-```yaml
-intunewin:
-  release: "1.8.6"   # pin to a specific release
-```
-
-The tool is cached under `cache/tools/{version}/` — each pinned release lives in
-its own subdirectory, so switching versions just downloads once and caches both.
-
-Use `"latest"` to always resolve the current release:
-
-```yaml
-intunewin:
-  release: "latest"  # default; resolves via GitHub API on each run if not cached
-```
+To pin the `IntuneWinAppUtil.exe` release `napt package` uses, see
+[`intunewin.release`](recipe-reference.md#intunewinapputil-configuration).
 
 ## Cross-platform support
 
@@ -1091,17 +1017,11 @@ intunewin:
 
 The `napt package` command uses Microsoft's [IntuneWinAppUtil.exe](https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool), which is a Windows-only .NET application. This is the official tool for creating .intunewin packages.
 
-### Recommended workflows
+### Mixed platform workflow
 
-#### Workflow 1: all-Windows (simplest)
-```bash
-# Run everything on Windows
-napt discover recipes/Google/chrome.yaml
-napt build recipes/Google/chrome.yaml
-napt package recipes/Google/chrome.yaml
-```
+Running everything on Windows is the simple case. To develop on Linux or
+macOS and package on Windows:
 
-#### Workflow 2: mixed platform development
 ```bash
 # On Linux/macOS: Discovery and build
 napt discover recipes/Google/chrome.yaml
@@ -1118,12 +1038,6 @@ napt package recipes/Google/chrome.yaml
 
 Organize recipes by vendor: `recipes/<Vendor>/<app>.yaml`. NAPT detects the vendor from the recipe's parent directory name (falling back to `psadt.app_vars.AppVendor`) and loads `defaults/vendors/<Vendor>.yaml` if it exists.
 
-### State management
-
-**Production:** Keep state tracking enabled (default), use version control for deployment state files, run on schedule to detect updates, use `--verbose` in CI/CD.
-
-**Development:** Use `--stateless` for testing, `--debug` for troubleshooting, delete the discovery cache to force re-discovery.
-
 ### Scripting
 
 All commands return standard exit codes (`0` = success, `1` = error), making them easy to use in automation scripts:
@@ -1136,45 +1050,8 @@ fi
 
 ## Troubleshooting
 
-### Common issues
-
-**Problem**: MSI extraction fails on Linux/macOS
-
-```bash
-# Solution: Install msitools
-sudo apt-get install msitools  # Debian/Ubuntu
-brew install msitools           # macOS
-```
-
-**Problem**: Discovery cache corrupted
-
-NAPT logs a warning and continues without cache tracking for that run; the
-corrupted file is left in place. The cache is disposable, so delete it and
-rediscover:
-
-```bash
-rm cache/discovery.json
-napt discover recipes/app.yaml
-```
-
-**Problem**: GitHub API rate limit
-
-> **⚠️ Security Note:** Never put tokens directly in recipe files (e.g., `token: "ghp_abc123"`). Always use environment variable substitution (`token: "${GITHUB_TOKEN}"`) to keep tokens out of version control. See [Handle Authentication Tokens](common-tasks.md#handle-authentication-tokens) for best practices.
-
-```yaml
-# Solution: Use authentication token via environment variable
-discovery:
-  strategy: api_github
-  token: "${GITHUB_TOKEN}"  # Environment variable substitution (secure)
-```
-
-```powershell
-# Set environment variable on Windows:
-$env:GITHUB_TOKEN="your_token_here"
-```
-```bash
-# Set environment variable on Linux/macOS: 
-export GITHUB_TOKEN="your_token_here"
-```
+For discovery failures (unknown strategy, version extraction, rate limits,
+network errors, corrupted cache) and MSI extraction on Linux/macOS, see
+[Troubleshoot discovery failures](common-tasks.md#troubleshoot-discovery-failures).
 
 

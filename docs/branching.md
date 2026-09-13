@@ -7,7 +7,6 @@ NAPT uses **GitHub Flow** - a simple, branch-based workflow that keeps `main` al
 1. **`main` branch is always stable** - Production-ready code only
 2. **Feature branches for all work** - Every change starts from a branch
 3. **Pull Requests for review** - All changes reviewed before merging
-4. **Merge frequently** - Keep branches short-lived (< 1 week ideal)
 
 ## Quick start
 
@@ -29,7 +28,7 @@ git checkout -b feat/your-feature-name
 ```bash
 # Make changes, commit frequently
 git add .
-git commit -m "feat: add your feature"
+git commit -m "feat: Add your feature"
 
 # Push your branch
 git push origin feat/your-feature-name
@@ -70,8 +69,6 @@ main (always deployable)
 
 ### Branch naming convention
 
-Use descriptive names with type prefixes:
-
 The prefix is the conventional commit type the PR will squash to:
 
 | Prefix | Purpose | Example |
@@ -83,9 +80,6 @@ The prefix is the conventional commit type the PR will squash to:
 | `test/` | Test additions/improvements | `test/add-integration-tests` |
 | `chore/` | Maintenance tasks | `chore/update-dependencies` |
 | `perf/` | Performance improvements | `perf/parallel-downloads` |
-
-`feature/` and `bugfix/` also appear in the history and are accepted, but
-prefer the short forms so the branch name and the squash commit type match.
 
 ### Naming rules
 
@@ -126,15 +120,15 @@ Use conventional commit format for clarity:
 
 | Type | Purpose | Example |
 |------|---------|---------|
-| `feat` | New feature | `feat: add EXE version extraction` |
-| `fix` | Bug fix | `fix: correct version comparison logic` |
-| `docs` | Documentation | `docs: update installation instructions` |
-| `refactor` | Code improvement | `refactor: simplify config loading` |
-| `test` | Tests | `test: add tests for MSI extraction` |
-| `chore` | Maintenance | `chore: update Poetry dependencies` |
-| `perf` | Performance | `perf: optimize version comparison` |
+| `feat` | New feature | `feat: Add EXE version extraction` |
+| `fix` | Bug fix | `fix: Correct version comparison logic` |
+| `docs` | Documentation | `docs: Update installation instructions` |
+| `refactor` | Code improvement | `refactor: Simplify config loading` |
+| `test` | Tests | `test: Add tests for MSI extraction` |
+| `chore` | Maintenance | `chore: Update Poetry dependencies` |
+| `perf` | Performance | `perf: Optimize version comparison` |
 
-### Commit guidelines
+### Rules
 
 - Use imperative mood: "add" not "added" or "adds"
 - Keep subject line under 50 characters
@@ -144,9 +138,9 @@ Use conventional commit format for clarity:
 
 **Good Examples:**
 ```bash
-git commit -m "feat: add RPM version extraction support"
-git commit -m "fix: handle missing ETag headers gracefully"
-git commit -m "docs: add examples for Linux MSI extraction"
+git commit -m "feat: Add RPM version extraction support"
+git commit -m "fix: Handle missing ETag headers gracefully"
+git commit -m "docs: Add examples for Linux MSI extraction"
 ```
 
 **Bad Examples:**
@@ -162,18 +156,9 @@ When creating a PR, the [PR template](https://github.com/RogerCibrian/notapkgtoo
 
 ## Merge strategy
 
-**Squash and Merge, always**
-
 NAPT uses **squash and merge** for every Pull Request, including release
-PRs, to maintain a clean, readable history in `main`.
-
-### Why squash and merge?
-
-- ✅ **Clean history**: One commit per feature/fix in `main`
-- ✅ **Conventional commits**: Each merge becomes a properly formatted commit
-- ✅ **Easy rollback**: Revert entire features with one command
-- ✅ **Better changelogs**: No noise from "WIP" or "fix typo" commits
-- ✅ **Simple bisecting**: Each commit represents a complete, working change
+PRs, so `main` gets one clean, conventional commit per change instead of
+every WIP commit from the branch.
 
 ### Merging
 
@@ -185,7 +170,7 @@ When merging on GitHub:
 
 **Example:**
 ```
-feat: add RPM version extraction support
+feat: Add RPM version extraction support
 
 - Implement RPM ProductVersion parser using rpm-py-installer
 - Add cross-platform support for RPM files (Linux/macOS)
@@ -199,13 +184,6 @@ Release PRs are no exception: `/release` makes a single
 `chore: Prepare release X.Y.Z` commit (version bump plus changelog
 promotion), and that squashes like any other PR.
 
-### Workflow
-
-1. **Before creating PR**: Clean up your branch commits if needed
-2. **During review**: Add commits normally (don't squash yet)
-3. **When merging**: Use GitHub's "Squash and merge" button
-4. **After merge**: Branch is auto-deleted, pull latest `main`
-
 ### Tips
 
 - Don't worry about messy commits in your branch - they'll be squashed
@@ -214,7 +192,6 @@ promotion), and that squashes like any other PR.
 - If you accidentally use wrong merge method, you can revert and redo
 
 ## Troubleshooting & scenarios
-
 
 ### Multiple related changes
 
@@ -242,24 +219,16 @@ For features taking multiple days/weeks:
 
 ### Urgent hotfixes
 
-For critical production issues:
+For critical production issues, branch from `main` as usual, then fix,
+test, and push:
 ```bash
-# Branch from main
-git checkout main
-git pull origin main
-git checkout -b fix/security-vulnerability
-
-# Fix, test, and push
 git commit -am "fix: Patch security vulnerability"
 git push origin fix/security-vulnerability
-
-# Create PR with high priority
-# Fast-track review and merge
 ```
 
 ## Best practices & quality checks
 
-### DO ✅
+### Do
 
 - Create small, focused branches with single purpose
 - Commit early and often with clear messages
@@ -270,7 +239,7 @@ git push origin fix/security-vulnerability
 - Update branch with `main` if it's behind
 - Delete branches after merging
 
-### DON'T ❌
+### Don't
 
 - Never commit directly to `main`
 - Don't create long-lived feature branches
@@ -278,7 +247,3 @@ git push origin fix/security-vulnerability
 - Don't merge without tests passing
 - Don't force push to shared branches
 - Don't include unrelated changes in one PR
-
----
-
-**Strategy**: GitHub Flow with Squash and Merge

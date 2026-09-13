@@ -2,12 +2,7 @@
 
 ## Philosophy
 
-This roadmap is a living document showing potential future directions for NAPT. Features listed here are **ideas and possibilities, not commitments**. Priorities may shift based on:
-
-- User feedback and real-world usage
-- Discovered technical challenges or opportunities
-- New insights from development experience
-- Community contributions
+Entries here are ideas, not commitments. Priorities shift with user feedback, technical findings, and contributions.
 
 **Status Legend:**
 
@@ -23,30 +18,24 @@ This roadmap is a living document showing potential future directions for NAPT. 
 
 | Feature | Status | Category | Complexity | Value |
 |---------|--------|----------|------------|-------|
-| Recipe Schema Redesign | ✅ Completed | User-Facing | High | High |
-| Microsoft Intune Upload | ✅ Completed | User-Facing | High | Very High |
 | `napt auth setup` Command | ✅ Completed | User-Facing | Medium | High |
-| Deployment Wave Management | ✅ Completed | User-Facing | Very High | High |
-| Detection Script Generation | ✅ Completed | User-Facing | High | High |
 | Pre/Post Install/Uninstall Script Support | 💡 Idea | User-Facing | Low | Medium |
 | Enhanced CLI Help Menu | 💡 Idea | User-Facing | Low | Medium |
 | Intune App Categorization & Scope Tags | 💡 Idea | User-Facing | Medium | Medium |
 | Configurable Install-Entry Cutover Ring | 💡 Idea | User-Facing | Medium | Medium |
 | PowerShell Validation | 💡 Idea | Code Quality | High | High |
 | Recipe Linting & Best Practices | 💡 Idea | Code Quality | High | Medium |
-| Unrecognized Config Field Warnings | ✅ Completed | Code Quality | Low | Medium |
 | Prerelease Version Ranking in Detection Scripts | 💡 Idea | Code Quality | Medium | Low |
 | Typed Config with Dataclasses | 💡 Idea | Code Quality | Medium | Medium |
 | EXE Version Extraction | 💡 Idea | Technical | High | Medium |
 | Parallel Package Building | 💡 Idea | Technical | Medium | Medium |
-| IntuneWinAppUtil Version Pinning | ✅ Completed | Technical | Low | Low |
 | Minify Scripts at Intune Upload | 💡 Idea | Technical | Medium | Medium |
 
 **Summary:**
 
-- ✅ **Completed**: 7
+- ✅ **Completed** (since the last release): 1
 - 💡 **Ideas**: 11
-- **Total**: 18 features
+- **Total**: 12 features
 
 ---
 
@@ -58,11 +47,9 @@ _Nothing currently in progress._
 
 ## Future ideas (by category)
 
-> **Note:** Categories are organized by how they impact users:
->
-> - **User-Facing Features**: Features and improvements that directly help recipe developers use NAPT more effectively, including new capabilities, UX enhancements, documentation, and tooling.
-> - **Code Quality & Validation**: Tools that validate and improve recipe quality, including syntax checking, linting, and best practices enforcement.
-> - **Technical Enhancements**: Internal improvements and infrastructure enhancements that improve performance, add backend capabilities, or optimize the tool's operation.
+> **User-facing features** are things recipe authors notice.
+> **Code quality & validation** covers recipe checking and linting.
+> **Technical enhancements** are internal performance and infrastructure work.
 
 ### User-facing features
 
@@ -100,13 +87,8 @@ each deployment phase.
 
 **Benefits**:
 
-- More granular control over deployment lifecycle
-- Separation of concerns (prep vs install vs cleanup)
-- Aligns with PSADT's deployment phase structure
-- Cleaner recipe organization
-- Enables better error handling and rollback capabilities
-
-**Related**: PSADT already has these phases in the template structure
+- Matches PSADT's existing deployment phases, so prep, install, and cleanup
+  scripts don't have to share one block
 
 #### Enhanced CLI help menu
 
@@ -114,20 +96,13 @@ each deployment phase.
 **Complexity**: Low (few hours to 1 day)
 **Value**: Medium
 
-**Description**: Improve the `napt -h` help output with more detailed
-information, examples, and better organization.
+**Description**: Improve the `napt -h` help output: group commands by
+category (discovery, building, packaging, deployment), add examples for
+common workflows, and point at `--verbose` and `--debug` for troubleshooting.
 
 **Benefits**:
 
-- Better discoverability of features
-- Reduces need to consult docs for basic usage
-- Improves new user onboarding experience
-- Quick reference for command options
-- Examples for common workflows directly in help text
-- Grouped commands by category (Discovery, Building, Packaging)
-- Tips for troubleshooting (--verbose, --debug flags)
-
-**Related**: CLI help currently minimal, relies on online documentation
+- Cuts how often users have to leave the terminal for the docs
 
 #### Configurable install-entry cutover ring
 
@@ -140,7 +115,7 @@ rollout in the first ring also points new installs at it (the `assign`
 action), so net-new devices receive the release before it has baked.
 Add an optional `deployment.install` setting (e.g.
 `after_ring: <ring-name>`) so the install assignment follows the release
-only once it has entered that ring — the planner gates the `assign`
+only once it has entered that ring: the planner gates the `assign`
 action on ring state instead of planning it on publish.
 Default stays immediate cutover.
 
@@ -177,10 +152,7 @@ to catch errors before deployment.
 
 **Benefits**:
 
-- Catch syntax errors at recipe validation time
-- Prevent broken deployments
-- Better developer experience
-- Reduces debugging time during deployment
+- Fewer failed deployments caused by a typo in an install script
 
 **Related**: Overlaps with Recipe Linting & Best Practices below; syntax
 checking is the narrower first step.
@@ -197,13 +169,7 @@ style guide enforcement.
 
 **Benefits**:
 
-- Higher quality recipes
-- Consistent code style across all recipes
-- Educational for new users
-- Validates PSADT function names exist in v4
-- Warns on deprecated patterns or old v3 functions
-- Suggests improvements (e.g., use Uninstall-ADTApplication)
-- Warns about unknown fields (e.g., deprecated keys from old schema versions)
+- Higher quality, more consistent recipes, and a teaching aid for new users
 
 #### Prerelease version ranking in detection scripts
 
@@ -244,9 +210,6 @@ development time.
 
 **Benefits**:
 
-- IDE autocomplete when accessing config values
-- Type checking with mypy catches errors early
-- Typos in config keys caught by IDE instead of runtime
 - Self-documenting structure with type hints
 - Better refactoring support
 
@@ -285,10 +248,7 @@ multi-app workflows.
 
 **Benefits**:
 
-- Significantly faster builds for organizations with 50+ apps
-- Reduces time for monthly update cycles
-- Improves CI/CD pipeline performance
-- Progress reporting for multiple concurrent builds
+- Faster builds for orgs with 50+ apps, especially monthly update cycles
 
 #### Minify scripts at Intune upload
 
@@ -307,9 +267,6 @@ Optional: PowerShell-invoked AST-based minifier for greater reduction.
 
 - Reduces per-app script size in the Intune policy payload
 - Helps organizations approaching the Intune 4 MB policy limit
-- On-disk scripts remain readable and easy to debug
-- No change to build output or script behavior; minification only in the
-  upload path
 
 **Dependencies**:
 
@@ -357,161 +314,4 @@ Shipped alongside `napt auth login`, `status`, and `logout`.
 
 ---
 
-#### IntuneWinAppUtil version pinning
-
-**Status**: ✅ Completed
-**Complexity**: Low
-**Value**: Low
-
-**Description**: `intunewin.release` in `defaults/org.yaml` pins the
-`IntuneWinAppUtil.exe` release `napt package` downloads (default `latest`).
-Each release is cached independently under `cache/tools/{version}/`, so
-builds are reproducible against a known-good tool version.
-
-**Related**: Shipped in 0.5.0. See [User Guide - Package Process](user-guide.md#package-process-napt-package).
-
----
-
-#### Deployment wave management
-
-**Status**: ✅ Completed
-**Complexity**: Very High
-**Value**: High
-
-**Description**: Ring-based promotion of published apps via
-`napt promote plan` / `napt promote apply` and `napt status`.
-Apps upload unassigned; promotion advances the newest release through an
-ordered list of rings (Entra ID group assignments on the `[Update]`
-entry), displacing whatever release each ring held.
-
-**Key design points** (delivered across PRs #81-#88):
-
-- Each ring holds at most one release — the newest that has reached it;
-  releases advance after `promote_after_days` in their current ring
-- Terraform-style plan/apply: per-app plan files
-  (`state/plans/<id>.json`) are the reviewable artifact and apply's
-  allowlist; validate-then-act makes both safe to re-run
-- Authoritative per-app deployment state
-  (`state/deployment/<id>.json`, `schemaVersion` 1) split from the
-  disposable discovery cache (`cache/discovery.json`)
-- Provenance stamp `napt/v1 id=<recipe> entry=<install|update>
-  sha256=<hash>` in the Intune notes field: ownership + identity;
-  upload is idempotent (adopt, resume, or create) and hash-gated
-  against the reviewed pending release (`deployment.require_pending`)
-- Retention (`retain_versions`) keeps displaced releases for rollback;
-  drift detection warns on every state/Intune discrepancy, never
-  corrects
-- GitOps-friendly, not git-aware: deterministic state files and
-  reference GitHub Actions workflows in
-  [Common Tasks](common-tasks.md#automate-napt-with-github-actions)
-
-**Related**: Health-gated promotion (block on install failure rates),
-native Intune supersedence, and `napt upload --replace` (delete and
-republish with re-applied assignments) are deliberate follow-ups.
-
----
-
-#### Recipe schema redesign
-
-**Status**: ✅ Completed
-**Complexity**: High
-**Value**: High
-
-**Description**: Restructured the recipe and config schema to eliminate design
-awkwardness accumulated during early development.
-All changes were breaking and landed on branch `refactor/recipe-schema-redesign`.
-
-**Changes**:
-
-- Removed `app:` wrapper — `name`, `id`, `discovery:`, `psadt:`, `intune:`,
-  and `logging:` are now top-level fields in recipe files
-- `source:` renamed to `discovery:` for clarity
-- Removed `defaults:` wrapper from `org.yaml` and `vendor.yaml` — the deep
-  merger now handles layering automatically without manual merge blocks
-- `win32.installed_check` replaced by `intune.detection` — all Intune
-  configuration (upload metadata, build behavior, detection settings) is now
-  in one place
-- `log_format`, `log_level`, `log_rotation_mb` moved out of
-  `win32.installed_check` into a top-level `logging:` section, reflecting that
-  they configure on-device script behavior rather than Intune
-- Added `directories:` section to replace
-  `defaults.discover/build/package.output_dir`
-
-**Related**: See [Recipe Reference](recipe-reference.md) for the current schema.
-
----
-
-#### Unrecognized config field warnings
-
-**Status**: ✅ Completed
-**Complexity**: Low
-**Value**: Medium
-
-**Description**: `napt validate` warns when recipes, org.yaml, or vendor files
-contain unrecognized fields.
-Typo detection suggests similar field names (e.g., "Did you mean
-'display_name'?").
-
-**Related**: Implemented in `napt/validation.py`.
-
----
-
-#### Microsoft Intune upload
-
-**Status**: ✅ Completed
-**Complexity**: High
-**Value**: Very High
-
-**Description**: `napt upload <recipe>` uploads `.intunewin` packages directly
-to Microsoft Intune via the Graph API.
-Detection and requirements scripts are embedded inline from build output.
-Authentication now goes through `napt auth login` for developers and the
-`AZURE_*` environment variables or Azure CLI for CI/CD; see
-[User Guide - Authentication](user-guide.md#authentication).
-
----
-
-#### Detection script generation
-
-**Status**: ✅ Completed
-**Complexity**: High
-**Value**: High
-
-**Description**: Automatic PowerShell detection and requirements script
-generation for Intune Win32 app deployments during the build process.
-Detection scripts check if the app is installed at the required version (App
-entry); requirements scripts check if an older version is installed (Update
-entry).
-Both use the same registry checks, installer-type filtering, and CMTrace
-logging.
-
-**Notes**:
-
-- Extracts app name from MSI ProductName (for MSI installers) or uses
-  `intune.detection.display_name` (for non-MSI installers)
-- Always generates detection script `{AppName}_{Version}-Detection.ps1`;
-  generates requirements script `{AppName}_{Version}-Requirements.ps1` when
-  `intune.build_types` is `both` or `update_only`
-- Supports exact match or minimum version (installed >= expected);
-  installer-type filtering (MSI strict, non-MSI permissive)
-- Includes CMTrace-formatted logging with log rotation (NAPTDetections.log,
-  NAPTRequirements.log)
-- Configurable via `intune.detection` and `logging` sections in defaults or
-  recipe
-
-**Related**: Implemented in `napt/build/registry_scripts.py` (and
-`napt/build/msix_scripts.py` for MSIX packages), integrated into the build
-process in `napt/build/manager.py`.
-See [User Guide - Detection and Requirements Scripts](user-guide.md#detection-and-requirements-scripts)
-and [Recipe Reference - Intune Configuration](recipe-reference.md#intune-configuration).
-
----
-
-**0.5.0** - MSIX support, recipe schema flattening, and centralized config defaults
-**0.4.0** - Intune upload (`napt upload`), `napt init`, and four-layer configuration
-**0.3.1** - PyPI rename to `napt` and automated publishing
-**0.3.0** - Detection and requirements scripts, Win32 validation, architecture-aware detection
-**0.2.0** - PSADT building, `.intunewin` packaging, and new discovery strategies
-**0.1.0** - Core validation, discovery, and configuration system
-
-See [CHANGELOG.md](changelog.md) for detailed release history.
+Everything shipped in earlier releases is in the [changelog](changelog.md).

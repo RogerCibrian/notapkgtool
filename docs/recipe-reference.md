@@ -1,6 +1,6 @@
 # Recipe reference
 
-Complete documentation of all recipe fields, options, and configuration patterns. Use this as a reference when writing recipes.
+Complete documentation of every recipe field and configuration pattern.
 
 > **Tip:** For practical examples and workflows, see [Common Tasks](common-tasks.md). For strategy selection guidance, see [Discovery Strategies](user-guide.md#discovery-strategies) in the User Guide.
 
@@ -28,9 +28,9 @@ logging:                    # Optional: On-device script logging settings
 
 **Type:** `string`
 **Required:** Yes
-**Values:** `napt/v1` (currently only version)
+**Values:** `napt/v1` (the only version so far)
 
-Specifies the recipe format version. Currently only `napt/v1` is supported.
+Recipe format version.
 
 ### name
 
@@ -51,8 +51,6 @@ name. Used to generate:
 
 - Build directory names: `builds/{id}/{version}/`
 - Package names: `packages/{id}/Invoke-AppDeployToolkit.intunewin`
-
-**Naming Convention:** Use `napt-` prefix followed by application name (e.g., `napt-chrome`, `napt-git`).
 
 ## Discovery configuration
 
@@ -142,9 +140,6 @@ is `false`, discovery fails with an error rather than walking back to an older
 stable release. Set to `true` for projects whose latest release is routinely a
 pre-release.
 
-**How it works:** Queries GitHub Releases API, finds the latest release, matches assets using
-`asset_pattern`, extracts version from tag using `version_pattern`.
-
 ### api_json strategy
 
 **Best for:** Vendors with JSON REST APIs, cloud services with version endpoints, or APIs
@@ -195,11 +190,9 @@ paths (same format as `version_path`).
 **Required:** No
 **Default:** None
 
-HTTP headers to include in the API request. Useful for authentication tokens, API keys, or
-custom headers.
-
-**Environment Variable Substitution:** Use `${VARIABLE_NAME}` syntax. NAPT substitutes
-environment variables at runtime.
+HTTP headers to include in the API request, typically for authentication.
+Values support `${VARIABLE_NAME}` substitution (see
+[Variable substitution](#variable-substitution)).
 
 **Example:**
 ```yaml
@@ -207,9 +200,6 @@ headers:
   Authorization: "Bearer ${API_TOKEN}"
   X-API-Key: "${VENDOR_API_KEY}"
 ```
-
-**How it works:** Makes HTTP GET request to `api_url`, extracts version using `version_path`,
-extracts download URL using `download_url_path`. Supports nested JSON paths.
 
 ### url_download strategy
 
@@ -231,14 +221,10 @@ discovery:
 Stable download URL for the installer. **Important:** This URL must not change when new versions
 are released. If the URL changes with each version, use `web_scrape` strategy instead.
 
-**How it works:** Downloads file from `url`, auto-detects MSI files by extension (`.msi`) and
-extracts version from MSI ProductVersion property. Uses HTTP conditional requests (ETags) for
-caching to avoid re-downloading unchanged files.
-
-**Version Extraction:** Automatically detected by file extension. MSI files (`.msi` extension)
-automatically extract ProductVersion. No configuration needed. Other file types are not
-supported for version extraction — use a version-first strategy (api_github, api_json,
-web_scrape) instead.
+Downloads the file from `url`, using HTTP conditional requests (ETags) to skip
+unchanged files. MSI files supply their version from the ProductVersion
+property with no configuration; other file types need a version-first strategy
+(api_github, api_json, web_scrape) instead.
 
 ### web_scrape strategy
 
@@ -330,10 +316,6 @@ string syntax with `{0}`, `{1}`, etc. for capture groups.
 - `"{1}.{0}"` - Reverses order: `"01"` + `"25"` → `"01.25"`
 - `"v{0}"` - Prefixes version: `"2.51.2"` → `"v2.51.2"`
 
-**How it works:** Downloads HTML from `page_url`, finds the link using `link_selector` (CSS)
-or `link_pattern` (regex), extracts the version from the URL using `version_pattern`, and
-formats it using `version_format` if provided.
-
 ## PSADT configuration
 
 The `psadt` section defines PowerShell deployment scripts and PSADT variables:
@@ -407,14 +389,12 @@ PSADT application variables set in the generated `Invoke-AppDeployToolkit.ps1` f
 NAPT sets `AppArch` itself from the installer architecture; `napt validate`
 rejects it as an `app_vars` key.
 
-**Build-time variables:** NAPT substitutes `{{discovered_version}}` (the version
-discovered by NAPT) and `{{installer_filename}}` (the exact filename of the downloaded
-installer) in all `app_vars` values.
-Use `{{discovered_version}}` in `AppVersion` to ensure the version matches the
-downloaded installer.
+Values support the build-time variables in
+[Variable substitution](#variable-substitution); use `{{discovered_version}}`
+in `AppVersion` so the version matches the downloaded installer.
 
 For org-wide values such as `AppVendor`, set them once in `defaults/org.yaml`
-(or a vendor file) instead of repeating them per recipe — the configuration
+(or a vendor file) instead of repeating them per recipe; the configuration
 layers are deep-merged into every recipe.
 
 ### override_msi_commands
@@ -439,10 +419,6 @@ and verbose MSI logging automatically; `-AdditionalArgumentList` appends `ALLUSE
 to those defaults to force a per-machine installation.
 Uninstall matches the MSI ProductName exactly (extracted at build time), not the
 ProductCode, so it keeps working when vendors change the ProductCode between versions.
-
-These commands are used unless `override_msi_commands: true` is set. If the
-recipe specifies `psadt.install` or `psadt.uninstall` without this flag, a
-warning is logged and the recipe values are ignored.
 
 **Behavior:**
 
@@ -483,10 +459,6 @@ The commands vary based on `intune.run_as_account`:
 - **Install (`user`):** `Add-AppxPackage -Path "$($adtSession.DirFiles)\{filename}"`
 - **Uninstall (`user`):** `Get-AppxPackage -Name "{identity_name}" | Remove-AppxPackage`
 
-These commands are used unless `override_msix_commands: true` is set. If the
-recipe specifies `psadt.install` or `psadt.uninstall` without this flag, a
-warning is logged and the recipe values are ignored.
-
 **Behavior:**
 
 - `false` (default): Auto-generated commands are used; recipe `install`/`uninstall` are ignored with a warning if set
@@ -515,12 +487,9 @@ psadt:
 PowerShell script executed during installation. Inserted into the generated
 `Invoke-AppDeployToolkit.ps1` in the installation section.
 
-**Build-time variables** (substituted by NAPT when the script is generated —
-these are not PowerShell variables):
-
-- `{{discovered_version}}`: Version discovered by NAPT
-- `{{installer_filename}}`: Exact filename of the downloaded installer in the
-  package's `Files` directory
+Supports the same build-time variables as `app_vars` (see
+[Variable substitution](#variable-substitution)); these are substituted when
+the script is generated and are not PowerShell variables.
 
 **PowerShell variables** (available at deploy time):
 
@@ -595,9 +564,9 @@ intune:
 **Default:** `"both"`
 **Allowed values:** `"both"`, `"app_only"`, `"update_only"`
 
-Controls which Intune Win32 app entries are created during `napt build` and
-`napt upload`. The detection script is always generated. This setting
-controls requirements script generation and how many app entries are uploaded:
+Controls which Intune Win32 app entries `napt upload` creates and whether
+`napt build` generates the requirements script (the detection script is always
+generated):
 
 - `"both"` (default): Generate detection and requirements scripts;
   `napt upload` creates an install entry (detection only) and an update entry
@@ -606,12 +575,6 @@ controls requirements script generation and how many app entries are uploaded:
   `napt upload` creates the install entry only
 - `"update_only"`: Generate detection and requirements scripts;
   `napt upload` creates the update entry only
-
-**Example:**
-```yaml
-intune:
-  build_types: "app_only"  # Only create App entry for this app
-```
 
 ### update_name_prefix
 
@@ -871,13 +834,6 @@ PowerShell's `-like` operator instead of exact `-eq` matching:
 | `*` | Matches zero or more characters | `"7-Zip *"` matches "7-Zip 24.09", "7-Zip 25.01 (x64)" |
 | `?` | Matches exactly one character | `"7-Zip ??.??"` matches "7-Zip 24.09" but not "7-Zip 24.9" |
 
-**Example:**
-```yaml
-intune:
-  detection:
-    display_name: "My Application"  # Matches registry DisplayName for EXE installers
-```
-
 **Example with version in DisplayName:**
 ```yaml
 intune:
@@ -912,18 +868,10 @@ requirements scripts check, and which device architectures the app is offered to
 
 | Value | Registry view | Intune device targets |
 |-------|---------------|-----------------------|
-| `x86` | 32-bit only | x86, x64, ARM64 — all Windows can run x86 via WOW64 |
-| `x64` | 64-bit only | x64, ARM64 — ARM64 Windows 11 supports x64 emulation |
-| `arm64` | 64-bit only | ARM64 only — native binary |
-| `any` | All views | x86, x64, ARM64 — permissive |
-
-**Example:**
-```yaml
-intune:
-  detection:
-    display_name: "My Application"
-    architecture: "x64"  # Required for EXE installers
-```
+| `x86` | 32-bit only | x86, x64, ARM64 (all Windows can run x86 via WOW64) |
+| `x64` | 64-bit only | x64, ARM64 (ARM64 Windows 11 supports x64 emulation) |
+| `arm64` | 64-bit only | ARM64 only (native binary) |
+| `any` | All views | x86, x64, ARM64 (permissive) |
 
 #### exact_match
 
@@ -957,58 +905,16 @@ number that changes with each release (e.g., "7-Zip 25.01").
 - `true`: Uses `display_name` field (must be set)
 - Non-MSI installers: Flag is ignored (a warning is logged if set)
 
-**Note:** Architecture is still auto-detected from the MSI Template property even when using
-this override.
-
 **Example:**
 ```yaml
 intune:
   detection:
-    display_name: "7-Zip * (x64 edition)"  # Matches any 7-Zip x64 version
-    override_msi_display_name: true         # Use display_name instead of MSI ProductName
-    # architecture still auto-detected from MSI Template
+    display_name: "7-Zip * (x64 edition)"
+    override_msi_display_name: true
 ```
 
-**How Scripts Work (MSI/EXE - Registry-based):**
-
-- **App Name Detection:**
-    - **MSI installers:** Uses MSI `ProductName` property (authoritative source for registry
-      `DisplayName`). The `display_name` field is ignored unless `override_msi_display_name:
-      true` is set.
-    - **Non-MSI installers:** Requires `intune.detection.display_name` in recipe configuration.
-    - **Wildcard matching:** When `display_name` contains `*` or `?`, scripts use PowerShell's
-      `-like` operator for flexible matching.
-- **Installer Type Filtering:**
-    - **MSI installers (strict):** Only matches registry entries with `WindowsInstaller` = 1.
-    - **Non-MSI installers (permissive):** Matches any registry entry.
-- **Architecture-Aware Registry Checking:** Uses explicit registry views for deterministic
-  detection (`x64`/`arm64`: 64-bit view; `x86`: 32-bit view; `any`: both views). For MSI
-  installers, architecture is auto-detected from the MSI Template property.
-- **Version Comparison:** Uses `DisplayVersion` registry value. Detection: exit 0 if installed
-  meets requirement, 1 otherwise. Requirements: always exit 0; output "Required" to stdout if
-  an older version is installed, nothing otherwise.
-
-**How Scripts Work (MSIX - AppX Package-based):**
-
-- **Package Detection:** Uses `Get-AppxPackage -Name "{identity_name}"` to query the Windows
-  AppX package database. The identity name is extracted from the MSIX manifest's `Identity`
-  element.
-- **No registry scanning:** MSIX detection does not check uninstall registry keys. The AppX
-  package database is the authoritative source for MSIX installations.
-- **Architecture:** Auto-detected from `ProcessorArchitecture` in the MSIX manifest. Not
-  configurable via recipe (manifest is authoritative).
-- **Version Comparison:** Same logic as registry-based scripts. Detection: exit 0 if installed
-  meets requirement, 1 otherwise. Requirements: always exit 0; output "Required" if installed
-  version < target.
-
-**Script Location (all installer types):**
-
-Generated scripts are saved as siblings to the `packagefiles/` directory
-(not included in `.intunewin` package). `napt upload` reads them directly from the build
-output and embeds them as inline PowerShell rules in the Intune app record.
-
-See [Detection and Requirements Scripts](user-guide.md#detection-and-requirements-scripts) in
-the User Guide for how scripts work and how to configure them in Intune.
+See [Detection and requirements scripts](user-guide.md#detection-and-requirements-scripts)
+in the User Guide for how the generated scripts work and where they are stored.
 
 ## IntuneWinAppUtil configuration
 
@@ -1055,17 +961,13 @@ This setting is typically configured in `defaults/org.yaml` rather than per-reci
 
 Maximum log file size in megabytes before rotation. Scripts use a 2-file rotation scheme
 (`.log` and `.log.old`).
-
-**Note:** Scripts try the Intune folder first:
-`C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\` (creating the parent directory if
-it does not exist and verifying write access). If that fails (e.g., permissions), they fall back
-to `C:\ProgramData\NAPT\` (system) or `%LOCALAPPDATA%\NAPT\` (user). If both fail, a warning is
-written to stderr and the script runs without a log file.
+Log file locations are described in
+[Detection and requirements scripts](user-guide.md#detection-and-requirements-scripts).
 
 ## Deployment configuration
 
 The `deployment` section controls upload strictness and deployment promotion.
-These settings are org policy — configure them in `defaults/org.yaml` and
+These settings are org policy: configure them in `defaults/org.yaml` and
 override per-recipe only when an app needs different treatment.
 
 ```yaml
@@ -1091,7 +993,7 @@ Display names are resolved via the Graph API, which requires the
 Two names are reserved for Intune's built-in targets: `"All Users"` and
 `"All Devices"` assign the corresponding virtual group instead of looking
 up an Entra ID group.
-The reserved names always win — a real Entra ID group that shares one of
+The reserved names always win: a real Entra ID group that shares one of
 these display names must be referenced by its object ID.
 
 ### require_pending
@@ -1101,8 +1003,8 @@ these display names must be referenced by its object ID.
 **Default:** `false`
 
 When enabled, `napt upload` fails if the app's deployment state has no
-pending release matching the package — nothing reaches Intune without a
-recorded release.
+pending release matching the package (nothing reaches Intune without a
+recorded release).
 Enable this when publishes are gated through review of committed deployment
 state.
 For a manual upload under this policy, run `napt discover` first or add a
@@ -1192,25 +1094,8 @@ psadt:
     Start-ADTProcess -FilePath "{{installer_filename}}" -ArgumentList "/S"
 ```
 
-### Setting environment variables
-
-**Windows (PowerShell):**
-```powershell
-$env:GITHUB_TOKEN="your_token_here"
-```
-
-**Windows (Command Prompt):**
-```cmd
-set GITHUB_TOKEN=your_token_here
-```
-
-**Linux/macOS:**
-```bash
-export GITHUB_TOKEN="your_token_here"
-```
-
-**Note:** For CI/CD, set environment variables in your pipeline configuration (GitHub Actions,
-Azure DevOps, etc.).
+For setting the variables locally and in CI/CD, see
+[Handle authentication tokens](common-tasks.md#handle-authentication-tokens).
 
 ## Complete example
 

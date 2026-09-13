@@ -85,7 +85,8 @@ why it matters. Wrap at 80 chars.
 
 - New entries: place at the bottom of the appropriate category section
 - Status changes: edit in place
-- Completed entries: leave in their category but update Status, swap Benefits → Changes/Notes, drop the Complexity time estimate
+- Completed entries: move to `## Recently completed`, update Status, swap Benefits → Changes/Notes, drop the Complexity time estimate, and update the Quick reference row and summary counts
+- Recently completed is a short-lived section: `/release` deletes every entry shipped in an earlier release (and its Quick reference row). Don't archive here; the changelog is the permanent record
 
 ## Step 5: Confirm
 
