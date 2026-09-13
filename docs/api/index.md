@@ -4,7 +4,7 @@ Overview of NAPT's codebase structure, architecture, and key concepts for contri
 
 ## Code organization
 
-NAPT's codebase structure matches the module organization. Here's the file structure:
+Here's the file structure:
 
 ```
 napt/
@@ -94,27 +94,13 @@ Recipe YAML
 Result (dataclass)
 ```
 
-## Quick start
-
-- **Adding a CLI command:** See [`cli/`](cli.md) for command registration patterns
-- **Adding discovery strategies:** Implement `DiscoveryStrategy` protocol from [`discovery/base.py`](discovery.md)
-
 ## Key concepts
 
 - **Discovery Strategies:** Protocol-based, stateless, listed in an explicit registry table (api_github, api_json, web_scrape). All return a `RemoteVersion` from configuration alone. The orchestrator runs the result through `resolve_with_cache` to skip the download when the version is unchanged. `url_download` is a separate flow (not a registered strategy) because it must download the file to determine the version.
 - **Configuration:** 3-layer system (org → vendor → recipe) with deep merging
-- **State Management:** Two kinds with opposite philosophies — the disposable discovery cache (`cache/discovery.json`) for download optimization, and authoritative per-app deployment state (`state/deployment/<id>.json`) recording what is published and pending
+- **State Management:** Two kinds with opposite philosophies: the disposable discovery cache (`cache/discovery.json`) for download optimization, and authoritative per-app deployment state (`state/deployment/<id>.json`) recording what is published and pending
 - **Exceptions:** All NAPT domain errors use custom exceptions inheriting from `NAPTError` (ConfigError, NetworkError, PackagingError, StateError, AuthError) - allows catching all NAPT errors or specific types
-- **Return Types:** Frozen dataclasses from `results.py`, one per napt command's underlying operation (type-safe, immutable returns)
-
-## Design principles
-
-- Single Responsibility per module
-- Protocol-based interfaces (typing.Protocol)
-- Stateless strategies (instantiated on-demand)
-- Structured returns (frozen dataclasses)
-- Exception-based error handling
-- Immutable configuration
+- **Return Types:** Frozen dataclasses from `results.py`, one per napt command's underlying operation
 
 ## Common contributor tasks
 

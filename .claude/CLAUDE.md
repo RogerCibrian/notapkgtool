@@ -217,9 +217,13 @@ Update docs when code changes affect user-facing behavior.
 | **common-tasks.md** | Copy-paste workflows |
 | **recipe-reference.md** | Complete recipe schema |
 
-**README.md sync:** ONE-WAY from index.md. Transform relative links to full URLs.
+**README.md sync:** ONE-WAY from index.md. Transform relative links to full URLs. The docs-links bar under the tagline is README-only.
 
 **What to update:** New feature → user-guide, common-tasks, changelog. CLI change → same. Recipe schema → recipe-reference, common-tasks, changelog.
+
+**Ownership (one home per fact):** how it works lives in user-guide, copy-paste workflows in common-tasks, field definitions in recipe-reference. Link to the owning doc instead of re-explaining.
+
+**Voice:** plain and direct. No marketing adjectives, exclamation points, or emoji in prose. No em dashes anywhere (use a comma, colon, semicolon, or parentheses). Say what a thing does and why; skip sentences that restate the heading or announce what follows. In sample console output, replace values that change per run with placeholders like `<version>`.
 
 **Formatting:** Use sentence case for headings. One sentence per line in source. Wrap at 80 chars for prose.
 
@@ -276,6 +280,8 @@ Follow [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/). Focus on 
 ## Roadmap
 
 When the user mentions deferred features ("add to roadmap", "let's do this later"), run `/roadmap`. The skill enforces the standard entry structure (Status / Complexity / Value / Description / Benefits / Prerequisites / Dependencies / Related), the status-progression vocabulary, and category placement (User-Facing Features / Code Quality & Validation / Technical Enhancements) in `docs/roadmap.md`.
+
+Completed entries move to **Recently completed** and stay there only until the next release ships; `/release` then deletes anything shipped in an earlier release. The changelog is the permanent record.
 
 ---
 

@@ -46,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **OIDC federation for CI/CD** - An Azure CLI session signed in as a
     service principal (what OIDC login steps such as GitHub Actions
     `azure/login` leave behind) is now honored, so pipelines can run
-    without a client secret; documented as the recommended CI/CD setup.
+    without a client secret. This is the recommended CI/CD setup.
     A CLI signed in as a person is refused so Intune activity is always
     attributed to the NAPT registration
 

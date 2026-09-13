@@ -1,12 +1,12 @@
 # Contributing to NAPT
 
-Thank you for your interest in contributing to NAPT! We welcome ideas and feedback.
+NAPT welcomes ideas and feedback.
 
 ## How to contribute
 
 ### Feature ideas
 
-Have an idea for NAPT? We'd love to hear it!
+Have an idea for NAPT?
 
 1. **Check the roadmap** - See [Roadmap](roadmap.md) to see what's planned
 2. **Open a GitHub Discussion** - Share your idea and get feedback
@@ -20,28 +20,18 @@ When suggesting features, please include:
 
 ### Feedback
 
-Have feedback, questions, or encountered issues? We'd love to hear from you!
-
 - **Questions about using NAPT** - Open a GitHub Discussion
 - **Feature ideas or suggestions** - See the Feature Ideas section above
 - **Issues or problems** - Open a GitHub Issue (note: NAPT is pre-release, so issues are expected)
-
-### Questions
-
-Have questions about using NAPT? Open a GitHub Discussion - we're happy to help!
 
 ## Code contributions
 
 We're currently not accepting code contributions. NAPT is still in active development and has not reached 1.0 yet. The project is evolving rapidly with frequent changes to APIs, schemas, configuration formats, and internal structure.
 
-This means:
+Breaking changes are common, backward compatibility is not maintained, and
+code contributions would need constant rework to keep up.
 
-- APIs and function signatures may change without notice
-- Recipe schema and configuration formats are still being refined
-- Breaking changes are common and backward compatibility is not maintained
-- Code contributions would likely require significant maintenance as the codebase evolves
-
-**Once NAPT reaches 1.0**, we'll be open to code contributions and will establish contribution guidelines. Until then, your ideas and feedback are incredibly valuable and help shape the direction of the project.
+**Once NAPT reaches 1.0**, we'll be open to code contributions and will establish contribution guidelines. Until then, your ideas and feedback help shape the project's direction.
 
 If you're interested in contributing code in the future, please reach out via GitHub Discussion first to discuss the current state and future plans.
 

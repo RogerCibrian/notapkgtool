@@ -70,9 +70,15 @@ bump and changelog promotion — nothing from an unrelated feature branch can le
    - Insert a fresh empty `## [Unreleased]` section above it
    - Add a comparison link at the bottom of the file: `[X.Y.Z]: https://github.com/RogerCibrian/notapkgtool/compare/PREV...X.Y.Z` (PREV = the previous release tag)
 
+6b. **Prune the roadmap** in `docs/roadmap.md`. `## Recently completed` only
+   holds entries shipped since the last release. Delete every entry that
+   shipped in an earlier release (everything there except what this release
+   ships), remove their Quick reference rows, and recount the summary. The
+   changelog is the permanent record, so nothing is summarized elsewhere.
+
 7. **Stage and commit** specific files only:
    ```
-   git add pyproject.toml docs/changelog.md
+   git add pyproject.toml docs/changelog.md docs/roadmap.md
    git commit -m "chore: Prepare release X.Y.Z"
    ```
 
