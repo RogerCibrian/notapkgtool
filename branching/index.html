@@ -1670,10 +1670,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#commit-guidelines_1" class="md-nav__link">
+  <a href="#rules" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Commit guidelines
+        Rules
       
     </span>
   </a>
@@ -1709,32 +1709,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#why-squash-and-merge" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why squash and merge?
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#merging" class="md-nav__link">
     <span class="md-ellipsis">
       
         Merging
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#workflow" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Workflow
       
     </span>
   </a>
@@ -1823,7 +1801,7 @@
   <a href="#do" class="md-nav__link">
     <span class="md-ellipsis">
       
-        DO ✅
+        Do
       
     </span>
   </a>
@@ -1834,7 +1812,7 @@
   <a href="#dont" class="md-nav__link">
     <span class="md-ellipsis">
       
-        DON'T ❌
+        Don't
       
     </span>
   </a>
@@ -1873,7 +1851,6 @@
 <li><strong><code>main</code> branch is always stable</strong> - Production-ready code only</li>
 <li><strong>Feature branches for all work</strong> - Every change starts from a branch</li>
 <li><strong>Pull Requests for review</strong> - All changes reviewed before merging</li>
-<li><strong>Merge frequently</strong> - Keep branches short-lived (&lt; 1 week ideal)</li>
 </ol>
 <h2 id="quick-start">Quick start</h2>
 <p>The most common workflow for making changes:</p>
@@ -1888,7 +1865,7 @@
 <h3 id="2-during-development">2. During development</h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Make changes, commit frequently</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>git<span class="w"> </span>add<span class="w"> </span>.
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"feat: add your feature"</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"feat: Add your feature"</span>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># Push your branch</span>
 </span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>feat/your-feature-name
@@ -1920,7 +1897,6 @@
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>└── refactor/simplify-config-loader
 </span></code></pre></div>
 <h3 id="branch-naming-convention">Branch naming convention</h3>
-<p>Use descriptive names with type prefixes:</p>
 <p>The prefix is the conventional commit type the PR will squash to:</p>
 <table>
 <thead>
@@ -1968,8 +1944,6 @@
 </tr>
 </tbody>
 </table>
-<p><code>feature/</code> and <code>bugfix/</code> also appear in the history and are accepted, but
-prefer the short forms so the branch name and the squash commit type match.</p>
 <h3 id="naming-rules">Naming rules</h3>
 <ul>
 <li>Use lowercase with hyphens</li>
@@ -2009,41 +1983,41 @@ prefer the short forms so the branch name and the squash commit type match.</p>
 <tr>
 <td><code>feat</code></td>
 <td>New feature</td>
-<td><code>feat: add EXE version extraction</code></td>
+<td><code>feat: Add EXE version extraction</code></td>
 </tr>
 <tr>
 <td><code>fix</code></td>
 <td>Bug fix</td>
-<td><code>fix: correct version comparison logic</code></td>
+<td><code>fix: Correct version comparison logic</code></td>
 </tr>
 <tr>
 <td><code>docs</code></td>
 <td>Documentation</td>
-<td><code>docs: update installation instructions</code></td>
+<td><code>docs: Update installation instructions</code></td>
 </tr>
 <tr>
 <td><code>refactor</code></td>
 <td>Code improvement</td>
-<td><code>refactor: simplify config loading</code></td>
+<td><code>refactor: Simplify config loading</code></td>
 </tr>
 <tr>
 <td><code>test</code></td>
 <td>Tests</td>
-<td><code>test: add tests for MSI extraction</code></td>
+<td><code>test: Add tests for MSI extraction</code></td>
 </tr>
 <tr>
 <td><code>chore</code></td>
 <td>Maintenance</td>
-<td><code>chore: update Poetry dependencies</code></td>
+<td><code>chore: Update Poetry dependencies</code></td>
 </tr>
 <tr>
 <td><code>perf</code></td>
 <td>Performance</td>
-<td><code>perf: optimize version comparison</code></td>
+<td><code>perf: Optimize version comparison</code></td>
 </tr>
 </tbody>
 </table>
-<h3 id="commit-guidelines_1">Commit guidelines</h3>
+<h3 id="rules">Rules</h3>
 <ul>
 <li>Use imperative mood: "add" not "added" or "adds"</li>
 <li>Keep subject line under 50 characters</li>
@@ -2052,9 +2026,9 @@ prefer the short forms so the branch name and the squash commit type match.</p>
 <li>Separate subject from body with blank line</li>
 </ul>
 <p><strong>Good Examples:</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"feat: add RPM version extraction support"</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"fix: handle missing ETag headers gracefully"</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"docs: add examples for Linux MSI extraction"</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"feat: Add RPM version extraction support"</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"fix: Handle missing ETag headers gracefully"</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"docs: Add examples for Linux MSI extraction"</span>
 </span></code></pre></div></p>
 <p><strong>Bad Examples:</strong>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">"added stuff"</span><span class="w">           </span><span class="c1"># Not descriptive</span>
@@ -2064,17 +2038,9 @@ prefer the short forms so the branch name and the squash commit type match.</p>
 <h2 id="pull-request-process">Pull request process</h2>
 <p>When creating a PR, the <a href="https://github.com/RogerCibrian/notapkgtool/blob/main/.github/PULL_REQUEST_TEMPLATE.md">PR template</a> auto-populates with sections for Description, Motivation, Changes, Testing, and Checklist.</p>
 <h2 id="merge-strategy">Merge strategy</h2>
-<p><strong>Squash and Merge, always</strong></p>
 <p>NAPT uses <strong>squash and merge</strong> for every Pull Request, including release
-PRs, to maintain a clean, readable history in <code>main</code>.</p>
-<h3 id="why-squash-and-merge">Why squash and merge?</h3>
-<ul>
-<li>✅ <strong>Clean history</strong>: One commit per feature/fix in <code>main</code></li>
-<li>✅ <strong>Conventional commits</strong>: Each merge becomes a properly formatted commit</li>
-<li>✅ <strong>Easy rollback</strong>: Revert entire features with one command</li>
-<li>✅ <strong>Better changelogs</strong>: No noise from "WIP" or "fix typo" commits</li>
-<li>✅ <strong>Simple bisecting</strong>: Each commit represents a complete, working change</li>
-</ul>
+PRs, so <code>main</code> gets one clean, conventional commit per change instead of
+every WIP commit from the branch.</p>
 <h3 id="merging">Merging</h3>
 <p>When merging on GitHub:
 1. Click "Squash and merge"
@@ -2082,7 +2048,7 @@ PRs, to maintain a clean, readable history in <code>main</code>.</p>
 3. Summarize all changes in the commit body
 4. Reference any issues with <code>Closes #XX</code></p>
 <p><strong>Example:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>feat: add RPM version extraction support
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>feat: Add RPM version extraction support
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>- Implement RPM ProductVersion parser using rpm-py-installer
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>- Add cross-platform support for RPM files (Linux/macOS)
@@ -2094,13 +2060,6 @@ PRs, to maintain a clean, readable history in <code>main</code>.</p>
 <p>Release PRs are no exception: <code>/release</code> makes a single
 <code>chore: Prepare release X.Y.Z</code> commit (version bump plus changelog
 promotion), and that squashes like any other PR.</p>
-<h3 id="workflow">Workflow</h3>
-<ol>
-<li><strong>Before creating PR</strong>: Clean up your branch commits if needed</li>
-<li><strong>During review</strong>: Add commits normally (don't squash yet)</li>
-<li><strong>When merging</strong>: Use GitHub's "Squash and merge" button</li>
-<li><strong>After merge</strong>: Branch is auto-deleted, pull latest <code>main</code></li>
-</ol>
 <h3 id="tips">Tips</h3>
 <ul>
 <li>Don't worry about messy commits in your branch - they'll be squashed</li>
@@ -2127,21 +2086,13 @@ promotion), and that squashes like any other PR.</p>
 3. Use draft PRs to show progress
 4. Consider feature flags for incomplete features</p>
 <h3 id="urgent-hotfixes">Urgent hotfixes</h3>
-<p>For critical production issues:
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Branch from main</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>git<span class="w"> </span>checkout<span class="w"> </span>main
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>git<span class="w"> </span>pull<span class="w"> </span>origin<span class="w"> </span>main
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>fix/security-vulnerability
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="c1"># Fix, test, and push</span>
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>git<span class="w"> </span>commit<span class="w"> </span>-am<span class="w"> </span><span class="s2">"fix: Patch security vulnerability"</span>
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>fix/security-vulnerability
-</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>
-</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="c1"># Create PR with high priority</span>
-</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="c1"># Fast-track review and merge</span>
+<p>For critical production issues, branch from <code>main</code> as usual, then fix,
+test, and push:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>git<span class="w"> </span>commit<span class="w"> </span>-am<span class="w"> </span><span class="s2">"fix: Patch security vulnerability"</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>fix/security-vulnerability
 </span></code></pre></div></p>
 <h2 id="best-practices-quality-checks">Best practices &amp; quality checks</h2>
-<h3 id="do">DO ✅</h3>
+<h3 id="do">Do</h3>
 <ul>
 <li>Create small, focused branches with single purpose</li>
 <li>Commit early and often with clear messages</li>
@@ -2152,7 +2103,7 @@ promotion), and that squashes like any other PR.</p>
 <li>Update branch with <code>main</code> if it's behind</li>
 <li>Delete branches after merging</li>
 </ul>
-<h3 id="dont">DON'T ❌</h3>
+<h3 id="dont">Don't</h3>
 <ul>
 <li>Never commit directly to <code>main</code></li>
 <li>Don't create long-lived feature branches</li>
@@ -2161,8 +2112,6 @@ promotion), and that squashes like any other PR.</p>
 <li>Don't force push to shared branches</li>
 <li>Don't include unrelated changes in one PR</li>
 </ul>
-<hr />
-<p><strong>Strategy</strong>: GitHub Flow with Squash and Merge</p>
 
 
 

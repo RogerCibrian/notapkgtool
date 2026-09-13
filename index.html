@@ -472,17 +472,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#cross-platform-support" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Cross-platform support
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#getting-started" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1720,17 +1709,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#cross-platform-support" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Cross-platform support
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#getting-started" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1824,7 +1802,7 @@
 <a href="https://www.python.org/downloads/"><img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11+-blue.svg" /></a>
 <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg" /></a></p>
 <h2 id="overview">Overview</h2>
-<p>NAPT is a Python-based CLI tool that automates the entire workflow for packaging Windows applications and deploying them to Microsoft Intune. It runs on Windows, Linux, and macOS, though packaging (.intunewin creation) requires Windows.</p>
+<p>NAPT is a Python CLI. It runs on Windows, Linux, and macOS, though packaging (.intunewin creation) requires Windows.</p>
 <h3 id="why-napt">Why NAPT?</h3>
 <p>Packaging applications for Microsoft Intune with PSAppDeployToolkit (PSADT) typically involves a manual, time-consuming process:</p>
 <ol>
@@ -1838,7 +1816,7 @@
 <p><strong>Create detection and requirements scripts</strong> - Write PowerShell detection and requirements logic, test thoroughly, maintain version checks. Must update for each new version.</p>
 </li>
 <li>
-<p><strong>Package as .intunewin</strong> - Run IntuneWinAppUtil.exe manually, manage paths, handle errors. Tedious and error-prone.</p>
+<p><strong>Package as .intunewin</strong> - Run IntuneWinAppUtil.exe manually, manage paths, handle errors.</p>
 </li>
 <li>
 <p><strong>Upload to Intune</strong> - Upload package via portal, fill metadata, configure app info and requirements manually.</p>
@@ -1847,48 +1825,15 @@
 <p><strong>Configure deployment</strong> - Set up rollout assignments manually for each version.</p>
 </li>
 </ol>
-<p>This manual workflow is repetitive, difficult to automate in CI/CD pipelines, lacks version tracking, and requires re-doing most of the work for every update. NAPT automates this entire workflow with YAML-based recipes and automatic version tracking.</p>
+<p>NAPT replaces this with YAML-based recipes and automatic version tracking.</p>
 <h3 id="key-features">Key features</h3>
 <ul>
-<li>✅ <strong>Automatic version tracking</strong> - Automatic discovery from MSI, EXE, URLs, or APIs with caching to skip unnecessary downloads</li>
-<li>✅ <strong>YAML-based recipes</strong> - Define app packaging once with layered configuration (Organization → Vendor → Recipe)</li>
-<li>✅ <strong>Automated PSADT packaging</strong> - Generate Intune-ready packages with detection and requirements scripts, no manual template editing</li>
-<li>✅ <strong>Cross-platform workflow</strong> - Run on Windows, Linux, and macOS (packaging requires Windows)</li>
-<li>✅ <strong>Direct Intune upload</strong> - Upload to Microsoft Intune via the Graph API, no portal required</li>
+<li><strong>Automatic version tracking</strong> - Discovery from MSI, EXE, URLs, or APIs with caching to skip unnecessary downloads</li>
+<li><strong>YAML-based recipes</strong> - Define app packaging once with layered configuration (Organization → Vendor → Recipe)</li>
+<li><strong>Automated PSADT packaging</strong> - Generate Intune-ready packages with detection and requirements scripts, no manual template editing</li>
+<li><strong>Cross-platform workflow</strong> - Run on Windows, Linux, and macOS (packaging requires Windows)</li>
+<li><strong>Direct Intune upload</strong> - Upload to Microsoft Intune via the Graph API, no portal required</li>
 </ul>
-<h2 id="cross-platform-support">Cross-platform support</h2>
-<table>
-<thead>
-<tr>
-<th>Feature</th>
-<th>Windows</th>
-<th>Linux/macOS</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Discovery &amp; Download</td>
-<td>✅</td>
-<td>✅</td>
-</tr>
-<tr>
-<td>PSADT Package Building</td>
-<td>✅</td>
-<td>✅</td>
-</tr>
-<tr>
-<td>Intune Packaging</td>
-<td>✅</td>
-<td>⚫ Windows Only</td>
-</tr>
-<tr>
-<td>Intune Upload</td>
-<td>✅</td>
-<td>✅</td>
-</tr>
-</tbody>
-</table>
-<p>See the <a href="user-guide/#cross-platform-support">Cross-platform support</a> section for platform-specific workflows.</p>
 <h2 id="getting-started">Getting started</h2>
 <p>See the <a href="quick-start/">Quick Start Guide</a> for installation and setup.</p>
 <h2 id="creating-recipes">Creating recipes</h2>
@@ -1905,7 +1850,7 @@ They are not included in the pip package.
 Run <code>napt init</code> to create your own workspace with a starter <code>org.yaml</code>.</p>
 <p>NAPT supports multiple discovery strategies (url_download, web_scrape, api_github, api_json) - see the <a href="user-guide/#discovery-strategies">Discovery Strategies</a> guide for detailed configuration and more examples.</p>
 <h2 id="contributing">Contributing</h2>
-<p>Ideas and feedback are welcome! See <a href="contributing/">Contributing</a> for guidelines.</p>
+<p>Ideas and feedback are welcome. See <a href="contributing/">Contributing</a> for guidelines.</p>
 <h2 id="license">License</h2>
 <p>This project is licensed under the Apache License 2.0 - see the <a href="https://github.com/RogerCibrian/notapkgtool/blob/main/LICENSE">LICENSE</a> file for details.</p>
 <h2 id="author">Author</h2>

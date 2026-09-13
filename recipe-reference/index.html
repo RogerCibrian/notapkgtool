@@ -1442,17 +1442,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#setting-environment-variables" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Setting environment variables
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -3295,17 +3284,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#setting-environment-variables" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Setting environment variables
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -3354,7 +3332,7 @@
 
 
 <h1 id="recipe-reference">Recipe reference</h1>
-<p>Complete documentation of all recipe fields, options, and configuration patterns. Use this as a reference when writing recipes.</p>
+<p>Complete documentation of every recipe field and configuration pattern.</p>
 <blockquote>
 <p><strong>Tip:</strong> For practical examples and workflows, see <a href="../common-tasks/">Common Tasks</a>. For strategy selection guidance, see <a href="../user-guide/#discovery-strategies">Discovery Strategies</a> in the User Guide.</p>
 </blockquote>
@@ -3378,8 +3356,8 @@
 <h3 id="apiversion">apiVersion</h3>
 <p><strong>Type:</strong> <code>string</code>
 <strong>Required:</strong> Yes
-<strong>Values:</strong> <code>napt/v1</code> (currently only version)</p>
-<p>Specifies the recipe format version. Currently only <code>napt/v1</code> is supported.</p>
+<strong>Values:</strong> <code>napt/v1</code> (the only version so far)</p>
+<p>Recipe format version.</p>
 <h3 id="name">name</h3>
 <p><strong>Type:</strong> <code>string</code>
 <strong>Required:</strong> Yes</p>
@@ -3395,7 +3373,6 @@ name. Used to generate:</p>
 <li>Build directory names: <code>builds/{id}/{version}/</code></li>
 <li>Package names: <code>packages/{id}/Invoke-AppDeployToolkit.intunewin</code></li>
 </ul>
-<p><strong>Naming Convention:</strong> Use <code>napt-</code> prefix followed by application name (e.g., <code>napt-chrome</code>, <code>napt-git</code>).</p>
 <h2 id="discovery-configuration">Discovery configuration</h2>
 <p>The <code>discovery</code> section defines how NAPT finds and downloads the installer. The structure
 depends on the chosen <code>strategy</code>.</p>
@@ -3458,8 +3435,6 @@ looks at the most recent release only; when it is a pre-release and this field
 is <code>false</code>, discovery fails with an error rather than walking back to an older
 stable release. Set to <code>true</code> for projects whose latest release is routinely a
 pre-release.</p>
-<p><strong>How it works:</strong> Queries GitHub Releases API, finds the latest release, matches assets using
-<code>asset_pattern</code>, extracts version from tag using <code>version_pattern</code>.</p>
 <h3 id="api_json-strategy">api_json strategy</h3>
 <p><strong>Best for:</strong> Vendors with JSON REST APIs, cloud services with version endpoints, or APIs
 requiring authentication.</p>
@@ -3493,17 +3468,14 @@ paths (same format as <code>version_path</code>).</p>
 <p><strong>Type:</strong> <code>object</code> (key-value pairs)
 <strong>Required:</strong> No
 <strong>Default:</strong> None</p>
-<p>HTTP headers to include in the API request. Useful for authentication tokens, API keys, or
-custom headers.</p>
-<p><strong>Environment Variable Substitution:</strong> Use <code>${VARIABLE_NAME}</code> syntax. NAPT substitutes
-environment variables at runtime.</p>
+<p>HTTP headers to include in the API request, typically for authentication.
+Values support <code>${VARIABLE_NAME}</code> substitution (see
+<a href="#variable-substitution">Variable substitution</a>).</p>
 <p><strong>Example:</strong>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">headers</span><span class="p">:</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">Authorization</span><span class="p">:</span><span class="w"> </span><span class="s">"Bearer</span><span class="nv"> </span><span class="s">${API_TOKEN}"</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">X-API-Key</span><span class="p">:</span><span class="w"> </span><span class="s">"${VENDOR_API_KEY}"</span>
 </span></code></pre></div></p>
-<p><strong>How it works:</strong> Makes HTTP GET request to <code>api_url</code>, extracts version using <code>version_path</code>,
-extracts download URL using <code>download_url_path</code>. Supports nested JSON paths.</p>
 <h3 id="url_download-strategy">url_download strategy</h3>
 <p><strong>Best for:</strong> Vendors with stable download URLs and MSI installers with embedded ProductVersion.</p>
 <p><strong>Configuration:</strong></p>
@@ -3516,13 +3488,10 @@ extracts download URL using <code>download_url_path</code>. Supports nested JSON
 <strong>Required:</strong> Yes</p>
 <p>Stable download URL for the installer. <strong>Important:</strong> This URL must not change when new versions
 are released. If the URL changes with each version, use <code>web_scrape</code> strategy instead.</p>
-<p><strong>How it works:</strong> Downloads file from <code>url</code>, auto-detects MSI files by extension (<code>.msi</code>) and
-extracts version from MSI ProductVersion property. Uses HTTP conditional requests (ETags) for
-caching to avoid re-downloading unchanged files.</p>
-<p><strong>Version Extraction:</strong> Automatically detected by file extension. MSI files (<code>.msi</code> extension)
-automatically extract ProductVersion. No configuration needed. Other file types are not
-supported for version extraction — use a version-first strategy (api_github, api_json,
-web_scrape) instead.</p>
+<p>Downloads the file from <code>url</code>, using HTTP conditional requests (ETags) to skip
+unchanged files. MSI files supply their version from the ProductVersion
+property with no configuration; other file types need a version-first strategy
+(api_github, api_json, web_scrape) instead.</p>
 <h3 id="web_scrape-strategy">web_scrape strategy</h3>
 <p><strong>Best for:</strong> Vendors with download pages listing installers when no direct download URL or API
 is available.</p>
@@ -3585,9 +3554,6 @@ string syntax with <code>{0}</code>, <code>{1}</code>, etc. for capture groups.<
 - <code>"{0}.{1}"</code> - Combines two groups: <code>"25"</code> + <code>"01"</code> → <code>"25.01"</code>
 - <code>"{1}.{0}"</code> - Reverses order: <code>"01"</code> + <code>"25"</code> → <code>"01.25"</code>
 - <code>"v{0}"</code> - Prefixes version: <code>"2.51.2"</code> → <code>"v2.51.2"</code></p>
-<p><strong>How it works:</strong> Downloads HTML from <code>page_url</code>, finds the link using <code>link_selector</code> (CSS)
-or <code>link_pattern</code> (regex), extracts the version from the URL using <code>version_pattern</code>, and
-formats it using <code>version_format</code> if provided.</p>
 <h2 id="psadt-configuration">PSADT configuration</h2>
 <p>The <code>psadt</code> section defines PowerShell deployment scripts and PSADT variables:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">psadt</span><span class="p">:</span>
@@ -3646,13 +3612,11 @@ files in every build. Set in <code>defaults/org.yaml</code> rather than per-reci
 </ul>
 <p>NAPT sets <code>AppArch</code> itself from the installer architecture; <code>napt validate</code>
 rejects it as an <code>app_vars</code> key.</p>
-<p><strong>Build-time variables:</strong> NAPT substitutes <code>{{discovered_version}}</code> (the version
-discovered by NAPT) and <code>{{installer_filename}}</code> (the exact filename of the downloaded
-installer) in all <code>app_vars</code> values.
-Use <code>{{discovered_version}}</code> in <code>AppVersion</code> to ensure the version matches the
-downloaded installer.</p>
+<p>Values support the build-time variables in
+<a href="#variable-substitution">Variable substitution</a>; use <code>{{discovered_version}}</code>
+in <code>AppVersion</code> so the version matches the downloaded installer.</p>
 <p>For org-wide values such as <code>AppVendor</code>, set them once in <code>defaults/org.yaml</code>
-(or a vendor file) instead of repeating them per recipe — the configuration
+(or a vendor file) instead of repeating them per recipe; the configuration
 layers are deep-merged into every recipe.</p>
 <h3 id="override_msi_commands">override_msi_commands</h3>
 <p><strong>Type:</strong> <code>boolean</code>
@@ -3673,9 +3637,6 @@ and verbose MSI logging automatically; <code>-AdditionalArgumentList</code> appe
 to those defaults to force a per-machine installation.
 Uninstall matches the MSI ProductName exactly (extracted at build time), not the
 ProductCode, so it keeps working when vendors change the ProductCode between versions.</p>
-<p>These commands are used unless <code>override_msi_commands: true</code> is set. If the
-recipe specifies <code>psadt.install</code> or <code>psadt.uninstall</code> without this flag, a
-warning is logged and the recipe values are ignored.</p>
 <p><strong>Behavior:</strong></p>
 <ul>
 <li><code>false</code> (default): Auto-generated commands are used; recipe <code>install</code>/<code>uninstall</code> are ignored with a warning if set</li>
@@ -3709,9 +3670,6 @@ The commands vary based on <code>intune.run_as_account</code>:</p>
 <li><strong>Install (<code>user</code>):</strong> <code>Add-AppxPackage -Path "$($adtSession.DirFiles)\{filename}"</code></li>
 <li><strong>Uninstall (<code>user</code>):</strong> <code>Get-AppxPackage -Name "{identity_name}" | Remove-AppxPackage</code></li>
 </ul>
-<p>These commands are used unless <code>override_msix_commands: true</code> is set. If the
-recipe specifies <code>psadt.install</code> or <code>psadt.uninstall</code> without this flag, a
-warning is logged and the recipe values are ignored.</p>
 <p><strong>Behavior:</strong></p>
 <ul>
 <li><code>false</code> (default): Auto-generated commands are used; recipe <code>install</code>/<code>uninstall</code> are ignored with a warning if set</li>
@@ -3734,13 +3692,9 @@ logic that differs from the standard pipeline.</p>
 <strong>Required:</strong> Yes (EXE); auto-generated for MSI and MSIX unless overridden</p>
 <p>PowerShell script executed during installation. Inserted into the generated
 <code>Invoke-AppDeployToolkit.ps1</code> in the installation section.</p>
-<p><strong>Build-time variables</strong> (substituted by NAPT when the script is generated —
-these are not PowerShell variables):</p>
-<ul>
-<li><code>{{discovered_version}}</code>: Version discovered by NAPT</li>
-<li><code>{{installer_filename}}</code>: Exact filename of the downloaded installer in the
-  package's <code>Files</code> directory</li>
-</ul>
+<p>Supports the same build-time variables as <code>app_vars</code> (see
+<a href="#variable-substitution">Variable substitution</a>); these are substituted when
+the script is generated and are not PowerShell variables.</p>
 <p><strong>PowerShell variables</strong> (available at deploy time):</p>
 <ul>
 <li><code>$($adtSession.DirFiles)</code>: Path to the installer files directory</li>
@@ -3800,9 +3754,9 @@ Use <code>{{installer_filename}}</code> instead of a wildcard pattern.</p>
 <strong>Required:</strong> No
 <strong>Default:</strong> <code>"both"</code>
 <strong>Allowed values:</strong> <code>"both"</code>, <code>"app_only"</code>, <code>"update_only"</code></p>
-<p>Controls which Intune Win32 app entries are created during <code>napt build</code> and
-<code>napt upload</code>. The detection script is always generated. This setting
-controls requirements script generation and how many app entries are uploaded:</p>
+<p>Controls which Intune Win32 app entries <code>napt upload</code> creates and whether
+<code>napt build</code> generates the requirements script (the detection script is always
+generated):</p>
 <ul>
 <li><code>"both"</code> (default): Generate detection and requirements scripts;
   <code>napt upload</code> creates an install entry (detection only) and an update entry
@@ -3812,10 +3766,6 @@ controls requirements script generation and how many app entries are uploaded:</
 <li><code>"update_only"</code>: Generate detection and requirements scripts;
   <code>napt upload</code> creates the update entry only</li>
 </ul>
-<p><strong>Example:</strong>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nt">intune</span><span class="p">:</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">build_types</span><span class="p">:</span><span class="w"> </span><span class="s">"app_only"</span><span class="w">  </span><span class="c1"># Only create App entry for this app</span>
-</span></code></pre></div></p>
 <h3 id="update_name_prefix">update_name_prefix</h3>
 <p><strong>Type:</strong> <code>string</code>
 <strong>Required:</strong> No
@@ -3823,12 +3773,12 @@ controls requirements script generation and how many app entries are uploaded:</
 <p>Prefix added to the app name for the Update app entry in Intune. The Update app display name is:
 <code>update_name_prefix + name</code>.</p>
 <p><strong>Example:</strong>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nt">intune</span><span class="p">:</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span><span class="nt">update_name_prefix</span><span class="p">:</span><span class="w"> </span><span class="s">"[Update]</span><span class="nv"> </span><span class="s">"</span>
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
-</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="c1"># Results in:</span>
-</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="c1"># - App entry: "Google Chrome"</span>
-</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="c1"># - Update entry: "[Update] Google Chrome"</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nt">intune</span><span class="p">:</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">update_name_prefix</span><span class="p">:</span><span class="w"> </span><span class="s">"[Update]</span><span class="nv"> </span><span class="s">"</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># Results in:</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="c1"># - App entry: "Google Chrome"</span>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="c1"># - Update entry: "[Update] Google Chrome"</span>
 </span></code></pre></div></p>
 <h3 id="minimum_supported_windows_release">minimum_supported_windows_release</h3>
 <p><strong>Type:</strong> <code>string</code>
@@ -4003,13 +3953,13 @@ application installation state.</p>
 <p><strong>MSIX installers:</strong> Scripts use <code>Get-AppxPackage</code> to query the AppX package database by
 package identity name. The <code>display_name</code>, <code>architecture</code>, and <code>override_msi_display_name</code>
 fields are not used for MSIX (metadata is extracted from <code>AppxManifest.xml</code>).</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># MSI/EXE detection configuration</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="nt">intune</span><span class="p">:</span>
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span><span class="nt">detection</span><span class="p">:</span>
-</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">    </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">"Application</span><span class="nv"> </span><span class="s">Name"</span><span class="w">  </span><span class="c1"># See below</span>
-</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">    </span><span class="nt">architecture</span><span class="p">:</span><span class="w"> </span><span class="s">"x64"</span><span class="w">               </span><span class="c1"># See below</span>
-</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">    </span><span class="nt">exact_match</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">                </span><span class="c1"># See below</span>
-</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">    </span><span class="nt">override_msi_display_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">  </span><span class="c1"># See below</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># MSI/EXE detection configuration</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="nt">intune</span><span class="p">:</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span><span class="nt">detection</span><span class="p">:</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">    </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">"Application</span><span class="nv"> </span><span class="s">Name"</span><span class="w">  </span><span class="c1"># See below</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">    </span><span class="nt">architecture</span><span class="p">:</span><span class="w"> </span><span class="s">"x64"</span><span class="w">               </span><span class="c1"># See below</span>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">    </span><span class="nt">exact_match</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">                </span><span class="c1"># See below</span>
+</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">    </span><span class="nt">override_msi_display_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">  </span><span class="c1"># See below</span>
 </span></code></pre></div>
 <h4 id="display_name">display_name</h4>
 <p><strong>Type:</strong> <code>string</code>
@@ -4054,21 +4004,16 @@ PowerShell's <code>-like</code> operator instead of exact <code>-eq</code> match
 </tr>
 </tbody>
 </table>
-<p><strong>Example:</strong>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nt">intune</span><span class="p">:</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="nt">detection</span><span class="p">:</span>
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">"My</span><span class="nv"> </span><span class="s">Application"</span><span class="w">  </span><span class="c1"># Matches registry DisplayName for EXE installers</span>
-</span></code></pre></div></p>
 <p><strong>Example with version in DisplayName:</strong>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nt">intune</span><span class="p">:</span>
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span><span class="nt">detection</span><span class="p">:</span>
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">    </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">"7-Zip</span><span class="nv"> </span><span class="s">{{discovered_version}}</span><span class="nv"> </span><span class="s">(x64)"</span><span class="w">  </span><span class="c1"># Matches "7-Zip 25.01 (x64)"</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nt">intune</span><span class="p">:</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">detection</span><span class="p">:</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">    </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">"7-Zip</span><span class="nv"> </span><span class="s">{{discovered_version}}</span><span class="nv"> </span><span class="s">(x64)"</span><span class="w">  </span><span class="c1"># Matches "7-Zip 25.01 (x64)"</span>
 </span></code></pre></div></p>
 <p><strong>Example with wildcard (for MSI with override):</strong>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="nt">intune</span><span class="p">:</span>
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span><span class="nt">detection</span><span class="p">:</span>
-</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">    </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">"7-Zip</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">(x64</span><span class="nv"> </span><span class="s">edition)"</span><span class="w">  </span><span class="c1"># Matches any 7-Zip x64 version</span>
-</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">    </span><span class="nt">override_msi_display_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nt">intune</span><span class="p">:</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="nt">detection</span><span class="p">:</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">"7-Zip</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">(x64</span><span class="nv"> </span><span class="s">edition)"</span><span class="w">  </span><span class="c1"># Matches any 7-Zip x64 version</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">    </span><span class="nt">override_msi_display_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 </span></code></pre></div></p>
 <h4 id="architecture">architecture</h4>
 <p><strong>Type:</strong> <code>string</code>
@@ -4095,31 +4040,25 @@ requirements scripts check, and which device architectures the app is offered to
 <tr>
 <td><code>x86</code></td>
 <td>32-bit only</td>
-<td>x86, x64, ARM64 — all Windows can run x86 via WOW64</td>
+<td>x86, x64, ARM64 (all Windows can run x86 via WOW64)</td>
 </tr>
 <tr>
 <td><code>x64</code></td>
 <td>64-bit only</td>
-<td>x64, ARM64 — ARM64 Windows 11 supports x64 emulation</td>
+<td>x64, ARM64 (ARM64 Windows 11 supports x64 emulation)</td>
 </tr>
 <tr>
 <td><code>arm64</code></td>
 <td>64-bit only</td>
-<td>ARM64 only — native binary</td>
+<td>ARM64 only (native binary)</td>
 </tr>
 <tr>
 <td><code>any</code></td>
 <td>All views</td>
-<td>x86, x64, ARM64 — permissive</td>
+<td>x86, x64, ARM64 (permissive)</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Example:</strong>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="nt">intune</span><span class="p">:</span>
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span><span class="nt">detection</span><span class="p">:</span>
-</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">    </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">"My</span><span class="nv"> </span><span class="s">Application"</span>
-</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">    </span><span class="nt">architecture</span><span class="p">:</span><span class="w"> </span><span class="s">"x64"</span><span class="w">  </span><span class="c1"># Required for EXE installers</span>
-</span></code></pre></div></p>
 <h4 id="exact_match">exact_match</h4>
 <p><strong>Type:</strong> <code>boolean</code>
 <strong>Required:</strong> No
@@ -4146,62 +4085,19 @@ number that changes with each release (e.g., "7-Zip 25.01").</p>
 <li><code>true</code>: Uses <code>display_name</code> field (must be set)</li>
 <li>Non-MSI installers: Flag is ignored (a warning is logged if set)</li>
 </ul>
-<p><strong>Note:</strong> Architecture is still auto-detected from the MSI Template property even when using
-this override.</p>
 <p><strong>Example:</strong>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="nt">intune</span><span class="p">:</span>
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">  </span><span class="nt">detection</span><span class="p">:</span>
-</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">    </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">"7-Zip</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">(x64</span><span class="nv"> </span><span class="s">edition)"</span><span class="w">  </span><span class="c1"># Matches any 7-Zip x64 version</span>
-</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">    </span><span class="nt">override_msi_display_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">         </span><span class="c1"># Use display_name instead of MSI ProductName</span>
-</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="w">    </span><span class="c1"># architecture still auto-detected from MSI Template</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nt">intune</span><span class="p">:</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span><span class="nt">detection</span><span class="p">:</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">    </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">"7-Zip</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">(x64</span><span class="nv"> </span><span class="s">edition)"</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">    </span><span class="nt">override_msi_display_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 </span></code></pre></div></p>
-<p><strong>How Scripts Work (MSI/EXE - Registry-based):</strong></p>
-<ul>
-<li><strong>App Name Detection:</strong><ul>
-<li><strong>MSI installers:</strong> Uses MSI <code>ProductName</code> property (authoritative source for registry
-  <code>DisplayName</code>). The <code>display_name</code> field is ignored unless <code>override_msi_display_name:
-  true</code> is set.</li>
-<li><strong>Non-MSI installers:</strong> Requires <code>intune.detection.display_name</code> in recipe configuration.</li>
-<li><strong>Wildcard matching:</strong> When <code>display_name</code> contains <code>*</code> or <code>?</code>, scripts use PowerShell's
-  <code>-like</code> operator for flexible matching.</li>
-</ul>
-</li>
-<li><strong>Installer Type Filtering:</strong><ul>
-<li><strong>MSI installers (strict):</strong> Only matches registry entries with <code>WindowsInstaller</code> = 1.</li>
-<li><strong>Non-MSI installers (permissive):</strong> Matches any registry entry.</li>
-</ul>
-</li>
-<li><strong>Architecture-Aware Registry Checking:</strong> Uses explicit registry views for deterministic
-  detection (<code>x64</code>/<code>arm64</code>: 64-bit view; <code>x86</code>: 32-bit view; <code>any</code>: both views). For MSI
-  installers, architecture is auto-detected from the MSI Template property.</li>
-<li><strong>Version Comparison:</strong> Uses <code>DisplayVersion</code> registry value. Detection: exit 0 if installed
-  meets requirement, 1 otherwise. Requirements: always exit 0; output "Required" to stdout if
-  an older version is installed, nothing otherwise.</li>
-</ul>
-<p><strong>How Scripts Work (MSIX - AppX Package-based):</strong></p>
-<ul>
-<li><strong>Package Detection:</strong> Uses <code>Get-AppxPackage -Name "{identity_name}"</code> to query the Windows
-  AppX package database. The identity name is extracted from the MSIX manifest's <code>Identity</code>
-  element.</li>
-<li><strong>No registry scanning:</strong> MSIX detection does not check uninstall registry keys. The AppX
-  package database is the authoritative source for MSIX installations.</li>
-<li><strong>Architecture:</strong> Auto-detected from <code>ProcessorArchitecture</code> in the MSIX manifest. Not
-  configurable via recipe (manifest is authoritative).</li>
-<li><strong>Version Comparison:</strong> Same logic as registry-based scripts. Detection: exit 0 if installed
-  meets requirement, 1 otherwise. Requirements: always exit 0; output "Required" if installed
-  version &lt; target.</li>
-</ul>
-<p><strong>Script Location (all installer types):</strong></p>
-<p>Generated scripts are saved as siblings to the <code>packagefiles/</code> directory
-(not included in <code>.intunewin</code> package). <code>napt upload</code> reads them directly from the build
-output and embeds them as inline PowerShell rules in the Intune app record.</p>
-<p>See <a href="../user-guide/#detection-and-requirements-scripts">Detection and Requirements Scripts</a> in
-the User Guide for how scripts work and how to configure them in Intune.</p>
+<p>See <a href="../user-guide/#detection-and-requirements-scripts">Detection and requirements scripts</a>
+in the User Guide for how the generated scripts work and where they are stored.</p>
 <h2 id="intunewinapputil-configuration">IntuneWinAppUtil configuration</h2>
 <p>The <code>intunewin</code> section controls the Microsoft packaging tool <code>napt package</code>
 uses. Set in <code>defaults/org.yaml</code>; it is not a per-recipe setting.</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="nt">intunewin</span><span class="p">:</span>
-</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="w">  </span><span class="nt">release</span><span class="p">:</span><span class="w"> </span><span class="s">"latest"</span><span class="w">   </span><span class="c1"># Optional: IntuneWinAppUtil.exe release</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="nt">intunewin</span><span class="p">:</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span><span class="nt">release</span><span class="p">:</span><span class="w"> </span><span class="s">"latest"</span><span class="w">   </span><span class="c1"># Optional: IntuneWinAppUtil.exe release</span>
 </span></code></pre></div>
 <h3 id="release_1">release</h3>
 <p><strong>Type:</strong> <code>string</code>
@@ -4218,8 +4114,8 @@ the pin never overwrites a previously downloaded tool.</p>
 <p>The <code>logging</code> section controls on-device logging for detection and requirements scripts.
 Logs are written in CMTrace format (compatible with the Configuration Manager Trace Log
 Tool).</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="nt">logging</span><span class="p">:</span>
-</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">  </span><span class="nt">log_rotation_mb</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span><span class="w">      </span><span class="c1"># Optional: max log file size in MB</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="nt">logging</span><span class="p">:</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span><span class="nt">log_rotation_mb</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span><span class="w">      </span><span class="c1"># Optional: max log file size in MB</span>
 </span></code></pre></div>
 <p>This setting is typically configured in <code>defaults/org.yaml</code> rather than per-recipe.</p>
 <h3 id="log_rotation_mb">log_rotation_mb</h3>
@@ -4227,28 +4123,25 @@ Tool).</p>
 <strong>Required:</strong> No
 <strong>Default:</strong> <code>3</code></p>
 <p>Maximum log file size in megabytes before rotation. Scripts use a 2-file rotation scheme
-(<code>.log</code> and <code>.log.old</code>).</p>
-<p><strong>Note:</strong> Scripts try the Intune folder first:
-<code>C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\</code> (creating the parent directory if
-it does not exist and verifying write access). If that fails (e.g., permissions), they fall back
-to <code>C:\ProgramData\NAPT\</code> (system) or <code>%LOCALAPPDATA%\NAPT\</code> (user). If both fail, a warning is
-written to stderr and the script runs without a log file.</p>
+(<code>.log</code> and <code>.log.old</code>).
+Log file locations are described in
+<a href="../user-guide/#detection-and-requirements-scripts">Detection and requirements scripts</a>.</p>
 <h2 id="deployment-configuration">Deployment configuration</h2>
 <p>The <code>deployment</code> section controls upload strictness and deployment promotion.
-These settings are org policy — configure them in <code>defaults/org.yaml</code> and
+These settings are org policy: configure them in <code>defaults/org.yaml</code> and
 override per-recipe only when an app needs different treatment.</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="nt">deployment</span><span class="p">:</span>
-</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="w">  </span><span class="nt">require_pending</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">        </span><span class="c1"># Optional: require a recorded pending release</span>
-</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="w">  </span><span class="nt">rings</span><span class="p">:</span><span class="w">                        </span><span class="c1"># Optional: rings for update promotion</span>
-</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"pilot"</span>
-</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="w">      </span><span class="nt">groups</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"sg-intune-pilot"</span><span class="p p-Indicator">]</span>
-</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a><span class="w">      </span><span class="nt">promote_after_days</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
-</span><span id="__span-24-7"><a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"production"</span>
-</span><span id="__span-24-8"><a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a><span class="w">      </span><span class="nt">groups</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"sg-intune-all-workstations"</span><span class="p p-Indicator">]</span>
-</span><span id="__span-24-9"><a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a><span class="w">  </span><span class="nt">install</span><span class="p">:</span><span class="w">                      </span><span class="c1"># Optional: install entry assignment</span>
-</span><span id="__span-24-10"><a id="__codelineno-24-10" name="__codelineno-24-10" href="#__codelineno-24-10"></a><span class="w">    </span><span class="nt">intent</span><span class="p">:</span><span class="w"> </span><span class="s">"available"</span>
-</span><span id="__span-24-11"><a id="__codelineno-24-11" name="__codelineno-24-11" href="#__codelineno-24-11"></a><span class="w">    </span><span class="nt">groups</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"All</span><span class="nv"> </span><span class="s">Users"</span><span class="p p-Indicator">]</span>
-</span><span id="__span-24-12"><a id="__codelineno-24-12" name="__codelineno-24-12" href="#__codelineno-24-12"></a><span class="w">  </span><span class="nt">retain_versions</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span><span class="w">            </span><span class="c1"># Optional: superseded versions kept for rollback</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="nt">deployment</span><span class="p">:</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">  </span><span class="nt">require_pending</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">        </span><span class="c1"># Optional: require a recorded pending release</span>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">  </span><span class="nt">rings</span><span class="p">:</span><span class="w">                        </span><span class="c1"># Optional: rings for update promotion</span>
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"pilot"</span>
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="w">      </span><span class="nt">groups</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"sg-intune-pilot"</span><span class="p p-Indicator">]</span>
+</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="w">      </span><span class="nt">promote_after_days</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"production"</span>
+</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a><span class="w">      </span><span class="nt">groups</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"sg-intune-all-workstations"</span><span class="p p-Indicator">]</span>
+</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a><span class="w">  </span><span class="nt">install</span><span class="p">:</span><span class="w">                      </span><span class="c1"># Optional: install entry assignment</span>
+</span><span id="__span-21-10"><a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a><span class="w">    </span><span class="nt">intent</span><span class="p">:</span><span class="w"> </span><span class="s">"available"</span>
+</span><span id="__span-21-11"><a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a><span class="w">    </span><span class="nt">groups</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"All</span><span class="nv"> </span><span class="s">Users"</span><span class="p p-Indicator">]</span>
+</span><span id="__span-21-12"><a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a><span class="w">  </span><span class="nt">retain_versions</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span><span class="w">            </span><span class="c1"># Optional: superseded versions kept for rollback</span>
 </span></code></pre></div>
 <p>Groups may be Entra ID display names or object IDs.
 Display names are resolved via the Graph API, which requires the
@@ -4257,15 +4150,15 @@ Display names are resolved via the Graph API, which requires the
 <p>Two names are reserved for Intune's built-in targets: <code>"All Users"</code> and
 <code>"All Devices"</code> assign the corresponding virtual group instead of looking
 up an Entra ID group.
-The reserved names always win — a real Entra ID group that shares one of
+The reserved names always win: a real Entra ID group that shares one of
 these display names must be referenced by its object ID.</p>
 <h3 id="require_pending">require_pending</h3>
 <p><strong>Type:</strong> <code>boolean</code>
 <strong>Required:</strong> No
 <strong>Default:</strong> <code>false</code></p>
 <p>When enabled, <code>napt upload</code> fails if the app's deployment state has no
-pending release matching the package — nothing reaches Intune without a
-recorded release.
+pending release matching the package (nothing reaches Intune without a
+recorded release).
 Enable this when publishes are gated through review of committed deployment
 state.
 For a manual upload under this policy, run <code>napt discover</code> first or add a
@@ -4338,54 +4231,44 @@ It works <strong>only</strong> in <code>discovery.token</code> and <code>discove
 <p>For non-secret org-wide values (e.g., <code>AppVendor</code>), use the configuration layers
 (<code>defaults/org.yaml</code>, <code>defaults/vendors/{Vendor}.yaml</code>) instead.</p>
 <h3 id="syntax">Syntax</h3>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="nt">discovery</span><span class="p">:</span>
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">"${GITHUB_TOKEN}"</span><span class="w">               </span><span class="c1"># Environment variable (secrets only)</span>
-</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="w">  </span><span class="nt">headers</span><span class="p">:</span>
-</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="w">    </span><span class="nt">Authorization</span><span class="p">:</span><span class="w"> </span><span class="s">"Bearer</span><span class="nv"> </span><span class="s">${API_TOKEN}"</span><span class="w"> </span><span class="c1"># Environment variable (secrets only)</span>
-</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>
-</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a><span class="nt">psadt</span><span class="p">:</span>
-</span><span id="__span-25-7"><a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
-</span><span id="__span-25-8"><a id="__codelineno-25-8" name="__codelineno-25-8" href="#__codelineno-25-8"></a><span class="w">    </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">"{{discovered_version}}"</span><span class="w"> </span><span class="c1"># NAPT build-time substitution</span>
-</span><span id="__span-25-9"><a id="__codelineno-25-9" name="__codelineno-25-9" href="#__codelineno-25-9"></a><span class="w">  </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-25-10"><a id="__codelineno-25-10" name="__codelineno-25-10" href="#__codelineno-25-10"></a><span class="w">    </span><span class="no">Start-ADTProcess -FilePath "{{installer_filename}}" -ArgumentList "/S"</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="nt">discovery</span><span class="p">:</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">"${GITHUB_TOKEN}"</span><span class="w">               </span><span class="c1"># Environment variable (secrets only)</span>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">  </span><span class="nt">headers</span><span class="p">:</span>
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">    </span><span class="nt">Authorization</span><span class="p">:</span><span class="w"> </span><span class="s">"Bearer</span><span class="nv"> </span><span class="s">${API_TOKEN}"</span><span class="w"> </span><span class="c1"># Environment variable (secrets only)</span>
+</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>
+</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="nt">psadt</span><span class="p">:</span>
+</span><span id="__span-22-7"><a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
+</span><span id="__span-22-8"><a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a><span class="w">    </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">"{{discovered_version}}"</span><span class="w"> </span><span class="c1"># NAPT build-time substitution</span>
+</span><span id="__span-22-9"><a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a><span class="w">  </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-22-10"><a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a><span class="w">    </span><span class="no">Start-ADTProcess -FilePath "{{installer_filename}}" -ArgumentList "/S"</span>
 </span></code></pre></div>
-<h3 id="setting-environment-variables">Setting environment variables</h3>
-<p><strong>Windows (PowerShell):</strong>
-<div class="language-powershell highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="nv">$env:GITHUB_TOKEN</span><span class="p">=</span><span class="s2">"your_token_here"</span>
-</span></code></pre></div></p>
-<p><strong>Windows (Command Prompt):</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>set GITHUB_TOKEN=your_token_here
-</span></code></pre></div></p>
-<p><strong>Linux/macOS:</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">GITHUB_TOKEN</span><span class="o">=</span><span class="s2">"your_token_here"</span>
-</span></code></pre></div></p>
-<p><strong>Note:</strong> For CI/CD, set environment variables in your pipeline configuration (GitHub Actions,
-Azure DevOps, etc.).</p>
+<p>For setting the variables locally and in CI/CD, see
+<a href="../common-tasks/#handle-authentication-tokens">Handle authentication tokens</a>.</p>
 <h2 id="complete-example">Complete example</h2>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span>
-</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>
-</span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"Example</span><span class="nv"> </span><span class="s">Application"</span>
-</span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">"napt-example"</span>
-</span><span id="__span-29-5"><a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a>
-</span><span id="__span-29-6"><a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a><span class="nt">discovery</span><span class="p">:</span>
-</span><span id="__span-29-7"><a id="__codelineno-29-7" name="__codelineno-29-7" href="#__codelineno-29-7"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
-</span><span id="__span-29-8"><a id="__codelineno-29-8" name="__codelineno-29-8" href="#__codelineno-29-8"></a><span class="w">  </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="s">"owner/repo"</span>
-</span><span id="__span-29-9"><a id="__codelineno-29-9" name="__codelineno-29-9" href="#__codelineno-29-9"></a><span class="w">  </span><span class="nt">asset_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">".*-x64\\.exe$"</span>
-</span><span id="__span-29-10"><a id="__codelineno-29-10" name="__codelineno-29-10" href="#__codelineno-29-10"></a><span class="w">  </span><span class="nt">version_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">"v?([0-9.]+)"</span>
-</span><span id="__span-29-11"><a id="__codelineno-29-11" name="__codelineno-29-11" href="#__codelineno-29-11"></a>
-</span><span id="__span-29-12"><a id="__codelineno-29-12" name="__codelineno-29-12" href="#__codelineno-29-12"></a><span class="nt">intune</span><span class="p">:</span>
-</span><span id="__span-29-13"><a id="__codelineno-29-13" name="__codelineno-29-13" href="#__codelineno-29-13"></a><span class="w">  </span><span class="nt">detection</span><span class="p">:</span>
-</span><span id="__span-29-14"><a id="__codelineno-29-14" name="__codelineno-29-14" href="#__codelineno-29-14"></a><span class="w">    </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">"Example</span><span class="nv"> </span><span class="s">Application"</span>
-</span><span id="__span-29-15"><a id="__codelineno-29-15" name="__codelineno-29-15" href="#__codelineno-29-15"></a><span class="w">    </span><span class="nt">architecture</span><span class="p">:</span><span class="w"> </span><span class="s">"x64"</span>
-</span><span id="__span-29-16"><a id="__codelineno-29-16" name="__codelineno-29-16" href="#__codelineno-29-16"></a>
-</span><span id="__span-29-17"><a id="__codelineno-29-17" name="__codelineno-29-17" href="#__codelineno-29-17"></a><span class="nt">psadt</span><span class="p">:</span>
-</span><span id="__span-29-18"><a id="__codelineno-29-18" name="__codelineno-29-18" href="#__codelineno-29-18"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
-</span><span id="__span-29-19"><a id="__codelineno-29-19" name="__codelineno-29-19" href="#__codelineno-29-19"></a><span class="w">    </span><span class="nt">AppName</span><span class="p">:</span><span class="w"> </span><span class="s">"Example</span><span class="nv"> </span><span class="s">Application"</span>
-</span><span id="__span-29-20"><a id="__codelineno-29-20" name="__codelineno-29-20" href="#__codelineno-29-20"></a><span class="w">    </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">"{{discovered_version}}"</span>
-</span><span id="__span-29-21"><a id="__codelineno-29-21" name="__codelineno-29-21" href="#__codelineno-29-21"></a><span class="w">  </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-29-22"><a id="__codelineno-29-22" name="__codelineno-29-22" href="#__codelineno-29-22"></a><span class="w">    </span><span class="no">Start-ADTProcess -FilePath "{{installer_filename}}" -ArgumentList "/S"</span>
-</span><span id="__span-29-23"><a id="__codelineno-29-23" name="__codelineno-29-23" href="#__codelineno-29-23"></a><span class="w">  </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-29-24"><a id="__codelineno-29-24" name="__codelineno-29-24" href="#__codelineno-29-24"></a><span class="w">    </span><span class="no">Uninstall-ADTApplication -Name "Example Application"</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"Example</span><span class="nv"> </span><span class="s">Application"</span>
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">"napt-example"</span>
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>
+</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a><span class="nt">discovery</span><span class="p">:</span>
+</span><span id="__span-23-7"><a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
+</span><span id="__span-23-8"><a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a><span class="w">  </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="s">"owner/repo"</span>
+</span><span id="__span-23-9"><a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a><span class="w">  </span><span class="nt">asset_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">".*-x64\\.exe$"</span>
+</span><span id="__span-23-10"><a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a><span class="w">  </span><span class="nt">version_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">"v?([0-9.]+)"</span>
+</span><span id="__span-23-11"><a id="__codelineno-23-11" name="__codelineno-23-11" href="#__codelineno-23-11"></a>
+</span><span id="__span-23-12"><a id="__codelineno-23-12" name="__codelineno-23-12" href="#__codelineno-23-12"></a><span class="nt">intune</span><span class="p">:</span>
+</span><span id="__span-23-13"><a id="__codelineno-23-13" name="__codelineno-23-13" href="#__codelineno-23-13"></a><span class="w">  </span><span class="nt">detection</span><span class="p">:</span>
+</span><span id="__span-23-14"><a id="__codelineno-23-14" name="__codelineno-23-14" href="#__codelineno-23-14"></a><span class="w">    </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">"Example</span><span class="nv"> </span><span class="s">Application"</span>
+</span><span id="__span-23-15"><a id="__codelineno-23-15" name="__codelineno-23-15" href="#__codelineno-23-15"></a><span class="w">    </span><span class="nt">architecture</span><span class="p">:</span><span class="w"> </span><span class="s">"x64"</span>
+</span><span id="__span-23-16"><a id="__codelineno-23-16" name="__codelineno-23-16" href="#__codelineno-23-16"></a>
+</span><span id="__span-23-17"><a id="__codelineno-23-17" name="__codelineno-23-17" href="#__codelineno-23-17"></a><span class="nt">psadt</span><span class="p">:</span>
+</span><span id="__span-23-18"><a id="__codelineno-23-18" name="__codelineno-23-18" href="#__codelineno-23-18"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
+</span><span id="__span-23-19"><a id="__codelineno-23-19" name="__codelineno-23-19" href="#__codelineno-23-19"></a><span class="w">    </span><span class="nt">AppName</span><span class="p">:</span><span class="w"> </span><span class="s">"Example</span><span class="nv"> </span><span class="s">Application"</span>
+</span><span id="__span-23-20"><a id="__codelineno-23-20" name="__codelineno-23-20" href="#__codelineno-23-20"></a><span class="w">    </span><span class="nt">AppVersion</span><span class="p">:</span><span class="w"> </span><span class="s">"{{discovered_version}}"</span>
+</span><span id="__span-23-21"><a id="__codelineno-23-21" name="__codelineno-23-21" href="#__codelineno-23-21"></a><span class="w">  </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-23-22"><a id="__codelineno-23-22" name="__codelineno-23-22" href="#__codelineno-23-22"></a><span class="w">    </span><span class="no">Start-ADTProcess -FilePath "{{installer_filename}}" -ArgumentList "/S"</span>
+</span><span id="__span-23-23"><a id="__codelineno-23-23" name="__codelineno-23-23" href="#__codelineno-23-23"></a><span class="w">  </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-23-24"><a id="__codelineno-23-24" name="__codelineno-23-24" href="#__codelineno-23-24"></a><span class="w">    </span><span class="no">Uninstall-ADTApplication -Name "Example Application"</span>
 </span></code></pre></div>
 <h2 id="see-also">See also</h2>
 <ul>

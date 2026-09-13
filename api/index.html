@@ -713,32 +713,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#quick-start" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Quick start
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#key-concepts" class="md-nav__link">
     <span class="md-ellipsis">
       
         Key concepts
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#design-principles" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Design principles
       
     </span>
   </a>
@@ -1683,32 +1661,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#quick-start" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Quick start
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#key-concepts" class="md-nav__link">
     <span class="md-ellipsis">
       
         Key concepts
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#design-principles" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Design principles
       
     </span>
   </a>
@@ -1760,7 +1716,7 @@
 <h1 id="developer-reference">Developer reference</h1>
 <p>Overview of NAPT's codebase structure, architecture, and key concepts for contributors.</p>
 <h2 id="code-organization">Code organization</h2>
-<p>NAPT's codebase structure matches the module organization. Here's the file structure:</p>
+<p>Here's the file structure:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>napt/
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── __init__.py              # Package overview docstring
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── exceptions.py            # Exception hierarchy
@@ -1844,27 +1800,13 @@
 </span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>    ↓
 </span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>Result (dataclass)
 </span></code></pre></div>
-<h2 id="quick-start">Quick start</h2>
-<ul>
-<li><strong>Adding a CLI command:</strong> See <a href="cli/"><code>cli/</code></a> for command registration patterns</li>
-<li><strong>Adding discovery strategies:</strong> Implement <code>DiscoveryStrategy</code> protocol from <a href="discovery/"><code>discovery/base.py</code></a></li>
-</ul>
 <h2 id="key-concepts">Key concepts</h2>
 <ul>
 <li><strong>Discovery Strategies:</strong> Protocol-based, stateless, listed in an explicit registry table (api_github, api_json, web_scrape). All return a <code>RemoteVersion</code> from configuration alone. The orchestrator runs the result through <code>resolve_with_cache</code> to skip the download when the version is unchanged. <code>url_download</code> is a separate flow (not a registered strategy) because it must download the file to determine the version.</li>
 <li><strong>Configuration:</strong> 3-layer system (org → vendor → recipe) with deep merging</li>
-<li><strong>State Management:</strong> Two kinds with opposite philosophies — the disposable discovery cache (<code>cache/discovery.json</code>) for download optimization, and authoritative per-app deployment state (<code>state/deployment/&lt;id&gt;.json</code>) recording what is published and pending</li>
+<li><strong>State Management:</strong> Two kinds with opposite philosophies: the disposable discovery cache (<code>cache/discovery.json</code>) for download optimization, and authoritative per-app deployment state (<code>state/deployment/&lt;id&gt;.json</code>) recording what is published and pending</li>
 <li><strong>Exceptions:</strong> All NAPT domain errors use custom exceptions inheriting from <code>NAPTError</code> (ConfigError, NetworkError, PackagingError, StateError, AuthError) - allows catching all NAPT errors or specific types</li>
-<li><strong>Return Types:</strong> Frozen dataclasses from <code>results.py</code>, one per napt command's underlying operation (type-safe, immutable returns)</li>
-</ul>
-<h2 id="design-principles">Design principles</h2>
-<ul>
-<li>Single Responsibility per module</li>
-<li>Protocol-based interfaces (typing.Protocol)</li>
-<li>Stateless strategies (instantiated on-demand)</li>
-<li>Structured returns (frozen dataclasses)</li>
-<li>Exception-based error handling</li>
-<li>Immutable configuration</li>
+<li><strong>Return Types:</strong> Frozen dataclasses from <code>results.py</code>, one per napt command's underlying operation</li>
 </ul>
 <h2 id="common-contributor-tasks">Common contributor tasks</h2>
 <ul>
