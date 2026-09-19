@@ -1388,6 +1388,50 @@ jobs:
   could run on Linux with `msitools` installed for MSI version
   extraction.
 
+## Share a base recipe between apps
+
+When several recipes differ only in a few fields, put the shared part in
+one file and name it as the `parent` of each app recipe.
+
+1. Write the base recipe. It is a complete recipe; keep it out of the
+   vendor folders so NAPT never runs it on its own:
+   ```yaml
+   # recipes/_base/chromium-family.yaml
+   apiVersion: napt/v1
+   name: "Chromium base"
+   id: "chromium-base"
+   discovery:
+     strategy: url_download
+     url: "https://example.com/placeholder.msi"
+   psadt:
+     app_vars:
+       AppProcessesToClose: ["chrome", "msedge"]
+   intune:
+     detection:
+       exact_match: false
+   ```
+
+2. Write each app as a child that sets only what differs. Name it
+   `<app>.override.yaml`:
+   ```yaml
+   # recipes/Google/chrome.override.yaml
+   apiVersion: napt/v1
+   parent: ../_base/chromium-family.yaml
+   name: "Google Chrome"
+   id: "napt-chrome"
+   discovery:
+     url: "https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi"
+   ```
+
+3. Validate the child. The output names the parent it merged:
+   ```bash
+   napt validate recipes/Google/chrome.override.yaml
+   ```
+
+Run every command against the child, never the base.
+The merge order and list behavior are in
+[Configuration layers](user-guide.md#configuration-layers).
+
 ## Update existing recipes
 
 When a recipe needs changes (new version format, different download URL, etc.).

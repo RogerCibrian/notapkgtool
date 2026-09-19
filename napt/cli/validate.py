@@ -92,6 +92,8 @@ def cmd_validate(args: argparse.Namespace) -> int:
     print("VALIDATION RESULTS")
     print("=" * 70)
     print(f"Recipe:      {result.recipe_path}")
+    if result.parent_path:
+        print(f"Parent:      {result.parent_path}")
     print(f"Status:      {result.status.upper()}")
     print(f"App Count:   {result.app_count}")
     print()

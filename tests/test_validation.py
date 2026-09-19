@@ -1001,3 +1001,95 @@ deployment:
 
         assert result.status == "valid"
         assert any("Unknown field 'bake_days'" in w for w in result.warnings)
+
+
+class TestParentValidation:
+    """Tests for the parent field and the .override.yaml naming convention."""
+
+    @staticmethod
+    def _write_parent(tmp_path, body: str = _DEPLOYMENT_RECIPE_HEADER):
+        parent = tmp_path / "base.yaml"
+        parent.write_text(body)
+        return parent
+
+    def test_override_with_parent_is_valid(self, tmp_path):
+        """Tests that an override lacking discovery is valid through its parent."""
+        parent = self._write_parent(tmp_path)
+        override = tmp_path / "app.override.yaml"
+        override.write_text(
+            "apiVersion: napt/v1\nparent: base.yaml\nname: Child\nid: child\n"
+        )
+
+        result = validate_recipe(override)
+
+        assert result.status == "valid"
+        assert result.warnings == []
+        assert result.parent_path == str(parent.resolve())
+
+    def test_recipe_without_parent_has_no_parent_path(self, tmp_path):
+        """Tests that a plain recipe reports no parent."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(_DEPLOYMENT_RECIPE_HEADER)
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "valid"
+        assert result.parent_path is None
+
+    def test_parent_without_suffix_warns(self, tmp_path):
+        """Tests that declaring parent in a file without the suffix warns."""
+        self._write_parent(tmp_path)
+        recipe = tmp_path / "app.yaml"
+        recipe.write_text(
+            "apiVersion: napt/v1\nparent: base.yaml\nname: Child\nid: child\n"
+        )
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "valid"
+        assert any("not named <app>.override.yaml" in w for w in result.warnings)
+
+    def test_suffix_without_parent_warns(self, tmp_path):
+        """Tests that the suffix on a file with no parent warns."""
+        recipe = tmp_path / "app.override.yaml"
+        recipe.write_text(_DEPLOYMENT_RECIPE_HEADER)
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "valid"
+        assert any("declares no parent" in w for w in result.warnings)
+
+    def test_missing_parent_file_is_invalid(self, tmp_path):
+        """Tests that a parent path that does not exist is an error."""
+        recipe = tmp_path / "app.override.yaml"
+        recipe.write_text(
+            "apiVersion: napt/v1\nparent: missing.yaml\nname: Child\nid: child\n"
+        )
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("Parent recipe not found" in err for err in result.errors)
+
+    def test_parent_chain_is_invalid(self, tmp_path):
+        """Tests that a parent declaring its own parent is an error."""
+        self._write_parent(tmp_path, "parent: other.yaml\n" + _DEPLOYMENT_RECIPE_HEADER)
+        recipe = tmp_path / "app.override.yaml"
+        recipe.write_text(
+            "apiVersion: napt/v1\nparent: base.yaml\nname: Child\nid: child\n"
+        )
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("Parent chains are not supported" in err for err in result.errors)
+
+    def test_non_string_parent_is_invalid(self, tmp_path):
+        """Tests that a non-string parent value is an error."""
+        recipe = tmp_path / "app.override.yaml"
+        recipe.write_text("apiVersion: napt/v1\nparent: 5\nname: Child\nid: child\n")
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("non-empty string" in err for err in result.errors)

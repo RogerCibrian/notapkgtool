@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Recipe `parent` field** - A recipe can name another recipe as its
+    parent and inherit everything it does not set itself. The parent merges
+    between vendor defaults and the recipe, lists replace rather than
+    append, and a parent cannot declare a parent of its own
+    - Name the child `<app>.override.yaml`; `napt validate` warns when the
+        name and the field disagree and reports the parent it merged
+
 ## [0.10.0] - 2026-09-12
 
 ### Added

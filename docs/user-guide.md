@@ -883,39 +883,48 @@ napt discover recipes/Google/chrome.yaml --stateless
 ## Configuration layers
 
 NAPT layers configuration so you don't repeat settings across recipes.
-All defaults live in code; configuration files are optional overrides.
+All defaults live in code; configuration files are optional layers on top.
 
 ### How configuration works
 
 ```
 Code defaults (always complete)     <- baseline, ships with napt
     |
-./defaults/org.yaml                 <- organization overrides (optional)
+./defaults/org.yaml                 <- organization defaults (optional)
     |
-./defaults/vendors/<Vendor>.yaml    <- vendor overrides (optional)
+./defaults/vendors/<Vendor>.yaml    <- vendor defaults (optional)
     |
-recipe.yaml                         <- recipe-specific overrides
+parent recipe                       <- named by the recipe's parent field (optional)
+    |
+recipe.yaml                         <- the app itself, wins over everything
 ```
 
 **Key principles:**
 
 - Code provides complete, working defaults for all settings
-- Config files only override what you need to change
+- Config files only set what you need to change
 - Missing fields always fall back to code defaults
 - Old configs never break when NAPT adds new features
-- Any setting can be overridden at any layer: org, vendor, or recipe
+- Any setting can be set at any layer: org, vendor, parent, or recipe
+- Dicts merge key by key; lists and scalars replace the value beneath them,
+  so a recipe that sets `deployment.rings` replaces the whole list
 
-### The three override layers
+### The configuration layers
 
-1. **Organization defaults** (`defaults/org.yaml`) - Base overrides for all apps.
+1. **Organization defaults** (`defaults/org.yaml`) - Base settings for all apps.
 Optional; only needed if you want to customize settings organization-wide.
 Contains PSADT settings, update policies, and build configuration.
 
-2. **Vendor defaults** (`defaults/vendors/<Vendor>.yaml`) - Vendor-specific overrides.
+2. **Vendor defaults** (`defaults/vendors/<Vendor>.yaml`) - Vendor-specific settings.
 Optional; only loaded if vendor is detected (e.g., Google-specific settings).
 
-3. **Recipe configuration** (`recipes/<Vendor>/<app>.yaml`) - App-specific settings.
-Always required; defines the specific app with final overrides.
+3. **Parent recipe** (the file named by the recipe's `parent` field) - Another recipe merged beneath this one.
+Optional; lets several recipes share a base without repeating it.
+A parent cannot declare its own parent.
+See [parent](recipe-reference.md#parent) for the field and the file naming convention.
+
+4. **Recipe configuration** (`recipes/<Vendor>/<app>.yaml`) - App-specific settings.
+Always required; defines the specific app and wins over every other layer.
 
 ### Example
 
