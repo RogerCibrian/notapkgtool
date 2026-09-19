@@ -8,6 +8,7 @@ Complete documentation of every recipe field and configuration pattern.
 
 ```yaml
 apiVersion: napt/v1        # Required: Recipe format version
+parent: ../_base/app.yaml  # Optional: Recipe merged beneath this one
 name: "Application Name"   # Required: Display name
 id: "napt-app-id"          # Required: Unique identifier
 discovery:                  # Required: How to find and download the installer
@@ -51,6 +52,29 @@ name. Used to generate:
 
 - Build directory names: `builds/{id}/{version}/`
 - Package names: `packages/{id}/Invoke-AppDeployToolkit.intunewin`
+
+### parent
+
+**Type:** `string`
+**Required:** No
+
+Path to another recipe, relative to this file's directory, that is merged
+beneath this one.
+This recipe wins wherever both set a value; the parent fills in everything
+else.
+A parent is an ordinary recipe and cannot declare a `parent` of its own.
+`name` and `id` must be set in this file when the parent's values are not
+wanted, since they identify the app in Intune and in NAPT's state.
+
+Name a recipe that declares `parent` as `<app>.override.yaml` so the
+relationship shows in every listing.
+`napt validate` warns when the field and the file name disagree in either
+direction, and reports the parent it merged.
+
+Relative paths a parent sets, such as `intune.logo_path`, resolve against
+this file's directory, not the parent's.
+See [Configuration layers](user-guide.md#configuration-layers) for where the
+parent sits in the merge order and how lists merge.
 
 ## Discovery configuration
 

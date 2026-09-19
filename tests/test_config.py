@@ -2,7 +2,7 @@
 
 Tests configuration loading and merging including:
 - YAML file loading
-- Four-layer merging (code defaults -> org -> vendor -> recipe)
+- Layer merging (code defaults -> org -> vendor -> parent -> recipe)
 - Path resolution
 - Dynamic value injection
 - Error handling
@@ -609,3 +609,165 @@ class TestValidationInLoader:
         assert any(
             "strategy" in err for err in result.errors
         ), "Error message should mention 'strategy'"
+
+
+_PARENT_RECIPE = """apiVersion: napt/v1
+name: Base App
+id: base-app
+discovery:
+  strategy: url_download
+  url: https://example.com/base.msi
+psadt:
+  app_vars:
+    AppLang: FR
+    AppProcessesToClose: [base]
+intune:
+  run_as_account: user
+"""
+
+
+class TestParentRecipes:
+    """Tests for the parent field: merge order, provenance, and errors."""
+
+    @staticmethod
+    def _project(
+        tmp_test_dir,
+        override_body: str = "",
+        parent_text: str = _PARENT_RECIPE,
+        org_text: str | None = None,
+        vendor_text: str | None = None,
+    ) -> Any:
+        """Writes a base recipe and an override naming it, returning the override."""
+        base_dir = tmp_test_dir / "recipes" / "_base"
+        base_dir.mkdir(parents=True)
+        (base_dir / "base.yaml").write_text(parent_text)
+        vendor_dir = tmp_test_dir / "recipes" / "Google"
+        vendor_dir.mkdir()
+        override = vendor_dir / "app.override.yaml"
+        override.write_text(
+            "apiVersion: napt/v1\nparent: ../_base/base.yaml\n"
+            "name: Child App\nid: child-app\n" + override_body
+        )
+        if org_text is not None or vendor_text is not None:
+            defaults_dir = tmp_test_dir / "defaults"
+            defaults_dir.mkdir()
+            (defaults_dir / "org.yaml").write_text(org_text or "apiVersion: napt/v1\n")
+            if vendor_text is not None:
+                (defaults_dir / "vendors").mkdir()
+                (defaults_dir / "vendors" / "Google.yaml").write_text(vendor_text)
+        return override
+
+    def test_parent_values_apply_when_override_is_silent(self, tmp_test_dir):
+        """Tests that the parent supplies everything the override leaves out."""
+        override = self._project(tmp_test_dir)
+
+        config = load_effective_config(override)
+
+        assert config["name"] == "Child App"
+        assert config["id"] == "child-app"
+        assert config["discovery"]["url"] == "https://example.com/base.msi"
+        assert config["psadt"]["app_vars"]["AppLang"] == "FR"
+
+    def test_override_beats_parent(self, tmp_test_dir):
+        """Tests that a value set in the override wins over the parent."""
+        override = self._project(tmp_test_dir, "psadt:\n  app_vars:\n    AppLang: EN\n")
+
+        config = load_effective_config(override)
+
+        assert config["psadt"]["app_vars"]["AppLang"] == "EN"
+
+    def test_parent_beats_org_and_vendor_defaults(self, tmp_test_dir):
+        """Tests that the parent layer wins over org and vendor defaults."""
+        override = self._project(
+            tmp_test_dir,
+            org_text="apiVersion: napt/v1\npsadt:\n  app_vars:\n    AppLang: DE\n",
+            vendor_text="psadt:\n  app_vars:\n    AppLang: IT\n",
+        )
+
+        config = load_effective_config(override)
+
+        assert config["psadt"]["app_vars"]["AppLang"] == "FR"
+
+    def test_override_list_replaces_parent_list(self, tmp_test_dir):
+        """Tests that a list in the override replaces the parent's list."""
+        override = self._project(
+            tmp_test_dir, "psadt:\n  app_vars:\n    AppProcessesToClose: [child]\n"
+        )
+
+        config = load_effective_config(override)
+
+        assert config["psadt"]["app_vars"]["AppProcessesToClose"] == ["child"]
+
+    def test_parent_key_is_not_in_returned_config(self, tmp_test_dir):
+        """Tests that the parent pointer is dropped from the merged config."""
+        override = self._project(tmp_test_dir)
+
+        config = load_effective_config(override)
+
+        assert "parent" not in config
+        assert "parent" not in config["_provenance"]
+
+    def test_provenance_labels_parent_layer(self, tmp_test_dir):
+        """Tests that values from the parent are attributed to the parent layer."""
+        override = self._project(tmp_test_dir)
+
+        config = load_effective_config(override)
+
+        provenance = config["_provenance"]
+        assert provenance["psadt"]["app_vars"]["AppLang"] == "parent"
+        assert provenance["name"] == "recipe"
+
+    def test_require_admin_from_parent_is_respected(self, tmp_test_dir):
+        """Tests that a RequireAdmin set by the parent is not recomputed."""
+        parent = _PARENT_RECIPE.replace(
+            "    AppLang: FR\n", "    AppLang: FR\n    RequireAdmin: true\n"
+        )
+        override = self._project(tmp_test_dir, parent_text=parent)
+
+        config = load_effective_config(override)
+
+        assert config["intune"]["run_as_account"] == "user"
+        assert config["psadt"]["app_vars"]["RequireAdmin"] is True
+
+    def test_parent_logo_path_resolves_against_override_dir(self, tmp_test_dir):
+        """Tests that a parent's relative logo_path resolves next to the override."""
+        parent = _PARENT_RECIPE + "  logo_path: logo.png\n"
+        override = self._project(tmp_test_dir, parent_text=parent)
+
+        config = load_effective_config(override)
+
+        expected = str((override.parent / "logo.png").resolve())
+        assert config["intune"]["logo_path"] == expected
+
+    def test_missing_parent_raises(self, tmp_test_dir):
+        """Tests that a parent path that does not exist is a ConfigError."""
+        override = self._project(tmp_test_dir)
+        (tmp_test_dir / "recipes" / "_base" / "base.yaml").unlink()
+
+        with pytest.raises(ConfigError, match="Parent recipe not found"):
+            load_effective_config(override)
+
+    def test_parent_chain_raises(self, tmp_test_dir):
+        """Tests that a parent declaring its own parent is a ConfigError."""
+        override = self._project(
+            tmp_test_dir, parent_text="parent: other.yaml\n" + _PARENT_RECIPE
+        )
+
+        with pytest.raises(ConfigError, match="Parent chains are not supported"):
+            load_effective_config(override)
+
+    def test_non_string_parent_raises(self, tmp_test_dir):
+        """Tests that a non-string parent value is a ConfigError."""
+        override = self._project(tmp_test_dir)
+        override.write_text("apiVersion: napt/v1\nparent: 5\nname: X\nid: x\n")
+
+        with pytest.raises(ConfigError, match="non-empty string"):
+            load_effective_config(override)
+
+    def test_invalid_parent_content_names_parent_in_error(self, tmp_test_dir):
+        """Tests that a schema error inherited from the parent names the parent."""
+        parent = _PARENT_RECIPE.replace("url_download", "bogus_strategy")
+        override = self._project(tmp_test_dir, parent_text=parent)
+
+        with pytest.raises(ConfigError, match=r"parent: .*base\.yaml"):
+            load_effective_config(override)

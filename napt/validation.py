@@ -23,6 +23,8 @@ Validation Checks:
 - YAML syntax is valid
 - Required top-level fields present (apiVersion, name, id, discovery)
 - apiVersion is supported
+- parent, when declared, is a string and the file carries the
+  ``.override.yaml`` suffix (a mismatch either way is a warning)
 - discovery.strategy exists and is registered
 - Strategy-specific configuration is valid
 - intune.detection fields are valid (types, values, unknown field warnings)
@@ -504,6 +506,42 @@ def _validate_deployment_section(
         errors.append("deployment.retain_versions: Must be >= 0")
 
 
+def _validate_parent_field(
+    config: dict[str, Any],
+    recipe_path: str,
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    """Validates the optional top-level parent field and its file-name convention.
+
+    A recipe that declares ``parent`` is expected to be named
+    ``<app>.override.yaml`` so the relationship is visible in every listing;
+    the suffix without a parent, or a parent without the suffix, is a
+    warning so a hand-written child recipe can opt out.
+
+    Args:
+        config: The full recipe dictionary.
+        recipe_path: Path string of the recipe file, or empty when unknown.
+        errors: List to append errors to.
+        warnings: List to append warnings to.
+    """
+    has_parent = "parent" in config
+    if has_parent:
+        parent = config["parent"]
+        if not isinstance(parent, str) or not parent.strip():
+            errors.append("Field 'parent' must be a non-empty string")
+
+    if not recipe_path:
+        return
+    has_suffix = recipe_path.endswith(".override.yaml")
+    if has_parent and not has_suffix:
+        warnings.append(
+            "parent is declared but the file is not named <app>.override.yaml"
+        )
+    elif has_suffix and not has_parent:
+        warnings.append("File is named <app>.override.yaml but declares no parent")
+
+
 def validate_config(
     config: dict[str, Any],
     recipe_path: str = "",
@@ -555,6 +593,8 @@ def validate_config(
             errors.append("Field 'id' must be a string")
         elif not config["id"]:
             errors.append("Field 'id' cannot be empty")
+
+    _validate_parent_field(config, recipe_path, errors, warnings)
 
     app_name = config.get("name", "unnamed")
     logger.verbose("VALIDATION", f"Validating: {app_name}")
@@ -624,16 +664,18 @@ def validate_config(
 
 
 def validate_recipe(recipe_path: Path) -> ValidationResult:
-    """Loads, merges, and validates a recipe file.
+    """Validates a recipe file's own schema.
 
-    Parses the YAML file, merges it through the config hierarchy, and
-    validates the merged result. This is the entry point for ``napt validate``.
+    Parses the YAML file, merges it over its parent recipe when it declares
+    one, and validates the result. Organization and vendor defaults are not
+    applied. This is the entry point for ``napt validate``.
 
     Args:
         recipe_path: Path to the recipe YAML file to validate.
 
     Returns:
-        Validation status, errors, warnings, and app count.
+        Validation status, errors, warnings, app count, and the parent path
+            when the recipe declares one.
 
     Example:
         Validate a recipe and check results:
@@ -698,5 +740,31 @@ def validate_recipe(recipe_path: Path) -> ValidationResult:
             recipe_path=recipe_path_str,
         )
 
+    # Merge over the parent recipe, if declared
+    from napt.config.loader import merge_parent
+
+    try:
+        recipe, parent_path = merge_parent(recipe_path, recipe)
+    except ConfigError as err:
+        return ValidationResult(
+            status="invalid",
+            errors=[str(err)],
+            warnings=[],
+            app_count=0,
+            recipe_path=recipe_path_str,
+        )
+    if parent_path is not None:
+        logger.verbose("VALIDATION", f"Parent recipe: {parent_path}")
+
     # Validate the parsed config dict
-    return validate_config(recipe, recipe_path=recipe_path_str)
+    result = validate_config(recipe, recipe_path=recipe_path_str)
+    if parent_path is None:
+        return result
+    return ValidationResult(
+        status=result.status,
+        errors=result.errors,
+        warnings=result.warnings,
+        app_count=result.app_count,
+        recipe_path=result.recipe_path,
+        parent_path=str(parent_path),
+    )

@@ -14,9 +14,9 @@
 
 """Configuration loading and merging for NAPT.
 
-This module implements a four-layer configuration system that allows NAPT to
-work out of the box while supporting full customization. Each layer overrides
-the previous, promoting DRY (Don't Repeat Yourself) principles.
+This module implements a layered configuration system that allows NAPT to
+work out of the box while supporting full customization. Each layer wins
+over the previous, promoting DRY (Don't Repeat Yourself) principles.
 
 Configuration Layers:
     1. **Code defaults** (napt/config/defaults.py)
@@ -25,32 +25,40 @@ Configuration Layers:
        - Provides sensible defaults for all settings
 
     2. **Organization defaults** (defaults/org.yaml)
-       - Organization-wide overrides
+       - Organization-wide settings
        - Optional; only loaded if file exists
        - Customizes settings for your organization
 
     3. **Vendor defaults** (defaults/vendors/{Vendor}.yaml)
-       - Vendor-specific overrides (e.g., Google-specific settings)
+       - Vendor-specific settings (e.g., Google-specific settings)
        - Optional; only loaded if vendor is detected
-       - Overrides organization defaults
+       - Wins over organization defaults
 
-    4. **Recipe configuration** (recipes/{Vendor}/{app}.yaml)
+    4. **Parent recipe** (the file named by the recipe's ``parent`` field)
+       - Another recipe merged beneath this one
+       - Optional; a parent may not itself declare a parent
+       - Wins over vendor defaults
+
+    5. **Recipe configuration** (recipes/{Vendor}/{app}.yaml)
        - App-specific configuration
        - Always required; defines the app itself
-       - Overrides all other layers
+       - Wins over all other layers
 
 Merge Behavior:
     The loader performs deep merging with "last wins" semantics:
 
-    - **Dicts**: Recursively merged (keys from overlay override base)
+    - **Dicts**: Recursively merged (keys from overlay win over base)
     - **Lists**: Completely replaced (NOT appended/extended)
     - **Scalars**: Overwritten (strings, numbers, booleans)
 
 Path Resolution:
-    Relative paths in configuration are resolved against the RECIPE FILE location,
-    making recipes relocatable and portable. Currently resolved paths:
+    Relative paths in configuration are resolved against the RECIPE FILE
+    location, making recipes relocatable and portable. A parent's relative
+    paths resolve against the child recipe, not the parent file. Currently
+    resolved paths:
 
     - psadt.brand_pack.path
+    - intune.logo_path
 
 Dynamic Injection:
     Some fields are injected at load time:
@@ -59,13 +67,13 @@ Dynamic Injection:
 
 Error Handling:
     - ConfigError: Recipe file doesn't exist, YAML parse errors, empty files,
-        or invalid structure
+        invalid structure, a missing parent, or a parent chain
     - All errors are chained with "from err" for better debugging
 
 Note:
     - Code defaults are always applied first (NAPT works without config files)
     - The loader walks upward from the recipe to find defaults/org.yaml
-    - Organization and vendor defaults are optional overrides
+    - Organization and vendor defaults are optional layers
     - Vendor is detected from directory name (recipes/Google/) or recipe content
     - Paths are resolved relative to the recipe, not the working directory
     - Dynamic fields are best-effort (warnings on failure, not errors)
@@ -154,6 +162,80 @@ def _deep_merge_dicts(
             if provenance is not None and layer_name:
                 provenance[k] = layer_name
     return result
+
+
+def load_parent(
+    recipe_path: Path, recipe_obj: dict[str, Any]
+) -> tuple[Path, dict[str, Any]] | None:
+    """Loads the parent recipe a recipe declares, if any.
+
+    The ``parent`` field names another recipe file relative to the
+    declaring recipe's directory. The parent is merged beneath the
+    declaring recipe by
+    [load_effective_config][napt.config.loader.load_effective_config] and by
+    ``napt validate``.
+
+    Args:
+        recipe_path: Path to the recipe that may declare ``parent``.
+        recipe_obj: The parsed recipe dictionary.
+
+    Returns:
+        The resolved parent path and its parsed contents, or None when the
+            recipe declares no parent.
+
+    Raises:
+        ConfigError: When ``parent`` is not a non-empty string, the parent
+            file is missing or not a mapping, or the parent itself declares
+            a parent (chains are not supported).
+    """
+    parent_ref = recipe_obj.get("parent")
+    if parent_ref is None:
+        return None
+    if not isinstance(parent_ref, str) or not parent_ref.strip():
+        raise ConfigError(f"parent must be a non-empty string: {recipe_path}")
+
+    parent_path = (recipe_path.resolve().parent / parent_ref).resolve()
+    if not parent_path.is_file():
+        raise ConfigError(
+            f"Parent recipe not found: {parent_path} (declared in {recipe_path})"
+        )
+
+    parent_obj = _load_yaml_file(parent_path)
+    if not isinstance(parent_obj, dict):
+        raise ConfigError(f"top-level YAML must be a mapping (dict): {parent_path}")
+    if "parent" in parent_obj:
+        raise ConfigError(
+            f"Parent chains are not supported: {parent_path} declares its own "
+            f"parent (used as parent by {recipe_path})"
+        )
+    return parent_path, parent_obj
+
+
+def merge_parent(
+    recipe_path: Path, recipe_obj: dict[str, Any]
+) -> tuple[dict[str, Any], Path | None]:
+    """Merges a recipe over its parent without the other configuration layers.
+
+    Used by ``napt validate``, which checks a recipe's own schema rather than
+    the fully merged configuration. The recipe's ``parent`` field survives
+    the merge so schema validation can see it.
+
+    Args:
+        recipe_path: Path to the recipe that may declare ``parent``.
+        recipe_obj: The parsed recipe dictionary.
+
+    Returns:
+        The merged dictionary and the parent path, or the recipe unchanged
+            and None when it declares no parent.
+
+    Raises:
+        ConfigError: See [load_parent][napt.config.loader.load_parent].
+    """
+    loaded = load_parent(recipe_path, recipe_obj)
+    if loaded is None:
+        return recipe_obj, None
+    parent_path, parent_obj = loaded
+    return _deep_merge_dicts(parent_obj, recipe_obj), parent_path
 
 
 def _find_defaults_root(start_dir: Path) -> Path | None:
@@ -270,7 +352,7 @@ def _inject_dynamic_values(
       explicitly set by a config layer.
     - ``psadt.app_vars.RequireAdmin``: Computed from
       ``intune.run_as_account`` (system -> True, user -> False), unless
-      explicitly set by org.yaml, vendor defaults, or recipe.
+      explicitly set by org.yaml, vendor defaults, a parent, or the recipe.
 
     Args:
         cfg: The configuration dictionary to inject values into.
@@ -285,7 +367,7 @@ def _inject_dynamic_values(
         app_vars.setdefault("AppScriptDate", today_str)
 
         # RequireAdmin: compute from run_as_account unless explicitly set
-        # by a user-controlled layer (org_yaml, vendor_yaml, or recipe).
+        # by a user-controlled layer (org_yaml, vendor_yaml, parent, recipe).
         run_as_account = cfg["intune"]["run_as_account"]
         require_admin_source = None
         if provenance is not None:
@@ -293,7 +375,7 @@ def _inject_dynamic_values(
                 provenance.get("psadt", {}).get("app_vars", {}).get("RequireAdmin")
             )
 
-        user_layers = {"org_yaml", "vendor_yaml", "recipe"}
+        user_layers = {"org_yaml", "vendor_yaml", "parent", "recipe"}
         if require_admin_source in user_layers:
             # User explicitly set RequireAdmin — respect their value
             pass
@@ -333,18 +415,22 @@ def load_effective_config(
 
     Performs the following operations:
 
-    1. Read recipe YAML
+    1. Read recipe YAML and its parent recipe, if it declares one
     2. Find defaults root by scanning upwards for defaults/org.yaml
     3. Load org defaults (required if defaults root exists)
     4. Determine vendor (param vendor > folder name > recipe contents)
     5. Load vendor defaults if present
-    6. Merge: org -> vendor -> recipe (dicts deep-merge, lists replace)
+    6. Merge: org -> vendor -> parent -> recipe (dicts deep-merge, lists
+       replace)
     7. Resolve known relative paths (relative to the recipe directory)
     8. Inject dynamic fields (AppScriptDate = today if absent)
 
+    The returned dict does not carry the ``parent`` field; the parent's
+    contents are already merged in.
+
     Args:
         recipe_path: Path to the recipe YAML file.
-        vendor: Optional vendor name override. If not provided, vendor is detected
+        vendor: Optional vendor name. If not provided, vendor is detected
             from the folder name or recipe contents.
 
     Returns:
@@ -353,7 +439,8 @@ def load_effective_config(
             resolution and injection).
 
     Raises:
-        ConfigError: On YAML parse errors, empty files, invalid structure, or if the recipe file is missing.
+        ConfigError: On YAML parse errors, empty files, invalid structure, a
+            missing recipe or parent file, or a parent chain.
     """
     from napt.logging import get_global_logger
 
@@ -363,10 +450,16 @@ def load_effective_config(
 
     logger.verbose("CONFIG", f"Loading recipe: {recipe_path}")
 
-    # 1) Read recipe
+    # 1) Read recipe and its parent, if any
     recipe_obj = _load_yaml_file(recipe_path)
     if not isinstance(recipe_obj, dict):
         raise ConfigError(f"top-level YAML must be a mapping (dict): {recipe_path}")
+
+    parent_path: Path | None = None
+    parent_obj: dict[str, Any] | None = None
+    loaded_parent = load_parent(recipe_path, recipe_obj)
+    if loaded_parent is not None:
+        parent_path, parent_obj = loaded_parent
 
     # 2) Find defaults root
     defaults_root = _find_defaults_root(recipe_dir)
@@ -438,12 +531,21 @@ def load_effective_config(
                     )
                     layers_merged += 1
 
+    # 6) Merge the parent beneath the recipe, then the recipe on top
+    if parent_path is not None and parent_obj is not None:
+        logger.verbose("CONFIG", f"Loading parent: {parent_path}")
+        logger.debug("CONFIG", f"--- Content from {parent_path.name} ---")
+        _print_yaml_content(parent_obj)
+        merged = _deep_merge_dicts(
+            merged, parent_obj, provenance=provenance, layer_name="parent"
+        )
+        layers_merged += 1
+
     # Show recipe content
     logger.verbose("CONFIG", f"Loading: {recipe_path.name}")
     logger.debug("CONFIG", f"--- Content from {recipe_path.name} ---")
     _print_yaml_content(recipe_obj)
 
-    # 6) Merge recipe on top
     merged = _deep_merge_dicts(
         merged, recipe_obj, provenance=provenance, layer_name="recipe"
     )
@@ -477,8 +579,13 @@ def load_effective_config(
 
     result = validate_config(merged, recipe_path=str(recipe_path))
     if result.errors:
-        raise ConfigError(f"Invalid configuration: {'; '.join(result.errors)}")
+        where = f" (parent: {parent_path})" if parent_path is not None else ""
+        raise ConfigError(f"Invalid configuration{where}: {'; '.join(result.errors)}")
     for warning in result.warnings:
         logger.warning("CONFIG", warning)
+
+    # The parent's contents are merged in; the pointer itself is not config.
+    merged.pop("parent", None)
+    provenance.pop("parent", None)
 
     return merged

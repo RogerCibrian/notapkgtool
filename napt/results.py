@@ -161,6 +161,8 @@ class ValidationResult:
         warnings: List of warning messages.
         app_count: Number of apps in the recipe.
         recipe_path: String path to the validated recipe file.
+        parent_path: String path to the parent recipe merged beneath it, or
+            None when the recipe declares no parent.
     """
 
     status: str
@@ -168,3 +170,4 @@ class ValidationResult:
     warnings: list[str]
     app_count: int
     recipe_path: str
+    parent_path: str | None = None
