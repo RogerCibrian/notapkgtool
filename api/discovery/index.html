@@ -3129,18 +3129,20 @@ method with the signatures below.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Resolves a <a class="autorefs autorefs-internal" title="            RemoteVersion
+        <p>Resolves a discovered remote version to a downloaded installer.</p>
+<p>Turns a <a class="autorefs autorefs-internal" title="            RemoteVersion
 
 
   
       dataclass
-  " href="#napt.discovery.base.RemoteVersion">RemoteVersion</a> to a <a class="autorefs autorefs-internal" title="            StrategyResult
+  " href="#napt.discovery.base.RemoteVersion">RemoteVersion</a> into a
+<a class="autorefs autorefs-internal" title="            StrategyResult
 
 
   
       dataclass
-  " href="#napt.discovery.base.StrategyResult">StrategyResult</a>.</p>
-<p>Implements the version-first fast path: when the discovered version
+  " href="#napt.discovery.base.StrategyResult">StrategyResult</a>.
+Implements the version-first fast path: when the discovered version
 matches the cached version and the cached file still exists on disk,
 the download is skipped entirely. Otherwise the file is downloaded
 fresh from <code>info.download_url</code>.</p>
@@ -3377,81 +3379,85 @@ exists or stateless mode is on.</p>
 <span class="normal"><a href="#__codelineno-0-233">233</a></span>
 <span class="normal"><a href="#__codelineno-0-234">234</a></span>
 <span class="normal"><a href="#__codelineno-0-235">235</a></span>
-<span class="normal"><a href="#__codelineno-0-236">236</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-162"><a id="__codelineno-0-162" name="__codelineno-0-162"></a><span class="k">def</span><span class="w"> </span><span class="nf">resolve_with_cache</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-236">236</a></span>
+<span class="normal"><a href="#__codelineno-0-237">237</a></span>
+<span class="normal"><a href="#__codelineno-0-238">238</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-162"><a id="__codelineno-0-162" name="__codelineno-0-162"></a><span class="k">def</span><span class="w"> </span><span class="nf">resolve_with_cache</span><span class="p">(</span>
 </span><span id="__span-0-163"><a id="__codelineno-0-163" name="__codelineno-0-163"></a>    <span class="n">info</span><span class="p">:</span> <span class="n">RemoteVersion</span><span class="p">,</span>
 </span><span id="__span-0-164"><a id="__codelineno-0-164" name="__codelineno-0-164"></a>    <span class="n">app_config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
 </span><span id="__span-0-165"><a id="__codelineno-0-165" name="__codelineno-0-165"></a>    <span class="n">output_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
 </span><span id="__span-0-166"><a id="__codelineno-0-166" name="__codelineno-0-166"></a>    <span class="n">cache</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="__span-0-167"><a id="__codelineno-0-167" name="__codelineno-0-167"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">StrategyResult</span><span class="p">:</span>
-</span><span id="__span-0-168"><a id="__codelineno-0-168" name="__codelineno-0-168"></a><span class="w">    </span><span class="sd">"""Resolves a [RemoteVersion][napt.discovery.base.RemoteVersion] to a [StrategyResult][napt.discovery.base.StrategyResult].</span>
+</span><span id="__span-0-168"><a id="__codelineno-0-168" name="__codelineno-0-168"></a><span class="w">    </span><span class="sd">"""Resolves a discovered remote version to a downloaded installer.</span>
 </span><span id="__span-0-169"><a id="__codelineno-0-169" name="__codelineno-0-169"></a>
-</span><span id="__span-0-170"><a id="__codelineno-0-170" name="__codelineno-0-170"></a><span class="sd">    Implements the version-first fast path: when the discovered version</span>
-</span><span id="__span-0-171"><a id="__codelineno-0-171" name="__codelineno-0-171"></a><span class="sd">    matches the cached version and the cached file still exists on disk,</span>
-</span><span id="__span-0-172"><a id="__codelineno-0-172" name="__codelineno-0-172"></a><span class="sd">    the download is skipped entirely. Otherwise the file is downloaded</span>
-</span><span id="__span-0-173"><a id="__codelineno-0-173" name="__codelineno-0-173"></a><span class="sd">    fresh from ``info.download_url``.</span>
-</span><span id="__span-0-174"><a id="__codelineno-0-174" name="__codelineno-0-174"></a>
-</span><span id="__span-0-175"><a id="__codelineno-0-175" name="__codelineno-0-175"></a><span class="sd">    Args:</span>
-</span><span id="__span-0-176"><a id="__codelineno-0-176" name="__codelineno-0-176"></a><span class="sd">        info: Version and download URL produced by a strategy's</span>
-</span><span id="__span-0-177"><a id="__codelineno-0-177" name="__codelineno-0-177"></a><span class="sd">            [discover][napt.discovery.base.DiscoveryStrategy.discover] call.</span>
-</span><span id="__span-0-178"><a id="__codelineno-0-178" name="__codelineno-0-178"></a><span class="sd">        app_config: Merged recipe configuration. Used to read ``id``</span>
-</span><span id="__span-0-179"><a id="__codelineno-0-179" name="__codelineno-0-179"></a><span class="sd">            for the per-app download subdirectory.</span>
-</span><span id="__span-0-180"><a id="__codelineno-0-180" name="__codelineno-0-180"></a><span class="sd">        output_dir: Base directory to download into. Files land in</span>
-</span><span id="__span-0-181"><a id="__codelineno-0-181" name="__codelineno-0-181"></a><span class="sd">            ``output_dir / app_id``.</span>
-</span><span id="__span-0-182"><a id="__codelineno-0-182" name="__codelineno-0-182"></a><span class="sd">        cache: Cached state for this recipe (``known_version``,</span>
-</span><span id="__span-0-183"><a id="__codelineno-0-183" name="__codelineno-0-183"></a><span class="sd">            ``file_path``, ``sha256``), or ``None`` when no prior state</span>
-</span><span id="__span-0-184"><a id="__codelineno-0-184" name="__codelineno-0-184"></a><span class="sd">            exists or stateless mode is on.</span>
-</span><span id="__span-0-185"><a id="__codelineno-0-185" name="__codelineno-0-185"></a>
-</span><span id="__span-0-186"><a id="__codelineno-0-186" name="__codelineno-0-186"></a><span class="sd">    Returns:</span>
-</span><span id="__span-0-187"><a id="__codelineno-0-187" name="__codelineno-0-187"></a><span class="sd">        Resolved version, file path, and download metadata. The</span>
-</span><span id="__span-0-188"><a id="__codelineno-0-188" name="__codelineno-0-188"></a><span class="sd">        ``cached`` field indicates whether the download was skipped.</span>
-</span><span id="__span-0-189"><a id="__codelineno-0-189" name="__codelineno-0-189"></a>
-</span><span id="__span-0-190"><a id="__codelineno-0-190" name="__codelineno-0-190"></a><span class="sd">    Raises:</span>
-</span><span id="__span-0-191"><a id="__codelineno-0-191" name="__codelineno-0-191"></a><span class="sd">        NetworkError: On download failures.</span>
-</span><span id="__span-0-192"><a id="__codelineno-0-192" name="__codelineno-0-192"></a>
-</span><span id="__span-0-193"><a id="__codelineno-0-193" name="__codelineno-0-193"></a><span class="sd">    """</span>
-</span><span id="__span-0-194"><a id="__codelineno-0-194" name="__codelineno-0-194"></a>    <span class="n">logger</span> <span class="o">=</span> <span class="n">get_global_logger</span><span class="p">()</span>
-</span><span id="__span-0-195"><a id="__codelineno-0-195" name="__codelineno-0-195"></a>    <span class="n">app_id</span> <span class="o">=</span> <span class="n">app_config</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span>
-</span><span id="__span-0-196"><a id="__codelineno-0-196" name="__codelineno-0-196"></a>
-</span><span id="__span-0-197"><a id="__codelineno-0-197" name="__codelineno-0-197"></a>    <span class="k">if</span> <span class="n">cache</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">is_newer</span><span class="p">(</span><span class="n">info</span><span class="o">.</span><span class="n">version</span><span class="p">,</span> <span class="n">cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"known_version"</span><span class="p">)):</span>
-</span><span id="__span-0-198"><a id="__codelineno-0-198" name="__codelineno-0-198"></a>        <span class="n">cached_path_str</span> <span class="o">=</span> <span class="n">cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"file_path"</span><span class="p">)</span>
-</span><span id="__span-0-199"><a id="__codelineno-0-199" name="__codelineno-0-199"></a>        <span class="n">cached_sha</span> <span class="o">=</span> <span class="n">cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"sha256"</span><span class="p">)</span>
-</span><span id="__span-0-200"><a id="__codelineno-0-200" name="__codelineno-0-200"></a>        <span class="k">if</span> <span class="n">cached_path_str</span> <span class="ow">and</span> <span class="n">cached_sha</span><span class="p">:</span>
-</span><span id="__span-0-201"><a id="__codelineno-0-201" name="__codelineno-0-201"></a>            <span class="n">cached_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">cached_path_str</span><span class="p">)</span>
-</span><span id="__span-0-202"><a id="__codelineno-0-202" name="__codelineno-0-202"></a>            <span class="k">if</span> <span class="n">cached_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-</span><span id="__span-0-203"><a id="__codelineno-0-203" name="__codelineno-0-203"></a>                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-</span><span id="__span-0-204"><a id="__codelineno-0-204" name="__codelineno-0-204"></a>                    <span class="s2">"CACHE"</span><span class="p">,</span>
-</span><span id="__span-0-205"><a id="__codelineno-0-205" name="__codelineno-0-205"></a>                    <span class="sa">f</span><span class="s2">"Version </span><span class="si">{</span><span class="n">info</span><span class="o">.</span><span class="n">version</span><span class="si">}</span><span class="s2"> unchanged, using cached file"</span><span class="p">,</span>
-</span><span id="__span-0-206"><a id="__codelineno-0-206" name="__codelineno-0-206"></a>                <span class="p">)</span>
-</span><span id="__span-0-207"><a id="__codelineno-0-207" name="__codelineno-0-207"></a>                <span class="k">return</span> <span class="n">StrategyResult</span><span class="p">(</span>
-</span><span id="__span-0-208"><a id="__codelineno-0-208" name="__codelineno-0-208"></a>                    <span class="n">version</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">version</span><span class="p">,</span>
-</span><span id="__span-0-209"><a id="__codelineno-0-209" name="__codelineno-0-209"></a>                    <span class="n">version_source</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">source</span><span class="p">,</span>
-</span><span id="__span-0-210"><a id="__codelineno-0-210" name="__codelineno-0-210"></a>                    <span class="n">file_path</span><span class="o">=</span><span class="n">cached_path</span><span class="p">,</span>
-</span><span id="__span-0-211"><a id="__codelineno-0-211" name="__codelineno-0-211"></a>                    <span class="n">sha256</span><span class="o">=</span><span class="n">cached_sha</span><span class="p">,</span>
-</span><span id="__span-0-212"><a id="__codelineno-0-212" name="__codelineno-0-212"></a>                    <span class="n">headers</span><span class="o">=</span><span class="p">{},</span>
-</span><span id="__span-0-213"><a id="__codelineno-0-213" name="__codelineno-0-213"></a>                    <span class="n">download_url</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">download_url</span><span class="p">,</span>
-</span><span id="__span-0-214"><a id="__codelineno-0-214" name="__codelineno-0-214"></a>                    <span class="n">cached</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-</span><span id="__span-0-215"><a id="__codelineno-0-215" name="__codelineno-0-215"></a>                <span class="p">)</span>
-</span><span id="__span-0-216"><a id="__codelineno-0-216" name="__codelineno-0-216"></a>            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-</span><span id="__span-0-217"><a id="__codelineno-0-217" name="__codelineno-0-217"></a>                <span class="s2">"CACHE"</span><span class="p">,</span>
-</span><span id="__span-0-218"><a id="__codelineno-0-218" name="__codelineno-0-218"></a>                <span class="sa">f</span><span class="s2">"Cached file </span><span class="si">{</span><span class="n">cached_path</span><span class="si">}</span><span class="s2"> not found, re-downloading"</span><span class="p">,</span>
-</span><span id="__span-0-219"><a id="__codelineno-0-219" name="__codelineno-0-219"></a>            <span class="p">)</span>
-</span><span id="__span-0-220"><a id="__codelineno-0-220" name="__codelineno-0-220"></a>
-</span><span id="__span-0-221"><a id="__codelineno-0-221" name="__codelineno-0-221"></a>    <span class="k">if</span> <span class="n">cache</span> <span class="ow">and</span> <span class="n">cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"known_version"</span><span class="p">):</span>
-</span><span id="__span-0-222"><a id="__codelineno-0-222" name="__codelineno-0-222"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-</span><span id="__span-0-223"><a id="__codelineno-0-223" name="__codelineno-0-223"></a>            <span class="s2">"DISCOVERY"</span><span class="p">,</span>
-</span><span id="__span-0-224"><a id="__codelineno-0-224" name="__codelineno-0-224"></a>            <span class="sa">f</span><span class="s2">"Version changed: </span><span class="si">{</span><span class="n">cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'known_version'</span><span class="p">)</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">info</span><span class="o">.</span><span class="n">version</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
-</span><span id="__span-0-225"><a id="__codelineno-0-225" name="__codelineno-0-225"></a>        <span class="p">)</span>
-</span><span id="__span-0-226"><a id="__codelineno-0-226" name="__codelineno-0-226"></a>
-</span><span id="__span-0-227"><a id="__codelineno-0-227" name="__codelineno-0-227"></a>    <span class="n">dl</span> <span class="o">=</span> <span class="n">download_file</span><span class="p">(</span><span class="n">info</span><span class="o">.</span><span class="n">download_url</span><span class="p">,</span> <span class="n">output_dir</span> <span class="o">/</span> <span class="n">app_id</span><span class="p">)</span>
-</span><span id="__span-0-228"><a id="__codelineno-0-228" name="__codelineno-0-228"></a>    <span class="k">return</span> <span class="n">StrategyResult</span><span class="p">(</span>
-</span><span id="__span-0-229"><a id="__codelineno-0-229" name="__codelineno-0-229"></a>        <span class="n">version</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">version</span><span class="p">,</span>
-</span><span id="__span-0-230"><a id="__codelineno-0-230" name="__codelineno-0-230"></a>        <span class="n">version_source</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">source</span><span class="p">,</span>
-</span><span id="__span-0-231"><a id="__codelineno-0-231" name="__codelineno-0-231"></a>        <span class="n">file_path</span><span class="o">=</span><span class="n">dl</span><span class="o">.</span><span class="n">file_path</span><span class="p">,</span>
-</span><span id="__span-0-232"><a id="__codelineno-0-232" name="__codelineno-0-232"></a>        <span class="n">sha256</span><span class="o">=</span><span class="n">dl</span><span class="o">.</span><span class="n">sha256</span><span class="p">,</span>
-</span><span id="__span-0-233"><a id="__codelineno-0-233" name="__codelineno-0-233"></a>        <span class="n">headers</span><span class="o">=</span><span class="n">dl</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
-</span><span id="__span-0-234"><a id="__codelineno-0-234" name="__codelineno-0-234"></a>        <span class="n">download_url</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">download_url</span><span class="p">,</span>
-</span><span id="__span-0-235"><a id="__codelineno-0-235" name="__codelineno-0-235"></a>        <span class="n">cached</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-</span><span id="__span-0-236"><a id="__codelineno-0-236" name="__codelineno-0-236"></a>    <span class="p">)</span>
+</span><span id="__span-0-170"><a id="__codelineno-0-170" name="__codelineno-0-170"></a><span class="sd">    Turns a [RemoteVersion][napt.discovery.base.RemoteVersion] into a</span>
+</span><span id="__span-0-171"><a id="__codelineno-0-171" name="__codelineno-0-171"></a><span class="sd">    [StrategyResult][napt.discovery.base.StrategyResult].</span>
+</span><span id="__span-0-172"><a id="__codelineno-0-172" name="__codelineno-0-172"></a><span class="sd">    Implements the version-first fast path: when the discovered version</span>
+</span><span id="__span-0-173"><a id="__codelineno-0-173" name="__codelineno-0-173"></a><span class="sd">    matches the cached version and the cached file still exists on disk,</span>
+</span><span id="__span-0-174"><a id="__codelineno-0-174" name="__codelineno-0-174"></a><span class="sd">    the download is skipped entirely. Otherwise the file is downloaded</span>
+</span><span id="__span-0-175"><a id="__codelineno-0-175" name="__codelineno-0-175"></a><span class="sd">    fresh from ``info.download_url``.</span>
+</span><span id="__span-0-176"><a id="__codelineno-0-176" name="__codelineno-0-176"></a>
+</span><span id="__span-0-177"><a id="__codelineno-0-177" name="__codelineno-0-177"></a><span class="sd">    Args:</span>
+</span><span id="__span-0-178"><a id="__codelineno-0-178" name="__codelineno-0-178"></a><span class="sd">        info: Version and download URL produced by a strategy's</span>
+</span><span id="__span-0-179"><a id="__codelineno-0-179" name="__codelineno-0-179"></a><span class="sd">            [discover][napt.discovery.base.DiscoveryStrategy.discover] call.</span>
+</span><span id="__span-0-180"><a id="__codelineno-0-180" name="__codelineno-0-180"></a><span class="sd">        app_config: Merged recipe configuration. Used to read ``id``</span>
+</span><span id="__span-0-181"><a id="__codelineno-0-181" name="__codelineno-0-181"></a><span class="sd">            for the per-app download subdirectory.</span>
+</span><span id="__span-0-182"><a id="__codelineno-0-182" name="__codelineno-0-182"></a><span class="sd">        output_dir: Base directory to download into. Files land in</span>
+</span><span id="__span-0-183"><a id="__codelineno-0-183" name="__codelineno-0-183"></a><span class="sd">            ``output_dir / app_id``.</span>
+</span><span id="__span-0-184"><a id="__codelineno-0-184" name="__codelineno-0-184"></a><span class="sd">        cache: Cached state for this recipe (``known_version``,</span>
+</span><span id="__span-0-185"><a id="__codelineno-0-185" name="__codelineno-0-185"></a><span class="sd">            ``file_path``, ``sha256``), or ``None`` when no prior state</span>
+</span><span id="__span-0-186"><a id="__codelineno-0-186" name="__codelineno-0-186"></a><span class="sd">            exists or stateless mode is on.</span>
+</span><span id="__span-0-187"><a id="__codelineno-0-187" name="__codelineno-0-187"></a>
+</span><span id="__span-0-188"><a id="__codelineno-0-188" name="__codelineno-0-188"></a><span class="sd">    Returns:</span>
+</span><span id="__span-0-189"><a id="__codelineno-0-189" name="__codelineno-0-189"></a><span class="sd">        Resolved version, file path, and download metadata. The</span>
+</span><span id="__span-0-190"><a id="__codelineno-0-190" name="__codelineno-0-190"></a><span class="sd">        ``cached`` field indicates whether the download was skipped.</span>
+</span><span id="__span-0-191"><a id="__codelineno-0-191" name="__codelineno-0-191"></a>
+</span><span id="__span-0-192"><a id="__codelineno-0-192" name="__codelineno-0-192"></a><span class="sd">    Raises:</span>
+</span><span id="__span-0-193"><a id="__codelineno-0-193" name="__codelineno-0-193"></a><span class="sd">        NetworkError: On download failures.</span>
+</span><span id="__span-0-194"><a id="__codelineno-0-194" name="__codelineno-0-194"></a>
+</span><span id="__span-0-195"><a id="__codelineno-0-195" name="__codelineno-0-195"></a><span class="sd">    """</span>
+</span><span id="__span-0-196"><a id="__codelineno-0-196" name="__codelineno-0-196"></a>    <span class="n">logger</span> <span class="o">=</span> <span class="n">get_global_logger</span><span class="p">()</span>
+</span><span id="__span-0-197"><a id="__codelineno-0-197" name="__codelineno-0-197"></a>    <span class="n">app_id</span> <span class="o">=</span> <span class="n">app_config</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span>
+</span><span id="__span-0-198"><a id="__codelineno-0-198" name="__codelineno-0-198"></a>
+</span><span id="__span-0-199"><a id="__codelineno-0-199" name="__codelineno-0-199"></a>    <span class="k">if</span> <span class="n">cache</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">is_newer</span><span class="p">(</span><span class="n">info</span><span class="o">.</span><span class="n">version</span><span class="p">,</span> <span class="n">cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"known_version"</span><span class="p">)):</span>
+</span><span id="__span-0-200"><a id="__codelineno-0-200" name="__codelineno-0-200"></a>        <span class="n">cached_path_str</span> <span class="o">=</span> <span class="n">cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"file_path"</span><span class="p">)</span>
+</span><span id="__span-0-201"><a id="__codelineno-0-201" name="__codelineno-0-201"></a>        <span class="n">cached_sha</span> <span class="o">=</span> <span class="n">cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"sha256"</span><span class="p">)</span>
+</span><span id="__span-0-202"><a id="__codelineno-0-202" name="__codelineno-0-202"></a>        <span class="k">if</span> <span class="n">cached_path_str</span> <span class="ow">and</span> <span class="n">cached_sha</span><span class="p">:</span>
+</span><span id="__span-0-203"><a id="__codelineno-0-203" name="__codelineno-0-203"></a>            <span class="n">cached_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">cached_path_str</span><span class="p">)</span>
+</span><span id="__span-0-204"><a id="__codelineno-0-204" name="__codelineno-0-204"></a>            <span class="k">if</span> <span class="n">cached_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+</span><span id="__span-0-205"><a id="__codelineno-0-205" name="__codelineno-0-205"></a>                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+</span><span id="__span-0-206"><a id="__codelineno-0-206" name="__codelineno-0-206"></a>                    <span class="s2">"CACHE"</span><span class="p">,</span>
+</span><span id="__span-0-207"><a id="__codelineno-0-207" name="__codelineno-0-207"></a>                    <span class="sa">f</span><span class="s2">"Version </span><span class="si">{</span><span class="n">info</span><span class="o">.</span><span class="n">version</span><span class="si">}</span><span class="s2"> unchanged, using cached file"</span><span class="p">,</span>
+</span><span id="__span-0-208"><a id="__codelineno-0-208" name="__codelineno-0-208"></a>                <span class="p">)</span>
+</span><span id="__span-0-209"><a id="__codelineno-0-209" name="__codelineno-0-209"></a>                <span class="k">return</span> <span class="n">StrategyResult</span><span class="p">(</span>
+</span><span id="__span-0-210"><a id="__codelineno-0-210" name="__codelineno-0-210"></a>                    <span class="n">version</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">version</span><span class="p">,</span>
+</span><span id="__span-0-211"><a id="__codelineno-0-211" name="__codelineno-0-211"></a>                    <span class="n">version_source</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">source</span><span class="p">,</span>
+</span><span id="__span-0-212"><a id="__codelineno-0-212" name="__codelineno-0-212"></a>                    <span class="n">file_path</span><span class="o">=</span><span class="n">cached_path</span><span class="p">,</span>
+</span><span id="__span-0-213"><a id="__codelineno-0-213" name="__codelineno-0-213"></a>                    <span class="n">sha256</span><span class="o">=</span><span class="n">cached_sha</span><span class="p">,</span>
+</span><span id="__span-0-214"><a id="__codelineno-0-214" name="__codelineno-0-214"></a>                    <span class="n">headers</span><span class="o">=</span><span class="p">{},</span>
+</span><span id="__span-0-215"><a id="__codelineno-0-215" name="__codelineno-0-215"></a>                    <span class="n">download_url</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">download_url</span><span class="p">,</span>
+</span><span id="__span-0-216"><a id="__codelineno-0-216" name="__codelineno-0-216"></a>                    <span class="n">cached</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-0-217"><a id="__codelineno-0-217" name="__codelineno-0-217"></a>                <span class="p">)</span>
+</span><span id="__span-0-218"><a id="__codelineno-0-218" name="__codelineno-0-218"></a>            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+</span><span id="__span-0-219"><a id="__codelineno-0-219" name="__codelineno-0-219"></a>                <span class="s2">"CACHE"</span><span class="p">,</span>
+</span><span id="__span-0-220"><a id="__codelineno-0-220" name="__codelineno-0-220"></a>                <span class="sa">f</span><span class="s2">"Cached file </span><span class="si">{</span><span class="n">cached_path</span><span class="si">}</span><span class="s2"> not found, re-downloading"</span><span class="p">,</span>
+</span><span id="__span-0-221"><a id="__codelineno-0-221" name="__codelineno-0-221"></a>            <span class="p">)</span>
+</span><span id="__span-0-222"><a id="__codelineno-0-222" name="__codelineno-0-222"></a>
+</span><span id="__span-0-223"><a id="__codelineno-0-223" name="__codelineno-0-223"></a>    <span class="k">if</span> <span class="n">cache</span> <span class="ow">and</span> <span class="n">cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"known_version"</span><span class="p">):</span>
+</span><span id="__span-0-224"><a id="__codelineno-0-224" name="__codelineno-0-224"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+</span><span id="__span-0-225"><a id="__codelineno-0-225" name="__codelineno-0-225"></a>            <span class="s2">"DISCOVERY"</span><span class="p">,</span>
+</span><span id="__span-0-226"><a id="__codelineno-0-226" name="__codelineno-0-226"></a>            <span class="sa">f</span><span class="s2">"Version changed: </span><span class="si">{</span><span class="n">cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'known_version'</span><span class="p">)</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">info</span><span class="o">.</span><span class="n">version</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+</span><span id="__span-0-227"><a id="__codelineno-0-227" name="__codelineno-0-227"></a>        <span class="p">)</span>
+</span><span id="__span-0-228"><a id="__codelineno-0-228" name="__codelineno-0-228"></a>
+</span><span id="__span-0-229"><a id="__codelineno-0-229" name="__codelineno-0-229"></a>    <span class="n">dl</span> <span class="o">=</span> <span class="n">download_file</span><span class="p">(</span><span class="n">info</span><span class="o">.</span><span class="n">download_url</span><span class="p">,</span> <span class="n">output_dir</span> <span class="o">/</span> <span class="n">app_id</span><span class="p">)</span>
+</span><span id="__span-0-230"><a id="__codelineno-0-230" name="__codelineno-0-230"></a>    <span class="k">return</span> <span class="n">StrategyResult</span><span class="p">(</span>
+</span><span id="__span-0-231"><a id="__codelineno-0-231" name="__codelineno-0-231"></a>        <span class="n">version</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">version</span><span class="p">,</span>
+</span><span id="__span-0-232"><a id="__codelineno-0-232" name="__codelineno-0-232"></a>        <span class="n">version_source</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">source</span><span class="p">,</span>
+</span><span id="__span-0-233"><a id="__codelineno-0-233" name="__codelineno-0-233"></a>        <span class="n">file_path</span><span class="o">=</span><span class="n">dl</span><span class="o">.</span><span class="n">file_path</span><span class="p">,</span>
+</span><span id="__span-0-234"><a id="__codelineno-0-234" name="__codelineno-0-234"></a>        <span class="n">sha256</span><span class="o">=</span><span class="n">dl</span><span class="o">.</span><span class="n">sha256</span><span class="p">,</span>
+</span><span id="__span-0-235"><a id="__codelineno-0-235" name="__codelineno-0-235"></a>        <span class="n">headers</span><span class="o">=</span><span class="n">dl</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+</span><span id="__span-0-236"><a id="__codelineno-0-236" name="__codelineno-0-236"></a>        <span class="n">download_url</span><span class="o">=</span><span class="n">info</span><span class="o">.</span><span class="n">download_url</span><span class="p">,</span>
+</span><span id="__span-0-237"><a id="__codelineno-0-237" name="__codelineno-0-237"></a>        <span class="n">cached</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+</span><span id="__span-0-238"><a id="__codelineno-0-238" name="__codelineno-0-238"></a>    <span class="p">)</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>

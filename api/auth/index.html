@@ -3951,9 +3951,10 @@ active one.</p>
     <div class="doc doc-contents ">
 
         <p>Reports which credential NAPT would use right now, or <code>None</code>.</p>
-<p>Resolves a token exactly as <a class="autorefs autorefs-internal" title="            get_access_token" href="#napt.auth.credentials.get_access_token">get_access_token</a>
-does -- so the answer reflects what <code>napt upload</code> will do -- and
-decodes it for display.</p>
+<p>Resolves a token exactly as
+<a class="autorefs autorefs-internal" title="            get_access_token" href="#napt.auth.credentials.get_access_token">get_access_token</a> does -- so
+the answer reflects what <code>napt upload</code> will do -- and decodes it for
+display.</p>
 
 
     <p><span class="doc-section-title">Returns:</span></p>
@@ -4056,38 +4057,40 @@ saved session that can no longer be refreshed).</p>
 <span class="normal"><a href="#__codelineno-0-798">798</a></span>
 <span class="normal"><a href="#__codelineno-0-799">799</a></span>
 <span class="normal"><a href="#__codelineno-0-800">800</a></span>
-<span class="normal"><a href="#__codelineno-0-801">801</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-770"><a id="__codelineno-0-770" name="__codelineno-0-770"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_status</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">AuthStatus</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-801">801</a></span>
+<span class="normal"><a href="#__codelineno-0-802">802</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-770"><a id="__codelineno-0-770" name="__codelineno-0-770"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_status</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">AuthStatus</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-0-771"><a id="__codelineno-0-771" name="__codelineno-0-771"></a><span class="w">    </span><span class="sd">"""Reports which credential NAPT would use right now, or ``None``.</span>
 </span><span id="__span-0-772"><a id="__codelineno-0-772" name="__codelineno-0-772"></a>
-</span><span id="__span-0-773"><a id="__codelineno-0-773" name="__codelineno-0-773"></a><span class="sd">    Resolves a token exactly as [get_access_token][napt.auth.credentials.get_access_token]</span>
-</span><span id="__span-0-774"><a id="__codelineno-0-774" name="__codelineno-0-774"></a><span class="sd">    does -- so the answer reflects what `napt upload` will do -- and</span>
-</span><span id="__span-0-775"><a id="__codelineno-0-775" name="__codelineno-0-775"></a><span class="sd">    decodes it for display.</span>
-</span><span id="__span-0-776"><a id="__codelineno-0-776" name="__codelineno-0-776"></a>
-</span><span id="__span-0-777"><a id="__codelineno-0-777" name="__codelineno-0-777"></a><span class="sd">    Returns:</span>
-</span><span id="__span-0-778"><a id="__codelineno-0-778" name="__codelineno-0-778"></a><span class="sd">        The current credential's status, or ``None`` when nothing is</span>
-</span><span id="__span-0-779"><a id="__codelineno-0-779" name="__codelineno-0-779"></a><span class="sd">        configured or signed in.</span>
-</span><span id="__span-0-780"><a id="__codelineno-0-780" name="__codelineno-0-780"></a>
-</span><span id="__span-0-781"><a id="__codelineno-0-781" name="__codelineno-0-781"></a><span class="sd">    Raises:</span>
-</span><span id="__span-0-782"><a id="__codelineno-0-782" name="__codelineno-0-782"></a><span class="sd">        AuthError: If a credential is configured but fails (for example, a</span>
-</span><span id="__span-0-783"><a id="__codelineno-0-783" name="__codelineno-0-783"></a><span class="sd">            saved session that can no longer be refreshed).</span>
-</span><span id="__span-0-784"><a id="__codelineno-0-784" name="__codelineno-0-784"></a><span class="sd">    """</span>
-</span><span id="__span-0-785"><a id="__codelineno-0-785" name="__codelineno-0-785"></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="__span-0-786"><a id="__codelineno-0-786" name="__codelineno-0-786"></a>        <span class="n">token</span> <span class="o">=</span> <span class="n">get_credential</span><span class="p">()</span><span class="o">.</span><span class="n">get_token</span><span class="p">(</span><span class="o">*</span><span class="n">GRAPH_SCOPES</span><span class="p">)</span><span class="o">.</span><span class="n">token</span>
-</span><span id="__span-0-787"><a id="__codelineno-0-787" name="__codelineno-0-787"></a>        <span class="k">return</span> <span class="n">_status_from_token</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">_describe_noninteractive_method</span><span class="p">())</span>
-</span><span id="__span-0-788"><a id="__codelineno-0-788" name="__codelineno-0-788"></a>    <span class="k">except</span> <span class="n">ClientAuthenticationError</span><span class="p">:</span>
-</span><span id="__span-0-789"><a id="__codelineno-0-789" name="__codelineno-0-789"></a>        <span class="k">pass</span>
-</span><span id="__span-0-790"><a id="__codelineno-0-790" name="__codelineno-0-790"></a>
-</span><span id="__span-0-791"><a id="__codelineno-0-791" name="__codelineno-0-791"></a>    <span class="n">config</span> <span class="o">=</span> <span class="n">_interactive_config</span><span class="p">()</span>
-</span><span id="__span-0-792"><a id="__codelineno-0-792" name="__codelineno-0-792"></a>    <span class="k">if</span> <span class="n">config</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-0-793"><a id="__codelineno-0-793" name="__codelineno-0-793"></a>        <span class="n">broker</span> <span class="o">=</span> <span class="n">_broker_available</span><span class="p">()</span>
-</span><span id="__span-0-794"><a id="__codelineno-0-794" name="__codelineno-0-794"></a>        <span class="n">token</span> <span class="o">=</span> <span class="n">_acquire_silent</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">use_broker</span><span class="o">=</span><span class="n">broker</span><span class="p">)</span>
-</span><span id="__span-0-795"><a id="__codelineno-0-795" name="__codelineno-0-795"></a>        <span class="k">if</span> <span class="n">token</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-0-796"><a id="__codelineno-0-796" name="__codelineno-0-796"></a>            <span class="k">return</span> <span class="n">_status_from_token</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">_interactive_method</span><span class="p">(</span><span class="n">broker</span><span class="p">))</span>
-</span><span id="__span-0-797"><a id="__codelineno-0-797" name="__codelineno-0-797"></a>
-</span><span id="__span-0-798"><a id="__codelineno-0-798" name="__codelineno-0-798"></a>    <span class="n">token</span> <span class="o">=</span> <span class="n">_azure_cli_token</span><span class="p">()</span>
-</span><span id="__span-0-799"><a id="__codelineno-0-799" name="__codelineno-0-799"></a>    <span class="k">if</span> <span class="n">token</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-0-800"><a id="__codelineno-0-800" name="__codelineno-0-800"></a>        <span class="k">return</span> <span class="n">_status_from_token</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="s2">"azure cli"</span><span class="p">)</span>
-</span><span id="__span-0-801"><a id="__codelineno-0-801" name="__codelineno-0-801"></a>    <span class="k">return</span> <span class="kc">None</span>
+</span><span id="__span-0-773"><a id="__codelineno-0-773" name="__codelineno-0-773"></a><span class="sd">    Resolves a token exactly as</span>
+</span><span id="__span-0-774"><a id="__codelineno-0-774" name="__codelineno-0-774"></a><span class="sd">    [get_access_token][napt.auth.credentials.get_access_token] does -- so</span>
+</span><span id="__span-0-775"><a id="__codelineno-0-775" name="__codelineno-0-775"></a><span class="sd">    the answer reflects what `napt upload` will do -- and decodes it for</span>
+</span><span id="__span-0-776"><a id="__codelineno-0-776" name="__codelineno-0-776"></a><span class="sd">    display.</span>
+</span><span id="__span-0-777"><a id="__codelineno-0-777" name="__codelineno-0-777"></a>
+</span><span id="__span-0-778"><a id="__codelineno-0-778" name="__codelineno-0-778"></a><span class="sd">    Returns:</span>
+</span><span id="__span-0-779"><a id="__codelineno-0-779" name="__codelineno-0-779"></a><span class="sd">        The current credential's status, or ``None`` when nothing is</span>
+</span><span id="__span-0-780"><a id="__codelineno-0-780" name="__codelineno-0-780"></a><span class="sd">        configured or signed in.</span>
+</span><span id="__span-0-781"><a id="__codelineno-0-781" name="__codelineno-0-781"></a>
+</span><span id="__span-0-782"><a id="__codelineno-0-782" name="__codelineno-0-782"></a><span class="sd">    Raises:</span>
+</span><span id="__span-0-783"><a id="__codelineno-0-783" name="__codelineno-0-783"></a><span class="sd">        AuthError: If a credential is configured but fails (for example, a</span>
+</span><span id="__span-0-784"><a id="__codelineno-0-784" name="__codelineno-0-784"></a><span class="sd">            saved session that can no longer be refreshed).</span>
+</span><span id="__span-0-785"><a id="__codelineno-0-785" name="__codelineno-0-785"></a><span class="sd">    """</span>
+</span><span id="__span-0-786"><a id="__codelineno-0-786" name="__codelineno-0-786"></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="__span-0-787"><a id="__codelineno-0-787" name="__codelineno-0-787"></a>        <span class="n">token</span> <span class="o">=</span> <span class="n">get_credential</span><span class="p">()</span><span class="o">.</span><span class="n">get_token</span><span class="p">(</span><span class="o">*</span><span class="n">GRAPH_SCOPES</span><span class="p">)</span><span class="o">.</span><span class="n">token</span>
+</span><span id="__span-0-788"><a id="__codelineno-0-788" name="__codelineno-0-788"></a>        <span class="k">return</span> <span class="n">_status_from_token</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">_describe_noninteractive_method</span><span class="p">())</span>
+</span><span id="__span-0-789"><a id="__codelineno-0-789" name="__codelineno-0-789"></a>    <span class="k">except</span> <span class="n">ClientAuthenticationError</span><span class="p">:</span>
+</span><span id="__span-0-790"><a id="__codelineno-0-790" name="__codelineno-0-790"></a>        <span class="k">pass</span>
+</span><span id="__span-0-791"><a id="__codelineno-0-791" name="__codelineno-0-791"></a>
+</span><span id="__span-0-792"><a id="__codelineno-0-792" name="__codelineno-0-792"></a>    <span class="n">config</span> <span class="o">=</span> <span class="n">_interactive_config</span><span class="p">()</span>
+</span><span id="__span-0-793"><a id="__codelineno-0-793" name="__codelineno-0-793"></a>    <span class="k">if</span> <span class="n">config</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-794"><a id="__codelineno-0-794" name="__codelineno-0-794"></a>        <span class="n">broker</span> <span class="o">=</span> <span class="n">_broker_available</span><span class="p">()</span>
+</span><span id="__span-0-795"><a id="__codelineno-0-795" name="__codelineno-0-795"></a>        <span class="n">token</span> <span class="o">=</span> <span class="n">_acquire_silent</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">use_broker</span><span class="o">=</span><span class="n">broker</span><span class="p">)</span>
+</span><span id="__span-0-796"><a id="__codelineno-0-796" name="__codelineno-0-796"></a>        <span class="k">if</span> <span class="n">token</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-797"><a id="__codelineno-0-797" name="__codelineno-0-797"></a>            <span class="k">return</span> <span class="n">_status_from_token</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">_interactive_method</span><span class="p">(</span><span class="n">broker</span><span class="p">))</span>
+</span><span id="__span-0-798"><a id="__codelineno-0-798" name="__codelineno-0-798"></a>
+</span><span id="__span-0-799"><a id="__codelineno-0-799" name="__codelineno-0-799"></a>    <span class="n">token</span> <span class="o">=</span> <span class="n">_azure_cli_token</span><span class="p">()</span>
+</span><span id="__span-0-800"><a id="__codelineno-0-800" name="__codelineno-0-800"></a>    <span class="k">if</span> <span class="n">token</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-801"><a id="__codelineno-0-801" name="__codelineno-0-801"></a>        <span class="k">return</span> <span class="n">_status_from_token</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="s2">"azure cli"</span><span class="p">)</span>
+</span><span id="__span-0-802"><a id="__codelineno-0-802" name="__codelineno-0-802"></a>    <span class="k">return</span> <span class="kc">None</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -4174,8 +4177,7 @@ longer be refreshed, with guidance on what to do.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>napt/auth/credentials.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-804">804</a></span>
-<span class="normal"><a href="#__codelineno-0-805">805</a></span>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-805">805</a></span>
 <span class="normal"><a href="#__codelineno-0-806">806</a></span>
 <span class="normal"><a href="#__codelineno-0-807">807</a></span>
 <span class="normal"><a href="#__codelineno-0-808">808</a></span>
@@ -4215,48 +4217,49 @@ longer be refreshed, with guidance on what to do.</p>
 <span class="normal"><a href="#__codelineno-0-842">842</a></span>
 <span class="normal"><a href="#__codelineno-0-843">843</a></span>
 <span class="normal"><a href="#__codelineno-0-844">844</a></span>
-<span class="normal"><a href="#__codelineno-0-845">845</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-804"><a id="__codelineno-0-804" name="__codelineno-0-804"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_access_token</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="__span-0-805"><a id="__codelineno-0-805" name="__codelineno-0-805"></a><span class="w">    </span><span class="sd">"""Acquires a Microsoft Graph access token.</span>
-</span><span id="__span-0-806"><a id="__codelineno-0-806" name="__codelineno-0-806"></a>
-</span><span id="__span-0-807"><a id="__codelineno-0-807" name="__codelineno-0-807"></a><span class="sd">    Tries the non-interactive chain from</span>
-</span><span id="__span-0-808"><a id="__codelineno-0-808" name="__codelineno-0-808"></a><span class="sd">    [get_credential][napt.auth.credentials.get_credential] first, then the session</span>
-</span><span id="__span-0-809"><a id="__codelineno-0-809" name="__codelineno-0-809"></a><span class="sd">    saved by `napt auth login`, then an existing Azure CLI (`az login`)</span>
-</span><span id="__span-0-810"><a id="__codelineno-0-810" name="__codelineno-0-810"></a><span class="sd">    session. Never opens a browser: an interactive user who has not logged</span>
-</span><span id="__span-0-811"><a id="__codelineno-0-811" name="__codelineno-0-811"></a><span class="sd">    in is told to run `napt auth login`.</span>
-</span><span id="__span-0-812"><a id="__codelineno-0-812" name="__codelineno-0-812"></a>
-</span><span id="__span-0-813"><a id="__codelineno-0-813" name="__codelineno-0-813"></a><span class="sd">    Returns:</span>
-</span><span id="__span-0-814"><a id="__codelineno-0-814" name="__codelineno-0-814"></a><span class="sd">        Bearer token string for use in Authorization headers.</span>
-</span><span id="__span-0-815"><a id="__codelineno-0-815" name="__codelineno-0-815"></a>
-</span><span id="__span-0-816"><a id="__codelineno-0-816" name="__codelineno-0-816"></a><span class="sd">    Raises:</span>
-</span><span id="__span-0-817"><a id="__codelineno-0-817" name="__codelineno-0-817"></a><span class="sd">        AuthError: If no credential is available or the saved session can no</span>
-</span><span id="__span-0-818"><a id="__codelineno-0-818" name="__codelineno-0-818"></a><span class="sd">            longer be refreshed, with guidance on what to do.</span>
-</span><span id="__span-0-819"><a id="__codelineno-0-819" name="__codelineno-0-819"></a>
-</span><span id="__span-0-820"><a id="__codelineno-0-820" name="__codelineno-0-820"></a><span class="sd">    Example:</span>
-</span><span id="__span-0-821"><a id="__codelineno-0-821" name="__codelineno-0-821"></a><span class="sd">        Get a token and use it in a request:</span>
-</span><span id="__span-0-822"><a id="__codelineno-0-822" name="__codelineno-0-822"></a><span class="sd">            ```python</span>
-</span><span id="__span-0-823"><a id="__codelineno-0-823" name="__codelineno-0-823"></a><span class="sd">            from napt.auth.credentials import get_access_token</span>
-</span><span id="__span-0-824"><a id="__codelineno-0-824" name="__codelineno-0-824"></a>
-</span><span id="__span-0-825"><a id="__codelineno-0-825" name="__codelineno-0-825"></a><span class="sd">            token = get_access_token()</span>
-</span><span id="__span-0-826"><a id="__codelineno-0-826" name="__codelineno-0-826"></a><span class="sd">            headers = {"Authorization": f"Bearer {token}"}</span>
-</span><span id="__span-0-827"><a id="__codelineno-0-827" name="__codelineno-0-827"></a><span class="sd">            ```</span>
-</span><span id="__span-0-828"><a id="__codelineno-0-828" name="__codelineno-0-828"></a>
-</span><span id="__span-0-829"><a id="__codelineno-0-829" name="__codelineno-0-829"></a><span class="sd">    """</span>
-</span><span id="__span-0-830"><a id="__codelineno-0-830" name="__codelineno-0-830"></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="__span-0-831"><a id="__codelineno-0-831" name="__codelineno-0-831"></a>        <span class="k">return</span> <span class="n">get_credential</span><span class="p">()</span><span class="o">.</span><span class="n">get_token</span><span class="p">(</span><span class="o">*</span><span class="n">GRAPH_SCOPES</span><span class="p">)</span><span class="o">.</span><span class="n">token</span>
-</span><span id="__span-0-832"><a id="__codelineno-0-832" name="__codelineno-0-832"></a>    <span class="k">except</span> <span class="n">ClientAuthenticationError</span><span class="p">:</span>
-</span><span id="__span-0-833"><a id="__codelineno-0-833" name="__codelineno-0-833"></a>        <span class="k">pass</span>
-</span><span id="__span-0-834"><a id="__codelineno-0-834" name="__codelineno-0-834"></a>
-</span><span id="__span-0-835"><a id="__codelineno-0-835" name="__codelineno-0-835"></a>    <span class="n">config</span> <span class="o">=</span> <span class="n">_interactive_config</span><span class="p">()</span>
-</span><span id="__span-0-836"><a id="__codelineno-0-836" name="__codelineno-0-836"></a>    <span class="k">if</span> <span class="n">config</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-0-837"><a id="__codelineno-0-837" name="__codelineno-0-837"></a>        <span class="n">token</span> <span class="o">=</span> <span class="n">_acquire_silent</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">use_broker</span><span class="o">=</span><span class="n">_broker_available</span><span class="p">())</span>
-</span><span id="__span-0-838"><a id="__codelineno-0-838" name="__codelineno-0-838"></a>        <span class="k">if</span> <span class="n">token</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-0-839"><a id="__codelineno-0-839" name="__codelineno-0-839"></a>            <span class="k">return</span> <span class="n">token</span>
-</span><span id="__span-0-840"><a id="__codelineno-0-840" name="__codelineno-0-840"></a>
-</span><span id="__span-0-841"><a id="__codelineno-0-841" name="__codelineno-0-841"></a>    <span class="n">token</span> <span class="o">=</span> <span class="n">_azure_cli_token</span><span class="p">()</span>
-</span><span id="__span-0-842"><a id="__codelineno-0-842" name="__codelineno-0-842"></a>    <span class="k">if</span> <span class="n">token</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-0-843"><a id="__codelineno-0-843" name="__codelineno-0-843"></a>        <span class="k">return</span> <span class="n">token</span>
-</span><span id="__span-0-844"><a id="__codelineno-0-844" name="__codelineno-0-844"></a>
-</span><span id="__span-0-845"><a id="__codelineno-0-845" name="__codelineno-0-845"></a>    <span class="k">raise</span> <span class="n">AuthError</span><span class="p">(</span><span class="n">_HINT_NOT_LOGGED_IN</span><span class="p">)</span>
+<span class="normal"><a href="#__codelineno-0-845">845</a></span>
+<span class="normal"><a href="#__codelineno-0-846">846</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-805"><a id="__codelineno-0-805" name="__codelineno-0-805"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_access_token</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="__span-0-806"><a id="__codelineno-0-806" name="__codelineno-0-806"></a><span class="w">    </span><span class="sd">"""Acquires a Microsoft Graph access token.</span>
+</span><span id="__span-0-807"><a id="__codelineno-0-807" name="__codelineno-0-807"></a>
+</span><span id="__span-0-808"><a id="__codelineno-0-808" name="__codelineno-0-808"></a><span class="sd">    Tries the non-interactive chain from</span>
+</span><span id="__span-0-809"><a id="__codelineno-0-809" name="__codelineno-0-809"></a><span class="sd">    [get_credential][napt.auth.credentials.get_credential] first, then the session</span>
+</span><span id="__span-0-810"><a id="__codelineno-0-810" name="__codelineno-0-810"></a><span class="sd">    saved by `napt auth login`, then an existing Azure CLI (`az login`)</span>
+</span><span id="__span-0-811"><a id="__codelineno-0-811" name="__codelineno-0-811"></a><span class="sd">    session. Never opens a browser: an interactive user who has not logged</span>
+</span><span id="__span-0-812"><a id="__codelineno-0-812" name="__codelineno-0-812"></a><span class="sd">    in is told to run `napt auth login`.</span>
+</span><span id="__span-0-813"><a id="__codelineno-0-813" name="__codelineno-0-813"></a>
+</span><span id="__span-0-814"><a id="__codelineno-0-814" name="__codelineno-0-814"></a><span class="sd">    Returns:</span>
+</span><span id="__span-0-815"><a id="__codelineno-0-815" name="__codelineno-0-815"></a><span class="sd">        Bearer token string for use in Authorization headers.</span>
+</span><span id="__span-0-816"><a id="__codelineno-0-816" name="__codelineno-0-816"></a>
+</span><span id="__span-0-817"><a id="__codelineno-0-817" name="__codelineno-0-817"></a><span class="sd">    Raises:</span>
+</span><span id="__span-0-818"><a id="__codelineno-0-818" name="__codelineno-0-818"></a><span class="sd">        AuthError: If no credential is available or the saved session can no</span>
+</span><span id="__span-0-819"><a id="__codelineno-0-819" name="__codelineno-0-819"></a><span class="sd">            longer be refreshed, with guidance on what to do.</span>
+</span><span id="__span-0-820"><a id="__codelineno-0-820" name="__codelineno-0-820"></a>
+</span><span id="__span-0-821"><a id="__codelineno-0-821" name="__codelineno-0-821"></a><span class="sd">    Example:</span>
+</span><span id="__span-0-822"><a id="__codelineno-0-822" name="__codelineno-0-822"></a><span class="sd">        Get a token and use it in a request:</span>
+</span><span id="__span-0-823"><a id="__codelineno-0-823" name="__codelineno-0-823"></a><span class="sd">            ```python</span>
+</span><span id="__span-0-824"><a id="__codelineno-0-824" name="__codelineno-0-824"></a><span class="sd">            from napt.auth.credentials import get_access_token</span>
+</span><span id="__span-0-825"><a id="__codelineno-0-825" name="__codelineno-0-825"></a>
+</span><span id="__span-0-826"><a id="__codelineno-0-826" name="__codelineno-0-826"></a><span class="sd">            token = get_access_token()</span>
+</span><span id="__span-0-827"><a id="__codelineno-0-827" name="__codelineno-0-827"></a><span class="sd">            headers = {"Authorization": f"Bearer {token}"}</span>
+</span><span id="__span-0-828"><a id="__codelineno-0-828" name="__codelineno-0-828"></a><span class="sd">            ```</span>
+</span><span id="__span-0-829"><a id="__codelineno-0-829" name="__codelineno-0-829"></a>
+</span><span id="__span-0-830"><a id="__codelineno-0-830" name="__codelineno-0-830"></a><span class="sd">    """</span>
+</span><span id="__span-0-831"><a id="__codelineno-0-831" name="__codelineno-0-831"></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="__span-0-832"><a id="__codelineno-0-832" name="__codelineno-0-832"></a>        <span class="k">return</span> <span class="n">get_credential</span><span class="p">()</span><span class="o">.</span><span class="n">get_token</span><span class="p">(</span><span class="o">*</span><span class="n">GRAPH_SCOPES</span><span class="p">)</span><span class="o">.</span><span class="n">token</span>
+</span><span id="__span-0-833"><a id="__codelineno-0-833" name="__codelineno-0-833"></a>    <span class="k">except</span> <span class="n">ClientAuthenticationError</span><span class="p">:</span>
+</span><span id="__span-0-834"><a id="__codelineno-0-834" name="__codelineno-0-834"></a>        <span class="k">pass</span>
+</span><span id="__span-0-835"><a id="__codelineno-0-835" name="__codelineno-0-835"></a>
+</span><span id="__span-0-836"><a id="__codelineno-0-836" name="__codelineno-0-836"></a>    <span class="n">config</span> <span class="o">=</span> <span class="n">_interactive_config</span><span class="p">()</span>
+</span><span id="__span-0-837"><a id="__codelineno-0-837" name="__codelineno-0-837"></a>    <span class="k">if</span> <span class="n">config</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-838"><a id="__codelineno-0-838" name="__codelineno-0-838"></a>        <span class="n">token</span> <span class="o">=</span> <span class="n">_acquire_silent</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">use_broker</span><span class="o">=</span><span class="n">_broker_available</span><span class="p">())</span>
+</span><span id="__span-0-839"><a id="__codelineno-0-839" name="__codelineno-0-839"></a>        <span class="k">if</span> <span class="n">token</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-840"><a id="__codelineno-0-840" name="__codelineno-0-840"></a>            <span class="k">return</span> <span class="n">token</span>
+</span><span id="__span-0-841"><a id="__codelineno-0-841" name="__codelineno-0-841"></a>
+</span><span id="__span-0-842"><a id="__codelineno-0-842" name="__codelineno-0-842"></a>    <span class="n">token</span> <span class="o">=</span> <span class="n">_azure_cli_token</span><span class="p">()</span>
+</span><span id="__span-0-843"><a id="__codelineno-0-843" name="__codelineno-0-843"></a>    <span class="k">if</span> <span class="n">token</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-844"><a id="__codelineno-0-844" name="__codelineno-0-844"></a>        <span class="k">return</span> <span class="n">token</span>
+</span><span id="__span-0-845"><a id="__codelineno-0-845" name="__codelineno-0-845"></a>
+</span><span id="__span-0-846"><a id="__codelineno-0-846" name="__codelineno-0-846"></a>    <span class="k">raise</span> <span class="n">AuthError</span><span class="p">(</span><span class="n">_HINT_NOT_LOGGED_IN</span><span class="p">)</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>
