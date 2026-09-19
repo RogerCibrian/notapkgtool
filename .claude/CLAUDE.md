@@ -47,7 +47,7 @@ Use **ruff** + **black**. Fix all errors before committing. Never ignore errors.
 .venv\Scripts\python.exe -m ruff check napt/ tests/
 ```
 
-**Line length:** 88 chars max. Break with parentheses or multiple lines.
+**Line length:** 88 chars max. Break with parentheses or multiple lines. Black wraps code; ruff's E501 enforces the limit on docstrings, comments, and strings. Put a long cross-reference link on its own line (ruff exempts a line that is a single unbreakable token). Use `# noqa: E501` only for content that cannot wrap, such as an embedded file template, and say why in a comment.
 
 **Dead code:** **vulture** detects unreferenced code. It scans `napt/` only — never `tests/`, so test references can't keep a corpse alive. Configuration is in `[tool.vulture]`. A finding means either delete the code or add a commented entry to `vulture_whitelist.py`; never raise the confidence threshold (unused functions score 60, so a higher floor blinds the check).
 

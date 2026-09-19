@@ -53,7 +53,7 @@ def test_parse_intunewin_missing_encryption_key_raises_packaging_error(
 def test_extract_encrypted_payload_returns_extracted_path(
     fake_intunewin: Path, tmp_path: Path
 ) -> None:
-    """Tests that extract_encrypted_payload extracts the payload and returns its path."""
+    """Tests that extract_encrypted_payload extracts the payload and returns a path."""
     dest = tmp_path / "out"
     dest.mkdir()
 

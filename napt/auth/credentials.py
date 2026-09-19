@@ -770,9 +770,10 @@ def logout(*, all_tenants: bool = False) -> list[str]:
 def get_status() -> AuthStatus | None:
     """Reports which credential NAPT would use right now, or ``None``.
 
-    Resolves a token exactly as [get_access_token][napt.auth.credentials.get_access_token]
-    does -- so the answer reflects what `napt upload` will do -- and
-    decodes it for display.
+    Resolves a token exactly as
+    [get_access_token][napt.auth.credentials.get_access_token] does -- so
+    the answer reflects what `napt upload` will do -- and decodes it for
+    display.
 
     Returns:
         The current credential's status, or ``None`` when nothing is

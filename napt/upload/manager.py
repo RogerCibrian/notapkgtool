@@ -336,8 +336,8 @@ def _build_app_metadata(
         config: Effective configuration dict from load_effective_config.
         recipe_path: Path to the recipe file (used to infer vendor/publisher).
         version: Application version string (from package directory name).
-        package_path: Path to the .intunewin file
-            (e.g., packages/napt-chrome/144.0.7559.110/Invoke-AppDeployToolkit.intunewin).
+        package_path: Path to the .intunewin file (e.g.,
+            packages/napt-chrome/<version>/Invoke-AppDeployToolkit.intunewin).
         build_types: Either "app_only" (install entry, detection script only) or
             "update_only" (update entry, detection + requirements scripts).
         manifest: Parsed build manifest from

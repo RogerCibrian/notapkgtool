@@ -98,7 +98,7 @@ def test_create_content_version_500_raises_network_error() -> None:
 def test_create_content_version_file_returns_file_id_and_sas_uri(
     fake_metadata,
 ) -> None:
-    """Tests that create_content_version_file returns (file_id, sas_uri) after polling."""
+    """Tests that polling create_content_version_file yields (file_id, sas_uri)."""
     with req_mock.Mocker() as m:
         m.post(_FILES_URL, json={"id": FILE_ID}, status_code=201)
         m.get(

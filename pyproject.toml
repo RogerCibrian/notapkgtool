@@ -89,7 +89,10 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "D"]
-extend-ignore = ["E203", "E501"]
+# E203 conflicts with black's slice formatting. E501 is enforced on purpose:
+# black wraps code, and this catches the docstrings, comments, and strings
+# black leaves alone.
+extend-ignore = ["E203"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
