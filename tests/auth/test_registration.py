@@ -497,7 +497,7 @@ def test_consent_retries_until_service_principal_replicates(
 
 
 def test_setup_adds_federated_credential_once(user_dir, bootstrap) -> None:
-    """Tests that the OIDC credential is created when absent and skipped when present."""
+    """Tests that the OIDC credential is created once and skipped when present."""
 
     def base() -> dict:
         # Fresh per run: FakeGraph consumes sequenced responses as it goes.
@@ -635,7 +635,7 @@ def test_setup_create_writes_stamp(user_dir, bootstrap) -> None:
 
 
 def test_setup_refuses_unstamped_name_match_without_adopt(user_dir, bootstrap) -> None:
-    """Tests that a portal-made registration of the same name is reported, not touched."""
+    """Tests that a same-name portal registration is reported, not touched."""
     app = _complete_app()
     app["notes"] = "Created by hand"
     graph = FakeGraph(_existing_tenant_responses(app))

@@ -431,7 +431,7 @@ class TestWebScrapeStrategyErrors:
             )
 
     def test_missing_link_finding_method_raises(self):
-        """Tests that omitting both link_selector and link_pattern raises ConfigError."""
+        """Tests that omitting link_selector and link_pattern raises ConfigError."""
         strategy = WebScrapeStrategy()
         with pytest.raises(ConfigError, match="link_selector.*link_pattern"):
             strategy.discover(

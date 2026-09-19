@@ -106,8 +106,8 @@ def extract_msi_metadata(file_path: str | Path) -> MSIMetadata:
             from pathlib import Path
             from napt.versioning.msi import extract_msi_metadata
 
-            metadata = extract_msi_metadata(Path("chrome.msi"))
-            print(f"{metadata.product_name} {metadata.product_version} ({metadata.architecture})")
+            meta = extract_msi_metadata(Path("chrome.msi"))
+            print(f"{meta.product_name} {meta.product_version} ({meta.architecture})")
             # Google Chrome 131.0.6778.86 (x64)
             ```
 
@@ -130,6 +130,10 @@ def extract_msi_metadata(file_path: str | Path) -> MSIMetadata:
     if sys.platform.startswith("win"):
         logger.debug("MSI", "Trying backend: PowerShell COM...")
         escaped_path = str(msi_path).replace("'", "''")
+        query = (
+            "SELECT Property, Value FROM Property "
+            "WHERE Property = 'ProductName' OR Property = 'ProductVersion'"
+        )
         ps_script = f"""
 $installer = New-Object -ComObject WindowsInstaller.Installer
 $db = $installer.OpenDatabase('{escaped_path}', 0)
@@ -137,7 +141,7 @@ if ($null -eq $db) {{
     Write-Error "Failed to open database"
     exit 1
 }}
-$view = $db.OpenView("SELECT Property, Value FROM Property WHERE Property = 'ProductName' OR Property = 'ProductVersion'")
+$view = $db.OpenView("{query}")
 $view.Execute()
 $props = @{{}}
 while ($record = $view.Fetch()) {{

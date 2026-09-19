@@ -117,8 +117,8 @@ def extract_msix_metadata(file_path: str | Path) -> MSIXMetadata:
             from pathlib import Path
             from napt.versioning.msix import extract_msix_metadata
 
-            metadata = extract_msix_metadata(Path("Slack.msix"))
-            print(f"{metadata.display_name} {metadata.version} ({metadata.architecture})")
+            meta = extract_msix_metadata(Path("Slack.msix"))
+            print(f"{meta.display_name} {meta.version} ({meta.architecture})")
             # Slack 4.49.81.0 (x64)
             ```
 

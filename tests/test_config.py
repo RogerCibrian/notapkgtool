@@ -217,7 +217,7 @@ class TestDynamicInjection:
             assert app_vars["AppScriptDate"] == today
 
     def test_require_admin_defaults_true_for_system_scope(self):
-        """Tests that _inject_dynamic_values defaults RequireAdmin to true for system scope."""
+        """Tests that RequireAdmin defaults to true for system scope."""
         from napt.config.loader import _inject_dynamic_values
 
         cfg = {"psadt": {"app_vars": {}}, "intune": {"run_as_account": "system"}}
@@ -226,7 +226,7 @@ class TestDynamicInjection:
         assert cfg["psadt"]["app_vars"]["RequireAdmin"] is True
 
     def test_require_admin_defaults_false_for_user_scope(self):
-        """Tests that _inject_dynamic_values defaults RequireAdmin to false for user scope."""
+        """Tests that RequireAdmin defaults to false for user scope."""
         from napt.config.loader import _inject_dynamic_values
 
         cfg = {"psadt": {"app_vars": {}}, "intune": {"run_as_account": "user"}}

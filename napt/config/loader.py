@@ -103,7 +103,8 @@ def _load_yaml_file(p: Path) -> Any:
         The parsed Python object from the YAML file.
 
     Raises:
-        ConfigError: When file does not exist, invalid YAML (parse error), or empty files.
+        ConfigError: When file does not exist, invalid YAML (parse error), or
+            empty files.
     """
     if not p.exists():
         raise ConfigError(f"file not found: {p}")

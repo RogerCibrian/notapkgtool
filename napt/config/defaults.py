@@ -122,6 +122,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
 
 # Template for org.yaml created by `napt init`.
 # This is a commented template showing available options, not required values.
+# File content written to defaults/org.yaml; its long YAML values cannot wrap,
+# hence the E501 exemption on the closing line.
 ORG_YAML_TEMPLATE = """\
 # NAPT Organization Defaults
 # ==========================
@@ -241,4 +243,4 @@ apiVersion: napt/v1
 #
 #   # Superseded versions kept in Intune for rollback before deletion.
 #   retain_versions: 1
-"""
+"""  # noqa: E501

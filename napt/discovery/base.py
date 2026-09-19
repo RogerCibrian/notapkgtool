@@ -165,8 +165,10 @@ def resolve_with_cache(
     output_dir: Path,
     cache: dict[str, Any] | None,
 ) -> StrategyResult:
-    """Resolves a [RemoteVersion][napt.discovery.base.RemoteVersion] to a [StrategyResult][napt.discovery.base.StrategyResult].
+    """Resolves a discovered remote version to a downloaded installer.
 
+    Turns a [RemoteVersion][napt.discovery.base.RemoteVersion] into a
+    [StrategyResult][napt.discovery.base.StrategyResult].
     Implements the version-first fast path: when the discovered version
     matches the cached version and the cached file still exists on disk,
     the download is skipped entirely. Otherwise the file is downloaded

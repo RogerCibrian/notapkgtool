@@ -80,7 +80,7 @@ def create_yaml_file(tmp_test_dir: Path):
 
 @pytest.fixture
 def make_config():
-    """Creates a config dict with all DEFAULT_CONFIG keys, overridden by provided values.
+    """Creates a config dict of all DEFAULT_CONFIG keys, overridden by given values.
 
     Usage:
         config = make_config({"id": "test-app", "name": "Test App"})

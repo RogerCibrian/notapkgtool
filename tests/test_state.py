@@ -338,7 +338,7 @@ class TestRecordPending:
         assert state["pending"] is None
 
     def test_rollback_to_published_clears_pending(self):
-        """Tests that pending is cleared when the vendor serves the published release."""
+        """Tests that pending clears when the vendor serves the published release."""
         state = create_default_deployment_state()
         state["published"] = {"version": "1.0.0", "sha256": "aaa"}
         record_pending(state, version="2.0.0", sha256="bbb", url="https://x/2.msi")

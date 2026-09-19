@@ -85,7 +85,7 @@ class TestCmdAuth:
         assert "No interactive session" in capsys.readouterr().out
 
     def test_status_lists_known_tenants(self, capsys, tmp_path, monkeypatch):
-        """Tests that interactive status lists remembered tenants, marking the active."""
+        """Tests that interactive status lists known tenants, marking the active."""
         from napt.auth.credentials import AuthConfig, AuthStore, _save_auth_store
 
         monkeypatch.setenv("NAPT_USER_DIR", str(tmp_path))

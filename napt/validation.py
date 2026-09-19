@@ -361,8 +361,9 @@ def _validate_intune_section(
 
         if not re.fullmatch(r"Windows(?:10|11)_(?:\d{4}|\d{2}H[12])", release):
             errors.append(
-                f"intune.minimum_supported_windows_release: Invalid format {release!r}. "
-                f"Expected format: 'Windows10_21H2' or 'Windows11_23H2'"
+                "intune.minimum_supported_windows_release: Invalid format "
+                f"{release!r}. "
+                "Expected format: 'Windows10_21H2' or 'Windows11_23H2'"
             )
 
     # Validate detection subsection
