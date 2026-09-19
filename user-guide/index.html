@@ -944,10 +944,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#the-three-override-layers" class="md-nav__link">
+  <a href="#the-configuration-layers" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The three override layers
+        The configuration layers
       
     </span>
   </a>
@@ -2510,10 +2510,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#the-three-override-layers" class="md-nav__link">
+  <a href="#the-configuration-layers" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The three override layers
+        The configuration layers
       
     </span>
   </a>
@@ -3524,38 +3524,48 @@ whatever is still eligible.</p>
 </span></code></pre></div>
 <h2 id="configuration-layers">Configuration layers</h2>
 <p>NAPT layers configuration so you don't repeat settings across recipes.
-All defaults live in code; configuration files are optional overrides.</p>
+All defaults live in code; configuration files are optional layers on top.</p>
 <h3 id="how-configuration-works">How configuration works</h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>Code defaults (always complete)     &lt;- baseline, ships with napt
 </span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>    |
-</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>./defaults/org.yaml                 &lt;- organization overrides (optional)
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>./defaults/org.yaml                 &lt;- organization defaults (optional)
 </span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>    |
-</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>./defaults/vendors/&lt;Vendor&gt;.yaml    &lt;- vendor overrides (optional)
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>./defaults/vendors/&lt;Vendor&gt;.yaml    &lt;- vendor defaults (optional)
 </span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a>    |
-</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>recipe.yaml                         &lt;- recipe-specific overrides
+</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>parent recipe                       &lt;- named by the recipe's parent field (optional)
+</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a>    |
+</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a>recipe.yaml                         &lt;- the app itself, wins over everything
 </span></code></pre></div>
 <p><strong>Key principles:</strong></p>
 <ul>
 <li>Code provides complete, working defaults for all settings</li>
-<li>Config files only override what you need to change</li>
+<li>Config files only set what you need to change</li>
 <li>Missing fields always fall back to code defaults</li>
 <li>Old configs never break when NAPT adds new features</li>
-<li>Any setting can be overridden at any layer: org, vendor, or recipe</li>
+<li>Any setting can be set at any layer: org, vendor, parent, or recipe</li>
+<li>Dicts merge key by key; lists and scalars replace the value beneath them,
+  so a recipe that sets <code>deployment.rings</code> replaces the whole list</li>
 </ul>
-<h3 id="the-three-override-layers">The three override layers</h3>
+<h3 id="the-configuration-layers">The configuration layers</h3>
 <ol>
 <li>
-<p><strong>Organization defaults</strong> (<code>defaults/org.yaml</code>) - Base overrides for all apps.
+<p><strong>Organization defaults</strong> (<code>defaults/org.yaml</code>) - Base settings for all apps.
 Optional; only needed if you want to customize settings organization-wide.
 Contains PSADT settings, update policies, and build configuration.</p>
 </li>
 <li>
-<p><strong>Vendor defaults</strong> (<code>defaults/vendors/&lt;Vendor&gt;.yaml</code>) - Vendor-specific overrides.
+<p><strong>Vendor defaults</strong> (<code>defaults/vendors/&lt;Vendor&gt;.yaml</code>) - Vendor-specific settings.
 Optional; only loaded if vendor is detected (e.g., Google-specific settings).</p>
 </li>
 <li>
+<p><strong>Parent recipe</strong> (the <code>parent</code> field) - Another recipe merged beneath this one.
+Optional; lets several recipes share a base without repeating it.
+A parent cannot declare its own parent.
+See <a href="../recipe-reference/#parent">parent</a> for the field and the file naming convention.</p>
+</li>
+<li>
 <p><strong>Recipe configuration</strong> (<code>recipes/&lt;Vendor&gt;/&lt;app&gt;.yaml</code>) - App-specific settings.
-Always required; defines the specific app with final overrides.</p>
+Always required; defines the specific app and wins over every other layer.</p>
 </li>
 </ol>
 <h3 id="example">Example</h3>

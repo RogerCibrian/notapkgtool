@@ -644,6 +644,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#parent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        parent
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2486,6 +2497,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#parent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        parent
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3338,20 +3360,21 @@
 </blockquote>
 <h2 id="top-level-fields">Top-level fields</h2>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span><span class="w">        </span><span class="c1"># Required: Recipe format version</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"Application</span><span class="nv"> </span><span class="s">Name"</span><span class="w">   </span><span class="c1"># Required: Display name</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">"napt-app-id"</span><span class="w">          </span><span class="c1"># Required: Unique identifier</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nt">discovery</span><span class="p">:</span><span class="w">                  </span><span class="c1"># Required: How to find and download the installer</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="c1"># ... strategy-specific fields</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="nt">psadt</span><span class="p">:</span><span class="w">                      </span><span class="c1"># Optional for MSI/MSIX; EXE needs install and uninstall</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="no"># ...</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">  </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="no"># ...</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="nt">intune</span><span class="p">:</span><span class="w">                     </span><span class="c1"># Optional: Intune-specific settings</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">  </span><span class="c1"># ...</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="nt">logging</span><span class="p">:</span><span class="w">                    </span><span class="c1"># Optional: On-device script logging settings</span>
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">  </span><span class="c1"># ...</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">parent</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../_base/app.yaml</span><span class="w">  </span><span class="c1"># Optional: Recipe merged beneath this one</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"Application</span><span class="nv"> </span><span class="s">Name"</span><span class="w">   </span><span class="c1"># Required: Display name</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">"napt-app-id"</span><span class="w">          </span><span class="c1"># Required: Unique identifier</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nt">discovery</span><span class="p">:</span><span class="w">                  </span><span class="c1"># Required: How to find and download the installer</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="c1"># ... strategy-specific fields</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="nt">psadt</span><span class="p">:</span><span class="w">                      </span><span class="c1"># Optional for MSI/MSIX; EXE needs install and uninstall</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">  </span><span class="nt">install</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="no"># ...</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">  </span><span class="nt">uninstall</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="no"># ...</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="nt">intune</span><span class="p">:</span><span class="w">                     </span><span class="c1"># Optional: Intune-specific settings</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">  </span><span class="c1"># ...</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="nt">logging</span><span class="p">:</span><span class="w">                    </span><span class="c1"># Optional: On-device script logging settings</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">  </span><span class="c1"># ...</span>
 </span></code></pre></div>
 <h3 id="apiversion">apiVersion</h3>
 <p><strong>Type:</strong> <code>string</code>
@@ -3373,6 +3396,24 @@ name. Used to generate:</p>
 <li>Build directory names: <code>builds/{id}/{version}/</code></li>
 <li>Package names: <code>packages/{id}/Invoke-AppDeployToolkit.intunewin</code></li>
 </ul>
+<h3 id="parent">parent</h3>
+<p><strong>Type:</strong> <code>string</code>
+<strong>Required:</strong> No</p>
+<p>Path to another recipe, relative to this file's directory, that is merged
+beneath this one.
+This recipe wins wherever both set a value; the parent fills in everything
+else.
+A parent is an ordinary recipe and cannot declare a <code>parent</code> of its own.
+<code>name</code> and <code>id</code> must be set in this file when the parent's values are not
+wanted, since they identify the app in Intune and in NAPT's state.</p>
+<p>Name a recipe that declares <code>parent</code> as <code>&lt;app&gt;.override.yaml</code> so the
+relationship shows in every listing.
+<code>napt validate</code> warns when the field and the file name disagree in either
+direction, and reports the parent it merged.</p>
+<p>Relative paths a parent sets, such as <code>intune.logo_path</code>, resolve against
+this file's directory, not the parent's.
+See <a href="../user-guide/#configuration-layers">Configuration layers</a> for where the
+parent sits in the merge order and how lists merge.</p>
 <h2 id="discovery-configuration">Discovery configuration</h2>
 <p>The <code>discovery</code> section defines how NAPT finds and downloads the installer. The structure
 depends on the chosen <code>strategy</code>.</p>
