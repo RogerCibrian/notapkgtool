@@ -171,8 +171,9 @@ def load_parent(
 
     The ``parent`` field names another recipe file relative to the
     declaring recipe's directory. The parent is merged beneath the
-    declaring recipe by [load_effective_config][napt.config.loader.load_effective_config]
-    and by ``napt validate``.
+    declaring recipe by
+    [load_effective_config][napt.config.loader.load_effective_config] and by
+    ``napt validate``.
 
     Args:
         recipe_path: Path to the recipe that may declare ``parent``.

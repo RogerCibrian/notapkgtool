@@ -918,7 +918,7 @@ Contains PSADT settings, update policies, and build configuration.
 2. **Vendor defaults** (`defaults/vendors/<Vendor>.yaml`) - Vendor-specific settings.
 Optional; only loaded if vendor is detected (e.g., Google-specific settings).
 
-3. **Parent recipe** (the file named by the recipe's `parent` field) - Another recipe merged beneath this one.
+3. **Parent recipe** (the `parent` field) - Another recipe merged beneath this one.
 Optional; lets several recipes share a base without repeating it.
 A parent cannot declare its own parent.
 See [parent](recipe-reference.md#parent) for the field and the file naming convention.
