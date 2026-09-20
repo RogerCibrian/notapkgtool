@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""MSIX detection and requirements script generation for Intune Win32 apps.
+r"""MSIX detection and requirements script generation for Intune Win32 apps.
 
 This module generates PowerShell detection and requirements scripts for
 MSIX packages deployed as Intune Win32 apps. Unlike MSI/EXE installers
@@ -50,9 +50,9 @@ Requirements Logic:
 
 Logging:
     - Primary (System):
-        C:\\ProgramData\\Microsoft\\IntuneManagementExtension\\Logs\\NAPTDetections.log
+        C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\NAPTDetections.log
     - Primary (User):
-        C:\\ProgramData\\Microsoft\\IntuneManagementExtension\\Logs\\NAPTDetectionsUser.log
+        C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\NAPTDetectionsUser.log
     - Fallback locations mirror the registry-based scripts
     - Format: CMTrace for compatibility with Intune diagnostics
 
@@ -174,9 +174,7 @@ def generate_msix_detection_script(
 
     logger = get_global_logger()
 
-    logger.verbose(
-        "DETECTION", f"Generating MSIX detection script: {output_path.name}"
-    )
+    logger.verbose("DETECTION", f"Generating MSIX detection script: {output_path.name}")
 
     helper_name = f"_msix_shared_{config.install_scope}.ps1"
     helper_content = (_TEMPLATES_DIR / helper_name).read_text(encoding="utf-8")
@@ -289,9 +287,7 @@ def generate_msix_requirements_script(
     try:
         script_bytes = script_content.encode(PS_SCRIPT_ENCODING)
         output_path.write_bytes(script_bytes)
-        logger.verbose(
-            "REQUIREMENTS", f"Requirements script written to: {output_path}"
-        )
+        logger.verbose("REQUIREMENTS", f"Requirements script written to: {output_path}")
     except OSError as err:
         raise OSError(
             f"Failed to write requirements script to {output_path}: {err}"

@@ -399,7 +399,11 @@ function Uninstall-ADTDeployment {
         }
 
         result = generate_invoke_script(
-            self._write_template(tmp_path), config, "25.01", "4.1.7", "x64",
+            self._write_template(tmp_path),
+            config,
+            "25.01",
+            "4.1.7",
+            "x64",
             "7z2501-x64.msi",
         )
 
@@ -435,7 +439,11 @@ function Uninstall-ADTDeployment {
             }
 
             generate_invoke_script(
-                self._write_template(tmp_path), config, "1.0", "4.1.7", "x64",
+                self._write_template(tmp_path),
+                config,
+                "1.0",
+                "4.1.7",
+                "x64",
                 "app.msi",
             )
         finally:

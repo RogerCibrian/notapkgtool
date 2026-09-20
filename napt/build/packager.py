@@ -37,9 +37,7 @@ from napt.exceptions import ConfigError, NetworkError, PackagingError
 from napt.results import PackageResult
 
 INTUNEWIN_REPO = "microsoft/Microsoft-Win32-Content-Prep-Tool"
-INTUNEWIN_GITHUB_API = (
-    f"https://api.github.com/repos/{INTUNEWIN_REPO}/releases/latest"
-)
+INTUNEWIN_GITHUB_API = f"https://api.github.com/repos/{INTUNEWIN_REPO}/releases/latest"
 INTUNEWIN_DOWNLOAD_URL = (
     f"https://github.com/{INTUNEWIN_REPO}/raw/{{tag}}/IntuneWinAppUtil.exe"
 )
@@ -267,7 +265,8 @@ def _execute_packaging(
 
     if not intunewin_files:
         raise PackagingError(
-            f"IntuneWinAppUtil.exe completed but no .intunewin file found in {output_dir}"
+            "IntuneWinAppUtil.exe completed but no .intunewin file found in "
+            f"{output_dir}"
         )
 
     # Return the most recently created file

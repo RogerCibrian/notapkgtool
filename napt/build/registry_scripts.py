@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Registry-based detection and requirements script generation for Intune Win32 apps.
+r"""Registry-based detection and requirements script generation for Intune Win32 apps.
 
 This module generates PowerShell detection and requirements scripts for
 MSI and EXE installers deployed as Intune Win32 apps. Scripts check
@@ -41,9 +41,8 @@ Installer Type Filtering:
         EXE installers that run embedded MSIs internally.
 
 Logging:
-    - Primary: C:\\ProgramData\\Microsoft\\IntuneManagementExtension\\Logs\\
-    - Fallback: C:\\ProgramData\\NAPT\\ (system) or %LOCALAPPDATA%\\NAPT\\
-        (user)
+    - Primary: C:\ProgramData\Microsoft\IntuneManagementExtension\Logs
+    - Fallback: C:\ProgramData\NAPT (system) or %LOCALAPPDATA%\NAPT (user)
     - Log rotation: 2-file rotation (.log and .log.old), configurable max
         size (default: 3MB)
     - Format: CMTrace for compatibility with Intune diagnostics
@@ -222,9 +221,7 @@ def generate_detection_script(config: DetectionConfig, output_path: Path) -> Pat
     return output_path
 
 
-def generate_requirements_script(
-    config: RequirementsConfig, output_path: Path
-) -> Path:
+def generate_requirements_script(config: RequirementsConfig, output_path: Path) -> Path:
     """Generates PowerShell requirements script for Intune Win32 app.
 
     Creates a PowerShell script that checks Windows uninstall registry keys

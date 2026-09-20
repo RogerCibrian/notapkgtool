@@ -96,7 +96,8 @@ def _substitute_variables(text: str, version: str, installer_filename: str) -> s
         Text with all supported variable tokens replaced.
     """
     # str.replace, not re.sub: filenames may contain regex-special characters
-    for token, value in zip(_NAPT_VARIABLES, (version, installer_filename)):
+    values = (version, installer_filename)
+    for token, value in zip(_NAPT_VARIABLES, values, strict=True):
         text = text.replace(token, value)
     return text
 
@@ -164,9 +165,7 @@ def _build_adtsession_vars(
 
     for key, value in merged_vars.items():
         if isinstance(value, str):
-            merged_vars[key] = _substitute_variables(
-                value, version, installer_filename
-            )
+            merged_vars[key] = _substitute_variables(value, version, installer_filename)
             _warn_unrecognized_tokens(merged_vars[key], f"psadt.app_vars.{key}")
 
     # Add auto-generated fields

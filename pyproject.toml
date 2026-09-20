@@ -74,6 +74,12 @@ pytest-cov = "^7.1.0"
 [tool.black]
 line-length = 88
 target-version = ["py311"]
+# Black's default minus "build", which would skip napt/build and tests/build.
+exclude = '''
+/(\.direnv|\.eggs|\.git|\.hg|\.ipynb_checkpoints|\.mypy_cache|\.nox
+  |\.pytest_cache|\.ruff_cache|\.tox|\.svn|\.venv|\.vscode|__pypackages__
+  |_build|buck-out|dist|venv)/
+'''
 
 # -----------------------------
 # Linting (Ruff)
@@ -82,7 +88,7 @@ target-version = ["py311"]
 exclude = [
     ".bzr", ".direnv", ".eggs", ".git", ".git-rewrite", ".hg", ".ipynb_checkpoints",
     ".mypy_cache", ".nox", ".pants.d", ".pyenv", ".pytest_cache", ".pytype", ".ruff_cache",
-    ".svn", ".tox", ".venv", ".vscode", "__pypackages__", "_build", "buck-out", "build",
+    ".svn", ".tox", ".venv", ".vscode", "__pypackages__", "_build", "buck-out",
     "dist", "node_modules", "site-packages", "venv",
 ]
 line-length = 88

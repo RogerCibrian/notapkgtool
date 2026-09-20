@@ -11,11 +11,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from napt.build.manager import sanitize_filename
 from napt.build.registry_scripts import (
     DetectionConfig,
     generate_detection_script,
 )
-from napt.build.manager import sanitize_filename
 
 # All tests in this file are unit tests (fast, mocked)
 
@@ -299,7 +299,8 @@ class TestGenerateDetectionScript:
 
         content = output_path.read_text(encoding="utf-8-sig")
 
-        # Component is built at runtime from $SanitizedAppName-$ExpectedVersion-Detection
+        # Component is built at runtime from
+        # $SanitizedAppName-$ExpectedVersion-Detection
         assert "ComponentName" in content and '-Detection"' in content
 
     def test_script_result_not_detected_logs_as_warning(self, tmp_path: Path):
@@ -387,7 +388,7 @@ class TestGenerateDetectionScript:
         assert "Registry32" in content
 
     def test_script_arm64_uses_registry64_view(self, tmp_path: Path):
-        """Test that arm64 architecture uses Registry64 view (ARM64 uses 64-bit registry)."""
+        """Tests that arm64 uses the Registry64 view, as ARM64 Windows does."""
         config = DetectionConfig(
             app_name="Test App",
             version="1.0.0",

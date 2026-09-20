@@ -279,7 +279,7 @@ class TestCreateIntunewin:
     def test_execute_packaging_called_with_packagefiles_dir(
         self, mock_execute, mock_get_tool, tmp_path
     ):
-        """Tests that IntuneWinAppUtil is invoked on packagefiles/ not the version dir."""
+        """Tests that IntuneWinAppUtil runs on packagefiles/, not the version dir."""
         build_dir = _make_build_dir(tmp_path)
         packages_dir = tmp_path / "packages"
 

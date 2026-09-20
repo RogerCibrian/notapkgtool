@@ -65,11 +65,11 @@ from napt.versioning.msix import (
 
 
 def sanitize_filename(name: str, app_id: str = "") -> str:
-    """Sanitize string for use in Windows filename.
+    r"""Sanitize string for use in Windows filename.
 
     Rules:
         - Replace spaces with hyphens
-        - Remove invalid Windows filename characters (< > : " | ? * \\ /)
+        - Remove invalid Windows filename characters (< > : " | ? * \ /)
         - Normalize multiple consecutive hyphens to single hyphen
         - Remove leading/trailing hyphens and dots
         - If result is empty, fallback to app_id (or "app" if app_id is empty)
@@ -544,9 +544,7 @@ def _resolve_app_info(
 
     detection_settings = config.get("intune", {}).get("detection", {})
     installer_ext = installer_file.suffix.lower()
-    override_display_name = detection_settings.get(
-        "override_msi_display_name", False
-    )
+    override_display_name = detection_settings.get("override_msi_display_name", False)
 
     # Warn about fields that will be ignored for MSI installers
     if installer_ext == ".msi" and detection_settings.get("display_name"):
@@ -634,9 +632,7 @@ def _resolve_app_info(
         logger.verbose("BUILD", f"Using MSIX DisplayName: {app_name}")
 
         expected_architecture = msix_metadata.architecture
-        logger.verbose(
-            "BUILD", f"MSIX architecture: {expected_architecture}"
-        )
+        logger.verbose("BUILD", f"MSIX architecture: {expected_architecture}")
 
     elif detection_settings.get("display_name"):
         app_name = detection_settings["display_name"]
@@ -713,9 +709,7 @@ def _generate_detection_script(
 
     sanitized_app_name = sanitize_filename(app_name, app_id)
     sanitized_version = version.replace(" ", "-")
-    detection_filename = (
-        f"{sanitized_app_name}_{sanitized_version}-Detection.ps1"
-    )
+    detection_filename = f"{sanitized_app_name}_{sanitized_version}-Detection.ps1"
     detection_script_path = build_dir.parent / detection_filename
 
     logger.verbose("DETECTION", f"Generating detection script: {detection_filename}")
@@ -801,9 +795,7 @@ def _generate_requirements_script(
 
     sanitized_app_name = sanitize_filename(app_name, app_id)
     sanitized_version = version.replace(" ", "-")
-    requirements_filename = (
-        f"{sanitized_app_name}_{sanitized_version}-Requirements.ps1"
-    )
+    requirements_filename = f"{sanitized_app_name}_{sanitized_version}-Requirements.ps1"
     requirements_script_path = build_dir.parent / requirements_filename
 
     logger.verbose(
@@ -824,9 +816,7 @@ def _generate_requirements_script(
             app_id=app_id,
             install_scope=run_as_account,
         )
-        generate_msix_requirements_script(
-            requirements_config, requirements_script_path
-        )
+        generate_msix_requirements_script(requirements_config, requirements_script_path)
     else:
         use_wildcard = "*" in app_name or "?" in app_name
         requirements_config = RequirementsConfig(
@@ -838,9 +828,7 @@ def _generate_requirements_script(
             expected_architecture=architecture,
             use_wildcard=use_wildcard,
         )
-        generate_requirements_script(
-            requirements_config, requirements_script_path
-        )
+        generate_requirements_script(requirements_config, requirements_script_path)
 
     return requirements_script_path
 
@@ -1430,7 +1418,11 @@ def build_package(
 
     template_path = psadt_cache_dir / "Invoke-AppDeployToolkit.ps1"
     invoke_script = generate_invoke_script(
-        template_path, config, version, psadt_version, architecture,
+        template_path,
+        config,
+        version,
+        psadt_version,
+        architecture,
         installer_file.name,
     )
 
@@ -1455,8 +1447,13 @@ def build_package(
     # Generate detection script (always; needed for App and Update entries)
     logger.step(7, 8, "Generating detection script...")
     detection_script_path = _generate_detection_script(
-        installer_file, config, version, app_id, build_dir,
-        msi_metadata, msix_metadata,
+        installer_file,
+        config,
+        version,
+        app_id,
+        build_dir,
+        msi_metadata,
+        msix_metadata,
     )
     logger.verbose("BUILD", "[OK] Detection script generated")
 
@@ -1464,8 +1461,13 @@ def build_package(
     if build_types in ("both", "update_only"):
         logger.step(8, 8, "Generating requirements script...")
         requirements_script_path = _generate_requirements_script(
-            installer_file, config, version, app_id, build_dir,
-            msi_metadata, msix_metadata,
+            installer_file,
+            config,
+            version,
+            app_id,
+            build_dir,
+            msi_metadata,
+            msix_metadata,
         )
         logger.verbose("BUILD", "[OK] Requirements script generated")
     else:

@@ -80,9 +80,7 @@ def substitute_ps_template(template: str, substitutions: dict[str, str]) -> str:
     # Sort keys longest-first so e.g. $NaptLogBaseNameUser (if it were
     # a key) would match before $NaptLogBaseName.
     pattern = re.compile(
-        "|".join(
-            re.escape(k) for k in sorted(substitutions, key=len, reverse=True)
-        )
+        "|".join(re.escape(k) for k in sorted(substitutions, key=len, reverse=True))
     )
     result = pattern.sub(lambda m: substitutions[m.group(0)], template)
 

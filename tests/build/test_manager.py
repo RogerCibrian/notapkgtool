@@ -625,9 +625,7 @@ class TestExtractAppIcon:
         assert "already exists" in capsys.readouterr().out
         assert icon_path.read_bytes() == b"curated icon"
 
-    def test_success_writes_icon_file(
-        self, make_config, tmp_path, monkeypatch, capsys
-    ):
+    def test_success_writes_icon_file(self, make_config, tmp_path, monkeypatch, capsys):
         """Tests that a successful extraction writes the icon file."""
         import napt.build.manager as manager_module
 
@@ -879,9 +877,7 @@ class TestApplyMsiCommands:
         _apply_msi_commands(config, self._metadata(), self.INSTALLER, self._logger())
 
         assert config["psadt"]["uninstall"] == self.EXPECTED_UNINSTALL
-        assert "psadt.uninstall is set but will be ignored" in (
-            capsys.readouterr().out
-        )
+        assert "psadt.uninstall is set but will be ignored" in (capsys.readouterr().out)
 
     def test_default_overwrites_both_when_only_install_set(self, capsys):
         """Tests that both commands are replaced when only install is set."""

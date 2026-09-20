@@ -8,8 +8,6 @@ Tests MSIX detection and requirements script generation including:
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from napt.build.msix_scripts import (
     MSIXDetectionConfig,
     MSIXRequirementsConfig,

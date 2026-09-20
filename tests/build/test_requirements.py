@@ -339,11 +339,12 @@ class TestGenerateRequirementsScript:
 
         content = output_path.read_text(encoding="utf-8-sig")
 
-        # Component is built at runtime from $SanitizedAppName-$TargetVersion-Requirements
+        # Component is built at runtime from
+        # $SanitizedAppName-$TargetVersion-Requirements
         assert "ComponentName" in content and '-Requirements"' in content
 
     def test_script_result_update_not_required_logs_as_warning(self, tmp_path: Path):
-        """Test that Update Not Required results are logged as WARNING for visibility."""
+        """Tests that an Update Not Required result is logged as WARNING."""
         config = RequirementsConfig(
             app_name="Test App",
             version="1.0.0",
