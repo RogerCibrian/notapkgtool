@@ -42,7 +42,7 @@ Don't write framing like "third-party extension API," "implementing custom strat
 
 Use **ruff** + **black**. Fix all errors before committing. Never ignore errors. Configuration is in `pyproject.toml`.
 
-**Auto-formatting:** A `PostToolUse` hook (`.claude/hooks/lint_edited.py`) runs `ruff --fix` and `black` on every edit to `napt/**/*.py` and `tests/**/*.py`. Don't manually run the formatters on individual files after an Edit/Write — they've already been applied. The commands below are for bulk reformats and the final pre-commit `ruff check` verification.
+**Auto-formatting:** A `PostToolUse` hook (`.claude/hooks/lint_edited.py`) runs `ruff --fix` and `black` on every edit to `napt/**/*.py` and `tests/**/*.py`. Don't manually run the formatters on individual files after an Edit/Write; they've already been applied. The hook leaves unused imports alone (`--unfixable F401`) so an import added one edit before its first use survives; `ruff check` still reports it. The hook never blocks and fails silently, so the final `ruff check` and `black --check` are what prove the tree is clean. The commands below are for bulk reformats and that final verification.
 
 ```powershell
 .venv\Scripts\python.exe -m ruff check --fix napt/ tests/

@@ -32,6 +32,7 @@ LICENSE_HEADER = """# Copyright 2025 Roger Cibrian
 
 
 def needs_header(file_path: str, content: str) -> bool:
+    """Reports whether a napt/ Python file is missing the license header."""
     if not file_path.endswith(".py"):
         return False
     parts = Path(file_path).parts
@@ -52,8 +53,11 @@ def prepend_header(content: str) -> str:
 
 
 def main() -> int:
+    """Rewrites a Write payload to include the license header when needed."""
     try:
-        data = json.load(sys.stdin)
+        # Read bytes, not text: the payload is UTF-8, and on Windows sys.stdin
+        # decodes as cp1252, which turns non-ASCII file content into mojibake.
+        data = json.load(sys.stdin.buffer)
     except Exception:
         return 0
 
