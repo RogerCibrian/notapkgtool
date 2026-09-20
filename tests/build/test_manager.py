@@ -201,6 +201,60 @@ class TestFindInstallerFile:
 
         assert result == installer
 
+    def test_find_by_cache_url_uses_the_name_the_download_saved(self, tmp_path):
+        """Tests that the discovery cache URL finds a filename the download rewrote."""
+        downloads_dir = tmp_path / "downloads"
+        app_dir = downloads_dir / "napt-zeta"
+        app_dir.mkdir(parents=True)
+        # Saved as "O_Brien-setup.exe"; nothing in it matches the app, so
+        # name matching cannot find it.
+        installer = app_dir / "O_Brien-setup.exe"
+        installer.write_text("fake exe")
+        cache_file = tmp_path / "cache" / "discovery.json"
+        cache_file.parent.mkdir()
+        cache_file.write_text(
+            json.dumps(
+                {
+                    "metadata": {"schema_version": "2"},
+                    "apps": {
+                        "napt-zeta": {"url": "https://example.com/O'Brien-setup.exe"}
+                    },
+                }
+            )
+        )
+        config = {"id": "napt-zeta", "name": "Zeta", "discovery": {}}
+
+        result = _find_installer_file(downloads_dir, config, cache_file)
+
+        assert result == installer
+
+    def test_find_by_deployment_state_url_uses_the_saved_name(self, tmp_path):
+        """Tests that the pending release URL finds a filename the download rewrote."""
+        downloads_dir = tmp_path / "downloads"
+        app_dir = downloads_dir / "napt-zeta"
+        app_dir.mkdir(parents=True)
+        installer = app_dir / "O_Brien-setup.exe"
+        installer.write_text("fake exe")
+        _write_pending_state(
+            tmp_path / "state",
+            "napt-zeta",
+            {
+                "version": "1.0",
+                "sha256": "abc123",
+                "url": "https://example.com/O'Brien-setup.exe",
+            },
+        )
+        config = {
+            "id": "napt-zeta",
+            "name": "Zeta",
+            "discovery": {},
+            "directories": {"state": str(tmp_path / "state")},
+        }
+
+        result = _find_installer_file(downloads_dir, config)
+
+        assert result == installer
+
     def test_find_no_pending_state_falls_through(self, tmp_path):
         """Tests that an empty deployment state falls through to name
         matching."""

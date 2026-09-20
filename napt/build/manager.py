@@ -239,8 +239,10 @@ def _find_installer_file(
     2. URL from discovery cache (for web_scrape, api_github, api_json strategies)
     3. URL of the pending release in deployment state (for machines that
         never ran discover, such as CI publish jobs)
-    4. Filename matching by app name/id
-    5. Most recent installer (last resort)
+    4. Filename matching by app name/id, taking the most recent match
+
+    The first three look for the filename the download step saved, which
+    can differ from the URL's when the name contained unsafe characters.
 
     Args:
         downloads_dir: Downloads directory to search.

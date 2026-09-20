@@ -41,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     warning showing the original and saved names
 - Fixed a version string containing `..` or a path separator pointing
     `napt build` at a folder outside `builds/`, where a rebuild would delete it
+    (closed by the version rule under Changed)
 - Fixed typographic quotes (such as `’` and `”`) in an app name, MSI
     ProductName, MSIX identity, `psadt.app_vars` value, or installer path
     ending a PowerShell string early, which let the rest of the value run as

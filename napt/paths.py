@@ -39,12 +39,13 @@ _FORBIDDEN_RE = re.compile(r'[<>:"|?*\x00-\x1f\x7f]')
 # recipe puts the filename: "$" and the backtick expand or escape in double
 # quotes, and every quote here closes a string. The escapes are the
 # typographic single quotes (U+2018 to U+201B) and double quotes (U+201C to
-# U+201E) that PowerShell accepts as delimiters. ";" is included because it is
-# rare in real names and ends the statement if the name is left unquoted.
+# U+201E) that PowerShell accepts as delimiters.
 #
-# This does not make unquoted use safe. Parentheses also run as code there
-# ("Setup (calc).exe" runs calc), and they are too common in real filenames to
-# replace. A recipe must quote {{installer_filename}}.
+# ";" is the one exception: it does nothing inside a quoted string, but ends
+# the statement if the name is left unquoted, and it is rare enough in real
+# filenames to replace. That does not make unquoted use safe. Parentheses also
+# run as code there ("Setup (calc).exe" runs calc), and they are too common in
+# real filenames to replace. A recipe must quote {{installer_filename}}.
 _POWERSHELL_ACTIVE_RE = re.compile("[$;`'\u2018\u2019\u201a\u201b\u201c\u201d\u201e]")
 
 # A path component NAPT will create a folder from: starts with a letter or
