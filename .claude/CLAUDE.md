@@ -42,7 +42,7 @@ Don't write framing like "third-party extension API," "implementing custom strat
 
 Use **ruff** + **black**. Fix all errors before committing. Never ignore errors. Configuration is in `pyproject.toml`.
 
-**Auto-formatting:** A `PostToolUse` hook (`.claude/hooks/lint_edited.py`) runs `ruff --fix` and `black` on every edit to `napt/**/*.py` and `tests/**/*.py`. Don't manually run the formatters on individual files after an Edit/Write — they've already been applied. The commands below are for bulk reformats and the final pre-commit `ruff check` verification.
+**Auto-formatting:** A `PostToolUse` hook (`.claude/hooks/lint_edited.py`) runs `ruff --fix` and `black` on every edit to `napt/**/*.py` and `tests/**/*.py`. Don't manually run the formatters on individual files after an Edit/Write; they've already been applied. The hook leaves unused imports alone (`--unfixable F401`) so an import added one edit before its first use survives; `ruff check` still reports it. The hook never blocks and fails silently, so the final `ruff check` and `black --check` are what prove the tree is clean. The commands below are for bulk reformats and that final verification.
 
 ```powershell
 .venv\Scripts\python.exe -m ruff check --fix napt/ tests/
@@ -341,6 +341,20 @@ Never write an em dash (U+2014) anywhere in the repository: code, comments, docs
 **Fix as you go:** the existing em dashes are cleaned up incrementally, not in a sweep. When you change a line that contains one, remove it. When you edit inside a function, class, docstring, or docs section, remove the others in that same block while you are there. Don't go hunting in files the change doesn't otherwise touch.
 
 In runtime strings an em dash is also a `Console Output` violation, since it can raise `UnicodeEncodeError` on a cp1252 console.
+
+Nothing checks this mechanically: ruff's `RUF001`-`RUF003` flag the en dash but not the em dash, so it is a review-time rule.
+
+---
+
+## Look-Alike Characters
+
+When Python source needs a character that is easy to mistake for an ASCII one (a typographic quote, a no-break space, an en dash), write it as a `\u` escape behind a named constant with a comment naming the character, never as the raw character:
+
+```python
+RSQUO = "\u2019"  # right single quotation mark
+```
+
+Ruff's `RUF001`-`RUF003` reject the raw form for typographic single quotes, the en dash, and the no-break space. They do not catch typographic double quotes, so use the escape for those too.
 
 ---
 

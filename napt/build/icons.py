@@ -414,9 +414,7 @@ def _pe_icon_resources(data: bytes) -> tuple[list[bytes], dict[int, bytes]]:
     def first_leaf(entry: tuple[int, int, bool], depth: int) -> bytes | None:
         _ident, relative, is_directory = entry
         if not is_directory:
-            data_rva, size = struct.unpack_from(
-                "<II", data, resource_offset + relative
-            )
+            data_rva, size = struct.unpack_from("<II", data, resource_offset + relative)
             offset = rva_to_offset(data_rva)
             if offset is None or offset + size > len(data):
                 return None
@@ -871,15 +869,11 @@ def _extract_from_msix(msix_path: Path) -> IconExtraction:
     try:
         with zipfile.ZipFile(msix_path, "r") as zf:
             if "AppxManifest.xml" not in zf.namelist():
-                return IconExtraction(
-                    None, None, "AppxManifest.xml not found in MSIX"
-                )
+                return IconExtraction(None, None, "AppxManifest.xml not found in MSIX")
             try:
                 root = ET.fromstring(zf.read("AppxManifest.xml"))
             except ET.ParseError:
-                return IconExtraction(
-                    None, None, "could not parse AppxManifest.xml"
-                )
+                return IconExtraction(None, None, "could not parse AppxManifest.xml")
             candidates = _msix_logo_candidates(root)
             if not candidates:
                 return IconExtraction(
@@ -892,16 +886,12 @@ def _extract_from_msix(msix_path: Path) -> IconExtraction:
             # variants (taskbar-specific plating).
             triples.sort(key=lambda triple: "altform-" in triple[2].lower())
             largest = max((width for _, width, _ in triples), default=0)
-            selected = _select_png_frame(
-                [(data, width) for data, width, _ in triples]
-            )
+            selected = _select_png_frame([(data, width) for data, width, _ in triples])
             if selected:
                 name = next(
                     name for data, _width, name in triples if data is selected[0]
                 )
-                return IconExtraction(
-                    selected[0], selected[1], f"MSIX asset {name}"
-                )
+                return IconExtraction(selected[0], selected[1], f"MSIX asset {name}")
             return IconExtraction(
                 None, None, _no_frame_detail(largest, "in the MSIX logo assets")
             )
@@ -938,11 +928,7 @@ def _msix_logo_candidates(root: ET.Element) -> list[str]:
     properties = root.find(f"{{{_MANIFEST_NS}}}Properties")
     if properties is not None:
         logo = properties.find(f"{{{_MANIFEST_NS}}}Logo")
-        if (
-            logo is not None
-            and logo.text
-            and not logo.text.startswith("ms-resource:")
-        ):
+        if logo is not None and logo.text and not logo.text.startswith("ms-resource:"):
             candidates.append(logo.text.strip().replace("\\", "/"))
     return list(dict.fromkeys(candidates))
 

@@ -151,9 +151,7 @@ def _pe_with_icons(
     # Recompute icon leaf offsets (they were appended before groups)
     leaf_offsets = [data_entries_offset + i * 16 for i in range(len(icon_payloads))]
 
-    root = directory(
-        [(3, icon_dir_offset, True), (14, group_dir_offset, True)]
-    )
+    root = directory([(3, icon_dir_offset, True), (14, group_dir_offset, True)])
     icon_dir = directory(
         [
             (ident, leaf_offsets[index], False)
@@ -180,9 +178,11 @@ def _pe_with_icons(
     struct.pack_into("<II", directories, 2 * 8, rsrc_rva, len(rsrc))
     optional += bytes(directories)
     optional += b"\x00" * (optional_size - len(optional))
-    section = b".rsrc\x00\x00\x00" + struct.pack(
-        "<IIII", len(rsrc), rsrc_rva, len(rsrc), rsrc_file_offset
-    ) + b"\x00" * 16
+    section = (
+        b".rsrc\x00\x00\x00"
+        + struct.pack("<IIII", len(rsrc), rsrc_rva, len(rsrc), rsrc_file_offset)
+        + b"\x00" * 16
+    )
     headers = dos + b"PE\x00\x00" + coff + optional + section
     return headers + b"\x00" * (rsrc_file_offset - len(headers)) + rsrc
 
@@ -368,8 +368,10 @@ class TestPeParser:
 
     def test_assemble_ico_skips_missing_payloads(self):
         """Tests that group entries referencing missing icons are skipped."""
-        group = struct.pack("<HHH", 0, 1, 1) + bytes([0, 0, 0, 0]) + struct.pack(
-            "<HHIH", 1, 32, 100, 99
+        group = (
+            struct.pack("<HHH", 0, 1, 1)
+            + bytes([0, 0, 0, 0])
+            + struct.pack("<HHIH", 1, 32, 100, 99)
         )
         assert _assemble_ico(group, {}) is None
 
@@ -423,9 +425,7 @@ class TestParseIconIdt:
     def test_parses_standard_export(self, tmp_path):
         """Tests that a standard 3-header-line idt is parsed."""
         idt = tmp_path / "Icon.idt"
-        idt.write_text(
-            "Name\tData\ns72\tv0\nIcon\tName\nicon.ico\ticon.ico.ibd\n"
-        )
+        idt.write_text("Name\tData\ns72\tv0\nIcon\tName\nicon.ico\ticon.ico.ibd\n")
         assert _parse_icon_idt(idt) == {"icon.ico": "icon.ico.ibd"}
 
     def test_tolerates_leading_codepage_line(self, tmp_path):
@@ -538,9 +538,7 @@ class TestMsiIconBlobsWindows:
                 cmd, 0, stdout="\nNAPT_ICON_EXPORTED\n", stderr=""
             )
 
-        with mock.patch(
-            "napt.build.icons.subprocess.run", side_effect=side_effect
-        ):
+        with mock.patch("napt.build.icons.subprocess.run", side_effect=side_effect):
             _arp, blobs = _msi_icon_blobs_windows(tmp_path / "x.msi", export_dir)
         assert blobs == {"app.ico": b"payload"}
 
@@ -642,9 +640,7 @@ class TestMsiCabIcons:
         def side_effect(cmd, **kwargs):
             assert cmd[0] == "/usr/bin/msiextract"
             target_dir = Path(cmd[2])
-            (target_dir / "app.exe").write_bytes(
-                _pe_with_icons([[(_png(256), 256)]])
-            )
+            (target_dir / "app.exe").write_bytes(_pe_with_icons([[(_png(256), 256)]]))
             return subprocess.CompletedProcess(cmd, 0, stdout=b"", stderr=b"")
 
         with (
@@ -826,20 +822,15 @@ class TestExtractIconPng:
         """Tests that an empty Icon table falls through to tier B."""
         import napt.build.icons as icons_module
 
-        monkeypatch.setattr(
-            icons_module, "_msi_icon_blobs", lambda path: ("", {})
-        )
+        monkeypatch.setattr(icons_module, "_msi_icon_blobs", lambda path: ("", {}))
         tier_b_result = IconExtraction(_png(256), 256, "PE icon resource inside")
-        monkeypatch.setattr(
-            icons_module, "_msi_cab_icons", lambda path: tier_b_result
-        )
+        monkeypatch.setattr(icons_module, "_msi_cab_icons", lambda path: tier_b_result)
         result = extract_icon_png(tmp_path / "x.msi")
         assert result is tier_b_result
 
     def test_msi_tier_a_error_still_tries_tier_b(self, tmp_path, monkeypatch):
         """Tests that a failing Icon table backend still falls through to tier B."""
         import napt.build.icons as icons_module
-
         from napt.exceptions import PackagingError
 
         def boom(path):
@@ -847,16 +838,13 @@ class TestExtractIconPng:
 
         monkeypatch.setattr(icons_module, "_msi_icon_blobs", boom)
         tier_b_result = IconExtraction(_png(256), 256, "PE icon resource inside")
-        monkeypatch.setattr(
-            icons_module, "_msi_cab_icons", lambda path: tier_b_result
-        )
+        monkeypatch.setattr(icons_module, "_msi_cab_icons", lambda path: tier_b_result)
         result = extract_icon_png(tmp_path / "x.msi")
         assert result is tier_b_result
 
     def test_msi_both_tiers_fail_combines_details(self, tmp_path, monkeypatch):
         """Tests that a tier A backend error appears in the combined detail."""
         import napt.build.icons as icons_module
-
         from napt.exceptions import PackagingError
 
         def boom(path):
