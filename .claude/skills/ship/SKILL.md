@@ -1,7 +1,6 @@
 ---
 name: ship
 description: Wrap up current work - lint, test, branch (if needed), update docs/changelog, commit, and create PR
-disable-model-invocation: true
 user-invocable: true
 allowed-tools: Bash(git *) Bash(*python* -m *) Bash(gh *) Read Edit Glob Grep Agent
 argument-hint: "commit type: feat|fix|refactor|docs|test|chore"

@@ -1,7 +1,6 @@
 ---
 name: add-recipe-field
 description: Add a new field to the NAPT recipe YAML schema. Categorizes the field (org-policy / strategy-specific / required / optional / computed) first, then walks the per-category checklist, documentation, changelog, and tests.
-disable-model-invocation: true
 user-invocable: true
 allowed-tools: Read Edit Write Glob Grep Bash(*python* -m *)
 argument-hint: "field name (and optionally a brief description)"
