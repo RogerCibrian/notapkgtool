@@ -33,7 +33,7 @@ from napt.build.manager import (
     _require_exe_scripts,
     _write_build_manifest,
 )
-from napt.exceptions import ConfigError
+from napt.exceptions import ConfigError, PackagingError
 from napt.versioning.msi import MSIMetadata
 from napt.versioning.msix import MSIXMetadata
 
@@ -96,6 +96,26 @@ class TestFindInstallerFile:
         config = {
             "id": "napt-chrome",
             "discovery": {"url": "https://example.com/chrome.msi"},
+        }
+
+        result = _find_installer_file(downloads_dir, config)
+
+        assert result == installer
+
+    def test_find_by_url_uses_the_name_the_download_saved(self, tmp_path):
+        """Tests that a filename the download rewrote is found by its URL."""
+        downloads_dir = tmp_path / "downloads"
+        app_dir = downloads_dir / "napt-zeta"
+        app_dir.mkdir(parents=True)
+        # The download step saves "O'Brien-setup.msi" as "O_Brien-setup.msi".
+        # Nothing in that name matches the app, so name matching cannot help.
+        installer = app_dir / "O_Brien-setup.msi"
+        installer.write_text("fake msi")
+
+        config = {
+            "id": "napt-zeta",
+            "name": "Zeta",
+            "discovery": {"url": "https://example.com/O'Brien-setup.msi"},
         }
 
         result = _find_installer_file(downloads_dir, config)
@@ -316,6 +336,21 @@ class TestCreateBuildDirectory:
         expected = base_dir / "test-app" / "1.0.0" / "packagefiles"
         assert result == expected
         assert not (existing / "old_file.txt").exists()
+
+    def test_version_with_parent_segments_deletes_nothing(self, tmp_path):
+        """Tests that a traversing version is refused before any delete."""
+        base_dir = tmp_path / "builds"
+        victim = tmp_path / "important"
+        victim.mkdir()
+        (victim / "keep.txt").write_text("keep")
+        # From builds/test-app/, two levels up is tmp_path, so this version
+        # would resolve to the victim folder and the rebuild would delete it.
+        version = "../../important"
+
+        with pytest.raises(PackagingError, match="cannot be used as a folder name"):
+            _create_build_directory(base_dir, "test-app", version)
+
+        assert (victim / "keep.txt").exists()
 
 
 class TestCopyPSADTPristine:

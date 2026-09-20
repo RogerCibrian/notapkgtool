@@ -16,8 +16,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Name the child `<app>.override.yaml`; `napt validate` warns when the
         name and the field disagree and reports the parent it merged
 
+### Changed
+
+- **BREAKING: Recipe `id` must be a plain folder name** - `napt validate` now
+    rejects an `id` containing anything other than letters, digits, `.`, `-`,
+    `_`, and `+`, or one that does not start with a letter or digit. Rename
+    any `id` that uses spaces, slashes, or other characters
+- **BREAKING: Discovered versions must be plain folder names** - The same
+    character rule applies to a version, because it names the build folder.
+    `napt discover` and `napt build` stop with an error for a version such as
+    `2.0 (x64)`. Tighten the recipe's `version_pattern` so it captures only
+    `2.0`; detection compares just the numeric parts, so nothing is lost.
+    `psadt.release` and `intunewin.release` follow the rule too
+
 ### Fixed
 
+- Fixed a download server being able to choose where a file is saved. A
+    filename such as `..\..\evil.exe` in the `Content-Disposition` header
+    (or its percent-encoded form) was joined onto the download folder as-is.
+    Only the final part of the name is kept now
+- Fixed characters in a downloaded file's name running as code when a recipe
+    uses `{{installer_filename}}` inside a quoted PowerShell string. `$`, `;`,
+    backticks, and quote characters in the name are replaced with `_`, with a
+    warning showing the original and saved names
+- Fixed a version string containing `..` or a path separator pointing
+    `napt build` at a folder outside `builds/`, where a rebuild would delete it
 - Fixed typographic quotes (such as `’` and `”`) in an app name, MSI
     ProductName, MSIX identity, `psadt.app_vars` value, or installer path
     ending a PowerShell string early, which let the rest of the value run as

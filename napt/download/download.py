@@ -49,6 +49,8 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from napt.exceptions import ConfigError, NetworkError, NotModifiedError
+from napt.logging import get_global_logger
+from napt.paths import safe_filename
 from napt.results import DownloadResult
 from napt.version import get_version
 
@@ -104,6 +106,41 @@ def _filename_from_url(url: str) -> str:
     """
     name = Path(urlparse(url).path).name
     return name or "download.bin"
+
+
+def _choose_filename(cd_name: str | None, url: str) -> str:
+    """Picks the name to save a download under, cleaned of unsafe content.
+
+    Both candidates come from the server, so each passes through
+    [safe_filename][napt.paths.safe_filename] before use. The
+    Content-Disposition name wins; the URL name is the fallback, and
+    ``download.bin`` is used when neither survives cleaning.
+
+    Args:
+        cd_name: Filename parsed from the Content-Disposition header, if any.
+        url: Final URL of the response, after redirects.
+
+    Returns:
+        A filename with no path components and no characters that act
+        inside a PowerShell string.
+
+    """
+    logger = get_global_logger()
+    for raw in (cd_name, _filename_from_url(url)):
+        if not raw:
+            continue
+        cleaned = safe_filename(raw)
+        if cleaned is None:
+            logger.warning("FILE", f"Ignoring unusable server filename: {raw!a}")
+            continue
+        if cleaned != raw:
+            logger.warning(
+                "FILE",
+                f"Server filename {raw!a} contains unsafe characters or path "
+                f"segments; saving as {cleaned!a}",
+            )
+        return cleaned
+    return "download.bin"
 
 
 def make_session() -> requests.Session:
@@ -191,8 +228,6 @@ def download_file(
             with text/html.
 
     """
-    from napt.logging import get_global_logger
-
     logger = get_global_logger()
     destination_folder = Path(destination_folder)
     destination_folder.mkdir(parents=True, exist_ok=True)
@@ -242,7 +277,7 @@ def download_file(
 
         # Content-Disposition beats URL when naming the file.
         cd_name = _filename_from_cd(resp.headers.get("Content-Disposition", ""))
-        filename = cd_name or _filename_from_url(resp.url)
+        filename = _choose_filename(cd_name, resp.url)
         target = destination_folder / filename
 
         # Log response details (always, not gated on Content-Length).

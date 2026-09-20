@@ -42,7 +42,8 @@ import zipfile
 import requests
 
 from napt.download.download import make_session
-from napt.exceptions import NetworkError, PackagingError
+from napt.exceptions import ConfigError, NetworkError, PackagingError
+from napt.paths import is_safe_path_component
 
 PSADT_REPO = "PSAppDeployToolkit/PSAppDeployToolkit"
 PSADT_GITHUB_API = f"https://api.github.com/repos/{PSADT_REPO}/releases/latest"
@@ -193,6 +194,13 @@ def get_psadt_release(release_spec: str, cache_dir: Path) -> Path:
         version = fetch_latest_psadt_version()
     else:
         version = release_spec
+
+    # The version names the cache folder, so it must be a plain folder name.
+    if not is_safe_path_component(version):
+        raise ConfigError(
+            f"Invalid psadt.release {version!a}: use 'latest' or a version "
+            "such as '4.1.7'"
+        )
 
     logger.verbose("PSADT", f"PSADT version: {version}")
 

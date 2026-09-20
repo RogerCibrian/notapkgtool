@@ -7,6 +7,8 @@ and configuration without making network calls or downloading files.
 
 from __future__ import annotations
 
+import pytest
+
 from napt.validation import validate_recipe
 
 
@@ -200,6 +202,26 @@ discovery:
 
         assert result.status == "invalid"
         assert any("id" in err for err in result.errors)
+
+    @pytest.mark.parametrize(
+        "app_id", ["../evil", "a/b", "..", "my app", "$(calc)", ".hidden", "NUL"]
+    )
+    def test_id_that_is_not_a_folder_name_is_invalid(self, tmp_path, app_id):
+        """Tests that an id unusable as a folder name is rejected."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(f"""
+apiVersion: napt/v1
+name: "Test"
+id: "{app_id}"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+""")
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("Field 'id' may contain only" in err for err in result.errors)
 
     def test_missing_discovery(self, tmp_path):
         """Test that missing discovery section is detected."""

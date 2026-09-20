@@ -46,12 +46,15 @@ Display name for the application. Used in PSADT dialogs and package metadata.
 **Required:** Yes
 **Convention:** Lowercase, alphanumeric, hyphens (e.g., `napt-chrome`, `napt-git`)
 
-Unique identifier for the application. `napt validate` only checks that it is a
-non-empty string, but keep it filesystem-safe because it becomes a directory
-name. Used to generate:
+Unique identifier for the application.
+It names the app's folders, so it must work as a folder name as-is: letters,
+digits, `.`, `-`, `_`, and `+`, starting with a letter or digit.
+`napt validate` rejects anything else, including path separators and `..`.
+Used to generate:
 
-- Build directory names: `builds/{id}/{version}/`
-- Package names: `packages/{id}/Invoke-AppDeployToolkit.intunewin`
+- Download directory: `downloads/{id}/`
+- Build directory: `builds/{id}/{version}/`
+- Package directory: `packages/{id}/{version}/`
 
 ### parent
 

@@ -113,6 +113,11 @@ class TestGetIntunewinTool:
 
         assert result == tool_path
 
+    def test_release_with_path_segments_is_rejected(self, tmp_path):
+        """Tests that an intunewin.release value cannot point outside the cache."""
+        with pytest.raises(ConfigError, match="Invalid intunewin.release"):
+            _get_intunewin_tool(tmp_path / "tools", "../../outside")
+
     @patch("napt.build.packager.fetch_latest_intunewin_version")
     def test_latest_resolves_via_api(self, mock_fetch, tmp_path, requests_mock):
         """Tests that 'latest' calls fetch_latest_intunewin_version."""
