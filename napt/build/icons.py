@@ -56,6 +56,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 from napt.exceptions import PackagingError
+from napt.powershell import ps_single_quote
 
 # Frame selection policy: PNG-encoded frames only, at least MIN_ICON_PX wide,
 # at most MAX_ICON_BYTES on disk (Intune rejects icons over 750KB), preferring
@@ -589,11 +590,11 @@ def _msi_icon_blobs_windows(
     """
     logger = _get_logger()
     logger.debug("BUILD", "Trying backend: PowerShell COM (Database.Export)...")
-    escaped_msi = str(msi_path).replace("'", "''")
-    escaped_dir = str(export_dir).replace("'", "''")
+    quoted_msi = ps_single_quote(str(msi_path))
+    quoted_dir = ps_single_quote(str(export_dir))
     ps_script = f"""
 $installer = New-Object -ComObject WindowsInstaller.Installer
-$db = $installer.OpenDatabase('{escaped_msi}', 0)
+$db = $installer.OpenDatabase({quoted_msi}, 0)
 if ($null -eq $db) {{
     Write-Error "Failed to open database"
     exit 1
@@ -606,7 +607,7 @@ $view.Close()
 if ($db.TablePersistent('Icon') -ne 1) {{
     '{_NO_ICON_TABLE_MARKER}'
 }} else {{
-    $db.Export('Icon', '{escaped_dir}', 'Icon.idt')
+    $db.Export('Icon', {quoted_dir}, 'Icon.idt')
     'NAPT_ICON_EXPORTED'
 }}
 """

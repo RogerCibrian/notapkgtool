@@ -63,8 +63,23 @@ Review the diff against the rules in these CLAUDE.md sections:
 - **`Exceptions`** — is each `raise` using the right type for the error domain? Are errors a napt command surfaces using custom types and private helpers using built-ins?
 - **`results.py Scope`** — `napt/results.py` holds only the result types napt commands return (one dataclass per command's underlying operation, plus the shared `DownloadResult`)
 - **`Console Output`** — ASCII-only applies to print(), logger, CLI strings (not docstrings / comments / JSON / YAML)
+- **`PowerShell Quoting`**: every recipe value, installer metadata field, filename, or path the diff interpolates into PowerShell source (generated `.ps1` content, PSADT command strings, `powershell -Command` scripts) must pass through `ps_single_quote` or `ps_escape_double_quoted` from `napt/powershell.py`. Flag a hand-rolled `.replace("'", "''")`, a bare `'{value}'` or `"{value}"` in an f-string that becomes PowerShell, and `ps_escape_double_quoted` output placed anywhere other than inside double quotes. Values NAPT fully controls (booleans, integers, fixed enum strings) are exempt.
 - **`CLI Structure`** — strict one module per top-level command under `napt/cli/` (`napt/cli/<command>.py` owns its `cmd_*` handlers and `register(subparsers)` hook); `main.py` assembles and dispatches only. Flag any new command added outside its own module, two commands sharing a module, or command logic growing in `main.py` or `__init__.py`.
 - **`Imports`** — package `__init__.py` files are docstring-only; names are imported from their defining module (`from napt.state.cache import load_cache`, never `from napt.state import load_cache`). Flag new re-exports in any `__init__.py` and new imports that name a package instead of the defining module. There are no sanctioned exceptions — `napt/__init__.py` is docstring-only too, and the version comes from `napt.version.get_version()` (a cached `importlib.metadata` lookup), never a `__version__` dunder.
+
+### Em dashes (every file type in the diff)
+
+Consult CLAUDE.md's `Em Dashes` section. Check mechanically rather than by eye, since the character is easy to miss:
+
+```
+git diff main -U0 | grep -n "^+" | grep -P "\x{2014}|\x{2013}"
+```
+
+(For a PR review, pipe `gh pr diff <N>` instead. If `grep -P` fails under the shell's locale, use `.venv/Scripts/python.exe` to scan the added lines for `chr(0x2014)` and `chr(0x2013)`.)
+
+- Any em dash or en dash on a line the diff **adds or changes** is `[BLOCKING]`, in every file type: code, comments, docstrings, string literals, tests, docs, changelog, recipes. Also check the PR title and body on a PR review. Give the fix as a rewritten sentence using a comma, colon, semicolon, or parentheses, not a hyphen swap.
+- Fix as you go: when the diff edits inside a function, class, docstring, or docs section that still contains em dashes on untouched lines, report them as one `[SUGGESTION]` per block naming the line numbers. This is the one sanctioned exception to "do not flag pre-existing issues outside the diff". Do not report em dashes in blocks or files the diff does not otherwise touch.
+- An em dash inside a runtime string (print, logger, exception message) is additionally a `Console Output` violation; report it once, under this category, and say so.
 
 ### Project principles
 
@@ -139,9 +154,9 @@ Group findings by severity, then by rule category. Each finding includes `file:l
 
 **Severity guidance:**
 
-- `[BLOCKING]` — project-principle violation, wrong exception type, missing changelog for a clearly user-facing change, `results.py` scope violation, ASCII rule violation in console output, backward-compat shim, git/CI logic added to napt, a `fix:` whose fixed lines no unit test executes.
-- `[SUGGESTION]` — logging level feels wrong, docstring section order off, docs could be updated but aren't strictly required, test docstring format deviation, changed logic that no unit test executes.
-- `[NIT]` — phrasing, minor inconsistency.
+- `[BLOCKING]`: project-principle violation, wrong exception type, missing changelog for a clearly user-facing change, `results.py` scope violation, ASCII rule violation in console output, backward-compat shim, git/CI logic added to napt, an unquoted or hand-escaped value interpolated into PowerShell source, an em dash or en dash on any added or changed line, a `fix:` whose fixed lines no unit test executes.
+- `[SUGGESTION]`: logging level feels wrong, docstring section order off, docs could be updated but aren't strictly required, test docstring format deviation, changed logic that no unit test executes.
+- `[NIT]`: phrasing, minor inconsistency.
 
 **End with a single verdict line:**
 
@@ -154,7 +169,7 @@ If the diff is clean, state it explicitly: `VERDICT: ship — no findings.`
 
 - Anything ruff already catches (consult `pyproject.toml` for the active rule set)
 - Reversals of changes made to satisfy ruff rules (see "Ruff deference" in Step 4)
-- Pre-existing issues outside the diff
+- Pre-existing issues outside the diff (one exception: em dashes in a block the diff edits, per the `Em dashes` category)
 - Style preferences not documented in CLAUDE.md
 - Future concerns unrelated to what this diff is changing (the `Forward-looking consequences` category is only for pain that follows directly from changed lines)
 - **Any changes under `.claude/`** (hooks, skills, agents, settings, CLAUDE.md itself). These are tooling/infrastructure, not NAPT package source. CLAUDE.md's code rules apply to `napt/` — not to the Claude Code harness.

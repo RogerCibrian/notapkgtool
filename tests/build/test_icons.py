@@ -37,6 +37,11 @@ from napt.build.icons import (
     _select_png_frame,
     extract_icon_png,
 )
+from napt.powershell import ps_single_quote
+
+# Typographic single quote, which PowerShell accepts as a string delimiter.
+# Written as an escape because it is nearly indistinguishable from ' on screen.
+RSQUO = "\u2019"  # right single quotation mark
 
 # ---------------------------------------------------------------------------
 # Fixture builders
@@ -471,6 +476,25 @@ class TestMsiIconBlobsWindows:
             )
 
         return side_effect
+
+    def test_paths_are_quoted_in_script(self, tmp_path):
+        """Tests that hostile MSI and export paths cannot close their strings."""
+        msi_path = tmp_path / f"app{RSQUO}; Remove-Item X; {RSQUO}.msi"
+        export_dir = tmp_path / f"out{RSQUO}x"
+        export_dir.mkdir()
+
+        with mock.patch(
+            "napt.build.icons.subprocess.run",
+            side_effect=self._run_side_effect(
+                export_dir, "", {}, marker="NAPT_NO_ICON_TABLE"
+            ),
+        ) as run:
+            _msi_icon_blobs_windows(msi_path, export_dir)
+
+        script = run.call_args.args[0][-1]
+        assert f"OpenDatabase({ps_single_quote(str(msi_path))}, 0)" in script
+        assert f"Export('Icon', {ps_single_quote(str(export_dir))}, " in script
+        assert f"app{RSQUO}{RSQUO}; Remove-Item X; {RSQUO}{RSQUO}.msi'" in script
 
     def test_exported_streams_read(self, tmp_path):
         """Tests that exported stream files are read via the idt mapping."""

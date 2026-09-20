@@ -334,6 +334,27 @@ Use ASCII-only in console output. Windows (cp1252, cp437) causes `UnicodeEncodeE
 
 ---
 
+## Em Dashes
+
+Never write an em dash (U+2014) anywhere in the repository: code, comments, docstrings, string literals, tests, docs, changelog, recipes, commit messages, or PR text. Restructure the sentence with a comma, colon, semicolon, or parentheses; pick the one that fits the meaning rather than swapping in a hyphen. En dashes (U+2013) follow the same rule; write numeric ranges with "to" or a hyphen.
+
+**Fix as you go:** the existing em dashes are cleaned up incrementally, not in a sweep. When you change a line that contains one, remove it. When you edit inside a function, class, docstring, or docs section, remove the others in that same block while you are there. Don't go hunting in files the change doesn't otherwise touch.
+
+In runtime strings an em dash is also a `Console Output` violation, since it can raise `UnicodeEncodeError` on a cp1252 console.
+
+---
+
+## PowerShell Quoting
+
+Any value interpolated into PowerShell source (generated `.ps1` files, PSADT command strings, `powershell -Command` scripts) goes through `napt/powershell.py`. Never hand-roll `.replace("'", "''")`: PowerShell also treats typographic quotes as string delimiters, and the helpers cover them.
+
+- `ps_single_quote(value)`: returns the whole `'...'` literal. Use it wherever the surrounding PowerShell accepts a single-quoted string (paths, names, arguments).
+- `ps_escape_double_quoted(value)`: returns escaped text for inside an existing `"..."`. Use it only when the string must stay double-quoted, such as a template placeholder inside a log message.
+
+**Applies to:** recipe values, MSI/MSIX metadata, filenames, and paths. **Not:** values NAPT fully controls (booleans, integers, fixed enum strings).
+
+---
+
 ## PSADT Reference
 
 For PSAppDeployToolkit work, reference: `.claude_context/PSADT Reference Documentation 11.5.25/`

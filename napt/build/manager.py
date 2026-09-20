@@ -50,6 +50,7 @@ from napt.build.registry_scripts import (
 )
 from napt.config.loader import load_effective_config
 from napt.exceptions import ConfigError, PackagingError
+from napt.powershell import PS_SCRIPT_ENCODING, ps_single_quote
 from napt.psadt.release import get_psadt_release
 from napt.results import BuildResult
 from napt.state.deployment import deployment_state_path, load_deployment_state
@@ -971,24 +972,27 @@ def _apply_msix_commands(
     recipe_install = psadt_config.get("install")
     recipe_uninstall = psadt_config.get("uninstall")
 
+    # The filename and identity come from the vendor, so both are emitted as
+    # single-quoted literals; Join-Path keeps the filename out of an
+    # expandable string.
+    package_path = (
+        f"(Join-Path $adtSession.DirFiles {ps_single_quote(installer_file.name)})"
+    )
+    identity = ps_single_quote(msix_metadata.identity_name)
+
     run_as_account = config["intune"]["run_as_account"]
     if run_as_account == "user":
-        auto_install = (
-            f'Add-AppxPackage -Path "$($adtSession.DirFiles)\\{installer_file.name}"'
-        )
-        auto_uninstall = (
-            f'Get-AppxPackage -Name "{msix_metadata.identity_name}"'
-            f" | Remove-AppxPackage"
-        )
+        auto_install = f"Add-AppxPackage -Path {package_path}"
+        auto_uninstall = f"Get-AppxPackage -Name {identity} | Remove-AppxPackage"
     else:
         auto_install = (
             f"Add-AppxProvisionedPackage -Online"
-            f' -PackagePath "$($adtSession.DirFiles)\\{installer_file.name}"'
+            f" -PackagePath {package_path}"
             f" -SkipLicense"
         )
         auto_uninstall = (
             f"Get-AppxProvisionedPackage -Online"
-            f' | Where-Object {{ $_.DisplayName -eq "{msix_metadata.identity_name}" }}'
+            f" | Where-Object {{ $_.DisplayName -eq {identity} }}"
             f" | Remove-AppxProvisionedPackage -Online"
         )
 
@@ -1019,7 +1023,7 @@ def _apply_msix_commands(
             logger.info("BUILD", f"Auto-generated MSIX uninstall: {auto_uninstall}")
         return
 
-    # No override flag — auto-generate and warn if recipe code is set
+    # No override flag: auto-generate and warn if recipe code is set
     if recipe_install:
         logger.warning(
             "BUILD",
@@ -1091,7 +1095,8 @@ def _apply_msi_commands(
     recipe_uninstall = psadt_config.get("uninstall")
 
     auto_install = (
-        f'Start-ADTMsiProcess -Action Install -FilePath "{installer_file.name}"'
+        "Start-ADTMsiProcess -Action Install"
+        f" -FilePath {ps_single_quote(installer_file.name)}"
     )
     if config["intune"]["run_as_account"] == "system":
         auto_install += ' -AdditionalArgumentList "ALLUSERS=1"'
@@ -1104,11 +1109,9 @@ def _apply_msi_commands(
                 "provide psadt.uninstall, or ensure the MSI file contains "
                 "ProductName."
             )
-        # Escape for the single-quoted PowerShell string (same rule as
-        # template._format_powershell_value)
-        escaped_name = msi_metadata.product_name.replace("'", "''")
+        quoted_name = ps_single_quote(msi_metadata.product_name)
         return (
-            f"Uninstall-ADTApplication -Name '{escaped_name}'"
+            f"Uninstall-ADTApplication -Name {quoted_name}"
             " -NameMatch 'Exact' -ApplicationType 'MSI'"
         )
 
@@ -1142,7 +1145,7 @@ def _apply_msi_commands(
             )
         return
 
-    # No override flag — auto-generate and warn if recipe code is set
+    # No override flag: auto-generate and warn if recipe code is set
     if recipe_install:
         logger.warning(
             "BUILD",
@@ -1433,7 +1436,7 @@ def build_package(
 
     # Write generated script
     script_dest = build_dir / "Invoke-AppDeployToolkit.ps1"
-    script_dest.write_text(invoke_script, encoding="utf-8")
+    script_dest.write_text(invoke_script, encoding=PS_SCRIPT_ENCODING)
     logger.verbose("BUILD", "[OK] Generated Invoke-AppDeployToolkit.ps1")
 
     # Copy installer

@@ -84,6 +84,7 @@ nav:
     - cli: api/cli.md
     - exceptions: api/exceptions.md
     - logging: api/logging.md
+    - powershell: api/powershell.md
     - results: api/results.md
     - validation: api/validation.md
     - version: api/version.md
