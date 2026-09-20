@@ -1665,6 +1665,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../api/powershell/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    powershell
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/results/" class="md-nav__link">
         
   
@@ -1788,10 +1816,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_9" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_10" >
         
           
-          <label class="md-nav__link" for="__nav_4_9" id="__nav_4_9_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_10" id="__nav_4_10_label" tabindex="0">
             
   
   
@@ -1809,8 +1837,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_9">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2014,10 +2042,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_11" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12" >
         
           
-          <label class="md-nav__link" for="__nav_4_11" id="__nav_4_11_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
             
   
   
@@ -2035,8 +2063,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_11_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_11">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_12">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3669,8 +3697,8 @@ auto-generated MSI commands.</p>
 <p><strong>MSI auto-generation:</strong> For MSI installers, NAPT auto-generates install and
 uninstall commands from the downloaded MSI's metadata:</p>
 <ul>
-<li><strong>Install (<code>intune.run_as_account: system</code>, default):</strong> <code>Start-ADTMsiProcess -Action Install -FilePath "{filename}" -AdditionalArgumentList "ALLUSERS=1"</code></li>
-<li><strong>Install (<code>user</code>):</strong> <code>Start-ADTMsiProcess -Action Install -FilePath "{filename}"</code></li>
+<li><strong>Install (<code>intune.run_as_account: system</code>, default):</strong> <code>Start-ADTMsiProcess -Action Install -FilePath '{filename}' -AdditionalArgumentList "ALLUSERS=1"</code></li>
+<li><strong>Install (<code>user</code>):</strong> <code>Start-ADTMsiProcess -Action Install -FilePath '{filename}'</code></li>
 <li><strong>Uninstall:</strong> <code>Uninstall-ADTApplication -Name '{ProductName}' -NameMatch 'Exact' -ApplicationType 'MSI'</code></li>
 </ul>
 <p>PSADT's configuration supplies the silent-install arguments (<code>/qn REBOOT=ReallySuppress</code>)
@@ -3706,10 +3734,10 @@ auto-generated MSIX commands.</p>
 uninstall commands from manifest metadata.
 The commands vary based on <code>intune.run_as_account</code>:</p>
 <ul>
-<li><strong>Install (<code>system</code>, default):</strong> <code>Add-AppxProvisionedPackage -Online -PackagePath "$($adtSession.DirFiles)\{filename}" -SkipLicense</code></li>
-<li><strong>Uninstall (<code>system</code>, default):</strong> <code>Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq "{identity_name}" } | Remove-AppxProvisionedPackage -Online</code></li>
-<li><strong>Install (<code>user</code>):</strong> <code>Add-AppxPackage -Path "$($adtSession.DirFiles)\{filename}"</code></li>
-<li><strong>Uninstall (<code>user</code>):</strong> <code>Get-AppxPackage -Name "{identity_name}" | Remove-AppxPackage</code></li>
+<li><strong>Install (<code>system</code>, default):</strong> <code>Add-AppxProvisionedPackage -Online -PackagePath (Join-Path $adtSession.DirFiles '{filename}') -SkipLicense</code></li>
+<li><strong>Uninstall (<code>system</code>, default):</strong> <code>Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq '{identity_name}' } | Remove-AppxProvisionedPackage -Online</code></li>
+<li><strong>Install (<code>user</code>):</strong> <code>Add-AppxPackage -Path (Join-Path $adtSession.DirFiles '{filename}')</code></li>
+<li><strong>Uninstall (<code>user</code>):</strong> <code>Get-AppxPackage -Name '{identity_name}' | Remove-AppxPackage</code></li>
 </ul>
 <p><strong>Behavior:</strong></p>
 <ul>

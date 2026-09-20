@@ -737,6 +737,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../powershell/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    powershell
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../results/" class="md-nav__link">
         
   
@@ -862,10 +890,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_9" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_10" checked>
         
           
-          <label class="md-nav__link" for="__nav_4_9" id="__nav_4_9_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_10" id="__nav_4_10_label" tabindex="0">
             
   
   
@@ -883,8 +911,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_9_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_4_9">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_10_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1196,10 +1224,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_11" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12" >
         
           
-          <label class="md-nav__link" for="__nav_4_11" id="__nav_4_11_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
             
   
   
@@ -1217,8 +1245,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_11_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_11">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_12">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2466,10 +2494,10 @@ version.</p>
 </span><span id="__span-0-167"><a id="__codelineno-0-167" name="__codelineno-0-167"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">napt.build._ps_templates</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
 </span><span id="__span-0-168"><a id="__codelineno-0-168" name="__codelineno-0-168"></a>        <span class="n">_TEMPLATES_DIR</span><span class="p">,</span>
 </span><span id="__span-0-169"><a id="__codelineno-0-169" name="__codelineno-0-169"></a>        <span class="n">_load_ps_template</span><span class="p">,</span>
-</span><span id="__span-0-170"><a id="__codelineno-0-170" name="__codelineno-0-170"></a>        <span class="n">escape_ps_string</span><span class="p">,</span>
-</span><span id="__span-0-171"><a id="__codelineno-0-171" name="__codelineno-0-171"></a>        <span class="n">substitute_ps_template</span><span class="p">,</span>
-</span><span id="__span-0-172"><a id="__codelineno-0-172" name="__codelineno-0-172"></a>    <span class="p">)</span>
-</span><span id="__span-0-173"><a id="__codelineno-0-173" name="__codelineno-0-173"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">napt.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_global_logger</span>
+</span><span id="__span-0-170"><a id="__codelineno-0-170" name="__codelineno-0-170"></a>        <span class="n">substitute_ps_template</span><span class="p">,</span>
+</span><span id="__span-0-171"><a id="__codelineno-0-171" name="__codelineno-0-171"></a>    <span class="p">)</span>
+</span><span id="__span-0-172"><a id="__codelineno-0-172" name="__codelineno-0-172"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">napt.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_global_logger</span>
+</span><span id="__span-0-173"><a id="__codelineno-0-173" name="__codelineno-0-173"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">napt.powershell</span><span class="w"> </span><span class="kn">import</span> <span class="n">PS_SCRIPT_ENCODING</span><span class="p">,</span> <span class="n">ps_escape_double_quoted</span>
 </span><span id="__span-0-174"><a id="__codelineno-0-174" name="__codelineno-0-174"></a>
 </span><span id="__span-0-175"><a id="__codelineno-0-175" name="__codelineno-0-175"></a>    <span class="n">logger</span> <span class="o">=</span> <span class="n">get_global_logger</span><span class="p">()</span>
 </span><span id="__span-0-176"><a id="__codelineno-0-176" name="__codelineno-0-176"></a>
@@ -2485,9 +2513,9 @@ version.</p>
 </span><span id="__span-0-186"><a id="__codelineno-0-186" name="__codelineno-0-186"></a>    <span class="n">script_content</span> <span class="o">=</span> <span class="n">substitute_ps_template</span><span class="p">(</span>
 </span><span id="__span-0-187"><a id="__codelineno-0-187" name="__codelineno-0-187"></a>        <span class="n">template</span><span class="p">,</span>
 </span><span id="__span-0-188"><a id="__codelineno-0-188" name="__codelineno-0-188"></a>        <span class="p">{</span>
-</span><span id="__span-0-189"><a id="__codelineno-0-189" name="__codelineno-0-189"></a>            <span class="s2">"$NaptPackageIdentityName"</span><span class="p">:</span> <span class="n">escape_ps_string</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">identity_name</span><span class="p">),</span>
-</span><span id="__span-0-190"><a id="__codelineno-0-190" name="__codelineno-0-190"></a>            <span class="s2">"$NaptAppName"</span><span class="p">:</span> <span class="n">escape_ps_string</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">app_name</span><span class="p">),</span>
-</span><span id="__span-0-191"><a id="__codelineno-0-191" name="__codelineno-0-191"></a>            <span class="s2">"$NaptVersion"</span><span class="p">:</span> <span class="n">escape_ps_string</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">version</span><span class="p">),</span>
+</span><span id="__span-0-189"><a id="__codelineno-0-189" name="__codelineno-0-189"></a>            <span class="s2">"$NaptPackageIdentityName"</span><span class="p">:</span> <span class="n">ps_escape_double_quoted</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">identity_name</span><span class="p">),</span>
+</span><span id="__span-0-190"><a id="__codelineno-0-190" name="__codelineno-0-190"></a>            <span class="s2">"$NaptAppName"</span><span class="p">:</span> <span class="n">ps_escape_double_quoted</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">app_name</span><span class="p">),</span>
+</span><span id="__span-0-191"><a id="__codelineno-0-191" name="__codelineno-0-191"></a>            <span class="s2">"$NaptVersion"</span><span class="p">:</span> <span class="n">ps_escape_double_quoted</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">version</span><span class="p">),</span>
 </span><span id="__span-0-192"><a id="__codelineno-0-192" name="__codelineno-0-192"></a>            <span class="s2">"$NaptExactMatch"</span><span class="p">:</span> <span class="s2">"$True"</span> <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">exact_match</span> <span class="k">else</span> <span class="s2">"$False"</span><span class="p">,</span>
 </span><span id="__span-0-193"><a id="__codelineno-0-193" name="__codelineno-0-193"></a>            <span class="s2">"$NaptLogRotationMb"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">log_rotation_mb</span><span class="p">),</span>
 </span><span id="__span-0-194"><a id="__codelineno-0-194" name="__codelineno-0-194"></a>            <span class="s2">"$NaptScriptType"</span><span class="p">:</span> <span class="s2">"Detection"</span><span class="p">,</span>
@@ -2499,7 +2527,7 @@ version.</p>
 </span><span id="__span-0-200"><a id="__codelineno-0-200" name="__codelineno-0-200"></a>    <span class="n">output_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </span><span id="__span-0-201"><a id="__codelineno-0-201" name="__codelineno-0-201"></a>
 </span><span id="__span-0-202"><a id="__codelineno-0-202" name="__codelineno-0-202"></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="__span-0-203"><a id="__codelineno-0-203" name="__codelineno-0-203"></a>        <span class="n">script_bytes</span> <span class="o">=</span> <span class="n">script_content</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">)</span>
+</span><span id="__span-0-203"><a id="__codelineno-0-203" name="__codelineno-0-203"></a>        <span class="n">script_bytes</span> <span class="o">=</span> <span class="n">script_content</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">PS_SCRIPT_ENCODING</span><span class="p">)</span>
 </span><span id="__span-0-204"><a id="__codelineno-0-204" name="__codelineno-0-204"></a>        <span class="n">output_path</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span><span class="n">script_bytes</span><span class="p">)</span>
 </span><span id="__span-0-205"><a id="__codelineno-0-205" name="__codelineno-0-205"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"DETECTION"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Detection script written to: </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span><span id="__span-0-206"><a id="__codelineno-0-206" name="__codelineno-0-206"></a>    <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
@@ -2785,10 +2813,10 @@ Outputs "Required" if installed version &lt; target, nothing otherwise.</p>
 </span><span id="__span-0-254"><a id="__codelineno-0-254" name="__codelineno-0-254"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">napt.build._ps_templates</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
 </span><span id="__span-0-255"><a id="__codelineno-0-255" name="__codelineno-0-255"></a>        <span class="n">_TEMPLATES_DIR</span><span class="p">,</span>
 </span><span id="__span-0-256"><a id="__codelineno-0-256" name="__codelineno-0-256"></a>        <span class="n">_load_ps_template</span><span class="p">,</span>
-</span><span id="__span-0-257"><a id="__codelineno-0-257" name="__codelineno-0-257"></a>        <span class="n">escape_ps_string</span><span class="p">,</span>
-</span><span id="__span-0-258"><a id="__codelineno-0-258" name="__codelineno-0-258"></a>        <span class="n">substitute_ps_template</span><span class="p">,</span>
-</span><span id="__span-0-259"><a id="__codelineno-0-259" name="__codelineno-0-259"></a>    <span class="p">)</span>
-</span><span id="__span-0-260"><a id="__codelineno-0-260" name="__codelineno-0-260"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">napt.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_global_logger</span>
+</span><span id="__span-0-257"><a id="__codelineno-0-257" name="__codelineno-0-257"></a>        <span class="n">substitute_ps_template</span><span class="p">,</span>
+</span><span id="__span-0-258"><a id="__codelineno-0-258" name="__codelineno-0-258"></a>    <span class="p">)</span>
+</span><span id="__span-0-259"><a id="__codelineno-0-259" name="__codelineno-0-259"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">napt.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_global_logger</span>
+</span><span id="__span-0-260"><a id="__codelineno-0-260" name="__codelineno-0-260"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">napt.powershell</span><span class="w"> </span><span class="kn">import</span> <span class="n">PS_SCRIPT_ENCODING</span><span class="p">,</span> <span class="n">ps_escape_double_quoted</span>
 </span><span id="__span-0-261"><a id="__codelineno-0-261" name="__codelineno-0-261"></a>
 </span><span id="__span-0-262"><a id="__codelineno-0-262" name="__codelineno-0-262"></a>    <span class="n">logger</span> <span class="o">=</span> <span class="n">get_global_logger</span><span class="p">()</span>
 </span><span id="__span-0-263"><a id="__codelineno-0-263" name="__codelineno-0-263"></a>
@@ -2805,9 +2833,9 @@ Outputs "Required" if installed version &lt; target, nothing otherwise.</p>
 </span><span id="__span-0-274"><a id="__codelineno-0-274" name="__codelineno-0-274"></a>    <span class="n">script_content</span> <span class="o">=</span> <span class="n">substitute_ps_template</span><span class="p">(</span>
 </span><span id="__span-0-275"><a id="__codelineno-0-275" name="__codelineno-0-275"></a>        <span class="n">template</span><span class="p">,</span>
 </span><span id="__span-0-276"><a id="__codelineno-0-276" name="__codelineno-0-276"></a>        <span class="p">{</span>
-</span><span id="__span-0-277"><a id="__codelineno-0-277" name="__codelineno-0-277"></a>            <span class="s2">"$NaptPackageIdentityName"</span><span class="p">:</span> <span class="n">escape_ps_string</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">identity_name</span><span class="p">),</span>
-</span><span id="__span-0-278"><a id="__codelineno-0-278" name="__codelineno-0-278"></a>            <span class="s2">"$NaptAppName"</span><span class="p">:</span> <span class="n">escape_ps_string</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">app_name</span><span class="p">),</span>
-</span><span id="__span-0-279"><a id="__codelineno-0-279" name="__codelineno-0-279"></a>            <span class="s2">"$NaptVersion"</span><span class="p">:</span> <span class="n">escape_ps_string</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">version</span><span class="p">),</span>
+</span><span id="__span-0-277"><a id="__codelineno-0-277" name="__codelineno-0-277"></a>            <span class="s2">"$NaptPackageIdentityName"</span><span class="p">:</span> <span class="n">ps_escape_double_quoted</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">identity_name</span><span class="p">),</span>
+</span><span id="__span-0-278"><a id="__codelineno-0-278" name="__codelineno-0-278"></a>            <span class="s2">"$NaptAppName"</span><span class="p">:</span> <span class="n">ps_escape_double_quoted</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">app_name</span><span class="p">),</span>
+</span><span id="__span-0-279"><a id="__codelineno-0-279" name="__codelineno-0-279"></a>            <span class="s2">"$NaptVersion"</span><span class="p">:</span> <span class="n">ps_escape_double_quoted</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">version</span><span class="p">),</span>
 </span><span id="__span-0-280"><a id="__codelineno-0-280" name="__codelineno-0-280"></a>            <span class="s2">"$NaptLogRotationMb"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">log_rotation_mb</span><span class="p">),</span>
 </span><span id="__span-0-281"><a id="__codelineno-0-281" name="__codelineno-0-281"></a>            <span class="s2">"$NaptScriptType"</span><span class="p">:</span> <span class="s2">"Requirements"</span><span class="p">,</span>
 </span><span id="__span-0-282"><a id="__codelineno-0-282" name="__codelineno-0-282"></a>            <span class="s2">"$NaptLogBaseName"</span><span class="p">:</span> <span class="s2">"NAPTRequirements"</span><span class="p">,</span>
@@ -2818,7 +2846,7 @@ Outputs "Required" if installed version &lt; target, nothing otherwise.</p>
 </span><span id="__span-0-287"><a id="__codelineno-0-287" name="__codelineno-0-287"></a>    <span class="n">output_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </span><span id="__span-0-288"><a id="__codelineno-0-288" name="__codelineno-0-288"></a>
 </span><span id="__span-0-289"><a id="__codelineno-0-289" name="__codelineno-0-289"></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="__span-0-290"><a id="__codelineno-0-290" name="__codelineno-0-290"></a>        <span class="n">script_bytes</span> <span class="o">=</span> <span class="n">script_content</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">)</span>
+</span><span id="__span-0-290"><a id="__codelineno-0-290" name="__codelineno-0-290"></a>        <span class="n">script_bytes</span> <span class="o">=</span> <span class="n">script_content</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">PS_SCRIPT_ENCODING</span><span class="p">)</span>
 </span><span id="__span-0-291"><a id="__codelineno-0-291" name="__codelineno-0-291"></a>        <span class="n">output_path</span><span class="o">.</span><span class="n">write_bytes</span><span class="p">(</span><span class="n">script_bytes</span><span class="p">)</span>
 </span><span id="__span-0-292"><a id="__codelineno-0-292" name="__codelineno-0-292"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span>
 </span><span id="__span-0-293"><a id="__codelineno-0-293" name="__codelineno-0-293"></a>            <span class="s2">"REQUIREMENTS"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Requirements script written to: </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2">"</span>
