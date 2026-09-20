@@ -267,3 +267,96 @@ def test_incomplete_download_raises_network_error(tmp_test_dir: Path) -> None:
 
     # .part file should be cleaned up
     assert not list(tmp_test_dir.glob("*.part"))
+
+
+def _download_with_header(tmp_test_dir: Path, disposition: str) -> Path:
+    """Downloads a small payload whose server announces the given filename."""
+    url = "https://example.com/latest"
+    data = b"payload"
+    with requests_mock.Mocker() as m:
+        m.get(
+            url,
+            content=data,
+            headers={
+                "Content-Length": str(len(data)),
+                "Content-Disposition": disposition,
+            },
+        )
+        return download_file(url, tmp_test_dir).file_path
+
+
+@pytest.mark.parametrize(
+    "disposition",
+    [
+        'attachment; filename="../../evil.exe"',
+        r'attachment; filename="..\..\evil.exe"',
+        'attachment; filename="C:/Windows/evil.exe"',
+        "attachment; filename*=UTF-8''..%2F..%2Fevil.exe",
+        "attachment; filename*=UTF-8''%2e%2e%5c%2e%2e%5cevil.exe",
+    ],
+)
+def test_server_filename_cannot_leave_download_folder(
+    tmp_test_dir: Path, disposition: str
+) -> None:
+    """Tests that path segments in a server filename are discarded."""
+    download_dir = tmp_test_dir / "downloads" / "napt-app"
+
+    saved = _download_with_header(download_dir, disposition)
+
+    assert saved == download_dir / "evil.exe"
+    assert saved.exists()
+    assert not (tmp_test_dir / "evil.exe").exists()
+    assert not (tmp_test_dir / "downloads" / "evil.exe").exists()
+
+
+def test_powershell_active_characters_are_replaced_in_filename(
+    tmp_test_dir: Path, capsys
+) -> None:
+    """Tests that a hostile filename is rewritten and the change is reported."""
+    saved = _download_with_header(
+        tmp_test_dir, 'attachment; filename="setup$(Start-Process calc).msi"'
+    )
+
+    assert saved.name == "setup_(Start-Process calc).msi"
+    output = capsys.readouterr().out
+    assert "setup$(Start-Process calc).msi" in output
+    assert "setup_(Start-Process calc).msi" in output
+
+
+def test_unusable_server_filename_falls_back_to_url_name(tmp_test_dir: Path) -> None:
+    """Tests that a reserved or empty server filename yields the URL name."""
+    saved = _download_with_header(tmp_test_dir, 'attachment; filename="NUL.msi"')
+
+    assert saved.name == "latest"
+
+
+def test_ordinary_server_filename_is_kept_without_warning(
+    tmp_test_dir: Path, capsys
+) -> None:
+    """Tests that a normal filename is saved as-is and nothing is reported."""
+    saved = _download_with_header(
+        tmp_test_dir, 'attachment; filename="Setup (x64).msi"'
+    )
+
+    assert saved.name == "Setup (x64).msi"
+    assert "unsafe" not in capsys.readouterr().out
+
+
+def test_falls_back_to_default_name_when_no_candidate_is_usable(
+    tmp_test_dir: Path,
+) -> None:
+    """Tests that download.bin is used when header and URL names are unusable."""
+    url = "https://example.com/files/NUL"
+    data = b"payload"
+    with requests_mock.Mocker() as m:
+        m.get(
+            url,
+            content=data,
+            headers={
+                "Content-Length": str(len(data)),
+                "Content-Disposition": 'attachment; filename=".."',
+            },
+        )
+        result = download_file(url, tmp_test_dir)
+
+    assert result.file_path.name == "download.bin"

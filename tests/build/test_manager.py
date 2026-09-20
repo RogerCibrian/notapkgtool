@@ -33,7 +33,7 @@ from napt.build.manager import (
     _require_exe_scripts,
     _write_build_manifest,
 )
-from napt.exceptions import ConfigError
+from napt.exceptions import ConfigError, PackagingError
 from napt.versioning.msi import MSIMetadata
 from napt.versioning.msix import MSIXMetadata
 
@@ -96,6 +96,26 @@ class TestFindInstallerFile:
         config = {
             "id": "napt-chrome",
             "discovery": {"url": "https://example.com/chrome.msi"},
+        }
+
+        result = _find_installer_file(downloads_dir, config)
+
+        assert result == installer
+
+    def test_find_by_url_uses_the_name_the_download_saved(self, tmp_path):
+        """Tests that a filename the download rewrote is found by its URL."""
+        downloads_dir = tmp_path / "downloads"
+        app_dir = downloads_dir / "napt-zeta"
+        app_dir.mkdir(parents=True)
+        # The download step saves "O'Brien-setup.msi" as "O_Brien-setup.msi".
+        # Nothing in that name matches the app, so name matching cannot help.
+        installer = app_dir / "O_Brien-setup.msi"
+        installer.write_text("fake msi")
+
+        config = {
+            "id": "napt-zeta",
+            "name": "Zeta",
+            "discovery": {"url": "https://example.com/O'Brien-setup.msi"},
         }
 
         result = _find_installer_file(downloads_dir, config)
@@ -173,6 +193,60 @@ class TestFindInstallerFile:
         config = {
             "id": "napt-test-7zip",
             "name": "NAPT Test 7-Zip",
+            "discovery": {},
+            "directories": {"state": str(tmp_path / "state")},
+        }
+
+        result = _find_installer_file(downloads_dir, config)
+
+        assert result == installer
+
+    def test_find_by_cache_url_uses_the_name_the_download_saved(self, tmp_path):
+        """Tests that the discovery cache URL finds a filename the download rewrote."""
+        downloads_dir = tmp_path / "downloads"
+        app_dir = downloads_dir / "napt-zeta"
+        app_dir.mkdir(parents=True)
+        # Saved as "O_Brien-setup.exe"; nothing in it matches the app, so
+        # name matching cannot find it.
+        installer = app_dir / "O_Brien-setup.exe"
+        installer.write_text("fake exe")
+        cache_file = tmp_path / "cache" / "discovery.json"
+        cache_file.parent.mkdir()
+        cache_file.write_text(
+            json.dumps(
+                {
+                    "metadata": {"schema_version": "2"},
+                    "apps": {
+                        "napt-zeta": {"url": "https://example.com/O'Brien-setup.exe"}
+                    },
+                }
+            )
+        )
+        config = {"id": "napt-zeta", "name": "Zeta", "discovery": {}}
+
+        result = _find_installer_file(downloads_dir, config, cache_file)
+
+        assert result == installer
+
+    def test_find_by_deployment_state_url_uses_the_saved_name(self, tmp_path):
+        """Tests that the pending release URL finds a filename the download rewrote."""
+        downloads_dir = tmp_path / "downloads"
+        app_dir = downloads_dir / "napt-zeta"
+        app_dir.mkdir(parents=True)
+        installer = app_dir / "O_Brien-setup.exe"
+        installer.write_text("fake exe")
+        _write_pending_state(
+            tmp_path / "state",
+            "napt-zeta",
+            {
+                "version": "1.0",
+                "sha256": "abc123",
+                "url": "https://example.com/O'Brien-setup.exe",
+            },
+        )
+        config = {
+            "id": "napt-zeta",
+            "name": "Zeta",
             "discovery": {},
             "directories": {"state": str(tmp_path / "state")},
         }
@@ -316,6 +390,21 @@ class TestCreateBuildDirectory:
         expected = base_dir / "test-app" / "1.0.0" / "packagefiles"
         assert result == expected
         assert not (existing / "old_file.txt").exists()
+
+    def test_version_with_parent_segments_deletes_nothing(self, tmp_path):
+        """Tests that a traversing version is refused before any delete."""
+        base_dir = tmp_path / "builds"
+        victim = tmp_path / "important"
+        victim.mkdir()
+        (victim / "keep.txt").write_text("keep")
+        # From builds/test-app/, two levels up is tmp_path, so this version
+        # would resolve to the victim folder and the rebuild would delete it.
+        version = "../../important"
+
+        with pytest.raises(PackagingError, match="cannot be used as a folder name"):
+            _create_build_directory(base_dir, "test-app", version)
+
+        assert (victim / "keep.txt").exists()
 
 
 class TestCopyPSADTPristine:

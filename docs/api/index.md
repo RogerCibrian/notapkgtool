@@ -11,6 +11,7 @@ napt/
 ├── __init__.py              # Package overview docstring
 ├── exceptions.py            # Exception hierarchy
 ├── logging.py               # Logging configuration
+├── paths.py                 # Safe filenames and folder names from external input
 ├── powershell.py            # PowerShell string quoting for generated scripts
 ├── results.py               # Result dataclasses returned by napt commands
 ├── validation.py            # Recipe validation logic

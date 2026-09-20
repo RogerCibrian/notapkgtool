@@ -42,6 +42,7 @@ import yaml
 from napt.discovery.registry import get_strategy
 from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
+from napt.paths import is_safe_path_component
 from napt.results import ValidationResult
 
 # Schema for the intune.detection subsection
@@ -594,6 +595,13 @@ def validate_config(
             errors.append("Field 'id' must be a string")
         elif not config["id"]:
             errors.append("Field 'id' cannot be empty")
+        elif not is_safe_path_component(config["id"]):
+            # The id names the app's download, build, package, and state
+            # folders, so it must be usable as a folder name as-is.
+            errors.append(
+                "Field 'id' may contain only letters, digits, '.', '-', '_', "
+                "and '+', and must start with a letter or digit"
+            )
 
     _validate_parent_field(config, recipe_path, errors, warnings)
 

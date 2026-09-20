@@ -21,6 +21,22 @@ The discovery process finds the latest version and downloads the installer:
 
 **Output**: Downloaded installer in `downloads/{app_id}/`, updated discovery cache, updated deployment state
 
+**Saved filename**: The file is saved under the name the server announces, or
+the URL's filename when it announces none.
+NAPT keeps only the final part of that name and replaces `$`, `;`, backticks,
+and quote characters with `_`, because `{{installer_filename}}` is substituted
+into your install script.
+A warning shows the original and saved names when they differ.
+Always put `{{installer_filename}}` inside quotes: unquoted, PowerShell runs
+parentheses in a filename as code, and those are too common in real names to
+replace.
+
+**Version**: The discovered version becomes a folder name
+(`builds/{app_id}/{version}/`), so it may contain only letters, digits, `.`,
+`-`, `_`, and `+`.
+If discovery stops with "cannot be used as a folder name", tighten the recipe's
+`version_pattern` so it captures only the version.
+
 ### Build process (`napt build`)
 
 The build process creates a complete PSADT package from the recipe and downloaded installer:

@@ -1,0 +1,3 @@
+# paths
+
+::: napt.paths

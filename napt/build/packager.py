@@ -34,6 +34,7 @@ import requests
 
 from napt.download.download import make_session
 from napt.exceptions import ConfigError, NetworkError, PackagingError
+from napt.paths import is_safe_path_component
 from napt.results import PackageResult
 
 INTUNEWIN_REPO = "microsoft/Microsoft-Win32-Content-Prep-Tool"
@@ -138,13 +139,14 @@ def _get_intunewin_tool(cache_dir: Path, release: str) -> Path:
 
     Args:
         cache_dir: Base directory for caching tool releases.
-        release: Release specifier — either "latest" or a specific version
+        release: Release specifier, either "latest" or a specific version
             (e.g., "1.8.6" or "v1.8.6").
 
     Returns:
         Path to the cached IntuneWinAppUtil.exe.
 
     Raises:
+        ConfigError: If release is not "latest" or a plain version.
         NetworkError: If the GitHub API query or download fails.
     """
     from napt.logging import get_global_logger
@@ -156,6 +158,13 @@ def _get_intunewin_tool(cache_dir: Path, release: str) -> Path:
         version = fetch_latest_intunewin_version()
     else:
         version = release.lstrip("v")
+
+    # The version names the cache folder, so it must be a plain folder name.
+    if not is_safe_path_component(version):
+        raise ConfigError(
+            f"Invalid intunewin.release {release!a}: use 'latest' or a version "
+            "such as '1.8.6'"
+        )
 
     tool_path = cache_dir / version / "IntuneWinAppUtil.exe"
 

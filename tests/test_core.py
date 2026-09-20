@@ -193,6 +193,42 @@ class TestVersionFirstFastPath:
         assert result.app_id == "test-app"
         assert result.status == "success"
 
+    def test_unusable_discovered_version_stops_before_download(
+        self, tmp_test_dir, create_yaml_file
+    ):
+        """Tests that a version with path segments is refused before any write."""
+        import requests_mock
+
+        recipe_data = {
+            "apiVersion": "napt/v1",
+            "name": "Test App",
+            "id": "test-app",
+            "discovery": {
+                "strategy": "web_scrape",
+                "page_url": "https://example.com/download.html",
+                "link_selector": 'a[href$=".msi"]',
+                # Captures everything between the markers, separators included.
+                "version_pattern": r"app-v(.+)-installer",
+            },
+        }
+        recipe_path = create_yaml_file("recipe.yaml", recipe_data)
+        html_content = '<a href="/app-v2.0/stable-installer.msi">Download</a>'
+        state_dir = tmp_test_dir / "state"
+
+        with requests_mock.Mocker() as m:
+            m.get("https://example.com/download.html", text=html_content)
+            with patch("napt.discovery.base.download_file") as mock_download:
+                with pytest.raises(ConfigError, match="cannot be used as a folder"):
+                    discover_recipe(
+                        recipe_path,
+                        tmp_test_dir,
+                        stateless=True,
+                        state_dir=state_dir,
+                    )
+
+        mock_download.assert_not_called()
+        assert not state_dir.exists()
+
     def test_version_first_cache_miss_downloads(self, tmp_test_dir, create_yaml_file):
         """Test that version-first strategies download when version changes."""
         from pathlib import Path

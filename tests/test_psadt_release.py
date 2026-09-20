@@ -132,6 +132,13 @@ class TestGetPSADTRelease:
 
         assert result == version_dir
 
+    def test_release_with_path_segments_is_rejected(self, tmp_path):
+        """Tests that a psadt.release value cannot point outside the cache."""
+        from napt.exceptions import ConfigError
+
+        with pytest.raises(ConfigError, match="Invalid psadt.release"):
+            get_psadt_release("../../outside", tmp_path / "cache")
+
     @patch("napt.psadt.release.fetch_latest_psadt_version")
     def test_get_release_resolves_latest(self, mock_fetch, tmp_path):
         """Test that 'latest' is resolved to actual version."""

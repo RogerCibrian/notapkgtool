@@ -33,6 +33,7 @@ from pathlib import Path
 import re
 import shutil
 from typing import Any, cast
+from urllib.parse import urlparse
 
 from napt.build.icons import extract_icon_png
 from napt.build.msix_scripts import (
@@ -50,6 +51,7 @@ from napt.build.registry_scripts import (
 )
 from napt.config.loader import load_effective_config
 from napt.exceptions import ConfigError, PackagingError
+from napt.paths import is_safe_path_component, safe_filename
 from napt.powershell import PS_SCRIPT_ENCODING, ps_single_quote
 from napt.psadt.release import get_psadt_release
 from napt.results import BuildResult
@@ -211,6 +213,22 @@ def _get_installer_version(
     )
 
 
+def _saved_name_for_url(url: str) -> str | None:
+    """Returns the filename a download from this URL is saved under.
+
+    Applies the same cleaning as the download step, so a name the download
+    rewrote is still found here.
+
+    Args:
+        url: Download URL from the recipe, the discovery cache, or state.
+
+    Returns:
+        The saved filename, or None when the URL has no usable filename.
+
+    """
+    return safe_filename(Path(urlparse(url).path).name)
+
+
 def _find_installer_file(
     downloads_dir: Path, config: dict[str, Any], cache_file: Path | None = None
 ) -> Path:
@@ -221,8 +239,10 @@ def _find_installer_file(
     2. URL from discovery cache (for web_scrape, api_github, api_json strategies)
     3. URL of the pending release in deployment state (for machines that
         never ran discover, such as CI publish jobs)
-    4. Filename matching by app name/id
-    5. Most recent installer (last resort)
+    4. Filename matching by app name/id, taking the most recent match
+
+    The first three look for the filename the download step saved, which
+    can differ from the URL's when the name contained unsafe characters.
 
     Args:
         downloads_dir: Downloads directory to search.
@@ -235,8 +255,6 @@ def _find_installer_file(
     Raises:
         PackagingError: If installer file cannot be found.
     """
-    from urllib.parse import urlparse
-
     from napt.logging import get_global_logger
 
     logger = get_global_logger()
@@ -247,8 +265,7 @@ def _find_installer_file(
 
     # Strategy 1: Extract filename from recipe URL (for url_download)
     if url:
-        parsed = urlparse(url)
-        filename = Path(parsed.path).name
+        filename = _saved_name_for_url(url)
         if filename:
             installer_path = app_dir / filename
 
@@ -268,8 +285,7 @@ def _find_installer_file(
             cached_url = app_entry.get("url", "")
 
             if cached_url:
-                parsed = urlparse(cached_url)
-                filename = Path(parsed.path).name
+                filename = _saved_name_for_url(cached_url)
                 if filename:
                     installer_path = app_dir / filename
 
@@ -285,8 +301,7 @@ def _find_installer_file(
     # deployment state (committed to the repo, unlike the discovery cache)
     pending = _pending_release(config)
     if pending:
-        parsed = urlparse(pending.get("url", ""))
-        filename = Path(parsed.path).name
+        filename = _saved_name_for_url(pending.get("url", ""))
         if filename:
             installer_path = app_dir / filename
 
@@ -352,11 +367,20 @@ def _create_build_directory(base_dir: Path, app_id: str, version: str) -> Path:
             (build_dir/packagefiles/).
 
     Raises:
+        PackagingError: If the version cannot be used as a folder name.
         OSError: If directory creation fails.
     """
     from napt.logging import get_global_logger
 
     logger = get_global_logger()
+    # The version comes from installer metadata or a scraped page. An existing
+    # build directory is deleted below, so a version such as "..\.." must
+    # never be allowed to point that delete somewhere else.
+    if not is_safe_path_component(version):
+        raise PackagingError(
+            f"Version {version!a} for {app_id} cannot be used as a folder name. "
+            "Versions may contain only letters, digits, '.', '-', '_', and '+'."
+        )
     version_dir = base_dir / app_id / version
     packagefiles_dir = version_dir / "packagefiles"
 
