@@ -66,6 +66,7 @@ mkdocs-material = "^9.6.23"
 mkdocstrings = "^1.0.6"
 mkdocstrings-python = "^2.0.7"
 vulture = "^2.16"
+pytest-cov = "^7.1.0"
 
 # -----------------------------
 # Formatting (Black)
@@ -133,4 +134,16 @@ addopts = "--basetemp=.pytest-tmp"
 norecursedirs = [".git", ".tox", "dist", ".eggs", "*.egg", ".venv", "venv"]
 markers = [
     "integration: Slow tests requiring network and real external dependencies",
+]
+
+[tool.coverage.run]
+source = ["napt"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "\\.\\.\\.$",
 ]
