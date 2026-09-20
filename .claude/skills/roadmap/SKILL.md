@@ -1,7 +1,6 @@
 ---
 name: roadmap
 description: Add or update an entry in docs/roadmap.md. Enforces the standard structure (Status / Complexity / Value / Description / Benefits / Prerequisites / Dependencies / Related) and category placement.
-disable-model-invocation: true
 user-invocable: true
 allowed-tools: Read Edit Write Glob Grep
 argument-hint: "feature name and brief description"
