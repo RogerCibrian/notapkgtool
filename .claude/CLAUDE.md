@@ -29,7 +29,10 @@ Don't write framing like "third-party extension API," "implementing custom strat
 .venv\Scripts\python.exe -m black napt/ tests/
 .venv\Scripts\python.exe -m pytest tests/ -m "not integration"   # unit tests only (fast)
 .venv\Scripts\python.exe -m pytest tests/                        # all tests including integration
+.venv\Scripts\python.exe -m pytest tests/ -m "not integration" --cov   # unit tests with branch coverage
 ```
+
+**Coverage** is opt-in (`--cov`) and has no threshold. Use it when deleting or restructuring code: compare the report before and after to see which branches lost their tests. Configuration is in `pyproject.toml` under `[tool.coverage.*]`.
 
 **Integration tests** (`tests/integration/`) require network access and download real dependencies. They are marked `@pytest.mark.integration`. Run unit tests during development; run the full suite before opening a PR.
 

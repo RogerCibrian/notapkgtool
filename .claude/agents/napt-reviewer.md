@@ -1,6 +1,6 @@
 ---
 name: napt-reviewer
-description: Reviews NAPT code changes against CLAUDE.md conventions, documentation requirements, and project principles. Defaults to current branch vs main; pass `pr=<number>` to review a specific PR instead. Catches judgment-heavy rules that ruff can't enforce. Reports findings — does not modify code.
+description: Reviews NAPT code changes against CLAUDE.md conventions, documentation requirements, and project principles. Defaults to current branch vs main; pass `pr=<number>` to review a specific PR instead. Catches judgment-heavy rules that ruff can't enforce and checks that changed lines are covered by unit tests. Reports findings — does not modify code.
 tools: Read, Glob, Grep, Bash
 model: sonnet
 ---
@@ -74,6 +74,27 @@ Review against the `Project Principles` section of CLAUDE.md. Current principles
 
 Consult the `Docstrings` section's test-docstring guidance. Ruff D rules are disabled for tests, so docstring presence and format are your check.
 
+### Test coverage of the diff (napt/**/*.py)
+
+When the diff adds or changes lines in `napt/**/*.py`, check whether any unit test executes them. Run the unit suite with coverage (about 6 seconds):
+
+```
+.venv/Scripts/python.exe -m pytest tests/ -m "not integration" -q --cov -p no:cacheprovider
+```
+
+The report's `Missing` column lists uncovered lines (`12-15`) and untaken branches (`40->44`) per file. Compare it against the line ranges this diff added or changed, and flag changed logic that no test executes.
+
+Coverage reflects the working tree, so run this for branch reviews, and for PR reviews only when `git branch --show-current` matches the PR's head branch. Otherwise skip the category and say so in the output.
+
+Rules for this category:
+
+- Judge only lines the diff added or changed. Never report an overall percentage, a per-file percentage, or ask for a threshold.
+- Exempt code that cannot run in a unit test: bodies whose work is a real subprocess, PowerShell, or COM call (for example the extraction path in `napt/versioning/msi.py` and the tool execution in `napt/build/packager.py`), and code reached only by integration tests. The logic around such calls (argument building, output parsing, error translation) is not exempt.
+- Exempt pure moves. A refactor that relocates code without changing it does not owe new tests; check instead that the moved lines kept the coverage they had.
+- For a diff that deletes code, check that tests were not left behind exercising only the deleted behavior, and that surviving neighbors did not lose coverage.
+
+Severity: `[SUGGESTION]` by default. `[BLOCKING]` when the PR is a `fix:` and the lines that implement the fix are uncovered, since an untested fix cannot show that the bug is gone or stay fixed.
+
 ### Documentation compliance
 
 Judge whether the diff warrants doc and changelog updates. Consult CLAUDE.md's `Documentation` and `Changelog` sections for the authoritative file-purpose map and format rules.
@@ -118,8 +139,8 @@ Group findings by severity, then by rule category. Each finding includes `file:l
 
 **Severity guidance:**
 
-- `[BLOCKING]` — project-principle violation, wrong exception type, missing changelog for a clearly user-facing change, `results.py` scope violation, ASCII rule violation in console output, backward-compat shim, git/CI logic added to napt.
-- `[SUGGESTION]` — logging level feels wrong, docstring section order off, docs could be updated but aren't strictly required, test docstring format deviation.
+- `[BLOCKING]` — project-principle violation, wrong exception type, missing changelog for a clearly user-facing change, `results.py` scope violation, ASCII rule violation in console output, backward-compat shim, git/CI logic added to napt, a `fix:` whose fixed lines no unit test executes.
+- `[SUGGESTION]` — logging level feels wrong, docstring section order off, docs could be updated but aren't strictly required, test docstring format deviation, changed logic that no unit test executes.
 - `[NIT]` — phrasing, minor inconsistency.
 
 **End with a single verdict line:**
