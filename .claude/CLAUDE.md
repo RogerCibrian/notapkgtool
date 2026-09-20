@@ -342,6 +342,20 @@ Never write an em dash (U+2014) anywhere in the repository: code, comments, docs
 
 In runtime strings an em dash is also a `Console Output` violation, since it can raise `UnicodeEncodeError` on a cp1252 console.
 
+Nothing checks this mechanically: ruff's `RUF001`-`RUF003` flag the en dash but not the em dash, so it is a review-time rule.
+
+---
+
+## Look-Alike Characters
+
+When Python source needs a character that is easy to mistake for an ASCII one (a typographic quote, a no-break space, an en dash), write it as a `\u` escape behind a named constant with a comment naming the character, never as the raw character:
+
+```python
+RSQUO = "\u2019"  # right single quotation mark
+```
+
+Ruff's `RUF001`-`RUF003` reject the raw form for typographic single quotes, the en dash, and the no-break space. They do not catch typographic double quotes, so use the escape for those too.
+
 ---
 
 ## PowerShell Quoting

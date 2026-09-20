@@ -95,7 +95,11 @@ line-length = 88
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "D"]
+select = ["E", "F", "I", "B", "UP", "D", "RUF001", "RUF002", "RUF003"]
+# RUF001-003 flag raw look-alike characters in strings, docstrings, and
+# comments: typographic single quotes, the en dash, and the no-break space.
+# They do not catch typographic double quotes or the em dash. Write such
+# characters as \u escapes with a comment naming them.
 # E203 conflicts with black's slice formatting. E501 is enforced on purpose:
 # black wraps code, and this catches the docstrings, comments, and strings
 # black leaves alone.
