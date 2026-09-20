@@ -170,7 +170,7 @@ def generate_msix_detection_script(
         substitute_ps_template,
     )
     from napt.logging import get_global_logger
-    from napt.powershell import ps_escape_double_quoted
+    from napt.powershell import PS_SCRIPT_ENCODING, ps_escape_double_quoted
 
     logger = get_global_logger()
 
@@ -200,7 +200,7 @@ def generate_msix_detection_script(
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        script_bytes = script_content.encode("utf-8")
+        script_bytes = script_content.encode(PS_SCRIPT_ENCODING)
         output_path.write_bytes(script_bytes)
         logger.verbose("DETECTION", f"Detection script written to: {output_path}")
     except OSError as err:
@@ -257,7 +257,7 @@ def generate_msix_requirements_script(
         substitute_ps_template,
     )
     from napt.logging import get_global_logger
-    from napt.powershell import ps_escape_double_quoted
+    from napt.powershell import PS_SCRIPT_ENCODING, ps_escape_double_quoted
 
     logger = get_global_logger()
 
@@ -287,7 +287,7 @@ def generate_msix_requirements_script(
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        script_bytes = script_content.encode("utf-8")
+        script_bytes = script_content.encode(PS_SCRIPT_ENCODING)
         output_path.write_bytes(script_bytes)
         logger.verbose(
             "REQUIREMENTS", f"Requirements script written to: {output_path}"

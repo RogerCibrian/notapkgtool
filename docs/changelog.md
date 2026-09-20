@@ -28,6 +28,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `$(...)` or quote in a downloaded file's name could run as code. The
     commands now single-quote both values (MSIX installs build the path with
     `Join-Path`)
+- Fixed detection and requirements scripts being written without a UTF-8
+    byte order mark. Windows PowerShell 5.1, which Intune uses to run them,
+    read such files as the ANSI code page, so an app name with a non-ASCII
+    character never matched the installed app, and some accented letters
+    decoded to a quote character that ended the string early. All generated
+    scripts now carry a BOM, as Microsoft recommends for Win32 detection scripts
 
 ## [0.10.0] - 2026-09-12
 

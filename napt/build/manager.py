@@ -50,7 +50,7 @@ from napt.build.registry_scripts import (
 )
 from napt.config.loader import load_effective_config
 from napt.exceptions import ConfigError, PackagingError
-from napt.powershell import ps_single_quote
+from napt.powershell import PS_SCRIPT_ENCODING, ps_single_quote
 from napt.psadt.release import get_psadt_release
 from napt.results import BuildResult
 from napt.state.deployment import deployment_state_path, load_deployment_state
@@ -1436,7 +1436,7 @@ def build_package(
 
     # Write generated script
     script_dest = build_dir / "Invoke-AppDeployToolkit.ps1"
-    script_dest.write_text(invoke_script, encoding="utf-8")
+    script_dest.write_text(invoke_script, encoding=PS_SCRIPT_ENCODING)
     logger.verbose("BUILD", "[OK] Generated Invoke-AppDeployToolkit.ps1")
 
     # Copy installer

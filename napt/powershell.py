@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""PowerShell string quoting for generated scripts and commands.
+"""PowerShell string quoting and file encoding for generated scripts.
 
 Values written into PowerShell source (recipe fields, installer metadata,
 file paths) can be vendor-controlled, and a value that closes its string
@@ -26,6 +26,14 @@ Both functions escape the full sets.
 from __future__ import annotations
 
 import re
+
+# Encoding for every .ps1 file NAPT writes: UTF-8 with a byte order mark.
+# Windows PowerShell 5.1 (which Intune uses for detection and requirements
+# scripts) reads a file without a BOM as the ANSI code page. That garbles
+# non-ASCII app names, and it undoes the quoting below: the UTF-8 bytes of an
+# ordinary letter such as U+00D3 decode to a typographic quote (C3 93 reads as
+# a left double quotation mark in cp1252), which then closes the string.
+PS_SCRIPT_ENCODING = "utf-8-sig"
 
 # Characters PowerShell's tokenizer treats as a single-quote delimiter: the
 # ASCII quote, then left, right, low-9, and high-reversed-9 quotation marks.
