@@ -12,11 +12,19 @@ Tests version comparison and extraction including:
 
 from __future__ import annotations
 
+import subprocess
+from unittest import mock
+
 import pytest
 
 from napt.exceptions import ConfigError
+from napt.powershell import ps_single_quote
 from napt.versioning.compare import compare, is_newer, version_key
-from napt.versioning.msi import _architecture_from_template
+from napt.versioning.msi import _architecture_from_template, extract_msi_metadata
+
+# Typographic single quote, which PowerShell accepts as a string delimiter.
+# Written as an escape because it is nearly indistinguishable from ' on screen.
+RSQUO = "\u2019"  # right single quotation mark
 
 
 class TestVersionComparison:
@@ -184,3 +192,26 @@ class TestArchitectureFromTemplate:
         """Tests that whitespace in the template is handled."""
         assert _architecture_from_template("  x64  ;1033") == "x64"
         assert _architecture_from_template("x64 ; 1033") == "x64"
+
+
+class TestExtractMsiMetadataScript:
+    """Tests for the PowerShell script built to read MSI metadata."""
+
+    def test_msi_path_is_quoted_in_script(self, tmp_path, monkeypatch):
+        """Tests that a hostile MSI path cannot close its PowerShell string."""
+        monkeypatch.setattr("napt.versioning.msi.sys.platform", "win32")
+        msi_path = tmp_path / f"app{RSQUO}; Remove-Item X; {RSQUO}.msi"
+        msi_path.write_bytes(b"")
+        completed = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="Contoso App\n1.2.3\nx64;1033\n", stderr=""
+        )
+
+        with mock.patch(
+            "napt.versioning.msi.subprocess.run", return_value=completed
+        ) as run:
+            metadata = extract_msi_metadata(msi_path)
+
+        script = run.call_args.args[0][-1]
+        assert f"OpenDatabase({ps_single_quote(str(msi_path))}, 0)" in script
+        assert f"app{RSQUO}{RSQUO}; Remove-Item X; {RSQUO}{RSQUO}.msi'" in script
+        assert metadata.product_version == "1.2.3"

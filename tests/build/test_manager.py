@@ -23,6 +23,7 @@ from napt.build.icons import IconExtraction
 from napt.build.manager import (
     _apply_branding,
     _apply_msi_commands,
+    _apply_msix_commands,
     _copy_installer,
     _copy_psadt_template,
     _create_build_directory,
@@ -34,6 +35,12 @@ from napt.build.manager import (
 )
 from napt.exceptions import ConfigError
 from napt.versioning.msi import MSIMetadata
+from napt.versioning.msix import MSIXMetadata
+
+# Typographic quotes PowerShell accepts as string delimiters. Written as
+# escapes because they are nearly indistinguishable from ' and " on screen.
+RSQUO = "\u2019"  # right single quotation mark
+RDQUO = "\u201d"  # right double quotation mark
 
 # All tests in this file are unit tests (fast, mocked)
 
@@ -761,7 +768,7 @@ class TestApplyMsiCommands:
     """Tests for MSI install/uninstall command auto-generation."""
 
     EXPECTED_INSTALL = (
-        'Start-ADTMsiProcess -Action Install -FilePath "7z2501-x64.msi"'
+        "Start-ADTMsiProcess -Action Install -FilePath '7z2501-x64.msi'"
         ' -AdditionalArgumentList "ALLUSERS=1"'
     )
     EXPECTED_UNINSTALL = (
@@ -822,6 +829,17 @@ class TestApplyMsiCommands:
 
         assert config["psadt"]["uninstall"] == self.EXPECTED_UNINSTALL
 
+    def test_product_name_with_smart_quote_stays_inside_string(self):
+        """Tests that a typographic quote in ProductName is doubled."""
+        config = self._config()
+        metadata = self._metadata(product_name=f"Acme{RSQUO}; Remove-Item C:")
+
+        _apply_msi_commands(config, metadata, self.INSTALLER, self._logger())
+
+        assert config["psadt"]["uninstall"].startswith(
+            f"Uninstall-ADTApplication -Name 'Acme{RSQUO}{RSQUO}; Remove-Item C:' "
+        )
+
     def test_user_account_omits_allusers(self):
         """Tests that run_as_account user omits the ALLUSERS argument."""
         config = self._config(run_as="user")
@@ -829,7 +847,19 @@ class TestApplyMsiCommands:
         _apply_msi_commands(config, self._metadata(), self.INSTALLER, self._logger())
 
         assert "ALLUSERS" not in config["psadt"]["install"]
-        assert config["psadt"]["install"].endswith('"7z2501-x64.msi"')
+        assert config["psadt"]["install"].endswith("'7z2501-x64.msi'")
+
+    def test_hostile_filename_stays_inside_string(self):
+        """Tests that a subexpression or quote in the filename is not executable."""
+        config = self._config(run_as="user")
+        installer = Path(f"app$(Remove-Item C:){RSQUO}x.msi")
+
+        _apply_msi_commands(config, self._metadata(), installer, self._logger())
+
+        assert config["psadt"]["install"] == (
+            "Start-ADTMsiProcess -Action Install"
+            f" -FilePath 'app$(Remove-Item C:){RSQUO}{RSQUO}x.msi'"
+        )
 
     def test_default_ignores_recipe_install_with_warning(self, capsys):
         """Tests that a recipe install command is ignored with a warning."""
@@ -935,3 +965,75 @@ class TestApplyMsiCommands:
 
         assert config["psadt"]["uninstall"] == "Custom-Uninstall"
         assert config["psadt"]["install"] == self.EXPECTED_INSTALL
+
+
+class TestApplyMsixCommands:
+    """Tests for MSIX install/uninstall command auto-generation."""
+
+    INSTALLER = Path("Contoso.App_1.2.3.0_x64.msix")
+
+    @staticmethod
+    def _logger():
+        from napt.logging import get_global_logger
+
+        return get_global_logger()
+
+    @staticmethod
+    def _metadata(identity_name="Contoso.App"):
+        return MSIXMetadata(
+            display_name="Contoso App",
+            version="1.2.3.0",
+            architecture="x64",
+            identity_name=identity_name,
+            publisher="Contoso",
+        )
+
+    @staticmethod
+    def _config(run_as="system"):
+        return {"psadt": {"app_vars": {}}, "intune": {"run_as_account": run_as}}
+
+    def test_system_generates_provisioned_package_commands(self):
+        """Tests that system installs provision the package for all users."""
+        config = self._config()
+
+        _apply_msix_commands(config, self._metadata(), self.INSTALLER, self._logger())
+
+        assert config["psadt"]["install"] == (
+            "Add-AppxProvisionedPackage -Online -PackagePath"
+            " (Join-Path $adtSession.DirFiles 'Contoso.App_1.2.3.0_x64.msix')"
+            " -SkipLicense"
+        )
+        assert config["psadt"]["uninstall"] == (
+            "Get-AppxProvisionedPackage -Online"
+            " | Where-Object { $_.DisplayName -eq 'Contoso.App' }"
+            " | Remove-AppxProvisionedPackage -Online"
+        )
+
+    def test_user_generates_per_user_commands(self):
+        """Tests that user installs register the package for the current user."""
+        config = self._config(run_as="user")
+
+        _apply_msix_commands(config, self._metadata(), self.INSTALLER, self._logger())
+
+        assert config["psadt"]["install"] == (
+            "Add-AppxPackage -Path"
+            " (Join-Path $adtSession.DirFiles 'Contoso.App_1.2.3.0_x64.msix')"
+        )
+        assert config["psadt"]["uninstall"] == (
+            "Get-AppxPackage -Name 'Contoso.App' | Remove-AppxPackage"
+        )
+
+    @pytest.mark.parametrize("run_as", ["system", "user"])
+    def test_hostile_values_stay_inside_strings(self, run_as: str):
+        """Tests that vendor-controlled filename and identity are not executable."""
+        config = self._config(run_as=run_as)
+        installer = Path(f"app$(Remove-Item C:){RSQUO}x.msix")
+        identity = f"Evil{RDQUO}; Remove-Item C:; {RSQUO}"
+        metadata = self._metadata(identity_name=identity)
+
+        _apply_msix_commands(config, metadata, installer, self._logger())
+
+        install = config["psadt"]["install"]
+        uninstall = config["psadt"]["uninstall"]
+        assert f"'app$(Remove-Item C:){RSQUO}{RSQUO}x.msix'" in install
+        assert f"'Evil{RDQUO}; Remove-Item C:; {RSQUO}{RSQUO}'" in uninstall

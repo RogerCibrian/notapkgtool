@@ -45,6 +45,7 @@ import sys
 from typing import Literal
 
 from napt.exceptions import ConfigError, PackagingError
+from napt.powershell import ps_single_quote
 
 # MSI Template platform mapping
 # See: https://learn.microsoft.com/en-us/windows/win32/msi/template-summary
@@ -113,8 +114,8 @@ def extract_msi_metadata(file_path: str | Path) -> MSIMetadata:
 
     Note:
         ProductName may be empty string if not found in MSI. The build phase
-        validates ProductName and raises ConfigError if empty — it is required
-        for detection script generation.
+        validates ProductName and raises ConfigError if empty, because it is
+        required for detection script generation.
 
     """
     from napt.logging import get_global_logger
@@ -129,14 +130,14 @@ def extract_msi_metadata(file_path: str | Path) -> MSIMetadata:
     # PowerShell COM (Windows only)
     if sys.platform.startswith("win"):
         logger.debug("MSI", "Trying backend: PowerShell COM...")
-        escaped_path = str(msi_path).replace("'", "''")
+        quoted_path = ps_single_quote(str(msi_path))
         query = (
             "SELECT Property, Value FROM Property "
             "WHERE Property = 'ProductName' OR Property = 'ProductVersion'"
         )
         ps_script = f"""
 $installer = New-Object -ComObject WindowsInstaller.Installer
-$db = $installer.OpenDatabase('{escaped_path}', 0)
+$db = $installer.OpenDatabase({quoted_path}, 0)
 if ($null -eq $db) {{
     Write-Error "Failed to open database"
     exit 1

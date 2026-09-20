@@ -434,8 +434,8 @@ auto-generated MSI commands.
 **MSI auto-generation:** For MSI installers, NAPT auto-generates install and
 uninstall commands from the downloaded MSI's metadata:
 
-- **Install (`intune.run_as_account: system`, default):** `Start-ADTMsiProcess -Action Install -FilePath "{filename}" -AdditionalArgumentList "ALLUSERS=1"`
-- **Install (`user`):** `Start-ADTMsiProcess -Action Install -FilePath "{filename}"`
+- **Install (`intune.run_as_account: system`, default):** `Start-ADTMsiProcess -Action Install -FilePath '{filename}' -AdditionalArgumentList "ALLUSERS=1"`
+- **Install (`user`):** `Start-ADTMsiProcess -Action Install -FilePath '{filename}'`
 - **Uninstall:** `Uninstall-ADTApplication -Name '{ProductName}' -NameMatch 'Exact' -ApplicationType 'MSI'`
 
 PSADT's configuration supplies the silent-install arguments (`/qn REBOOT=ReallySuppress`)
@@ -478,10 +478,10 @@ auto-generated MSIX commands.
 uninstall commands from manifest metadata.
 The commands vary based on `intune.run_as_account`:
 
-- **Install (`system`, default):** `Add-AppxProvisionedPackage -Online -PackagePath "$($adtSession.DirFiles)\{filename}" -SkipLicense`
-- **Uninstall (`system`, default):** `Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq "{identity_name}" } | Remove-AppxProvisionedPackage -Online`
-- **Install (`user`):** `Add-AppxPackage -Path "$($adtSession.DirFiles)\{filename}"`
-- **Uninstall (`user`):** `Get-AppxPackage -Name "{identity_name}" | Remove-AppxPackage`
+- **Install (`system`, default):** `Add-AppxProvisionedPackage -Online -PackagePath (Join-Path $adtSession.DirFiles '{filename}') -SkipLicense`
+- **Uninstall (`system`, default):** `Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq '{identity_name}' } | Remove-AppxProvisionedPackage -Online`
+- **Install (`user`):** `Add-AppxPackage -Path (Join-Path $adtSession.DirFiles '{filename}')`
+- **Uninstall (`user`):** `Get-AppxPackage -Name '{identity_name}' | Remove-AppxPackage`
 
 **Behavior:**
 

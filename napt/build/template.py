@@ -34,6 +34,7 @@ import re
 from typing import Any
 
 from napt.exceptions import PackagingError
+from napt.powershell import ps_single_quote
 
 
 def _format_powershell_value(value: Any) -> str:
@@ -56,9 +57,7 @@ def _format_powershell_value(value: Any) -> str:
     if isinstance(value, bool):
         return "$true" if value else "$false"
     elif isinstance(value, str):
-        # Escape single quotes in strings
-        escaped = value.replace("'", "''")
-        return f"'{escaped}'"
+        return ps_single_quote(value)
     elif isinstance(value, (int, float)):
         return str(value)
     elif isinstance(value, list):
@@ -69,7 +68,7 @@ def _format_powershell_value(value: Any) -> str:
         return "''"
     else:
         # Fallback: convert to string and quote
-        return f"'{str(value)}'"
+        return ps_single_quote(str(value))
 
 
 # Leftover {{snake_case}} tokens after substitution; digit-led sequences like

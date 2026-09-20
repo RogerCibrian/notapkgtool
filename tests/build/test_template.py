@@ -10,6 +10,8 @@ Tests Invoke-AppDeployToolkit.ps1 generation including:
 
 from __future__ import annotations
 
+from datetime import date
+
 import pytest
 
 from napt.build.template import (
@@ -22,6 +24,10 @@ from napt.build.template import (
     generate_invoke_script,
 )
 
+# Typographic single quote, which PowerShell accepts as a string delimiter.
+# Written as an escape because it is nearly indistinguishable from ' on screen.
+RSQUO = "\u2019"  # right single quotation mark
+
 
 class TestFormatPowerShellValue:
     """Tests for formatting Python values as PowerShell literals."""
@@ -33,6 +39,12 @@ class TestFormatPowerShellValue:
     def test_format_string_with_quotes(self):
         """Test string with single quotes (should be escaped)."""
         assert _format_powershell_value("it's") == "'it''s'"
+
+    def test_format_string_with_smart_quote(self):
+        """Tests that a typographic single quote is doubled, not left bare."""
+        result = _format_powershell_value(f"it{RSQUO}s")
+
+        assert result == f"'it{RSQUO}{RSQUO}s'"
 
     def test_format_bool_true(self):
         """Test boolean true."""
@@ -66,6 +78,16 @@ class TestFormatPowerShellValue:
     def test_format_none(self):
         """Test None value."""
         assert _format_powershell_value(None) == "''"
+
+    def test_format_yaml_date_is_quoted(self):
+        """Tests that a date parsed from unquoted YAML becomes a string literal."""
+        assert _format_powershell_value(date(2026, 1, 1)) == "'2026-01-01'"
+
+    def test_format_other_type_escapes_quotes(self):
+        """Tests that a value of any other type is escaped after conversion."""
+        result = _format_powershell_value({"a": f"it{RSQUO}s"})
+
+        assert result == "'{''a'': ''it" + RSQUO * 2 + "s''}'"
 
 
 class TestBuildAdtSessionVars:

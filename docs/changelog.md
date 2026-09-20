@@ -16,6 +16,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Name the child `<app>.override.yaml`; `napt validate` warns when the
         name and the field disagree and reports the parent it merged
 
+### Fixed
+
+- Fixed typographic quotes (such as `’` and `”`) in an app name, MSI
+    ProductName, MSIX identity, `psadt.app_vars` value, or installer path
+    ending a PowerShell string early, which let the rest of the value run as
+    code in the generated deployment, detection, and requirements scripts and
+    in the MSI metadata commands NAPT runs during a build
+- Fixed the auto-generated MSI and MSIX install and uninstall commands
+    embedding the installer filename and MSIX identity without escaping, so a
+    `$(...)` or quote in a downloaded file's name could run as code. The
+    commands now single-quote both values (MSIX installs build the path with
+    `Join-Path`)
+
 ## [0.10.0] - 2026-09-12
 
 ### Added
