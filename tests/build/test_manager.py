@@ -14,8 +14,10 @@ For integration tests with real PSADT, see test_integration_build.py.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -30,10 +32,11 @@ from napt.build.manager import (
     _extract_app_icon,
     _find_installer_file,
     _get_installer_version,
+    _release_to_build,
     _require_exe_scripts,
     _write_build_manifest,
 )
-from napt.exceptions import ConfigError, PackagingError
+from napt.exceptions import ConfigError, PackagingError, StateError
 from napt.versioning.msi import MSIMetadata
 from napt.versioning.msix import MSIXMetadata
 
@@ -68,13 +71,23 @@ class TestRequireExeScripts:
             _require_exe_scripts(config)
 
 
-def _write_pending_state(state_dir: Path, app_id: str, pending: dict) -> None:
-    """Writes a deployment state file with the given pending release."""
+def _sha256(data: bytes) -> str:
+    """Returns the SHA-256 hex digest of the given bytes."""
+    return hashlib.sha256(data).hexdigest()
+
+
+def _write_state(
+    state_dir: Path,
+    app_id: str,
+    pending: dict | None = None,
+    published: dict | None = None,
+) -> None:
+    """Writes a deployment state file with the given releases."""
     deployment_dir = state_dir / "deployment"
     deployment_dir.mkdir(parents=True, exist_ok=True)
     state = {
         "schemaVersion": 1,
-        "published": None,
+        "published": published,
         "pending": pending,
         "rings": {},
         "retained": [],
@@ -82,280 +95,184 @@ def _write_pending_state(state_dir: Path, app_id: str, pending: dict) -> None:
     (deployment_dir / f"{app_id}.json").write_text(json.dumps(state))
 
 
+def _save_download(downloads_dir: Path, app_id: str, version: str, name: str) -> bytes:
+    """Saves a fake installer where discover would and returns its content."""
+    content = f"{name} {version}".encode()
+    version_dir = downloads_dir / app_id / version
+    version_dir.mkdir(parents=True, exist_ok=True)
+    (version_dir / name).write_bytes(content)
+    return content
+
+
+class TestReleaseToBuild:
+    """Tests for choosing the release to build from deployment state."""
+
+    PENDING = {"version": "2.0", "sha256": "bb", "url": "https://example.com/b"}
+    PUBLISHED = {"version": "1.0", "sha256": "aa"}
+
+    @staticmethod
+    def _config(tmp_path: Path) -> dict:
+        return {"id": "napt-app", "directories": {"state": str(tmp_path / "state")}}
+
+    def test_pending_release_wins(self, tmp_path):
+        """Tests that the pending release is built when one is recorded."""
+        _write_state(tmp_path / "state", "napt-app", self.PENDING, self.PUBLISHED)
+
+        assert _release_to_build(self._config(tmp_path)) == self.PENDING
+
+    def test_published_release_is_used_when_nothing_is_pending(self, tmp_path):
+        """Tests that the published release is rebuilt when nothing is pending."""
+        _write_state(tmp_path / "state", "napt-app", published=self.PUBLISHED)
+
+        assert _release_to_build(self._config(tmp_path)) == self.PUBLISHED
+
+    def test_no_state_returns_none(self, tmp_path):
+        """Tests that a missing state file yields no release."""
+        assert _release_to_build(self._config(tmp_path)) is None
+
+
 class TestFindInstallerFile:
-    """Tests for finding installer files."""
+    """Tests for finding the installer to build."""
 
-    def test_find_by_url(self, tmp_path):
-        """Test finding installer using URL from config."""
+    def test_finds_the_recorded_release_by_hash(self, tmp_path):
+        """Tests that the file in the version folder with the recorded hash wins."""
         downloads_dir = tmp_path / "downloads"
-        app_dir = downloads_dir / "napt-chrome"
-        app_dir.mkdir(parents=True)
-        installer = app_dir / "chrome.msi"
-        installer.write_text("fake msi")
+        content = _save_download(downloads_dir, "napt-app", "2.0", "setup.exe")
+        release = {"version": "2.0", "sha256": _sha256(content)}
 
-        config = {
-            "id": "napt-chrome",
-            "discovery": {"url": "https://example.com/chrome.msi"},
-        }
+        path, digest = _find_installer_file(downloads_dir, "napt-app", release)
 
-        result = _find_installer_file(downloads_dir, config)
+        assert path == downloads_dir / "napt-app" / "2.0" / "setup.exe"
+        assert digest == release["sha256"]
 
-        assert result == installer
-
-    def test_find_by_url_uses_the_name_the_download_saved(self, tmp_path):
-        """Tests that a filename the download rewrote is found by its URL."""
+    def test_ignores_other_versions_with_the_same_filename(self, tmp_path):
+        """Tests that a newer download under the same name is not picked."""
         downloads_dir = tmp_path / "downloads"
-        app_dir = downloads_dir / "napt-zeta"
-        app_dir.mkdir(parents=True)
-        # The download step saves "O'Brien-setup.msi" as "O_Brien-setup.msi".
-        # Nothing in that name matches the app, so name matching cannot help.
-        installer = app_dir / "O_Brien-setup.msi"
-        installer.write_text("fake msi")
+        approved = _save_download(downloads_dir, "napt-app", "1.0", "setup.msi")
+        _save_download(downloads_dir, "napt-app", "2.0", "setup.msi")
+        release = {"version": "1.0", "sha256": _sha256(approved)}
 
-        config = {
-            "id": "napt-zeta",
-            "name": "Zeta",
-            "discovery": {"url": "https://example.com/O'Brien-setup.msi"},
-        }
+        path, _digest = _find_installer_file(downloads_dir, "napt-app", release)
 
-        result = _find_installer_file(downloads_dir, config)
+        assert path == downloads_dir / "napt-app" / "1.0" / "setup.msi"
 
-        assert result == installer
-
-    def test_find_by_pattern_msi(self, tmp_path):
-        """Test finding installer by .msi pattern."""
+    def test_picks_the_matching_file_when_a_folder_holds_several(self, tmp_path):
+        """Tests that a same-version re-release is told apart by hash."""
         downloads_dir = tmp_path / "downloads"
-        app_dir = downloads_dir / "test-app"
-        app_dir.mkdir(parents=True)
-        installer = app_dir / "test-app.msi"
-        installer.write_text("fake msi")
+        _save_download(downloads_dir, "napt-app", "2.0", "setup-a.exe")
+        wanted = _save_download(downloads_dir, "napt-app", "2.0", "setup-b.exe")
+        release = {"version": "2.0", "sha256": _sha256(wanted)}
 
-        config = {"id": "test-app", "name": "Test App", "discovery": {}}
+        path, _digest = _find_installer_file(downloads_dir, "napt-app", release)
 
-        result = _find_installer_file(downloads_dir, config)
+        assert path.name == "setup-b.exe"
 
-        assert result == installer
-
-    def test_find_by_pattern_exe(self, tmp_path):
-        """Test finding installer by .exe pattern."""
+    def test_changed_file_is_refused(self, tmp_path):
+        """Tests that a file whose content changed since discovery is refused."""
         downloads_dir = tmp_path / "downloads"
-        app_dir = downloads_dir / "test-app"
-        app_dir.mkdir(parents=True)
-        installer = app_dir / "test-app-setup.exe"
-        installer.write_text("fake exe")
+        content = _save_download(downloads_dir, "napt-app", "2.0", "setup.exe")
+        release = {"version": "2.0", "sha256": _sha256(content)}
+        (downloads_dir / "napt-app" / "2.0" / "setup.exe").write_bytes(b"tampered")
 
-        config = {"id": "test-app", "name": "Test App", "discovery": {}}
+        with pytest.raises(PackagingError, match="matches the recorded release"):
+            _find_installer_file(downloads_dir, "napt-app", release)
 
-        result = _find_installer_file(downloads_dir, config)
-
-        assert result == installer
-
-    def test_find_most_recent(self, tmp_path):
-        """Test finding most recent installer when multiple exist."""
-        import time
-
+    def test_recorded_version_cannot_point_outside_the_app_folder(self, tmp_path):
+        """Tests that an edited state file cannot steer build to another folder."""
         downloads_dir = tmp_path / "downloads"
-        app_dir = downloads_dir / "test-app"
-        app_dir.mkdir(parents=True)
+        # A real file outside the app's folder, with a hash the state could name.
+        outside = tmp_path / "elsewhere"
+        outside.mkdir()
+        (outside / "payload.exe").write_bytes(b"not the app")
+        (downloads_dir / "napt-app").mkdir(parents=True)
+        release = {"version": "../../elsewhere", "sha256": _sha256(b"not the app")}
 
-        old = app_dir / "test-app-1.0.msi"
-        old.write_text("old")
-        time.sleep(0.01)
+        with pytest.raises(StateError, match="cannot be used as a folder name"):
+            _find_installer_file(downloads_dir, "napt-app", release)
 
-        new = app_dir / "test-app-2.0.msi"
-        new.write_text("new")
+    def test_missing_version_folder_says_to_run_discover(self, tmp_path):
+        """Tests that an undownloaded release points the user at discover."""
+        release = {"version": "2.0", "sha256": "ab" * 32}
 
-        config = {"id": "test-app", "name": "Test App", "discovery": {}}
+        with pytest.raises(PackagingError, match="Run 'napt discover'"):
+            _find_installer_file(tmp_path / "downloads", "napt-app", release)
 
-        result = _find_installer_file(downloads_dir, config)
-
-        assert result == new
-
-    def test_find_by_deployment_state_url(self, tmp_path):
-        """Tests that the pending release URL locates a vendor filename
-        that name matching cannot."""
+    def test_partial_download_is_not_a_candidate(self, tmp_path):
+        """Tests that a leftover .part file is never hashed or returned."""
         downloads_dir = tmp_path / "downloads"
-        app_dir = downloads_dir / "napt-test-7zip"
-        app_dir.mkdir(parents=True)
-        installer = app_dir / "7z2602-x64.exe"
-        installer.write_text("fake exe")
+        content = _save_download(downloads_dir, "napt-app", "2.0", "setup.exe.part")
+        release = {"version": "2.0", "sha256": _sha256(content)}
 
-        _write_pending_state(
-            tmp_path / "state",
-            "napt-test-7zip",
-            {
-                "version": "26.02",
-                "sha256": "abc123",
-                "url": "https://example.com/dl/7z2602-x64.exe",
-            },
-        )
+        with pytest.raises(PackagingError, match="matches the recorded release"):
+            _find_installer_file(downloads_dir, "napt-app", release)
 
-        config = {
-            "id": "napt-test-7zip",
-            "name": "NAPT Test 7-Zip",
-            "discovery": {},
-            "directories": {"state": str(tmp_path / "state")},
-        }
-
-        result = _find_installer_file(downloads_dir, config)
-
-        assert result == installer
-
-    def test_find_by_cache_url_uses_the_name_the_download_saved(self, tmp_path):
-        """Tests that the discovery cache URL finds a filename the download rewrote."""
+    def test_no_recorded_release_uses_the_single_installer(self, tmp_path):
+        """Tests that a stateless download is found when it is the only one."""
         downloads_dir = tmp_path / "downloads"
-        app_dir = downloads_dir / "napt-zeta"
-        app_dir.mkdir(parents=True)
-        # Saved as "O_Brien-setup.exe"; nothing in it matches the app, so
-        # name matching cannot find it.
-        installer = app_dir / "O_Brien-setup.exe"
-        installer.write_text("fake exe")
-        cache_file = tmp_path / "cache" / "discovery.json"
-        cache_file.parent.mkdir()
-        cache_file.write_text(
-            json.dumps(
-                {
-                    "metadata": {"schema_version": "2"},
-                    "apps": {
-                        "napt-zeta": {"url": "https://example.com/O'Brien-setup.exe"}
-                    },
-                }
-            )
-        )
-        config = {"id": "napt-zeta", "name": "Zeta", "discovery": {}}
+        content = _save_download(downloads_dir, "napt-app", "2.0", "setup.msix")
 
-        result = _find_installer_file(downloads_dir, config, cache_file)
+        path, digest = _find_installer_file(downloads_dir, "napt-app", None)
 
-        assert result == installer
+        assert path == downloads_dir / "napt-app" / "2.0" / "setup.msix"
+        assert digest == _sha256(content)
 
-    def test_find_by_deployment_state_url_uses_the_saved_name(self, tmp_path):
-        """Tests that the pending release URL finds a filename the download rewrote."""
+    def test_no_recorded_release_and_several_installers_lists_them(self, tmp_path):
+        """Tests that an ambiguous stateless build stops and names the files."""
         downloads_dir = tmp_path / "downloads"
-        app_dir = downloads_dir / "napt-zeta"
-        app_dir.mkdir(parents=True)
-        installer = app_dir / "O_Brien-setup.exe"
-        installer.write_text("fake exe")
-        _write_pending_state(
-            tmp_path / "state",
-            "napt-zeta",
-            {
-                "version": "1.0",
-                "sha256": "abc123",
-                "url": "https://example.com/O'Brien-setup.exe",
-            },
-        )
-        config = {
-            "id": "napt-zeta",
-            "name": "Zeta",
-            "discovery": {},
-            "directories": {"state": str(tmp_path / "state")},
-        }
+        _save_download(downloads_dir, "napt-app", "1.0", "setup.exe")
+        _save_download(downloads_dir, "napt-app", "2.0", "setup.exe")
 
-        result = _find_installer_file(downloads_dir, config)
+        with pytest.raises(PackagingError, match="more than one installer") as err:
+            _find_installer_file(downloads_dir, "napt-app", None)
 
-        assert result == installer
+        assert "1.0" in str(err.value) and "2.0" in str(err.value)
 
-    def test_find_no_pending_state_falls_through(self, tmp_path):
-        """Tests that an empty deployment state falls through to name
-        matching."""
+    def test_no_recorded_release_and_no_installer_raises(self, tmp_path):
+        """Tests that an empty download folder points the user at discover."""
+        with pytest.raises(PackagingError, match="No installer found"):
+            _find_installer_file(tmp_path / "downloads", "napt-app", None)
+
+    def test_no_recorded_release_ignores_a_leftover_incoming_download(self, tmp_path):
+        """Tests that a download stranded by an interrupted discover is skipped."""
         downloads_dir = tmp_path / "downloads"
-        app_dir = downloads_dir / "test-app"
-        app_dir.mkdir(parents=True)
-        installer = app_dir / "test-app.msi"
-        installer.write_text("fake msi")
+        _save_download(downloads_dir, "napt-app", ".incoming", "setup.exe")
+        _save_download(downloads_dir, "napt-app", "2.0", "setup.exe")
 
-        config = {
-            "id": "test-app",
-            "name": "Test App",
-            "discovery": {},
-            "directories": {"state": str(tmp_path / "state")},
-        }
+        path, _digest = _find_installer_file(downloads_dir, "napt-app", None)
 
-        result = _find_installer_file(downloads_dir, config)
+        assert path == downloads_dir / "napt-app" / "2.0" / "setup.exe"
 
-        assert result == installer
-
-    def test_find_not_found_raises(self, tmp_path):
-        """Test error when no installer found."""
+    def test_no_recorded_release_and_only_a_leftover_download_raises(self, tmp_path):
+        """Tests that a stranded download alone is never treated as the installer."""
         downloads_dir = tmp_path / "downloads"
-        app_dir = downloads_dir / "test-app"
-        app_dir.mkdir(parents=True)
+        _save_download(downloads_dir, "napt-app", ".incoming", "setup.exe")
 
-        config = {"id": "test-app", "name": "Test App", "discovery": {}}
-
-        from napt.exceptions import PackagingError
-
-        with pytest.raises(PackagingError, match="Cannot locate installer file"):
-            _find_installer_file(downloads_dir, config)
+        with pytest.raises(PackagingError, match="No installer found"):
+            _find_installer_file(downloads_dir, "napt-app", None)
 
 
 class TestGetInstallerVersion:
-    """Tests for determining installer versions."""
+    """Tests for determining the version of the installer to build."""
 
-    def test_version_from_deployment_state(self, tmp_path):
-        """Tests that a non-MSI installer version falls back to the
-        pending release in deployment state."""
-        installer = tmp_path / "7z2602-x64.exe"
-        installer.write_text("fake exe")
+    def test_non_msi_version_is_the_download_folder_name(self, tmp_path):
+        """Tests that an EXE takes the version discover filed it under."""
+        downloads_dir = tmp_path / "downloads"
+        _save_download(downloads_dir, "napt-app", "26.02", "7z2602-x64.exe")
+        installer = downloads_dir / "napt-app" / "26.02" / "7z2602-x64.exe"
 
-        _write_pending_state(
-            tmp_path / "state",
-            "napt-test-7zip",
-            {
-                "version": "26.02",
-                "sha256": "abc123",
-                "url": "https://example.com/dl/7z2602-x64.exe",
-            },
-        )
+        assert _get_installer_version(installer) == "26.02"
 
-        config = {
-            "id": "napt-test-7zip",
-            "name": "NAPT Test 7-Zip",
-            "directories": {"state": str(tmp_path / "state")},
-        }
+    def test_msi_version_comes_from_the_installer(self, tmp_path):
+        """Tests that an MSI reports its own version over the folder name."""
+        downloads_dir = tmp_path / "downloads"
+        _save_download(downloads_dir, "napt-app", "26.02", "7z2602-x64.msi")
+        installer = downloads_dir / "napt-app" / "26.02" / "7z2602-x64.msi"
 
-        assert _get_installer_version(installer, config) == "26.02"
-
-    def test_discovery_cache_wins_over_state(self, tmp_path):
-        """Tests that the discovery cache version takes priority over
-        deployment state."""
-        installer = tmp_path / "app-setup.exe"
-        installer.write_text("fake exe")
-
-        cache_file = tmp_path / "cache" / "discovery.json"
-        cache_file.parent.mkdir(parents=True)
-        cache_file.write_text(
-            json.dumps({"apps": {"test-app": {"known_version": "1.2.3"}}})
-        )
-
-        _write_pending_state(
-            tmp_path / "state",
-            "test-app",
-            {"version": "9.9.9", "sha256": "abc123", "url": ""},
-        )
-
-        config = {
-            "id": "test-app",
-            "name": "Test App",
-            "directories": {"state": str(tmp_path / "state")},
-        }
-
-        assert _get_installer_version(installer, config, cache_file) == "1.2.3"
-
-    def test_no_version_source_raises(self, tmp_path):
-        """Tests that a non-MSI installer with no cache and no pending
-        release raises ConfigError."""
-        installer = tmp_path / "app-setup.exe"
-        installer.write_text("fake exe")
-
-        config = {
-            "id": "test-app",
-            "name": "Test App",
-            "directories": {"state": str(tmp_path / "state")},
-        }
-
-        with pytest.raises(ConfigError, match="Could not determine version"):
-            _get_installer_version(installer, config)
+        with patch("napt.build.manager.extract_msi_metadata") as mock_extract:
+            mock_extract.return_value = MSIMetadata(
+                product_name="7-Zip", product_version="26.02.00.0", architecture="x64"
+            )
+            assert _get_installer_version(installer) == "26.02.00.0"
 
 
 class TestCreateBuildDirectory:

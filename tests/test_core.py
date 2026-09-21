@@ -357,8 +357,8 @@ class TestVersionFirstFastPath:
                         state_dir=tmp_test_dir / "state",
                     )
 
-        # Verify result and that file was downloaded into app-scoped subdirectory
+        # Verify result and that the file landed in the app's version folder
         assert result.version == "1.2.3"
         assert result.status == "success"
-        fake_file = tmp_test_dir / "test-app" / "app-v1.2.3-installer.msi"
+        fake_file = tmp_test_dir / "test-app" / "1.2.3" / "app-v1.2.3-installer.msi"
         assert fake_file.exists()

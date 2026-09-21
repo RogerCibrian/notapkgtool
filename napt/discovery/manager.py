@@ -50,12 +50,15 @@ from pathlib import Path
 from typing import Any
 
 from napt.config.loader import load_effective_config
-from napt.discovery.base import StrategyResult, resolve_with_cache
+from napt.discovery.base import (
+    StrategyResult,
+    require_usable_version,
+    resolve_with_cache,
+)
 from napt.discovery.registry import get_strategy
 from napt.discovery.url_download import run_url_download
 from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
-from napt.paths import is_safe_path_component
 from napt.results import DiscoverResult
 from napt.state.cache import cache_file_path, load_cache, save_cache
 from napt.state.deployment import (
@@ -137,11 +140,10 @@ def discover_recipe(
     if strategy_name == "url_download":
         logger.step(3, 4, "Fetching installer...")
         result = run_url_download(config, output_dir, cache=cache)
-        _require_usable_version(result.version)
     else:
         strategy = get_strategy(strategy_name)
         info = strategy.discover(config)
-        _require_usable_version(info.version)
+        require_usable_version(info.version)
         logger.info("DISCOVERY", f"Version discovered: {info.version}")
         logger.step(3, 4, "Resolving installer...")
         result = resolve_with_cache(info, config, output_dir, cache)
@@ -164,27 +166,6 @@ def discover_recipe(
         sha256=result.sha256,
         status="success",
     )
-
-
-def _require_usable_version(version: str) -> None:
-    """Rejects a discovered version that cannot name a build folder.
-
-    The version is recorded in state and later becomes
-    ``builds/<id>/<version>``, so a value with a path separator or ``..``
-    is refused here, before anything is downloaded or written.
-
-    Args:
-        version: Version reported by the discovery strategy.
-
-    Raises:
-        ConfigError: If the version is not a plain folder name.
-    """
-    if not is_safe_path_component(version):
-        raise ConfigError(
-            f"Discovered version {version!a} cannot be used as a folder name. "
-            "Versions may contain only letters, digits, '.', '-', '_', and '+'. "
-            "Check the recipe's version pattern, or the installer's metadata."
-        )
 
 
 def _load_cache(

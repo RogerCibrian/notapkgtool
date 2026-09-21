@@ -33,7 +33,6 @@ from pathlib import Path
 import re
 import shutil
 from typing import Any, cast
-from urllib.parse import urlparse
 
 from napt.build.icons import extract_icon_png
 from napt.build.msix_scripts import (
@@ -50,8 +49,8 @@ from napt.build.registry_scripts import (
     generate_requirements_script,
 )
 from napt.config.loader import load_effective_config
-from napt.exceptions import ConfigError, PackagingError
-from napt.paths import is_safe_path_component, safe_filename
+from napt.exceptions import ConfigError, PackagingError, StateError
+from napt.paths import is_safe_path_component
 from napt.powershell import PS_SCRIPT_ENCODING, ps_single_quote
 from napt.psadt.release import get_psadt_release
 from napt.results import BuildResult
@@ -109,62 +108,53 @@ def sanitize_filename(name: str, app_id: str = "") -> str:
     return sanitized
 
 
-def _pending_release(config: dict[str, Any]) -> dict[str, Any] | None:
-    """Reads the pending release from the app's deployment state.
+def _release_to_build(config: dict[str, Any]) -> dict[str, Any] | None:
+    """Reads the release to build from the app's deployment state.
 
-    Deployment state is committed alongside recipes, so the pending
-    release (version, sha256, url) is available on machines that never
-    ran discover — such as a CI publish job restoring downloads from a
-    cache.
+    That is the pending release (awaiting publication), or the published
+    release when nothing is pending, which is the case when rebuilding the
+    current version. Deployment state is committed alongside recipes, so
+    this works on machines that never ran discover, such as a CI publish
+    job restoring downloads from a cache.
 
     Args:
         config: Recipe configuration.
 
     Returns:
-        The pending release entry, or None when no state directory is
-            configured or no pending release is recorded.
+        The release entry (``version``, ``sha256``, ``url``), or None when
+            no release is recorded.
 
     Raises:
         StateError: If the deployment state file exists but is corrupted
             or has an unsupported schema version.
     """
-    state_dir = config.get("directories", {}).get("state")
-    if not state_dir:
-        return None
-    state_path = deployment_state_path(Path(state_dir) / "deployment", config["id"])
-    return load_deployment_state(state_path).get("pending")
+    state_dir = Path(config["directories"]["state"]) / "deployment"
+    state = load_deployment_state(deployment_state_path(state_dir, config["id"]))
+    return state.get("pending") or state.get("published")
 
 
-def _get_installer_version(
-    installer_file: Path, config: dict[str, Any], cache_file: Path | None = None
-) -> str:
-    """Get version for the installer file.
+def _get_installer_version(installer_file: Path) -> str:
+    """Gets the version for the installer file.
 
-    Priority:
-        1. Auto-detect MSI files (`.msi` extension) and extract version
-        2. Auto-detect MSIX files (`.msix` extension) and extract version
-        3. Fall back to known_version from the discovery cache
-        4. Fall back to the pending release version from deployment state
-        5. If all else fails, raise an error
+    MSI and MSIX installers report their own version, which is
+    authoritative. For any other installer the version is the one discover
+    recorded, which is the name of the folder the file was saved in
+    (``downloads/<id>/<version>/``).
 
     Args:
         installer_file: Path to the installer file.
-        config: Recipe configuration.
-        cache_file: Path to discovery cache for fallback version lookup.
 
     Returns:
-        Extracted version string.
+        Version string.
 
     Raises:
-        PackagingError: If MSI version extraction fails (when explicitly requested).
-        ConfigError: If version cannot be determined from any source.
+        PackagingError: If MSI or MSIX metadata extraction fails.
     """
     from napt.logging import get_global_logger
 
     logger = get_global_logger()
-    app_id = config["id"]
 
-    # MSI: version is authoritative from the installer — no fallback
+    # MSI: version is authoritative from the installer
     if installer_file.suffix.lower() == ".msi":
         logger.verbose(
             "BUILD", f"Auto-detected MSI, extracting version: {installer_file.name}"
@@ -173,7 +163,7 @@ def _get_installer_version(
         logger.verbose("BUILD", f"Extracted version: {metadata.product_version}")
         return metadata.product_version
 
-    # MSIX: version is authoritative from the manifest — no fallback
+    # MSIX: version is authoritative from the manifest
     if installer_file.suffix.lower() == ".msix":
         logger.verbose(
             "BUILD",
@@ -183,166 +173,102 @@ def _get_installer_version(
         logger.verbose("BUILD", f"Extracted version: {metadata.version}")
         return metadata.version
 
-    # Non-MSI/MSIX: fall back to discovery cache
-    if cache_file and cache_file.exists():
-        from napt.state.cache import load_cache
-
-        logger.verbose("BUILD", "Using version from discovery cache")
-        cache_data = load_cache(cache_file)
-        app_entry = cache_data.get("apps", {}).get(app_id, {})
-        known_version = app_entry.get("known_version")
-
-        if known_version:
-            logger.verbose("BUILD", f"Using version from cache: {known_version}")
-            return known_version
-
-    # Non-MSI/MSIX without a discovery cache: fall back to the pending
-    # release recorded in deployment state
-    pending = _pending_release(config)
-    if pending and pending.get("version"):
-        logger.verbose(
-            "BUILD", f"Using version from deployment state: {pending['version']}"
-        )
-        return pending["version"]
-
-    # No version found - provide error
-    raise ConfigError(
-        f"Could not determine version for {app_id}. Either:\n"
-        f"  - Use an MSI or MSIX installer (auto-detected from file extension)\n"
-        f"  - Run 'napt discover' first to populate the discovery cache"
-    )
+    version = installer_file.parent.name
+    logger.verbose("BUILD", f"Using discovered version: {version}")
+    return version
 
 
-def _saved_name_for_url(url: str) -> str | None:
-    """Returns the filename a download from this URL is saved under.
-
-    Applies the same cleaning as the download step, so a name the download
-    rewrote is still found here.
-
-    Args:
-        url: Download URL from the recipe, the discovery cache, or state.
-
-    Returns:
-        The saved filename, or None when the URL has no usable filename.
-
-    """
-    return safe_filename(Path(urlparse(url).path).name)
+_INSTALLER_SUFFIXES = (".msi", ".msix", ".exe")
 
 
 def _find_installer_file(
-    downloads_dir: Path, config: dict[str, Any], cache_file: Path | None = None
-) -> Path:
-    """Find the installer file in the downloads directory.
+    downloads_dir: Path, app_id: str, release: dict[str, Any] | None
+) -> tuple[Path, str]:
+    """Finds the installer to build and returns it with its SHA-256.
 
-    Uses multiple strategies to locate the installer:
-    1. URL from recipe (for url_download strategy)
-    2. URL from discovery cache (for web_scrape, api_github, api_json strategies)
-    3. URL of the pending release in deployment state (for machines that
-        never ran discover, such as CI publish jobs)
-    4. Filename matching by app name/id, taking the most recent match
+    Discover saves each download to ``downloads/<id>/<version>/``. With a
+    recorded release, the installer is the file in that version's folder
+    whose hash matches the recorded one, so a file that was swapped or
+    corrupted since discovery is refused rather than packaged.
 
-    The first three look for the filename the download step saved, which
-    can differ from the URL's when the name contained unsafe characters.
+    Without a recorded release (a stateless discover and no deployment
+    state), there is nothing to match against, and the single installer
+    found in one of the app's version folders is used.
 
     Args:
         downloads_dir: Downloads directory to search.
-        config: Recipe configuration.
-        cache_file: Optional discovery cache to check for cached URL.
+        app_id: Recipe id.
+        release: The release to build (``version`` and ``sha256``), from
+            [_release_to_build][napt.build.manager._release_to_build], or
+            None when no release is recorded.
 
     Returns:
-        Path to the installer file.
+        A tuple (installer_path, sha256), where
+            installer_path is the installer file,
+            sha256 is its hex digest.
 
     Raises:
-        PackagingError: If installer file cannot be found.
+        StateError: If the recorded version is not a plain folder name.
+        PackagingError: If no file matches the recorded release, or, with
+            no recorded release, if there is not exactly one installer.
     """
     from napt.logging import get_global_logger
 
     logger = get_global_logger()
-    app_id = config["id"]
-    url = config.get("discovery", {}).get("url", "")
-
     app_dir = downloads_dir / app_id
 
-    # Strategy 1: Extract filename from recipe URL (for url_download)
-    if url:
-        filename = _saved_name_for_url(url)
-        if filename:
-            installer_path = app_dir / filename
-
-            if installer_path.exists():
-                logger.verbose(
-                    "BUILD", f"Found installer from recipe URL: {installer_path}"
-                )
-                return installer_path
-
-    # Strategy 2: Extract filename from discovery cache URL (for web_scrape, etc.)
-    if cache_file and cache_file.exists():
-        try:
-            from napt.state.cache import load_cache
-
-            cache_data = load_cache(cache_file)
-            app_entry = cache_data.get("apps", {}).get(app_id, {})
-            cached_url = app_entry.get("url", "")
-
-            if cached_url:
-                filename = _saved_name_for_url(cached_url)
-                if filename:
-                    installer_path = app_dir / filename
-
-                    if installer_path.exists():
-                        logger.verbose(
-                            "BUILD", f"Found installer from cache URL: {installer_path}"
-                        )
-                        return installer_path
-        except Exception as err:
-            logger.warning("BUILD", f"Could not check discovery cache: {err}")
-
-    # Strategy 3: Extract filename from the pending release URL in
-    # deployment state (committed to the repo, unlike the discovery cache)
-    pending = _pending_release(config)
-    if pending:
-        filename = _saved_name_for_url(pending.get("url", ""))
-        if filename:
-            installer_path = app_dir / filename
-
-            if installer_path.exists():
-                logger.verbose(
-                    "BUILD",
-                    f"Found installer from deployment state: {installer_path}",
-                )
-                return installer_path
-
-    # Strategy 4: Fallback - Search for installer matching app name/id
-    app_name = config["name"].lower()
-
-    # Try to find installer matching app_id or app_name in filename
-    if app_dir.exists():
-        for pattern in ["*.msi", "*.msix", "*.exe"]:
-            matches = list(app_dir.glob(pattern))
-
-            # Filter by app name/id if possible
-            matching = [
+    if release is not None:
+        # State files are hand-editable and reviewed through pull requests, so
+        # the recorded version is not trusted to stay inside the app's folder.
+        if not is_safe_path_component(release["version"]):
+            raise StateError(
+                f"Deployment state for {app_id} records version "
+                f"{release['version']!a}, which cannot be used as a folder name. "
+                "Run 'napt discover' to record the release again."
+            )
+        version_dir = app_dir / release["version"]
+        candidates = (
+            [
                 p
-                for p in matches
-                if app_id.lower().replace("napt-", "") in p.name.lower()
-                or any(
-                    word in p.name.lower() for word in app_name.split() if len(word) > 3
-                )
+                for p in version_dir.iterdir()
+                if p.is_file() and p.suffix.lower() != ".part"
             ]
+            if version_dir.is_dir()
+            else []
+        )
+        for candidate in candidates:
+            digest = _sha256_file(candidate)
+            if digest == release["sha256"]:
+                logger.verbose("BUILD", f"Found installer: {candidate}")
+                return candidate, digest
+        raise PackagingError(
+            f"No file in {version_dir} matches the recorded release of {app_id} "
+            f"(version {release['version']}, sha256 {release['sha256']}). "
+            f"Run 'napt discover' to download it."
+        )
 
-            if matching:
-                installer_path = max(matching, key=lambda p: p.stat().st_mtime)
-                logger.verbose(
-                    "BUILD", f"Found installer matching app: {installer_path}"
-                )
-                return installer_path
-
-    # No installer found after trying all strategies
+    # Only folders named like a version count. That skips ".incoming", where
+    # an interrupted discover can leave a finished download behind.
+    installers = sorted(
+        p
+        for p in app_dir.glob("*/*")
+        if p.is_file()
+        and p.suffix.lower() in _INSTALLER_SUFFIXES
+        and is_safe_path_component(p.parent.name)
+    )
+    if len(installers) == 1:
+        logger.verbose("BUILD", f"Found installer: {installers[0]}")
+        return installers[0], _sha256_file(installers[0])
+    if not installers:
+        raise PackagingError(
+            f"No installer found for {app_id} under {app_dir}. "
+            f"Run 'napt discover' first."
+        )
+    listing = ", ".join(str(p.relative_to(app_dir)) for p in installers)
     raise PackagingError(
-        f"Cannot locate installer file for {app_id} in {downloads_dir}/{app_id}. "
-        f"Tried locating via recipe URL, discovery cache URL, deployment "
-        f"state URL, and filename matching, but no matching installer found. "
-        f"Verify the installer file exists in {downloads_dir}/{app_id}."
+        f"No release is recorded for {app_id}, and {app_dir} holds more than one "
+        f"installer ({listing}). Run 'napt discover' without --stateless so "
+        f"the release to build is recorded."
     )
 
 
@@ -1358,7 +1284,6 @@ def build_package(
         "update_only" generates detection and requirements.
     """
     from napt.logging import get_global_logger
-    from napt.state.cache import cache_file_path
 
     logger = get_global_logger()
     # Load configuration
@@ -1377,12 +1302,13 @@ def build_package(
 
     # Find installer file
     logger.step(2, 8, "Finding installer...")
-    cache_file = cache_file_path(config)
-    installer_file = _find_installer_file(downloads_dir, config, cache_file)
+    installer_file, installer_sha256 = _find_installer_file(
+        downloads_dir, app_id, _release_to_build(config)
+    )
 
-    # Extract version from installer or cache (filesystem is truth)
+    # MSI and MSIX report their own version; otherwise the discovered one
     logger.step(3, 8, "Determining version...")
-    version = _get_installer_version(installer_file, config, cache_file)
+    version = _get_installer_version(installer_file)
 
     logger.info("BUILD", f"Building {app_name} v{version}")
 
@@ -1505,7 +1431,7 @@ def build_package(
         version=version,
         build_types=build_types,
         architecture=architecture,
-        installer_sha256=_sha256_file(installer_file),
+        installer_sha256=installer_sha256,
         detection_script_path=detection_script_path,
         requirements_script_path=requirements_script_path,
     )

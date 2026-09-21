@@ -51,13 +51,17 @@ Recipe Example:
 from __future__ import annotations
 
 from pathlib import Path
+import shutil
 from typing import Any
 
 from napt.download.download import download_file
 from napt.exceptions import ConfigError, NetworkError, NotModifiedError
 from napt.versioning.msi import extract_msi_metadata
 
-from .base import StrategyResult
+from .base import StrategyResult, require_usable_version
+
+# Holding folder for a download whose version is not known yet.
+_INCOMING_DIR = ".incoming"
 
 
 def run_url_download(
@@ -76,7 +80,7 @@ def run_url_download(
         app_config: Merged recipe configuration dict containing
             ``discovery.url`` and ``id``.
         output_dir: Base directory to download into. The file lands
-            in ``output_dir / app_id``.
+            in ``output_dir / app_id / version``.
         cache: Cached state for this recipe (``etag``, ``last_modified``,
             ``file_path``, ``sha256``), or ``None`` when no prior state
             exists or stateless mode is on.
@@ -114,11 +118,8 @@ def run_url_download(
         logger.verbose("DISCOVERY", f"Using cached Last-Modified: {last_modified}")
 
     try:
-        dl = download_file(
-            url,
-            output_dir / app_id,
-            etag=etag,
-            last_modified=last_modified,
+        return _download_into_version_folder(
+            url, output_dir / app_id, etag=etag, last_modified=last_modified
         )
     except NotModifiedError:
         return _resolve_not_modified(url, cache, output_dir, app_id, logger)
@@ -126,17 +127,6 @@ def run_url_download(
         raise
     except Exception as err:
         raise NetworkError(f"Failed to download {url}: {err}") from err
-
-    version = _extract_version(dl.file_path)
-    return StrategyResult(
-        version=version,
-        version_source="url_download",
-        file_path=dl.file_path,
-        sha256=dl.sha256,
-        headers=dl.headers,
-        download_url=url,
-        cached=False,
-    )
 
 
 def validate_url_download_config(app_config: dict[str, Any]) -> list[str]:
@@ -222,12 +212,57 @@ def _resolve_not_modified(
         "CACHE",
         "Cache incomplete or cached file not found, forcing re-download",
     )
-    dl = download_file(url, output_dir / app_id)
-    version = _extract_version(dl.file_path)
+    return _download_into_version_folder(url, output_dir / app_id)
+
+
+def _download_into_version_folder(
+    url: str,
+    app_dir: Path,
+    etag: str | None = None,
+    last_modified: str | None = None,
+) -> StrategyResult:
+    """Downloads an installer and files it under its version.
+
+    The version is only known once the file is on disk, so the download
+    lands in ``<app_dir>/.incoming`` first and is then moved to
+    ``<app_dir>/<version>/``. Installers of other versions are never
+    touched, which matters for vendors that serve every release under one
+    filename.
+
+    Args:
+        url: Download URL.
+        app_dir: The app's download directory (``downloads/<id>``).
+        etag: ETag from the previous download, for a conditional request.
+        last_modified: Last-Modified from the previous download, used when
+            no ETag is available.
+
+    Returns:
+        Resolved version, the file's final path, and download metadata.
+
+    Raises:
+        NotModifiedError: If the server answers HTTP 304.
+        NetworkError: On download or version-extraction failure.
+        ConfigError: If the file is not an MSI, or its version cannot be
+            used as a folder name.
+
+    """
+    incoming = app_dir / _INCOMING_DIR
+    # Clear leftovers from an interrupted run.
+    shutil.rmtree(incoming, ignore_errors=True)
+    try:
+        dl = download_file(url, incoming, etag=etag, last_modified=last_modified)
+        version = _extract_version(dl.file_path)
+        require_usable_version(version)
+        final_path = app_dir / version / dl.file_path.name
+        final_path.parent.mkdir(parents=True, exist_ok=True)
+        dl.file_path.replace(final_path)
+    finally:
+        shutil.rmtree(incoming, ignore_errors=True)
+
     return StrategyResult(
         version=version,
         version_source="url_download",
-        file_path=dl.file_path,
+        file_path=final_path,
         sha256=dl.sha256,
         headers=dl.headers,
         download_url=url,

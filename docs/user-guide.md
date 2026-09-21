@@ -19,7 +19,13 @@ The discovery process finds the latest version and downloads the installer:
 6. **Update Cache** - Updates `cache/discovery.json` with new version, file path, SHA-256 hash, and ETag (if download occurred)
 7. **Record Pending Release** - Updates `state/deployment/{app_id}.json` with the discovered release as the pending publication candidate when it differs from the published version. The pending slot holds one candidate and the newest discovery wins.
 
-**Output**: Downloaded installer in `downloads/{app_id}/`, updated discovery cache, updated deployment state
+**Output**: Downloaded installer in `downloads/{app_id}/{version}/`, updated discovery cache, updated deployment state
+
+**One folder per version**: Each download is filed under its version, the same
+way builds and packages are.
+A vendor that serves every release under one filename (Chrome's
+`googlechromestandaloneenterprise64.msi`, for example) therefore cannot
+overwrite an installer that is still waiting for approval.
 
 **Saved filename**: The file is saved under the name the server announces, or
 the URL's filename when it announces none.
@@ -32,7 +38,7 @@ parentheses in a filename as code, and those are too common in real names to
 replace.
 
 **Version**: The discovered version becomes a folder name
-(`builds/{app_id}/{version}/`), so it may contain only letters, digits, `.`,
+(`downloads/{app_id}/{version}/`), so it may contain only letters, digits, `.`,
 `-`, `_`, and `+`.
 If discovery stops with "cannot be used as a folder name", tighten the recipe's
 `version_pattern` so it captures only the version.
@@ -42,8 +48,8 @@ If discovery stops with "cannot be used as a folder name", tighten the recipe's
 The build process creates a complete PSADT package from the recipe and downloaded installer:
 
 1. **Load Configuration** - Merges configuration layers (org → vendor → recipe)
-2. **Find Installer** - Locates installer in `downloads/{app_id}/` (tries the recipe URL filename, then the filename recorded in the discovery cache or pending release, then an app name/id match, then the most recent file). Supports `.msi`, `.exe`, and `.msix` files
-3. **Extract Version** - Extracts version from installer file (MSI from ProductVersion, MSIX from AppxManifest.xml), otherwise uses discovery cache version
+2. **Find Installer** - Reads the release to build from `state/deployment/{app_id}.json` (the pending release, or the published one when nothing is pending), looks in `downloads/{app_id}/{version}/`, and takes the file whose SHA-256 matches the recorded hash. A file that changed since discovery is refused. With no recorded release (a `--stateless` discover and no state), the single installer found in a version folder (`downloads/{app_id}/{version}/`) is used; more than one stops the build, and a file placed directly in `downloads/{app_id}/` is not found
+3. **Extract Version** - Extracts version from installer file (MSI from ProductVersion, MSIX from AppxManifest.xml), otherwise uses the discovered version, which is the name of the download folder
 4. **Get PSADT Release** - Downloads/caches PSADT Template_v4 from GitHub if not already cached
 5. **Create Build Directory** - Creates versioned directory using discovered app version: `builds/{app_id}/{version}/`
 6. **Copy PSADT Template** - Copies entire PSADT template structure (unmodified) from cache:
@@ -63,7 +69,7 @@ The build process creates a complete PSADT package from the recipe and downloade
     - Sets dynamic values (AppScriptDate, discovered version, PSADT version)
     - Preserves PSADT's structure and comments
 8. **Copy Installer** - Copies downloaded installer file to `Files/` directory:
-    - Source: `downloads/{app_id}/{installer_filename}`
+    - Source: `downloads/{app_id}/{version}/{installer_filename}`
     - Destination: `builds/{app_id}/{version}/Files/{installer_filename}`
     - Installer is accessible in scripts via `$($adtSession.DirFiles)` (PSADT 4.x)
 9. **Apply Branding** - Replaces PSADT default assets with custom branding (if configured):
@@ -516,7 +522,8 @@ After a complete workflow, your directory structure looks like:
 ```
 downloads/
   └── napt-chrome/
-      └── googlechromestandaloneenterprise64.msi
+      └── 142.0.7444.163/
+          └── googlechromestandaloneenterprise64.msi
 
 builds/
   └── napt-chrome/
