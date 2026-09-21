@@ -115,18 +115,18 @@ Download the installer and extract version information:
 
 ```bash
 # Discover version and download installer
-# State tracking enabled by default for efficient re-runs
+# Records the release in deployment state by default
 napt discover recipes/Google/chrome.yaml
 
 # Specify custom output directory
-napt discover recipes/Google/chrome.yaml --output-dir ./cache
+napt discover recipes/Google/chrome.yaml --output-dir ./installers
 
-# Disable state tracking (always download, no caching)
+# Leave deployment state alone (no pending release is recorded)
 napt discover recipes/Google/chrome.yaml --stateless
 ```
 
 Re-running `napt discover` skips the download when nothing changed; the fetch
-step reports `[CACHE] File not modified` instead.
+step reports `[DISCOVERY] File not modified` instead.
 
 ### Build PSADT package
 

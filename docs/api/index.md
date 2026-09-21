@@ -60,7 +60,6 @@ napt/
 │   └── release.py              # PSADT release download and caching
 │
 ├── state/                   # State persistence
-│   ├── cache.py                # Disposable cache of discovered versions and ETags
 │   ├── deployment.py           # Authoritative per-app record of published and pending releases
 │   └── stamp.py                # Provenance stamp linking Intune apps to deployment state
 │
@@ -68,8 +67,7 @@ napt/
 │   ├── manager.py              # Upload orchestration
 │   └── intunewin.py            # .intunewin package parser
 │
-└── versioning/              # Version extraction and comparison
-    ├── compare.py              # Version comparison (is_newer)
+└── versioning/              # Version extraction
     ├── msi.py                  # MSI metadata extraction backends
     └── msix.py                 # MSIX metadata extraction (AppxManifest)
 ```
@@ -82,8 +80,6 @@ Recipe YAML
 [config/loader.py] Load and merge configuration
     ↓
 [discovery/] Discover version and download
-    ↓
-[state/cache.py] Update discovery cache
     ↓
 [state/deployment.py] Record pending release
     ↓
@@ -98,9 +94,9 @@ Result (dataclass)
 
 ## Key concepts
 
-- **Discovery Strategies:** Protocol-based, stateless, listed in an explicit registry table (api_github, api_json, web_scrape). All return a `RemoteVersion` from configuration alone. The orchestrator runs the result through `resolve_with_cache` to skip the download when the version is unchanged. `url_download` is a separate flow (not a registered strategy) because it must download the file to determine the version.
+- **Discovery Strategies:** Protocol-based, stateless, listed in an explicit registry table (api_github, api_json, web_scrape). All return a `RemoteVersion` from configuration alone. The orchestrator runs the result through `resolve_installer` to skip the download when the version's download folder already holds the installer. `url_download` is a separate flow (not a registered strategy) because it must download the file to determine the version.
 - **Configuration:** 3-layer system (org → vendor → recipe) with deep merging
-- **State Management:** Two kinds with opposite philosophies: the disposable discovery cache (`cache/discovery.json`) for download optimization, and authoritative per-app deployment state (`state/deployment/<id>.json`) recording what is published and pending
+- **State Management:** Authoritative per-app deployment state (`state/deployment/<id>.json`) records what is published and pending. The downloads folder is disposable; discovery reuses what it finds there and never treats it as a record
 - **Exceptions:** All NAPT domain errors use custom exceptions inheriting from `NAPTError` (ConfigError, NetworkError, PackagingError, StateError, AuthError) - allows catching all NAPT errors or specific types
 - **Return Types:** Frozen dataclasses from `results.py`, one per napt command's underlying operation
 

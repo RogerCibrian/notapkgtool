@@ -12,21 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Version comparison and extraction utilities for NAPT.
+"""Version extraction utilities for NAPT.
 
-Compares version strings and extracts version information from MSI and
-MSIX files. Supports multiple comparison strategies and handles various
-versioning schemes including semantic versioning, numeric versions, and
-prerelease tags.
-
-Versions are compared using semver-like parsing: X.Y.Z tuples with optional
-prerelease and build metadata. Handles prerelease tags (alpha, beta, rc, dev)
-and correctly orders 1.0.0-alpha < 1.0.0-beta < 1.0.0-rc < 1.0.0. Falls back
-to lexicographic comparison for non-version-like strings (build IDs,
-timestamps).
+Extracts version information and other metadata from MSI and MSIX files.
 
 Modules:
-    compare - Version comparison with semver-like parsing (compare, is_newer).
     msi - MSI metadata extraction using PowerShell COM (Windows) or
         msitools (Linux/macOS).
     msix - MSIX metadata extraction using zipfile and XML parsing

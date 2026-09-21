@@ -17,8 +17,7 @@
 A *discovery strategy* answers a single question: "what is the latest
 version of this app, and where can it be downloaded from?" Strategies
 return that answer as a [RemoteVersion][napt.discovery.base.RemoteVersion]
-dataclass. They do not download files or touch the cache themselves;
-the orchestrator does.
+dataclass. They do not download files themselves; the orchestrator does.
 
 Built-in strategies:
     - api_github: queries the GitHub releases API for the latest tag.
@@ -34,15 +33,15 @@ uses ``strategy: url_download``.
 Design Philosophy:
     - Strategies are ``typing.Protocol`` types. Implementations are
         matched structurally; no inheritance is required.
-    - Strategies are pure functions of configuration. They have no state,
-        no I/O of files, and no awareness of the cache.
+    - Strategies are pure functions of configuration. They have no state
+        and no I/O of files.
     - Dispatch is an explicit name-to-class table in
         [napt.discovery.registry][].
-    - The [resolve_with_cache][napt.discovery.base.resolve_with_cache]
+    - The [resolve_installer][napt.discovery.base.resolve_installer]
         helper turns a [RemoteVersion][napt.discovery.base.RemoteVersion]
         into a [StrategyResult][napt.discovery.base.StrategyResult] by
-        checking the cache and downloading if needed. Strategies don't
-        call it themselves; the orchestrator does.
+        reusing the version's download folder or downloading if needed.
+        Strategies don't call it themselves; the orchestrator does.
 
 """
 
@@ -52,11 +51,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-from napt.download.download import download_file
+from napt.download.download import (
+    DOWNLOAD_PART_SUFFIX,
+    download_file,
+    sha256_file,
+)
 from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
 from napt.paths import is_safe_path_component
-from napt.versioning.compare import is_newer
 
 
 @dataclass(frozen=True)
@@ -65,8 +67,8 @@ class RemoteVersion:
 
     Returned by every [DiscoveryStrategy][napt.discovery.base.DiscoveryStrategy]
     implementation. The orchestrator passes this to
-    [resolve_with_cache][napt.discovery.base.resolve_with_cache] to decide
-    whether the file needs to be re-downloaded.
+    [resolve_installer][napt.discovery.base.resolve_installer] to decide
+    whether the file needs to be downloaded.
 
     Attributes:
         version: Raw version string extracted from the remote source
@@ -83,12 +85,12 @@ class RemoteVersion:
 
 @dataclass(frozen=True)
 class StrategyResult:
-    """Resolved discovery result, ready to be saved to state.
+    """Resolved discovery result, ready to be recorded in deployment state.
 
     Returned by both the version-first flow (via
-    [resolve_with_cache][napt.discovery.base.resolve_with_cache]) and the
+    [resolve_installer][napt.discovery.base.resolve_installer]) and the
     url_download flow. Captures everything the orchestrator needs to
-    update the state cache and build a public
+    record the pending release and build a public
     [DiscoverResult][napt.results.DiscoverResult].
 
     Attributes:
@@ -96,23 +98,18 @@ class StrategyResult:
         version_source: Strategy name that produced this version
             (for example, ``"api_github"`` or ``"url_download"``).
         file_path: Path to the resolved installer on disk. This is either
-            a freshly downloaded file or a previously cached file when the
-            cache was reused.
+            a freshly downloaded file or one an earlier run downloaded.
         sha256: SHA-256 hex digest of the resolved file.
-        headers: HTTP response headers from the download. Empty when the
-            cache was reused without a network call. Used to persist
-            ``ETag`` / ``Last-Modified`` for the next conditional request.
-        download_url: URL the file came from. Stored in state so that
-            future runs know where to re-fetch from if needed.
-        cached: True when the file was reused from cache; False when it
-            was downloaded.
+        download_url: URL the file came from, recorded with the pending
+            release.
+        cached: True when a file from an earlier run was reused; False
+            when it was downloaded.
     """
 
     version: str
     version_source: str
     file_path: Path
     sha256: str
-    headers: dict[str, str]
     download_url: str
     cached: bool
 
@@ -122,8 +119,7 @@ class DiscoveryStrategy(Protocol):
 
     A strategy queries a remote source (API, web page, etc.) and returns
     the latest version plus its download URL. Strategies do not download
-    files, touch the cache, or write to disk. Those concerns belong to
-    the orchestrator.
+    files or write to disk. Those concerns belong to the orchestrator.
 
     Implementations need only a ``discover`` and a ``validate_config``
     method with the signatures below.
@@ -182,20 +178,19 @@ def require_usable_version(version: str) -> None:
         )
 
 
-def resolve_with_cache(
+def resolve_installer(
     info: RemoteVersion,
     app_config: dict[str, Any],
     output_dir: Path,
-    cache: dict[str, Any] | None,
 ) -> StrategyResult:
-    """Resolves a discovered remote version to a downloaded installer.
+    """Resolves a discovered remote version to an installer on disk.
 
     Turns a [RemoteVersion][napt.discovery.base.RemoteVersion] into a
-    [StrategyResult][napt.discovery.base.StrategyResult].
-    Implements the version-first fast path: when the discovered version
-    matches the cached version and the cached file still exists on disk,
-    the download is skipped entirely. Otherwise the file is downloaded
-    fresh from ``info.download_url``.
+    [StrategyResult][napt.discovery.base.StrategyResult]. Each version has
+    its own folder (``output_dir / app_id / version``), so the folder
+    answers whether the version was already fetched: when it holds exactly
+    one finished file, that file is reused and the download is skipped.
+    Otherwise the file is downloaded from ``info.download_url``.
 
     Args:
         info: Version and download URL produced by a strategy's
@@ -204,60 +199,49 @@ def resolve_with_cache(
             for the per-app download subdirectory.
         output_dir: Base directory to download into. Files land in
             ``output_dir / app_id / version``.
-        cache: Cached state for this recipe (``known_version``,
-            ``file_path``, ``sha256``), or ``None`` when no prior state
-            exists or stateless mode is on.
 
     Returns:
-        Resolved version, file path, and download metadata. The
-        ``cached`` field indicates whether the download was skipped.
+        Resolved version, file path, and SHA-256 hash. The ``cached``
+        field indicates whether the download was skipped.
 
     Raises:
         NetworkError: On download failures.
 
     """
     logger = get_global_logger()
-    app_id = app_config["id"]
-
-    if cache and not is_newer(info.version, cache.get("known_version")):
-        cached_path_str = cache.get("file_path")
-        cached_sha = cache.get("sha256")
-        if cached_path_str and cached_sha:
-            cached_path = Path(cached_path_str)
-            if cached_path.exists():
-                logger.info(
-                    "CACHE",
-                    f"Version {info.version} unchanged, using cached file",
-                )
-                return StrategyResult(
-                    version=info.version,
-                    version_source=info.source,
-                    file_path=cached_path,
-                    sha256=cached_sha,
-                    headers={},
-                    download_url=info.download_url,
-                    cached=True,
-                )
-            logger.warning(
-                "CACHE",
-                f"Cached file {cached_path} not found, re-downloading",
-            )
-
-    if cache and cache.get("known_version"):
-        logger.info(
-            "DISCOVERY",
-            f"Version changed: {cache.get('known_version')} -> {info.version}",
-        )
-
     # One folder per version, so a vendor that reuses a filename for every
     # release cannot overwrite an installer that is still awaiting approval.
-    dl = download_file(info.download_url, output_dir / app_id / info.version)
+    version_dir = output_dir / app_config["id"] / info.version
+
+    existing = (
+        [
+            p
+            for p in version_dir.iterdir()
+            if p.is_file() and p.suffix != DOWNLOAD_PART_SUFFIX
+        ]
+        if version_dir.is_dir()
+        else []
+    )
+    if len(existing) == 1:
+        logger.info(
+            "DISCOVERY",
+            f"Version {info.version} already downloaded, using {existing[0]}",
+        )
+        return StrategyResult(
+            version=info.version,
+            version_source=info.source,
+            file_path=existing[0],
+            sha256=sha256_file(existing[0]),
+            download_url=info.download_url,
+            cached=True,
+        )
+
+    dl = download_file(info.download_url, version_dir)
     return StrategyResult(
         version=info.version,
         version_source=info.source,
         file_path=dl.file_path,
         sha256=dl.sha256,
-        headers=dl.headers,
         download_url=info.download_url,
         cached=False,
     )

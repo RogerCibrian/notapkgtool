@@ -18,24 +18,25 @@ This module is intentionally not a
 [DiscoveryStrategy][napt.discovery.base.DiscoveryStrategy]. The
 strategies in [napt.discovery.base][] produce a
 [RemoteVersion][napt.discovery.base.RemoteVersion] from configuration
-alone (version-first). ``url_download`` cannot do that — it has no
+alone (version-first). ``url_download`` cannot do that: it has no
 remote endpoint to query for the version, so it must download the
 installer and extract the version from the file's metadata. The
 discovery orchestrator special-cases ``strategy: url_download`` and
 dispatches to
 [run_url_download][napt.discovery.url_download.run_url_download] directly.
 
-Cache Strategy:
-    Uses HTTP conditional requests. If a previous run stored an ``ETag``
-    or ``Last-Modified`` header in state, those are sent as
-    ``If-None-Match`` / ``If-Modified-Since`` on the next request. A
-    server response of HTTP 304 reuses the cached file without a
-    re-download. This is a different mechanism than the version-first
-    strategies, which compare version strings (no HTTP round-trip
-    required to detect "no change" beyond the initial discovery query).
+Conditional Requests:
+    Each download writes ``downloads/<id>/.download.json`` beside the
+    app's version folders. It records what the URL served (``ETag``,
+    ``Last-Modified``) and where that installer was filed. The next run
+    sends those values as ``If-None-Match`` / ``If-Modified-Since``, and a
+    server response of HTTP 304 reuses the installer without a
+    re-download. The values are sent only while the installer they
+    describe is still on disk, so a 304 can always be honored. The file
+    is disposable: a missing or unreadable one costs one full download.
 
 Supported File Types:
-    - ``.msi`` — version is read from the MSI ProductVersion property.
+    - ``.msi``: version is read from the MSI ProductVersion property.
     - Other extensions raise [ConfigError][napt.exceptions.ConfigError].
         For non-MSI installers, use a version-first strategy.
 
@@ -50,12 +51,16 @@ Recipe Example:
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+import json
 from pathlib import Path
 import shutil
 from typing import Any
 
 from napt.download.download import download_file
 from napt.exceptions import ConfigError, NetworkError, NotModifiedError
+from napt.logging import get_global_logger
+from napt.paths import is_safe_path_component, safe_filename
 from napt.versioning.msi import extract_msi_metadata
 
 from .base import StrategyResult, require_usable_version
@@ -63,32 +68,43 @@ from .base import StrategyResult, require_usable_version
 # Holding folder for a download whose version is not known yet.
 _INCOMING_DIR = ".incoming"
 
+# Per-app record of what the URL served last time (downloads/<id>/<name>).
+_SIDECAR_NAME = ".download.json"
+
+
+@dataclass(frozen=True)
+class _PreviousDownload:
+    """The last download of an app's URL, as recorded in its sidecar file."""
+
+    etag: str | None
+    last_modified: str | None
+    version: str
+    file_path: Path
+    sha256: str
+
 
 def run_url_download(
     app_config: dict[str, Any],
     output_dir: Path,
-    cache: dict[str, Any] | None = None,
 ) -> StrategyResult:
     """Downloads a fixed URL and extracts the version from the resulting file.
 
-    Issues a conditional HTTP request when ``cache`` carries an ``ETag``
-    or ``Last-Modified``. On HTTP 304 the cached file is reused; otherwise
-    the fresh download is used. Either way, the version is extracted from
-    the file (MSI ProductVersion today).
+    Issues a conditional HTTP request when the app's sidecar file records
+    an ``ETag`` or ``Last-Modified`` for an installer that is still on
+    disk. On HTTP 304 that installer is reused; otherwise the fresh
+    download is filed under the version read from it (MSI ProductVersion
+    today).
 
     Args:
         app_config: Merged recipe configuration dict containing
             ``discovery.url`` and ``id``.
         output_dir: Base directory to download into. The file lands
             in ``output_dir / app_id / version``.
-        cache: Cached state for this recipe (``etag``, ``last_modified``,
-            ``file_path``, ``sha256``), or ``None`` when no prior state
-            exists or stateless mode is on.
 
     Returns:
-        Resolved version, file path, and download metadata. The
-        ``cached`` field is True when HTTP 304 was used to reuse the
-        previously downloaded file.
+        Resolved version, file path, and SHA-256 hash. The ``cached``
+        field is True when HTTP 304 was used to reuse the previously
+        downloaded file.
 
     Raises:
         ConfigError: If ``discovery.url`` is missing, or if the
@@ -97,32 +113,45 @@ def run_url_download(
         NetworkError: On download or version-extraction failures.
 
     """
-    from napt.logging import get_global_logger
-
     logger = get_global_logger()
     source = app_config.get("discovery", {})
     url = source.get("url")
     if not url:
         raise ConfigError("url_download strategy requires 'discovery.url' in config")
 
-    app_id = app_config["id"]
+    app_dir = output_dir / app_config["id"]
 
     logger.verbose("DISCOVERY", "Strategy: url_download (file-first)")
     logger.verbose("DISCOVERY", f"Source URL: {url}")
 
-    etag = cache.get("etag") if cache else None
-    last_modified = cache.get("last_modified") if cache else None
-    if etag:
-        logger.verbose("DISCOVERY", f"Using cached ETag: {etag}")
-    if last_modified:
-        logger.verbose("DISCOVERY", f"Using cached Last-Modified: {last_modified}")
+    previous = _load_sidecar(app_dir, url)
+    if previous:
+        logger.verbose("DISCOVERY", f"Previous ETag: {previous.etag}")
+        logger.verbose("DISCOVERY", f"Previous Last-Modified: {previous.last_modified}")
 
     try:
-        return _download_into_version_folder(
-            url, output_dir / app_id, etag=etag, last_modified=last_modified
-        )
-    except NotModifiedError:
-        return _resolve_not_modified(url, cache, output_dir, app_id, logger)
+        if previous is None:
+            return _download_into_version_folder(url, app_dir)
+        try:
+            return _download_into_version_folder(
+                url,
+                app_dir,
+                etag=previous.etag,
+                last_modified=previous.last_modified,
+            )
+        except NotModifiedError:
+            logger.info(
+                "DISCOVERY",
+                f"File not modified (HTTP 304), using {previous.file_path}",
+            )
+            return StrategyResult(
+                version=previous.version,
+                version_source="url_download",
+                file_path=previous.file_path,
+                sha256=previous.sha256,
+                download_url=url,
+                cached=True,
+            )
     except (NetworkError, ConfigError):
         raise
     except Exception as err:
@@ -155,64 +184,71 @@ def validate_url_download_config(app_config: dict[str, Any]) -> list[str]:
     return errors
 
 
-def _resolve_not_modified(
-    url: str,
-    cache: dict[str, Any] | None,
-    output_dir: Path,
-    app_id: str,
-    logger: Any,
-) -> StrategyResult:
-    """Handles HTTP 304 by reusing the cached file or forcing re-download.
+def _load_sidecar(app_dir: Path, url: str) -> _PreviousDownload | None:
+    """Reads the app's sidecar file when it can support a conditional request.
 
-    When the server reports the file is unchanged, this attempts to reuse
-    the cached file path. If the cache is incomplete or the file is gone
-    from disk, it falls back to an unconditional re-download.
+    The sidecar is a disposable hint, so every problem with it means "no
+    previous download" rather than an error: a missing or unreadable file,
+    a record for a different URL, no ``ETag`` or ``Last-Modified``, or an
+    installer that is no longer on disk.
 
     Args:
-        url: Original download URL (used for re-download fallback).
-        cache: Cached state for this recipe, if any.
-        output_dir: Base directory to download into for the fallback path.
-        app_id: Recipe app id, used for the per-app subdirectory.
-        logger: Global logger instance, passed in to avoid repeated lookups.
+        app_dir: The app's download directory (``downloads/<id>``).
+        url: The recipe's download URL.
 
     Returns:
-        Resolved version, file path, and download metadata. The
-        ``cached`` field is True when the previously cached file was
-        reused; False when the fallback re-download was used.
-
-    Raises:
-        NetworkError: On re-download or version-extraction failure.
-        ConfigError: If the cached file is not an MSI.
+        The previous download, or None when a conditional request cannot
+        be made or could not be honored.
 
     """
-    logger.info("CACHE", "File not modified (HTTP 304), using cached version")
-
-    cached_path_str = cache.get("file_path") if cache else None
-    cached_sha = cache.get("sha256") if cache else None
-    cached_path = Path(cached_path_str) if cached_path_str else None
-
-    if cache and cached_sha and cached_path is not None and cached_path.exists():
-        version = _extract_version(cached_path)
-        preserved_headers: dict[str, str] = {}
-        if cache.get("etag"):
-            preserved_headers["ETag"] = cache["etag"]
-        if cache.get("last_modified"):
-            preserved_headers["Last-Modified"] = cache["last_modified"]
-        return StrategyResult(
-            version=version,
-            version_source="url_download",
-            file_path=cached_path,
-            sha256=cached_sha,
-            headers=preserved_headers,
-            download_url=url,
-            cached=True,
+    try:
+        data = json.loads((app_dir / _SIDECAR_NAME).read_text(encoding="utf-8"))
+        previous = _PreviousDownload(
+            etag=data["etag"],
+            last_modified=data["last_modified"],
+            version=data["version"],
+            file_path=app_dir / data["version"] / data["filename"],
+            sha256=data["sha256"],
         )
+        usable = (
+            data["url"] == url
+            and isinstance(previous.etag, str | None)
+            and isinstance(previous.last_modified, str | None)
+            and isinstance(previous.sha256, str)
+            and bool(previous.etag or previous.last_modified)
+            and is_safe_path_component(previous.version)
+            and safe_filename(data["filename"]) == data["filename"]
+            and previous.file_path.is_file()
+        )
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    return previous if usable else None
 
-    logger.warning(
-        "CACHE",
-        "Cache incomplete or cached file not found, forcing re-download",
-    )
-    return _download_into_version_folder(url, output_dir / app_id)
+
+def _write_sidecar(
+    app_dir: Path, url: str, headers: dict[str, str], result: StrategyResult
+) -> None:
+    """Records what the URL served, for the next run's conditional request."""
+    # Header names arrive in whatever case the server used.
+    lowered = {name.lower(): value for name, value in headers.items()}
+    data = {
+        "url": url,
+        "etag": lowered.get("etag"),
+        "last_modified": lowered.get("last-modified"),
+        "version": result.version,
+        "filename": result.file_path.name,
+        "sha256": result.sha256,
+    }
+    try:
+        (app_dir / _SIDECAR_NAME).write_text(
+            json.dumps(data, indent=2) + "\n", encoding="utf-8"
+        )
+    except OSError as err:
+        get_global_logger().warning(
+            "DISCOVERY",
+            f"Could not write {app_dir / _SIDECAR_NAME}: {err}. "
+            "The next run will download the full file.",
+        )
 
 
 def _download_into_version_folder(
@@ -227,7 +263,8 @@ def _download_into_version_folder(
     lands in ``<app_dir>/.incoming`` first and is then moved to
     ``<app_dir>/<version>/``. Installers of other versions are never
     touched, which matters for vendors that serve every release under one
-    filename.
+    filename. The sidecar file is written last, so an interrupted run can
+    leave an installer without a sidecar but never the reverse.
 
     Args:
         url: Download URL.
@@ -259,15 +296,16 @@ def _download_into_version_folder(
     finally:
         shutil.rmtree(incoming, ignore_errors=True)
 
-    return StrategyResult(
+    result = StrategyResult(
         version=version,
         version_source="url_download",
         file_path=final_path,
         sha256=dl.sha256,
-        headers=dl.headers,
         download_url=url,
         cached=False,
     )
+    _write_sidecar(app_dir, url, dl.headers, result)
+    return result
 
 
 def _extract_version(file_path: Path) -> str:

@@ -31,12 +31,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     the published one when nothing is pending), looks in that version's
     download folder, and takes the file whose SHA-256 matches. A file that was
     swapped or corrupted since discovery now stops the build instead of being
-    packaged. Guessing the file from URLs and app names is removed, and build
-    no longer reads the discovery cache
+    packaged. Guessing the file from URLs and app names is removed
     - With no recorded release (`napt discover --stateless` and no state),
         build uses the single installer found in a version folder
         (`downloads/{id}/{version}/`) and stops if there is more than one. A
         file placed directly in `downloads/{id}/` is not found
+- **BREAKING: The discovery cache is removed** - `cache/discovery.json`, the
+    `napt discover --cache-file` flag, and the `directories.cache` setting
+    are gone. `napt discover` decides whether to download from the downloads
+    folder alone: a version whose folder already holds the installer is not
+    fetched again, and `url_download` recipes keep the server's `ETag` in
+    `downloads/{id}/.download.json`. Delete `cache/discovery.json`, drop
+    `--cache-file` from scripts, and cache only `downloads` in CI (the
+    reference workflows are updated)
+    - `--stateless` now means only "do not read or write deployment state";
+        installers already in the downloads folder are still reused
 - **BREAKING: Recipe `id` must be a plain folder name** - `napt validate` now
     rejects an `id` containing anything other than letters, digits, `.`, `-`,
     `_`, and `+`, or one that does not start with a letter or digit. Rename
@@ -50,6 +59,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed `napt discover` labelling the installer it already had with an older
+    version number when a vendor rolled a release back. With `api_github`,
+    `api_json`, and `web_scrape` recipes, the older version was treated as
+    "not newer", so the newer installer was reused under the older version
+    and recorded as the pending release. Each version now has its own
+    download, so the older release is fetched and recorded as itself
+- Fixed `url_download` recipes making a wasted request when the saved `ETag`
+    outlived the installer it described: the server answered "not modified",
+    and NAPT then had to request the file a second time. The `ETag` is now
+    sent only while that installer is on disk
+- Fixed a server's `ETag` being ignored when it sent the header name in
+    lowercase
 - Fixed a download server being able to choose where a file is saved. A
     filename such as `..\..\evil.exe` in the `Content-Disposition` header
     (or its percent-encoded form) was joined onto the download folder as-is.

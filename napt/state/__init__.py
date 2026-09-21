@@ -14,24 +14,16 @@
 
 """State persistence for NAPT.
 
-This package holds two kinds of state with opposite philosophies:
-
-- **Discovery cache** ([napt.state.cache][]): A disposable optimization
-    file (default ``cache/discovery.json``) tracking discovered versions,
-    ETags, and download metadata between runs. It enables conditional
-    downloads (HTTP 304) and version-change detection. Deleting it costs
-    one full re-download per app and nothing else.
-- **Deployment state** ([napt.state.deployment][]): Authoritative per-app
-    records (``state/deployment/<recipe-id>.json``) of what NAPT has
-    published to Intune and what is awaiting publication. Not regenerable.
-    Serialized deterministically so unchanged state produces byte-identical
-    files and clean diffs.
+**Deployment state** ([napt.state.deployment][]) is the authoritative
+per-app record (``state/deployment/<recipe-id>.json``) of what NAPT has
+published to Intune and what is awaiting publication. Not regenerable.
+Serialized deterministically so unchanged state produces byte-identical
+files and clean diffs.
 
 The provenance stamp ([napt.state.stamp][]) is the join between deployment
 state and Intune: a machine-parseable line in each published app's notes
 field that marks the app as NAPT-managed and ties it to the publish
 instance recorded here.
 
-Cache tracking is enabled by default and can be disabled with the
---stateless flag, which also disables deployment state writes.
+The --stateless flag disables deployment state reads and writes.
 """

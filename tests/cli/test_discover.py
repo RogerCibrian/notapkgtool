@@ -18,7 +18,6 @@ class TestCmdDiscover:
             _args(
                 recipe=str(tmp_path / "nonexistent.yaml"),
                 output_dir=None,
-                cache_file=None,
                 state_dir=None,
                 stateless=False,
             )
@@ -45,7 +44,6 @@ class TestCmdDiscover:
                 _args(
                     recipe=str(recipe),
                     output_dir=None,
-                    cache_file=None,
                     state_dir=None,
                     stateless=False,
                 )
@@ -67,7 +65,6 @@ class TestCmdDiscover:
                 _args(
                     recipe=str(recipe),
                     output_dir=None,
-                    cache_file=None,
                     state_dir=None,
                     stateless=False,
                 )
@@ -87,7 +84,6 @@ class TestCmdDiscover:
                     _args(
                         recipe=str(recipe),
                         output_dir=None,
-                        cache_file=None,
                         state_dir=None,
                         stateless=False,
                     )
@@ -116,14 +112,12 @@ class TestCmdDiscover:
                 _args(
                     recipe=str(recipe),
                     output_dir=None,
-                    cache_file=None,
                     state_dir=None,
                     stateless=True,
                 )
             )
         _, kwargs = mock.call_args
         assert kwargs["stateless"] is True
-        assert kwargs["cache_file"] is None
         assert kwargs["state_dir"] is None
 
     def test_output_dir_passed_through(self, tmp_path):
@@ -148,7 +142,6 @@ class TestCmdDiscover:
                 _args(
                     recipe=str(recipe),
                     output_dir=str(custom_output),
-                    cache_file=None,
                     state_dir=None,
                     stateless=False,
                 )

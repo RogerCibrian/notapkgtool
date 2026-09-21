@@ -202,7 +202,7 @@ Domain types and internal types stay co-located with their logic.
 
 ## Imports
 
-**Package `__init__.py` files are docstring-only — no re-exports, no exceptions.** Import every name from its defining module: `from napt.state.cache import load_cache`, never `from napt.state import load_cache`. This keeps the import graph equal to the real dependencies, makes circular imports through package inits structurally impossible, and keeps CLI startup from loading subsystems a command doesn't use.
+**Package `__init__.py` files are docstring-only: no re-exports, no exceptions.** Import every name from its defining module: `from napt.state.deployment import record_pending`, never `from napt.state import record_pending`. This keeps the import graph equal to the real dependencies, makes circular imports through package inits structurally impossible, and keeps CLI startup from loading subsystems a command doesn't use.
 
 The package version is not defined in code — `pyproject.toml` is the single source. Read it at runtime with `get_version()` from `napt/version.py` (a cached `importlib.metadata` lookup); never add a `__version__` dunder.
 

@@ -2,21 +2,15 @@
 Tests for napt.state module.
 
 Tests state persistence including:
-- Loading and saving discovery cache files
-- Cache operations
-- Cache file creation and error handling
 - Deployment state loading, saving, and determinism
 - Pending release recording (newest wins)
 """
 
 from __future__ import annotations
 
-import json
-
 import pytest
 
 from napt.exceptions import StateError
-from napt.state.cache import load_cache, save_cache
 from napt.state.deployment import (
     create_default_deployment_state,
     deployment_state_path,
@@ -26,73 +20,6 @@ from napt.state.deployment import (
     save_deployment_state,
     summarize_deployment_states,
 )
-
-
-class TestCacheFileOperations:
-    """Tests for loading and saving discovery cache files."""
-
-    def test_save_and_load_cache(self, tmp_path):
-        """Tests round-trip save and load."""
-        cache_file = tmp_path / "discovery.json"
-        data = {
-            "metadata": {"napt_version": "0.1.0"},
-            "apps": {
-                "test-app": {
-                    "url": "https://vendor.com/app.msi",
-                    "etag": 'W/"abc123"',
-                    "sha256": "def456",
-                    "known_version": "1.2.3",
-                }
-            },
-        }
-
-        # Save
-        save_cache(data, cache_file)
-        assert cache_file.exists()
-
-        # Load
-        loaded = load_cache(cache_file)
-        assert loaded["apps"]["test-app"]["known_version"] == "1.2.3"
-        assert loaded["apps"]["test-app"]["etag"] == 'W/"abc123"'
-        assert loaded["apps"]["test-app"]["url"] == "https://vendor.com/app.msi"
-
-    def test_load_missing_file_raises(self, tmp_path):
-        """Tests that loading nonexistent file raises FileNotFoundError."""
-        cache_file = tmp_path / "nonexistent.json"
-
-        with pytest.raises(FileNotFoundError):
-            load_cache(cache_file)
-
-    def test_load_invalid_json_raises(self, tmp_path):
-        """Tests that loading invalid JSON raises JSONDecodeError."""
-        cache_file = tmp_path / "invalid.json"
-        cache_file.write_text("This is not JSON", encoding="utf-8")
-
-        with pytest.raises(json.JSONDecodeError):
-            load_cache(cache_file)
-
-    def test_save_creates_parent_directory(self, tmp_path):
-        """Tests that save creates parent directories if needed."""
-        cache_file = tmp_path / "nested" / "dir" / "discovery.json"
-        data = {"metadata": {"schema_version": "2"}, "apps": {}}
-
-        save_cache(data, cache_file)
-
-        assert cache_file.exists()
-        assert cache_file.parent.exists()
-
-    def test_save_pretty_prints_json(self, tmp_path):
-        """Tests that saved JSON is pretty-printed."""
-        cache_file = tmp_path / "discovery.json"
-        data = {"metadata": {}, "apps": {"test": {"version": "1.0"}}}
-
-        save_cache(data, cache_file)
-
-        content = cache_file.read_text(encoding="utf-8")
-        # Should have indentation (pretty-printed)
-        assert "  " in content
-        # Should have trailing newline
-        assert content.endswith("\n")
 
 
 class TestDeploymentStateFiles:

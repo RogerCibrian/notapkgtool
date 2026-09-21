@@ -27,7 +27,6 @@ Design Principles:
 
 from __future__ import annotations
 
-import hashlib
 import json
 from pathlib import Path
 import re
@@ -49,6 +48,7 @@ from napt.build.registry_scripts import (
     generate_requirements_script,
 )
 from napt.config.loader import load_effective_config
+from napt.download.download import DOWNLOAD_PART_SUFFIX, sha256_file
 from napt.exceptions import ConfigError, PackagingError, StateError
 from napt.paths import is_safe_path_component
 from napt.powershell import PS_SCRIPT_ENCODING, ps_single_quote
@@ -231,13 +231,13 @@ def _find_installer_file(
             [
                 p
                 for p in version_dir.iterdir()
-                if p.is_file() and p.suffix.lower() != ".part"
+                if p.is_file() and p.suffix != DOWNLOAD_PART_SUFFIX
             ]
             if version_dir.is_dir()
             else []
         )
         for candidate in candidates:
-            digest = _sha256_file(candidate)
+            digest = sha256_file(candidate)
             if digest == release["sha256"]:
                 logger.verbose("BUILD", f"Found installer: {candidate}")
                 return candidate, digest
@@ -258,7 +258,7 @@ def _find_installer_file(
     )
     if len(installers) == 1:
         logger.verbose("BUILD", f"Found installer: {installers[0]}")
-        return installers[0], _sha256_file(installers[0])
+        return installers[0], sha256_file(installers[0])
     if not installers:
         raise PackagingError(
             f"No installer found for {app_id} under {app_dir}. "
@@ -781,23 +781,6 @@ def _generate_requirements_script(
         generate_requirements_script(requirements_config, requirements_script_path)
 
     return requirements_script_path
-
-
-def _sha256_file(path: Path) -> str:
-    """Computes the SHA-256 hex digest of a file with chunked reads.
-
-    Args:
-        path: File to hash.
-
-    Returns:
-        SHA-256 hex digest string.
-
-    """
-    sha = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b""):
-            sha.update(chunk)
-    return sha.hexdigest()
 
 
 def _write_build_manifest(

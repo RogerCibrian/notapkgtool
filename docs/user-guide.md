@@ -11,15 +11,13 @@ The discovery process finds the latest version and downloads the installer:
 
 1. **Load Configuration** - Merges organization defaults, vendor defaults, and recipe configuration
 2. **Check Version** - Uses the configured discovery strategy to check for new versions
-3. **Compare with Cache** - Compares discovered version to cached `known_version` in the discovery cache
-4. **Skip or Download**:
-    - If version unchanged and file exists → Skip download 
-    - If version changed or file missing → Download installer
-5. **Extract Version** - Extracts version from installer (MSI ProductVersion) or uses discovered version
-6. **Update Cache** - Updates `cache/discovery.json` with new version, file path, SHA-256 hash, and ETag (if download occurred)
-7. **Record Pending Release** - Updates `state/deployment/{app_id}.json` with the discovered release as the pending publication candidate when it differs from the published version. The pending slot holds one candidate and the newest discovery wins.
+3. **Skip or Download**:
+    - If the installer for that version is already in `downloads/{app_id}/{version}/` → Skip download
+    - Otherwise → Download installer
+4. **Extract Version** - Extracts version from installer (MSI ProductVersion) or uses discovered version
+5. **Record Pending Release** - Updates `state/deployment/{app_id}.json` with the discovered release as the pending publication candidate when it differs from the published version. The pending slot holds one candidate and the newest discovery wins.
 
-**Output**: Downloaded installer in `downloads/{app_id}/{version}/`, updated discovery cache, updated deployment state
+**Output**: Downloaded installer in `downloads/{app_id}/{version}/`, updated deployment state
 
 **One folder per version**: Each download is filed under its version, the same
 way builds and packages are.
@@ -522,6 +520,7 @@ After a complete workflow, your directory structure looks like:
 ```
 downloads/
   └── napt-chrome/
+      ├── .download.json                   # url_download only: ETag of the last download
       └── 142.0.7444.163/
           └── googlechromestandaloneenterprise64.msi
 
@@ -550,9 +549,6 @@ packages/
           ├── Google-Chrome_142.0.7444.163-Detection.ps1    # Copied by napt package
           ├── Google-Chrome_142.0.7444.163-Requirements.ps1 # Copied by napt package
           └── build-manifest.json                      # Copied by napt package; read by napt upload
-
-cache/
-  └── discovery.json                       # Discovery cache (disposable)
 
 state/
   └── deployment/
@@ -762,55 +758,59 @@ Intune settings.
 Every field is documented in the [Recipe Reference](recipe-reference.md);
 worked examples for each strategy are in [Common Tasks](common-tasks.md).
 
-## State management & caching
+## State management & downloads
 
-NAPT keeps two kinds of state with different purposes:
+NAPT keeps its records in two places:
 
-- **Discovery cache** (`cache/discovery.json`) - A disposable optimization file tracking discovered versions, ETags, and download metadata.
-Deleting it costs one full re-download per app and nothing else.
+- **The downloads folder** (`downloads/<app_id>/<version>/`) - The installers themselves.
+Disposable: deleting it costs one full re-download per app and nothing else.
 Safe to gitignore.
 - **Deployment state** (`state/deployment/<app_id>.json`) - Authoritative per-app records of what NAPT has published to Intune (`published`) and what is awaiting publication (`pending`).
 Not regenerable.
 Written deterministically (fixed reading-order keys, no timestamps), so unchanged state produces byte-identical files and clean diffs. Commit these files to version control if you want an auditable record or a PR-based review workflow.
 
-### Discovery cache
+### Skipping downloads
 
-The discovery cache avoids unnecessary downloads, which matters most for CI/CD running frequent scheduled checks.
+`napt discover` avoids downloading an installer it already has, which matters most for CI/CD running frequent scheduled checks.
+The downloads folder is the only thing it consults, so restoring that folder between runs (for example with `actions/cache`) is all a pipeline needs to do.
 
-NAPT uses two caching approaches depending on the discovery strategy:
+How the check works depends on the discovery strategy:
 
 ```mermaid
 flowchart TD
     Start([napt discover]) --> Strategy{Strategy Type?}
-    
+
     Strategy -->|Version-First<br/>api_github, api_json, web_scrape| CheckVersion[Check Version via API/Page]
-    Strategy -->|File-First<br/>url_download| CheckETag[Check File via HTTP ETag]
-    
-    CheckVersion --> VersionChanged{Version<br/>Changed?}
-    VersionChanged -->|No| FileExists1{File<br/>Exists?}
-    VersionChanged -->|Yes| Download1[Download File]
-    
+    Strategy -->|File-First<br/>url_download| HaveFile{Last download<br/>still on disk?}
+
+    CheckVersion --> FolderHasFile{Installer in<br/>downloads/id/version?}
+    FolderHasFile -->|Yes| Skip1([Skip download<br/>Use that file])
+    FolderHasFile -->|No| Download1[Download File]
+
+    HaveFile -->|Yes| CheckETag[Conditional request<br/>with saved ETag]
+    HaveFile -->|No| Download2[Download File]
     CheckETag --> ETagResponse{Server<br/>Response?}
-    ETagResponse -->|304 Not Modified| FileExists2{File<br/>Exists?}
-    ETagResponse -->|200 OK Changed| Download2[Download File]
-    
-    FileExists1 -->|Yes| SkipDownload1([✓ Skip Download<br/>Use cached file])
-    FileExists1 -->|No| Download1
-    
-    FileExists2 -->|Yes| SkipDownload2([✓ Skip Download<br/>Use cached file])
-    FileExists2 -->|No| Download2
-    
-    Download1 --> UpdateCache[Update discovery cache]
-    Download2 --> UpdateCache
-    SkipDownload1 --> UpdateCache
-    SkipDownload2 --> UpdateCache
-    UpdateCache --> Pending[Record pending release]
-    Pending --> Ready([✓ Ready for napt build])
+    ETagResponse -->|304 Not Modified| Skip2([Skip download<br/>Use that file])
+    ETagResponse -->|200 OK Changed| Download2
+
+    Download1 --> Pending[Record pending release]
+    Download2 --> Pending
+    Skip1 --> Pending
+    Skip2 --> Pending
+    Pending --> Ready([Ready for napt build])
 ```
 
-**Performance:** Version-first strategies (api_github, api_json, web_scrape) check versions before downloading (~100-300ms) and skip downloads entirely if unchanged. File-first strategy (url_download) uses HTTP conditional requests (~500ms) with ETag caching.
+**Version-first strategies** (api_github, api_json, web_scrape) learn the version before downloading (~100-300ms).
+Each version has its own folder, so a folder that already holds the installer means there is nothing to fetch.
 
-**Note:** The cache is updated after every discovery run, even when skipping downloads. This updates the `last_updated` timestamp and confirms the cached version is still current.
+**url_download** cannot know the version without the file, so it asks the server whether the file changed.
+Each download writes `downloads/<app_id>/.download.json`, which records the `ETag` and `Last-Modified` the server sent and which installer they describe.
+The next run sends them back as a conditional request (~500ms); a `304 Not Modified` answer reuses the installer.
+The values are only sent while that installer is still on disk.
+The file is a hint, not a record: if it is missing or unreadable, NAPT downloads the full file and writes a new one.
+
+**A version that goes down** (a vendor pulling a release) is handled like any other change: the older version gets its own folder and its own download.
+NAPT never relabels an installer it already has.
 
 ### Deployment state
 
@@ -886,21 +886,20 @@ whatever is still eligible.
 ### Default behavior (stateful)
 
 ```bash
-# Cache and deployment state tracking enabled by default
+# Deployment state tracking enabled by default
 napt discover recipes/Google/chrome.yaml
 
-# Creates/updates: cache/discovery.json
 # Creates/updates: state/deployment/napt-chrome.json
 ```
 
 ### Stateless mode
 
 ```bash
-# Disable the discovery cache and deployment state writes for one-off checks
+# Leave deployment state alone for one-off checks
 napt discover recipes/Google/chrome.yaml --stateless
 
-# Always downloads, no caching, records nothing
-# Useful for ad-hoc checks that should leave no trace
+# Deployment state is neither read nor written, so no pending release is recorded
+# Installers already in the downloads folder are still reused
 ```
 
 ## Configuration layers
@@ -989,7 +988,6 @@ to its own:
 | Command | Flag | Purpose | Config key | Built-in default |
 |---------|------|---------|-----------|-----------------|
 | `napt discover` | `--output-dir` | Where to save downloaded installers | `directories.discover` | `downloads` |
-| `napt discover` | `--cache-file` | Discovery cache file (`<dir>/discovery.json`) | `directories.cache` | `cache` |
 | `napt discover` | `--state-dir` | Per-app deployment state (`<dir>/deployment/`) | `directories.state` | `state` |
 | `napt promote` | `--state-dir` | Deployment state and plan files | `directories.state` | `state` |
 | `napt status` | `--state-dir` | Deployment state to summarize (no config lookup) | - | `state` |
@@ -1015,7 +1013,6 @@ directories:
   build: "artifacts/builds"        # used by both build and package
   package: "artifacts/packages"
   icons: "artifacts/icons"         # written by build, read by upload
-  cache: "artifacts/cache"         # discovery cache (disposable)
   state: "deployment-state"        # per-app deployment state (authoritative)
 ```
 
@@ -1083,7 +1080,7 @@ fi
 ## Troubleshooting
 
 For discovery failures (unknown strategy, version extraction, rate limits,
-network errors, corrupted cache) and MSI extraction on Linux/macOS, see
+network errors, corrupted state) and MSI extraction on Linux/macOS, see
 [Troubleshoot discovery failures](common-tasks.md#troubleshoot-discovery-failures).
 
 
