@@ -686,6 +686,10 @@ scripting.
 napt status [OPTIONS]
 ```
 
+A pending release whose version is lower than the published one is marked
+`[DOWNGRADE]` in the table and `"pending_is_downgrade": true` in the JSON.
+See [Downgrades](#downgrades).
+
 ### napt upload
 
 Uploads the `.intunewin` package to Microsoft Intune via the Graph API.
@@ -811,6 +815,29 @@ The file is a hint, not a record: if it is missing or unreadable, NAPT downloads
 
 **A version that goes down** (a vendor pulling a release) is handled like any other change: the older version gets its own folder and its own download.
 NAPT never relabels an installer it already has.
+
+### Downgrades
+
+NAPT treats a release as new when its installer differs from the published one, whichever direction the version moved.
+When a vendor replaces `2.0.0` with `1.9.0`, `napt discover` records `1.9.0` as the pending release like any other, and nothing is published until you approve it.
+
+What NAPT adds is a label, so the decision is made knowingly:
+
+- `napt discover` logs a warning that the pending release is lower than the published one.
+- `napt status` marks the app `[DOWNGRADE]` (`"pending_is_downgrade": true` in JSON).
+- The [reference discover workflow](common-tasks.md#workflow-1-discover-opens-publish-prs) reads that field and opens the PR as `Publish <Name> 1.9.0 (downgrade from 2.0.0)` with a warning at the top of the body.
+
+The label is worked out each time from the two versions in deployment state; it is not stored.
+
+**Publishing a downgrade does not roll devices back.**
+Detection and requirements scripts treat "this version or higher" as installed, so a device already on `2.0.0` reports the app as installed and is left alone.
+Only new installs receive `1.9.0`.
+To move existing devices down, uninstall the newer version first.
+
+**How versions are ordered:** NAPT uses the same comparison as the detection script on the device, so the label means "devices on the published version will not take this".
+Each `.` or `-` separated part contributes its leading digits, and a part with no leading digits counts as 0.
+A prerelease tag is therefore not ranked (`1.0-rc1` equals `1.0`), and a `v` prefix turns the first number into 0 (`v2.0` reads as `0.0`).
+Capture only the numeric version in the recipe's `version_pattern` to avoid both.
 
 ### Deployment state
 

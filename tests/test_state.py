@@ -390,11 +390,36 @@ class TestSummarizeDeploymentStates:
         rows = summarize_deployment_states(deployment_dir)
 
         assert rows == [
-            {"app_id": "alpha", "published": None, "pending": "1.0", "rings": {}},
+            {
+                "app_id": "alpha",
+                "published": None,
+                "pending": "1.0",
+                "pending_is_downgrade": False,
+                "rings": {},
+            },
             {
                 "app_id": "zeta",
                 "published": "2.0",
                 "pending": None,
+                "pending_is_downgrade": False,
                 "rings": {"pilot": "2.0"},
             },
         ]
+
+    @pytest.mark.parametrize(
+        ("pending_version", "expected"),
+        [("1.9.0", True), ("2.0.0", False), ("2.0.1", False)],
+    )
+    def test_flags_pending_lower_than_published(
+        self, tmp_path, pending_version, expected
+    ):
+        """Tests that only a pending version below the published one is flagged."""
+        deployment_dir = tmp_path / "deployment"
+        state = create_default_deployment_state()
+        state["published"] = {"version": "2.0.0", "sha256": "a"}
+        state["pending"] = {"version": pending_version, "sha256": "b", "url": "u"}
+        save_deployment_state(state, deployment_state_path(deployment_dir, "app"))
+
+        rows = summarize_deployment_states(deployment_dir)
+
+        assert rows[0]["pending_is_downgrade"] is expected

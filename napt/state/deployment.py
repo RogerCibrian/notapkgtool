@@ -53,6 +53,7 @@ from pathlib import Path
 from typing import Any
 
 from napt.exceptions import StateError
+from napt.versioning.ordering import is_downgrade
 
 # Schema version written to every deployment state file. Loaders reject
 # files stamped with a different version.
@@ -317,9 +318,10 @@ def summarize_deployment_states(deployment_dir: Path) -> list[dict[str, Any]]:
 
     Returns:
         One summary dict per app, sorted by app id, each with the app id,
-            published version, pending version, and a ring-to-version
-            map. Empty when the directory does not exist or holds no
-            state.
+            published version, pending version, whether the pending
+            version is lower than the published one
+            (``pending_is_downgrade``), and a ring-to-version map. Empty
+            when the directory does not exist or holds no state.
 
     Raises:
         StateError: On a corrupted deployment state file.
@@ -339,6 +341,10 @@ def summarize_deployment_states(deployment_dir: Path) -> list[dict[str, Any]]:
                 "app_id": path.stem,
                 "published": published.get("version"),
                 "pending": pending.get("version"),
+                # Derived on every read, never stored: the two versions it
+                # compares change independently.
+                "pending_is_downgrade": bool(pending)
+                and is_downgrade(pending["version"], published.get("version")),
                 "rings": {
                     name: entry.get("version") for name, entry in sorted(rings.items())
                 },

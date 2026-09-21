@@ -980,6 +980,7 @@ jobs:
           pr_meta() {
           python - "$1" <<'PY'
           import json
+          import subprocess
           import sys
           from pathlib import Path
 
@@ -1004,7 +1005,27 @@ jobs:
               print(f"Clear pending release for {name}")
               raise SystemExit
           current = published.get("version") or "none - first deployment"
+          # Ask napt whether the new version is lower than the published
+          # one. It orders versions exactly as the detection script on a
+          # device does, so the workflow never carries its own copy.
+          status = json.loads(
+              subprocess.run(
+                  ["napt", "status", "--format", "json"],
+                  capture_output=True, text=True, check=True,
+              ).stdout
+          )
+          row = next(r for r in status if r["app_id"] == state_path.stem)
+          warning = suffix = ""
+          if row["pending_is_downgrade"]:
+              suffix = f" (downgrade from {current})"
+              warning = (
+                  f"**This is a downgrade:** {pending['version']} is "
+                  f"lower than the published {current}. Devices already "
+                  f"on {current} will not move to it; merging changes "
+                  "what new installs get.\n\n"
+              )
           Path("pr-body.md").write_text(
+              f"{warning}"
               f"**Name:** {name}\n"
               f"**New version:** {pending['version']}\n"
               f"**Currently published:** {current}\n"
@@ -1024,7 +1045,7 @@ jobs:
               "automatically.\n",
               encoding="utf-8",
           )
-          print(f"Publish {name} {pending['version']}")
+          print(f"Publish {name} {pending['version']}{suffix}")
           PY
           }
           # Snapshot all changes on a temp branch, then carve out one

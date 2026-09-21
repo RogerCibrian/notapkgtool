@@ -195,6 +195,39 @@ class TestVersionFirstInstallerReuse:
         assert result.sha256 == hashlib.sha256(older_content).hexdigest()
         assert newer.read_bytes() == b"the 2.0.0 installer"
 
+    @pytest.mark.parametrize(("served", "warns"), [("1.9.0", True), ("2.1.0", False)])
+    def test_warns_when_pending_is_lower_than_published(
+        self, tmp_test_dir, create_yaml_file, capsys, served, warns
+    ):
+        """Tests that a downgrade is recorded as pending and called out."""
+        from napt.state.deployment import (
+            create_default_deployment_state,
+            deployment_state_path,
+            load_deployment_state,
+            save_deployment_state,
+        )
+
+        recipe_path = _web_scrape_recipe(create_yaml_file)
+        state_path = deployment_state_path(tmp_test_dir / "state", "test-app")
+        state = create_default_deployment_state()
+        state["published"] = {"version": "2.0.0", "sha256": "published"}
+        save_deployment_state(state, state_path)
+
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://example.com/download.html",
+                text=f'<a href="/app-v{served}-installer.msi">Download</a>',
+            )
+            m.get(
+                f"https://example.com/app-v{served}-installer.msi",
+                content=b"installer",
+                headers={"Content-Length": "9"},
+            )
+            discover_recipe(recipe_path, tmp_test_dir, state_dir=tmp_test_dir / "state")
+
+        assert load_deployment_state(state_path)["pending"]["version"] == served
+        assert ("is LOWER than the published" in capsys.readouterr().out) is warns
+
     def test_unfinished_download_is_not_reused(self, tmp_test_dir, create_yaml_file):
         """Tests that a leftover .part file does not count as the installer."""
         recipe_path = _web_scrape_recipe(create_yaml_file)
