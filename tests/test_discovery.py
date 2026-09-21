@@ -73,11 +73,70 @@ class TestUrlDownloadFlow:
 
         assert result.version == "1.2.3"
         assert result.version_source == "url_download"
-        assert result.file_path == tmp_test_dir / "test-app" / "installer.msi"
+        app_dir = tmp_test_dir / "test-app"
+        assert result.file_path == app_dir / "1.2.3" / "installer.msi"
         assert result.file_path.exists()
+        assert not (app_dir / ".incoming").exists()
         assert len(result.sha256) == 64
         assert result.cached is False
         assert result.download_url == "https://example.com/installer.msi"
+
+    def test_new_version_under_same_filename_keeps_the_old_installer(
+        self, tmp_test_dir
+    ):
+        """Tests that a vendor reusing one filename cannot overwrite a release."""
+        app_config = {
+            "id": "test-app",
+            "discovery": {"url": "https://example.com/installer.msi"},
+        }
+        downloads = [(b"version one", "1.0.0"), (b"version two!", "2.0.0")]
+
+        for content, version in downloads:
+            with requests_mock.Mocker() as m:
+                m.get(
+                    "https://example.com/installer.msi",
+                    content=content,
+                    headers={"Content-Length": str(len(content))},
+                )
+                with patch(
+                    "napt.discovery.url_download.extract_msi_metadata"
+                ) as mock_extract:
+                    mock_extract.return_value = MSIMetadata(
+                        product_name="", product_version=version, architecture="x64"
+                    )
+                    run_url_download(app_config, tmp_test_dir)
+
+        app_dir = tmp_test_dir / "test-app"
+        assert (app_dir / "1.0.0" / "installer.msi").read_bytes() == b"version one"
+        assert (app_dir / "2.0.0" / "installer.msi").read_bytes() == b"version two!"
+
+    def test_unusable_msi_version_is_refused_and_leaves_nothing_behind(
+        self, tmp_test_dir
+    ):
+        """Tests that a traversing ProductVersion creates no folder."""
+        app_config = {
+            "id": "test-app",
+            "discovery": {"url": "https://example.com/installer.msi"},
+        }
+        content = b"fake MSI content"
+
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://example.com/installer.msi",
+                content=content,
+                headers={"Content-Length": str(len(content))},
+            )
+            with patch(
+                "napt.discovery.url_download.extract_msi_metadata"
+            ) as mock_extract:
+                mock_extract.return_value = MSIMetadata(
+                    product_name="", product_version="../../evil", architecture="x64"
+                )
+                with pytest.raises(ConfigError, match="cannot be used as a folder"):
+                    run_url_download(app_config, tmp_test_dir)
+
+        assert not (tmp_test_dir / "evil").exists()
+        assert list((tmp_test_dir / "test-app").iterdir()) == []
 
     def test_missing_url_raises(self, tmp_test_dir):
         """Tests that a missing discovery.url raises ConfigError."""
@@ -183,7 +242,7 @@ class TestUrlDownloadCacheBehavior:
                 )
                 result = run_url_download(app_config, tmp_test_dir, cache=cache)
 
-        assert result.file_path == tmp_test_dir / "test-app" / "installer.msi"
+        assert result.file_path == tmp_test_dir / "test-app" / "2.0.0" / "installer.msi"
         assert result.file_path.exists()
         assert result.version == "2.0.0"
         assert result.cached is False
@@ -212,7 +271,7 @@ class TestUrlDownloadCacheBehavior:
                 result = run_url_download(app_config, tmp_test_dir)
 
         assert result.version == "1.0.0"
-        assert result.file_path == tmp_test_dir / "test-app" / "installer.msi"
+        assert result.file_path == tmp_test_dir / "test-app" / "1.0.0" / "installer.msi"
         assert result.file_path.exists()
 
     def test_cache_with_missing_file_redownloads(self, tmp_test_dir):

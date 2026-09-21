@@ -18,6 +18,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING: Downloads are filed by version** - `napt discover` saves each
+    installer to `downloads/{id}/{version}/`, matching `builds/` and
+    `packages/`. A vendor that serves every release under one filename can no
+    longer overwrite an installer that is awaiting approval. Installers in the
+    old flat `downloads/{id}/` layout are not found; run `napt discover` once
+    per app to download them again
+    - CI workflows that hash downloads need the two-level path:
+        `sha256sum "downloads/$id/"*/*` (reference workflow 2 is updated)
+- **BREAKING: `napt build` finds the installer by its recorded hash** - Build
+    reads the release to build from deployment state (the pending release, or
+    the published one when nothing is pending), looks in that version's
+    download folder, and takes the file whose SHA-256 matches. A file that was
+    swapped or corrupted since discovery now stops the build instead of being
+    packaged. Guessing the file from URLs and app names is removed, and build
+    no longer reads the discovery cache
+    - With no recorded release (`napt discover --stateless` and no state),
+        build uses the single installer found in a version folder
+        (`downloads/{id}/{version}/`) and stops if there is more than one. A
+        file placed directly in `downloads/{id}/` is not found
 - **BREAKING: Recipe `id` must be a plain folder name** - `napt validate` now
     rejects an `id` containing anything other than letters, digits, `.`, `-`,
     `_`, and `+`, or one that does not start with a letter or digit. Rename

@@ -53,7 +53,9 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from napt.download.download import download_file
+from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
+from napt.paths import is_safe_path_component
 from napt.versioning.compare import is_newer
 
 
@@ -159,6 +161,27 @@ class DiscoveryStrategy(Protocol):
         ...
 
 
+def require_usable_version(version: str) -> None:
+    """Rejects a discovered version that cannot name a folder.
+
+    The version names the download folder (``downloads/<id>/<version>``)
+    and later the build folder, so a value with a path separator or ``..``
+    is refused before any folder is created from it.
+
+    Args:
+        version: Version reported by a strategy or read from the installer.
+
+    Raises:
+        ConfigError: If the version is not a plain folder name.
+    """
+    if not is_safe_path_component(version):
+        raise ConfigError(
+            f"Discovered version {version!a} cannot be used as a folder name. "
+            "Versions may contain only letters, digits, '.', '-', '_', and '+'. "
+            "Check the recipe's version pattern, or the installer's metadata."
+        )
+
+
 def resolve_with_cache(
     info: RemoteVersion,
     app_config: dict[str, Any],
@@ -180,7 +203,7 @@ def resolve_with_cache(
         app_config: Merged recipe configuration. Used to read ``id``
             for the per-app download subdirectory.
         output_dir: Base directory to download into. Files land in
-            ``output_dir / app_id``.
+            ``output_dir / app_id / version``.
         cache: Cached state for this recipe (``known_version``,
             ``file_path``, ``sha256``), or ``None`` when no prior state
             exists or stateless mode is on.
@@ -226,7 +249,9 @@ def resolve_with_cache(
             f"Version changed: {cache.get('known_version')} -> {info.version}",
         )
 
-    dl = download_file(info.download_url, output_dir / app_id)
+    # One folder per version, so a vendor that reuses a filename for every
+    # release cannot overwrite an installer that is still awaiting approval.
+    dl = download_file(info.download_url, output_dir / app_id / info.version)
     return StrategyResult(
         version=info.version,
         version_source=info.source,

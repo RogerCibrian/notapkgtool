@@ -52,7 +52,7 @@ digits, `.`, `-`, `_`, and `+`, starting with a letter or digit.
 `napt validate` rejects anything else, including path separators and `..`.
 Used to generate:
 
-- Download directory: `downloads/{id}/`
+- Download directory: `downloads/{id}/{version}/`
 - Build directory: `builds/{id}/{version}/`
 - Package directory: `packages/{id}/{version}/`
 

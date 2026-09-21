@@ -1098,14 +1098,15 @@ jobs:
             [ "$pending" = "True" ] || continue
             # Use the cached installer when its hash matches the approved
             # release; otherwise fetch from the vendor. --stateless keeps
-            # the approved pending untouched, and the upload hash gate
-            # refuses anything that does not match it.
+            # the approved pending untouched, and napt build refuses any
+            # file that does not match it. Downloads are filed by version
+            # (downloads/<id>/<version>/<file>), hence the two-level glob.
             psha=$(python -c "import json, sys; print(json.load(open(sys.argv[1], encoding='utf-8'))['pending']['sha256'])" "$state")
-            if ! sha256sum "downloads/$id/"* 2>/dev/null | grep -q "^$psha "; then
+            if ! sha256sum "downloads/$id/"*/* 2>/dev/null | grep -q "^$psha "; then
               napt discover "$recipe" --stateless
               # Fail fast when the vendor no longer serves the approved
-              # binary (the upload hash gate would refuse it anyway).
-              sha256sum "downloads/$id/"* 2>/dev/null | grep -q "^$psha " || {
+              # binary (napt build would refuse it anyway).
+              sha256sum "downloads/$id/"*/* 2>/dev/null | grep -q "^$psha " || {
                 echo "::error::$id: vendor no longer serves the approved release ($psha); the approval is stranded until a new discover PR supersedes it"
                 exit 1
               }

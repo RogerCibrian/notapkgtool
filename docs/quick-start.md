@@ -191,7 +191,7 @@ App ID:          napt-chrome
 Strategy:        url_download
 Version:         <version>
 Version Source:  msi
-File Path:       /path/to/downloads/napt-chrome/googlechromestandaloneenterprise64.msi
+File Path:       /path/to/downloads/napt-chrome/<version>/googlechromestandaloneenterprise64.msi
 SHA-256:         <sha256>
 Status:          success
 ======================================================================
