@@ -849,22 +849,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#state-management-caching" class="md-nav__link">
+  <a href="#state-management-downloads" class="md-nav__link">
     <span class="md-ellipsis">
       
-        State management &amp; caching
+        State management &amp; downloads
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="State management &amp; caching">
+    <nav class="md-nav" aria-label="State management &amp; downloads">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#discovery-cache" class="md-nav__link">
+  <a href="#skipping-downloads" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Discovery cache
+        Skipping downloads
       
     </span>
   </a>
@@ -2471,22 +2471,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#state-management-caching" class="md-nav__link">
+  <a href="#state-management-downloads" class="md-nav__link">
     <span class="md-ellipsis">
       
-        State management &amp; caching
+        State management &amp; downloads
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="State management &amp; caching">
+    <nav class="md-nav" aria-label="State management &amp; downloads">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#discovery-cache" class="md-nav__link">
+  <a href="#skipping-downloads" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Discovery cache
+        Skipping downloads
       
     </span>
   </a>
@@ -2732,17 +2732,15 @@ configuration layers.</p>
 <ol>
 <li><strong>Load Configuration</strong> - Merges organization defaults, vendor defaults, and recipe configuration</li>
 <li><strong>Check Version</strong> - Uses the configured discovery strategy to check for new versions</li>
-<li><strong>Compare with Cache</strong> - Compares discovered version to cached <code>known_version</code> in the discovery cache</li>
 <li><strong>Skip or Download</strong>:<ul>
-<li>If version unchanged and file exists → Skip download </li>
-<li>If version changed or file missing → Download installer</li>
+<li>If the installer for that version is already in <code>downloads/{app_id}/{version}/</code> → Skip download</li>
+<li>Otherwise → Download installer</li>
 </ul>
 </li>
 <li><strong>Extract Version</strong> - Extracts version from installer (MSI ProductVersion) or uses discovered version</li>
-<li><strong>Update Cache</strong> - Updates <code>cache/discovery.json</code> with new version, file path, SHA-256 hash, and ETag (if download occurred)</li>
 <li><strong>Record Pending Release</strong> - Updates <code>state/deployment/{app_id}.json</code> with the discovered release as the pending publication candidate when it differs from the published version. The pending slot holds one candidate and the newest discovery wins.</li>
 </ol>
-<p><strong>Output</strong>: Downloaded installer in <code>downloads/{app_id}/{version}/</code>, updated discovery cache, updated deployment state</p>
+<p><strong>Output</strong>: Downloaded installer in <code>downloads/{app_id}/{version}/</code>, updated deployment state</p>
 <p><strong>One folder per version</strong>: Each download is filed under its version, the same
 way builds and packages are.
 A vendor that serves every release under one filename (Chrome's
@@ -3248,41 +3246,39 @@ instead of <code>AZURE_CLIENT_SECRET</code>.</p>
 <p>After a complete workflow, your directory structure looks like:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>downloads/
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>  └── napt-chrome/
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>      └── 142.0.7444.163/
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>          └── googlechromestandaloneenterprise64.msi
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>builds/
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>  └── napt-chrome/
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>      └── 142.0.7444.163/
-</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>          ├── packagefiles/                # PSADT package contents
-</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>          │   ├── PSAppDeployToolkit/      # PSADT module (from template)
-</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>          │   ├── PSAppDeployToolkit.Extensions/
-</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>          │   ├── Assets/                  # Custom branding (if configured)
-</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>          │   ├── Config/
-</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>          │   ├── Strings/
-</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>          │   ├── Files/                   # Installer copied here
-</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>          │   │   └── googlechromestandaloneenterprise64.msi
-</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>          │   ├── SupportFiles/            # Empty (for additional files)
-</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>          │   ├── Invoke-AppDeployToolkit.ps1  # Generated script
-</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>          │   └── Invoke-AppDeployToolkit.exe  # From template
-</span><span id="__span-8-20"><a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>          ├── Google-Chrome_142.0.7444.163-Detection.ps1
-</span><span id="__span-8-21"><a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>          ├── Google-Chrome_142.0.7444.163-Requirements.ps1
-</span><span id="__span-8-22"><a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>          └── build-manifest.json              # Installer hash and metadata
-</span><span id="__span-8-23"><a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a>
-</span><span id="__span-8-24"><a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a>packages/
-</span><span id="__span-8-25"><a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>  └── napt-chrome/
-</span><span id="__span-8-26"><a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a>      └── 142.0.7444.163/                              # One version kept at a time
-</span><span id="__span-8-27"><a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a>          ├── Invoke-AppDeployToolkit.intunewin        # Encrypted package
-</span><span id="__span-8-28"><a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a>          ├── Google-Chrome_142.0.7444.163-Detection.ps1    # Copied by napt package
-</span><span id="__span-8-29"><a id="__codelineno-8-29" name="__codelineno-8-29" href="#__codelineno-8-29"></a>          ├── Google-Chrome_142.0.7444.163-Requirements.ps1 # Copied by napt package
-</span><span id="__span-8-30"><a id="__codelineno-8-30" name="__codelineno-8-30" href="#__codelineno-8-30"></a>          └── build-manifest.json                      # Copied by napt package; read by napt upload
-</span><span id="__span-8-31"><a id="__codelineno-8-31" name="__codelineno-8-31" href="#__codelineno-8-31"></a>
-</span><span id="__span-8-32"><a id="__codelineno-8-32" name="__codelineno-8-32" href="#__codelineno-8-32"></a>cache/
-</span><span id="__span-8-33"><a id="__codelineno-8-33" name="__codelineno-8-33" href="#__codelineno-8-33"></a>  └── discovery.json                       # Discovery cache (disposable)
-</span><span id="__span-8-34"><a id="__codelineno-8-34" name="__codelineno-8-34" href="#__codelineno-8-34"></a>
-</span><span id="__span-8-35"><a id="__codelineno-8-35" name="__codelineno-8-35" href="#__codelineno-8-35"></a>state/
-</span><span id="__span-8-36"><a id="__codelineno-8-36" name="__codelineno-8-36" href="#__codelineno-8-36"></a>  └── deployment/
-</span><span id="__span-8-37"><a id="__codelineno-8-37" name="__codelineno-8-37" href="#__codelineno-8-37"></a>      └── napt-chrome.json                 # Deployment state (authoritative)
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>      ├── .download.json                   # url_download only: ETag of the last download
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>      └── 142.0.7444.163/
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>          └── googlechromestandaloneenterprise64.msi
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>builds/
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>  └── napt-chrome/
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>      └── 142.0.7444.163/
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>          ├── packagefiles/                # PSADT package contents
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>          │   ├── PSAppDeployToolkit/      # PSADT module (from template)
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>          │   ├── PSAppDeployToolkit.Extensions/
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>          │   ├── Assets/                  # Custom branding (if configured)
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>          │   ├── Config/
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>          │   ├── Strings/
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>          │   ├── Files/                   # Installer copied here
+</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>          │   │   └── googlechromestandaloneenterprise64.msi
+</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>          │   ├── SupportFiles/            # Empty (for additional files)
+</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>          │   ├── Invoke-AppDeployToolkit.ps1  # Generated script
+</span><span id="__span-8-20"><a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>          │   └── Invoke-AppDeployToolkit.exe  # From template
+</span><span id="__span-8-21"><a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>          ├── Google-Chrome_142.0.7444.163-Detection.ps1
+</span><span id="__span-8-22"><a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>          ├── Google-Chrome_142.0.7444.163-Requirements.ps1
+</span><span id="__span-8-23"><a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a>          └── build-manifest.json              # Installer hash and metadata
+</span><span id="__span-8-24"><a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a>
+</span><span id="__span-8-25"><a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>packages/
+</span><span id="__span-8-26"><a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a>  └── napt-chrome/
+</span><span id="__span-8-27"><a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a>      └── 142.0.7444.163/                              # One version kept at a time
+</span><span id="__span-8-28"><a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a>          ├── Invoke-AppDeployToolkit.intunewin        # Encrypted package
+</span><span id="__span-8-29"><a id="__codelineno-8-29" name="__codelineno-8-29" href="#__codelineno-8-29"></a>          ├── Google-Chrome_142.0.7444.163-Detection.ps1    # Copied by napt package
+</span><span id="__span-8-30"><a id="__codelineno-8-30" name="__codelineno-8-30" href="#__codelineno-8-30"></a>          ├── Google-Chrome_142.0.7444.163-Requirements.ps1 # Copied by napt package
+</span><span id="__span-8-31"><a id="__codelineno-8-31" name="__codelineno-8-31" href="#__codelineno-8-31"></a>          └── build-manifest.json                      # Copied by napt package; read by napt upload
+</span><span id="__span-8-32"><a id="__codelineno-8-32" name="__codelineno-8-32" href="#__codelineno-8-32"></a>
+</span><span id="__span-8-33"><a id="__codelineno-8-33" name="__codelineno-8-33" href="#__codelineno-8-33"></a>state/
+</span><span id="__span-8-34"><a id="__codelineno-8-34" name="__codelineno-8-34" href="#__codelineno-8-34"></a>  └── deployment/
+</span><span id="__span-8-35"><a id="__codelineno-8-35" name="__codelineno-8-35" href="#__codelineno-8-35"></a>      └── napt-chrome.json                 # Deployment state (authoritative)
 </span></code></pre></div>
 <h2 id="commands-reference">Commands reference</h2>
 <blockquote>
@@ -3479,47 +3475,50 @@ application: a discovery strategy, PSADT scripts and variables, and optional
 Intune settings.
 Every field is documented in the <a href="../recipe-reference/">Recipe Reference</a>;
 worked examples for each strategy are in <a href="../common-tasks/">Common Tasks</a>.</p>
-<h2 id="state-management-caching">State management &amp; caching</h2>
-<p>NAPT keeps two kinds of state with different purposes:</p>
+<h2 id="state-management-downloads">State management &amp; downloads</h2>
+<p>NAPT keeps its records in two places:</p>
 <ul>
-<li><strong>Discovery cache</strong> (<code>cache/discovery.json</code>) - A disposable optimization file tracking discovered versions, ETags, and download metadata.
-Deleting it costs one full re-download per app and nothing else.
+<li><strong>The downloads folder</strong> (<code>downloads/&lt;app_id&gt;/&lt;version&gt;/</code>) - The installers themselves.
+Disposable: deleting it costs one full re-download per app and nothing else.
 Safe to gitignore.</li>
 <li><strong>Deployment state</strong> (<code>state/deployment/&lt;app_id&gt;.json</code>) - Authoritative per-app records of what NAPT has published to Intune (<code>published</code>) and what is awaiting publication (<code>pending</code>).
 Not regenerable.
 Written deterministically (fixed reading-order keys, no timestamps), so unchanged state produces byte-identical files and clean diffs. Commit these files to version control if you want an auditable record or a PR-based review workflow.</li>
 </ul>
-<h3 id="discovery-cache">Discovery cache</h3>
-<p>The discovery cache avoids unnecessary downloads, which matters most for CI/CD running frequent scheduled checks.</p>
-<p>NAPT uses two caching approaches depending on the discovery strategy:</p>
+<h3 id="skipping-downloads">Skipping downloads</h3>
+<p><code>napt discover</code> avoids downloading an installer it already has, which matters most for CI/CD running frequent scheduled checks.
+The downloads folder is the only thing it consults, so restoring that folder between runs (for example with <code>actions/cache</code>) is all a pipeline needs to do.</p>
+<p>How the check works depends on the discovery strategy:</p>
 <pre class="mermaid"><code>flowchart TD
     Start([napt discover]) --&gt; Strategy{Strategy Type?}
 
     Strategy --&gt;|Version-First&lt;br/&gt;api_github, api_json, web_scrape| CheckVersion[Check Version via API/Page]
-    Strategy --&gt;|File-First&lt;br/&gt;url_download| CheckETag[Check File via HTTP ETag]
+    Strategy --&gt;|File-First&lt;br/&gt;url_download| HaveFile{Last download&lt;br/&gt;still on disk?}
 
-    CheckVersion --&gt; VersionChanged{Version&lt;br/&gt;Changed?}
-    VersionChanged --&gt;|No| FileExists1{File&lt;br/&gt;Exists?}
-    VersionChanged --&gt;|Yes| Download1[Download File]
+    CheckVersion --&gt; FolderHasFile{Installer in&lt;br/&gt;downloads/id/version?}
+    FolderHasFile --&gt;|Yes| Skip1([Skip download&lt;br/&gt;Use that file])
+    FolderHasFile --&gt;|No| Download1[Download File]
 
+    HaveFile --&gt;|Yes| CheckETag[Conditional request&lt;br/&gt;with saved ETag]
+    HaveFile --&gt;|No| Download2[Download File]
     CheckETag --&gt; ETagResponse{Server&lt;br/&gt;Response?}
-    ETagResponse --&gt;|304 Not Modified| FileExists2{File&lt;br/&gt;Exists?}
-    ETagResponse --&gt;|200 OK Changed| Download2[Download File]
+    ETagResponse --&gt;|304 Not Modified| Skip2([Skip download&lt;br/&gt;Use that file])
+    ETagResponse --&gt;|200 OK Changed| Download2
 
-    FileExists1 --&gt;|Yes| SkipDownload1([✓ Skip Download&lt;br/&gt;Use cached file])
-    FileExists1 --&gt;|No| Download1
-
-    FileExists2 --&gt;|Yes| SkipDownload2([✓ Skip Download&lt;br/&gt;Use cached file])
-    FileExists2 --&gt;|No| Download2
-
-    Download1 --&gt; UpdateCache[Update discovery cache]
-    Download2 --&gt; UpdateCache
-    SkipDownload1 --&gt; UpdateCache
-    SkipDownload2 --&gt; UpdateCache
-    UpdateCache --&gt; Pending[Record pending release]
-    Pending --&gt; Ready([✓ Ready for napt build])</code></pre>
-<p><strong>Performance:</strong> Version-first strategies (api_github, api_json, web_scrape) check versions before downloading (~100-300ms) and skip downloads entirely if unchanged. File-first strategy (url_download) uses HTTP conditional requests (~500ms) with ETag caching.</p>
-<p><strong>Note:</strong> The cache is updated after every discovery run, even when skipping downloads. This updates the <code>last_updated</code> timestamp and confirms the cached version is still current.</p>
+    Download1 --&gt; Pending[Record pending release]
+    Download2 --&gt; Pending
+    Skip1 --&gt; Pending
+    Skip2 --&gt; Pending
+    Pending --&gt; Ready([Ready for napt build])</code></pre>
+<p><strong>Version-first strategies</strong> (api_github, api_json, web_scrape) learn the version before downloading (~100-300ms).
+Each version has its own folder, so a folder that already holds the installer means there is nothing to fetch.</p>
+<p><strong>url_download</strong> cannot know the version without the file, so it asks the server whether the file changed.
+Each download writes <code>downloads/&lt;app_id&gt;/.download.json</code>, which records the <code>ETag</code> and <code>Last-Modified</code> the server sent and which installer they describe.
+The next run sends them back as a conditional request (~500ms); a <code>304 Not Modified</code> answer reuses the installer.
+The values are only sent while that installer is still on disk.
+The file is a hint, not a record: if it is missing or unreadable, NAPT downloads the full file and writes a new one.</p>
+<p><strong>A version that goes down</strong> (a vendor pulling a release) is handled like any other change: the older version gets its own folder and its own download.
+NAPT never relabels an installer it already has.</p>
 <h3 id="deployment-state">Deployment state</h3>
 <p>Each app gets its own file, <code>state/deployment/&lt;app_id&gt;.json</code>, so concurrent changes to different apps never conflict and each file's diff is scoped to one app.
 Every file carries a <code>schemaVersion</code> (currently 1); NAPT refuses files
@@ -3585,18 +3584,17 @@ To hold one app's promotions during review, delete its plan file; the
 other apps' plans are unaffected, and the next plan run re-proposes
 whatever is still eligible.</p>
 <h3 id="default-behavior-stateful">Default behavior (stateful)</h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Cache and deployment state tracking enabled by default</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Deployment state tracking enabled by default</span>
 </span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
 </span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
-</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="c1"># Creates/updates: cache/discovery.json</span>
-</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="c1"># Creates/updates: state/deployment/napt-chrome.json</span>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="c1"># Creates/updates: state/deployment/napt-chrome.json</span>
 </span></code></pre></div>
 <h3 id="stateless-mode">Stateless mode</h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Disable the discovery cache and deployment state writes for one-off checks</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Leave deployment state alone for one-off checks</span>
 </span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span>--stateless
 </span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
-</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c1"># Always downloads, no caching, records nothing</span>
-</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="c1"># Useful for ad-hoc checks that should leave no trace</span>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c1"># Deployment state is neither read nor written, so no pending release is recorded</span>
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="c1"># Installers already in the downloads folder are still reused</span>
 </span></code></pre></div>
 <h2 id="configuration-layers">Configuration layers</h2>
 <p>NAPT layers configuration so you don't repeat settings across recipes.
@@ -3691,13 +3689,6 @@ to its own:</p>
 </tr>
 <tr>
 <td><code>napt discover</code></td>
-<td><code>--cache-file</code></td>
-<td>Discovery cache file (<code>&lt;dir&gt;/discovery.json</code>)</td>
-<td><code>directories.cache</code></td>
-<td><code>cache</code></td>
-</tr>
-<tr>
-<td><code>napt discover</code></td>
 <td><code>--state-dir</code></td>
 <td>Per-app deployment state (<code>&lt;dir&gt;/deployment/</code>)</td>
 <td><code>directories.state</code></td>
@@ -3760,8 +3751,7 @@ See <a href="#app-icons">App icons</a>.</p>
 </span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="w">  </span><span class="nt">build</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/builds"</span><span class="w">        </span><span class="c1"># used by both build and package</span>
 </span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="w">  </span><span class="nt">package</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/packages"</span>
 </span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a><span class="w">  </span><span class="nt">icons</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/icons"</span><span class="w">         </span><span class="c1"># written by build, read by upload</span>
-</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a><span class="w">  </span><span class="nt">cache</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/cache"</span><span class="w">         </span><span class="c1"># discovery cache (disposable)</span>
-</span><span id="__span-25-7"><a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a><span class="w">  </span><span class="nt">state</span><span class="p">:</span><span class="w"> </span><span class="s">"deployment-state"</span><span class="w">        </span><span class="c1"># per-app deployment state (authoritative)</span>
+</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a><span class="w">  </span><span class="nt">state</span><span class="p">:</span><span class="w"> </span><span class="s">"deployment-state"</span><span class="w">        </span><span class="c1"># per-app deployment state (authoritative)</span>
 </span></code></pre></div>
 <p>Any CLI flag still overrides the config value for that single run:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="c1"># Uses config default (or built-in if not configured)</span>
@@ -3830,7 +3820,7 @@ macOS and package on Windows:</p>
 </span></code></pre></div>
 <h2 id="troubleshooting">Troubleshooting</h2>
 <p>For discovery failures (unknown strategy, version extraction, rate limits,
-network errors, corrupted cache) and MSI extraction on Linux/macOS, see
+network errors, corrupted state) and MSI extraction on Linux/macOS, see
 <a href="../common-tasks/#troubleshoot-discovery-failures">Troubleshoot discovery failures</a>.</p>
 
 

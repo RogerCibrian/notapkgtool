@@ -1015,10 +1015,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#issue-discovery-cache-corrupted" class="md-nav__link">
+  <a href="#issue-discover-reuses-an-installer-you-want-downloaded-again" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Issue: "Discovery cache corrupted"
+        Issue: discover reuses an installer you want downloaded again
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issue-deployment-state-corrupted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue: "Deployment state corrupted"
       
     </span>
   </a>
@@ -2552,10 +2563,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#issue-discovery-cache-corrupted" class="md-nav__link">
+  <a href="#issue-discover-reuses-an-installer-you-want-downloaded-again" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Issue: "Discovery cache corrupted"
+        Issue: discover reuses an installer you want downloaded again
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issue-deployment-state-corrupted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue: "Deployment state corrupted"
       
     </span>
   </a>
@@ -3418,110 +3440,106 @@ the <code>env:</code> block in the examples below for an <code>azure/login</code
 </span><span id="__span-52-15"><a id="__codelineno-52-15" name="__codelineno-52-15" href="#__codelineno-52-15"></a><span class="w">        </span><span class="nt">with</span><span class="p">:</span>
 </span><span id="__span-52-16"><a id="__codelineno-52-16" name="__codelineno-52-16" href="#__codelineno-52-16"></a><span class="w">          </span><span class="nt">python-version</span><span class="p">:</span><span class="w"> </span><span class="s">"3.13"</span>
 </span><span id="__span-52-17"><a id="__codelineno-52-17" name="__codelineno-52-17" href="#__codelineno-52-17"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pip install napt</span>
-</span><span id="__span-52-18"><a id="__codelineno-52-18" name="__codelineno-52-18" href="#__codelineno-52-18"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Restore installers and discovery cache from the last run</span>
+</span><span id="__span-52-18"><a id="__codelineno-52-18" name="__codelineno-52-18" href="#__codelineno-52-18"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Restore installers from the last run</span>
 </span><span id="__span-52-19"><a id="__codelineno-52-19" name="__codelineno-52-19" href="#__codelineno-52-19"></a><span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/cache/restore@v4</span>
 </span><span id="__span-52-20"><a id="__codelineno-52-20" name="__codelineno-52-20" href="#__codelineno-52-20"></a><span class="w">        </span><span class="nt">with</span><span class="p">:</span>
-</span><span id="__span-52-21"><a id="__codelineno-52-21" name="__codelineno-52-21" href="#__codelineno-52-21"></a><span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-52-22"><a id="__codelineno-52-22" name="__codelineno-52-22" href="#__codelineno-52-22"></a><span class="w">            </span><span class="no">downloads</span>
-</span><span id="__span-52-23"><a id="__codelineno-52-23" name="__codelineno-52-23" href="#__codelineno-52-23"></a><span class="w">            </span><span class="no">cache</span>
-</span><span id="__span-52-24"><a id="__codelineno-52-24" name="__codelineno-52-24" href="#__codelineno-52-24"></a><span class="w">          </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">installers-</span>
-</span><span id="__span-52-25"><a id="__codelineno-52-25" name="__codelineno-52-25" href="#__codelineno-52-25"></a><span class="w">          </span><span class="nt">restore-keys</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">installers-</span>
-</span><span id="__span-52-26"><a id="__codelineno-52-26" name="__codelineno-52-26" href="#__codelineno-52-26"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Discover all recipes</span>
-</span><span id="__span-52-27"><a id="__codelineno-52-27" name="__codelineno-52-27" href="#__codelineno-52-27"></a><span class="w">        </span><span class="nt">shell</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bash</span>
-</span><span id="__span-52-28"><a id="__codelineno-52-28" name="__codelineno-52-28" href="#__codelineno-52-28"></a><span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-52-29"><a id="__codelineno-52-29" name="__codelineno-52-29" href="#__codelineno-52-29"></a><span class="w">          </span><span class="no">git ls-files 'recipes/*.yaml' 'recipes/**/*.yaml' | while read -r recipe; do</span>
-</span><span id="__span-52-30"><a id="__codelineno-52-30" name="__codelineno-52-30" href="#__codelineno-52-30"></a><span class="w">            </span><span class="no">napt discover "$recipe"</span>
-</span><span id="__span-52-31"><a id="__codelineno-52-31" name="__codelineno-52-31" href="#__codelineno-52-31"></a><span class="w">          </span><span class="no">done</span>
-</span><span id="__span-52-32"><a id="__codelineno-52-32" name="__codelineno-52-32" href="#__codelineno-52-32"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Cache installers for publish and the next discover</span>
-</span><span id="__span-52-33"><a id="__codelineno-52-33" name="__codelineno-52-33" href="#__codelineno-52-33"></a><span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/cache/save@v4</span>
-</span><span id="__span-52-34"><a id="__codelineno-52-34" name="__codelineno-52-34" href="#__codelineno-52-34"></a><span class="w">        </span><span class="nt">with</span><span class="p">:</span>
-</span><span id="__span-52-35"><a id="__codelineno-52-35" name="__codelineno-52-35" href="#__codelineno-52-35"></a><span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-52-36"><a id="__codelineno-52-36" name="__codelineno-52-36" href="#__codelineno-52-36"></a><span class="w">            </span><span class="no">downloads</span>
-</span><span id="__span-52-37"><a id="__codelineno-52-37" name="__codelineno-52-37" href="#__codelineno-52-37"></a><span class="w">            </span><span class="no">cache</span>
-</span><span id="__span-52-38"><a id="__codelineno-52-38" name="__codelineno-52-38" href="#__codelineno-52-38"></a><span class="w">          </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">installers-${{ github.run_id }}</span>
-</span><span id="__span-52-39"><a id="__codelineno-52-39" name="__codelineno-52-39" href="#__codelineno-52-39"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Open one PR per app with a new pending release</span>
-</span><span id="__span-52-40"><a id="__codelineno-52-40" name="__codelineno-52-40" href="#__codelineno-52-40"></a><span class="w">        </span><span class="nt">shell</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bash</span>
-</span><span id="__span-52-41"><a id="__codelineno-52-41" name="__codelineno-52-41" href="#__codelineno-52-41"></a><span class="w">        </span><span class="nt">env</span><span class="p">:</span>
-</span><span id="__span-52-42"><a id="__codelineno-52-42" name="__codelineno-52-42" href="#__codelineno-52-42"></a><span class="w">          </span><span class="nt">GH_TOKEN</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${{ github.token }}</span>
-</span><span id="__span-52-43"><a id="__codelineno-52-43" name="__codelineno-52-43" href="#__codelineno-52-43"></a><span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-52-44"><a id="__codelineno-52-44" name="__codelineno-52-44" href="#__codelineno-52-44"></a><span class="w">          </span><span class="no">git config user.name "napt-bot"</span>
-</span><span id="__span-52-45"><a id="__codelineno-52-45" name="__codelineno-52-45" href="#__codelineno-52-45"></a><span class="w">          </span><span class="no">git config user.email "napt-bot@users.noreply.github.com"</span>
-</span><span id="__span-52-46"><a id="__codelineno-52-46" name="__codelineno-52-46" href="#__codelineno-52-46"></a><span class="w">          </span><span class="no"># Stage first so brand-new (untracked) state files are seen too</span>
-</span><span id="__span-52-47"><a id="__codelineno-52-47" name="__codelineno-52-47" href="#__codelineno-52-47"></a><span class="w">          </span><span class="no">git add state/deployment</span>
-</span><span id="__span-52-48"><a id="__codelineno-52-48" name="__codelineno-52-48" href="#__codelineno-52-48"></a><span class="w">          </span><span class="no">changed=$(git diff --cached --name-only -- state/deployment)</span>
-</span><span id="__span-52-49"><a id="__codelineno-52-49" name="__codelineno-52-49" href="#__codelineno-52-49"></a><span class="w">          </span><span class="no">[ -z "$changed" ] &amp;&amp; exit 0</span>
-</span><span id="__span-52-50"><a id="__codelineno-52-50" name="__codelineno-52-50" href="#__codelineno-52-50"></a><span class="w">          </span><span class="no"># Writes pr-body.md and prints the PR title for one app's</span>
-</span><span id="__span-52-51"><a id="__codelineno-52-51" name="__codelineno-52-51" href="#__codelineno-52-51"></a><span class="w">          </span><span class="no"># state file. The title is the decision (imperative, display</span>
-</span><span id="__span-52-52"><a id="__codelineno-52-52" name="__codelineno-52-52" href="#__codelineno-52-52"></a><span class="w">          </span><span class="no"># name + version); the body layers facts, then what merging</span>
-</span><span id="__span-52-53"><a id="__codelineno-52-53" name="__codelineno-52-53" href="#__codelineno-52-53"></a><span class="w">          </span><span class="no"># does, then how to say no.</span>
-</span><span id="__span-52-54"><a id="__codelineno-52-54" name="__codelineno-52-54" href="#__codelineno-52-54"></a><span class="w">          </span><span class="no">pr_meta() {</span>
-</span><span id="__span-52-55"><a id="__codelineno-52-55" name="__codelineno-52-55" href="#__codelineno-52-55"></a><span class="w">          </span><span class="no">python - "$1" &lt;&lt;'PY'</span>
-</span><span id="__span-52-56"><a id="__codelineno-52-56" name="__codelineno-52-56" href="#__codelineno-52-56"></a><span class="w">          </span><span class="no">import json</span>
-</span><span id="__span-52-57"><a id="__codelineno-52-57" name="__codelineno-52-57" href="#__codelineno-52-57"></a><span class="w">          </span><span class="no">import sys</span>
-</span><span id="__span-52-58"><a id="__codelineno-52-58" name="__codelineno-52-58" href="#__codelineno-52-58"></a><span class="w">          </span><span class="no">from pathlib import Path</span>
-</span><span id="__span-52-59"><a id="__codelineno-52-59" name="__codelineno-52-59" href="#__codelineno-52-59"></a>
-</span><span id="__span-52-60"><a id="__codelineno-52-60" name="__codelineno-52-60" href="#__codelineno-52-60"></a><span class="w">          </span><span class="no">state_path = Path(sys.argv[1])</span>
-</span><span id="__span-52-61"><a id="__codelineno-52-61" name="__codelineno-52-61" href="#__codelineno-52-61"></a><span class="w">          </span><span class="no">state = json.loads(state_path.read_text(encoding="utf-8"))</span>
-</span><span id="__span-52-62"><a id="__codelineno-52-62" name="__codelineno-52-62" href="#__codelineno-52-62"></a><span class="w">          </span><span class="no"># The state file names its app; the filename backstops a</span>
-</span><span id="__span-52-63"><a id="__codelineno-52-63" name="__codelineno-52-63" href="#__codelineno-52-63"></a><span class="w">          </span><span class="no"># file saved before any name was recorded.</span>
-</span><span id="__span-52-64"><a id="__codelineno-52-64" name="__codelineno-52-64" href="#__codelineno-52-64"></a><span class="w">          </span><span class="no">name = state.get("name") or state_path.stem</span>
-</span><span id="__span-52-65"><a id="__codelineno-52-65" name="__codelineno-52-65" href="#__codelineno-52-65"></a><span class="w">          </span><span class="no">pending = state.get("pending")</span>
-</span><span id="__span-52-66"><a id="__codelineno-52-66" name="__codelineno-52-66" href="#__codelineno-52-66"></a><span class="w">          </span><span class="no">published = state.get("published") or {}</span>
-</span><span id="__span-52-67"><a id="__codelineno-52-67" name="__codelineno-52-67" href="#__codelineno-52-67"></a><span class="w">          </span><span class="no">if pending is None:</span>
-</span><span id="__span-52-68"><a id="__codelineno-52-68" name="__codelineno-52-68" href="#__codelineno-52-68"></a><span class="w">              </span><span class="no"># Discovery cleared the pending slot: the vendor serves</span>
-</span><span id="__span-52-69"><a id="__codelineno-52-69" name="__codelineno-52-69" href="#__codelineno-52-69"></a><span class="w">              </span><span class="no"># the already-published release. The diff only records it.</span>
-</span><span id="__span-52-70"><a id="__codelineno-52-70" name="__codelineno-52-70" href="#__codelineno-52-70"></a><span class="w">              </span><span class="no">Path("pr-body.md").write_text(</span>
-</span><span id="__span-52-71"><a id="__codelineno-52-71" name="__codelineno-52-71" href="#__codelineno-52-71"></a><span class="w">                  </span><span class="no">f"**Name:** {name}\n\n"</span>
-</span><span id="__span-52-72"><a id="__codelineno-52-72" name="__codelineno-52-72" href="#__codelineno-52-72"></a><span class="w">                  </span><span class="no">"Discovery found the vendor serving the already-"</span>
-</span><span id="__span-52-73"><a id="__codelineno-52-73" name="__codelineno-52-73" href="#__codelineno-52-73"></a><span class="w">                  </span><span class="no">"published release, so this diff only clears the "</span>
-</span><span id="__span-52-74"><a id="__codelineno-52-74" name="__codelineno-52-74" href="#__codelineno-52-74"></a><span class="w">                  </span><span class="no">"app's pending slot. Merging records that; nothing "</span>
-</span><span id="__span-52-75"><a id="__codelineno-52-75" name="__codelineno-52-75" href="#__codelineno-52-75"></a><span class="w">                  </span><span class="no">"is published.\n",</span>
-</span><span id="__span-52-76"><a id="__codelineno-52-76" name="__codelineno-52-76" href="#__codelineno-52-76"></a><span class="w">                  </span><span class="no">encoding="utf-8",</span>
-</span><span id="__span-52-77"><a id="__codelineno-52-77" name="__codelineno-52-77" href="#__codelineno-52-77"></a><span class="w">              </span><span class="no">)</span>
-</span><span id="__span-52-78"><a id="__codelineno-52-78" name="__codelineno-52-78" href="#__codelineno-52-78"></a><span class="w">              </span><span class="no">print(f"Clear pending release for {name}")</span>
-</span><span id="__span-52-79"><a id="__codelineno-52-79" name="__codelineno-52-79" href="#__codelineno-52-79"></a><span class="w">              </span><span class="no">raise SystemExit</span>
-</span><span id="__span-52-80"><a id="__codelineno-52-80" name="__codelineno-52-80" href="#__codelineno-52-80"></a><span class="w">          </span><span class="no">current = published.get("version") or "none - first deployment"</span>
-</span><span id="__span-52-81"><a id="__codelineno-52-81" name="__codelineno-52-81" href="#__codelineno-52-81"></a><span class="w">          </span><span class="no">Path("pr-body.md").write_text(</span>
-</span><span id="__span-52-82"><a id="__codelineno-52-82" name="__codelineno-52-82" href="#__codelineno-52-82"></a><span class="w">              </span><span class="no">f"**Name:** {name}\n"</span>
-</span><span id="__span-52-83"><a id="__codelineno-52-83" name="__codelineno-52-83" href="#__codelineno-52-83"></a><span class="w">              </span><span class="no">f"**New version:** {pending['version']}\n"</span>
-</span><span id="__span-52-84"><a id="__codelineno-52-84" name="__codelineno-52-84" href="#__codelineno-52-84"></a><span class="w">              </span><span class="no">f"**Currently published:** {current}\n"</span>
-</span><span id="__span-52-85"><a id="__codelineno-52-85" name="__codelineno-52-85" href="#__codelineno-52-85"></a><span class="w">              </span><span class="no">f"**Installer:** {pending['url']}\n"</span>
-</span><span id="__span-52-86"><a id="__codelineno-52-86" name="__codelineno-52-86" href="#__codelineno-52-86"></a><span class="w">              </span><span class="no">f"**SHA-256:** `{pending['sha256']}`\n"</span>
-</span><span id="__span-52-87"><a id="__codelineno-52-87" name="__codelineno-52-87" href="#__codelineno-52-87"></a><span class="w">              </span><span class="no">"\n"</span>
-</span><span id="__span-52-88"><a id="__codelineno-52-88" name="__codelineno-52-88" href="#__codelineno-52-88"></a><span class="w">              </span><span class="no">"**Merging approves this exact binary.** The publish "</span>
-</span><span id="__span-52-89"><a id="__codelineno-52-89" name="__codelineno-52-89" href="#__codelineno-52-89"></a><span class="w">              </span><span class="no">"workflow builds, packages, and uploads it; the upload "</span>
-</span><span id="__span-52-90"><a id="__codelineno-52-90" name="__codelineno-52-90" href="#__codelineno-52-90"></a><span class="w">              </span><span class="no">"hash gate refuses any file that does not match the "</span>
-</span><span id="__span-52-91"><a id="__codelineno-52-91" name="__codelineno-52-91" href="#__codelineno-52-91"></a><span class="w">              </span><span class="no">"SHA-256 above.\n"</span>
-</span><span id="__span-52-92"><a id="__codelineno-52-92" name="__codelineno-52-92" href="#__codelineno-52-92"></a><span class="w">              </span><span class="no">"\n"</span>
-</span><span id="__span-52-93"><a id="__codelineno-52-93" name="__codelineno-52-93" href="#__codelineno-52-93"></a><span class="w">              </span><span class="no">"**To hold:** leave this PR open - nothing ships until "</span>
-</span><span id="__span-52-94"><a id="__codelineno-52-94" name="__codelineno-52-94" href="#__codelineno-52-94"></a><span class="w">              </span><span class="no">"it merges.\n"</span>
-</span><span id="__span-52-95"><a id="__codelineno-52-95" name="__codelineno-52-95" href="#__codelineno-52-95"></a><span class="w">              </span><span class="no">"**Closing is not a durable rejection:** the next "</span>
-</span><span id="__span-52-96"><a id="__codelineno-52-96" name="__codelineno-52-96" href="#__codelineno-52-96"></a><span class="w">              </span><span class="no">"discover run re-proposes the release, and a newer "</span>
-</span><span id="__span-52-97"><a id="__codelineno-52-97" name="__codelineno-52-97" href="#__codelineno-52-97"></a><span class="w">              </span><span class="no">"vendor release replaces this PR's content "</span>
-</span><span id="__span-52-98"><a id="__codelineno-52-98" name="__codelineno-52-98" href="#__codelineno-52-98"></a><span class="w">              </span><span class="no">"automatically.\n",</span>
-</span><span id="__span-52-99"><a id="__codelineno-52-99" name="__codelineno-52-99" href="#__codelineno-52-99"></a><span class="w">              </span><span class="no">encoding="utf-8",</span>
-</span><span id="__span-52-100"><a id="__codelineno-52-100" name="__codelineno-52-100" href="#__codelineno-52-100"></a><span class="w">          </span><span class="no">)</span>
-</span><span id="__span-52-101"><a id="__codelineno-52-101" name="__codelineno-52-101" href="#__codelineno-52-101"></a><span class="w">          </span><span class="no">print(f"Publish {name} {pending['version']}")</span>
-</span><span id="__span-52-102"><a id="__codelineno-52-102" name="__codelineno-52-102" href="#__codelineno-52-102"></a><span class="w">          </span><span class="no">PY</span>
-</span><span id="__span-52-103"><a id="__codelineno-52-103" name="__codelineno-52-103" href="#__codelineno-52-103"></a><span class="w">          </span><span class="no">}</span>
-</span><span id="__span-52-104"><a id="__codelineno-52-104" name="__codelineno-52-104" href="#__codelineno-52-104"></a><span class="w">          </span><span class="no"># Snapshot all changes on a temp branch, then carve out one</span>
-</span><span id="__span-52-105"><a id="__codelineno-52-105" name="__codelineno-52-105" href="#__codelineno-52-105"></a><span class="w">          </span><span class="no"># branch per app so each PR reviews exactly one state file.</span>
-</span><span id="__span-52-106"><a id="__codelineno-52-106" name="__codelineno-52-106" href="#__codelineno-52-106"></a><span class="w">          </span><span class="no">git checkout -b napt/discover-snapshot</span>
-</span><span id="__span-52-107"><a id="__codelineno-52-107" name="__codelineno-52-107" href="#__codelineno-52-107"></a><span class="w">          </span><span class="no">git commit -m "temp: discovery snapshot"</span>
-</span><span id="__span-52-108"><a id="__codelineno-52-108" name="__codelineno-52-108" href="#__codelineno-52-108"></a><span class="w">          </span><span class="no">for f in $changed; do</span>
-</span><span id="__span-52-109"><a id="__codelineno-52-109" name="__codelineno-52-109" href="#__codelineno-52-109"></a><span class="w">            </span><span class="no">app=$(basename "$f" .json)</span>
-</span><span id="__span-52-110"><a id="__codelineno-52-110" name="__codelineno-52-110" href="#__codelineno-52-110"></a><span class="w">            </span><span class="no">git checkout -B "napt/discover-$app" origin/main</span>
-</span><span id="__span-52-111"><a id="__codelineno-52-111" name="__codelineno-52-111" href="#__codelineno-52-111"></a><span class="w">            </span><span class="no">git checkout napt/discover-snapshot -- "$f"</span>
-</span><span id="__span-52-112"><a id="__codelineno-52-112" name="__codelineno-52-112" href="#__codelineno-52-112"></a><span class="w">            </span><span class="no">git commit -m "feat: Record pending release for $app"</span>
-</span><span id="__span-52-113"><a id="__codelineno-52-113" name="__codelineno-52-113" href="#__codelineno-52-113"></a><span class="w">            </span><span class="no">git push -f origin "napt/discover-$app"</span>
-</span><span id="__span-52-114"><a id="__codelineno-52-114" name="__codelineno-52-114" href="#__codelineno-52-114"></a><span class="w">            </span><span class="no">title=$(pr_meta "$f")</span>
-</span><span id="__span-52-115"><a id="__codelineno-52-115" name="__codelineno-52-115" href="#__codelineno-52-115"></a><span class="w">            </span><span class="no"># Refresh the title and body on every force-push so a</span>
-</span><span id="__span-52-116"><a id="__codelineno-52-116" name="__codelineno-52-116" href="#__codelineno-52-116"></a><span class="w">            </span><span class="no"># superseding release never leaves a stale decision open.</span>
-</span><span id="__span-52-117"><a id="__codelineno-52-117" name="__codelineno-52-117" href="#__codelineno-52-117"></a><span class="w">            </span><span class="no">gh pr create --head "napt/discover-$app" \</span>
-</span><span id="__span-52-118"><a id="__codelineno-52-118" name="__codelineno-52-118" href="#__codelineno-52-118"></a><span class="w">              </span><span class="no">--title "$title" --body-file pr-body.md \</span>
-</span><span id="__span-52-119"><a id="__codelineno-52-119" name="__codelineno-52-119" href="#__codelineno-52-119"></a><span class="w">              </span><span class="no">|| gh pr edit "napt/discover-$app" \</span>
-</span><span id="__span-52-120"><a id="__codelineno-52-120" name="__codelineno-52-120" href="#__codelineno-52-120"></a><span class="w">                </span><span class="no">--title "$title" --body-file pr-body.md</span>
-</span><span id="__span-52-121"><a id="__codelineno-52-121" name="__codelineno-52-121" href="#__codelineno-52-121"></a><span class="w">          </span><span class="no">done</span>
+</span><span id="__span-52-21"><a id="__codelineno-52-21" name="__codelineno-52-21" href="#__codelineno-52-21"></a><span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">downloads</span>
+</span><span id="__span-52-22"><a id="__codelineno-52-22" name="__codelineno-52-22" href="#__codelineno-52-22"></a><span class="w">          </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">installers-</span>
+</span><span id="__span-52-23"><a id="__codelineno-52-23" name="__codelineno-52-23" href="#__codelineno-52-23"></a><span class="w">          </span><span class="nt">restore-keys</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">installers-</span>
+</span><span id="__span-52-24"><a id="__codelineno-52-24" name="__codelineno-52-24" href="#__codelineno-52-24"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Discover all recipes</span>
+</span><span id="__span-52-25"><a id="__codelineno-52-25" name="__codelineno-52-25" href="#__codelineno-52-25"></a><span class="w">        </span><span class="nt">shell</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bash</span>
+</span><span id="__span-52-26"><a id="__codelineno-52-26" name="__codelineno-52-26" href="#__codelineno-52-26"></a><span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-52-27"><a id="__codelineno-52-27" name="__codelineno-52-27" href="#__codelineno-52-27"></a><span class="w">          </span><span class="no">git ls-files 'recipes/*.yaml' 'recipes/**/*.yaml' | while read -r recipe; do</span>
+</span><span id="__span-52-28"><a id="__codelineno-52-28" name="__codelineno-52-28" href="#__codelineno-52-28"></a><span class="w">            </span><span class="no">napt discover "$recipe"</span>
+</span><span id="__span-52-29"><a id="__codelineno-52-29" name="__codelineno-52-29" href="#__codelineno-52-29"></a><span class="w">          </span><span class="no">done</span>
+</span><span id="__span-52-30"><a id="__codelineno-52-30" name="__codelineno-52-30" href="#__codelineno-52-30"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Cache installers for publish and the next discover</span>
+</span><span id="__span-52-31"><a id="__codelineno-52-31" name="__codelineno-52-31" href="#__codelineno-52-31"></a><span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/cache/save@v4</span>
+</span><span id="__span-52-32"><a id="__codelineno-52-32" name="__codelineno-52-32" href="#__codelineno-52-32"></a><span class="w">        </span><span class="nt">with</span><span class="p">:</span>
+</span><span id="__span-52-33"><a id="__codelineno-52-33" name="__codelineno-52-33" href="#__codelineno-52-33"></a><span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">downloads</span>
+</span><span id="__span-52-34"><a id="__codelineno-52-34" name="__codelineno-52-34" href="#__codelineno-52-34"></a><span class="w">          </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">installers-${{ github.run_id }}</span>
+</span><span id="__span-52-35"><a id="__codelineno-52-35" name="__codelineno-52-35" href="#__codelineno-52-35"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Open one PR per app with a new pending release</span>
+</span><span id="__span-52-36"><a id="__codelineno-52-36" name="__codelineno-52-36" href="#__codelineno-52-36"></a><span class="w">        </span><span class="nt">shell</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bash</span>
+</span><span id="__span-52-37"><a id="__codelineno-52-37" name="__codelineno-52-37" href="#__codelineno-52-37"></a><span class="w">        </span><span class="nt">env</span><span class="p">:</span>
+</span><span id="__span-52-38"><a id="__codelineno-52-38" name="__codelineno-52-38" href="#__codelineno-52-38"></a><span class="w">          </span><span class="nt">GH_TOKEN</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${{ github.token }}</span>
+</span><span id="__span-52-39"><a id="__codelineno-52-39" name="__codelineno-52-39" href="#__codelineno-52-39"></a><span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-52-40"><a id="__codelineno-52-40" name="__codelineno-52-40" href="#__codelineno-52-40"></a><span class="w">          </span><span class="no">git config user.name "napt-bot"</span>
+</span><span id="__span-52-41"><a id="__codelineno-52-41" name="__codelineno-52-41" href="#__codelineno-52-41"></a><span class="w">          </span><span class="no">git config user.email "napt-bot@users.noreply.github.com"</span>
+</span><span id="__span-52-42"><a id="__codelineno-52-42" name="__codelineno-52-42" href="#__codelineno-52-42"></a><span class="w">          </span><span class="no"># Stage first so brand-new (untracked) state files are seen too</span>
+</span><span id="__span-52-43"><a id="__codelineno-52-43" name="__codelineno-52-43" href="#__codelineno-52-43"></a><span class="w">          </span><span class="no">git add state/deployment</span>
+</span><span id="__span-52-44"><a id="__codelineno-52-44" name="__codelineno-52-44" href="#__codelineno-52-44"></a><span class="w">          </span><span class="no">changed=$(git diff --cached --name-only -- state/deployment)</span>
+</span><span id="__span-52-45"><a id="__codelineno-52-45" name="__codelineno-52-45" href="#__codelineno-52-45"></a><span class="w">          </span><span class="no">[ -z "$changed" ] &amp;&amp; exit 0</span>
+</span><span id="__span-52-46"><a id="__codelineno-52-46" name="__codelineno-52-46" href="#__codelineno-52-46"></a><span class="w">          </span><span class="no"># Writes pr-body.md and prints the PR title for one app's</span>
+</span><span id="__span-52-47"><a id="__codelineno-52-47" name="__codelineno-52-47" href="#__codelineno-52-47"></a><span class="w">          </span><span class="no"># state file. The title is the decision (imperative, display</span>
+</span><span id="__span-52-48"><a id="__codelineno-52-48" name="__codelineno-52-48" href="#__codelineno-52-48"></a><span class="w">          </span><span class="no"># name + version); the body layers facts, then what merging</span>
+</span><span id="__span-52-49"><a id="__codelineno-52-49" name="__codelineno-52-49" href="#__codelineno-52-49"></a><span class="w">          </span><span class="no"># does, then how to say no.</span>
+</span><span id="__span-52-50"><a id="__codelineno-52-50" name="__codelineno-52-50" href="#__codelineno-52-50"></a><span class="w">          </span><span class="no">pr_meta() {</span>
+</span><span id="__span-52-51"><a id="__codelineno-52-51" name="__codelineno-52-51" href="#__codelineno-52-51"></a><span class="w">          </span><span class="no">python - "$1" &lt;&lt;'PY'</span>
+</span><span id="__span-52-52"><a id="__codelineno-52-52" name="__codelineno-52-52" href="#__codelineno-52-52"></a><span class="w">          </span><span class="no">import json</span>
+</span><span id="__span-52-53"><a id="__codelineno-52-53" name="__codelineno-52-53" href="#__codelineno-52-53"></a><span class="w">          </span><span class="no">import sys</span>
+</span><span id="__span-52-54"><a id="__codelineno-52-54" name="__codelineno-52-54" href="#__codelineno-52-54"></a><span class="w">          </span><span class="no">from pathlib import Path</span>
+</span><span id="__span-52-55"><a id="__codelineno-52-55" name="__codelineno-52-55" href="#__codelineno-52-55"></a>
+</span><span id="__span-52-56"><a id="__codelineno-52-56" name="__codelineno-52-56" href="#__codelineno-52-56"></a><span class="w">          </span><span class="no">state_path = Path(sys.argv[1])</span>
+</span><span id="__span-52-57"><a id="__codelineno-52-57" name="__codelineno-52-57" href="#__codelineno-52-57"></a><span class="w">          </span><span class="no">state = json.loads(state_path.read_text(encoding="utf-8"))</span>
+</span><span id="__span-52-58"><a id="__codelineno-52-58" name="__codelineno-52-58" href="#__codelineno-52-58"></a><span class="w">          </span><span class="no"># The state file names its app; the filename backstops a</span>
+</span><span id="__span-52-59"><a id="__codelineno-52-59" name="__codelineno-52-59" href="#__codelineno-52-59"></a><span class="w">          </span><span class="no"># file saved before any name was recorded.</span>
+</span><span id="__span-52-60"><a id="__codelineno-52-60" name="__codelineno-52-60" href="#__codelineno-52-60"></a><span class="w">          </span><span class="no">name = state.get("name") or state_path.stem</span>
+</span><span id="__span-52-61"><a id="__codelineno-52-61" name="__codelineno-52-61" href="#__codelineno-52-61"></a><span class="w">          </span><span class="no">pending = state.get("pending")</span>
+</span><span id="__span-52-62"><a id="__codelineno-52-62" name="__codelineno-52-62" href="#__codelineno-52-62"></a><span class="w">          </span><span class="no">published = state.get("published") or {}</span>
+</span><span id="__span-52-63"><a id="__codelineno-52-63" name="__codelineno-52-63" href="#__codelineno-52-63"></a><span class="w">          </span><span class="no">if pending is None:</span>
+</span><span id="__span-52-64"><a id="__codelineno-52-64" name="__codelineno-52-64" href="#__codelineno-52-64"></a><span class="w">              </span><span class="no"># Discovery cleared the pending slot: the vendor serves</span>
+</span><span id="__span-52-65"><a id="__codelineno-52-65" name="__codelineno-52-65" href="#__codelineno-52-65"></a><span class="w">              </span><span class="no"># the already-published release. The diff only records it.</span>
+</span><span id="__span-52-66"><a id="__codelineno-52-66" name="__codelineno-52-66" href="#__codelineno-52-66"></a><span class="w">              </span><span class="no">Path("pr-body.md").write_text(</span>
+</span><span id="__span-52-67"><a id="__codelineno-52-67" name="__codelineno-52-67" href="#__codelineno-52-67"></a><span class="w">                  </span><span class="no">f"**Name:** {name}\n\n"</span>
+</span><span id="__span-52-68"><a id="__codelineno-52-68" name="__codelineno-52-68" href="#__codelineno-52-68"></a><span class="w">                  </span><span class="no">"Discovery found the vendor serving the already-"</span>
+</span><span id="__span-52-69"><a id="__codelineno-52-69" name="__codelineno-52-69" href="#__codelineno-52-69"></a><span class="w">                  </span><span class="no">"published release, so this diff only clears the "</span>
+</span><span id="__span-52-70"><a id="__codelineno-52-70" name="__codelineno-52-70" href="#__codelineno-52-70"></a><span class="w">                  </span><span class="no">"app's pending slot. Merging records that; nothing "</span>
+</span><span id="__span-52-71"><a id="__codelineno-52-71" name="__codelineno-52-71" href="#__codelineno-52-71"></a><span class="w">                  </span><span class="no">"is published.\n",</span>
+</span><span id="__span-52-72"><a id="__codelineno-52-72" name="__codelineno-52-72" href="#__codelineno-52-72"></a><span class="w">                  </span><span class="no">encoding="utf-8",</span>
+</span><span id="__span-52-73"><a id="__codelineno-52-73" name="__codelineno-52-73" href="#__codelineno-52-73"></a><span class="w">              </span><span class="no">)</span>
+</span><span id="__span-52-74"><a id="__codelineno-52-74" name="__codelineno-52-74" href="#__codelineno-52-74"></a><span class="w">              </span><span class="no">print(f"Clear pending release for {name}")</span>
+</span><span id="__span-52-75"><a id="__codelineno-52-75" name="__codelineno-52-75" href="#__codelineno-52-75"></a><span class="w">              </span><span class="no">raise SystemExit</span>
+</span><span id="__span-52-76"><a id="__codelineno-52-76" name="__codelineno-52-76" href="#__codelineno-52-76"></a><span class="w">          </span><span class="no">current = published.get("version") or "none - first deployment"</span>
+</span><span id="__span-52-77"><a id="__codelineno-52-77" name="__codelineno-52-77" href="#__codelineno-52-77"></a><span class="w">          </span><span class="no">Path("pr-body.md").write_text(</span>
+</span><span id="__span-52-78"><a id="__codelineno-52-78" name="__codelineno-52-78" href="#__codelineno-52-78"></a><span class="w">              </span><span class="no">f"**Name:** {name}\n"</span>
+</span><span id="__span-52-79"><a id="__codelineno-52-79" name="__codelineno-52-79" href="#__codelineno-52-79"></a><span class="w">              </span><span class="no">f"**New version:** {pending['version']}\n"</span>
+</span><span id="__span-52-80"><a id="__codelineno-52-80" name="__codelineno-52-80" href="#__codelineno-52-80"></a><span class="w">              </span><span class="no">f"**Currently published:** {current}\n"</span>
+</span><span id="__span-52-81"><a id="__codelineno-52-81" name="__codelineno-52-81" href="#__codelineno-52-81"></a><span class="w">              </span><span class="no">f"**Installer:** {pending['url']}\n"</span>
+</span><span id="__span-52-82"><a id="__codelineno-52-82" name="__codelineno-52-82" href="#__codelineno-52-82"></a><span class="w">              </span><span class="no">f"**SHA-256:** `{pending['sha256']}`\n"</span>
+</span><span id="__span-52-83"><a id="__codelineno-52-83" name="__codelineno-52-83" href="#__codelineno-52-83"></a><span class="w">              </span><span class="no">"\n"</span>
+</span><span id="__span-52-84"><a id="__codelineno-52-84" name="__codelineno-52-84" href="#__codelineno-52-84"></a><span class="w">              </span><span class="no">"**Merging approves this exact binary.** The publish "</span>
+</span><span id="__span-52-85"><a id="__codelineno-52-85" name="__codelineno-52-85" href="#__codelineno-52-85"></a><span class="w">              </span><span class="no">"workflow builds, packages, and uploads it; the upload "</span>
+</span><span id="__span-52-86"><a id="__codelineno-52-86" name="__codelineno-52-86" href="#__codelineno-52-86"></a><span class="w">              </span><span class="no">"hash gate refuses any file that does not match the "</span>
+</span><span id="__span-52-87"><a id="__codelineno-52-87" name="__codelineno-52-87" href="#__codelineno-52-87"></a><span class="w">              </span><span class="no">"SHA-256 above.\n"</span>
+</span><span id="__span-52-88"><a id="__codelineno-52-88" name="__codelineno-52-88" href="#__codelineno-52-88"></a><span class="w">              </span><span class="no">"\n"</span>
+</span><span id="__span-52-89"><a id="__codelineno-52-89" name="__codelineno-52-89" href="#__codelineno-52-89"></a><span class="w">              </span><span class="no">"**To hold:** leave this PR open - nothing ships until "</span>
+</span><span id="__span-52-90"><a id="__codelineno-52-90" name="__codelineno-52-90" href="#__codelineno-52-90"></a><span class="w">              </span><span class="no">"it merges.\n"</span>
+</span><span id="__span-52-91"><a id="__codelineno-52-91" name="__codelineno-52-91" href="#__codelineno-52-91"></a><span class="w">              </span><span class="no">"**Closing is not a durable rejection:** the next "</span>
+</span><span id="__span-52-92"><a id="__codelineno-52-92" name="__codelineno-52-92" href="#__codelineno-52-92"></a><span class="w">              </span><span class="no">"discover run re-proposes the release, and a newer "</span>
+</span><span id="__span-52-93"><a id="__codelineno-52-93" name="__codelineno-52-93" href="#__codelineno-52-93"></a><span class="w">              </span><span class="no">"vendor release replaces this PR's content "</span>
+</span><span id="__span-52-94"><a id="__codelineno-52-94" name="__codelineno-52-94" href="#__codelineno-52-94"></a><span class="w">              </span><span class="no">"automatically.\n",</span>
+</span><span id="__span-52-95"><a id="__codelineno-52-95" name="__codelineno-52-95" href="#__codelineno-52-95"></a><span class="w">              </span><span class="no">encoding="utf-8",</span>
+</span><span id="__span-52-96"><a id="__codelineno-52-96" name="__codelineno-52-96" href="#__codelineno-52-96"></a><span class="w">          </span><span class="no">)</span>
+</span><span id="__span-52-97"><a id="__codelineno-52-97" name="__codelineno-52-97" href="#__codelineno-52-97"></a><span class="w">          </span><span class="no">print(f"Publish {name} {pending['version']}")</span>
+</span><span id="__span-52-98"><a id="__codelineno-52-98" name="__codelineno-52-98" href="#__codelineno-52-98"></a><span class="w">          </span><span class="no">PY</span>
+</span><span id="__span-52-99"><a id="__codelineno-52-99" name="__codelineno-52-99" href="#__codelineno-52-99"></a><span class="w">          </span><span class="no">}</span>
+</span><span id="__span-52-100"><a id="__codelineno-52-100" name="__codelineno-52-100" href="#__codelineno-52-100"></a><span class="w">          </span><span class="no"># Snapshot all changes on a temp branch, then carve out one</span>
+</span><span id="__span-52-101"><a id="__codelineno-52-101" name="__codelineno-52-101" href="#__codelineno-52-101"></a><span class="w">          </span><span class="no"># branch per app so each PR reviews exactly one state file.</span>
+</span><span id="__span-52-102"><a id="__codelineno-52-102" name="__codelineno-52-102" href="#__codelineno-52-102"></a><span class="w">          </span><span class="no">git checkout -b napt/discover-snapshot</span>
+</span><span id="__span-52-103"><a id="__codelineno-52-103" name="__codelineno-52-103" href="#__codelineno-52-103"></a><span class="w">          </span><span class="no">git commit -m "temp: discovery snapshot"</span>
+</span><span id="__span-52-104"><a id="__codelineno-52-104" name="__codelineno-52-104" href="#__codelineno-52-104"></a><span class="w">          </span><span class="no">for f in $changed; do</span>
+</span><span id="__span-52-105"><a id="__codelineno-52-105" name="__codelineno-52-105" href="#__codelineno-52-105"></a><span class="w">            </span><span class="no">app=$(basename "$f" .json)</span>
+</span><span id="__span-52-106"><a id="__codelineno-52-106" name="__codelineno-52-106" href="#__codelineno-52-106"></a><span class="w">            </span><span class="no">git checkout -B "napt/discover-$app" origin/main</span>
+</span><span id="__span-52-107"><a id="__codelineno-52-107" name="__codelineno-52-107" href="#__codelineno-52-107"></a><span class="w">            </span><span class="no">git checkout napt/discover-snapshot -- "$f"</span>
+</span><span id="__span-52-108"><a id="__codelineno-52-108" name="__codelineno-52-108" href="#__codelineno-52-108"></a><span class="w">            </span><span class="no">git commit -m "feat: Record pending release for $app"</span>
+</span><span id="__span-52-109"><a id="__codelineno-52-109" name="__codelineno-52-109" href="#__codelineno-52-109"></a><span class="w">            </span><span class="no">git push -f origin "napt/discover-$app"</span>
+</span><span id="__span-52-110"><a id="__codelineno-52-110" name="__codelineno-52-110" href="#__codelineno-52-110"></a><span class="w">            </span><span class="no">title=$(pr_meta "$f")</span>
+</span><span id="__span-52-111"><a id="__codelineno-52-111" name="__codelineno-52-111" href="#__codelineno-52-111"></a><span class="w">            </span><span class="no"># Refresh the title and body on every force-push so a</span>
+</span><span id="__span-52-112"><a id="__codelineno-52-112" name="__codelineno-52-112" href="#__codelineno-52-112"></a><span class="w">            </span><span class="no"># superseding release never leaves a stale decision open.</span>
+</span><span id="__span-52-113"><a id="__codelineno-52-113" name="__codelineno-52-113" href="#__codelineno-52-113"></a><span class="w">            </span><span class="no">gh pr create --head "napt/discover-$app" \</span>
+</span><span id="__span-52-114"><a id="__codelineno-52-114" name="__codelineno-52-114" href="#__codelineno-52-114"></a><span class="w">              </span><span class="no">--title "$title" --body-file pr-body.md \</span>
+</span><span id="__span-52-115"><a id="__codelineno-52-115" name="__codelineno-52-115" href="#__codelineno-52-115"></a><span class="w">              </span><span class="no">|| gh pr edit "napt/discover-$app" \</span>
+</span><span id="__span-52-116"><a id="__codelineno-52-116" name="__codelineno-52-116" href="#__codelineno-52-116"></a><span class="w">                </span><span class="no">--title "$title" --body-file pr-body.md</span>
+</span><span id="__span-52-117"><a id="__codelineno-52-117" name="__codelineno-52-117" href="#__codelineno-52-117"></a><span class="w">          </span><span class="no">done</span>
 </span></code></pre></div>
 <h3 id="workflow-2-publish-on-merge-of-a-publish-pr">Workflow 2: publish (on merge of a publish PR)</h3>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-53-1"><a id="__codelineno-53-1" name="__codelineno-53-1" href="#__codelineno-53-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">publish</span>
@@ -3552,55 +3570,53 @@ the <code>env:</code> block in the examples below for an <code>azure/login</code
 </span><span id="__span-53-26"><a id="__codelineno-53-26" name="__codelineno-53-26" href="#__codelineno-53-26"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Restore cached installers</span>
 </span><span id="__span-53-27"><a id="__codelineno-53-27" name="__codelineno-53-27" href="#__codelineno-53-27"></a><span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/cache/restore@v4</span>
 </span><span id="__span-53-28"><a id="__codelineno-53-28" name="__codelineno-53-28" href="#__codelineno-53-28"></a><span class="w">        </span><span class="nt">with</span><span class="p">:</span>
-</span><span id="__span-53-29"><a id="__codelineno-53-29" name="__codelineno-53-29" href="#__codelineno-53-29"></a><span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-53-30"><a id="__codelineno-53-30" name="__codelineno-53-30" href="#__codelineno-53-30"></a><span class="w">            </span><span class="no">downloads</span>
-</span><span id="__span-53-31"><a id="__codelineno-53-31" name="__codelineno-53-31" href="#__codelineno-53-31"></a><span class="w">            </span><span class="no">cache</span>
-</span><span id="__span-53-32"><a id="__codelineno-53-32" name="__codelineno-53-32" href="#__codelineno-53-32"></a><span class="w">          </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">installers-</span>
-</span><span id="__span-53-33"><a id="__codelineno-53-33" name="__codelineno-53-33" href="#__codelineno-53-33"></a><span class="w">          </span><span class="nt">restore-keys</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">installers-</span>
-</span><span id="__span-53-34"><a id="__codelineno-53-34" name="__codelineno-53-34" href="#__codelineno-53-34"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Publish every app with an approved pending release</span>
-</span><span id="__span-53-35"><a id="__codelineno-53-35" name="__codelineno-53-35" href="#__codelineno-53-35"></a><span class="w">        </span><span class="nt">shell</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bash</span>
-</span><span id="__span-53-36"><a id="__codelineno-53-36" name="__codelineno-53-36" href="#__codelineno-53-36"></a><span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-53-37"><a id="__codelineno-53-37" name="__codelineno-53-37" href="#__codelineno-53-37"></a><span class="w">          </span><span class="no">git ls-files 'recipes/*.yaml' 'recipes/**/*.yaml' | while read -r recipe; do</span>
-</span><span id="__span-53-38"><a id="__codelineno-53-38" name="__codelineno-53-38" href="#__codelineno-53-38"></a><span class="w">            </span><span class="no">id=$(python -c "import sys, yaml; print(yaml.safe_load(open(sys.argv[1], encoding='utf-8'))['id'])" "$recipe")</span>
-</span><span id="__span-53-39"><a id="__codelineno-53-39" name="__codelineno-53-39" href="#__codelineno-53-39"></a><span class="w">            </span><span class="no">state="state/deployment/$id.json"</span>
-</span><span id="__span-53-40"><a id="__codelineno-53-40" name="__codelineno-53-40" href="#__codelineno-53-40"></a><span class="w">            </span><span class="no">[ -f "$state" ] || continue</span>
-</span><span id="__span-53-41"><a id="__codelineno-53-41" name="__codelineno-53-41" href="#__codelineno-53-41"></a><span class="w">            </span><span class="no">pending=$(python -c "import json, sys; print(json.load(open(sys.argv[1], encoding='utf-8')).get('pending') is not None)" "$state")</span>
-</span><span id="__span-53-42"><a id="__codelineno-53-42" name="__codelineno-53-42" href="#__codelineno-53-42"></a><span class="w">            </span><span class="no">[ "$pending" = "True" ] || continue</span>
-</span><span id="__span-53-43"><a id="__codelineno-53-43" name="__codelineno-53-43" href="#__codelineno-53-43"></a><span class="w">            </span><span class="no"># Use the cached installer when its hash matches the approved</span>
-</span><span id="__span-53-44"><a id="__codelineno-53-44" name="__codelineno-53-44" href="#__codelineno-53-44"></a><span class="w">            </span><span class="no"># release; otherwise fetch from the vendor. --stateless keeps</span>
-</span><span id="__span-53-45"><a id="__codelineno-53-45" name="__codelineno-53-45" href="#__codelineno-53-45"></a><span class="w">            </span><span class="no"># the approved pending untouched, and napt build refuses any</span>
-</span><span id="__span-53-46"><a id="__codelineno-53-46" name="__codelineno-53-46" href="#__codelineno-53-46"></a><span class="w">            </span><span class="no"># file that does not match it. Downloads are filed by version</span>
-</span><span id="__span-53-47"><a id="__codelineno-53-47" name="__codelineno-53-47" href="#__codelineno-53-47"></a><span class="w">            </span><span class="no"># (downloads/&lt;id&gt;/&lt;version&gt;/&lt;file&gt;), hence the two-level glob.</span>
-</span><span id="__span-53-48"><a id="__codelineno-53-48" name="__codelineno-53-48" href="#__codelineno-53-48"></a><span class="w">            </span><span class="no">psha=$(python -c "import json, sys; print(json.load(open(sys.argv[1], encoding='utf-8'))['pending']['sha256'])" "$state")</span>
-</span><span id="__span-53-49"><a id="__codelineno-53-49" name="__codelineno-53-49" href="#__codelineno-53-49"></a><span class="w">            </span><span class="no">if ! sha256sum "downloads/$id/"*/* 2&gt;/dev/null | grep -q "^$psha "; then</span>
-</span><span id="__span-53-50"><a id="__codelineno-53-50" name="__codelineno-53-50" href="#__codelineno-53-50"></a><span class="w">              </span><span class="no">napt discover "$recipe" --stateless</span>
-</span><span id="__span-53-51"><a id="__codelineno-53-51" name="__codelineno-53-51" href="#__codelineno-53-51"></a><span class="w">              </span><span class="no"># Fail fast when the vendor no longer serves the approved</span>
-</span><span id="__span-53-52"><a id="__codelineno-53-52" name="__codelineno-53-52" href="#__codelineno-53-52"></a><span class="w">              </span><span class="no"># binary (napt build would refuse it anyway).</span>
-</span><span id="__span-53-53"><a id="__codelineno-53-53" name="__codelineno-53-53" href="#__codelineno-53-53"></a><span class="w">              </span><span class="no">sha256sum "downloads/$id/"*/* 2&gt;/dev/null | grep -q "^$psha " || {</span>
-</span><span id="__span-53-54"><a id="__codelineno-53-54" name="__codelineno-53-54" href="#__codelineno-53-54"></a><span class="w">                </span><span class="no">echo "::error::$id: vendor no longer serves the approved release ($psha); the approval is stranded until a new discover PR supersedes it"</span>
-</span><span id="__span-53-55"><a id="__codelineno-53-55" name="__codelineno-53-55" href="#__codelineno-53-55"></a><span class="w">                </span><span class="no">exit 1</span>
-</span><span id="__span-53-56"><a id="__codelineno-53-56" name="__codelineno-53-56" href="#__codelineno-53-56"></a><span class="w">              </span><span class="no">}</span>
-</span><span id="__span-53-57"><a id="__codelineno-53-57" name="__codelineno-53-57" href="#__codelineno-53-57"></a><span class="w">            </span><span class="no">fi</span>
-</span><span id="__span-53-58"><a id="__codelineno-53-58" name="__codelineno-53-58" href="#__codelineno-53-58"></a><span class="w">            </span><span class="no">napt build "$recipe"</span>
-</span><span id="__span-53-59"><a id="__codelineno-53-59" name="__codelineno-53-59" href="#__codelineno-53-59"></a><span class="w">            </span><span class="no">napt package "$recipe"</span>
-</span><span id="__span-53-60"><a id="__codelineno-53-60" name="__codelineno-53-60" href="#__codelineno-53-60"></a><span class="w">            </span><span class="no">napt upload "$recipe"</span>
-</span><span id="__span-53-61"><a id="__codelineno-53-61" name="__codelineno-53-61" href="#__codelineno-53-61"></a><span class="w">          </span><span class="no">done</span>
-</span><span id="__span-53-62"><a id="__codelineno-53-62" name="__codelineno-53-62" href="#__codelineno-53-62"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Write back recorded app IDs</span>
-</span><span id="__span-53-63"><a id="__codelineno-53-63" name="__codelineno-53-63" href="#__codelineno-53-63"></a><span class="w">        </span><span class="nt">shell</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bash</span>
-</span><span id="__span-53-64"><a id="__codelineno-53-64" name="__codelineno-53-64" href="#__codelineno-53-64"></a><span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-53-65"><a id="__codelineno-53-65" name="__codelineno-53-65" href="#__codelineno-53-65"></a><span class="w">          </span><span class="no">git config user.name "napt-bot"</span>
-</span><span id="__span-53-66"><a id="__codelineno-53-66" name="__codelineno-53-66" href="#__codelineno-53-66"></a><span class="w">          </span><span class="no">git config user.email "napt-bot@users.noreply.github.com"</span>
-</span><span id="__span-53-67"><a id="__codelineno-53-67" name="__codelineno-53-67" href="#__codelineno-53-67"></a><span class="w">          </span><span class="no">git add state/deployment</span>
-</span><span id="__span-53-68"><a id="__codelineno-53-68" name="__codelineno-53-68" href="#__codelineno-53-68"></a><span class="w">          </span><span class="no">git diff --cached --quiet &amp;&amp; exit 0</span>
-</span><span id="__span-53-69"><a id="__codelineno-53-69" name="__codelineno-53-69" href="#__codelineno-53-69"></a><span class="w">          </span><span class="no">git commit -m "chore: Record published releases [skip ci]"</span>
-</span><span id="__span-53-70"><a id="__codelineno-53-70" name="__codelineno-53-70" href="#__codelineno-53-70"></a><span class="w">          </span><span class="no"># main may have advanced while this run published (more merges,</span>
-</span><span id="__span-53-71"><a id="__codelineno-53-71" name="__codelineno-53-71" href="#__codelineno-53-71"></a><span class="w">          </span><span class="no"># another workflow's writeback). State files are per-app, so a</span>
-</span><span id="__span-53-72"><a id="__codelineno-53-72" name="__codelineno-53-72" href="#__codelineno-53-72"></a><span class="w">          </span><span class="no"># rebase cannot conflict.</span>
-</span><span id="__span-53-73"><a id="__codelineno-53-73" name="__codelineno-53-73" href="#__codelineno-53-73"></a><span class="w">          </span><span class="no">for attempt in 1 2 3; do</span>
-</span><span id="__span-53-74"><a id="__codelineno-53-74" name="__codelineno-53-74" href="#__codelineno-53-74"></a><span class="w">            </span><span class="no">git push &amp;&amp; exit 0</span>
-</span><span id="__span-53-75"><a id="__codelineno-53-75" name="__codelineno-53-75" href="#__codelineno-53-75"></a><span class="w">            </span><span class="no">git pull --rebase origin main</span>
-</span><span id="__span-53-76"><a id="__codelineno-53-76" name="__codelineno-53-76" href="#__codelineno-53-76"></a><span class="w">          </span><span class="no">done</span>
-</span><span id="__span-53-77"><a id="__codelineno-53-77" name="__codelineno-53-77" href="#__codelineno-53-77"></a><span class="w">          </span><span class="no">git push</span>
+</span><span id="__span-53-29"><a id="__codelineno-53-29" name="__codelineno-53-29" href="#__codelineno-53-29"></a><span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">downloads</span>
+</span><span id="__span-53-30"><a id="__codelineno-53-30" name="__codelineno-53-30" href="#__codelineno-53-30"></a><span class="w">          </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">installers-</span>
+</span><span id="__span-53-31"><a id="__codelineno-53-31" name="__codelineno-53-31" href="#__codelineno-53-31"></a><span class="w">          </span><span class="nt">restore-keys</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">installers-</span>
+</span><span id="__span-53-32"><a id="__codelineno-53-32" name="__codelineno-53-32" href="#__codelineno-53-32"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Publish every app with an approved pending release</span>
+</span><span id="__span-53-33"><a id="__codelineno-53-33" name="__codelineno-53-33" href="#__codelineno-53-33"></a><span class="w">        </span><span class="nt">shell</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bash</span>
+</span><span id="__span-53-34"><a id="__codelineno-53-34" name="__codelineno-53-34" href="#__codelineno-53-34"></a><span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-53-35"><a id="__codelineno-53-35" name="__codelineno-53-35" href="#__codelineno-53-35"></a><span class="w">          </span><span class="no">git ls-files 'recipes/*.yaml' 'recipes/**/*.yaml' | while read -r recipe; do</span>
+</span><span id="__span-53-36"><a id="__codelineno-53-36" name="__codelineno-53-36" href="#__codelineno-53-36"></a><span class="w">            </span><span class="no">id=$(python -c "import sys, yaml; print(yaml.safe_load(open(sys.argv[1], encoding='utf-8'))['id'])" "$recipe")</span>
+</span><span id="__span-53-37"><a id="__codelineno-53-37" name="__codelineno-53-37" href="#__codelineno-53-37"></a><span class="w">            </span><span class="no">state="state/deployment/$id.json"</span>
+</span><span id="__span-53-38"><a id="__codelineno-53-38" name="__codelineno-53-38" href="#__codelineno-53-38"></a><span class="w">            </span><span class="no">[ -f "$state" ] || continue</span>
+</span><span id="__span-53-39"><a id="__codelineno-53-39" name="__codelineno-53-39" href="#__codelineno-53-39"></a><span class="w">            </span><span class="no">pending=$(python -c "import json, sys; print(json.load(open(sys.argv[1], encoding='utf-8')).get('pending') is not None)" "$state")</span>
+</span><span id="__span-53-40"><a id="__codelineno-53-40" name="__codelineno-53-40" href="#__codelineno-53-40"></a><span class="w">            </span><span class="no">[ "$pending" = "True" ] || continue</span>
+</span><span id="__span-53-41"><a id="__codelineno-53-41" name="__codelineno-53-41" href="#__codelineno-53-41"></a><span class="w">            </span><span class="no"># Use the cached installer when its hash matches the approved</span>
+</span><span id="__span-53-42"><a id="__codelineno-53-42" name="__codelineno-53-42" href="#__codelineno-53-42"></a><span class="w">            </span><span class="no"># release; otherwise fetch from the vendor. --stateless keeps</span>
+</span><span id="__span-53-43"><a id="__codelineno-53-43" name="__codelineno-53-43" href="#__codelineno-53-43"></a><span class="w">            </span><span class="no"># the approved pending untouched, and napt build refuses any</span>
+</span><span id="__span-53-44"><a id="__codelineno-53-44" name="__codelineno-53-44" href="#__codelineno-53-44"></a><span class="w">            </span><span class="no"># file that does not match it. Downloads are filed by version</span>
+</span><span id="__span-53-45"><a id="__codelineno-53-45" name="__codelineno-53-45" href="#__codelineno-53-45"></a><span class="w">            </span><span class="no"># (downloads/&lt;id&gt;/&lt;version&gt;/&lt;file&gt;), hence the two-level glob.</span>
+</span><span id="__span-53-46"><a id="__codelineno-53-46" name="__codelineno-53-46" href="#__codelineno-53-46"></a><span class="w">            </span><span class="no">psha=$(python -c "import json, sys; print(json.load(open(sys.argv[1], encoding='utf-8'))['pending']['sha256'])" "$state")</span>
+</span><span id="__span-53-47"><a id="__codelineno-53-47" name="__codelineno-53-47" href="#__codelineno-53-47"></a><span class="w">            </span><span class="no">if ! sha256sum "downloads/$id/"*/* 2&gt;/dev/null | grep -q "^$psha "; then</span>
+</span><span id="__span-53-48"><a id="__codelineno-53-48" name="__codelineno-53-48" href="#__codelineno-53-48"></a><span class="w">              </span><span class="no">napt discover "$recipe" --stateless</span>
+</span><span id="__span-53-49"><a id="__codelineno-53-49" name="__codelineno-53-49" href="#__codelineno-53-49"></a><span class="w">              </span><span class="no"># Fail fast when the vendor no longer serves the approved</span>
+</span><span id="__span-53-50"><a id="__codelineno-53-50" name="__codelineno-53-50" href="#__codelineno-53-50"></a><span class="w">              </span><span class="no"># binary (napt build would refuse it anyway).</span>
+</span><span id="__span-53-51"><a id="__codelineno-53-51" name="__codelineno-53-51" href="#__codelineno-53-51"></a><span class="w">              </span><span class="no">sha256sum "downloads/$id/"*/* 2&gt;/dev/null | grep -q "^$psha " || {</span>
+</span><span id="__span-53-52"><a id="__codelineno-53-52" name="__codelineno-53-52" href="#__codelineno-53-52"></a><span class="w">                </span><span class="no">echo "::error::$id: vendor no longer serves the approved release ($psha); the approval is stranded until a new discover PR supersedes it"</span>
+</span><span id="__span-53-53"><a id="__codelineno-53-53" name="__codelineno-53-53" href="#__codelineno-53-53"></a><span class="w">                </span><span class="no">exit 1</span>
+</span><span id="__span-53-54"><a id="__codelineno-53-54" name="__codelineno-53-54" href="#__codelineno-53-54"></a><span class="w">              </span><span class="no">}</span>
+</span><span id="__span-53-55"><a id="__codelineno-53-55" name="__codelineno-53-55" href="#__codelineno-53-55"></a><span class="w">            </span><span class="no">fi</span>
+</span><span id="__span-53-56"><a id="__codelineno-53-56" name="__codelineno-53-56" href="#__codelineno-53-56"></a><span class="w">            </span><span class="no">napt build "$recipe"</span>
+</span><span id="__span-53-57"><a id="__codelineno-53-57" name="__codelineno-53-57" href="#__codelineno-53-57"></a><span class="w">            </span><span class="no">napt package "$recipe"</span>
+</span><span id="__span-53-58"><a id="__codelineno-53-58" name="__codelineno-53-58" href="#__codelineno-53-58"></a><span class="w">            </span><span class="no">napt upload "$recipe"</span>
+</span><span id="__span-53-59"><a id="__codelineno-53-59" name="__codelineno-53-59" href="#__codelineno-53-59"></a><span class="w">          </span><span class="no">done</span>
+</span><span id="__span-53-60"><a id="__codelineno-53-60" name="__codelineno-53-60" href="#__codelineno-53-60"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Write back recorded app IDs</span>
+</span><span id="__span-53-61"><a id="__codelineno-53-61" name="__codelineno-53-61" href="#__codelineno-53-61"></a><span class="w">        </span><span class="nt">shell</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bash</span>
+</span><span id="__span-53-62"><a id="__codelineno-53-62" name="__codelineno-53-62" href="#__codelineno-53-62"></a><span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-53-63"><a id="__codelineno-53-63" name="__codelineno-53-63" href="#__codelineno-53-63"></a><span class="w">          </span><span class="no">git config user.name "napt-bot"</span>
+</span><span id="__span-53-64"><a id="__codelineno-53-64" name="__codelineno-53-64" href="#__codelineno-53-64"></a><span class="w">          </span><span class="no">git config user.email "napt-bot@users.noreply.github.com"</span>
+</span><span id="__span-53-65"><a id="__codelineno-53-65" name="__codelineno-53-65" href="#__codelineno-53-65"></a><span class="w">          </span><span class="no">git add state/deployment</span>
+</span><span id="__span-53-66"><a id="__codelineno-53-66" name="__codelineno-53-66" href="#__codelineno-53-66"></a><span class="w">          </span><span class="no">git diff --cached --quiet &amp;&amp; exit 0</span>
+</span><span id="__span-53-67"><a id="__codelineno-53-67" name="__codelineno-53-67" href="#__codelineno-53-67"></a><span class="w">          </span><span class="no">git commit -m "chore: Record published releases [skip ci]"</span>
+</span><span id="__span-53-68"><a id="__codelineno-53-68" name="__codelineno-53-68" href="#__codelineno-53-68"></a><span class="w">          </span><span class="no"># main may have advanced while this run published (more merges,</span>
+</span><span id="__span-53-69"><a id="__codelineno-53-69" name="__codelineno-53-69" href="#__codelineno-53-69"></a><span class="w">          </span><span class="no"># another workflow's writeback). State files are per-app, so a</span>
+</span><span id="__span-53-70"><a id="__codelineno-53-70" name="__codelineno-53-70" href="#__codelineno-53-70"></a><span class="w">          </span><span class="no"># rebase cannot conflict.</span>
+</span><span id="__span-53-71"><a id="__codelineno-53-71" name="__codelineno-53-71" href="#__codelineno-53-71"></a><span class="w">          </span><span class="no">for attempt in 1 2 3; do</span>
+</span><span id="__span-53-72"><a id="__codelineno-53-72" name="__codelineno-53-72" href="#__codelineno-53-72"></a><span class="w">            </span><span class="no">git push &amp;&amp; exit 0</span>
+</span><span id="__span-53-73"><a id="__codelineno-53-73" name="__codelineno-53-73" href="#__codelineno-53-73"></a><span class="w">            </span><span class="no">git pull --rebase origin main</span>
+</span><span id="__span-53-74"><a id="__codelineno-53-74" name="__codelineno-53-74" href="#__codelineno-53-74"></a><span class="w">          </span><span class="no">done</span>
+</span><span id="__span-53-75"><a id="__codelineno-53-75" name="__codelineno-53-75" href="#__codelineno-53-75"></a><span class="w">          </span><span class="no">git push</span>
 </span></code></pre></div>
 <p><strong>Why the installer cache steps matter.</strong>
 Without them, the publish runner re-downloads from the vendor, which
@@ -3615,19 +3631,15 @@ This is safe by construction: the upload hash gate validates whatever
 binary the runner provides, so a cache can never ship the wrong bytes.</p>
 <p>The restore step in the discover workflow serves a second purpose:
 bandwidth.
-<code>napt discover</code> skips the download when the installer has not changed:
-<code>url_download</code> recipes record the vendor's <code>ETag</code>/<code>Last-Modified</code> headers
-in <code>cache/discovery.json</code> and send them as conditional request headers
-on the next run, reusing the file when the vendor answers HTTP 304;
-<code>api_github</code>, <code>api_json</code>, and <code>web_scrape</code> recipes compare the discovered
-version against the cached one and skip the download on a match.
-Either way, a fresh runner starts with neither the cache nor the files,
-so restoring <code>cache/</code> and <code>downloads/</code> from the last run is what lets
-the scheduled discover skip re-downloading installers that have not
-changed, which adds up quickly for recipe sets full of large installers.
-Keep the <code>path</code> lists of the save and restore steps identical:
+<code>napt discover</code> skips the download when the installer has not changed;
+<a href="../user-guide/#skipping-downloads">Skipping downloads</a> explains how.
+Everything it consults lives in <code>downloads/</code>, and a fresh runner starts
+without it, so restoring <code>downloads/</code> from the last run is what lets the
+scheduled discover skip re-downloading installers that have not changed,
+which adds up quickly for recipe sets full of large installers.
+Keep the <code>path</code> values of the save and restore steps identical:
 <code>actions/cache</code> makes the path list part of the cache version, so a
-mismatched list reads as a silent cache miss.</p>
+mismatch reads as a silent cache miss.</p>
 <p>For long-lived archival (including installers for retained releases the
 vendor no longer serves) replace the cache steps with an object store
 (S3, Azure Blob) or a self-hosted runner with a persistent <code>downloads/</code>
@@ -3899,12 +3911,6 @@ The merge order and list behavior are in
 <p>Edit the recipe file.</p>
 </li>
 <li>
-<p>If the version format changed, clear the discovery cache so the next run
-   re-discovers from scratch:
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-59-1"><a id="__codelineno-59-1" name="__codelineno-59-1" href="#__codelineno-59-1"></a>rm<span class="w"> </span>cache/discovery.json
-</span></code></pre></div></p>
-</li>
-<li>
 <p>Validate and test it the same way as a new recipe: see
    <a href="#test-recipes-before-production">Test recipes before production</a>.</p>
 </li>
@@ -3931,7 +3937,7 @@ The merge order and list behavior are in
 <ol>
 <li>Use <code>--debug</code> to see what NAPT is trying to parse:</li>
 </ol>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-60-1"><a id="__codelineno-60-1" name="__codelineno-60-1" href="#__codelineno-60-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/App/app.yaml<span class="w"> </span>--debug
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-59-1"><a id="__codelineno-59-1" name="__codelineno-59-1" href="#__codelineno-59-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/App/app.yaml<span class="w"> </span>--debug
 </span></code></pre></div>
 <ol>
 <li>
@@ -3950,10 +3956,10 @@ The merge order and list behavior are in
 <ol>
 <li>Create a GitHub personal access token</li>
 <li>Add to recipe:
-   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-61-1"><a id="__codelineno-61-1" name="__codelineno-61-1" href="#__codelineno-61-1"></a><span class="nt">discovery</span><span class="p">:</span>
-</span><span id="__span-61-2"><a id="__codelineno-61-2" name="__codelineno-61-2" href="#__codelineno-61-2"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
-</span><span id="__span-61-3"><a id="__codelineno-61-3" name="__codelineno-61-3" href="#__codelineno-61-3"></a><span class="w">  </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="s">"owner/repo"</span>
-</span><span id="__span-61-4"><a id="__codelineno-61-4" name="__codelineno-61-4" href="#__codelineno-61-4"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">"${GITHUB_TOKEN}"</span>
+   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-60-1"><a id="__codelineno-60-1" name="__codelineno-60-1" href="#__codelineno-60-1"></a><span class="nt">discovery</span><span class="p">:</span>
+</span><span id="__span-60-2"><a id="__codelineno-60-2" name="__codelineno-60-2" href="#__codelineno-60-2"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
+</span><span id="__span-60-3"><a id="__codelineno-60-3" name="__codelineno-60-3" href="#__codelineno-60-3"></a><span class="w">  </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="s">"owner/repo"</span>
+</span><span id="__span-60-4"><a id="__codelineno-60-4" name="__codelineno-60-4" href="#__codelineno-60-4"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">"${GITHUB_TOKEN}"</span>
 </span></code></pre></div></li>
 <li>Set <code>GITHUB_TOKEN</code> in your environment (see
    <a href="#handle-authentication-tokens">Handle authentication tokens</a>)</li>
@@ -3975,28 +3981,30 @@ The merge order and list behavior are in
 <p>Use <code>--verbose</code> to see HTTP request/response details</p>
 </li>
 </ol>
-<h3 id="issue-discovery-cache-corrupted">Issue: "Discovery cache corrupted"</h3>
-<p><strong>Problem:</strong> <code>cache/discovery.json</code> has invalid JSON or is corrupted.</p>
+<h3 id="issue-discover-reuses-an-installer-you-want-downloaded-again">Issue: discover reuses an installer you want downloaded again</h3>
+<p><strong>Problem:</strong> <code>napt discover</code> reports that the version is already downloaded
+(or <code>File not modified</code>) and you want a fresh copy.</p>
 <p><strong>Solution:</strong></p>
-<p>NAPT logs <code>Failed to load discovery cache</code> as a warning and continues without
-cache tracking for that run. The corrupted file is left in place, so the warning
-repeats until you fix it. The cache is disposable: delete it and rediscover.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-62-1"><a id="__codelineno-62-1" name="__codelineno-62-1" href="#__codelineno-62-1"></a>rm<span class="w"> </span>cache/discovery.json
-</span><span id="__span-62-2"><a id="__codelineno-62-2" name="__codelineno-62-2" href="#__codelineno-62-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/app.yaml
+<p>The downloads folder is disposable: delete the app's folder and rediscover.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-61-1"><a id="__codelineno-61-1" name="__codelineno-61-1" href="#__codelineno-61-1"></a>rm<span class="w"> </span>-r<span class="w"> </span>downloads/&lt;app_id&gt;
+</span><span id="__span-61-2"><a id="__codelineno-61-2" name="__codelineno-61-2" href="#__codelineno-61-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/app.yaml
 </span></code></pre></div>
-<p>To bypass cache and state tracking for a single run without touching the file,
-use <code>--stateless</code>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-63-1"><a id="__codelineno-63-1" name="__codelineno-63-1" href="#__codelineno-63-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/app.yaml<span class="w"> </span>--stateless
+<h3 id="issue-deployment-state-corrupted">Issue: "Deployment state corrupted"</h3>
+<p><strong>Problem:</strong> A file under <code>state/deployment/</code> has invalid JSON.</p>
+<p><strong>Solution:</strong></p>
+<p>Deployment state files are authoritative and are never auto-replaced.
+Fix the JSON or restore the file from version control.</p>
+<p>To run discovery once without reading or writing deployment state, use
+<code>--stateless</code>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-62-1"><a id="__codelineno-62-1" name="__codelineno-62-1" href="#__codelineno-62-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/app.yaml<span class="w"> </span>--stateless
 </span></code></pre></div>
-<p><strong>Note:</strong> Deployment state files (<code>state/deployment/</code>) are authoritative and are never auto-replaced.
-If one is corrupted, fix the JSON or restore the file from a backup.</p>
 <h3 id="issue-msi-version-extraction-fails-on-linuxmacos">Issue: MSI version extraction fails on Linux/macOS</h3>
 <p><strong>Problem:</strong> <code>napt discover</code> or <code>napt build</code> cannot read the MSI ProductVersion
 on a non-Windows machine.</p>
 <p><strong>Solution:</strong> Install <code>msitools</code>, which provides the <code>msiinfo</code> backend:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-64-1"><a id="__codelineno-64-1" name="__codelineno-64-1" href="#__codelineno-64-1"></a>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>msitools<span class="w">  </span><span class="c1"># Debian/Ubuntu</span>
-</span><span id="__span-64-2"><a id="__codelineno-64-2" name="__codelineno-64-2" href="#__codelineno-64-2"></a>sudo<span class="w"> </span>dnf<span class="w"> </span>install<span class="w"> </span>msitools<span class="w">      </span><span class="c1"># RHEL/Fedora</span>
-</span><span id="__span-64-3"><a id="__codelineno-64-3" name="__codelineno-64-3" href="#__codelineno-64-3"></a>brew<span class="w"> </span>install<span class="w"> </span>msitools<span class="w">          </span><span class="c1"># macOS</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-63-1"><a id="__codelineno-63-1" name="__codelineno-63-1" href="#__codelineno-63-1"></a>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>msitools<span class="w">  </span><span class="c1"># Debian/Ubuntu</span>
+</span><span id="__span-63-2"><a id="__codelineno-63-2" name="__codelineno-63-2" href="#__codelineno-63-2"></a>sudo<span class="w"> </span>dnf<span class="w"> </span>install<span class="w"> </span>msitools<span class="w">      </span><span class="c1"># RHEL/Fedora</span>
+</span><span id="__span-63-3"><a id="__codelineno-63-3" name="__codelineno-63-3" href="#__codelineno-63-3"></a>brew<span class="w"> </span>install<span class="w"> </span>msitools<span class="w">          </span><span class="c1"># macOS</span>
 </span></code></pre></div>
 <h2 id="whats-next">What's next?</h2>
 <ul>

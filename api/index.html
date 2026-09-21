@@ -1826,18 +1826,16 @@
 </span><span id="__span-0-51"><a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a>│   └── release.py              # PSADT release download and caching
 </span><span id="__span-0-52"><a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a>│
 </span><span id="__span-0-53"><a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a>├── state/                   # State persistence
-</span><span id="__span-0-54"><a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a>│   ├── cache.py                # Disposable cache of discovered versions and ETags
-</span><span id="__span-0-55"><a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a>│   ├── deployment.py           # Authoritative per-app record of published and pending releases
-</span><span id="__span-0-56"><a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a>│   └── stamp.py                # Provenance stamp linking Intune apps to deployment state
-</span><span id="__span-0-57"><a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a>│
-</span><span id="__span-0-58"><a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a>├── upload/                  # Intune upload pipeline
-</span><span id="__span-0-59"><a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a>│   ├── manager.py              # Upload orchestration
-</span><span id="__span-0-60"><a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a>│   └── intunewin.py            # .intunewin package parser
-</span><span id="__span-0-61"><a id="__codelineno-0-61" name="__codelineno-0-61" href="#__codelineno-0-61"></a>│
-</span><span id="__span-0-62"><a id="__codelineno-0-62" name="__codelineno-0-62" href="#__codelineno-0-62"></a>└── versioning/              # Version extraction and comparison
-</span><span id="__span-0-63"><a id="__codelineno-0-63" name="__codelineno-0-63" href="#__codelineno-0-63"></a>    ├── compare.py              # Version comparison (is_newer)
-</span><span id="__span-0-64"><a id="__codelineno-0-64" name="__codelineno-0-64" href="#__codelineno-0-64"></a>    ├── msi.py                  # MSI metadata extraction backends
-</span><span id="__span-0-65"><a id="__codelineno-0-65" name="__codelineno-0-65" href="#__codelineno-0-65"></a>    └── msix.py                 # MSIX metadata extraction (AppxManifest)
+</span><span id="__span-0-54"><a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a>│   ├── deployment.py           # Authoritative per-app record of published and pending releases
+</span><span id="__span-0-55"><a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a>│   └── stamp.py                # Provenance stamp linking Intune apps to deployment state
+</span><span id="__span-0-56"><a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a>│
+</span><span id="__span-0-57"><a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a>├── upload/                  # Intune upload pipeline
+</span><span id="__span-0-58"><a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a>│   ├── manager.py              # Upload orchestration
+</span><span id="__span-0-59"><a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a>│   └── intunewin.py            # .intunewin package parser
+</span><span id="__span-0-60"><a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a>│
+</span><span id="__span-0-61"><a id="__codelineno-0-61" name="__codelineno-0-61" href="#__codelineno-0-61"></a>└── versioning/              # Version extraction
+</span><span id="__span-0-62"><a id="__codelineno-0-62" name="__codelineno-0-62" href="#__codelineno-0-62"></a>    ├── msi.py                  # MSI metadata extraction backends
+</span><span id="__span-0-63"><a id="__codelineno-0-63" name="__codelineno-0-63" href="#__codelineno-0-63"></a>    └── msix.py                 # MSIX metadata extraction (AppxManifest)
 </span></code></pre></div>
 <h3 id="data-flow">Data flow</h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Recipe YAML
@@ -1846,23 +1844,21 @@
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    ↓
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>[discovery/] Discover version and download
 </span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    ↓
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>[state/cache.py] Update discovery cache
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>[state/deployment.py] Record pending release
 </span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    ↓
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>[state/deployment.py] Record pending release
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>[build/manager.py] Build PSADT package
 </span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    ↓
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>[build/manager.py] Build PSADT package
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>[build/packager.py] Create .intunewin
 </span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    ↓
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>[build/packager.py] Create .intunewin
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>[upload/manager.py] Upload to Microsoft Intune
 </span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    ↓
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>[upload/manager.py] Upload to Microsoft Intune
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>    ↓
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>Result (dataclass)
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>Result (dataclass)
 </span></code></pre></div>
 <h2 id="key-concepts">Key concepts</h2>
 <ul>
-<li><strong>Discovery Strategies:</strong> Protocol-based, stateless, listed in an explicit registry table (api_github, api_json, web_scrape). All return a <code>RemoteVersion</code> from configuration alone. The orchestrator runs the result through <code>resolve_with_cache</code> to skip the download when the version is unchanged. <code>url_download</code> is a separate flow (not a registered strategy) because it must download the file to determine the version.</li>
+<li><strong>Discovery Strategies:</strong> Protocol-based, stateless, listed in an explicit registry table (api_github, api_json, web_scrape). All return a <code>RemoteVersion</code> from configuration alone. The orchestrator runs the result through <code>resolve_installer</code> to skip the download when the version's download folder already holds the installer. <code>url_download</code> is a separate flow (not a registered strategy) because it must download the file to determine the version.</li>
 <li><strong>Configuration:</strong> 3-layer system (org → vendor → recipe) with deep merging</li>
-<li><strong>State Management:</strong> Two kinds with opposite philosophies: the disposable discovery cache (<code>cache/discovery.json</code>) for download optimization, and authoritative per-app deployment state (<code>state/deployment/&lt;id&gt;.json</code>) recording what is published and pending</li>
+<li><strong>State Management:</strong> Authoritative per-app deployment state (<code>state/deployment/&lt;id&gt;.json</code>) records what is published and pending. The downloads folder is disposable; discovery reuses what it finds there and never treats it as a record</li>
 <li><strong>Exceptions:</strong> All NAPT domain errors use custom exceptions inheriting from <code>NAPTError</code> (ConfigError, NetworkError, PackagingError, StateError, AuthError) - allows catching all NAPT errors or specific types</li>
 <li><strong>Return Types:</strong> Frozen dataclasses from <code>results.py</code>, one per napt command's underlying operation</li>
 </ul>

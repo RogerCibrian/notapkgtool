@@ -2760,12 +2760,23 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
     the published one when nothing is pending), looks in that version's
     download folder, and takes the file whose SHA-256 matches. A file that was
     swapped or corrupted since discovery now stops the build instead of being
-    packaged. Guessing the file from URLs and app names is removed, and build
-    no longer reads the discovery cache<ul>
+    packaged. Guessing the file from URLs and app names is removed<ul>
 <li>With no recorded release (<code>napt discover --stateless</code> and no state),
     build uses the single installer found in a version folder
     (<code>downloads/{id}/{version}/</code>) and stops if there is more than one. A
     file placed directly in <code>downloads/{id}/</code> is not found</li>
+</ul>
+</li>
+<li><strong>BREAKING: The discovery cache is removed</strong> - <code>cache/discovery.json</code>, the
+    <code>napt discover --cache-file</code> flag, and the <code>directories.cache</code> setting
+    are gone. <code>napt discover</code> decides whether to download from the downloads
+    folder alone: a version whose folder already holds the installer is not
+    fetched again, and <code>url_download</code> recipes keep the server's <code>ETag</code> in
+    <code>downloads/{id}/.download.json</code>. Delete <code>cache/discovery.json</code>, drop
+    <code>--cache-file</code> from scripts, and cache only <code>downloads</code> in CI (the
+    reference workflows are updated)<ul>
+<li><code>--stateless</code> now means only "do not read or write deployment state";
+    installers already in the downloads folder are still reused</li>
 </ul>
 </li>
 <li><strong>BREAKING: Recipe <code>id</code> must be a plain folder name</strong> - <code>napt validate</code> now
@@ -2781,6 +2792,18 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="fixed">Fixed</h3>
 <ul>
+<li>Fixed <code>napt discover</code> labelling the installer it already had with an older
+    version number when a vendor rolled a release back. With <code>api_github</code>,
+    <code>api_json</code>, and <code>web_scrape</code> recipes, the older version was treated as
+    "not newer", so the newer installer was reused under the older version
+    and recorded as the pending release. Each version now has its own
+    download, so the older release is fetched and recorded as itself</li>
+<li>Fixed <code>url_download</code> recipes making a wasted request when the saved <code>ETag</code>
+    outlived the installer it described: the server answered "not modified",
+    and NAPT then had to request the file a second time. The <code>ETag</code> is now
+    sent only while that installer is on disk</li>
+<li>Fixed a server's <code>ETag</code> being ignored when it sent the header name in
+    lowercase</li>
 <li>Fixed a download server being able to choose where a file is saved. A
     filename such as <code>..\..\evil.exe</code> in the <code>Content-Disposition</code> header
     (or its percent-encoded form) was joined onto the download folder as-is.
