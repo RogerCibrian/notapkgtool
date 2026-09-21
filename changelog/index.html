@@ -2745,6 +2745,29 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="changed">Changed</h3>
 <ul>
+<li><strong>BREAKING: Downloads are filed by version</strong> - <code>napt discover</code> saves each
+    installer to <code>downloads/{id}/{version}/</code>, matching <code>builds/</code> and
+    <code>packages/</code>. A vendor that serves every release under one filename can no
+    longer overwrite an installer that is awaiting approval. Installers in the
+    old flat <code>downloads/{id}/</code> layout are not found; run <code>napt discover</code> once
+    per app to download them again<ul>
+<li>CI workflows that hash downloads need the two-level path:
+    <code>sha256sum "downloads/$id/"*/*</code> (reference workflow 2 is updated)</li>
+</ul>
+</li>
+<li><strong>BREAKING: <code>napt build</code> finds the installer by its recorded hash</strong> - Build
+    reads the release to build from deployment state (the pending release, or
+    the published one when nothing is pending), looks in that version's
+    download folder, and takes the file whose SHA-256 matches. A file that was
+    swapped or corrupted since discovery now stops the build instead of being
+    packaged. Guessing the file from URLs and app names is removed, and build
+    no longer reads the discovery cache<ul>
+<li>With no recorded release (<code>napt discover --stateless</code> and no state),
+    build uses the single installer found in a version folder
+    (<code>downloads/{id}/{version}/</code>) and stops if there is more than one. A
+    file placed directly in <code>downloads/{id}/</code> is not found</li>
+</ul>
+</li>
 <li><strong>BREAKING: Recipe <code>id</code> must be a plain folder name</strong> - <code>napt validate</code> now
     rejects an <code>id</code> containing anything other than letters, digits, <code>.</code>, <code>-</code>,
     <code>_</code>, and <code>+</code>, or one that does not start with a letter or digit. Rename

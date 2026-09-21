@@ -2742,7 +2742,12 @@ configuration layers.</p>
 <li><strong>Update Cache</strong> - Updates <code>cache/discovery.json</code> with new version, file path, SHA-256 hash, and ETag (if download occurred)</li>
 <li><strong>Record Pending Release</strong> - Updates <code>state/deployment/{app_id}.json</code> with the discovered release as the pending publication candidate when it differs from the published version. The pending slot holds one candidate and the newest discovery wins.</li>
 </ol>
-<p><strong>Output</strong>: Downloaded installer in <code>downloads/{app_id}/</code>, updated discovery cache, updated deployment state</p>
+<p><strong>Output</strong>: Downloaded installer in <code>downloads/{app_id}/{version}/</code>, updated discovery cache, updated deployment state</p>
+<p><strong>One folder per version</strong>: Each download is filed under its version, the same
+way builds and packages are.
+A vendor that serves every release under one filename (Chrome's
+<code>googlechromestandaloneenterprise64.msi</code>, for example) therefore cannot
+overwrite an installer that is still waiting for approval.</p>
 <p><strong>Saved filename</strong>: The file is saved under the name the server announces, or
 the URL's filename when it announces none.
 NAPT keeps only the final part of that name and replaces <code>$</code>, <code>;</code>, backticks,
@@ -2753,7 +2758,7 @@ Always put <code>{{installer_filename}}</code> inside quotes: unquoted, PowerShe
 parentheses in a filename as code, and those are too common in real names to
 replace.</p>
 <p><strong>Version</strong>: The discovered version becomes a folder name
-(<code>builds/{app_id}/{version}/</code>), so it may contain only letters, digits, <code>.</code>,
+(<code>downloads/{app_id}/{version}/</code>), so it may contain only letters, digits, <code>.</code>,
 <code>-</code>, <code>_</code>, and <code>+</code>.
 If discovery stops with "cannot be used as a folder name", tighten the recipe's
 <code>version_pattern</code> so it captures only the version.</p>
@@ -2761,8 +2766,8 @@ If discovery stops with "cannot be used as a folder name", tighten the recipe's
 <p>The build process creates a complete PSADT package from the recipe and downloaded installer:</p>
 <ol>
 <li><strong>Load Configuration</strong> - Merges configuration layers (org → vendor → recipe)</li>
-<li><strong>Find Installer</strong> - Locates installer in <code>downloads/{app_id}/</code> (tries the recipe URL filename, then the filename recorded in the discovery cache or pending release, then an app name/id match, then the most recent file). Supports <code>.msi</code>, <code>.exe</code>, and <code>.msix</code> files</li>
-<li><strong>Extract Version</strong> - Extracts version from installer file (MSI from ProductVersion, MSIX from AppxManifest.xml), otherwise uses discovery cache version</li>
+<li><strong>Find Installer</strong> - Reads the release to build from <code>state/deployment/{app_id}.json</code> (the pending release, or the published one when nothing is pending), looks in <code>downloads/{app_id}/{version}/</code>, and takes the file whose SHA-256 matches the recorded hash. A file that changed since discovery is refused. With no recorded release (a <code>--stateless</code> discover and no state), the single installer found in a version folder (<code>downloads/{app_id}/{version}/</code>) is used; more than one stops the build, and a file placed directly in <code>downloads/{app_id}/</code> is not found</li>
+<li><strong>Extract Version</strong> - Extracts version from installer file (MSI from ProductVersion, MSIX from AppxManifest.xml), otherwise uses the discovered version, which is the name of the download folder</li>
 <li><strong>Get PSADT Release</strong> - Downloads/caches PSADT Template_v4 from GitHub if not already cached</li>
 <li><strong>Create Build Directory</strong> - Creates versioned directory using discovered app version: <code>builds/{app_id}/{version}/</code></li>
 <li><strong>Copy PSADT Template</strong> - Copies entire PSADT template structure (unmodified) from cache:<ul>
@@ -2786,7 +2791,7 @@ If discovery stops with "cannot be used as a folder name", tighten the recipe's
 </ul>
 </li>
 <li><strong>Copy Installer</strong> - Copies downloaded installer file to <code>Files/</code> directory:<ul>
-<li>Source: <code>downloads/{app_id}/{installer_filename}</code></li>
+<li>Source: <code>downloads/{app_id}/{version}/{installer_filename}</code></li>
 <li>Destination: <code>builds/{app_id}/{version}/Files/{installer_filename}</code></li>
 <li>Installer is accessible in scripts via <code>$($adtSession.DirFiles)</code> (PSADT 4.x)</li>
 </ul>
@@ -3243,40 +3248,41 @@ instead of <code>AZURE_CLIENT_SECRET</code>.</p>
 <p>After a complete workflow, your directory structure looks like:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>downloads/
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>  └── napt-chrome/
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>      └── googlechromestandaloneenterprise64.msi
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>builds/
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>  └── napt-chrome/
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>      └── 142.0.7444.163/
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>          ├── packagefiles/                # PSADT package contents
-</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>          │   ├── PSAppDeployToolkit/      # PSADT module (from template)
-</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>          │   ├── PSAppDeployToolkit.Extensions/
-</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>          │   ├── Assets/                  # Custom branding (if configured)
-</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>          │   ├── Config/
-</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>          │   ├── Strings/
-</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>          │   ├── Files/                   # Installer copied here
-</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>          │   │   └── googlechromestandaloneenterprise64.msi
-</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>          │   ├── SupportFiles/            # Empty (for additional files)
-</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>          │   ├── Invoke-AppDeployToolkit.ps1  # Generated script
-</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>          │   └── Invoke-AppDeployToolkit.exe  # From template
-</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>          ├── Google-Chrome_142.0.7444.163-Detection.ps1
-</span><span id="__span-8-20"><a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>          ├── Google-Chrome_142.0.7444.163-Requirements.ps1
-</span><span id="__span-8-21"><a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>          └── build-manifest.json              # Installer hash and metadata
-</span><span id="__span-8-22"><a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>
-</span><span id="__span-8-23"><a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a>packages/
-</span><span id="__span-8-24"><a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a>  └── napt-chrome/
-</span><span id="__span-8-25"><a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>      └── 142.0.7444.163/                              # One version kept at a time
-</span><span id="__span-8-26"><a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a>          ├── Invoke-AppDeployToolkit.intunewin        # Encrypted package
-</span><span id="__span-8-27"><a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a>          ├── Google-Chrome_142.0.7444.163-Detection.ps1    # Copied by napt package
-</span><span id="__span-8-28"><a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a>          ├── Google-Chrome_142.0.7444.163-Requirements.ps1 # Copied by napt package
-</span><span id="__span-8-29"><a id="__codelineno-8-29" name="__codelineno-8-29" href="#__codelineno-8-29"></a>          └── build-manifest.json                      # Copied by napt package; read by napt upload
-</span><span id="__span-8-30"><a id="__codelineno-8-30" name="__codelineno-8-30" href="#__codelineno-8-30"></a>
-</span><span id="__span-8-31"><a id="__codelineno-8-31" name="__codelineno-8-31" href="#__codelineno-8-31"></a>cache/
-</span><span id="__span-8-32"><a id="__codelineno-8-32" name="__codelineno-8-32" href="#__codelineno-8-32"></a>  └── discovery.json                       # Discovery cache (disposable)
-</span><span id="__span-8-33"><a id="__codelineno-8-33" name="__codelineno-8-33" href="#__codelineno-8-33"></a>
-</span><span id="__span-8-34"><a id="__codelineno-8-34" name="__codelineno-8-34" href="#__codelineno-8-34"></a>state/
-</span><span id="__span-8-35"><a id="__codelineno-8-35" name="__codelineno-8-35" href="#__codelineno-8-35"></a>  └── deployment/
-</span><span id="__span-8-36"><a id="__codelineno-8-36" name="__codelineno-8-36" href="#__codelineno-8-36"></a>      └── napt-chrome.json                 # Deployment state (authoritative)
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>      └── 142.0.7444.163/
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>          └── googlechromestandaloneenterprise64.msi
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>builds/
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>  └── napt-chrome/
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>      └── 142.0.7444.163/
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>          ├── packagefiles/                # PSADT package contents
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>          │   ├── PSAppDeployToolkit/      # PSADT module (from template)
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>          │   ├── PSAppDeployToolkit.Extensions/
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>          │   ├── Assets/                  # Custom branding (if configured)
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>          │   ├── Config/
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>          │   ├── Strings/
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>          │   ├── Files/                   # Installer copied here
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>          │   │   └── googlechromestandaloneenterprise64.msi
+</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>          │   ├── SupportFiles/            # Empty (for additional files)
+</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>          │   ├── Invoke-AppDeployToolkit.ps1  # Generated script
+</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>          │   └── Invoke-AppDeployToolkit.exe  # From template
+</span><span id="__span-8-20"><a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>          ├── Google-Chrome_142.0.7444.163-Detection.ps1
+</span><span id="__span-8-21"><a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>          ├── Google-Chrome_142.0.7444.163-Requirements.ps1
+</span><span id="__span-8-22"><a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>          └── build-manifest.json              # Installer hash and metadata
+</span><span id="__span-8-23"><a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a>
+</span><span id="__span-8-24"><a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a>packages/
+</span><span id="__span-8-25"><a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>  └── napt-chrome/
+</span><span id="__span-8-26"><a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a>      └── 142.0.7444.163/                              # One version kept at a time
+</span><span id="__span-8-27"><a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a>          ├── Invoke-AppDeployToolkit.intunewin        # Encrypted package
+</span><span id="__span-8-28"><a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a>          ├── Google-Chrome_142.0.7444.163-Detection.ps1    # Copied by napt package
+</span><span id="__span-8-29"><a id="__codelineno-8-29" name="__codelineno-8-29" href="#__codelineno-8-29"></a>          ├── Google-Chrome_142.0.7444.163-Requirements.ps1 # Copied by napt package
+</span><span id="__span-8-30"><a id="__codelineno-8-30" name="__codelineno-8-30" href="#__codelineno-8-30"></a>          └── build-manifest.json                      # Copied by napt package; read by napt upload
+</span><span id="__span-8-31"><a id="__codelineno-8-31" name="__codelineno-8-31" href="#__codelineno-8-31"></a>
+</span><span id="__span-8-32"><a id="__codelineno-8-32" name="__codelineno-8-32" href="#__codelineno-8-32"></a>cache/
+</span><span id="__span-8-33"><a id="__codelineno-8-33" name="__codelineno-8-33" href="#__codelineno-8-33"></a>  └── discovery.json                       # Discovery cache (disposable)
+</span><span id="__span-8-34"><a id="__codelineno-8-34" name="__codelineno-8-34" href="#__codelineno-8-34"></a>
+</span><span id="__span-8-35"><a id="__codelineno-8-35" name="__codelineno-8-35" href="#__codelineno-8-35"></a>state/
+</span><span id="__span-8-36"><a id="__codelineno-8-36" name="__codelineno-8-36" href="#__codelineno-8-36"></a>  └── deployment/
+</span><span id="__span-8-37"><a id="__codelineno-8-37" name="__codelineno-8-37" href="#__codelineno-8-37"></a>      └── napt-chrome.json                 # Deployment state (authoritative)
 </span></code></pre></div>
 <h2 id="commands-reference">Commands reference</h2>
 <blockquote>
