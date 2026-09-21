@@ -872,6 +872,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#downgrades" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Downgrades
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#deployment-state" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2494,6 +2505,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#downgrades" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Downgrades
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#deployment-state" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3378,6 +3400,9 @@ release, and which version holds each ring. <code>--format json</code> for
 scripting.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>napt<span class="w"> </span>status<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </span></code></pre></div>
+<p>A pending release whose version is lower than the published one is marked
+<code>[DOWNGRADE]</code> in the table and <code>"pending_is_downgrade": true</code> in the JSON.
+See <a href="#downgrades">Downgrades</a>.</p>
 <h3 id="napt-upload">napt upload</h3>
 <p>Uploads the <code>.intunewin</code> package to Microsoft Intune via the Graph API.
 Uses the CI/CD environment credential when set, otherwise the session from
@@ -3519,6 +3544,24 @@ The values are only sent while that installer is still on disk.
 The file is a hint, not a record: if it is missing or unreadable, NAPT downloads the full file and writes a new one.</p>
 <p><strong>A version that goes down</strong> (a vendor pulling a release) is handled like any other change: the older version gets its own folder and its own download.
 NAPT never relabels an installer it already has.</p>
+<h3 id="downgrades">Downgrades</h3>
+<p>NAPT treats a release as new when its installer differs from the published one, whichever direction the version moved.
+When a vendor replaces <code>2.0.0</code> with <code>1.9.0</code>, <code>napt discover</code> records <code>1.9.0</code> as the pending release like any other, and nothing is published until you approve it.</p>
+<p>What NAPT adds is a label, so the decision is made knowingly:</p>
+<ul>
+<li><code>napt discover</code> logs a warning that the pending release is lower than the published one.</li>
+<li><code>napt status</code> marks the app <code>[DOWNGRADE]</code> (<code>"pending_is_downgrade": true</code> in JSON).</li>
+<li>The <a href="../common-tasks/#workflow-1-discover-opens-publish-prs">reference discover workflow</a> reads that field and opens the PR as <code>Publish &lt;Name&gt; 1.9.0 (downgrade from 2.0.0)</code> with a warning at the top of the body.</li>
+</ul>
+<p>The label is worked out each time from the two versions in deployment state; it is not stored.</p>
+<p><strong>Publishing a downgrade does not roll devices back.</strong>
+Detection and requirements scripts treat "this version or higher" as installed, so a device already on <code>2.0.0</code> reports the app as installed and is left alone.
+Only new installs receive <code>1.9.0</code>.
+To move existing devices down, uninstall the newer version first.</p>
+<p><strong>How versions are ordered:</strong> NAPT uses the same comparison as the detection script on the device, so the label means "devices on the published version will not take this".
+Each <code>.</code> or <code>-</code> separated part contributes its leading digits, and a part with no leading digits counts as 0.
+A prerelease tag is therefore not ranked (<code>1.0-rc1</code> equals <code>1.0</code>), and a <code>v</code> prefix turns the first number into 0 (<code>v2.0</code> reads as <code>0.0</code>).
+Capture only the numeric version in the recipe's <code>version_pattern</code> to avoid both.</p>
 <h3 id="deployment-state">Deployment state</h3>
 <p>Each app gets its own file, <code>state/deployment/&lt;app_id&gt;.json</code>, so concurrent changes to different apps never conflict and each file's diff is scoped to one app.
 Every file carries a <code>schemaVersion</code> (currently 1); NAPT refuses files
