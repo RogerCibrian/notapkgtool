@@ -945,12 +945,10 @@ jobs:
         with:
           python-version: "3.13"
       - run: pip install napt
-      - name: Restore installers and discovery cache from the last run
+      - name: Restore installers from the last run
         uses: actions/cache/restore@v4
         with:
-          path: |
-            downloads
-            cache
+          path: downloads
           key: installers-
           restore-keys: installers-
       - name: Discover all recipes
@@ -962,9 +960,7 @@ jobs:
       - name: Cache installers for publish and the next discover
         uses: actions/cache/save@v4
         with:
-          path: |
-            downloads
-            cache
+          path: downloads
           key: installers-${{ github.run_id }}
       - name: Open one PR per app with a new pending release
         shell: bash
@@ -1082,9 +1078,7 @@ jobs:
       - name: Restore cached installers
         uses: actions/cache/restore@v4
         with:
-          path: |
-            downloads
-            cache
+          path: downloads
           key: installers-
           restore-keys: installers-
       - name: Publish every app with an approved pending release
@@ -1147,19 +1141,15 @@ binary the runner provides, so a cache can never ship the wrong bytes.
 
 The restore step in the discover workflow serves a second purpose:
 bandwidth.
-`napt discover` skips the download when the installer has not changed:
-`url_download` recipes record the vendor's `ETag`/`Last-Modified` headers
-in `cache/discovery.json` and send them as conditional request headers
-on the next run, reusing the file when the vendor answers HTTP 304;
-`api_github`, `api_json`, and `web_scrape` recipes compare the discovered
-version against the cached one and skip the download on a match.
-Either way, a fresh runner starts with neither the cache nor the files,
-so restoring `cache/` and `downloads/` from the last run is what lets
-the scheduled discover skip re-downloading installers that have not
-changed, which adds up quickly for recipe sets full of large installers.
-Keep the `path` lists of the save and restore steps identical:
+`napt discover` skips the download when the installer has not changed;
+[Skipping downloads](user-guide.md#skipping-downloads) explains how.
+Everything it consults lives in `downloads/`, and a fresh runner starts
+without it, so restoring `downloads/` from the last run is what lets the
+scheduled discover skip re-downloading installers that have not changed,
+which adds up quickly for recipe sets full of large installers.
+Keep the `path` values of the save and restore steps identical:
 `actions/cache` makes the path list part of the cache version, so a
-mismatched list reads as a silent cache miss.
+mismatch reads as a silent cache miss.
 
 For long-lived archival (including installers for retained releases the
 vendor no longer serves) replace the cache steps with an object store
@@ -1439,13 +1429,7 @@ When a recipe needs changes (new version format, different download URL, etc.).
 
 1. Edit the recipe file.
 
-2. If the version format changed, clear the discovery cache so the next run
-   re-discovers from scratch:
-   ```bash
-   rm cache/discovery.json
-   ```
-
-3. Validate and test it the same way as a new recipe: see
+2. Validate and test it the same way as a new recipe: see
    [Test recipes before production](#test-recipes-before-production).
 
 ## Troubleshoot discovery failures
@@ -1513,30 +1497,35 @@ Common issues and solutions when `napt discover` fails.
 
 4. Use `--verbose` to see HTTP request/response details
 
-### Issue: "Discovery cache corrupted"
+### Issue: discover reuses an installer you want downloaded again
 
-**Problem:** `cache/discovery.json` has invalid JSON or is corrupted.
+**Problem:** `napt discover` reports that the version is already downloaded
+(or `File not modified`) and you want a fresh copy.
 
 **Solution:**
 
-NAPT logs `Failed to load discovery cache` as a warning and continues without
-cache tracking for that run. The corrupted file is left in place, so the warning
-repeats until you fix it. The cache is disposable: delete it and rediscover.
+The downloads folder is disposable: delete the app's folder and rediscover.
 
 ```bash
-rm cache/discovery.json
+rm -r downloads/<app_id>
 napt discover recipes/app.yaml
 ```
 
-To bypass cache and state tracking for a single run without touching the file,
-use `--stateless`:
+### Issue: "Deployment state corrupted"
+
+**Problem:** A file under `state/deployment/` has invalid JSON.
+
+**Solution:**
+
+Deployment state files are authoritative and are never auto-replaced.
+Fix the JSON or restore the file from version control.
+
+To run discovery once without reading or writing deployment state, use
+`--stateless`:
 
 ```bash
 napt discover recipes/app.yaml --stateless
 ```
-
-**Note:** Deployment state files (`state/deployment/`) are authoritative and are never auto-replaced.
-If one is corrupted, fix the JSON or restore the file from a backup.
 
 ### Issue: MSI version extraction fails on Linux/macOS
 

@@ -18,11 +18,11 @@ Two flows feed into
 [discover_recipe][napt.discovery.manager.discover_recipe]:
 
 - **Version-first strategies** (api_github, api_json, web_scrape)
-    implement [DiscoveryStrategy][napt.discovery.base.DiscoveryStrategy]
-    — they discover a version and its download URL without touching the
+    implement [DiscoveryStrategy][napt.discovery.base.DiscoveryStrategy]:
+    they discover a version and its download URL without touching the
     file. The orchestrator looks them up in the explicit table in
     [napt.discovery.registry][] and runs the result through
-    [resolve_with_cache][napt.discovery.base.resolve_with_cache] to
+    [resolve_installer][napt.discovery.base.resolve_installer] to
     decide whether to skip the download.
 - **url_download** is a separate flow at
     [run_url_download][napt.discovery.url_download.run_url_download]. It

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from unittest.mock import patch
 
 import pytest
@@ -177,79 +178,211 @@ class TestUrlDownloadFlow:
                     run_url_download(app_config, tmp_test_dir)
 
 
-class TestUrlDownloadCacheBehavior:
-    """Tests for url_download's HTTP-conditional cache handling."""
+_SIDECAR_URL = "https://example.com/installer.msi"
 
-    def test_cache_not_modified_uses_cached_file(self, tmp_test_dir):
-        """Tests that HTTP 304 reuses the cached file and version."""
-        app_config = {
-            "id": "test-app",
-            "discovery": {"url": "https://example.com/installer.msi"},
-        }
-        app_dir = tmp_test_dir / "test-app"
-        app_dir.mkdir()
-        cached_file = app_dir / "installer.msi"
-        cached_file.write_bytes(b"fake cached msi")
-        cache = {
-            "etag": 'W/"abc123"',
-            "file_path": str(cached_file),
-            "sha256": "cached_sha256",
-        }
+
+def _seed_previous_download(
+    app_dir,
+    *,
+    version="1.0.0",
+    filename="installer.msi",
+    url=_SIDECAR_URL,
+    etag='W/"abc123"',
+    with_installer=True,
+):
+    """Writes a sidecar file and, by default, the installer it points at."""
+    app_dir.mkdir(parents=True)
+    if with_installer:
+        installer = app_dir / version / filename
+        installer.parent.mkdir(parents=True, exist_ok=True)
+        installer.write_bytes(b"fake cached msi")
+    (app_dir / ".download.json").write_text(
+        json.dumps(
+            {
+                "url": url,
+                "etag": etag,
+                "last_modified": None,
+                "version": version,
+                "filename": filename,
+                "sha256": "cached_sha256",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def _run_with_msi_version(app_config, output_dir, version):
+    """Runs url_download with MSI version extraction stubbed out."""
+    with patch("napt.discovery.url_download.extract_msi_metadata") as mock_extract:
+        mock_extract.return_value = MSIMetadata(
+            product_name="", product_version=version, architecture="x64"
+        )
+        return run_url_download(app_config, output_dir)
+
+
+class TestUrlDownloadSidecar:
+    """Tests for url_download's conditional requests and sidecar file."""
+
+    APP_CONFIG = {"id": "test-app", "discovery": {"url": _SIDECAR_URL}}
+
+    def test_download_then_304_reuses_installer(self, tmp_test_dir):
+        """Tests that a run's sidecar lets the next run reuse the installer."""
+        fake_msi = b"fake MSI content"
+        with requests_mock.Mocker() as m:
+            m.get(
+                _SIDECAR_URL,
+                [
+                    {
+                        "content": fake_msi,
+                        "headers": {
+                            "Content-Length": str(len(fake_msi)),
+                            "ETag": 'W/"abc123"',
+                        },
+                    },
+                    {"status_code": 304},
+                ],
+            )
+            first = _run_with_msi_version(self.APP_CONFIG, tmp_test_dir, "1.0.0")
+            second = _run_with_msi_version(self.APP_CONFIG, tmp_test_dir, "1.0.0")
+            conditional = m.request_history[1].headers.get("If-None-Match")
+
+        assert first.cached is False
+        assert conditional == 'W/"abc123"'
+        assert second.cached is True
+        assert second.file_path == first.file_path
+        assert second.version == "1.0.0"
+        assert second.sha256 == first.sha256
+
+    def test_lowercase_etag_header_is_recorded(self, tmp_test_dir):
+        """Tests that an ETag sent under a lowercase header name is kept."""
+        with requests_mock.Mocker() as m:
+            m.get(
+                _SIDECAR_URL,
+                content=b"msi",
+                headers={"Content-Length": "3", "etag": '"lower"'},
+            )
+            _run_with_msi_version(self.APP_CONFIG, tmp_test_dir, "1.0.0")
+
+        sidecar = json.loads(
+            (tmp_test_dir / "test-app" / ".download.json").read_text(encoding="utf-8")
+        )
+        assert sidecar["etag"] == '"lower"'
+        assert sidecar["version"] == "1.0.0"
+        assert sidecar["filename"] == "installer.msi"
+
+    def test_304_uses_recorded_filename_not_url(self, tmp_test_dir):
+        """Tests that HTTP 304 reuses the recorded file, not a URL-derived name."""
+        url = "https://example.com/download?token=abc"
+        app_config = {"id": "test-app", "discovery": {"url": url}}
+        _seed_previous_download(
+            tmp_test_dir / "test-app",
+            version="2.1.0",
+            filename="MyApp Setup.msi",
+            url=url,
+        )
 
         with requests_mock.Mocker() as m:
-            m.get("https://example.com/installer.msi", status_code=304)
-            with patch(
-                "napt.discovery.url_download.extract_msi_metadata"
-            ) as mock_extract:
-                mock_extract.return_value = MSIMetadata(
-                    product_name="", product_version="1.0.0", architecture="x64"
-                )
-                result = run_url_download(app_config, tmp_test_dir, cache=cache)
+            m.get("https://example.com/download", status_code=304)
+            result = _run_with_msi_version(app_config, tmp_test_dir, "unused")
 
-        assert result.file_path == cached_file
+        expected = tmp_test_dir / "test-app" / "2.1.0" / "MyApp Setup.msi"
+        assert result.file_path == expected
+        assert result.version == "2.1.0"
         assert result.sha256 == "cached_sha256"
-        assert result.version == "1.0.0"
         assert result.cached is True
-        assert result.headers.get("ETag") == 'W/"abc123"'
 
-    def test_cache_modified_redownloads(self, tmp_test_dir):
-        """Tests that HTTP 200 downloads the new file."""
-        app_config = {
-            "id": "test-app",
-            "discovery": {"url": "https://example.com/installer.msi"},
-        }
-        cache = {
-            "etag": 'W/"old_etag"',
-            "file_path": str(tmp_test_dir / "test-app" / "old_installer.msi"),
-            "sha256": "old_sha256",
-        }
-        fake_msi = b"new fake MSI content"
+    def test_changed_file_gets_its_own_version_folder(self, tmp_test_dir):
+        """Tests that a vendor rollback is filed under the version it carries."""
+        app_dir = tmp_test_dir / "test-app"
+        _seed_previous_download(app_dir, version="2.0.0")
+        older_msi = b"the older release"
 
         with requests_mock.Mocker() as m:
             m.get(
-                "https://example.com/installer.msi",
-                content=fake_msi,
-                headers={
-                    "Content-Length": str(len(fake_msi)),
-                    "ETag": 'W/"new_etag"',
-                },
+                _SIDECAR_URL,
+                content=older_msi,
+                headers={"Content-Length": str(len(older_msi)), "ETag": '"rolled"'},
             )
-            with patch(
-                "napt.discovery.url_download.extract_msi_metadata"
-            ) as mock_extract:
-                mock_extract.return_value = MSIMetadata(
-                    product_name="", product_version="2.0.0", architecture="x64"
-                )
-                result = run_url_download(app_config, tmp_test_dir, cache=cache)
+            result = _run_with_msi_version(self.APP_CONFIG, tmp_test_dir, "1.9.0")
 
-        assert result.file_path == tmp_test_dir / "test-app" / "2.0.0" / "installer.msi"
-        assert result.file_path.exists()
-        assert result.version == "2.0.0"
+        assert result.version == "1.9.0"
         assert result.cached is False
-        assert len(result.sha256) == 64
+        assert result.file_path == app_dir / "1.9.0" / "installer.msi"
+        assert result.file_path.read_bytes() == older_msi
+        assert (app_dir / "2.0.0" / "installer.msi").read_bytes() == b"fake cached msi"
+        sidecar = json.loads((app_dir / ".download.json").read_text(encoding="utf-8"))
+        assert sidecar["version"] == "1.9.0"
+        assert sidecar["etag"] == '"rolled"'
+
+    @pytest.mark.parametrize(
+        "seed",
+        [
+            pytest.param({"with_installer": False}, id="installer-missing"),
+            pytest.param({"url": "https://example.com/old.msi"}, id="url-changed"),
+            pytest.param({"etag": None}, id="no-validators"),
+            pytest.param({"version": "../escape"}, id="unsafe-version"),
+            pytest.param({"filename": "a/b.msi"}, id="unsafe-filename"),
+        ],
+    )
+    def test_unusable_sidecar_downloads_unconditionally(self, tmp_test_dir, seed):
+        """Tests that a sidecar that cannot be honored sends no conditions."""
+        app_dir = tmp_test_dir / "test-app"
+        _seed_previous_download(app_dir, **seed)
+
+        with requests_mock.Mocker() as m:
+            m.get(_SIDECAR_URL, content=b"msi", headers={"Content-Length": "3"})
+            result = _run_with_msi_version(self.APP_CONFIG, tmp_test_dir, "1.0.0")
+            sent = m.last_request.headers
+
+        assert "If-None-Match" not in sent
+        assert "If-Modified-Since" not in sent
+        assert result.cached is False
+        assert result.file_path.read_bytes() == b"msi"
+
+    @pytest.mark.parametrize("content", ["not json", "[]", '{"url": 1}'])
+    def test_corrupt_sidecar_is_treated_as_missing(self, tmp_test_dir, content):
+        """Tests that an unreadable sidecar costs a download, not an error."""
+        app_dir = tmp_test_dir / "test-app"
+        app_dir.mkdir()
+        (app_dir / ".download.json").write_text(content, encoding="utf-8")
+
+        with requests_mock.Mocker() as m:
+            m.get(_SIDECAR_URL, content=b"msi", headers={"Content-Length": "3"})
+            result = _run_with_msi_version(self.APP_CONFIG, tmp_test_dir, "1.0.0")
+
+        assert result.cached is False
+        assert result.version == "1.0.0"
+
+    def test_unwritable_sidecar_warns_and_keeps_the_download(
+        self, tmp_test_dir, capsys
+    ):
+        """Tests that a sidecar write failure does not fail the discovery."""
+        # A directory where the sidecar file belongs makes the write fail.
+        (tmp_test_dir / "test-app" / ".download.json").mkdir(parents=True)
+
+        with requests_mock.Mocker() as m:
+            m.get(_SIDECAR_URL, content=b"msi", headers={"Content-Length": "3"})
+            result = _run_with_msi_version(self.APP_CONFIG, tmp_test_dir, "1.0.0")
+
+        assert result.cached is False
+        assert result.file_path.read_bytes() == b"msi"
+        assert "Could not write" in capsys.readouterr().out
+
+    def test_failed_download_leaves_sidecar_untouched(self, tmp_test_dir):
+        """Tests that the sidecar is only rewritten after a finished download."""
+        app_dir = tmp_test_dir / "test-app"
+        _seed_previous_download(app_dir)
+        before = (app_dir / ".download.json").read_text(encoding="utf-8")
+
+        with requests_mock.Mocker() as m:
+            m.get(_SIDECAR_URL, content=b"msi", headers={"Content-Length": "3"})
+            with pytest.raises(ConfigError, match="cannot be used as a folder name"):
+                _run_with_msi_version(self.APP_CONFIG, tmp_test_dir, "../bad")
+
+        assert (app_dir / ".download.json").read_text(encoding="utf-8") == before
 
     def test_no_cache_works(self, tmp_test_dir):
-        """Tests that url_download works without a cache argument."""
+        """Tests that url_download works with no earlier download on disk."""
         app_config = {
             "id": "test-app",
             "discovery": {"url": "https://example.com/installer.msi"},
@@ -273,78 +406,6 @@ class TestUrlDownloadCacheBehavior:
         assert result.version == "1.0.0"
         assert result.file_path == tmp_test_dir / "test-app" / "1.0.0" / "installer.msi"
         assert result.file_path.exists()
-
-    def test_cache_with_missing_file_redownloads(self, tmp_test_dir):
-        """Tests that HTTP 304 with a missing cached file forces a re-download."""
-        app_config = {
-            "id": "test-app",
-            "discovery": {"url": "https://example.com/installer.msi"},
-        }
-        cache = {
-            "etag": 'W/"abc123"',
-            "file_path": str(tmp_test_dir / "test-app" / "nonexistent.msi"),
-            "sha256": "cached_sha",
-        }
-        fake_msi = b"re-downloaded MSI content"
-
-        with requests_mock.Mocker() as m:
-            m.get(
-                "https://example.com/installer.msi",
-                [
-                    {"status_code": 304},
-                    {
-                        "content": fake_msi,
-                        "headers": {"Content-Length": str(len(fake_msi))},
-                    },
-                ],
-            )
-            with patch(
-                "napt.discovery.url_download.extract_msi_metadata"
-            ) as mock_extract:
-                mock_extract.return_value = MSIMetadata(
-                    product_name="", product_version="1.0.0", architecture="x64"
-                )
-                result = run_url_download(app_config, tmp_test_dir, cache=cache)
-
-        assert result.version == "1.0.0"
-        assert result.file_path.exists()
-        assert result.cached is False
-
-    def test_304_uses_cached_file_path_not_url(self, tmp_test_dir):
-        """Tests that HTTP 304 reuses the stored file_path, not a URL-derived name.
-
-        Guards against the bug where Content-Disposition gave the original
-        download a different filename than the URL path. On 304, the stored
-        path must be used so the file is found again.
-        """
-        app_config = {
-            "id": "test-app",
-            "discovery": {"url": "https://example.com/download?token=abc"},
-        }
-        app_dir = tmp_test_dir / "test-app"
-        app_dir.mkdir()
-        cd_named_file = app_dir / "MyApp-Setup-2.1.0.msi"
-        cd_named_file.write_bytes(b"fake msi from cd header")
-        cache = {
-            "etag": 'W/"xyz"',
-            "file_path": str(cd_named_file),
-            "sha256": "deadbeef" * 8,
-        }
-
-        with requests_mock.Mocker() as m:
-            m.get("https://example.com/download", status_code=304)
-            with patch(
-                "napt.discovery.url_download.extract_msi_metadata"
-            ) as mock_extract:
-                mock_extract.return_value = MSIMetadata(
-                    product_name="", product_version="2.1.0", architecture="x64"
-                )
-                result = run_url_download(app_config, tmp_test_dir, cache=cache)
-
-        assert result.file_path == cd_named_file
-        assert result.version == "2.1.0"
-        assert result.sha256 == "deadbeef" * 8
-        assert result.cached is True
 
 
 class TestVersionFirstStrategies:

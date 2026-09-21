@@ -9,9 +9,11 @@ Tests core orchestration including:
 
 from __future__ import annotations
 
+import hashlib
 from unittest.mock import patch
 
 import pytest
+import requests_mock
 
 from napt.discovery.manager import discover_recipe
 from napt.exceptions import ConfigError
@@ -41,14 +43,12 @@ class TestDiscoverRecipe:
                 version_source="url_download",
                 file_path=tmp_test_dir / "test.msi",
                 sha256="abc123" * 8,
-                headers={"ETag": 'W/"test123"'},
                 download_url="https://example.com/test.msi",
                 cached=False,
             )
             result = discover_recipe(
                 recipe_path,
                 tmp_test_dir,
-                cache_file=tmp_test_dir / "cache.json",
                 state_dir=tmp_test_dir / "state",
             )
 
@@ -70,7 +70,6 @@ class TestDiscoverRecipe:
             discover_recipe(
                 recipe_path,
                 tmp_test_dir,
-                cache_file=tmp_test_dir / "cache.json",
                 state_dir=tmp_test_dir / "state",
             )
 
@@ -90,7 +89,6 @@ class TestDiscoverRecipe:
             discover_recipe(
                 recipe_path,
                 tmp_test_dir,
-                cache_file=tmp_test_dir / "cache.json",
                 state_dir=tmp_test_dir / "state",
             )
 
@@ -110,7 +108,6 @@ class TestDiscoverRecipe:
             discover_recipe(
                 recipe_path,
                 tmp_test_dir,
-                cache_file=tmp_test_dir / "cache.json",
                 state_dir=tmp_test_dir / "state",
             )
 
@@ -122,18 +119,11 @@ class TestDiscoverRecipe:
             discover_recipe(nonexistent, tmp_test_dir)
 
 
-class TestVersionFirstFastPath:
-    """Tests for version-first fast path in discover_recipe."""
-
-    def test_version_first_cache_hit_skips_download(
-        self, tmp_test_dir, create_yaml_file
-    ):
-        """Test that version-first strategies skip download when version
-        matches cache."""
-        from pathlib import Path
-
-        # Create a minimal recipe with web_scrape strategy
-        recipe_data = {
+def _web_scrape_recipe(create_yaml_file, version_pattern=r"app-v([0-9.]+)-installer"):
+    """Creates a web_scrape recipe whose version comes from the link's filename."""
+    return create_yaml_file(
+        "recipe.yaml",
+        {
             "apiVersion": "napt/v1",
             "name": "Test App",
             "id": "test-app",
@@ -141,77 +131,131 @@ class TestVersionFirstFastPath:
                 "strategy": "web_scrape",
                 "page_url": "https://example.com/download.html",
                 "link_selector": 'a[href$=".msi"]',
-                "version_pattern": r"app-v([0-9.]+)-installer",
+                "version_pattern": version_pattern,
             },
-        }
-        recipe_path = create_yaml_file("recipe.yaml", recipe_data)
+        },
+    )
 
-        # Create cached file in app-scoped subdirectory
-        app_dir = tmp_test_dir / "test-app"
-        app_dir.mkdir(parents=True)
-        cached_file = app_dir / "app-v1.2.3-installer.msi"
-        cached_file.write_bytes(b"fake installer content")
 
-        # Mock HTML page for web_scrape
-        html_content = '<a href="/app-v1.2.3-installer.msi">Download</a>'
+class TestVersionFirstInstallerReuse:
+    """Tests that version-first discovery reuses a version's download folder."""
 
-        # Mock state with matching version and stored file path
-        state = {
-            "metadata": {"napt_version": "0.1.0", "schema_version": "2"},
-            "apps": {
-                "test-app": {
-                    "url": "https://example.com/app-v1.2.3-installer.msi",
-                    "known_version": "1.2.3",
-                    "sha256": "abc123" * 8,
-                    "file_path": str(cached_file),
-                }
-            },
-        }
-
-        import requests_mock
+    def test_existing_version_folder_skips_download(
+        self, tmp_test_dir, create_yaml_file
+    ):
+        """Tests that an installer already in the version folder is reused."""
+        recipe_path = _web_scrape_recipe(create_yaml_file)
+        installer = tmp_test_dir / "test-app" / "1.2.3" / "any-name.msi"
+        installer.parent.mkdir(parents=True)
+        installer.write_bytes(b"fake installer content")
 
         with requests_mock.Mocker() as m:
-            m.get("https://example.com/download.html", text=html_content)
+            m.get(
+                "https://example.com/download.html",
+                text='<a href="/app-v1.2.3-installer.msi">Download</a>',
+            )
+            with patch("napt.discovery.base.download_file") as mock_download:
+                result = discover_recipe(
+                    recipe_path, tmp_test_dir, state_dir=tmp_test_dir / "state"
+                )
 
-            with patch("napt.discovery.manager.load_cache") as mock_load_cache:
-                mock_load_cache.return_value = state
-
-                with patch("napt.discovery.manager.save_cache"):
-                    with patch("napt.discovery.base.download_file") as mock_download:
-                        result = discover_recipe(
-                            recipe_path,
-                            tmp_test_dir,
-                            cache_file=Path("state.json"),
-                            state_dir=tmp_test_dir / "state",
-                        )
-
-                        # Verify download was NOT called (fast path)
-                        mock_download.assert_not_called()
-
-        # Verify result uses cached version
+        mock_download.assert_not_called()
         assert result.version == "1.2.3"
-        assert result.app_id == "test-app"
-        assert result.status == "success"
+        assert result.file_path == installer
+        assert result.sha256 == hashlib.sha256(b"fake installer content").hexdigest()
+
+    def test_older_version_is_downloaded_not_relabelled(
+        self, tmp_test_dir, create_yaml_file
+    ):
+        """Tests that a vendor rollback never reuses the newer version's file."""
+        recipe_path = _web_scrape_recipe(create_yaml_file)
+        newer = tmp_test_dir / "test-app" / "2.0.0" / "app-v2.0.0-installer.msi"
+        newer.parent.mkdir(parents=True)
+        newer.write_bytes(b"the 2.0.0 installer")
+        older_content = b"the 1.9.0 installer"
+
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://example.com/download.html",
+                text='<a href="/app-v1.9.0-installer.msi">Download</a>',
+            )
+            m.get(
+                "https://example.com/app-v1.9.0-installer.msi",
+                content=older_content,
+                headers={"Content-Length": str(len(older_content))},
+            )
+            result = discover_recipe(
+                recipe_path, tmp_test_dir, state_dir=tmp_test_dir / "state"
+            )
+
+        assert result.version == "1.9.0"
+        assert result.file_path == (
+            tmp_test_dir / "test-app" / "1.9.0" / "app-v1.9.0-installer.msi"
+        )
+        assert result.sha256 == hashlib.sha256(older_content).hexdigest()
+        assert newer.read_bytes() == b"the 2.0.0 installer"
+
+    def test_unfinished_download_is_not_reused(self, tmp_test_dir, create_yaml_file):
+        """Tests that a leftover .part file does not count as the installer."""
+        recipe_path = _web_scrape_recipe(create_yaml_file)
+        leftover = tmp_test_dir / "test-app" / "1.2.3" / "app-v1.2.3-installer.msi.part"
+        leftover.parent.mkdir(parents=True)
+        leftover.write_bytes(b"half a file")
+        content = b"the whole installer"
+
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://example.com/download.html",
+                text='<a href="/app-v1.2.3-installer.msi">Download</a>',
+            )
+            m.get(
+                "https://example.com/app-v1.2.3-installer.msi",
+                content=content,
+                headers={"Content-Length": str(len(content))},
+            )
+            result = discover_recipe(
+                recipe_path, tmp_test_dir, state_dir=tmp_test_dir / "state"
+            )
+
+        assert result.file_path.name == "app-v1.2.3-installer.msi"
+        assert result.file_path.read_bytes() == content
+
+    def test_ambiguous_version_folder_downloads_again(
+        self, tmp_test_dir, create_yaml_file
+    ):
+        """Tests that a folder with several files is not guessed from."""
+        recipe_path = _web_scrape_recipe(create_yaml_file)
+        version_dir = tmp_test_dir / "test-app" / "1.2.3"
+        version_dir.mkdir(parents=True)
+        (version_dir / "one.msi").write_bytes(b"one")
+        (version_dir / "two.msi").write_bytes(b"two")
+        content = b"the real installer"
+
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://example.com/download.html",
+                text='<a href="/app-v1.2.3-installer.msi">Download</a>',
+            )
+            m.get(
+                "https://example.com/app-v1.2.3-installer.msi",
+                content=content,
+                headers={"Content-Length": str(len(content))},
+            )
+            result = discover_recipe(
+                recipe_path, tmp_test_dir, state_dir=tmp_test_dir / "state"
+            )
+
+        assert result.file_path == version_dir / "app-v1.2.3-installer.msi"
+        assert result.sha256 == hashlib.sha256(content).hexdigest()
 
     def test_unusable_discovered_version_stops_before_download(
         self, tmp_test_dir, create_yaml_file
     ):
         """Tests that a version with path segments is refused before any write."""
-        import requests_mock
-
-        recipe_data = {
-            "apiVersion": "napt/v1",
-            "name": "Test App",
-            "id": "test-app",
-            "discovery": {
-                "strategy": "web_scrape",
-                "page_url": "https://example.com/download.html",
-                "link_selector": 'a[href$=".msi"]',
-                # Captures everything between the markers, separators included.
-                "version_pattern": r"app-v(.+)-installer",
-            },
-        }
-        recipe_path = create_yaml_file("recipe.yaml", recipe_data)
+        # Captures everything between the markers, separators included.
+        recipe_path = _web_scrape_recipe(
+            create_yaml_file, version_pattern=r"app-v(.+)-installer"
+        )
         html_content = '<a href="/app-v2.0/stable-installer.msi">Download</a>'
         state_dir = tmp_test_dir / "state"
 
@@ -228,137 +272,3 @@ class TestVersionFirstFastPath:
 
         mock_download.assert_not_called()
         assert not state_dir.exists()
-
-    def test_version_first_cache_miss_downloads(self, tmp_test_dir, create_yaml_file):
-        """Test that version-first strategies download when version changes."""
-        from pathlib import Path
-
-        # Create a minimal recipe with web_scrape strategy
-        recipe_data = {
-            "apiVersion": "napt/v1",
-            "name": "Test App",
-            "id": "test-app",
-            "discovery": {
-                "strategy": "web_scrape",
-                "page_url": "https://example.com/download.html",
-                "link_selector": 'a[href$=".msi"]',
-                "version_pattern": r"app-v([0-9.]+)-installer",
-            },
-        }
-        recipe_path = create_yaml_file("recipe.yaml", recipe_data)
-
-        # Mock HTML page for web_scrape (new version)
-        html_content = '<a href="/app-v2.0.0-installer.msi">Download</a>'
-
-        # Mock state with OLD version
-        state = {
-            "metadata": {"napt_version": "0.1.0", "schema_version": "2"},
-            "apps": {
-                "test-app": {
-                    "url": "https://example.com/app-v1.2.3-installer.msi",
-                    "known_version": "1.2.3",
-                    "sha256": "old_hash" * 8,
-                }
-            },
-        }
-
-        fake_file = tmp_test_dir / "app-v2.0.0-installer.msi"
-        fake_file.write_bytes(b"new installer content")
-
-        import requests_mock
-
-        with requests_mock.Mocker() as m:
-            m.get("https://example.com/download.html", text=html_content)
-
-            with patch("napt.discovery.manager.load_cache") as mock_load_cache:
-                mock_load_cache.return_value = state
-
-                with patch("napt.discovery.manager.save_cache"):
-                    with patch("napt.discovery.base.download_file") as mock_download:
-                        from napt.results import DownloadResult
-
-                        mock_download.return_value = DownloadResult(
-                            file_path=fake_file,
-                            sha256="new_hash" * 8,
-                            headers={"ETag": 'W/"new123"'},
-                        )
-
-                        result = discover_recipe(
-                            recipe_path,
-                            tmp_test_dir,
-                            cache_file=Path("state.json"),
-                            state_dir=tmp_test_dir / "state",
-                        )
-
-                        # Verify download WAS called (version changed)
-                        mock_download.assert_called_once()
-
-            # Verify result has new version
-            assert result.version == "2.0.0"
-            assert result.app_id == "test-app"
-            assert result.status == "success"
-
-    def test_version_first_missing_cached_file_redownloads(
-        self, tmp_test_dir, create_yaml_file
-    ):
-        """Test that missing cached file triggers re-download even if
-        version matches."""
-        from pathlib import Path
-
-        import requests_mock
-
-        # Create a minimal recipe with web_scrape strategy
-        recipe_data = {
-            "apiVersion": "napt/v1",
-            "name": "Test App",
-            "id": "test-app",
-            "discovery": {
-                "strategy": "web_scrape",
-                "page_url": "https://example.com/download.html",
-                "link_selector": 'a[href$=".msi"]',
-                "version_pattern": r"app-v([0-9.]+)-installer",
-            },
-        }
-        recipe_path = create_yaml_file("recipe.yaml", recipe_data)
-
-        # Mock HTML page for web_scrape
-        html_content = '<a href="/app-v1.2.3-installer.msi">Download</a>'
-
-        # Mock state with matching version BUT no cached file exists
-        state = {
-            "metadata": {"napt_version": "0.1.0", "schema_version": "2"},
-            "apps": {
-                "test-app": {
-                    "url": "https://example.com/app-v1.2.3-installer.msi",
-                    "known_version": "1.2.3",
-                    "sha256": "abc123" * 8,
-                }
-            },
-        }
-
-        fake_content = b"redownloaded installer content"
-
-        with requests_mock.Mocker() as m:
-            m.get("https://example.com/download.html", text=html_content)
-            m.get(
-                "https://example.com/app-v1.2.3-installer.msi",
-                content=fake_content,
-                headers={"Content-Length": str(len(fake_content))},
-            )
-
-            with patch("napt.discovery.manager.load_cache") as mock_load_cache:
-                mock_load_cache.return_value = state
-
-                with patch("napt.discovery.manager.save_cache"):
-                    result = discover_recipe(
-                        recipe_path,
-                        tmp_test_dir,
-                        cache_file=Path("state.json"),
-                        state_dir=tmp_test_dir / "state",
-                    )
-
-        # Verify result and that the file landed in the app's version folder
-        assert result.version == "1.2.3"
-        assert result.status == "success"
-        fake_file = tmp_test_dir / "test-app" / "1.2.3" / "app-v1.2.3-installer.msi"
-        assert fake_file.exists()

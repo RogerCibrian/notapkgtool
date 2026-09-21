@@ -57,6 +57,9 @@ from napt.version import get_version
 # Stream size per chunk (1 MiB). Tune up/down if needed.
 DEFAULT_CHUNK = 1024 * 1024
 
+# Suffix of an unfinished download; it is dropped when the download completes.
+DOWNLOAD_PART_SUFFIX = ".part"
+
 
 def _filename_from_cd(content_disposition: str) -> str | None:
     """Extract a filename from a Content-Disposition header.
@@ -141,6 +144,20 @@ def _choose_filename(cd_name: str | None, url: str) -> str:
             )
         return cleaned
     return "download.bin"
+
+
+def sha256_file(path: Path) -> str:
+    """Computes the SHA-256 hex digest of a file on disk.
+
+    Args:
+        path: File to hash.
+
+    Returns:
+        SHA-256 hex digest string.
+
+    """
+    with open(path, "rb") as f:
+        return hashlib.file_digest(f, "sha256").hexdigest()
 
 
 def make_session() -> requests.Session:
@@ -301,7 +318,7 @@ def download_file(
 
         total_size = int(resp.headers.get("Content-Length", "0") or 0)
 
-        tmp = target.with_suffix(target.suffix + ".part")
+        tmp = target.with_suffix(target.suffix + DOWNLOAD_PART_SUFFIX)
         logger.verbose("FILE", f"Downloading to: {tmp}")
 
         sha = hashlib.sha256()

@@ -16,7 +16,7 @@
 
 This module implements per-app deployment state: authoritative records of
 what NAPT has published to Intune and what is awaiting publication. Unlike
-the discovery cache, deployment state is not regenerable.
+the downloads folder, deployment state is not regenerable.
 
 Each app gets its own file, ``state/deployment/<recipe-id>.json``, so that
 concurrent changes to different apps never conflict and each file's diff

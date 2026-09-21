@@ -34,25 +34,24 @@ def cmd_discover(args: argparse.Namespace) -> int:
     Discovers the latest version of an application by querying the source
     and downloading the installer. This command validates the recipe YAML,
     uses the configured discovery strategy to find the latest version,
-    downloads the installer (or uses cached version via ETag), extracts
-    version information, updates the discovery cache, and records the
-    release as a pending publication candidate in deployment state when it
-    differs from the published version.
+    downloads the installer (or reuses the one an earlier run downloaded),
+    extracts version information, and records the release as a pending
+    publication candidate in deployment state when it differs from the
+    published version.
 
     Args:
         args: Parsed command-line arguments containing
-            recipe path, output directory, cache file path, deployment
-            state directory, and flags.
+            recipe path, output directory, deployment state directory,
+            and flags.
 
     Returns:
         Exit code (0 for success, 1 for failure).
 
     Note:
-        Downloads installer file to output_dir (or uses cached version).
-        Updates the discovery cache with version and ETag information and
-        the app's deployment state file with the pending release. Prints
-        progress and results to stdout. Prints errors with optional
-        traceback if verbose/debug.
+        Downloads installer file to output_dir (or reuses an earlier
+        download). Updates the app's deployment state file with the
+        pending release. Prints progress and results to stdout. Prints
+        errors with optional traceback if verbose/debug.
 
     """
     # Configure global logger
@@ -75,7 +74,6 @@ def cmd_discover(args: argparse.Namespace) -> int:
         result = discover_recipe(
             recipe_path,
             output_dir,
-            cache_file=args.cache_file,
             state_dir=args.state_dir,
             stateless=args.stateless,
         )
@@ -144,15 +142,6 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         help="Directory to save downloaded files (default: from config or ./downloads)",
     )
     parser_discover.add_argument(
-        "--cache-file",
-        type=Path,
-        default=None,
-        help=(
-            "Discovery cache file for version tracking and ETag caching "
-            "(default: cache/discovery.json from directories.cache)"
-        ),
-    )
-    parser_discover.add_argument(
         "--state-dir",
         type=Path,
         default=None,
@@ -164,10 +153,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     parser_discover.add_argument(
         "--stateless",
         action="store_true",
-        help=(
-            "Disable the discovery cache and deployment state writes "
-            "(always download full files, record nothing)"
-        ),
+        help="Do not read or write deployment state (no pending release is recorded)",
     )
     parser_discover.add_argument(
         "-v",

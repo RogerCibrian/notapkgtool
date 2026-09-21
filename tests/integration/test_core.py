@@ -76,7 +76,6 @@ class TestEndToEndWorkflow:
                 result = discover_recipe(
                     recipe_path,
                     output_dir,
-                    cache_file=tmp_test_dir / "cache.json",
                     state_dir=tmp_test_dir / "state",
                 )
 
@@ -125,7 +124,6 @@ class TestConfigAndDiscoveryIntegration:
                 result = discover_recipe(
                     recipe_path,
                     tmp_test_dir,
-                    cache_file=tmp_test_dir / "cache.json",
                     state_dir=tmp_test_dir / "state",
                 )
 
@@ -158,7 +156,6 @@ class TestErrorPropagation:
                 discover_recipe(
                     recipe_path,
                     tmp_test_dir,
-                    cache_file=tmp_test_dir / "cache.json",
                     state_dir=tmp_test_dir / "state",
                 )
 
@@ -191,6 +188,5 @@ class TestErrorPropagation:
                     discover_recipe(
                         recipe_path,
                         tmp_test_dir,
-                        cache_file=tmp_test_dir / "cache.json",
                         state_dir=tmp_test_dir / "state",
                     )
