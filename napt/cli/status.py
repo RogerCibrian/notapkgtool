@@ -72,7 +72,8 @@ def cmd_status(args: argparse.Namespace) -> int:
         (
             row["app_id"],
             row["published"] or "-",
-            row["pending"] or "-",
+            (row["pending"] or "-")
+            + (" [DOWNGRADE]" if row["pending_is_downgrade"] else ""),
             ", ".join(f"{name}={ver}" for name, ver in row["rings"].items()) or "-",
         )
         for row in rows

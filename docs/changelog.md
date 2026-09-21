@@ -16,6 +16,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Name the child `<app>.override.yaml`; `napt validate` warns when the
         name and the field disagree and reports the parent it merged
 
+- **Downgrade label** - When a vendor replaces a release with a lower
+    version, `napt discover` still records it as the pending release, and now
+    says so: discover logs a warning, `napt status` marks the app
+    `[DOWNGRADE]` (`"pending_is_downgrade": true` with `--format json`), and
+    the reference discover workflow titles the PR
+    `Publish <Name> <version> (downgrade from <published>)`. Versions are
+    ordered exactly as the detection script on a device orders them.
+    Publishing a downgrade changes what new installs get; devices already on
+    the higher version are left alone
+
 ### Changed
 
 - **BREAKING: Downloads are filed by version** - `napt discover` saves each

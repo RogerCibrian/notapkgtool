@@ -67,9 +67,10 @@ napt/
 │   ├── manager.py              # Upload orchestration
 │   └── intunewin.py            # .intunewin package parser
 │
-└── versioning/              # Version extraction
+└── versioning/              # Version extraction and ordering
     ├── msi.py                  # MSI metadata extraction backends
-    └── msix.py                 # MSIX metadata extraction (AppxManifest)
+    ├── msix.py                 # MSIX metadata extraction (AppxManifest)
+    └── ordering.py             # Version ordering, mirroring the device-side comparison
 ```
 
 ### Data flow

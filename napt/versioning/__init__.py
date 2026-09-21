@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Version extraction utilities for NAPT.
+"""Version extraction and ordering utilities for NAPT.
 
-Extracts version information and other metadata from MSI and MSIX files.
+Extracts version information and other metadata from MSI and MSIX files,
+and orders version strings the way managed devices do.
 
 Modules:
+    ordering - Version ordering that mirrors the device-side comparison.
     msi - MSI metadata extraction using PowerShell COM (Windows) or
         msitools (Linux/macOS).
     msix - MSIX metadata extraction using zipfile and XML parsing

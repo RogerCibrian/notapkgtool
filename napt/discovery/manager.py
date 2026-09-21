@@ -64,6 +64,7 @@ from napt.state.deployment import (
     record_pending,
     save_deployment_state,
 )
+from napt.versioning.ordering import is_downgrade
 
 
 def discover_recipe(
@@ -166,6 +167,15 @@ def _record_pending_release(
         sha256=result.sha256,
         url=result.download_url,
     )
+
+    published_version = (state.get("published") or {}).get("version")
+    if state.get("pending") and is_downgrade(result.version, published_version):
+        logger.warning(
+            "STATE",
+            f"Pending release {result.version} is LOWER than the published "
+            f"{published_version}. Devices already on {published_version} "
+            "will not move to it; publishing affects new installs only.",
+        )
 
     if action is None:
         logger.verbose("STATE", "Pending release unchanged")
