@@ -2826,6 +2826,14 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="fixed">Fixed</h3>
 <ul>
+<li>Fixed a wrong first download never being corrected. When a vendor's page
+    or API announced a new version before the file behind the link changed,
+    <code>napt discover</code> filed the old file and then, since the page kept
+    reporting the same version, never looked again. Discover now trusts a
+    repeated version only if it matched the installer's own version last
+    time; otherwise it warns on every run and asks the server whether the
+    file changed (a full download when the server sends no <code>ETag</code>), until
+    the two agree</li>
 <li>Fixed <code>napt discover</code> labelling the installer it already had with an older
     version number when a vendor rolled a release back. With <code>api_github</code>,
     <code>api_json</code>, and <code>web_scrape</code> recipes, the older version was treated as
