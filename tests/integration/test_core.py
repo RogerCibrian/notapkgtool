@@ -66,9 +66,7 @@ class TestEndToEndWorkflow:
                 headers={"Content-Length": str(len(fake_msi))},
             )
 
-            with patch(
-                "napt.discovery.url_download.extract_msi_metadata"
-            ) as mock_extract:
+            with patch("napt.discovery.resolve.extract_msi_metadata") as mock_extract:
                 mock_extract.return_value = MSIMetadata(
                     product_name="", product_version="1.2.3", architecture="x64"
                 )
@@ -114,9 +112,7 @@ class TestConfigAndDiscoveryIntegration:
                 headers={"Content-Length": "4"},
             )
 
-            with patch(
-                "napt.discovery.url_download.extract_msi_metadata"
-            ) as mock_extract:
+            with patch("napt.discovery.resolve.extract_msi_metadata") as mock_extract:
                 mock_extract.return_value = MSIMetadata(
                     product_name="", product_version="1.0.0", architecture="x64"
                 )
@@ -179,9 +175,7 @@ class TestErrorPropagation:
                 headers={"Content-Length": "7"},
             )
 
-            with patch(
-                "napt.discovery.url_download.extract_msi_metadata"
-            ) as mock_extract:
+            with patch("napt.discovery.resolve.extract_msi_metadata") as mock_extract:
                 mock_extract.side_effect = NetworkError("Invalid MSI")
 
                 with pytest.raises(NetworkError, match="Failed to extract"):

@@ -1397,8 +1397,8 @@ jobs:
   run. Re-running the failed publish also converges, just sooner.
 - `windows-latest` runners are required for `napt package`
   (IntuneWinAppUtil.exe is Windows-only). The discover workflow alone
-  could run on Linux with `msitools` installed for MSI version
-  extraction.
+  could run on Linux with `msitools` installed, since discover reads the
+  version out of every MSI it downloads.
 
 ## Share a base recipe between apps
 

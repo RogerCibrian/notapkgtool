@@ -95,7 +95,7 @@ Result (dataclass)
 
 ## Key concepts
 
-- **Discovery Strategies:** Protocol-based, stateless, listed in an explicit registry table (api_github, api_json, web_scrape). All return a `RemoteVersion` from configuration alone. The orchestrator runs the result through `resolve_installer` to skip the download when the version's download folder already holds the installer. `url_download` is a separate flow (not a registered strategy) because it must download the file to determine the version.
+- **Discovery Strategies:** Protocol-based, stateless, listed in an explicit registry table (api_github, api_json, web_scrape). All return a `RemoteVersion` from configuration alone. `url_download` is a separate flow (not a registered strategy) because it must download the file to determine the version. Both end in `discovery/resolve.py`, which reuses the previous download when the strategy reports the same version as last run (or the server answers HTTP 304 for `url_download`), and otherwise downloads the file, reads the version from an MSI or MSIX installer, and files it under that version
 - **Configuration:** 3-layer system (org → vendor → recipe) with deep merging
 - **State Management:** Authoritative per-app deployment state (`state/deployment/<id>.json`) records what is published and pending. The downloads folder is disposable; discovery reuses what it finds there and never treats it as a record
 - **Exceptions:** All NAPT domain errors use custom exceptions inheriting from `NAPTError` (ConfigError, NetworkError, PackagingError, StateError, AuthError) - allows catching all NAPT errors or specific types

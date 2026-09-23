@@ -28,6 +28,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING: The installer's own version is the version** - For an MSI
+    or MSIX, `napt discover` now reads the version out of the downloaded
+    file and records that, rather than the value the page or API reported.
+    The download folder, the pending release, the publish PR title, and
+    `{{discovered_version}}` all carry the same version the detection
+    script will compare on a device, and a file the vendor serves under a
+    newer number than it really is gets recorded as what it really is. The
+    reported value is still the trigger: a run that finds the same value as
+    last time reuses the download without a request. EXE installers are
+    unchanged, since they carry no readable version
+    - An MSI or MSIX app whose reported version differs in format from the
+        installer's (`4.41.106` against `4.41.106.0`) gets a new download
+        folder name, so it is downloaded once more after upgrading
+    - `napt build` refuses an MSI or MSIX whose version differs from the
+        folder it is in, which only happens to a file moved by hand
+    - Discover needs `msitools` on Linux for MSI recipes of every
+        strategy, not only `url_download`
+- **`url_download` accepts MSIX installers** - The version is read from
+    the package's Identity, as it already was for MSI ProductVersion
 - **BREAKING: Downloads are filed by version** - `napt discover` saves each
     installer to `downloads/{id}/{version}/`, matching `builds/` and
     `packages/`. A vendor that serves every release under one filename can no

@@ -234,8 +234,9 @@ headers for .exe installers.
 - Enables version discovery for applications distributed as EXE
 - Useful for vendors who don't provide version in URL or API
 
-**Related**: `url_download` only extracts versions from MSI installers today
-and raises `ConfigError` for other extensions when no version is discoverable.
+**Related**: `url_download` only extracts versions from MSI and MSIX installers
+today and raises `ConfigError` for other extensions when no version is
+discoverable.
 
 #### Parallel package building
 

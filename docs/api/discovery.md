@@ -4,6 +4,8 @@
 
 ::: napt.discovery.registry
 
+::: napt.discovery.resolve
+
 ::: napt.discovery.url_download
 
 ::: napt.discovery.web_scrape

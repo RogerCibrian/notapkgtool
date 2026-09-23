@@ -20,25 +20,20 @@ strategies in [napt.discovery.base][] produce a
 [RemoteVersion][napt.discovery.base.RemoteVersion] from configuration
 alone (version-first). ``url_download`` cannot do that: it has no
 remote endpoint to query for the version, so it must download the
-installer and extract the version from the file's metadata. The
-discovery orchestrator special-cases ``strategy: url_download`` and
-dispatches to
+installer and read the version from the file itself. The discovery
+orchestrator special-cases ``strategy: url_download`` and dispatches to
 [run_url_download][napt.discovery.url_download.run_url_download] directly.
 
-Conditional Requests:
-    Each download writes ``downloads/<id>/.download.json`` beside the
-    app's version folders. It records what the URL served (``ETag``,
-    ``Last-Modified``) and where that installer was filed. The next run
-    sends those values as ``If-None-Match`` / ``If-Modified-Since``, and a
-    server response of HTTP 304 reuses the installer without a
-    re-download. The values are sent only while the installer they
-    describe is still on disk, so a 304 can always be honored. The file
-    is disposable: a missing or unreadable one costs one full download.
+The download, the version read, and the reuse of an unchanged file all
+happen in [napt.discovery.resolve][], shared with the version-first
+strategies. With no version to compare, this flow relies on the server's
+``ETag`` / ``Last-Modified`` to learn whether the file changed.
 
 Supported File Types:
     - ``.msi``: version is read from the MSI ProductVersion property.
+    - ``.msix``: version is read from the package's Identity element.
     - Other extensions raise [ConfigError][napt.exceptions.ConfigError].
-        For non-MSI installers, use a version-first strategy.
+        For those installers, use a version-first strategy.
 
 Recipe Example:
     ```yaml
@@ -51,49 +46,21 @@ Recipe Example:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-import json
 from pathlib import Path
-import shutil
 from typing import Any
 
-from napt.download.download import download_file
-from napt.exceptions import ConfigError, NetworkError, NotModifiedError
+from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
-from napt.paths import is_safe_path_component, safe_filename
-from napt.versioning.msi import extract_msi_metadata
 
-from .base import StrategyResult, require_usable_version
-
-# Holding folder for a download whose version is not known yet.
-_INCOMING_DIR = ".incoming"
-
-# Per-app record of what the URL served last time (downloads/<id>/<name>).
-_SIDECAR_NAME = ".download.json"
-
-
-@dataclass(frozen=True)
-class _PreviousDownload:
-    """The last download of an app's URL, as recorded in its sidecar file."""
-
-    etag: str | None
-    last_modified: str | None
-    version: str
-    file_path: Path
-    sha256: str
+from .base import StrategyResult
+from .resolve import resolve_installer
 
 
 def run_url_download(
     app_config: dict[str, Any],
     output_dir: Path,
 ) -> StrategyResult:
-    """Downloads a fixed URL and extracts the version from the resulting file.
-
-    Issues a conditional HTTP request when the app's sidecar file records
-    an ``ETag`` or ``Last-Modified`` for an installer that is still on
-    disk. On HTTP 304 that installer is reused; otherwise the fresh
-    download is filed under the version read from it (MSI ProductVersion
-    today).
+    """Downloads a fixed URL and reads the version from the resulting file.
 
     Args:
         app_config: Merged recipe configuration dict containing
@@ -108,54 +75,19 @@ def run_url_download(
 
     Raises:
         ConfigError: If ``discovery.url`` is missing, or if the
-            downloaded file is not an MSI (version extraction is
-            not supported for other file types).
+            downloaded file is not an MSI or MSIX.
         NetworkError: On download or version-extraction failures.
 
     """
     logger = get_global_logger()
-    source = app_config.get("discovery", {})
-    url = source.get("url")
+    url = app_config.get("discovery", {}).get("url")
     if not url:
         raise ConfigError("url_download strategy requires 'discovery.url' in config")
-
-    app_dir = output_dir / app_config["id"]
 
     logger.verbose("DISCOVERY", "Strategy: url_download (file-first)")
     logger.verbose("DISCOVERY", f"Source URL: {url}")
 
-    previous = _load_sidecar(app_dir, url)
-    if previous:
-        logger.verbose("DISCOVERY", f"Previous ETag: {previous.etag}")
-        logger.verbose("DISCOVERY", f"Previous Last-Modified: {previous.last_modified}")
-
-    try:
-        if previous is None:
-            return _download_into_version_folder(url, app_dir)
-        try:
-            return _download_into_version_folder(
-                url,
-                app_dir,
-                etag=previous.etag,
-                last_modified=previous.last_modified,
-            )
-        except NotModifiedError:
-            logger.info(
-                "DISCOVERY",
-                f"File not modified (HTTP 304), using {previous.file_path}",
-            )
-            return StrategyResult(
-                version=previous.version,
-                version_source="url_download",
-                file_path=previous.file_path,
-                sha256=previous.sha256,
-                download_url=url,
-                cached=True,
-            )
-    except (NetworkError, ConfigError):
-        raise
-    except Exception as err:
-        raise NetworkError(f"Failed to download {url}: {err}") from err
+    return resolve_installer(url, output_dir / app_config["id"], source="url_download")
 
 
 def validate_url_download_config(app_config: dict[str, Any]) -> list[str]:
@@ -182,163 +114,3 @@ def validate_url_download_config(app_config: dict[str, Any]) -> list[str]:
         errors.append("discovery.url cannot be empty")
 
     return errors
-
-
-def _load_sidecar(app_dir: Path, url: str) -> _PreviousDownload | None:
-    """Reads the app's sidecar file when it can support a conditional request.
-
-    The sidecar is a disposable hint, so every problem with it means "no
-    previous download" rather than an error: a missing or unreadable file,
-    a record for a different URL, no ``ETag`` or ``Last-Modified``, or an
-    installer that is no longer on disk.
-
-    Args:
-        app_dir: The app's download directory (``downloads/<id>``).
-        url: The recipe's download URL.
-
-    Returns:
-        The previous download, or None when a conditional request cannot
-        be made or could not be honored.
-
-    """
-    try:
-        data = json.loads((app_dir / _SIDECAR_NAME).read_text(encoding="utf-8"))
-        previous = _PreviousDownload(
-            etag=data["etag"],
-            last_modified=data["last_modified"],
-            version=data["version"],
-            file_path=app_dir / data["version"] / data["filename"],
-            sha256=data["sha256"],
-        )
-        usable = (
-            data["url"] == url
-            and isinstance(previous.etag, str | None)
-            and isinstance(previous.last_modified, str | None)
-            and isinstance(previous.sha256, str)
-            and bool(previous.etag or previous.last_modified)
-            and is_safe_path_component(previous.version)
-            and safe_filename(data["filename"]) == data["filename"]
-            and previous.file_path.is_file()
-        )
-    except (OSError, ValueError, KeyError, TypeError):
-        return None
-    return previous if usable else None
-
-
-def _write_sidecar(
-    app_dir: Path, url: str, headers: dict[str, str], result: StrategyResult
-) -> None:
-    """Records what the URL served, for the next run's conditional request."""
-    # Header names arrive in whatever case the server used.
-    lowered = {name.lower(): value for name, value in headers.items()}
-    data = {
-        "url": url,
-        "etag": lowered.get("etag"),
-        "last_modified": lowered.get("last-modified"),
-        "version": result.version,
-        "filename": result.file_path.name,
-        "sha256": result.sha256,
-    }
-    try:
-        (app_dir / _SIDECAR_NAME).write_text(
-            json.dumps(data, indent=2) + "\n", encoding="utf-8"
-        )
-    except OSError as err:
-        get_global_logger().warning(
-            "DISCOVERY",
-            f"Could not write {app_dir / _SIDECAR_NAME}: {err}. "
-            "The next run will download the full file.",
-        )
-
-
-def _download_into_version_folder(
-    url: str,
-    app_dir: Path,
-    etag: str | None = None,
-    last_modified: str | None = None,
-) -> StrategyResult:
-    """Downloads an installer and files it under its version.
-
-    The version is only known once the file is on disk, so the download
-    lands in ``<app_dir>/.incoming`` first and is then moved to
-    ``<app_dir>/<version>/``. Installers of other versions are never
-    touched, which matters for vendors that serve every release under one
-    filename. The sidecar file is written last, so an interrupted run can
-    leave an installer without a sidecar but never the reverse.
-
-    Args:
-        url: Download URL.
-        app_dir: The app's download directory (``downloads/<id>``).
-        etag: ETag from the previous download, for a conditional request.
-        last_modified: Last-Modified from the previous download, used when
-            no ETag is available.
-
-    Returns:
-        Resolved version, the file's final path, and download metadata.
-
-    Raises:
-        NotModifiedError: If the server answers HTTP 304.
-        NetworkError: On download or version-extraction failure.
-        ConfigError: If the file is not an MSI, or its version cannot be
-            used as a folder name.
-
-    """
-    incoming = app_dir / _INCOMING_DIR
-    # Clear leftovers from an interrupted run.
-    shutil.rmtree(incoming, ignore_errors=True)
-    try:
-        dl = download_file(url, incoming, etag=etag, last_modified=last_modified)
-        version = _extract_version(dl.file_path)
-        require_usable_version(version)
-        final_path = app_dir / version / dl.file_path.name
-        final_path.parent.mkdir(parents=True, exist_ok=True)
-        dl.file_path.replace(final_path)
-    finally:
-        shutil.rmtree(incoming, ignore_errors=True)
-
-    result = StrategyResult(
-        version=version,
-        version_source="url_download",
-        file_path=final_path,
-        sha256=dl.sha256,
-        download_url=url,
-        cached=False,
-    )
-    _write_sidecar(app_dir, url, dl.headers, result)
-    return result
-
-
-def _extract_version(file_path: Path) -> str:
-    """Extracts a version string from an installer file's metadata.
-
-    Currently supports MSI files via
-    [extract_msi_metadata][napt.versioning.msi.extract_msi_metadata].
-    Other file types raise [ConfigError][napt.exceptions.ConfigError] —
-    use a version-first strategy for those instead.
-
-    Args:
-        file_path: Path to the downloaded installer file.
-
-    Returns:
-        Version string from the file's metadata.
-
-    Raises:
-        ConfigError: If ``file_path`` is not an MSI installer.
-        NetworkError: If MSI metadata extraction fails.
-
-    """
-    if file_path.suffix.lower() != ".msi":
-        raise ConfigError(
-            f"Cannot extract version from file type: {file_path.suffix!r}. "
-            f"url_download strategy currently supports MSI files only. "
-            f"For other file types, use a version-first strategy "
-            f"(api_github, api_json, web_scrape) or ensure the file "
-            f"is an MSI installer."
-        )
-
-    try:
-        return extract_msi_metadata(file_path).product_version
-    except Exception as err:
-        raise NetworkError(
-            f"Failed to extract MSI ProductVersion from {file_path}: {err}"
-        ) from err

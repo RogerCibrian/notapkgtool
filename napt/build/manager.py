@@ -136,10 +136,12 @@ def _release_to_build(config: dict[str, Any]) -> dict[str, Any] | None:
 def _get_installer_version(installer_file: Path) -> str:
     """Gets the version for the installer file.
 
-    MSI and MSIX installers report their own version, which is
-    authoritative. For any other installer the version is the one discover
-    recorded, which is the name of the folder the file was saved in
-    (``downloads/<id>/<version>/``).
+    The version is the name of the folder discover filed the installer in
+    (``downloads/<id>/<version>/``). An MSI or MSIX installer reports its
+    own version, and discover names the folder after it, so for those the
+    two are read and must agree: a file moved into the wrong folder by
+    hand would otherwise be built and detected under a version it does
+    not carry.
 
     Args:
         installer_file: Path to the installer file.
@@ -148,33 +150,37 @@ def _get_installer_version(installer_file: Path) -> str:
         Version string.
 
     Raises:
-        PackagingError: If MSI or MSIX metadata extraction fails.
+        PackagingError: If MSI or MSIX metadata extraction fails, or if
+            the installer's version differs from its folder's name.
     """
     from napt.logging import get_global_logger
 
     logger = get_global_logger()
+    version = installer_file.parent.name
+    suffix = installer_file.suffix.lower()
 
-    # MSI: version is authoritative from the installer
-    if installer_file.suffix.lower() == ".msi":
+    if suffix == ".msi":
         logger.verbose(
             "BUILD", f"Auto-detected MSI, extracting version: {installer_file.name}"
         )
-        metadata = extract_msi_metadata(installer_file)
-        logger.verbose("BUILD", f"Extracted version: {metadata.product_version}")
-        return metadata.product_version
-
-    # MSIX: version is authoritative from the manifest
-    if installer_file.suffix.lower() == ".msix":
+        reported = extract_msi_metadata(installer_file).product_version
+    elif suffix == ".msix":
         logger.verbose(
             "BUILD",
             f"Auto-detected MSIX, extracting version: {installer_file.name}",
         )
-        metadata = extract_msix_metadata(installer_file)
-        logger.verbose("BUILD", f"Extracted version: {metadata.version}")
-        return metadata.version
+        reported = extract_msix_metadata(installer_file).version
+    else:
+        logger.verbose("BUILD", f"Using discovered version: {version}")
+        return version
 
-    version = installer_file.parent.name
-    logger.verbose("BUILD", f"Using discovered version: {version}")
+    logger.verbose("BUILD", f"Extracted version: {reported}")
+    if reported != version:
+        raise PackagingError(
+            f"{installer_file.name} reports version {reported} but is filed "
+            f"under {installer_file.parent}. Run 'napt discover' to file it "
+            "under its own version, or rename the folder to match."
+        )
     return version
 
 
