@@ -3577,7 +3577,7 @@ Values support <code>${VARIABLE_NAME}</code> substitution (see
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">X-API-Key</span><span class="p">:</span><span class="w"> </span><span class="s">"${VENDOR_API_KEY}"</span>
 </span></code></pre></div></p>
 <h3 id="url_download-strategy">url_download strategy</h3>
-<p><strong>Best for:</strong> Vendors with stable download URLs and MSI installers with embedded ProductVersion.</p>
+<p><strong>Best for:</strong> Vendors with stable download URLs and MSI or MSIX installers, which carry their own version.</p>
 <p><strong>Configuration:</strong></p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">discovery</span><span class="p">:</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">url_download</span>
@@ -3590,8 +3590,8 @@ Values support <code>${VARIABLE_NAME}</code> substitution (see
 are released. If the URL changes with each version, use <code>web_scrape</code> strategy instead.</p>
 <p>Downloads the file from <code>url</code>, using HTTP conditional requests (ETags) to skip
 unchanged files. MSI files supply their version from the ProductVersion
-property with no configuration; other file types need a version-first strategy
-(api_github, api_json, web_scrape) instead.</p>
+property and MSIX files from their Identity, with no configuration; other file
+types need a version-first strategy (api_github, api_json, web_scrape) instead.</p>
 <h3 id="web_scrape-strategy">web_scrape strategy</h3>
 <p><strong>Best for:</strong> Vendors with download pages listing installers when no direct download URL or API
 is available.</p>
@@ -4312,7 +4312,7 @@ variables):</p>
 <tbody>
 <tr>
 <td><code>{{discovered_version}}</code></td>
-<td>Version discovered by NAPT</td>
+<td>The release's version: the installer's own for MSI and MSIX, the strategy's for EXE (see <a href="../user-guide/#the-installers-version-is-the-version">The installer's version is the version</a>)</td>
 <td><code>psadt.app_vars</code>, <code>psadt.install</code>, <code>psadt.uninstall</code>, <code>intune.detection.display_name</code></td>
 </tr>
 <tr>

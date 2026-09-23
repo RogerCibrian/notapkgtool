@@ -872,6 +872,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#the-installers-version-is-the-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The installer's version is the version
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#downgrades" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2505,6 +2516,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#the-installers-version-is-the-version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The installer's version is the version
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#downgrades" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2755,11 +2777,11 @@ configuration layers.</p>
 <li><strong>Load Configuration</strong> - Merges organization defaults, vendor defaults, and recipe configuration</li>
 <li><strong>Check Version</strong> - Uses the configured discovery strategy to check for new versions</li>
 <li><strong>Skip or Download</strong>:<ul>
-<li>If the installer for that version is already in <code>downloads/{app_id}/{version}/</code> → Skip download</li>
+<li>If the strategy reports the same version as last run (or, for <code>url_download</code>, the server answers <code>304 Not Modified</code>) → Skip download</li>
 <li>Otherwise → Download installer</li>
 </ul>
 </li>
-<li><strong>Extract Version</strong> - Extracts version from installer (MSI ProductVersion) or uses discovered version</li>
+<li><strong>Read the Version</strong> - Takes the version from the installer itself (MSI ProductVersion, MSIX Identity), falling back to the version the strategy reported for installers that carry none (EXE). This is the version recorded and used everywhere after</li>
 <li><strong>Record Pending Release</strong> - Updates <code>state/deployment/{app_id}.json</code> with the discovered release as the pending publication candidate when it differs from the published version. The pending slot holds one candidate and the newest discovery wins.</li>
 </ol>
 <p><strong>Output</strong>: Downloaded installer in <code>downloads/{app_id}/{version}/</code>, updated deployment state</p>
@@ -2777,7 +2799,7 @@ A warning shows the original and saved names when they differ.
 Always put <code>{{installer_filename}}</code> inside quotes: unquoted, PowerShell runs
 parentheses in a filename as code, and those are too common in real names to
 replace.</p>
-<p><strong>Version</strong>: The discovered version becomes a folder name
+<p><strong>Version</strong>: The version becomes a folder name
 (<code>downloads/{app_id}/{version}/</code>), so it may contain only letters, digits, <code>.</code>,
 <code>-</code>, <code>_</code>, and <code>+</code>.
 If discovery stops with "cannot be used as a folder name", tighten the recipe's
@@ -2787,7 +2809,7 @@ If discovery stops with "cannot be used as a folder name", tighten the recipe's
 <ol>
 <li><strong>Load Configuration</strong> - Merges configuration layers (org → vendor → recipe)</li>
 <li><strong>Find Installer</strong> - Reads the release to build from <code>state/deployment/{app_id}.json</code> (the pending release, or the published one when nothing is pending), looks in <code>downloads/{app_id}/{version}/</code>, and takes the file whose SHA-256 matches the recorded hash. A file that changed since discovery is refused. With no recorded release (a <code>--stateless</code> discover and no state), the single installer found in a version folder (<code>downloads/{app_id}/{version}/</code>) is used; more than one stops the build, and a file placed directly in <code>downloads/{app_id}/</code> is not found</li>
-<li><strong>Extract Version</strong> - Extracts version from installer file (MSI from ProductVersion, MSIX from AppxManifest.xml), otherwise uses the discovered version, which is the name of the download folder</li>
+<li><strong>Confirm Version</strong> - The version is the name of the download folder. For an MSI or MSIX, build reads the installer's own version and refuses to continue if it differs from the folder, since that means a file was moved by hand</li>
 <li><strong>Get PSADT Release</strong> - Downloads/caches PSADT Template_v4 from GitHub if not already cached</li>
 <li><strong>Create Build Directory</strong> - Creates versioned directory using discovered app version: <code>builds/{app_id}/{version}/</code></li>
 <li><strong>Copy PSADT Template</strong> - Copies entire PSADT template structure (unmodified) from cache:<ul>
@@ -3268,7 +3290,7 @@ instead of <code>AZURE_CLIENT_SECRET</code>.</p>
 <p>After a complete workflow, your directory structure looks like:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>downloads/
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>  └── napt-chrome/
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>      ├── .download.json                   # url_download only: ETag of the last download
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>      ├── .download.json                   # What the last discover run resolved
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>      └── 142.0.7444.163/
 </span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>          └── googlechromestandaloneenterprise64.msi
 </span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
@@ -3451,7 +3473,7 @@ See <a href="#authentication">Authentication</a>.</p>
 <th>Strategy</th>
 <th>Version Source</th>
 <th>Use Case</th>
-<th>Unchanged Version Detection Speed</th>
+<th>How "unchanged" is detected</th>
 </tr>
 </thead>
 <tbody>
@@ -3459,25 +3481,25 @@ See <a href="#authentication">Authentication</a>.</p>
 <td><strong>api_github</strong></td>
 <td>Git tags</td>
 <td>GitHub-hosted releases</td>
-<td>Fast (GitHub API ~100ms)</td>
+<td>Same tag as last run</td>
 </tr>
 <tr>
 <td><strong>api_json</strong></td>
 <td>JSON API</td>
 <td>REST APIs with metadata</td>
-<td>Fast (API call ~100ms)</td>
+<td>Same version field as last run</td>
 </tr>
 <tr>
 <td><strong>url_download</strong></td>
 <td>File metadata</td>
-<td>Fixed URLs, MSI installers</td>
-<td>Medium (HTTP conditional ~500ms)</td>
+<td>Fixed URLs, MSI or MSIX installers</td>
+<td>HTTP conditional request (ETag)</td>
 </tr>
 <tr>
 <td><strong>web_scrape</strong></td>
 <td>Download page</td>
 <td>Vendors without APIs</td>
-<td>Fast (page scrape + regex)</td>
+<td>Same version on the page as last run</td>
 </tr>
 </tbody>
 </table>
@@ -3520,9 +3542,9 @@ The downloads folder is the only thing it consults, so restoring that folder bet
     Strategy --&gt;|Version-First&lt;br/&gt;api_github, api_json, web_scrape| CheckVersion[Check Version via API/Page]
     Strategy --&gt;|File-First&lt;br/&gt;url_download| HaveFile{Last download&lt;br/&gt;still on disk?}
 
-    CheckVersion --&gt; FolderHasFile{Installer in&lt;br/&gt;downloads/id/version?}
-    FolderHasFile --&gt;|Yes| Skip1([Skip download&lt;br/&gt;Use that file])
-    FolderHasFile --&gt;|No| Download1[Download File]
+    CheckVersion --&gt; SameVersion{Same version&lt;br/&gt;as last run?}
+    SameVersion --&gt;|Yes| Skip1([Skip download&lt;br/&gt;Use that file])
+    SameVersion --&gt;|No| Download1[Download File]
 
     HaveFile --&gt;|Yes| CheckETag[Conditional request&lt;br/&gt;with saved ETag]
     HaveFile --&gt;|No| Download2[Download File]
@@ -3530,18 +3552,26 @@ The downloads folder is the only thing it consults, so restoring that folder bet
     ETagResponse --&gt;|304 Not Modified| Skip2([Skip download&lt;br/&gt;Use that file])
     ETagResponse --&gt;|200 OK Changed| Download2
 
-    Download1 --&gt; Pending[Record pending release]
-    Download2 --&gt; Pending
+    Download1 --&gt; ReadVersion[Read version&lt;br/&gt;from MSI or MSIX]
+    Download2 --&gt; ReadVersion
+    ReadVersion --&gt; Pending[Record pending release]
     Skip1 --&gt; Pending
     Skip2 --&gt; Pending
     Pending --&gt; Ready([Ready for napt build])</code></pre>
-<p><strong>Version-first strategies</strong> (api_github, api_json, web_scrape) learn the version before downloading (~100-300ms).
-Each version has its own folder, so a folder that already holds the installer means there is nothing to fetch.</p>
-<p><strong>url_download</strong> cannot know the version without the file, so it asks the server whether the file changed.
-Each download writes <code>downloads/&lt;app_id&gt;/.download.json</code>, which records the <code>ETag</code> and <code>Last-Modified</code> the server sent and which installer they describe.
-The next run sends them back as a conditional request (~500ms); a <code>304 Not Modified</code> answer reuses the installer.
-The values are only sent while that installer is still on disk.
+<p>Every download writes <code>downloads/&lt;app_id&gt;/.download.json</code>, which records what that run resolved: the version the strategy reported, the server's <code>ETag</code> and <code>Last-Modified</code>, and the installer's own version, filename, and hash.
 The file is a hint, not a record: if it is missing or unreadable, NAPT downloads the full file and writes a new one.</p>
+<p><strong>Version-first strategies</strong> (api_github, api_json, web_scrape) learn a version before downloading.
+When it is the same version the last run reported, the installer on disk is reused without a request.</p>
+<p><strong>url_download</strong> cannot know the version without the file, so it asks the server whether the file changed.
+The next run sends the recorded <code>ETag</code> and <code>Last-Modified</code> back as a conditional request; a <code>304 Not Modified</code> answer reuses the installer.
+The values are only sent while that installer is still on disk.</p>
+<h3 id="the-installers-version-is-the-version">The installer's version is the version</h3>
+<p>The version a page or API reports is only the trigger for a download.
+Once the file is on disk, an MSI or MSIX installer reports its own version, and that is what NAPT records: it names the download folder, becomes the pending release, and later names the build and package folders, fills <code>{{discovered_version}}</code>, and is the version the detection script compares against on a device.
+An EXE carries no readable version, so for it the reported version is used as is.</p>
+<p>When the two differ, discover says so in its log (<code>Installer reports version 4.41.106.0 (api_json reported 4.41.106); recording 4.41.106.0</code>).
+A format difference like that is normal and harmless.
+A real disagreement (the page says 2.1, the file is 2.0) means the vendor is serving an older file than it advertises, or the recipe's <code>version_pattern</code> captured the wrong value; the recorded release is truthful either way.</p>
 <p><strong>A version that goes down</strong> (a vendor pulling a release) is handled like any other change: the older version gets its own folder and its own download.
 NAPT never relabels an installer it already has.</p>
 <h3 id="downgrades">Downgrades</h3>

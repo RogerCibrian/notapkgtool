@@ -3879,8 +3879,8 @@ directory.</p>
   run. Re-running the failed publish also converges, just sooner.</li>
 <li><code>windows-latest</code> runners are required for <code>napt package</code>
   (IntuneWinAppUtil.exe is Windows-only). The discover workflow alone
-  could run on Linux with <code>msitools</code> installed for MSI version
-  extraction.</li>
+  could run on Linux with <code>msitools</code> installed, since discover reads the
+  version out of every MSI it downloads.</li>
 </ul>
 <h2 id="share-a-base-recipe-between-apps">Share a base recipe between apps</h2>
 <p>When several recipes differ only in a few fields, put the shared part in

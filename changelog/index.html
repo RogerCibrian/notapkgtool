@@ -2758,6 +2758,27 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="changed">Changed</h3>
 <ul>
+<li><strong>BREAKING: The installer's own version is the version</strong> - For an MSI
+    or MSIX, <code>napt discover</code> now reads the version out of the downloaded
+    file and records that, rather than the value the page or API reported.
+    The download folder, the pending release, the publish PR title, and
+    <code>{{discovered_version}}</code> all carry the same version the detection
+    script will compare on a device, and a file the vendor serves under a
+    newer number than it really is gets recorded as what it really is. The
+    reported value is still the trigger: a run that finds the same value as
+    last time reuses the download without a request. EXE installers are
+    unchanged, since they carry no readable version<ul>
+<li>An MSI or MSIX app whose reported version differs in format from the
+    installer's (<code>4.41.106</code> against <code>4.41.106.0</code>) gets a new download
+    folder name, so it is downloaded once more after upgrading</li>
+<li><code>napt build</code> refuses an MSI or MSIX whose version differs from the
+    folder it is in, which only happens to a file moved by hand</li>
+<li>Discover needs <code>msitools</code> on Linux for MSI recipes of every
+    strategy, not only <code>url_download</code></li>
+</ul>
+</li>
+<li><strong><code>url_download</code> accepts MSIX installers</strong> - The version is read from
+    the package's Identity, as it already was for MSI ProductVersion</li>
 <li><strong>BREAKING: Downloads are filed by version</strong> - <code>napt discover</code> saves each
     installer to <code>downloads/{id}/{version}/</code>, matching <code>builds/</code> and
     <code>packages/</code>. A vendor that serves every release under one filename can no
