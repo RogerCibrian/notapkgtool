@@ -12,9 +12,9 @@ The discovery process finds the latest version and downloads the installer:
 1. **Load Configuration** - Merges organization defaults, vendor defaults, and recipe configuration
 2. **Check Version** - Uses the configured discovery strategy to check for new versions
 3. **Skip or Download**:
-    - If the installer for that version is already in `downloads/{app_id}/{version}/` → Skip download
+    - If the strategy reports the same version as last run (or, for `url_download`, the server answers `304 Not Modified`) → Skip download
     - Otherwise → Download installer
-4. **Extract Version** - Extracts version from installer (MSI ProductVersion) or uses discovered version
+4. **Read the Version** - Takes the version from the installer itself (MSI ProductVersion, MSIX Identity), falling back to the version the strategy reported for installers that carry none (EXE). This is the version recorded and used everywhere after
 5. **Record Pending Release** - Updates `state/deployment/{app_id}.json` with the discovered release as the pending publication candidate when it differs from the published version. The pending slot holds one candidate and the newest discovery wins.
 
 **Output**: Downloaded installer in `downloads/{app_id}/{version}/`, updated deployment state
@@ -35,7 +35,7 @@ Always put `{{installer_filename}}` inside quotes: unquoted, PowerShell runs
 parentheses in a filename as code, and those are too common in real names to
 replace.
 
-**Version**: The discovered version becomes a folder name
+**Version**: The version becomes a folder name
 (`downloads/{app_id}/{version}/`), so it may contain only letters, digits, `.`,
 `-`, `_`, and `+`.
 If discovery stops with "cannot be used as a folder name", tighten the recipe's
@@ -47,7 +47,7 @@ The build process creates a complete PSADT package from the recipe and downloade
 
 1. **Load Configuration** - Merges configuration layers (org → vendor → recipe)
 2. **Find Installer** - Reads the release to build from `state/deployment/{app_id}.json` (the pending release, or the published one when nothing is pending), looks in `downloads/{app_id}/{version}/`, and takes the file whose SHA-256 matches the recorded hash. A file that changed since discovery is refused. With no recorded release (a `--stateless` discover and no state), the single installer found in a version folder (`downloads/{app_id}/{version}/`) is used; more than one stops the build, and a file placed directly in `downloads/{app_id}/` is not found
-3. **Extract Version** - Extracts version from installer file (MSI from ProductVersion, MSIX from AppxManifest.xml), otherwise uses the discovered version, which is the name of the download folder
+3. **Confirm Version** - The version is the name of the download folder. For an MSI or MSIX, build reads the installer's own version and refuses to continue if it differs from the folder, since that means a file was moved by hand
 4. **Get PSADT Release** - Downloads/caches PSADT Template_v4 from GitHub if not already cached
 5. **Create Build Directory** - Creates versioned directory using discovered app version: `builds/{app_id}/{version}/`
 6. **Copy PSADT Template** - Copies entire PSADT template structure (unmodified) from cache:
@@ -520,7 +520,7 @@ After a complete workflow, your directory structure looks like:
 ```
 downloads/
   └── napt-chrome/
-      ├── .download.json                   # url_download only: ETag of the last download
+      ├── .download.json                   # What the last discover run resolved
       └── 142.0.7444.163/
           └── googlechromestandaloneenterprise64.msi
 
@@ -730,12 +730,12 @@ Discovery strategies determine how NAPT finds installers and extracts version in
 
 ### Available strategies
 
-| Strategy | Version Source | Use Case | Unchanged Version Detection Speed |
-|----------|---------------|----------|---------------------|
-| **api_github** | Git tags | GitHub-hosted releases | Fast (GitHub API ~100ms) |
-| **api_json** | JSON API | REST APIs with metadata | Fast (API call ~100ms) |
-| **url_download** | File metadata | Fixed URLs, MSI installers | Medium (HTTP conditional ~500ms) |
-| **web_scrape** | Download page | Vendors without APIs | Fast (page scrape + regex) |
+| Strategy | Version Source | Use Case | How "unchanged" is detected |
+|----------|---------------|----------|-----------------------------|
+| **api_github** | Git tags | GitHub-hosted releases | Same tag as last run |
+| **api_json** | JSON API | REST APIs with metadata | Same version field as last run |
+| **url_download** | File metadata | Fixed URLs, MSI or MSIX installers | HTTP conditional request (ETag) |
+| **web_scrape** | Download page | Vendors without APIs | Same version on the page as last run |
 
 > **Note:** For complete configuration examples and field documentation for each strategy, see [Recipe Reference](recipe-reference.md).
 
@@ -787,9 +787,9 @@ flowchart TD
     Strategy -->|Version-First<br/>api_github, api_json, web_scrape| CheckVersion[Check Version via API/Page]
     Strategy -->|File-First<br/>url_download| HaveFile{Last download<br/>still on disk?}
 
-    CheckVersion --> FolderHasFile{Installer in<br/>downloads/id/version?}
-    FolderHasFile -->|Yes| Skip1([Skip download<br/>Use that file])
-    FolderHasFile -->|No| Download1[Download File]
+    CheckVersion --> SameVersion{Same version<br/>as last run?}
+    SameVersion -->|Yes| Skip1([Skip download<br/>Use that file])
+    SameVersion -->|No| Download1[Download File]
 
     HaveFile -->|Yes| CheckETag[Conditional request<br/>with saved ETag]
     HaveFile -->|No| Download2[Download File]
@@ -797,21 +797,33 @@ flowchart TD
     ETagResponse -->|304 Not Modified| Skip2([Skip download<br/>Use that file])
     ETagResponse -->|200 OK Changed| Download2
 
-    Download1 --> Pending[Record pending release]
-    Download2 --> Pending
+    Download1 --> ReadVersion[Read version<br/>from MSI or MSIX]
+    Download2 --> ReadVersion
+    ReadVersion --> Pending[Record pending release]
     Skip1 --> Pending
     Skip2 --> Pending
     Pending --> Ready([Ready for napt build])
 ```
 
-**Version-first strategies** (api_github, api_json, web_scrape) learn the version before downloading (~100-300ms).
-Each version has its own folder, so a folder that already holds the installer means there is nothing to fetch.
+Every download writes `downloads/<app_id>/.download.json`, which records what that run resolved: the version the strategy reported, the server's `ETag` and `Last-Modified`, and the installer's own version, filename, and hash.
+The file is a hint, not a record: if it is missing or unreadable, NAPT downloads the full file and writes a new one.
+
+**Version-first strategies** (api_github, api_json, web_scrape) learn a version before downloading.
+When it is the same version the last run reported, the installer on disk is reused without a request.
 
 **url_download** cannot know the version without the file, so it asks the server whether the file changed.
-Each download writes `downloads/<app_id>/.download.json`, which records the `ETag` and `Last-Modified` the server sent and which installer they describe.
-The next run sends them back as a conditional request (~500ms); a `304 Not Modified` answer reuses the installer.
+The next run sends the recorded `ETag` and `Last-Modified` back as a conditional request; a `304 Not Modified` answer reuses the installer.
 The values are only sent while that installer is still on disk.
-The file is a hint, not a record: if it is missing or unreadable, NAPT downloads the full file and writes a new one.
+
+### The installer's version is the version
+
+The version a page or API reports is only the trigger for a download.
+Once the file is on disk, an MSI or MSIX installer reports its own version, and that is what NAPT records: it names the download folder, becomes the pending release, and later names the build and package folders, fills `{{discovered_version}}`, and is the version the detection script compares against on a device.
+An EXE carries no readable version, so for it the reported version is used as is.
+
+When the two differ, discover says so in its log (`Installer reports version 4.41.106.0 (api_json reported 4.41.106); recording 4.41.106.0`).
+A format difference like that is normal and harmless.
+A real disagreement (the page says 2.1, the file is 2.0) means the vendor is serving an older file than it advertises, or the recipe's `version_pattern` captured the wrong value; the recorded release is truthful either way.
 
 **A version that goes down** (a vendor pulling a release) is handled like any other change: the older version gets its own folder and its own download.
 NAPT never relabels an installer it already has.

@@ -21,14 +21,16 @@ Two flows feed into
     implement [DiscoveryStrategy][napt.discovery.base.DiscoveryStrategy]:
     they discover a version and its download URL without touching the
     file. The orchestrator looks them up in the explicit table in
-    [napt.discovery.registry][] and runs the result through
-    [resolve_installer][napt.discovery.base.resolve_installer] to
-    decide whether to skip the download.
+    [napt.discovery.registry][].
 - **url_download** is a separate flow at
     [run_url_download][napt.discovery.url_download.run_url_download]. It
-    downloads the file with HTTP conditional requests and extracts the
-    version from the file's metadata. It is not in the registry because
-    it cannot determine the version without the file.
+    is not in the registry because it cannot determine the version
+    without the file.
+
+Both end in [resolve_installer][napt.discovery.resolve.resolve_installer],
+which reuses the previous download when nothing changed, and otherwise
+downloads the file, reads the version from an MSI or MSIX installer, and
+files it under that version.
 
 The discovery orchestrator dispatches to one of the two flows based
 on the recipe's ``discovery.strategy`` value.

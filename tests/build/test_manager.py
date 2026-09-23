@@ -262,8 +262,51 @@ class TestGetInstallerVersion:
 
         assert _get_installer_version(installer) == "26.02"
 
-    def test_msi_version_comes_from_the_installer(self, tmp_path):
-        """Tests that an MSI reports its own version over the folder name."""
+    def test_msi_version_is_confirmed_against_the_folder(self, tmp_path):
+        """Tests that an MSI filed under its own version is accepted."""
+        downloads_dir = tmp_path / "downloads"
+        _save_download(downloads_dir, "napt-app", "26.02.00.0", "7z2602-x64.msi")
+        installer = downloads_dir / "napt-app" / "26.02.00.0" / "7z2602-x64.msi"
+
+        with patch("napt.build.manager.extract_msi_metadata") as mock_extract:
+            mock_extract.return_value = MSIMetadata(
+                product_name="7-Zip", product_version="26.02.00.0", architecture="x64"
+            )
+            assert _get_installer_version(installer) == "26.02.00.0"
+
+    @staticmethod
+    def _msix_metadata(version):
+        return MSIXMetadata(
+            display_name="App",
+            version=version,
+            architecture="x64",
+            identity_name="Vendor.App",
+            publisher="CN=Vendor",
+        )
+
+    def test_msix_version_is_confirmed_against_the_folder(self, tmp_path):
+        """Tests that an MSIX filed under its own version is accepted."""
+        downloads_dir = tmp_path / "downloads"
+        _save_download(downloads_dir, "napt-app", "4.41.105.0", "app.msix")
+        installer = downloads_dir / "napt-app" / "4.41.105.0" / "app.msix"
+
+        with patch("napt.build.manager.extract_msix_metadata") as mock_extract:
+            mock_extract.return_value = self._msix_metadata("4.41.105.0")
+            assert _get_installer_version(installer) == "4.41.105.0"
+
+    def test_msix_in_the_wrong_folder_is_refused(self, tmp_path):
+        """Tests that an MSIX whose version differs from its folder stops the build."""
+        downloads_dir = tmp_path / "downloads"
+        _save_download(downloads_dir, "napt-app", "4.41.105", "app.msix")
+        installer = downloads_dir / "napt-app" / "4.41.105" / "app.msix"
+
+        with patch("napt.build.manager.extract_msix_metadata") as mock_extract:
+            mock_extract.return_value = self._msix_metadata("4.41.105.0")
+            with pytest.raises(PackagingError, match="reports version 4.41.105.0"):
+                _get_installer_version(installer)
+
+    def test_msi_in_the_wrong_folder_is_refused(self, tmp_path):
+        """Tests that an MSI whose version differs from its folder stops the build."""
         downloads_dir = tmp_path / "downloads"
         _save_download(downloads_dir, "napt-app", "26.02", "7z2602-x64.msi")
         installer = downloads_dir / "napt-app" / "26.02" / "7z2602-x64.msi"
@@ -272,7 +315,8 @@ class TestGetInstallerVersion:
             mock_extract.return_value = MSIMetadata(
                 product_name="7-Zip", product_version="26.02.00.0", architecture="x64"
             )
-            assert _get_installer_version(installer) == "26.02.00.0"
+            with pytest.raises(PackagingError, match="reports version 26.02.00.0"):
+                _get_installer_version(installer)
 
 
 class TestCreateBuildDirectory:

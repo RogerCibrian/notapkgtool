@@ -16,6 +16,7 @@ from napt.discovery.url_download import run_url_download
 from napt.discovery.web_scrape import WebScrapeStrategy
 from napt.exceptions import ConfigError, NetworkError
 from napt.versioning.msi import MSIMetadata
+from napt.versioning.msix import MSIXMetadata
 
 
 class TestStrategyRegistry:
@@ -64,16 +65,14 @@ class TestUrlDownloadFlow:
                 content=fake_msi_content,
                 headers={"Content-Length": str(len(fake_msi_content))},
             )
-            with patch(
-                "napt.discovery.url_download.extract_msi_metadata"
-            ) as mock_extract:
+            with patch("napt.discovery.resolve.extract_msi_metadata") as mock_extract:
                 mock_extract.return_value = MSIMetadata(
                     product_name="", product_version="1.2.3", architecture="x64"
                 )
                 result = run_url_download(app_config, tmp_test_dir)
 
         assert result.version == "1.2.3"
-        assert result.version_source == "url_download"
+        assert result.version_source == "msi"
         app_dir = tmp_test_dir / "test-app"
         assert result.file_path == app_dir / "1.2.3" / "installer.msi"
         assert result.file_path.exists()
@@ -100,7 +99,7 @@ class TestUrlDownloadFlow:
                     headers={"Content-Length": str(len(content))},
                 )
                 with patch(
-                    "napt.discovery.url_download.extract_msi_metadata"
+                    "napt.discovery.resolve.extract_msi_metadata"
                 ) as mock_extract:
                     mock_extract.return_value = MSIMetadata(
                         product_name="", product_version=version, architecture="x64"
@@ -127,9 +126,7 @@ class TestUrlDownloadFlow:
                 content=content,
                 headers={"Content-Length": str(len(content))},
             )
-            with patch(
-                "napt.discovery.url_download.extract_msi_metadata"
-            ) as mock_extract:
+            with patch("napt.discovery.resolve.extract_msi_metadata") as mock_extract:
                 mock_extract.return_value = MSIMetadata(
                     product_name="", product_version="../../evil", architecture="x64"
                 )
@@ -155,6 +152,17 @@ class TestUrlDownloadFlow:
             with pytest.raises(NetworkError, match="download failed"):
                 run_url_download(app_config, tmp_test_dir)
 
+    def test_unexpected_error_is_reported_as_network_error(self, tmp_test_dir):
+        """Tests that a failure outside HTTP still surfaces as NetworkError."""
+        app_config = {
+            "id": "test-app",
+            "discovery": {"url": "https://example.com/installer.msi"},
+        }
+        with patch("napt.discovery.resolve.download_file") as mock_download:
+            mock_download.side_effect = OSError("disk full")
+            with pytest.raises(NetworkError, match="Failed to download"):
+                run_url_download(app_config, tmp_test_dir)
+
     def test_extraction_failure_raises(self, tmp_test_dir):
         """Tests that MSI extraction failures raise NetworkError."""
         app_config = {
@@ -168,14 +176,45 @@ class TestUrlDownloadFlow:
                 content=fake_content,
                 headers={"Content-Length": str(len(fake_content))},
             )
-            with patch(
-                "napt.discovery.url_download.extract_msi_metadata"
-            ) as mock_extract:
+            with patch("napt.discovery.resolve.extract_msi_metadata") as mock_extract:
                 mock_extract.side_effect = NetworkError("Invalid MSI")
-                with pytest.raises(
-                    NetworkError, match="Failed to extract MSI ProductVersion"
-                ):
+                with pytest.raises(NetworkError, match="Failed to extract"):
                     run_url_download(app_config, tmp_test_dir)
+
+    def test_discovers_version_from_msix(self, tmp_test_dir):
+        """Tests that an MSIX's Identity version is read the same way."""
+        app_config = {
+            "id": "test-app",
+            "discovery": {"url": "https://example.com/app.msix"},
+        }
+        with requests_mock.Mocker() as m:
+            m.get("https://example.com/app.msix", content=b"x", headers={})
+            with patch("napt.discovery.resolve.extract_msix_metadata") as extract:
+                extract.return_value = MSIXMetadata(
+                    identity_name="App",
+                    version="4.41.105.0",
+                    architecture="x64",
+                    display_name="App",
+                    publisher="CN=Vendor",
+                )
+                result = run_url_download(app_config, tmp_test_dir)
+
+        assert result.version == "4.41.105.0"
+        assert result.version_source == "msix"
+        assert result.file_path == tmp_test_dir / "test-app" / "4.41.105.0" / "app.msix"
+
+    def test_exe_is_refused(self, tmp_test_dir):
+        """Tests that a file with no readable version is refused with guidance."""
+        app_config = {
+            "id": "test-app",
+            "discovery": {"url": "https://example.com/setup.exe"},
+        }
+        with requests_mock.Mocker() as m:
+            m.get("https://example.com/setup.exe", content=b"x", headers={})
+            with pytest.raises(ConfigError, match="MSI and MSIX installers only"):
+                run_url_download(app_config, tmp_test_dir)
+
+        assert list((tmp_test_dir / "test-app").iterdir()) == []
 
 
 _SIDECAR_URL = "https://example.com/installer.msi"
@@ -200,6 +239,7 @@ def _seed_previous_download(
         json.dumps(
             {
                 "url": url,
+                "discovered_version": None,
                 "etag": etag,
                 "last_modified": None,
                 "version": version,
@@ -213,7 +253,7 @@ def _seed_previous_download(
 
 def _run_with_msi_version(app_config, output_dir, version):
     """Runs url_download with MSI version extraction stubbed out."""
-    with patch("napt.discovery.url_download.extract_msi_metadata") as mock_extract:
+    with patch("napt.discovery.resolve.extract_msi_metadata") as mock_extract:
         mock_extract.return_value = MSIMetadata(
             product_name="", product_version=version, architecture="x64"
         )
@@ -395,9 +435,7 @@ class TestUrlDownloadSidecar:
                 content=fake_msi,
                 headers={"Content-Length": str(len(fake_msi))},
             )
-            with patch(
-                "napt.discovery.url_download.extract_msi_metadata"
-            ) as mock_extract:
+            with patch("napt.discovery.resolve.extract_msi_metadata") as mock_extract:
                 mock_extract.return_value = MSIMetadata(
                     product_name="", product_version="1.0.0", architecture="x64"
                 )

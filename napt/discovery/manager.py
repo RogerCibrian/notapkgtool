@@ -26,19 +26,20 @@ Two Flows:
     - **Version-first** (api_github, api_json, web_scrape and any other
         registered [DiscoveryStrategy][napt.discovery.base.DiscoveryStrategy]):
         the strategy returns a
-        [RemoteVersion][napt.discovery.base.RemoteVersion], and
-        [resolve_installer][napt.discovery.base.resolve_installer]
-        decides whether to skip the download (the version's folder
-        already holds the installer) or fetch fresh.
+        [RemoteVersion][napt.discovery.base.RemoteVersion], whose version
+        is the trigger: a run that finds the same version as last time
+        reuses the previous download without a request.
     - **url_download** (handled by
         [run_url_download][napt.discovery.url_download.run_url_download]):
-        downloads the file with HTTP conditional headers (``ETag`` /
-        ``Last-Modified``) and extracts the version from the file's
-        metadata. Not a registered strategy because it cannot determine
-        the version without the file.
+        has no version to compare, so it sends HTTP conditional headers
+        (``ETag`` / ``Last-Modified``) and reuses the file on HTTP 304.
+        Not a registered strategy because it cannot determine the
+        version without the file.
 
-Both flows return a [StrategyResult][napt.discovery.base.StrategyResult],
-which this module unwraps into the pending release and the public result.
+Both flows end in [resolve_installer][napt.discovery.resolve.resolve_installer],
+which downloads when needed, reads the version from an MSI or MSIX
+installer, and returns a [StrategyResult][napt.discovery.base.StrategyResult]
+that this module unwraps into the pending release and the public result.
 
 """
 
@@ -48,12 +49,9 @@ from pathlib import Path
 from typing import Any
 
 from napt.config.loader import load_effective_config
-from napt.discovery.base import (
-    StrategyResult,
-    require_usable_version,
-    resolve_installer,
-)
+from napt.discovery.base import StrategyResult
 from napt.discovery.registry import get_strategy
+from napt.discovery.resolve import resolve_installer
 from napt.discovery.url_download import run_url_download
 from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
@@ -129,10 +127,14 @@ def discover_recipe(
     else:
         strategy = get_strategy(strategy_name)
         info = strategy.discover(config)
-        require_usable_version(info.version)
         logger.info("DISCOVERY", f"Version discovered: {info.version}")
         logger.step(3, 4, "Resolving installer...")
-        result = resolve_installer(info, config, output_dir)
+        result = resolve_installer(
+            info.download_url,
+            output_dir / app_id,
+            source=info.source,
+            discovered_version=info.version,
+        )
 
     logger.step(4, 4, "Updating state...")
     if not stateless:

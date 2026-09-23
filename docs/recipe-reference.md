@@ -230,7 +230,7 @@ headers:
 
 ### url_download strategy
 
-**Best for:** Vendors with stable download URLs and MSI installers with embedded ProductVersion.
+**Best for:** Vendors with stable download URLs and MSI or MSIX installers, which carry their own version.
 
 **Configuration:**
 
@@ -250,8 +250,8 @@ are released. If the URL changes with each version, use `web_scrape` strategy in
 
 Downloads the file from `url`, using HTTP conditional requests (ETags) to skip
 unchanged files. MSI files supply their version from the ProductVersion
-property with no configuration; other file types need a version-first strategy
-(api_github, api_json, web_scrape) instead.
+property and MSIX files from their Identity, with no configuration; other file
+types need a version-first strategy (api_github, api_json, web_scrape) instead.
 
 ### web_scrape strategy
 
@@ -1091,7 +1091,7 @@ variables):
 
 | Variable | Value | Supported fields |
 |----------|-------|------------------|
-| `{{discovered_version}}` | Version discovered by NAPT | `psadt.app_vars`, `psadt.install`, `psadt.uninstall`, `intune.detection.display_name` |
+| `{{discovered_version}}` | The release's version: the installer's own for MSI and MSIX, the strategy's for EXE (see [The installer's version is the version](user-guide.md#the-installers-version-is-the-version)) | `psadt.app_vars`, `psadt.install`, `psadt.uninstall`, `intune.detection.display_name` |
 | `{{installer_filename}}` | Exact filename of the downloaded installer | `psadt.app_vars`, `psadt.install`, `psadt.uninstall` |
 
 `napt build` logs a warning if an `app_vars` value or an install/uninstall
