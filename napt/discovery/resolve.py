@@ -32,7 +32,13 @@ Skipping Downloads:
     and hash. The next run compares its trigger against that record:
 
     - A version-first strategy that reports the same version as last time
-        reuses the installer without a request.
+        reuses the installer without a request, provided that version and
+        the installer's own agree as a device would compare them
+        (``4.41.106`` and ``4.41.106.0`` do). When they disagree, the
+        report was already wrong about this file once (a page updated
+        before the file behind it, or a pattern capturing the wrong
+        value), so it cannot vouch that nothing changed: the run warns
+        and asks the server instead, as ``url_download`` does.
     - ``url_download`` has no version to compare, so it sends the
         ``ETag`` / ``Last-Modified`` back as a conditional request and
         reuses the installer when the server answers HTTP 304.
@@ -55,6 +61,7 @@ from napt.logging import get_global_logger
 from napt.paths import is_safe_path_component, safe_filename
 from napt.versioning.msi import extract_msi_metadata
 from napt.versioning.msix import extract_msix_metadata
+from napt.versioning.ordering import compare_versions
 
 from .base import StrategyResult, require_usable_version
 
@@ -123,44 +130,92 @@ def resolve_installer(
             # The reported version is the whole trigger. The URL is not part
             # of it, because some vendor pages embed a changing token in
             # every download link.
-            if previous is not None and previous.discovered_version == (
-                discovered_version
-            ):
+            if previous is None or previous.discovered_version != discovered_version:
+                return _download_and_file(url, app_dir, source, discovered_version)
+            if compare_versions(discovered_version, previous.version) == 0:
                 logger.info(
                     "DISCOVERY",
                     f"Version {discovered_version} already downloaded, "
                     f"using {previous.file_path}",
                 )
                 return _reuse(previous, url, source)
-            return _download_and_file(url, app_dir, source, discovered_version)
+            # The reported version was already wrong about this file once,
+            # so it cannot vouch that nothing changed. Ask the server.
+            _warn_mismatch(source, discovered_version, previous.version)
+            return _refresh(previous, url, app_dir, source, discovered_version)
 
-        if (
-            previous is None
-            or previous.url != url
-            or not (previous.etag or previous.last_modified)
-        ):
+        if previous is None or previous.url != url:
             return _download_and_file(url, app_dir, source, None)
-        logger.verbose("DISCOVERY", f"Previous ETag: {previous.etag}")
-        logger.verbose("DISCOVERY", f"Previous Last-Modified: {previous.last_modified}")
-        try:
-            return _download_and_file(
-                url,
-                app_dir,
-                source,
-                None,
-                etag=previous.etag,
-                last_modified=previous.last_modified,
-            )
-        except NotModifiedError:
-            logger.info(
-                "DISCOVERY",
-                f"File not modified (HTTP 304), using {previous.file_path}",
-            )
-            return _reuse(previous, url, source)
+        return _refresh(previous, url, app_dir, source, None)
     except (NetworkError, ConfigError):
         raise
     except Exception as err:
         raise NetworkError(f"Failed to download {url}: {err}") from err
+
+
+def _refresh(
+    previous: _PreviousDownload,
+    url: str,
+    app_dir: Path,
+    source: str,
+    discovered_version: str | None,
+) -> StrategyResult:
+    """Downloads again unless the server confirms the previous file is current.
+
+    Sends the sidecar's ``ETag`` / ``Last-Modified`` as a conditional
+    request. HTTP 304 reuses the previous download; anything else is a
+    fresh download. A sidecar with neither value cannot ask, so the file
+    is simply downloaded again.
+
+    Args:
+        previous: The app's last download, as recorded in its sidecar.
+        url: Download URL.
+        app_dir: The app's download directory (``downloads/<id>``).
+        source: Strategy name.
+        discovered_version: Version the strategy reported, or None for
+            ``url_download``.
+
+    Returns:
+        Resolved version, its source, file path, and SHA-256 hash.
+
+    Raises:
+        NetworkError: On download or version-extraction failure.
+        ConfigError: If the version cannot be used as a folder name, or
+            if there is no version at all.
+
+    """
+    logger = get_global_logger()
+    if not (previous.etag or previous.last_modified):
+        return _download_and_file(url, app_dir, source, discovered_version)
+    logger.verbose("DISCOVERY", f"Previous ETag: {previous.etag}")
+    logger.verbose("DISCOVERY", f"Previous Last-Modified: {previous.last_modified}")
+    try:
+        return _download_and_file(
+            url,
+            app_dir,
+            source,
+            discovered_version,
+            etag=previous.etag,
+            last_modified=previous.last_modified,
+        )
+    except NotModifiedError:
+        logger.info(
+            "DISCOVERY",
+            f"File not modified (HTTP 304), using {previous.file_path}",
+        )
+        return _reuse(previous, url, source)
+
+
+def _warn_mismatch(source: str, discovered_version: str, version: str) -> None:
+    """Warns that the reported version and the installer's disagree."""
+    get_global_logger().warning(
+        "DISCOVERY",
+        f"{source} reports version {discovered_version} but the installer is "
+        f"{version}. The vendor may be serving an older file than it "
+        "advertises, or the recipe's version_pattern may capture the wrong "
+        "value. Every run will ask the server for a newer file until the two "
+        "agree.",
+    )
 
 
 def _reuse(previous: _PreviousDownload, url: str, source: str) -> StrategyResult:
@@ -228,11 +283,15 @@ def _download_and_file(
         if installer_version is not None:
             version = installer_version
             if discovered_version is not None and discovered_version != version:
-                logger.info(
-                    "DISCOVERY",
-                    f"Installer reports version {version} ({source} reported "
-                    f"{discovered_version}); recording {version}",
-                )
+                if compare_versions(discovered_version, version) == 0:
+                    logger.info(
+                        "DISCOVERY",
+                        f"Installer reports version {version} ({source} reported "
+                        f"{discovered_version}); recording {version}",
+                    )
+                else:
+                    _warn_mismatch(source, discovered_version, version)
+                    logger.info("DISCOVERY", f"Recording {version}")
         elif discovered_version is not None:
             version = discovered_version
         else:

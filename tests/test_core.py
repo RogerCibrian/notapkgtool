@@ -238,6 +238,107 @@ class TestVersionFirstResolution:
         assert second.file_path == tmp_test_dir / "test-app" / "4.41.106.0" / name
         assert second.sha256 == first.sha256
 
+    def test_wrong_first_download_is_corrected_once_the_vendor_catches_up(
+        self, tmp_test_dir, create_yaml_file, capsys
+    ):
+        """Tests that a page ahead of its file keeps being checked until they agree."""
+        recipe_path = _web_scrape_recipe(create_yaml_file, extension="msi")
+        state_dir = tmp_test_dir / "state"
+        link = "https://example.com/app-v2.1-installer.msi"
+        msi_versions = iter(["2.0", "2.1"])
+
+        def run():
+            with patch("napt.discovery.resolve.extract_msi_metadata") as extract:
+                extract.side_effect = lambda _path: MSIMetadata(
+                    product_name="",
+                    product_version=next(msi_versions),
+                    architecture="x64",
+                )
+                return discover_recipe(recipe_path, tmp_test_dir, state_dir=state_dir)
+
+        with requests_mock.Mocker() as m:
+            m.get(_PAGE, text='<a href="/app-v2.1-installer.msi">Download</a>')
+            m.get(
+                link,
+                [
+                    # Monday: the page says 2.1, the link still serves 2.0.
+                    {"content": b"old", "headers": {"ETag": '"e-2.0"'}},
+                    # Monday, later: unchanged.
+                    {"status_code": 304},
+                    # Wednesday: the real 2.1 file arrives.
+                    {"content": b"new!", "headers": {"ETag": '"e-2.1"'}},
+                ],
+            )
+            monday = run()
+            monday_again = run()
+            wednesday = run()
+            thursday = run()
+            installer_requests = [
+                r for r in m.request_history if r.url.startswith(link)
+            ]
+
+        app_dir = tmp_test_dir / "test-app"
+        assert monday.version == "2.0"
+        assert monday_again.version == "2.0"
+        assert installer_requests[1].headers["If-None-Match"] == '"e-2.0"'
+        assert wednesday.version == "2.1"
+        assert wednesday.file_path == app_dir / "2.1" / "app-v2.1-installer.msi"
+        assert (app_dir / "2.0" / "app-v2.1-installer.msi").read_bytes() == b"old"
+        assert thursday.version == "2.1"
+        assert len(installer_requests) == 3  # Thursday made no request
+        # Warned on Monday, Monday again, and at the start of Wednesday's run
+        # (before the fetch showed the vendor had caught up); not on Thursday.
+        out = capsys.readouterr().out
+        assert out.count("web_scrape reports version 2.1 but the installer is 2.0") == 3
+
+    def test_format_only_difference_is_trusted(
+        self, tmp_test_dir, create_yaml_file, capsys
+    ):
+        """Tests that 4.41.106 against 4.41.106.0 skips with no request or warning."""
+        recipe_path = _web_scrape_recipe(create_yaml_file, extension="msi")
+
+        with requests_mock.Mocker() as m:
+            _serve(m, "4.41.106", b"msi bytes", extension="msi")
+            with patch("napt.discovery.resolve.extract_msi_metadata") as extract:
+                extract.return_value = MSIMetadata(
+                    product_name="", product_version="4.41.106.0", architecture="x64"
+                )
+                discover_recipe(
+                    recipe_path, tmp_test_dir, state_dir=tmp_test_dir / "state"
+                )
+                discover_recipe(
+                    recipe_path, tmp_test_dir, state_dir=tmp_test_dir / "state"
+                )
+            installer_requests = [
+                r for r in m.request_history if r.url.endswith(".msi")
+            ]
+
+        assert len(installer_requests) == 1
+        assert "but the installer is" not in capsys.readouterr().out
+
+    def test_mismatch_without_validators_downloads_every_run(
+        self, tmp_test_dir, create_yaml_file
+    ):
+        """Tests that a server with no ETag gets a full download while mismatched."""
+        recipe_path = _web_scrape_recipe(create_yaml_file, extension="msi")
+
+        with requests_mock.Mocker() as m:
+            _serve(m, "2.1", b"old", extension="msi")
+            with patch("napt.discovery.resolve.extract_msi_metadata") as extract:
+                extract.return_value = MSIMetadata(
+                    product_name="", product_version="2.0", architecture="x64"
+                )
+                for _ in range(2):
+                    discover_recipe(
+                        recipe_path, tmp_test_dir, state_dir=tmp_test_dir / "state"
+                    )
+            installer_requests = [
+                r for r in m.request_history if r.url.endswith(".msi")
+            ]
+
+        assert len(installer_requests) == 2
+        assert all("If-None-Match" not in r.headers for r in installer_requests)
+
     def test_reuse_ignores_a_changed_download_url(self, tmp_test_dir, create_yaml_file):
         """Tests that the same release behind a new link does not defeat the skip."""
         recipe_path = _web_scrape_recipe(create_yaml_file)
