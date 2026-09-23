@@ -88,6 +88,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed a wrong first download never being corrected. When a vendor's page
+    or API announced a new version before the file behind the link changed,
+    `napt discover` filed the old file and then, since the page kept
+    reporting the same version, never looked again. Discover now trusts a
+    repeated version only if it matched the installer's own version last
+    time; otherwise it warns on every run and asks the server whether the
+    file changed (a full download when the server sends no `ETag`), until
+    the two agree
 - Fixed `napt discover` labelling the installer it already had with an older
     version number when a vendor rolled a release back. With `api_github`,
     `api_json`, and `web_scrape` recipes, the older version was treated as

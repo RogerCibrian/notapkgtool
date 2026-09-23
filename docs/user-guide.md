@@ -788,7 +788,8 @@ flowchart TD
     Strategy -->|File-First<br/>url_download| HaveFile{Last download<br/>still on disk?}
 
     CheckVersion --> SameVersion{Same version<br/>as last run?}
-    SameVersion -->|Yes| Skip1([Skip download<br/>Use that file])
+    SameVersion -->|Yes, and it matched<br/>the file's version| Skip1([Skip download<br/>Use that file])
+    SameVersion -->|Yes, but the file<br/>disagreed| CheckETag
     SameVersion -->|No| Download1[Download File]
 
     HaveFile -->|Yes| CheckETag[Conditional request<br/>with saved ETag]
@@ -821,9 +822,15 @@ The version a page or API reports is only the trigger for a download.
 Once the file is on disk, an MSI or MSIX installer reports its own version, and that is what NAPT records: it names the download folder, becomes the pending release, and later names the build and package folders, fills `{{discovered_version}}`, and is the version the detection script compares against on a device.
 An EXE carries no readable version, so for it the reported version is used as is.
 
-When the two differ, discover says so in its log (`Installer reports version 4.41.106.0 (api_json reported 4.41.106); recording 4.41.106.0`).
-A format difference like that is normal and harmless.
-A real disagreement (the page says 2.1, the file is 2.0) means the vendor is serving an older file than it advertises, or the recipe's `version_pattern` captured the wrong value; the recorded release is truthful either way.
+When the two differ only in format (`4.41.106` against `4.41.106.0`), discover notes it in its log and treats them as the same version, because a device would too.
+
+A real disagreement (the page says 2.1, the file is 2.0) means the vendor is serving an older file than it advertises, or the recipe's `version_pattern` captured the wrong value.
+The recorded release is truthful either way: 2.0 is what gets recorded.
+Discover also stops trusting the page's version as proof that nothing changed, since it was already wrong about this file once.
+Every run logs a warning naming both values and asks the server whether the file changed, using the saved `ETag`; a `304 Not Modified` reuses the file, a `200` fetches whatever the server now serves.
+A server that sends no `ETag` or `Last-Modified` gets a full download each run instead.
+Once the page's version and the file's agree again, the request-free skip returns.
+If the warning never goes away, the recipe's `version_pattern` is the likely cause.
 
 **A version that goes down** (a vendor pulling a release) is handled like any other change: the older version gets its own folder and its own download.
 NAPT never relabels an installer it already has.
