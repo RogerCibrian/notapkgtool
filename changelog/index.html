@@ -2734,6 +2734,12 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.10.0...HEAD">Unreleased</a></h2>
 <h3 id="added">Added</h3>
 <ul>
+<li><strong><code>version_pattern</code> for <code>api_json</code> recipes</strong> - A regex applied to the
+    value found at <code>version_path</code>, the same field <code>api_github</code> and
+    <code>web_scrape</code> already have. Use it when the API wraps the version in a
+    prefix or suffix (<code>"v2.0"</code>, <code>"2.0 (stable)"</code>), which a device would
+    otherwise read as version 0. Without it the API's value is used as is,
+    so existing recipes are unchanged</li>
 <li>
 <p><strong>Recipe <code>parent</code> field</strong> - A recipe can name another recipe as its
     parent and inherit everything it does not set itself. The parent merges
