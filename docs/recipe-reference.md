@@ -88,6 +88,17 @@ depends on the chosen `strategy`.
 
 - `strategy`: Required. One of: `api_github`, `api_json`, `url_download`, `web_scrape`
 
+**Why `version_pattern` differs by strategy:** the regex exists to pull a
+version out of something that is not one, so each strategy needs it in
+proportion to how raw its source is.
+`web_scrape` requires it, because the version is buried in a link URL.
+`api_github` defaults it to `v?([0-9.]+)`, because Git tags conventionally
+carry a `v`.
+`api_json` leaves it off unless you set it, because a JSON version field is
+usually already a version; add it only when the API wraps the value.
+`url_download` has no such field, because the version is read from the
+installer itself.
+
 ### api_github strategy
 
 **Best for:** Open-source projects on GitHub with releases and semantic versioned tags.
@@ -180,6 +191,7 @@ discovery:
   api_url: "https://api.vendor.com/latest"   # Required: JSON API endpoint URL
   version_path: "version"                    # Required: JSONPath to version field
   download_url_path: "download_url"          # Required: JSONPath to download URL field
+  version_pattern: "v?([0-9.]+)"             # Optional: regex to narrow the version value
   headers:                                   # Optional: HTTP headers for authentication
     Authorization: "Bearer ${API_TOKEN}"
 ```
@@ -210,6 +222,25 @@ JSONPath expression to extract the version field from the API response. Supports
 
 JSONPath expression to extract the download URL field from the API response. Supports nested
 paths (same format as `version_path`).
+
+#### version_pattern
+
+**Type:** `string` (regex)
+**Required:** No
+**Default:** None (the value at `version_path` is used as is)
+
+Regular expression applied to the value found at `version_path`. Use it when the
+API wraps the version in a prefix or suffix that a device would misread: version
+comparison on the device takes each part's leading digits, so `"v2.0"` reads as
+version 0.
+
+**Examples:**
+- `"v?([0-9.]+)"` - Extracts `2.0` from `v2.0` or `2.0`
+- `"([0-9.]+)"` - Extracts `2.0` from `2.0 (stable)`
+
+**Note:** The first capture group is used as the version string; a pattern with
+no capture group uses the whole match. A pattern that does not match stops
+discovery with an error.
 
 #### headers
 

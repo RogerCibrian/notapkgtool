@@ -1086,8 +1086,94 @@ class TestApiJsonStrategyErrors:
         assert "3.1.4" in version_info.download_url
 
 
+class TestApiJsonVersionPattern:
+    """Tests for the optional version_pattern of the api_json strategy."""
+
+    @staticmethod
+    def _discover(version_value, version_pattern=None):
+        discovery = {
+            "api_url": "https://api.example.com/latest",
+            "version_path": "version",
+            "download_url_path": "url",
+        }
+        if version_pattern is not None:
+            discovery["version_pattern"] = version_pattern
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://api.example.com/latest",
+                json={"version": version_value, "url": "https://example.com/a.msi"},
+            )
+            return ApiJsonStrategy().discover({"discovery": discovery})
+
+    def test_absent_pattern_uses_the_value_as_is(self):
+        """Tests that without a pattern the API's value is not touched."""
+        assert self._discover("v2.0").version == "v2.0"
+
+    def test_capture_group_narrows_the_value(self):
+        """Tests that capture group 1 becomes the version."""
+        assert self._discover("v2.0", r"v?([0-9.]+)").version == "2.0"
+        assert self._discover("2.0 (stable)", r"([0-9.]+)").version == "2.0"
+
+    def test_pattern_without_group_uses_the_full_match(self):
+        """Tests that a pattern with no capture group keeps the whole match."""
+        assert self._discover("build-2024.10", r"[0-9.]+").version == "2024.10"
+
+    def test_pattern_that_does_not_match_raises(self):
+        """Tests that a non-matching pattern is a configuration error."""
+        with pytest.raises(ConfigError, match="did not match the API's version"):
+            self._discover("latest", r"[0-9]+\.[0-9]+")
+
+    def test_invalid_pattern_raises(self):
+        """Tests that an invalid regex is a configuration error at discovery."""
+        with pytest.raises(ConfigError, match="Invalid version_pattern regex"):
+            self._discover("2.0", r"([0-9")
+
+
 class TestApiJsonValidateConfig:
     """Tests for ApiJsonStrategy.validate_config()."""
+
+    def test_version_pattern_must_be_a_string(self):
+        """Tests that a non-string version_pattern is reported."""
+        errors = ApiJsonStrategy().validate_config(
+            {
+                "discovery": {
+                    "api_url": "https://api.example.com/latest",
+                    "version_path": "version",
+                    "download_url_path": "download_url",
+                    "version_pattern": 5,
+                }
+            }
+        )
+        assert errors == ["discovery.version_pattern must be a string"]
+
+    def test_invalid_version_pattern_regex_reported(self):
+        """Tests that an invalid version_pattern regex is reported."""
+        errors = ApiJsonStrategy().validate_config(
+            {
+                "discovery": {
+                    "api_url": "https://api.example.com/latest",
+                    "version_path": "version",
+                    "download_url_path": "download_url",
+                    "version_pattern": "([0-9",
+                }
+            }
+        )
+        assert len(errors) == 1
+        assert errors[0].startswith("Invalid version_pattern regex")
+
+    def test_valid_version_pattern_accepted(self):
+        """Tests that a valid version_pattern adds no errors."""
+        errors = ApiJsonStrategy().validate_config(
+            {
+                "discovery": {
+                    "api_url": "https://api.example.com/latest",
+                    "version_path": "version",
+                    "download_url_path": "download_url",
+                    "version_pattern": r"v?([0-9.]+)",
+                }
+            }
+        )
+        assert errors == []
 
     def test_valid_config_returns_empty(self):
         """Tests that a fully valid config returns no errors."""
