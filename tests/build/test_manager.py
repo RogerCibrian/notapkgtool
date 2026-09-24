@@ -34,6 +34,7 @@ from napt.build.manager import (
     _get_installer_version,
     _release_to_build,
     _require_exe_scripts,
+    _resolve_app_info,
     _write_build_manifest,
 )
 from napt.exceptions import ConfigError, PackagingError, StateError
@@ -317,6 +318,45 @@ class TestGetInstallerVersion:
             )
             with pytest.raises(PackagingError, match="reports version 26.02.00.0"):
                 _get_installer_version(installer)
+
+
+class TestResolveAppInfo:
+    """Tests for the app name and architecture used by the generated scripts."""
+
+    def test_control_characters_in_name_are_removed_with_a_warning(self, capsys):
+        """Tests that a line break in an installer's name never reaches a script."""
+        metadata = MSIXMetadata(
+            display_name="Contoso\r\nViewer",
+            version="1.0.0.0",
+            architecture="x64",
+            identity_name="Contoso.Viewer",
+            publisher="CN=Contoso",
+        )
+
+        app_name, architecture = _resolve_app_info(
+            Path("app.msix"), {"intune": {"detection": {}}}, "1.0.0.0", None, metadata
+        )
+
+        assert app_name == "Contoso Viewer"
+        assert architecture == "x64"
+        assert "contains control characters" in capsys.readouterr().out
+
+    def test_clean_name_passes_through_silently(self, capsys):
+        """Tests that an ordinary name is used as is, with no warning."""
+        metadata = MSIXMetadata(
+            display_name="Café Viewer™",
+            version="1.0.0.0",
+            architecture="x64",
+            identity_name="Contoso.Viewer",
+            publisher="CN=Contoso",
+        )
+
+        app_name, _ = _resolve_app_info(
+            Path("app.msix"), {"intune": {"detection": {}}}, "1.0.0.0", None, metadata
+        )
+
+        assert app_name == "Café Viewer™"
+        assert "control characters" not in capsys.readouterr().out
 
 
 class TestCreateBuildDirectory:

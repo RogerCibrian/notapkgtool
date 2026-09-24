@@ -8,12 +8,13 @@ Tests MSI metadata extraction including:
 
 from __future__ import annotations
 
+from pathlib import Path
 import subprocess
 from unittest import mock
 
 import pytest
 
-from napt.exceptions import ConfigError
+from napt.exceptions import ConfigError, PackagingError
 from napt.powershell import ps_single_quote
 from napt.versioning.msi import _architecture_from_template, extract_msi_metadata
 
@@ -85,17 +86,26 @@ class TestArchitectureFromTemplate:
 class TestExtractMsiMetadataScript:
     """Tests for the PowerShell script built to read MSI metadata."""
 
+    @staticmethod
+    def _fake_powershell(lines, encoding="utf-8"):
+        """Stands in for powershell.exe: writes the values to the output file."""
+
+        def run(args, **kwargs):
+            out = Path(kwargs["env"]["NAPT_MSI_OUT"])
+            out.write_text("\n".join(lines) + "\n", encoding=encoding)
+            return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+        return run
+
     def test_msi_path_is_quoted_in_script(self, tmp_path, monkeypatch):
         """Tests that a hostile MSI path cannot close its PowerShell string."""
         monkeypatch.setattr("napt.versioning.msi.sys.platform", "win32")
         msi_path = tmp_path / f"app{RSQUO}; Remove-Item X; {RSQUO}.msi"
         msi_path.write_bytes(b"")
-        completed = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout="Contoso App\n1.2.3\nx64;1033\n", stderr=""
-        )
 
         with mock.patch(
-            "napt.versioning.msi.subprocess.run", return_value=completed
+            "napt.versioning.msi.subprocess.run",
+            side_effect=self._fake_powershell(["Contoso App", "1.2.3", "x64;1033"]),
         ) as run:
             metadata = extract_msi_metadata(msi_path)
 
@@ -103,3 +113,40 @@ class TestExtractMsiMetadataScript:
         assert f"OpenDatabase({ps_single_quote(str(msi_path))}, 0)" in script
         assert f"app{RSQUO}{RSQUO}; Remove-Item X; {RSQUO}{RSQUO}.msi'" in script
         assert metadata.product_version == "1.2.3"
+
+    @pytest.mark.parametrize("encoding", ["utf-8", "utf-8-sig"])
+    def test_non_ascii_product_name_round_trips(self, tmp_path, monkeypatch, encoding):
+        """Tests that the values travel through a UTF-8 file, not the console."""
+        monkeypatch.setattr("napt.versioning.msi.sys.platform", "win32")
+        msi_path = tmp_path / "app.msi"
+        msi_path.write_bytes(b"")
+        name = "Café Office™ üÉ"
+
+        with mock.patch(
+            "napt.versioning.msi.subprocess.run",
+            side_effect=self._fake_powershell([name, "2.0.0", "x64;1033"], encoding),
+        ) as run:
+            metadata = extract_msi_metadata(msi_path)
+
+        script = run.call_args.args[0][-1]
+        assert "[Console]::OutputEncoding" not in script
+        assert "$env:NAPT_MSI_OUT" in script
+        assert metadata.product_name == name
+        assert not Path(run.call_args.kwargs["env"]["NAPT_MSI_OUT"]).exists()
+
+    def test_output_file_is_removed_when_powershell_fails(self, tmp_path, monkeypatch):
+        """Tests that a failed query leaves no temp file behind."""
+        monkeypatch.setattr("napt.versioning.msi.sys.platform", "win32")
+        msi_path = tmp_path / "app.msi"
+        msi_path.write_bytes(b"")
+        seen = {}
+
+        def failing_run(args, **kwargs):
+            seen["out"] = Path(kwargs["env"]["NAPT_MSI_OUT"])
+            raise subprocess.CalledProcessError(1, args, stderr="boom")
+
+        with mock.patch("napt.versioning.msi.subprocess.run", side_effect=failing_run):
+            with pytest.raises(PackagingError, match="PowerShell MSI query"):
+                extract_msi_metadata(msi_path)
+
+        assert not seen["out"].exists()

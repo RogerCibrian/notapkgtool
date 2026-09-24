@@ -38,10 +38,12 @@ Note:
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 from typing import Literal
 
 from napt.exceptions import ConfigError, PackagingError
@@ -135,6 +137,17 @@ def extract_msi_metadata(file_path: str | Path) -> MSIMetadata:
             "SELECT Property, Value FROM Property "
             "WHERE Property = 'ProductName' OR Property = 'ProductVersion'"
         )
+        # PowerShell writes captured stdout in the console's OEM code page
+        # (cp437 on English Windows), which Python would decode as the locale
+        # code page (cp1252), mangling every non-ASCII character of a product
+        # name. Changing the console's code page from inside the script would
+        # fix that but leaks into the user's terminal for the rest of the
+        # session, so the values go through a UTF-8 file instead. Its path
+        # travels in an environment variable, keeping it out of the script.
+        with tempfile.NamedTemporaryFile(
+            prefix="napt-msi-", suffix=".txt", delete=False
+        ) as handle:
+            out_path = Path(handle.name)
         ps_script = f"""
 $installer = New-Object -ComObject WindowsInstaller.Installer
 $db = $installer.OpenDatabase({quoted_path}, 0)
@@ -160,17 +173,24 @@ if (-not $template) {{
     Write-Error "Template (Summary Information Property 7) not found"
     exit 1
 }}
-@($props['ProductName'], $props['ProductVersion'], $template) -join "`n"
+$utf8 = New-Object System.Text.UTF8Encoding $false
+[System.IO.File]::WriteAllLines(
+    $env:NAPT_MSI_OUT,
+    [string[]]@($props['ProductName'], $props['ProductVersion'], $template),
+    $utf8
+)
 """
         try:
-            ps_result = subprocess.run(
+            subprocess.run(
                 ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_script],
                 check=True,
                 capture_output=True,
                 text=True,
+                errors="replace",
                 timeout=10,
+                env={**os.environ, "NAPT_MSI_OUT": str(out_path)},
             )
-            output_lines = ps_result.stdout.splitlines()
+            output_lines = out_path.read_text(encoding="utf-8-sig").splitlines()
             product_name = output_lines[0] if len(output_lines) > 0 else ""
             product_version = output_lines[1] if len(output_lines) > 1 else ""
             template = output_lines[2] if len(output_lines) > 2 else ""
@@ -201,6 +221,8 @@ if (-not $template) {{
             ) from err
         except subprocess.TimeoutExpired:
             raise PackagingError("PowerShell MSI query timed out") from None
+        finally:
+            out_path.unlink(missing_ok=True)
 
     # msiinfo (Linux/macOS)
     msiinfo_bin = shutil.which("msiinfo")

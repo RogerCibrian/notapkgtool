@@ -177,7 +177,11 @@ def generate_detection_script(config: DetectionConfig, output_path: Path) -> Pat
         substitute_ps_template,
     )
     from napt.logging import get_global_logger
-    from napt.powershell import PS_SCRIPT_ENCODING, ps_escape_double_quoted
+    from napt.powershell import (
+        PS_SCRIPT_ENCODING,
+        ps_escape_double_quoted,
+        strip_control_characters,
+    )
 
     logger = get_global_logger()
 
@@ -187,7 +191,9 @@ def generate_detection_script(config: DetectionConfig, output_path: Path) -> Pat
     script_content = substitute_ps_template(
         template,
         {
-            "$NaptAppName": ps_escape_double_quoted(config.app_name),
+            "$NaptAppName": ps_escape_double_quoted(
+                strip_control_characters(config.app_name)
+            ),
             "$NaptVersion": ps_escape_double_quoted(config.version),
             "$NaptExactMatch": "$True" if config.exact_match else "$False",
             "$NaptLogRotationMb": str(config.log_rotation_mb),
@@ -264,7 +270,11 @@ def generate_requirements_script(config: RequirementsConfig, output_path: Path) 
         substitute_ps_template,
     )
     from napt.logging import get_global_logger
-    from napt.powershell import PS_SCRIPT_ENCODING, ps_escape_double_quoted
+    from napt.powershell import (
+        PS_SCRIPT_ENCODING,
+        ps_escape_double_quoted,
+        strip_control_characters,
+    )
 
     logger = get_global_logger()
 
@@ -276,7 +286,9 @@ def generate_requirements_script(config: RequirementsConfig, output_path: Path) 
     script_content = substitute_ps_template(
         template,
         {
-            "$NaptAppName": ps_escape_double_quoted(config.app_name),
+            "$NaptAppName": ps_escape_double_quoted(
+                strip_control_characters(config.app_name)
+            ),
             "$NaptVersion": ps_escape_double_quoted(config.version),
             "$NaptLogRotationMb": str(config.log_rotation_mb),
             "$NaptIsMsiInstaller": "$True" if config.is_msi_installer else "$False",

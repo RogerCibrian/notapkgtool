@@ -20,7 +20,11 @@ early runs as code on the endpoint or the build host.
 
 PowerShell treats typographic quotes as string delimiters too: U+2018 to
 U+201B close a single-quoted string, U+201C to U+201E a double-quoted one.
-Both functions escape the full sets.
+Both quoting functions escape the full sets. A value that lands outside a
+string, such as an app name in a comment line, needs a different guard: a
+line break ends the comment and the rest of the value runs as code, so
+[strip_control_characters][napt.powershell.strip_control_characters] removes
+line breaks and the other control characters first.
 """
 
 from __future__ import annotations
@@ -44,6 +48,11 @@ _DOUBLE_QUOTES = '"\u201c\u201d\u201e'
 
 _SINGLE_QUOTE_RE = re.compile(f"[{_SINGLE_QUOTES}]")
 _DOUBLE_QUOTED_SPECIAL_RE = re.compile(f"[`${_DOUBLE_QUOTES}]")
+
+# C0 controls (including CR and LF, the only characters that end a PowerShell
+# comment), DEL, and the Unicode line and paragraph separators, which do not
+# end a comment but are invisible and have no place in a name or filename.
+_CONTROL_RE = re.compile("[\x00-\x1f\x7f\u2028\u2029]+")
 
 
 def ps_single_quote(value: str) -> str:
@@ -91,3 +100,29 @@ def ps_escape_double_quoted(value: str) -> str:
 
     """
     return _DOUBLE_QUOTED_SPECIAL_RE.sub(lambda m: "`" + m.group(0), value)
+
+
+def strip_control_characters(value: str) -> str:
+    """Removes line breaks and other control characters from a value.
+
+    Quoting keeps a value safe inside a string, but an app name is also
+    written into a comment line and a script filename, where a line break
+    ends the comment (the remainder runs as code) or makes the filename
+    invalid. Each run of control characters becomes a single space.
+
+    Args:
+        value: Raw text, typically an app name from installer metadata or
+            a recipe.
+
+    Returns:
+        The text with every run of control characters replaced by a space
+        and surrounding whitespace trimmed.
+
+    Example:
+        Clean a display name read from an installer manifest:
+            ```python
+            app_name = strip_control_characters(metadata.display_name)
+            ```
+
+    """
+    return _CONTROL_RE.sub(" ", value).strip()
