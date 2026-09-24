@@ -38,8 +38,14 @@ replace.
 **Version**: The version becomes a folder name
 (`downloads/{app_id}/{version}/`), so it may contain only letters, digits, `.`,
 `-`, `_`, and `+`.
-If discovery stops with "cannot be used as a folder name", tighten the recipe's
-`version_pattern` so it captures only the version.
+It must also start with a digit: a device compares versions by each part's
+leading digits, so `v2.0` would read as version 0 there, every device would
+report it installed, and none would upgrade to it.
+If discovery stops with "cannot be used as a folder name" or "does not start
+with a number", tighten the recipe's `version_pattern` so it captures only the
+version.
+An MSI or MSIX is judged by its own version, so this only comes up for EXE
+recipes whose pattern (or `api_json` value) keeps a prefix.
 
 ### Build process (`napt build`)
 

@@ -34,6 +34,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING: Versions must start with a digit** - `napt discover` stops
+    with an error for a version such as `v2.0`, `release-2.0`, or `latest`.
+    A device compares versions by each part's leading digits, so such a
+    version read as 0 there: every device reported the app installed and
+    none ever upgraded, with no error anywhere. The error names the value a
+    `version_pattern` should capture. An MSI or MSIX is judged by its own
+    version, so only EXE recipes whose pattern or `api_json` value keeps a
+    prefix are affected; `api_github` already strips a `v` by default
 - **BREAKING: The installer's own version is the version** - For an MSI
     or MSIX, `napt discover` now reads the version out of the downloaded
     file and records that, rather than the value the page or API reported.
