@@ -49,6 +49,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import re
 from typing import Any, Protocol
 
 from napt.exceptions import ConfigError
@@ -154,22 +155,44 @@ class DiscoveryStrategy(Protocol):
 
 
 def require_usable_version(version: str) -> None:
-    """Rejects a version that cannot name a folder.
+    """Rejects a version that cannot name a folder or that a device would misread.
 
     The version names the download folder (``downloads/<id>/<version>``)
     and later the build folder, so a value with a path separator or ``..``
     is refused before any folder is created from it.
+
+    It is also what the detection and requirements scripts compare on a
+    device, and they take each part's leading digits with a part that has
+    none counting as 0. A version whose first part has no digits (``v2.0``,
+    ``latest``) therefore reads as version 0 there: every device would
+    report it installed and no device would ever upgrade to it. Such a
+    version is refused so the recipe gets fixed instead.
 
     Args:
         version: Version read from the installer, or reported by a
             strategy for an installer that carries no version of its own.
 
     Raises:
-        ConfigError: If the version is not a plain folder name.
+        ConfigError: If the version is not a plain folder name, or does
+            not start with a digit.
     """
     if not is_safe_path_component(version):
         raise ConfigError(
             f"Discovered version {version!a} cannot be used as a folder name. "
             "Versions may contain only letters, digits, '.', '-', '_', and '+'. "
             "Check the recipe's version pattern, or the installer's metadata."
+        )
+    if not version[0].isdigit():
+        # The part from the first digit onward is what a pattern should keep.
+        digits = re.search(r"\d.*", version)
+        hint = (
+            f"Tighten the recipe's version_pattern so it captures only "
+            f"{digits.group()!a}."
+            if digits
+            else "Check the recipe's version_path or version_pattern."
+        )
+        raise ConfigError(
+            f"Version {version!a} does not start with a number. Devices compare "
+            "versions numerically and would read it as 0, which blocks "
+            f"upgrades. {hint}"
         )

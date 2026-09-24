@@ -421,6 +421,40 @@ class TestUrlDownloadSidecar:
 
         assert (app_dir / ".download.json").read_text(encoding="utf-8") == before
 
+    @pytest.mark.parametrize(
+        ("version", "hint"),
+        [
+            ("v2.0", "captures only '2.0'"),
+            ("release-2.0", "captures only '2.0'"),
+            ("latest", "version_path or version_pattern"),
+        ],
+    )
+    def test_version_without_leading_digit_is_refused(
+        self, tmp_test_dir, version, hint
+    ):
+        """Tests that a version a device would read as 0 stops discovery."""
+        app_dir = tmp_test_dir / "test-app"
+
+        with requests_mock.Mocker() as m:
+            m.get(_SIDECAR_URL, content=b"msi", headers={"Content-Length": "3"})
+            with pytest.raises(ConfigError, match="does not start with a number"):
+                try:
+                    _run_with_msi_version(self.APP_CONFIG, tmp_test_dir, version)
+                except ConfigError as err:
+                    assert hint in str(err)
+                    raise
+
+        assert list(app_dir.iterdir()) == []
+
+    @pytest.mark.parametrize("version", ["2.0", "2024.10.15-hotfix2", "01.02"])
+    def test_version_with_leading_digit_is_accepted(self, tmp_test_dir, version):
+        """Tests that a version starting with a digit passes, whatever follows."""
+        with requests_mock.Mocker() as m:
+            m.get(_SIDECAR_URL, content=b"msi", headers={"Content-Length": "3"})
+            result = _run_with_msi_version(self.APP_CONFIG, tmp_test_dir, version)
+
+        assert result.version == version
+
     def test_no_cache_works(self, tmp_test_dir):
         """Tests that url_download works with no earlier download on disk."""
         app_config = {

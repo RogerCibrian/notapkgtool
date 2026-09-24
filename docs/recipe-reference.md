@@ -232,7 +232,8 @@ paths (same format as `version_path`).
 Regular expression applied to the value found at `version_path`. Use it when the
 API wraps the version in a prefix or suffix that a device would misread: version
 comparison on the device takes each part's leading digits, so `"v2.0"` reads as
-version 0.
+version 0. For that reason `napt discover` refuses a version that does not start
+with a digit, and the error names the value to capture.
 
 **Examples:**
 - `"v?([0-9.]+)"` - Extracts `2.0` from `v2.0` or `2.0`
@@ -372,7 +373,9 @@ string syntax with `{0}`, `{1}`, etc. for capture groups.
 **Examples:**
 - `"{0}.{1}"` - Combines two groups: `"25"` + `"01"` → `"25.01"`
 - `"{1}.{0}"` - Reverses order: `"01"` + `"25"` → `"01.25"`
-- `"v{0}"` - Prefixes version: `"2.51.2"` → `"v2.51.2"`
+- `"{0}.{1}.0"` - Pads to three parts: `"2"` + `"51"` → `"2.51.0"`
+
+The combined result is the version, so it must still start with a digit.
 
 ## PSADT configuration
 
