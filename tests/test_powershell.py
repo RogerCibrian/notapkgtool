@@ -15,7 +15,11 @@ import subprocess
 
 import pytest
 
-from napt.powershell import ps_escape_double_quoted, ps_single_quote
+from napt.powershell import (
+    ps_escape_double_quoted,
+    ps_single_quote,
+    strip_control_characters,
+)
 
 # PowerShell treats these as string delimiters in addition to ' and ".
 SMART_SINGLE_QUOTES = ["\u2018", "\u2019", "\u201a", "\u201b"]
@@ -93,6 +97,29 @@ class TestPsEscapeDoubleQuoted:
     def test_empty_string(self):
         """Tests that an empty string passes through."""
         assert ps_escape_double_quoted("") == ""
+
+
+class TestStripControlCharacters:
+    """Tests for removing line breaks and control characters from a value."""
+
+    def test_plain_name_unchanged(self):
+        """Tests that an ordinary name, including non-ASCII, is untouched."""
+        assert strip_control_characters("Café Office™") == ("Café Office™")
+
+    @pytest.mark.parametrize(
+        ("raw", "expected"),
+        [
+            ("Contoso\r\nViewer", "Contoso Viewer"),
+            ("Contoso\nViewer", "Contoso Viewer"),
+            ("Contoso\tViewer", "Contoso Viewer"),
+            ("Contoso\u2028Viewer", "Contoso Viewer"),
+            ("Contoso\x00\x7fViewer", "Contoso Viewer"),
+            ("\r\nContoso Viewer\r\n", "Contoso Viewer"),
+        ],
+    )
+    def test_control_characters_become_one_space(self, raw: str, expected: str):
+        """Tests that each run of control characters collapses to a space."""
+        assert strip_control_characters(raw) == expected
 
 
 def _powershell_executables() -> list[str]:

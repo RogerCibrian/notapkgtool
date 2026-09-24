@@ -51,7 +51,11 @@ from napt.config.loader import load_effective_config
 from napt.download.download import DOWNLOAD_PART_SUFFIX, sha256_file
 from napt.exceptions import ConfigError, PackagingError, StateError
 from napt.paths import is_safe_path_component
-from napt.powershell import PS_SCRIPT_ENCODING, ps_single_quote
+from napt.powershell import (
+    PS_SCRIPT_ENCODING,
+    ps_single_quote,
+    strip_control_characters,
+)
 from napt.psadt.release import get_psadt_release
 from napt.results import BuildResult
 from napt.state.deployment import deployment_state_path, load_deployment_state
@@ -614,6 +618,17 @@ def _resolve_app_info(
             "intune.detection.display_name is required for EXE installers. "
             "Set intune.detection.display_name in the recipe."
         )
+
+    # The name is written into a comment line and the script filenames, where
+    # a line break would end the comment or break the name.
+    cleaned = strip_control_characters(app_name)
+    if cleaned != app_name:
+        logger.warning(
+            "BUILD",
+            f"App name {app_name!a} contains control characters; using "
+            f"{cleaned!a} for scripts and filenames",
+        )
+        app_name = cleaned
 
     return app_name, expected_architecture
 

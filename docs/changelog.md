@@ -107,6 +107,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed non-ASCII MSI product names being read through the wrong code page
+    on Windows, so a name such as `Café Office™` was recorded as
+    `Caf‚ OfficeT`. The detection script and the uninstall command then
+    looked for a name that never matched on devices, with no error at build
+    time; some names crashed the build instead. `napt build` now reads
+    the name exactly as the MSI stores it
+- Fixed a line break in an app name (an MSI `ProductName`, an MSIX
+    `DisplayName`, or `intune.detection.display_name`) ending the comment on
+    the first line of the generated detection and requirements scripts, so
+    that whatever followed the break would run as code on devices; on a
+    Windows build host the same name crashed the build instead, because the
+    script filename kept the line break. Control characters in a name are
+    now replaced with a space, with a warning
 - Fixed a wrong first download never being corrected. When a vendor's page
     or API announced a new version before the file behind the link changed,
     `napt discover` filed the old file and then, since the page kept

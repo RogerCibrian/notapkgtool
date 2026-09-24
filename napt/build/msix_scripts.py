@@ -170,7 +170,11 @@ def generate_msix_detection_script(
         substitute_ps_template,
     )
     from napt.logging import get_global_logger
-    from napt.powershell import PS_SCRIPT_ENCODING, ps_escape_double_quoted
+    from napt.powershell import (
+        PS_SCRIPT_ENCODING,
+        ps_escape_double_quoted,
+        strip_control_characters,
+    )
 
     logger = get_global_logger()
 
@@ -185,7 +189,9 @@ def generate_msix_detection_script(
         template,
         {
             "$NaptPackageIdentityName": ps_escape_double_quoted(config.identity_name),
-            "$NaptAppName": ps_escape_double_quoted(config.app_name),
+            "$NaptAppName": ps_escape_double_quoted(
+                strip_control_characters(config.app_name)
+            ),
             "$NaptVersion": ps_escape_double_quoted(config.version),
             "$NaptExactMatch": "$True" if config.exact_match else "$False",
             "$NaptLogRotationMb": str(config.log_rotation_mb),
@@ -255,7 +261,11 @@ def generate_msix_requirements_script(
         substitute_ps_template,
     )
     from napt.logging import get_global_logger
-    from napt.powershell import PS_SCRIPT_ENCODING, ps_escape_double_quoted
+    from napt.powershell import (
+        PS_SCRIPT_ENCODING,
+        ps_escape_double_quoted,
+        strip_control_characters,
+    )
 
     logger = get_global_logger()
 
@@ -273,7 +283,9 @@ def generate_msix_requirements_script(
         template,
         {
             "$NaptPackageIdentityName": ps_escape_double_quoted(config.identity_name),
-            "$NaptAppName": ps_escape_double_quoted(config.app_name),
+            "$NaptAppName": ps_escape_double_quoted(
+                strip_control_characters(config.app_name)
+            ),
             "$NaptVersion": ps_escape_double_quoted(config.version),
             "$NaptLogRotationMb": str(config.log_rotation_mb),
             "$NaptScriptType": "Requirements",
