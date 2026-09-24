@@ -2764,6 +2764,11 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="changed">Changed</h3>
 <ul>
+<li><strong>Reference discover workflow continues past a failing recipe</strong> - One
+    recipe's <code>napt discover</code> failure used to end the loop and silently skip
+    every recipe after it. The workflow in the docs now records the failure,
+    still opens publish PRs for the apps that succeeded, and fails the run at
+    the end with each failed recipe annotated on the run summary</li>
 <li><strong>BREAKING: Versions must start with a digit</strong> - <code>napt discover</code> stops
     with an error for a version such as <code>v2.0</code>, <code>release-2.0</code>, or <code>latest</code>.
     A device compares versions by each part's leading digits, so such a
