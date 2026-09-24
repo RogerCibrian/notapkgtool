@@ -954,9 +954,18 @@ jobs:
           restore-keys: installers-
       - name: Discover all recipes
         shell: bash
+        # Actions' `shell: bash` runs with -e, so an unguarded loop would
+        # end at the first failing recipe (a vendor outage, a version the
+        # pattern cannot handle) and silently skip every recipe after it.
+        # Failures are collected instead, the successful apps still get
+        # their PRs below, and the last step fails the job.
         run: |
+          : > discover-failures.txt
           git ls-files 'recipes/*.yaml' 'recipes/**/*.yaml' | while read -r recipe; do
-            napt discover "$recipe"
+            napt discover "$recipe" || {
+              echo "::error::napt discover failed for $recipe"
+              echo "$recipe" >> discover-failures.txt
+            }
           done
       - name: Cache installers for publish and the next discover
         uses: actions/cache/save@v4
@@ -1067,7 +1076,19 @@ jobs:
               || gh pr edit "napt/discover-$app" \
                 --title "$title" --body-file pr-body.md
           done
+      - name: Fail the run if any recipe failed to discover
+        shell: bash
+        run: |
+          [ -s discover-failures.txt ] || exit 0
+          echo "Discovery failed for:"
+          cat discover-failures.txt
+          exit 1
 ```
+
+One recipe's failure does not hold up the others: the discover step records
+it, the PR step still opens publish PRs for every app that did discover a new
+release, and the final step fails the run so the failure is not missed.
+Each failed recipe is also annotated on the run summary.
 
 ### Workflow 2: publish (on merge of a publish PR)
 

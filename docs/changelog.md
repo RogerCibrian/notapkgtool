@@ -34,6 +34,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Reference discover workflow continues past a failing recipe** - One
+    recipe's `napt discover` failure used to end the loop and silently skip
+    every recipe after it. The workflow in the docs now records the failure,
+    still opens publish PRs for the apps that succeeded, and fails the run at
+    the end with each failed recipe annotated on the run summary
 - **BREAKING: Versions must start with a digit** - `napt discover` stops
     with an error for a version such as `v2.0`, `release-2.0`, or `latest`.
     A device compares versions by each part's leading digits, so such a
