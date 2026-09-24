@@ -76,6 +76,7 @@ def cmd_build(args: argparse.Namespace) -> int:
             recipe_path,
             downloads_dir=downloads_dir,
             output_dir=output_dir,
+            state_dir=args.state_dir,
         )
     except (ConfigError, NetworkError, PackagingError) as err:
         print(f"Error: {err}")
@@ -146,6 +147,15 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         "--output-dir",
         default=None,
         help="Base directory for build output (default: from config or ./builds)",
+    )
+    parser_build.add_argument(
+        "--state-dir",
+        type=Path,
+        default=None,
+        help=(
+            "State root; the release to build is read from <dir>/deployment/ "
+            "(default: directories.state, ./state)"
+        ),
     )
     parser_build.add_argument(
         "-v",

@@ -113,6 +113,13 @@ def _load_yaml_file(p: Path) -> Any:
             data = yaml.safe_load(f)
     except yaml.YAMLError as err:
         raise ConfigError(f"Error parsing YAML: {p}: {err}") from err
+    except UnicodeDecodeError as err:
+        raise ConfigError(
+            f"Cannot read {p}: the file is not UTF-8 (a file saved by "
+            f"PowerShell's Out-File is often UTF-16). {err}"
+        ) from err
+    except OSError as err:
+        raise ConfigError(f"Cannot read {p}: {err}") from err
     if data is None:
         raise ConfigError(f"YAML file is empty: {p}")
     return data
@@ -153,7 +160,15 @@ def _deep_merge_dicts(
             # Recurse for nested dicts
             sub_prov: dict[str, Any] | None = None
             if provenance is not None:
-                sub_prov = provenance.setdefault(k, {})
+                # An earlier layer may have recorded this whole section as
+                # one entry (its layer name). Expand that to one entry per
+                # key so this layer's keys can be recorded beside them.
+                existing = provenance.get(k)
+                if isinstance(existing, dict):
+                    sub_prov = existing
+                else:
+                    sub_prov = {key: existing for key in result[k]} if existing else {}
+                provenance[k] = sub_prov
             result[k] = _deep_merge_dicts(
                 result[k], v, provenance=sub_prov, layer_name=layer_name
             )
@@ -323,8 +338,9 @@ def _resolve_known_paths(
                     brand_pack["path"] = str((defaults_root / p).resolve())
                 else:
                     brand_pack["path"] = str((recipe_dir / p).resolve())
-    except KeyError:
-        # Field missing; nothing to resolve
+    except (KeyError, TypeError):
+        # Field missing, or a section left empty in the recipe (which
+        # validation reports); nothing to resolve.
         pass
 
     intune = cfg.get("intune")
@@ -361,6 +377,13 @@ def _inject_dynamic_values(
             value. Used to detect whether ``RequireAdmin`` was explicitly
             overridden by the user.
     """
+    # A section left empty in the recipe is null here. Validation reports
+    # it, so there is nothing to inject into and no warning to add.
+    psadt = cfg.get("psadt")
+    if psadt is None or cfg.get("intune") is None:
+        return
+    if isinstance(psadt, dict) and "app_vars" in psadt and psadt["app_vars"] is None:
+        return
     try:
         app_vars = cfg.setdefault("psadt", {}).setdefault("app_vars", {})
 

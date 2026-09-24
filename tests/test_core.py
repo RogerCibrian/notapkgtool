@@ -199,8 +199,10 @@ class TestVersionFirstResolution:
         assert result.version == "4.41.106.0"
         assert result.version_source == "msi"
         assert result.file_path == tmp_test_dir / "test-app" / "4.41.106.0" / name
+        # --state-dir is the state root; files live under deployment/, where
+        # build, promote, and status read them.
         state = load_deployment_state(
-            deployment_state_path(tmp_test_dir / "state", "test-app")
+            deployment_state_path(tmp_test_dir / "state" / "deployment", "test-app")
         )
         assert state["pending"]["version"] == "4.41.106.0"
         sidecar = json.loads(
@@ -414,7 +416,9 @@ class TestVersionFirstResolution:
         )
 
         recipe_path = _web_scrape_recipe(create_yaml_file)
-        state_path = deployment_state_path(tmp_test_dir / "state", "test-app")
+        state_path = deployment_state_path(
+            tmp_test_dir / "state" / "deployment", "test-app"
+        )
         state = create_default_deployment_state()
         state["published"] = {"version": "2.0.0", "sha256": "published"}
         save_deployment_state(state, state_path)

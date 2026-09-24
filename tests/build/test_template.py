@@ -195,6 +195,18 @@ $adtSession = @{
         assert "AppVersion = '1.0.0'" in result
         assert "$adtSession = @{" in result
 
+    def test_backslashes_in_values_are_written_verbatim(self):
+        """Tests that a value is never read as a regex replacement template."""
+        template = "$adtSession = @{\n    AppName = ''\n}\n"
+
+        result = _replace_session_block(
+            template, {"AppVendor": "Contoso\\1Tools", "AppName": "C:\\Apps\\x"}
+        )
+
+        assert "AppVendor = 'Contoso\\1Tools'" in result
+        assert "AppName = 'C:\\Apps\\x'" in result
+        assert result.count("$adtSession = @{") == 1
+
     def test_replace_session_missing_block_raises(self):
         """Test error when $adtSession block not found."""
         template = "# No session block here"

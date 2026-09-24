@@ -10,7 +10,13 @@ import requests
 import requests_mock as req_mock
 
 from napt.exceptions import AuthError, ConfigError, NetworkError
-from napt.graph.client import GRAPH_BASE, auth_headers, graph_request, json_headers
+from napt.graph.client import (
+    GRAPH_BASE,
+    _check_response,
+    auth_headers,
+    graph_request,
+    json_headers,
+)
 
 TOKEN = "fake-token"
 APP_ID = "app-id-123"
@@ -251,3 +257,18 @@ def test_graph_request_deadline_stops_retries() -> None:
 
     assert len(m.request_history) == 1
     sleep_mock.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("status", "error"), [(403, AuthError), (400, ConfigError), (503, NetworkError)]
+)
+def test_error_messages_print_on_a_cp437_console(status, error) -> None:
+    """Tests that a Graph error can be reported on a plain cmd.exe console."""
+    response = requests.Response()
+    response.status_code = status
+    response._content = b"details"
+
+    with pytest.raises(error) as excinfo:
+        _check_response(response, "upload")
+
+    str(excinfo.value).encode("cp437")

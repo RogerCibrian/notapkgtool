@@ -34,6 +34,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING: `--state-dir` means the state root for every command** -
+    `napt discover --state-dir X` wrote state files directly into `X`, while
+    `napt promote` and `napt status` read `X/deployment/` and `napt build`
+    had no such flag, so state written that way was never found and
+    `napt upload` ran without its hash check. Discover now writes to
+    `X/deployment/` like the others, and `napt build` gains `--state-dir`
+- **A section left empty in a recipe is a validation error** - `psadt:`,
+    `intune:`, `logging:`, `deployment:`, `psadt.app_vars:`, or
+    `intune.detection:` with nothing under it used to crash the loader or
+    load as nothing, silently skipping the values NAPT computes for that
+    section. `napt validate` now names the empty key
 - **Reference discover workflow continues past a failing recipe** - One
     recipe's `napt discover` failure used to end the loop and silently skip
     every recipe after it. The workflow in the docs now records the failure,
@@ -107,6 +118,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed a child recipe that sets a section its parent also sets (the
+    documented base-recipe case, such as `discovery.url` under a parent that
+    sets `discovery.strategy`) crashing every command with a `TypeError`,
+    while `napt validate` reported VALID
+- Fixed a backslash in a `psadt.app_vars` value corrupting the generated
+    deployment script: `Contoso\1Tools` was written as
+    `Contoso$adtSession = @{Tools`, and some values crashed the build
+- Fixed group and app names containing `&` or `#` never resolving in
+    Microsoft Graph, so `napt promote` could not assign to a group named
+    `R&D #1 Team`
+- Fixed a recipe path that is a folder, or a recipe saved as UTF-16 (the
+    PowerShell `Out-File` default), producing a raw traceback instead of a
+    message naming the file; in `napt promote` one such file aborted every
+    app
+- Fixed `napt validate --debug` hiding a failure to merge the recipe behind
+    VALID with no provenance block; it now prints the reason
+- Fixed the "Unknown discovery strategy" hint omitting `url_download`
+- Fixed three Microsoft Graph error messages crashing with
+    `UnicodeEncodeError` on a cp437 console (a plain `cmd.exe` window),
+    replacing the real permissions or metadata error with a traceback
 - Fixed non-ASCII MSI product names being read through the wrong code page
     on Windows, so a name such as `Café Office™` was recorded as
     `Caf‚ OfficeT`. The detection script and the uninstall command then

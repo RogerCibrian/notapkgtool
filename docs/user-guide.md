@@ -1041,6 +1041,7 @@ to its own:
 |---------|------|---------|-----------|-----------------|
 | `napt discover` | `--output-dir` | Where to save downloaded installers | `directories.discover` | `downloads` |
 | `napt discover` | `--state-dir` | Per-app deployment state (`<dir>/deployment/`) | `directories.state` | `state` |
+| `napt build` | `--state-dir` | Where to read the release to build (`<dir>/deployment/`) | `directories.state` | `state` |
 | `napt promote` | `--state-dir` | Deployment state and plan files | `directories.state` | `state` |
 | `napt status` | `--state-dir` | Deployment state to summarize (no config lookup) | - | `state` |
 | `napt build` | `--downloads-dir` | Where to find the installer | `directories.discover` | `downloads` |

@@ -69,7 +69,7 @@ def get_strategy(name: str) -> DiscoveryStrategy:
     """
     strategy_class = _STRATEGIES.get(name)
     if strategy_class is None:
-        available = ", ".join(sorted(_STRATEGIES))
+        available = ", ".join(sorted([*_STRATEGIES, "url_download"]))
         raise ConfigError(
             f"Unknown discovery strategy: {name!r}. Available: {available}"
         )

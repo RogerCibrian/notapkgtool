@@ -49,6 +49,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 import re
 import time
+from urllib.parse import quote
 
 import msal
 
@@ -361,7 +362,9 @@ def _find_application(token: str, spec: SetupSpec) -> dict | None:
                 f"tenant {spec.tenant_id}"
             )
         return apps[0]
-    name = spec.display_name.replace("'", "''")
+    # OData doubles the quote; the URL then needs the rest percent-encoded,
+    # or a name with "&" or "#" ends the filter early.
+    name = quote(spec.display_name.replace("'", "''"), safe="'")
     data = _get(
         token,
         f"/applications?$filter=displayName eq '{name}'&{select}",

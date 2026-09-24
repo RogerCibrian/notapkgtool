@@ -112,7 +112,9 @@ def sanitize_filename(name: str, app_id: str = "") -> str:
     return sanitized
 
 
-def _release_to_build(config: dict[str, Any]) -> dict[str, Any] | None:
+def _release_to_build(
+    config: dict[str, Any], state_dir: Path | None = None
+) -> dict[str, Any] | None:
     """Reads the release to build from the app's deployment state.
 
     That is the pending release (awaiting publication), or the published
@@ -123,6 +125,7 @@ def _release_to_build(config: dict[str, Any]) -> dict[str, Any] | None:
 
     Args:
         config: Recipe configuration.
+        state_dir: State root, or None for ``directories.state``.
 
     Returns:
         The release entry (``version``, ``sha256``, ``url``), or None when
@@ -132,8 +135,10 @@ def _release_to_build(config: dict[str, Any]) -> dict[str, Any] | None:
         StateError: If the deployment state file exists but is corrupted
             or has an unsupported schema version.
     """
-    state_dir = Path(config["directories"]["state"]) / "deployment"
-    state = load_deployment_state(deployment_state_path(state_dir, config["id"]))
+    if state_dir is None:
+        state_dir = Path(config["directories"]["state"])
+    deployment_dir = state_dir / "deployment"
+    state = load_deployment_state(deployment_state_path(deployment_dir, config["id"]))
     return state.get("pending") or state.get("published")
 
 
@@ -1225,6 +1230,7 @@ def build_package(
     recipe_path: Path,
     downloads_dir: Path | None = None,
     output_dir: Path | None = None,
+    state_dir: Path | None = None,
 ) -> BuildResult:
     """Build a PSADT package from a recipe and downloaded installer.
 
@@ -1248,6 +1254,8 @@ def build_package(
             installer. Default: Path("downloads")
         output_dir: Base directory for build output.
             Default: From config or Path("builds")
+        state_dir: State root whose ``deployment/`` subfolder holds the
+            release to build. Default: ``directories.state`` from config.
 
     Returns:
         Build result containing app metadata, build paths, PSADT version, and
@@ -1307,7 +1315,7 @@ def build_package(
     # Find installer file
     logger.step(2, 8, "Finding installer...")
     installer_file, installer_sha256 = _find_installer_file(
-        downloads_dir, app_id, _release_to_build(config)
+        downloads_dir, app_id, _release_to_build(config, state_dir)
     )
 
     # MSI and MSIX report their own version; otherwise the discovered one

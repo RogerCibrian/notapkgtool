@@ -19,6 +19,7 @@ class TestCmdBuild:
                 recipe=str(tmp_path / "nonexistent.yaml"),
                 downloads_dir=None,
                 output_dir=None,
+                state_dir=None,
             )
         )
         assert code == 1
@@ -38,7 +39,12 @@ class TestCmdBuild:
         )
         with patch("napt.cli.build.build_package", return_value=mock_result):
             code = cmd_build(
-                _args(recipe=str(recipe), downloads_dir=None, output_dir=None)
+                _args(
+                    recipe=str(recipe),
+                    downloads_dir=None,
+                    output_dir=None,
+                    state_dir=None,
+                )
             )
         assert code == 0
         out = capsys.readouterr().out
@@ -54,7 +60,12 @@ class TestCmdBuild:
             "napt.cli.build.build_package", side_effect=PackagingError("build failed")
         ):
             code = cmd_build(
-                _args(recipe=str(recipe), downloads_dir=None, output_dir=None)
+                _args(
+                    recipe=str(recipe),
+                    downloads_dir=None,
+                    output_dir=None,
+                    state_dir=None,
+                )
             )
         assert code == 1
         assert "build failed" in capsys.readouterr().out
@@ -68,7 +79,27 @@ class TestCmdBuild:
         ):
             assert (
                 cmd_build(
-                    _args(recipe=str(recipe), downloads_dir=None, output_dir=None)
+                    _args(
+                        recipe=str(recipe),
+                        downloads_dir=None,
+                        output_dir=None,
+                        state_dir=None,
+                    )
                 )
                 == 1
             )
+
+    def test_state_dir_passed_through(self, tmp_path):
+        """Tests that --state-dir reaches build_package."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.touch()
+        with patch("napt.cli.build.build_package", return_value=_mock_result()) as mock:
+            cmd_build(
+                _args(
+                    recipe=str(recipe),
+                    downloads_dir=None,
+                    output_dir=None,
+                    state_dir=tmp_path / "state",
+                )
+            )
+        assert mock.call_args.kwargs["state_dir"] == tmp_path / "state"
