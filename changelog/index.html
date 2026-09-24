@@ -2764,6 +2764,14 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="changed">Changed</h3>
 <ul>
+<li><strong>BREAKING: Versions must start with a digit</strong> - <code>napt discover</code> stops
+    with an error for a version such as <code>v2.0</code>, <code>release-2.0</code>, or <code>latest</code>.
+    A device compares versions by each part's leading digits, so such a
+    version read as 0 there: every device reported the app installed and
+    none ever upgraded, with no error anywhere. The error names the value a
+    <code>version_pattern</code> should capture. An MSI or MSIX is judged by its own
+    version, so only EXE recipes whose pattern or <code>api_json</code> value keeps a
+    prefix are affected; <code>api_github</code> already strips a <code>v</code> by default</li>
 <li><strong>BREAKING: The installer's own version is the version</strong> - For an MSI
     or MSIX, <code>napt discover</code> now reads the version out of the downloaded
     file and records that, rather than the value the page or API reported.

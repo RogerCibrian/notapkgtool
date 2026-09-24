@@ -3604,7 +3604,8 @@ paths (same format as <code>version_path</code>).</p>
 <p>Regular expression applied to the value found at <code>version_path</code>. Use it when the
 API wraps the version in a prefix or suffix that a device would misread: version
 comparison on the device takes each part's leading digits, so <code>"v2.0"</code> reads as
-version 0.</p>
+version 0. For that reason <code>napt discover</code> refuses a version that does not start
+with a digit, and the error names the value to capture.</p>
 <p><strong>Examples:</strong>
 - <code>"v?([0-9.]+)"</code> - Extracts <code>2.0</code> from <code>v2.0</code> or <code>2.0</code>
 - <code>"([0-9.]+)"</code> - Extracts <code>2.0</code> from <code>2.0 (stable)</code></p>
@@ -3700,7 +3701,8 @@ string syntax with <code>{0}</code>, <code>{1}</code>, etc. for capture groups.<
 <p><strong>Examples:</strong>
 - <code>"{0}.{1}"</code> - Combines two groups: <code>"25"</code> + <code>"01"</code> → <code>"25.01"</code>
 - <code>"{1}.{0}"</code> - Reverses order: <code>"01"</code> + <code>"25"</code> → <code>"01.25"</code>
-- <code>"v{0}"</code> - Prefixes version: <code>"2.51.2"</code> → <code>"v2.51.2"</code></p>
+- <code>"{0}.{1}.0"</code> - Pads to three parts: <code>"2"</code> + <code>"51"</code> → <code>"2.51.0"</code></p>
+<p>The combined result is the version, so it must still start with a digit.</p>
 <h2 id="psadt-configuration">PSADT configuration</h2>
 <p>The <code>psadt</code> section defines PowerShell deployment scripts and PSADT variables:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">psadt</span><span class="p">:</span>

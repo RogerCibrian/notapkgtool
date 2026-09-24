@@ -2802,8 +2802,14 @@ replace.</p>
 <p><strong>Version</strong>: The version becomes a folder name
 (<code>downloads/{app_id}/{version}/</code>), so it may contain only letters, digits, <code>.</code>,
 <code>-</code>, <code>_</code>, and <code>+</code>.
-If discovery stops with "cannot be used as a folder name", tighten the recipe's
-<code>version_pattern</code> so it captures only the version.</p>
+It must also start with a digit: a device compares versions by each part's
+leading digits, so <code>v2.0</code> would read as version 0 there, every device would
+report it installed, and none would upgrade to it.
+If discovery stops with "cannot be used as a folder name" or "does not start
+with a number", tighten the recipe's <code>version_pattern</code> so it captures only the
+version.
+An MSI or MSIX is judged by its own version, so this only comes up for EXE
+recipes whose pattern (or <code>api_json</code> value) keeps a prefix.</p>
 <h3 id="build-process-napt-build">Build process (<code>napt build</code>)</h3>
 <p>The build process creates a complete PSADT package from the recipe and downloaded installer:</p>
 <ol>
