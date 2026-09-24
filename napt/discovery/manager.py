@@ -85,9 +85,10 @@ def discover_recipe(
         output_dir: Directory to download the installer into. When
             omitted, falls back to ``directories.discover`` from the
             merged configuration. Created if it does not exist.
-        state_dir: Directory holding per-app deployment state files.
-            When omitted, falls back to ``<directories.state>/deployment``
-            from the merged configuration.
+        state_dir: State root; per-app deployment state files live in its
+            ``deployment/`` subfolder, the same layout ``napt build``,
+            ``napt promote``, and ``napt status`` read. When omitted, falls
+            back to ``directories.state`` from the merged configuration.
         stateless: When True, deployment state is neither read nor
             written, so no pending release is recorded.
 
@@ -110,7 +111,8 @@ def discover_recipe(
     if output_dir is None:
         output_dir = Path(config["directories"]["discover"])
     if state_dir is None:
-        state_dir = Path(config["directories"]["state"]) / "deployment"
+        state_dir = Path(config["directories"]["state"])
+    deployment_dir = state_dir / "deployment"
 
     app_name = config["name"]
     app_id = config["id"]
@@ -138,7 +140,7 @@ def discover_recipe(
 
     logger.step(4, 4, "Updating state...")
     if not stateless:
-        _record_pending_release(state_dir, app_id, app_name, result, logger)
+        _record_pending_release(deployment_dir, app_id, app_name, result, logger)
 
     return DiscoverResult(
         app_name=app_name,

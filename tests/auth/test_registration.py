@@ -392,7 +392,33 @@ def test_setup_rejects_ambiguous_display_name(user_dir, bootstrap) -> None:
         _run(graph, SetupSpec(tenant_id="tid"))
 
 
-def test_setup_with_unknown_client_id_fails(user_dir, bootstrap) -> None:
+def test_setup_encodes_the_display_name_in_the_filter(user_dir, bootstrap) -> None:
+    """Tests that & and # in a display name stay inside the $filter value."""
+    graph = FakeGraph(
+        {
+            ("GET", "/servicePrincipals"): _graph_sp_response(),
+            ("GET", "/applications"): {
+                "value": [{"id": "a", "appId": "1"}, {"id": "b", "appId": "2"}]
+            },
+        }
+    )
+    urls: list[str] = []
+
+    def recording(method, url, *args, **kwargs):
+        urls.append(url)
+        return graph(method, url, *args, **kwargs)
+
+    with (
+        patch("napt.auth.registration.graph_request", recording),
+        patch("napt.auth.registration.time.sleep"),
+        pytest.raises(ConfigError, match="--client-id"),
+    ):
+        setup_app_registration(
+            SetupSpec(tenant_id="tid", display_name="R&D #1 O'Brien")
+        )
+
+    lookup = next(u for u in urls if "/applications?" in u and "displayName" in u)
+    assert "displayName eq 'R%26D%20%231%20O''Brien'" in lookup
     """Tests that an explicit --client-id must exist."""
     graph = FakeGraph(
         {

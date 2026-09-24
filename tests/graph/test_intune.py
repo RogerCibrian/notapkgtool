@@ -337,6 +337,17 @@ def test_resolve_group_id_looks_up_name() -> None:
         assert resolve_group_id(TOKEN, "Pilot") == GROUP_ID
 
 
+def test_resolve_group_id_encodes_the_name_in_the_filter() -> None:
+    """Tests that & and # in a group name stay inside the filter value."""
+    with req_mock.Mocker() as m:
+        m.get(req_mock.ANY, json={"value": [{"id": GROUP_ID, "displayName": "x"}]})
+        assert resolve_group_id(TOKEN, "R&D #1 O'Brien") == GROUP_ID
+        query = m.last_request.url.split("?", 1)[1]
+
+    assert "displayName%20eq%20'R%26D%20%231%20O''Brien'" in query
+    assert m.last_request.qs.get("$select") == ["id,displayname"]
+
+
 def test_resolve_group_id_no_match_raises() -> None:
     """Tests that an unknown group name raises ConfigError."""
     with req_mock.Mocker() as m:

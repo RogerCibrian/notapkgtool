@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
+import pytest
+
 from napt.cli.validate import cmd_validate
+from napt.exceptions import ConfigError
 from napt.results import ValidationResult
 from tests.cli.conftest import _args, _mock_result
 
@@ -115,3 +118,40 @@ class TestCmdValidate:
             cmd_validate(_args(recipe=str(recipe)))
         out = capsys.readouterr().out
         assert "Parent:" not in out
+
+
+class TestDebugProvenance:
+    """Tests for the provenance block that --debug adds."""
+
+    @staticmethod
+    def _valid_recipe(tmp_path):
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(
+            "apiVersion: napt/v1\nname: App\nid: app\n"
+            "discovery:\n  strategy: url_download\n  url: https://x/a.msi\n"
+        )
+        return recipe
+
+    def test_load_failure_is_reported_not_hidden(self, tmp_path, capsys):
+        """Tests that a recipe that validates but cannot be merged says so."""
+        recipe = self._valid_recipe(tmp_path)
+
+        with patch(
+            "napt.cli.validate.load_effective_config",
+            side_effect=ConfigError("merge failed"),
+        ):
+            code = cmd_validate(_args(recipe=str(recipe), debug=True))
+
+        assert code == 0
+        assert "Provenance unavailable: merge failed" in capsys.readouterr().out
+
+    def test_unexpected_error_is_not_swallowed(self, tmp_path):
+        """Tests that a bug in the loader surfaces instead of printing VALID."""
+        recipe = self._valid_recipe(tmp_path)
+
+        with patch(
+            "napt.cli.validate.load_effective_config",
+            side_effect=TypeError("bug"),
+        ):
+            with pytest.raises(TypeError):
+                cmd_validate(_args(recipe=str(recipe), debug=True))

@@ -85,24 +85,24 @@ def _check_response(response: requests.Response, context: str) -> dict:
 
     Raises:
         AuthError: On 401 or 403.
-        ConfigError: On 400 (bad request — likely a metadata problem).
+        ConfigError: On 400 (bad request, likely a metadata problem).
         NetworkError: On 5xx or any other non-2xx status.
 
     """
     if response.status_code in (401, 403):
         raise AuthError(
-            f"{context}: HTTP {response.status_code} — "
+            f"{context}: HTTP {response.status_code}: "
             f"check that the authenticated account has Intune device "
             f"administrator or app manager permissions.\n{response.text}"
         )
     if response.status_code == 400:
         raise ConfigError(
-            f"{context}: HTTP 400 Bad Request — the app metadata may be "
+            f"{context}: HTTP 400 Bad Request: the app metadata may be "
             f"invalid.\n{response.text}"
         )
     if response.status_code >= 500:
         raise NetworkError(
-            f"{context}: HTTP {response.status_code} — Graph API server error."
+            f"{context}: HTTP {response.status_code}: Graph API server error."
             f"\n{response.text}"
         )
     if not response.ok:

@@ -264,6 +264,14 @@ def _validate_section(
             _validate_field_value(value, allowed_values, field_path, errors)
 
 
+# A section key that is present but has nothing under it. YAML reads it as
+# null, which every consumer would then index as a dict.
+_EMPTY_SECTION = (
+    "{}: Must be a dictionary. The key is present but empty; remove it or "
+    "add fields under it"
+)
+
+
 def _validate_psadt_app_vars(
     app_vars: object,
     app_vars_path: str,
@@ -308,6 +316,9 @@ def _validate_psadt_section(
         errors: List to append errors to.
 
     """
+    if "psadt" in recipe and recipe["psadt"] is None:
+        errors.append(_EMPTY_SECTION.format("psadt"))
+        return
     psadt = recipe.get("psadt")
     if psadt is None:
         return
@@ -316,6 +327,8 @@ def _validate_psadt_section(
         errors.append("psadt: Must be a dictionary")
         return
 
+    if "app_vars" in psadt and psadt["app_vars"] is None:
+        errors.append(_EMPTY_SECTION.format("psadt.app_vars"))
     app_vars = psadt.get("app_vars")
     if app_vars is not None:
         _validate_psadt_app_vars(app_vars, "psadt.app_vars", errors)
@@ -345,6 +358,9 @@ def _validate_intune_section(
         warnings: List to append warnings to.
 
     """
+    if "intune" in recipe and recipe["intune"] is None:
+        errors.append(_EMPTY_SECTION.format("intune"))
+        return
     intune = recipe.get("intune")
     if intune is None:
         return
@@ -368,6 +384,8 @@ def _validate_intune_section(
             )
 
     # Validate detection subsection
+    if "detection" in intune and intune["detection"] is None:
+        errors.append(_EMPTY_SECTION.format("intune.detection"))
     detection = intune.get("detection")
     if detection is not None:
         if not isinstance(detection, dict):
@@ -397,6 +415,9 @@ def _validate_logging_section(
         warnings: List to append warnings to.
 
     """
+    if "logging" in recipe and recipe["logging"] is None:
+        errors.append(_EMPTY_SECTION.format("logging"))
+        return
     logging_config = recipe.get("logging")
     if logging_config is None:
         return
@@ -446,6 +467,9 @@ def _validate_deployment_section(
         warnings: List to append warnings to.
 
     """
+    if "deployment" in recipe and recipe["deployment"] is None:
+        errors.append(_EMPTY_SECTION.format("deployment"))
+        return
     deployment = recipe.get("deployment")
     if deployment is None:
         return

@@ -771,3 +771,70 @@ class TestParentRecipes:
 
         with pytest.raises(ConfigError, match=r"parent: .*base\.yaml"):
             load_effective_config(override)
+
+    def test_parent_and_child_both_setting_a_section_merges(self, tmp_test_dir):
+        """Tests that a child merges into a parent-set section instead of crashing."""
+        override = self._project(
+            tmp_test_dir,
+            override_body="discovery:\n  url: https://vendor.example.com/child.msi\n",
+        )
+
+        config = load_effective_config(override)
+
+        assert config["discovery"]["url"] == "https://vendor.example.com/child.msi"
+        assert config["discovery"]["strategy"] == "url_download"
+        provenance = config["_provenance"]["discovery"]
+        assert provenance["url"] == "recipe"
+        assert provenance["strategy"] == "parent"
+
+
+class TestUnreadableRecipeFiles:
+    """Tests that a recipe file that cannot be read is a ConfigError."""
+
+    def test_directory_path_is_a_config_error(self, tmp_test_dir):
+        """Tests that pointing at a folder does not raise a raw OSError."""
+        with pytest.raises(ConfigError, match="Cannot read"):
+            load_effective_config(tmp_test_dir)
+
+    def test_utf16_file_is_a_config_error(self, tmp_test_dir):
+        """Tests that a file saved as UTF-16 names the encoding in the error."""
+        recipe = tmp_test_dir / "recipe.yaml"
+        recipe.write_text("apiVersion: napt/v1\nname: U\nid: u\n", encoding="utf-16")
+
+        with pytest.raises(ConfigError, match="not UTF-8"):
+            load_effective_config(recipe)
+
+
+class TestEmptySections:
+    """Tests that a section key with nothing under it is rejected, not crashed on."""
+
+    @pytest.mark.parametrize("section", ["psadt", "intune", "logging", "deployment"])
+    def test_empty_top_level_section(self, tmp_test_dir, section):
+        """Tests that an empty section is a validation error, not a TypeError."""
+        recipe = tmp_test_dir / "recipe.yaml"
+        recipe.write_text(
+            "apiVersion: napt/v1\nname: E\nid: e\n"
+            "discovery:\n  strategy: url_download\n  url: https://x/a.msi\n"
+            f"{section}:\n"
+        )
+
+        with pytest.raises(ConfigError, match=f"{section}: Must be a dictionary"):
+            load_effective_config(recipe)
+
+    @pytest.mark.parametrize(
+        ("body", "path"),
+        [
+            ("psadt:\n  app_vars:\n", "psadt.app_vars"),
+            ("intune:\n  detection:\n", "intune.detection"),
+        ],
+    )
+    def test_empty_nested_section(self, tmp_test_dir, body, path):
+        """Tests that an empty nested section is reported by its full path."""
+        recipe = tmp_test_dir / "recipe.yaml"
+        recipe.write_text(
+            "apiVersion: napt/v1\nname: E\nid: e\n"
+            "discovery:\n  strategy: url_download\n  url: https://x/a.msi\n" + body
+        )
+
+        with pytest.raises(ConfigError, match=f"{path}: Must be a dictionary"):
+            load_effective_config(recipe)

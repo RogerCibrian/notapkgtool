@@ -29,6 +29,11 @@ class TestStrategyRegistry:
 
     def test_get_unknown_strategy_raises(self):
         """Tests that an unregistered strategy name raises ConfigError."""
+        with pytest.raises(ConfigError, match="Unknown discovery strategy") as exc:
+            get_strategy("urldownload")
+        # The hint names every strategy a recipe can use, not only the
+        # registered ones.
+        assert "url_download" in str(exc.value)
         with pytest.raises(ConfigError, match="Unknown discovery strategy"):
             get_strategy("nonexistent_strategy")
 

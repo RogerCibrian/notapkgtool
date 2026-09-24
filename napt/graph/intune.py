@@ -42,6 +42,7 @@ from pathlib import Path
 import re
 import time
 from typing import TYPE_CHECKING
+from urllib.parse import quote
 
 import requests
 
@@ -137,7 +138,9 @@ def resolve_group_id(access_token: str, group: str) -> str:
     if _GUID_RE.match(group):
         return group
 
-    escaped = group.replace("'", "''")
+    # OData doubles the quote; the URL then needs the rest percent-encoded,
+    # or a name with "&" or "#" ends the filter early.
+    escaped = quote(group.replace("'", "''"), safe="'")
     url = (
         f"{GRAPH_BASE}/groups"
         f"?$filter=displayName eq '{escaped}'&$select=id,displayName"

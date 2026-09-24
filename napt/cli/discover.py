@@ -146,8 +146,8 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         type=Path,
         default=None,
         help=(
-            "Directory for per-app deployment state files "
-            "(default: state/deployment from directories.state)"
+            "State root; deployment state is written to <dir>/deployment/ "
+            "(default: directories.state, ./state)"
         ),
     )
     parser_discover.add_argument(

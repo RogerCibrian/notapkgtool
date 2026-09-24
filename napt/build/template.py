@@ -219,8 +219,9 @@ def _replace_session_block(template: str, vars_dict: dict[str, Any]) -> str:
 
     replacement = "$adtSession = @{\n" + "\n".join(lines) + "\n}"
 
-    # Replace in template
-    result = re.sub(pattern, replacement, template, flags=re.DOTALL)
+    # A function inserts the block verbatim; as a string it would be read
+    # as a regex template, so a backslash in a recipe value would break it.
+    result = re.sub(pattern, lambda _match: replacement, template, flags=re.DOTALL)
 
     return result
 

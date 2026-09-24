@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Any
 
 from napt.config.loader import load_effective_config
+from napt.exceptions import NAPTError
 from napt.logging import get_logger, set_global_logger
 from napt.validation import validate_recipe
 
@@ -125,8 +126,10 @@ def cmd_validate(args: argparse.Namespace) -> int:
                 print("-" * 70)
                 _print_provenance(config, provenance)
                 print("-" * 70)
-        except Exception:
-            pass  # Best-effort; config may fail to load for invalid recipes
+        except NAPTError as err:
+            # An invalid recipe cannot be merged; say so rather than hide it.
+            print()
+            print(f"Provenance unavailable: {err}")
 
     if result.status == "valid":
         print()

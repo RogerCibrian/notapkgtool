@@ -131,6 +131,16 @@ class TestReleaseToBuild:
         """Tests that a missing state file yields no release."""
         assert _release_to_build(self._config(tmp_path)) is None
 
+    def test_state_dir_names_the_state_root(self, tmp_path):
+        """Tests that --state-dir reads <dir>/deployment/, like the other commands."""
+        _write_state(tmp_path / "custom", "napt-app", self.PENDING, self.PUBLISHED)
+        # The configured location holds a different release; it must be ignored.
+        _write_state(tmp_path / "state", "napt-app", published=self.PUBLISHED)
+
+        release = _release_to_build(self._config(tmp_path), tmp_path / "custom")
+
+        assert release == self.PENDING
+
 
 class TestFindInstallerFile:
     """Tests for finding the installer to build."""
