@@ -2845,6 +2845,19 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="fixed">Fixed</h3>
 <ul>
+<li>Fixed non-ASCII MSI product names being read through the wrong code page
+    on Windows, so a name such as <code>Café Office™</code> was recorded as
+    <code>Caf‚ OfficeT</code>. The detection script and the uninstall command then
+    looked for a name that never matched on devices, with no error at build
+    time; some names crashed the build instead. <code>napt build</code> now reads
+    the name exactly as the MSI stores it</li>
+<li>Fixed a line break in an app name (an MSI <code>ProductName</code>, an MSIX
+    <code>DisplayName</code>, or <code>intune.detection.display_name</code>) ending the comment on
+    the first line of the generated detection and requirements scripts, so
+    that whatever followed the break would run as code on devices; on a
+    Windows build host the same name crashed the build instead, because the
+    script filename kept the line break. Control characters in a name are
+    now replaced with a space, with a warning</li>
 <li>Fixed a wrong first download never being corrected. When a vendor's page
     or API announced a new version before the file behind the link changed,
     <code>napt discover</code> filed the old file and then, since the page kept
