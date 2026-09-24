@@ -276,6 +276,7 @@ discovery:
   api_url: "https://api.vendor.com/latest"
   version_path: "version"          # JSONPath to version field (e.g., "version" or "data.version")
   download_url_path: "download_url"
+  version_pattern: "v?([0-9.]+)"   # Optional: narrow the version value with a regex
   headers:                         # Optional HTTP headers (e.g., for authentication)
     Authorization: "Bearer ${API_TOKEN}"
 

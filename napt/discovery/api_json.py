@@ -24,6 +24,7 @@ Recipe Example:
       api_url: "https://vendor.example.com/api/latest"  # required
       version_path: "version"                           # required, JSONPath
       download_url_path: "download_url"                 # required, JSONPath
+      version_pattern: "v?([0-9.]+)"                    # optional, regex
       headers:                                          # optional
         Authorization: "Bearer ${API_TOKEN}"
         Accept: "application/json"
@@ -47,6 +48,11 @@ Configuration Fields:
         ``"release.version"``).
     - **download_url_path** (required): JSONPath expression locating
         the installer download URL in the response.
+    - **version_pattern** (optional): Regex applied to the value found
+        at ``version_path``. Uses capture group 1 if present, otherwise
+        the full match. Without it the value is used as is; add it when
+        the API wraps the version in a prefix or suffix (``"v2.0"``,
+        ``"2.0 (stable)"``).
     - **headers** (optional): HTTP headers to send. Values support
         ``${ENV_VAR}`` expansion.
 
@@ -60,6 +66,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from typing import Any
 
 from jsonpath_ng import parse as jsonpath_parse
@@ -82,16 +89,17 @@ class ApiJsonStrategy:
         Args:
             app_config: Merged recipe configuration dict containing
                 ``discovery.api_url``, ``discovery.version_path``, and
-                ``discovery.download_url_path``, plus an optional
-                ``headers`` field.
+                ``discovery.download_url_path``, plus optional
+                ``version_pattern`` and ``headers`` fields.
 
         Returns:
             Discovered version, download URL, and ``"api_json"`` as
             the source identifier.
 
         Raises:
-            ConfigError: On missing required configuration or when
-                the JSONPath expressions do not match the response.
+            ConfigError: On missing required configuration, when the
+                JSONPath expressions do not match the response, or when
+                ``version_pattern`` is invalid or does not match.
             NetworkError: On API request failure.
 
         """
@@ -193,6 +201,12 @@ class ApiJsonStrategy:
 
         logger.verbose("DISCOVERY", f"Extracted version: {version_str}")
 
+        version_pattern = source.get("version_pattern")
+        if version_pattern:
+            logger.verbose("DISCOVERY", f"Version pattern: {version_pattern}")
+            version_str = _apply_version_pattern(version_pattern, version_str)
+            logger.verbose("DISCOVERY", f"Version after pattern: {version_str}")
+
         # Extract download URL using JSONPath
         logger.verbose(
             "DISCOVERY", f"Extracting download URL from path: {download_url_path}"
@@ -281,4 +295,42 @@ class ApiJsonStrategy:
         if "headers" in source and not isinstance(source["headers"], dict):
             errors.append("discovery.headers must be a dictionary")
 
+        if "version_pattern" in source:
+            if not isinstance(source["version_pattern"], str):
+                errors.append("discovery.version_pattern must be a string")
+            else:
+                try:
+                    re.compile(source["version_pattern"])
+                except re.error as err:
+                    errors.append(f"Invalid version_pattern regex: {err}")
+
         return errors
+
+
+def _apply_version_pattern(version_pattern: str, value: str) -> str:
+    """Narrows the API's version value to the part the pattern captures.
+
+    Args:
+        version_pattern: Regex from ``discovery.version_pattern``.
+        value: The string found at ``discovery.version_path``.
+
+    Returns:
+        Capture group 1 when the pattern has one, otherwise the full match.
+
+    Raises:
+        ConfigError: If the pattern is not a valid regex or does not match.
+
+    """
+    try:
+        pattern = re.compile(version_pattern)
+    except re.error as err:
+        raise ConfigError(
+            f"Invalid version_pattern regex: {version_pattern!r}"
+        ) from err
+    match = pattern.search(value)
+    if not match:
+        raise ConfigError(
+            f"Version pattern {version_pattern!r} did not match the API's "
+            f"version value {value!r}"
+        )
+    return match.group(1) if pattern.groups else match.group(0)

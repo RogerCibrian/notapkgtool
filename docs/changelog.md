@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`version_pattern` for `api_json` recipes** - A regex applied to the
+    value found at `version_path`, the same field `api_github` and
+    `web_scrape` already have. Use it when the API wraps the version in a
+    prefix or suffix (`"v2.0"`, `"2.0 (stable)"`), which a device would
+    otherwise read as version 0. Without it the API's value is used as is,
+    so existing recipes are unchanged
 - **Recipe `parent` field** - A recipe can name another recipe as its
     parent and inherit everything it does not set itself. The parent merges
     between vendor defaults and the recipe, lists replace rather than
