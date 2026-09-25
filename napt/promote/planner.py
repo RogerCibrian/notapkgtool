@@ -324,19 +324,29 @@ def load_recipe_configs(recipes: Path) -> dict[str, dict[str, Any]]:
         recipes: A recipe YAML file, or a directory scanned recursively.
 
     Returns:
-        Effective configurations keyed by recipe id.
+        Effective configurations keyed by recipe id, in path order.
 
     Raises:
-        ConfigError: If the path does not exist, contains no recipes, or
-            a recipe is invalid.
+        ConfigError: If the path does not exist, contains no recipes, a
+            recipe is invalid, or two recipe files resolve to the same
+            id.
 
     """
-    return {
-        config["id"]: config
-        for config in (
-            load_effective_config(path) for path in _collect_recipe_paths(recipes)
-        )
-    }
+    configs: dict[str, dict[str, Any]] = {}
+    sources: dict[str, Path] = {}
+    for path in _collect_recipe_paths(recipes):
+        config = load_effective_config(path)
+        app_id: str = config["id"]
+        if app_id in sources:
+            raise ConfigError(
+                f"Recipe id '{app_id}' is declared by both {sources[app_id]} "
+                f"and {path}. Give each recipe its own id, or move a parent "
+                "recipe that shares its child's id out of the directory "
+                "being scanned."
+            )
+        sources[app_id] = path
+        configs[app_id] = config
+    return configs
 
 
 def resolve_state_dir(recipes: Path) -> Path:
@@ -395,8 +405,7 @@ def plan_promotions(
         now = datetime.now(UTC)
 
     actions: list[dict[str, Any]] = []
-    for recipe_path in _collect_recipe_paths(recipes):
-        config = load_effective_config(recipe_path)
+    for config in load_recipe_configs(recipes).values():
         app_state_dir = (
             state_dir
             if state_dir is not None

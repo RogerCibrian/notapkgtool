@@ -20,24 +20,28 @@ replace, and retires them per the retention policy.
 
 Plans are applied per app: each ``state/plans/<app_id>.json`` file is
 an independent unit of work, preflighted, executed, and consumed on
-its own. A failure inside one app's plan records the failure, keeps
-that plan file for retry, and moves on to the next — one app's broken
-group or Graph error never strands the rest of the fleet's
-promotions.
+its own. Only the plan files of the recipes given to the run are
+loaded, so applying one recipe leaves every other app's reviewed plan
+in place. A failure inside one app's plan (an unresolvable group, a
+Graph error, a state file that cannot be written) records the
+failure, keeps that plan file for retry, and moves on to the next;
+one app's problem never strands the rest of the fleet's promotions.
 
 Every action is validated against current deployment state before
-executing (validate-then-act): stale actions — the published release
-changed since the plan was written, or the action already applied —
-are skipped with a warning instead of failing, so re-running apply
-after a partial failure is safe. Deployment state is saved after each
-applied action, and ring ``entered_at`` timestamps are written here
-and only here.
+executing (validate-then-act): stale actions, where the published
+release changed since the plan was written or the action already
+applied, are skipped with a warning instead of failing, so re-running
+apply after a partial failure is safe. Deployment state is saved after
+each applied action, and ring ``entered_at`` timestamps are written
+here and only here.
 
 Displaced releases are found through their provenance stamps (the
-tenant is listed once per run), not through deployment state — state
+tenant is listed once per run), not through deployment state, which
 only records the current release's app IDs. A displaced release that
 no longer holds any ring moves to the retained list; releases beyond
-``deployment.retain_versions`` have their Intune apps deleted.
+``deployment.retain_versions`` have their Intune apps deleted and
+leave the run's tenant listing, so the drift check that follows does
+not report them.
 
 Assignments NAPT does not manage are preserved: assignment sets are
 read, modified, and written back, so admin-made assignments and
@@ -66,7 +70,6 @@ from napt.promote.drift import detect_drift
 from napt.promote.planner import (
     PLAN_SCHEMA_VERSION,
     load_recipe_configs,
-    plan_promotions,
     plans_dir_for,
 )
 from napt.promote.preflight import unresolvable_groups
@@ -79,8 +82,57 @@ from napt.state.deployment import (
 from napt.state.stamp import ENTRY_INSTALL, ENTRY_UPDATE, find_stamped_app
 
 # Ring assignments target the Update entry, which is gated to devices
-# with an older release installed — always a required install.
+# with an older release installed: always a required install.
 _RING_INTENT = "required"
+
+# Fields every planned action carries, and the one field each type adds.
+_ACTION_FIELDS = {"sha256": str, "version": str, "groups": list}
+_ACTION_TYPE_FIELDS = {"assign": ("intent", str), "promote": ("ring", str)}
+
+
+def _corrupted(plan_path: Path, problem: str) -> StateError:
+    """Builds the error for a plan file that does not match the planner's output."""
+    return StateError(
+        f"Corrupted plan file: {plan_path}. {problem}. "
+        "Re-run 'napt promote plan' to regenerate it."
+    )
+
+
+def _check_action(action: Any, index: int, plan_path: Path) -> None:
+    """Verifies that one plan action has the shape the planner writes.
+
+    Args:
+        action: The raw action from the plan file.
+        index: One-based position of the action in the file, for the
+            error message.
+        plan_path: Path to the plan file, for the error message.
+
+    Raises:
+        StateError: If the action is not an object, has an unknown type,
+            or is missing a field apply keys on.
+
+    """
+    if not isinstance(action, dict):
+        raise _corrupted(plan_path, f"action {index} is not an object")
+    action_type = action.get("type")
+    if action_type not in _ACTION_TYPE_FIELDS:
+        raise _corrupted(
+            plan_path,
+            f"action {index} has unknown type {action_type!r} (expected "
+            f"{' or '.join(sorted(_ACTION_TYPE_FIELDS))})",
+        )
+    required = dict(_ACTION_FIELDS)
+    key, kind = _ACTION_TYPE_FIELDS[action_type]
+    required[key] = kind
+    for field, expected in required.items():
+        if not isinstance(action.get(field), expected):
+            raise _corrupted(
+                plan_path,
+                f"action {index} is missing '{field}' or it is not "
+                f"{'a list' if expected is list else 'a string'}",
+            )
+    if not all(isinstance(group, str) for group in action["groups"]):
+        raise _corrupted(plan_path, f"action {index} has a non-string group")
 
 
 def load_plan_file(plan_path: Path) -> list[dict[str, Any]]:
@@ -88,8 +140,9 @@ def load_plan_file(plan_path: Path) -> list[dict[str, Any]]:
 
     The file records its app id and display name once at the top level;
     both are re-injected into every returned action, so in-memory
-    actions look the same whether they came from a plan file or a fresh
-    plan.
+    actions look the same as the planner's output. The filename is the
+    app's identity, as for deployment state: ``<app_id>.json`` must
+    declare that same app id.
 
     Args:
         plan_path: Path to the plan file.
@@ -98,14 +151,20 @@ def load_plan_file(plan_path: Path) -> list[dict[str, Any]]:
         The planned action dicts.
 
     Raises:
-        StateError: If the plan file contains invalid JSON, lacks an
-            actions list or app id, its schemaVersion is missing or
-            unsupported, or an action references a different app than
-            the one the file declares.
+        StateError: If the plan file cannot be read, contains invalid
+            JSON, lacks an actions list or app id, declares an app id
+            other than its filename, its schemaVersion is missing or
+            unsupported, an action is not shaped like the planner writes
+            it, or an action references a different app than the one
+            the file declares.
 
     """
     try:
-        data = json.loads(plan_path.read_text(encoding="utf-8"))
+        text = plan_path.read_text(encoding="utf-8")
+    except OSError as err:
+        raise StateError(f"Cannot read plan file {plan_path}: {err}") from err
+    try:
+        data = json.loads(text)
         actions = data["actions"]
         declared = data["app_id"]
     except (json.JSONDecodeError, KeyError, TypeError) as err:
@@ -113,6 +172,16 @@ def load_plan_file(plan_path: Path) -> list[dict[str, Any]]:
             f"Corrupted plan file: {plan_path}. "
             "Re-run 'napt promote plan' to regenerate it."
         ) from err
+    if not isinstance(actions, list):
+        raise _corrupted(plan_path, "'actions' is not a list")
+    if not isinstance(declared, str):
+        raise _corrupted(plan_path, "'app_id' is not a string")
+    if declared != plan_path.stem:
+        raise StateError(
+            f"Plan file {plan_path} declares app_id {declared!r}, but its "
+            f"filename says {plan_path.stem!r}. The file was likely copied "
+            "or renamed. Fix whichever is wrong before continuing."
+        )
 
     found = data.get("schemaVersion")
     if found != PLAN_SCHEMA_VERSION:
@@ -121,6 +190,9 @@ def load_plan_file(plan_path: Path) -> list[dict[str, Any]]:
             f"(this NAPT release supports version {PLAN_SCHEMA_VERSION}). "
             "Re-run 'napt promote plan' to regenerate it."
         )
+
+    for index, action in enumerate(actions, start=1):
+        _check_action(action, index, plan_path)
 
     # A plan file is one app's unit of work: apply's failure isolation
     # and consume-after-success semantics attribute the whole file to a
@@ -256,14 +328,28 @@ class _ApplyRun:
         return self._states[app_id]
 
     def save_state(self, app_id: str) -> None:
-        """Persists an app's deployment state after an applied action."""
+        """Persists an app's deployment state after an applied action.
+
+        Raises:
+            StateError: If the state file cannot be written. Intune has
+                already been changed at this point; the message says so
+                and that re-running apply repeats the action safely
+                (assignments are replaced, not duplicated, and retention
+                works from a fresh tenant listing).
+
+        """
         state = self._states[app_id]
-        if app_id in self.configs:
-            state["name"] = self.configs[app_id]["name"]
-        save_deployment_state(
-            state,
-            deployment_state_path(self.deployment_dir, app_id),
-        )
+        state["name"] = self.configs[app_id]["name"]
+        state_path = deployment_state_path(self.deployment_dir, app_id)
+        try:
+            save_deployment_state(state, state_path)
+        except OSError as err:
+            raise StateError(
+                f"{app_id}: Intune was updated but deployment state could "
+                f"not be written to {state_path}: {err}. Fix the file or "
+                "its permissions and re-run apply; the action is repeated "
+                "safely"
+            ) from err
 
     def resolve_targets(self, groups: list[str]) -> list[dict[str, Any]]:
         """Resolves group names/IDs to assignment targets with a per-run cache.
@@ -332,6 +418,9 @@ def _retire_release(run: _ApplyRun, app_id: str, version: str, sha256: str) -> N
             )
             if app is not None:
                 delete_mobile_app(run.access_token, app["id"])
+                # The drift check runs on this listing after the actions;
+                # a deleted entry must not be reported as orphaned.
+                run.existing_apps.remove(app)
                 logger.info(
                     "PROMOTE",
                     f"{app_id}: deleted retired {entry_type} entry "
@@ -344,9 +433,11 @@ def _action_skip_reason(run: _ApplyRun, action: dict[str, Any]) -> str | None:
 
     The single authority for skip semantics: the apply loop records the
     returned reason, and the group preflight validates only actions this
-    function clears — so a group referenced solely by a stale or
+    function clears, so a group referenced solely by a stale or
     already-applied action can never block a run. All checks are local
-    (state files, cached tenant listing); nothing calls Graph.
+    (state files, cached tenant listing); nothing calls Graph. The
+    action's app is one of the run's recipes: apply loads no other
+    plan files.
 
     Args:
         run: The apply run context.
@@ -358,8 +449,6 @@ def _action_skip_reason(run: _ApplyRun, action: dict[str, Any]) -> str | None:
     """
     app_id: str = action["app_id"]
     sha256: str = action["sha256"]
-    if app_id not in run.configs:
-        return "no recipe found for this app"
 
     state = run.state_for(app_id)
     published = state.get("published") or {}
@@ -496,38 +585,38 @@ def apply_plan(
 ) -> dict[str, Any]:
     """Executes promotion plans against Intune.
 
-    Consumes per-app plan files from ``<state_dir>/plans/`` when any
-    exist (removing each after its app applies fully); otherwise plans
-    fresh and applies immediately. Each app's plan is an independent
+    Consumes the given recipes' plan files from ``<state_dir>/plans/``,
+    removing each after its app applies fully. A plan file written by
+    ``napt promote plan`` is the only thing apply executes: a recipe
+    without one has nothing to apply, and plan files for apps outside
+    the run are left untouched, so applying one recipe never consumes
+    another app's reviewed plan. Each app's plan is an independent
     unit: its groups are preflighted before any of its actions execute,
-    so an unresolvable group fails that app with zero mutations — and a
-    failure while applying one app records the failure, keeps its plan
-    file for retry, and continues with the remaining apps. A dead group
-    referenced only by stale or already-applied actions never blocks an
-    app. Deployment state is saved after each applied action, so a
-    failed run resumes safely — already-applied actions validate as
-    no-ops.
+    so an unresolvable group fails that app with zero mutations, and a
+    failure while preflighting or applying one app records the
+    failure, keeps its plan file for retry, and continues with the
+    remaining apps. A dead group referenced only by stale or
+    already-applied actions never blocks an app. Deployment state is
+    saved after each applied action, so a failed run resumes safely:
+    already-applied actions validate as no-ops.
 
-    Assignment drift is checked on every run — including runs with
-    nothing to apply, which therefore still authenticate — and reported
+    Assignment drift is checked on every run, including runs with
+    nothing to apply (which therefore still authenticate), and reported
     in the summary, never corrected. Publications whose state writeback
     was lost are recovered first (see
-    [reconcile_publications][napt.promote.reconcile.reconcile_publications]).
-    When planning fresh, recovery runs before the plan is computed, so a
-    recovered release is promotable in the same run; a pre-existing plan
-    file was computed earlier and gains nothing from the recovery — the
-    next plan run picks the release up.
+    [reconcile_publications][napt.promote.reconcile.reconcile_publications]);
+    a recovered release is picked up by the next plan run, since the
+    plan files being applied were computed before the recovery.
 
     Args:
         recipes: A recipe YAML file, or a directory scanned recursively.
         state_dir: State directory holding ``deployment/`` and
             ``plans/``.
-        plan_file: Explicit path to a single plan file to apply. When
-            omitted, every file in the default plans directory is
-            applied if any exist, else a fresh plan is computed and
-            applied.
-        now: Evaluation clock for ring timestamps and fresh planning.
-            Defaults to the current UTC time.
+        plan_file: Explicit path to a single plan file to apply; its app
+            must be one of the recipes. When omitted, the recipes' plan
+            files in the default plans directory are applied.
+        now: Evaluation clock for ring timestamps. Defaults to the
+            current UTC time.
 
     Returns:
         A summary dict with "applied" and "skipped" action lists,
@@ -535,8 +624,10 @@ def apply_plan(
             "drift" findings, and "recovered" reconciliation findings.
 
     Raises:
-        AuthError: If authentication fails.
-        ConfigError: On invalid recipes.
+        AuthError: If authentication fails, or Graph rejects the token
+            during a run.
+        ConfigError: On invalid recipes, or a plan file for an app the
+            run has no recipe for.
         NetworkError: On Graph API failures outside a per-app unit
             (listing the tenant, reconciliation, the drift check).
         StateError: On corrupted deployment state or plan file.
@@ -556,63 +647,79 @@ def apply_plan(
     access_token = get_access_token()
     run = _ApplyRun(access_token, configs, deployment_dir, now)
 
-    # Recover lost publication writebacks before planning, so a
-    # recovered release is promotable in this same run.
+    # Recover lost publication writebacks so state is right for the
+    # actions below and for the next plan run.
     recovered = reconcile_publications(
         access_token, configs, deployment_dir, run.existing_apps
     )
 
     # Each unit is one app's plan: (plan file to consume, its actions).
-    # A fresh plan has no files to consume but keeps the per-app split
-    # so failure isolation behaves identically in both modes.
-    units: list[tuple[Path | None, list[dict[str, Any]]]]
+    # The filename is the app's identity (load_plan_file rejects a file
+    # whose declared app id disagrees), so the stem decides which files
+    # belong to this run before any content is read.
+    units: list[tuple[Path, list[dict[str, Any]]]]
     if plan_file is not None:
+        if plan_file.stem not in configs:
+            raise ConfigError(
+                f"Plan file {plan_file} is for app '{plan_file.stem}', which "
+                f"is not among the recipes given ({recipes}). Pass that "
+                "app's recipe, or the recipes directory."
+            )
         units = [(plan_file, load_plan_file(plan_file))]
         logger.info("PROMOTE", f"Applying plan file: {plan_file}")
     else:
         plan_paths = sorted(plans_dir_for(state_dir).glob("*.json"))
-        if plan_paths:
-            units = [(path, load_plan_file(path)) for path in plan_paths]
+        outside = [path for path in plan_paths if path.stem not in configs]
+        if outside:
             logger.info(
                 "PROMOTE",
-                f"Applying {len(plan_paths)} plan file(s) from "
-                f"{plans_dir_for(state_dir)}",
+                f"Left {len(outside)} plan file(s) for apps outside this run "
+                f"untouched: {', '.join(path.stem for path in outside)}",
+            )
+        mine = [path for path in plan_paths if path.stem in configs]
+        units = [(path, load_plan_file(path)) for path in mine]
+        if mine:
+            logger.info(
+                "PROMOTE",
+                f"Applying {len(mine)} plan file(s) from {plans_dir_for(state_dir)}",
             )
         else:
-            fresh = plan_promotions(recipes, state_dir=deployment_dir, now=now)
-            by_app: dict[str, list[dict[str, Any]]] = {}
-            for action in fresh:
-                by_app.setdefault(action["app_id"], []).append(action)
-            units = [(None, app_actions) for _, app_actions in sorted(by_app.items())]
-            logger.info("PROMOTE", "No plan files found; planning and applying")
+            logger.info(
+                "PROMOTE",
+                "No plan files to apply; run 'napt promote plan' to compute them",
+            )
 
     failed: list[dict[str, Any]] = []
     for plan_path, actions in units:
-        if plan_path is not None and not actions:
+        if not actions:
             plan_path.unlink()  # An empty plan file holds no decisions.
             continue
-        unit_id = actions[0]["app_id"] if actions else "?"
+        unit_id = plan_path.stem
 
         # Preflight: every group a live action of this app will touch
         # must resolve before any of its actions execute, so an
         # unresolvable group fails this app with zero mutations instead
-        # of stranding a half-applied plan. Skipped actions are excluded
-        # — a dead group referenced only by a stale or already-applied
+        # of stranding a half-applied plan. Skipped actions are excluded:
+        # a dead group referenced only by a stale or already-applied
         # action never blocks the app. Resolutions are cached for the
-        # action loop below.
-        live = [a for a in actions if _action_skip_reason(run, a) is None]
-        problems = unresolvable_groups(access_token, live, run.group_id_cache)
-        if problems:
-            reason = "unresolvable groups: " + "; ".join(problems)
-            logger.warning(
-                "PROMOTE",
-                f"{unit_id}: preflight failed, nothing applied for this "
-                f"app; plan kept for retry ({reason})",
-            )
-            failed.append({"app_id": unit_id, "error": reason})
-            continue
-
+        # action loop below. The preflight's own Graph calls sit inside
+        # the same per-app isolation as the actions, so a transient
+        # failure there fails this app only; a rejected token (AuthError)
+        # still aborts the run, since it would fail every app the same
+        # way.
         try:
+            live = [a for a in actions if _action_skip_reason(run, a) is None]
+            problems = unresolvable_groups(access_token, live, run.group_id_cache)
+            if problems:
+                reason = "unresolvable groups: " + "; ".join(problems)
+                logger.warning(
+                    "PROMOTE",
+                    f"{unit_id}: preflight failed, nothing applied for this "
+                    f"app; plan kept for retry ({reason})",
+                )
+                failed.append({"app_id": unit_id, "error": reason})
+                continue
+
             for action in actions:
                 reason = _action_skip_reason(run, action)
                 if reason is not None:
@@ -630,9 +737,8 @@ def apply_plan(
             failed.append({"app_id": unit_id, "error": str(err)})
             continue
 
-        if plan_path is not None:
-            plan_path.unlink()
-            logger.verbose("PROMOTE", f"Consumed plan file: {plan_path}")
+        plan_path.unlink()
+        logger.verbose("PROMOTE", f"Consumed plan file: {plan_path}")
 
     # Drift is checked after the actions so freshly applied assignments
     # are reflected. Findings are warnings only, never corrected.

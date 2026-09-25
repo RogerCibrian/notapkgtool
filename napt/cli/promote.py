@@ -220,19 +220,20 @@ def cmd_promote_apply(args: argparse.Namespace) -> int:
 
     Executes promotion plans against Intune: assigns install entries,
     promotes releases through rings, displaces the older releases they
-    replace, and retires them per the retention policy. Consumes each
-    per-app plan file after its app applies fully; otherwise plans
-    fresh and applies immediately. One app's failure keeps its plan
-    file for retry and never blocks the others, and stale or
-    already-applied actions are skipped with a warning, so re-running
-    after a partial failure is safe.
+    replace, and retires them per the retention policy. Executes only
+    the plan files written by ``napt promote plan``, consuming each
+    per-app file after its app applies fully; with no plan file there
+    is nothing to apply. One app's failure keeps its plan file for
+    retry and never blocks the others, and stale or already-applied
+    actions are skipped with a warning, so re-running after a partial
+    failure is safe.
 
     Args:
         args: Parsed command-line arguments containing the recipes path,
             state directory, plan file, and flags.
 
     Returns:
-        Exit code (0 for success — including nothing to apply,
+        Exit code (0 for success, including nothing to apply;
         1 for failure, including any app whose plan failed to apply).
 
     """
@@ -407,9 +408,9 @@ def register(subparsers: argparse._SubParsersAction) -> None:
             "Execute promotion actions: assign install entries, promote "
             "releases through rings, displace the older releases they "
             "replace, and retire them per deployment.retain_versions. "
-            "Consumes each per-app plan "
-            "file in state/plans/ when any exist; otherwise plans fresh "
-            "and applies immediately. One app's failure keeps its plan "
+            "Executes only the plan files written by 'napt promote plan', "
+            "consuming each per-app file in state/plans/ after its app "
+            "applies fully. One app's failure keeps its plan "
             "file and never blocks the others, and stale or "
             "already-applied actions are skipped, so re-running is safe."
         ),
@@ -435,8 +436,8 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         type=Path,
         default=None,
         help=(
-            "Single plan file to execute (default: every file in "
-            "<state-dir>/plans/ if any exist)"
+            "Single plan file to execute (default: the given recipes' plan "
+            "files in <state-dir>/plans/; other apps' files are left alone)"
         ),
     )
     parser_promote_apply.add_argument(
