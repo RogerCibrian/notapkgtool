@@ -8,7 +8,8 @@
 
 ## Overview
 
-NAPT is a Python CLI.
+NAPT is a Python CLI that automates packaging Windows apps for Microsoft
+Intune.
 It runs on Windows, Linux, and macOS; creating .intunewin packages requires
 Windows.
 
@@ -35,8 +36,8 @@ NAPT does each step from one YAML recipe per app.
 - **Ring promotion** - `napt promote` moves each release through deployment
   rings and reports assignment drift; `napt status` shows every app's
   published version, pending release, and ring positions
-- **Intune sign-in** - `napt auth setup` creates the app registration;
-  `napt auth login` signs in
+- **Tenant setup and sign-in** - `napt auth setup` creates the Entra app
+  registration with the permissions NAPT needs; `napt auth login` signs in
 
 ## Getting started
 
