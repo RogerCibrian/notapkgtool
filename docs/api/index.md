@@ -127,4 +127,3 @@ Recipe YAML
   AuthError)
 - **Return types:** Frozen dataclasses from `results.py`, one per napt
   command's underlying operation
-
