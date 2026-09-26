@@ -18,7 +18,6 @@ Entries here are ideas, not commitments. Priorities shift with user feedback, te
 
 | Feature | Status | Category | Complexity | Value |
 |---------|--------|----------|------------|-------|
-| `napt auth setup` Command | ✅ Completed | User-Facing | Medium | High |
 | Pre/Post Install/Uninstall Script Support | 💡 Idea | User-Facing | Low | Medium |
 | Enhanced CLI Help Menu | 💡 Idea | User-Facing | Low | Medium |
 | Intune App Categorization & Scope Tags | 💡 Idea | User-Facing | Medium | Medium |
@@ -33,9 +32,9 @@ Entries here are ideas, not commitments. Priorities shift with user feedback, te
 
 **Summary:**
 
-- ✅ **Completed** (since the last release): 1
+- ✅ **Completed** (since the last release): 0
 - 💡 **Ideas**: 11
-- **Total**: 12 features
+- **Total**: 11 features
 
 ---
 
@@ -287,31 +286,7 @@ signing)
 
 ## Recently completed
 
-#### `napt auth setup` command
-
-**Status**: ✅ Completed
-**Complexity**: Medium
-**Value**: High
-
-**Description**: `napt auth setup --tenant-id <id>` creates the NAPT app
-registration in Microsoft Entra ID directly through Microsoft Graph (no
-Azure CLI dependency), or brings an existing one up to spec: redirect URIs,
-application and delegated Graph permissions, service principal, and admin
-consent.
-Shipped alongside `napt auth login`, `status`, and `logout`.
-
-**Notes**:
-
-- Re-running is safe: compares the registration with what the installed
-  NAPT version needs and adds only what is missing, never removing anything
-- `--federated-issuer` / `--federated-subject` add a federated credential
-  so CI/CD can authenticate through OIDC without a client secret
-- Registrations are stamped with a provenance note; an unstamped name
-  match is left untouched unless `--adopt` is given
-- `--print-only` prints the equivalent portal checklist for tenants where
-  the automated path is not allowed
-
-**Related**: See [User Guide - App Registration Setup](user-guide.md#app-registration-setup).
+_Nothing since the last release._
 
 ---
 
