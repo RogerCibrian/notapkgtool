@@ -623,12 +623,17 @@ the release entered that ring and its bake threshold.
 
 `promote apply` executes the plans against Intune: assigns install
 entries, promotes releases through rings, unassigns displaced releases,
-and retires them per `deployment.retain_versions`. It consumes every plan
-file in `state/plans/` when any exist (removing each after its app
-applies fully) and plans fresh otherwise. Each app's plan is an
-independent unit: one app's failure keeps its plan file for retry and
-never blocks the others. Stale or already-applied actions are skipped
-with a warning, so re-running after a partial failure is safe.
+and retires them per `deployment.retain_versions`. It executes only the
+plan files `promote plan` wrote: it consumes the plan files of the
+recipes it was given from `state/plans/` (removing each after its app
+applies fully), a recipe without a plan file has nothing to apply, and
+plan files for apps outside the run are left untouched, so applying
+one recipe never consumes another app's reviewed plan.
+Each app's plan is an independent unit: one app's failure, whether a
+Graph error, an unresolvable group, or a state file that cannot be
+written, keeps its plan file for retry and never blocks the others.
+Stale or already-applied actions are skipped with a warning, so
+re-running after a partial failure is safe.
 Assignments NAPT does not manage (admin-made groups, all-device
 targets, exclusions) are always preserved.
 
@@ -668,8 +673,10 @@ committed content; a partially published release is warned about
 instead, since only a publish re-run can finish it. Apply reconciles
 automatically; plan reconciles with `--reconcile` (which needs Graph
 credentials and, unlike the rest of plan, writes deployment state).
-Reconciliation runs before planning, so a recovered release is
-promotable in the same run.
+In `plan --reconcile`, reconciliation runs before planning, so a
+recovered release is promotable in the same run; in apply, the plan
+files were computed earlier, so a recovered release waits for the next
+plan run.
 
 ```bash
 napt promote plan [RECIPE_OR_DIR] [OPTIONS]
@@ -931,6 +938,10 @@ produces byte-identical files.
 `napt promote apply` executes each plan as an allowlist (entries that no
 longer validate against current state are skipped, never improvised) and
 removes each file after its app applies fully.
+Given one recipe, it touches only that app's plan file.
+A hand-edited action that no longer has the shape shown above, or a
+file whose name and `app_id` disagree, is rejected with a message to
+re-run `napt promote plan`.
 To hold one app's promotions during review, delete its plan file; the
 other apps' plans are unaffected, and the next plan run re-proposes
 whatever is still eligible.

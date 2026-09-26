@@ -12,6 +12,7 @@ import yaml
 
 from napt.exceptions import ConfigError, StateError
 from napt.promote.planner import (
+    load_recipe_configs,
     plan_path_for,
     plan_promotions,
     resolve_state_dir,
@@ -391,6 +392,47 @@ class TestPlanPromotions:
 
         assert len(actions) == 1
         assert actions[0]["type"] == "promote"
+
+
+class TestLoadRecipeConfigs:
+    """Tests for recipe loading across a directory."""
+
+    def _write_override(self, tmp_path: Path, parent: Path) -> Path:
+        """Writes a child recipe beside its parent that inherits the id."""
+        override = parent.with_name(f"{parent.stem}.override.yaml")
+        override.write_text(
+            yaml.dump(
+                {
+                    "apiVersion": "napt/v1",
+                    "parent": parent.name,
+                    "deployment": {"retain_versions": 1},
+                }
+            ),
+            encoding="utf-8",
+        )
+        return override
+
+    def test_duplicate_ids_raise_naming_both_files(self, tmp_path):
+        """Tests that two recipe files resolving to the same id are rejected
+        instead of one silently replacing the other."""
+        parent = _write_recipe(tmp_path, rings=_RINGS)
+        override = self._write_override(tmp_path, parent)
+
+        with pytest.raises(ConfigError, match="test-app") as info:
+            load_recipe_configs(tmp_path / "recipes")
+
+        assert parent.name in str(info.value)
+        assert override.name in str(info.value)
+
+    def test_plan_never_plans_one_app_twice(self, tmp_path):
+        """Tests that planning a directory with a duplicated id raises rather
+        than producing two sets of actions for one app."""
+        parent = _write_recipe(tmp_path, rings=_RINGS)
+        self._write_override(tmp_path, parent)
+        _write_state(tmp_path, published=_published())
+
+        with pytest.raises(ConfigError, match="test-app"):
+            plan_promotions(tmp_path / "recipes", now=NOW)
 
 
 class TestResolveStateDir:

@@ -150,6 +150,10 @@ def _run_apply(
     assign_side_effect: Any = None,
     drift_findings: list[dict[str, Any]] | None = None,
     resolve_side_effect: Any = None,
+    recipes: Path | None = None,
+    plan_file: Path | None = None,
+    real_drift: bool = False,
+    save_side_effect: Any = None,
 ) -> tuple[dict[str, Any], dict[str, MagicMock]]:
     """Runs apply_plan with all Graph calls mocked.
 
@@ -162,14 +166,25 @@ def _run_apply(
         drift_findings: detect_drift return value.
         resolve_side_effect: Overrides the group resolution fake (shared
             by the preflight and the action loop).
+        recipes: Recipe file or directory to apply. Defaults to the
+            project's recipes directory.
+        plan_file: Explicit plan file to apply.
+        real_drift: Runs the real drift check (with its Graph calls
+            mocked) instead of returning drift_findings.
+        save_side_effect: Optional side effect for the deployment state
+            save; the real save runs when omitted.
 
     Returns:
         A tuple of (summary, mocks).
 
     """
     assignments = assignments or {}
+
+    def _record(token: str, app_id: str, payload: list[dict[str, Any]]) -> None:
+        assignments[app_id] = list(payload)
+
     mocks = {
-        "assign_app": MagicMock(side_effect=assign_side_effect),
+        "assign_app": MagicMock(side_effect=assign_side_effect or _record),
         "delete_mobile_app": MagicMock(),
         "get_app_assignments": MagicMock(
             side_effect=lambda token, app_id: list(assignments.get(app_id, []))
@@ -198,12 +213,23 @@ def _run_apply(
                 mocks["resolve_assignment_target"],
             )
         )
-        stack.enter_context(
-            patch(
-                "napt.promote.applier.detect_drift",
-                return_value=drift_findings or [],
+        if real_drift:
+            for name in ("get_app_assignments", "resolve_assignment_target"):
+                stack.enter_context(patch(f"napt.promote.drift.{name}", mocks[name]))
+        else:
+            stack.enter_context(
+                patch(
+                    "napt.promote.applier.detect_drift",
+                    return_value=drift_findings or [],
+                )
             )
-        )
+        if save_side_effect is not None:
+            stack.enter_context(
+                patch(
+                    "napt.promote.applier.save_deployment_state",
+                    side_effect=save_side_effect,
+                )
+            )
         # Reconciliation's committed-content lookups; only reached when a
         # test seeds a pending release with stamped tenant entries.
         stack.enter_context(
@@ -213,8 +239,9 @@ def _run_apply(
             )
         )
         summary = apply_plan(
-            tmp_path / "recipes",
+            recipes if recipes is not None else tmp_path / "recipes",
             state_dir=tmp_path / "state",
+            plan_file=plan_file,
             now=NOW,
         )
 
@@ -386,6 +413,34 @@ class TestApplyPromoteActions:
         deleted = [c.args[1] for c in mocks["delete_mobile_app"].call_args_list]
         assert deleted == ["install-ancient", "update-ancient"]
 
+    def test_retired_entries_are_not_reported_as_drift(self, tmp_path):
+        """Tests that the drift check does not report the entries retention
+        deleted in the same run as orphaned."""
+        _write_recipe(tmp_path, rings=_RINGS, retain_versions=1)
+        _write_state(
+            tmp_path,
+            published=_published(),
+            rings={
+                "pilot": {
+                    "version": "1.0.0",
+                    "sha256": "a" * 64,
+                    "entered_at": "2026-07-01T00:00:00+00:00",
+                }
+            },
+            retained=[{"version": "0.9.0", "sha256": "9" * 64}],
+        )
+        _write_plan(tmp_path, [_promote_action()])
+        tenant = _tenant() + [
+            _stamped("test-app", "install", "9" * 64, "install-ancient"),
+            _stamped("test-app", "update", "9" * 64, "update-ancient"),
+        ]
+
+        summary, mocks = _run_apply(tmp_path, existing_apps=tenant, real_drift=True)
+
+        assert len(summary["applied"]) == 1
+        assert mocks["delete_mobile_app"].call_count == 2
+        assert [f["kind"] for f in summary["drift"]] == []
+
     def test_stale_action_skipped(self, tmp_path):
         """Tests that an action for a superseded release is skipped."""
         _write_recipe(tmp_path, rings=_RINGS)
@@ -517,17 +572,53 @@ class TestApplyAssignActions:
 class TestApplyOrchestration:
     """Tests for plan sourcing and file lifecycle."""
 
-    def test_bare_apply_plans_fresh(self, tmp_path):
-        """Tests that apply without a plan file plans and applies."""
+    def test_no_plan_file_applies_nothing(self, tmp_path):
+        """Tests that an eligible release without a plan file is not applied:
+        only a plan file written by promote plan is executed."""
         _write_recipe(tmp_path, rings=_RINGS)
         state_path = _write_state(tmp_path, published=_published())
 
         summary, mocks = _run_apply(tmp_path, existing_apps=_tenant())
 
-        assert len(summary["applied"]) == 1
-        assert mocks["assign_app"].call_count == 1
-        state = load_deployment_state(state_path)
-        assert state["rings"]["pilot"]["sha256"] == "b" * 64
+        assert summary["applied"] == []
+        assert summary["failed"] == []
+        mocks["assign_app"].assert_not_called()
+        assert load_deployment_state(state_path)["rings"] == {}
+
+    def test_explicit_plan_file_applies_its_app(self, tmp_path):
+        """Tests that --plan-file applies and consumes the named app's plan
+        while leaving other plan files alone."""
+        _write_recipe(tmp_path, app_id="app-a", rings=_RINGS)
+        _write_recipe(tmp_path, app_id="app-b", rings=_RINGS)
+        _write_state(tmp_path, app_id="app-a", published=_published())
+        _write_state(tmp_path, app_id="app-b", published=_published())
+        action_a = _promote_action()
+        action_a["app_id"] = "app-a"
+        action_b = _promote_action()
+        action_b["app_id"] = "app-b"
+        plan_a = _write_plan(tmp_path, [action_a])
+        plan_b = _write_plan(tmp_path, [action_b])
+        tenant = [
+            _stamped("app-a", "update", "b" * 64, "update-a"),
+            _stamped("app-b", "update", "b" * 64, "update-b"),
+        ]
+
+        summary, mocks = _run_apply(tmp_path, existing_apps=tenant, plan_file=plan_a)
+
+        assert [a["app_id"] for a in summary["applied"]] == ["app-a"]
+        assert [c.args[1] for c in mocks["assign_app"].call_args_list] == ["update-a"]
+        assert not plan_a.exists()
+        assert plan_b.exists()
+
+    def test_missing_plan_file_raises(self, tmp_path):
+        """Tests that --plan-file naming a file that does not exist is a
+        StateError, not a traceback."""
+        _write_recipe(tmp_path, rings=_RINGS)
+        _write_state(tmp_path, published=_published())
+        missing = plan_path_for(tmp_path / "state", "test-app")
+
+        with pytest.raises(StateError, match="Cannot read plan file"):
+            _run_apply(tmp_path, existing_apps=_tenant(), plan_file=missing)
 
     def test_nothing_to_apply(self, tmp_path):
         """Tests that no plan and no eligible actions is a clean no-op."""
@@ -545,9 +636,9 @@ class TestApplyOrchestration:
         }
         mocks["assign_app"].assert_not_called()
 
-    def test_recovers_lost_writeback_and_promotes_same_run(self, tmp_path):
+    def test_recovers_lost_writeback_without_promoting(self, tmp_path):
         """Tests that a publication whose writeback was lost is recovered
-        and enters the first ring in the same apply run."""
+        into state and left for the next plan run to promote."""
         _write_recipe(tmp_path, rings=_RINGS)
         # State still shows the release as pending: the publish run
         # uploaded successfully but its state commit never landed.
@@ -562,14 +653,15 @@ class TestApplyOrchestration:
         )
         save_deployment_state(state, state_path)
 
-        summary, _ = _run_apply(tmp_path, existing_apps=_tenant())
+        summary, mocks = _run_apply(tmp_path, existing_apps=_tenant())
 
         assert [f["kind"] for f in summary["recovered"]] == ["recovered"]
-        assert [a["type"] for a in summary["applied"]] == ["promote"]
+        assert summary["applied"] == []
+        mocks["assign_app"].assert_not_called()
         state = load_deployment_state(state_path)
         assert state["pending"] is None
         assert state["published"]["intune_app_id"] == "install-new"
-        assert state["rings"]["pilot"]["sha256"] == "b" * 64
+        assert state["rings"] == {}
 
     def test_preflight_fails_app_with_zero_mutations(self, tmp_path):
         """Tests that an unresolvable group fails the app with zero mutations."""
@@ -728,18 +820,177 @@ class TestApplyOrchestration:
         assert bad_plan.exists()
         assert not good_plan.exists()
 
-    def test_unknown_app_in_plan_skipped(self, tmp_path):
-        """Tests that a plan action without a matching recipe is skipped."""
+    def test_plan_outside_the_run_is_left_untouched(self, tmp_path):
+        """Tests that a plan file for an app not in this run's recipes is
+        neither applied nor consumed."""
         _write_recipe(tmp_path, rings=_RINGS)
         _write_state(tmp_path, published=_published())
         action = _promote_action()
         action["app_id"] = "ghost-app"
-        _write_plan(tmp_path, [action])
+        ghost_plan = _write_plan(tmp_path, [action])
 
-        summary, _ = _run_apply(tmp_path, existing_apps=_tenant())
+        summary, mocks = _run_apply(tmp_path, existing_apps=_tenant())
 
         assert summary["applied"] == []
-        assert "no recipe" in summary["skipped"][0]["reason"]
+        assert summary["skipped"] == []
+        assert ghost_plan.exists()
+        mocks["assign_app"].assert_not_called()
+
+    def test_single_recipe_apply_keeps_other_apps_plans(self, tmp_path):
+        """Tests that applying one recipe consumes only that app's plan file
+        and leaves the other apps' reviewed plans in place."""
+        recipe_a = _write_recipe(tmp_path, app_id="app-a", rings=_RINGS)
+        _write_recipe(tmp_path, app_id="app-b", rings=_RINGS)
+        _write_state(tmp_path, app_id="app-a", published=_published())
+        _write_state(tmp_path, app_id="app-b", published=_published())
+        action_a = _promote_action()
+        action_a["app_id"] = "app-a"
+        action_b = _promote_action()
+        action_b["app_id"] = "app-b"
+        plan_a = _write_plan(tmp_path, [action_a])
+        plan_b = _write_plan(tmp_path, [action_b])
+        tenant = [
+            _stamped("app-a", "update", "b" * 64, "update-a"),
+            _stamped("app-b", "update", "b" * 64, "update-b"),
+        ]
+
+        summary, mocks = _run_apply(tmp_path, existing_apps=tenant, recipes=recipe_a)
+
+        assert [a["app_id"] for a in summary["applied"]] == ["app-a"]
+        assert summary["skipped"] == []
+        assert not plan_a.exists()
+        assert plan_b.exists()
+        assert [c.args[1] for c in mocks["assign_app"].call_args_list] == ["update-a"]
+
+    def test_explicit_plan_file_for_app_outside_the_run_raises(self, tmp_path):
+        """Tests that --plan-file naming an app the run has no recipe for is
+        a ConfigError, and the file is kept."""
+        from napt.exceptions import ConfigError
+
+        _write_recipe(tmp_path, rings=_RINGS)
+        _write_state(tmp_path, published=_published())
+        action = _promote_action()
+        action["app_id"] = "ghost-app"
+        ghost_plan = _write_plan(tmp_path, [action])
+
+        with pytest.raises(ConfigError, match="ghost-app"):
+            _run_apply(tmp_path, existing_apps=_tenant(), plan_file=ghost_plan)
+
+        assert ghost_plan.exists()
+
+    def test_empty_explicit_plan_file_outside_the_run_is_kept(self, tmp_path):
+        """Tests that --plan-file naming another app's plan is refused even
+        when that plan holds no actions, instead of being deleted as empty."""
+        from napt.exceptions import ConfigError
+
+        _write_recipe(tmp_path, rings=_RINGS)
+        _write_state(tmp_path, published=_published())
+        ghost_plan = plan_path_for(tmp_path / "state", "ghost-app")
+        ghost_plan.parent.mkdir(parents=True)
+        ghost_plan.write_text(
+            json.dumps({"schemaVersion": 1, "app_id": "ghost-app", "actions": []}),
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ConfigError, match="ghost-app"):
+            _run_apply(tmp_path, existing_apps=_tenant(), plan_file=ghost_plan)
+
+        assert ghost_plan.exists()
+
+    def test_network_error_in_preflight_isolated_to_one_app(self, tmp_path):
+        """Tests that a Graph failure while resolving one app's groups fails
+        that app, keeps its plan, and lets the other apps apply."""
+        _write_recipe(tmp_path, app_id="app-bad", rings=_RINGS)
+        _write_recipe(tmp_path, app_id="app-good", rings=_RINGS)
+        _write_state(tmp_path, app_id="app-bad", published=_published())
+        _write_state(tmp_path, app_id="app-good", published=_published())
+        bad_action = _promote_action()
+        bad_action["app_id"] = "app-bad"
+        bad_action["groups"] = ["flaky-group"]
+        good_action = _promote_action()
+        good_action["app_id"] = "app-good"
+        bad_plan = _write_plan(tmp_path, [bad_action])
+        good_plan = _write_plan(tmp_path, [good_action])
+        tenant = [
+            _stamped("app-bad", "update", "b" * 64, "update-bad"),
+            _stamped("app-good", "update", "b" * 64, "update-good"),
+        ]
+
+        def _resolve(token, group, cache=None):
+            if group == "flaky-group":
+                raise NetworkError("Graph API error 503")
+            return _fake_resolve_target(token, group, cache)
+
+        summary, mocks = _run_apply(
+            tmp_path,
+            existing_apps=tenant,
+            resolve_side_effect=_resolve,
+        )
+
+        assert [a["app_id"] for a in summary["applied"]] == ["app-good"]
+        assert [f["app_id"] for f in summary["failed"]] == ["app-bad"]
+        assert "503" in summary["failed"][0]["error"]
+        assert bad_plan.exists()
+        assert not good_plan.exists()
+        assert [c.args[1] for c in mocks["assign_app"].call_args_list] == [
+            "update-good"
+        ]
+
+    def test_auth_error_in_preflight_aborts_the_run(self, tmp_path):
+        """Tests that a rejected token during preflight stops the whole run,
+        since it would fail every app the same way."""
+        from napt.exceptions import AuthError
+
+        _write_recipe(tmp_path, rings=_RINGS)
+        _write_state(tmp_path, published=_published())
+        plan_path = _write_plan(tmp_path, [_promote_action()])
+
+        with pytest.raises(AuthError):
+            _run_apply(
+                tmp_path,
+                existing_apps=_tenant(),
+                resolve_side_effect=AuthError("401"),
+            )
+
+        assert plan_path.exists()
+
+    def test_state_save_failure_after_assignment_is_isolated(self, tmp_path):
+        """Tests that a failed state write after Intune changed fails that
+        app with a message naming the file, keeps its plan, and lets the
+        other apps apply."""
+        _write_recipe(tmp_path, app_id="app-bad", rings=_RINGS)
+        _write_recipe(tmp_path, app_id="app-good", rings=_RINGS)
+        _write_state(tmp_path, app_id="app-bad", published=_published())
+        good_state = _write_state(tmp_path, app_id="app-good", published=_published())
+        bad_action = _promote_action()
+        bad_action["app_id"] = "app-bad"
+        good_action = _promote_action()
+        good_action["app_id"] = "app-good"
+        bad_plan = _write_plan(tmp_path, [bad_action])
+        good_plan = _write_plan(tmp_path, [good_action])
+        tenant = [
+            _stamped("app-bad", "update", "b" * 64, "update-bad"),
+            _stamped("app-good", "update", "b" * 64, "update-good"),
+        ]
+
+        def _save(state, state_path):
+            if state_path.stem == "app-bad":
+                raise PermissionError(13, "Permission denied", str(state_path))
+            save_deployment_state(state, state_path)
+
+        summary, mocks = _run_apply(
+            tmp_path, existing_apps=tenant, save_side_effect=_save
+        )
+
+        assert [a["app_id"] for a in summary["applied"]] == ["app-good"]
+        assert [f["app_id"] for f in summary["failed"]] == ["app-bad"]
+        error = summary["failed"][0]["error"]
+        assert "app-bad.json" in error
+        assert "Intune" in error
+        assert bad_plan.exists()
+        assert not good_plan.exists()
+        assert mocks["assign_app"].call_count == 2
+        assert load_deployment_state(good_state)["rings"]["pilot"]["sha256"] == "b" * 64
 
 
 class TestLoadPlanFile:
@@ -747,7 +998,7 @@ class TestLoadPlanFile:
 
     def test_corrupted_plan_raises(self, tmp_path):
         """Tests that invalid plan JSON raises StateError."""
-        plan_path = tmp_path / "plan.json"
+        plan_path = tmp_path / "test-app.json"
         plan_path.write_text("not json{{{", encoding="utf-8")
 
         with pytest.raises(StateError, match="Corrupted plan file"):
@@ -755,7 +1006,7 @@ class TestLoadPlanFile:
 
     def test_missing_actions_key_raises(self, tmp_path):
         """Tests that a plan without an actions list raises StateError."""
-        plan_path = tmp_path / "plan.json"
+        plan_path = tmp_path / "test-app.json"
         plan_path.write_text('{"app_id": "test-app"}', encoding="utf-8")
 
         with pytest.raises(StateError, match="Corrupted plan file"):
@@ -763,7 +1014,7 @@ class TestLoadPlanFile:
 
     def test_missing_app_id_raises(self, tmp_path):
         """Tests that a plan without a declared app id raises StateError."""
-        plan_path = tmp_path / "plan.json"
+        plan_path = tmp_path / "test-app.json"
         plan_path.write_text('{"schemaVersion": 1, "actions": []}', encoding="utf-8")
 
         with pytest.raises(StateError, match="Corrupted plan file"):
@@ -771,7 +1022,7 @@ class TestLoadPlanFile:
 
     def test_foreign_action_app_id_raises(self, tmp_path):
         """Tests that an action referencing another app is rejected."""
-        plan_path = tmp_path / "plan.json"
+        plan_path = tmp_path / "test-app.json"
         plan_path.write_text(
             json.dumps(
                 {
@@ -791,7 +1042,7 @@ class TestLoadPlanFile:
 
     def test_injects_file_level_app_id_and_name(self, tmp_path):
         """Tests that the file's app id and name are injected into actions."""
-        plan_path = tmp_path / "plan.json"
+        plan_path = tmp_path / "test-app.json"
         action = {
             key: value for key, value in _promote_action().items() if key != "app_id"
         }
@@ -812,9 +1063,69 @@ class TestLoadPlanFile:
         assert actions[0]["app_id"] == "test-app"
         assert actions[0]["name"] == "App test-app"
 
+    @pytest.mark.parametrize(
+        ("actions", "expected"),
+        [
+            ("abc", "actions"),
+            ({"oops": 1}, "actions"),
+            (["not a dict"], "action 1"),
+            ([{"type": "promote", "version": "2.0.0", "ring": "pilot"}], "sha256"),
+            ([{**_promote_action(), "type": "delete"}], "type"),
+            ([{**_promote_action(), "groups": "Pilot Devices"}], "groups"),
+            ([{**_promote_action(), "groups": ["Pilot Devices", 123]}], "group"),
+            ([{**_promote_action(), "ring": None}], "ring"),
+            ([{**_promote_action(), "type": "assign", "intent": None}], "intent"),
+        ],
+        ids=[
+            "actions-string",
+            "actions-dict",
+            "action-string",
+            "missing-sha256",
+            "unknown-type",
+            "groups-string",
+            "group-number",
+            "promote-without-ring",
+            "assign-without-intent",
+        ],
+    )
+    def test_malformed_action_raises(self, tmp_path, actions, expected):
+        """Tests that a hand-edited action of the wrong shape raises
+        StateError naming the problem instead of a raw traceback."""
+        plan_path = tmp_path / "test-app.json"
+        plan_path.write_text(
+            json.dumps({"schemaVersion": 1, "app_id": "test-app", "actions": actions}),
+            encoding="utf-8",
+        )
+
+        with pytest.raises(StateError, match=expected):
+            load_plan_file(plan_path)
+
+    def test_non_string_app_id_raises(self, tmp_path):
+        """Tests that a declared app id of the wrong type is rejected."""
+        plan_path = tmp_path / "test-app.json"
+        plan_path.write_text(
+            json.dumps({"schemaVersion": 1, "app_id": 42, "actions": []}),
+            encoding="utf-8",
+        )
+
+        with pytest.raises(StateError, match="'app_id' is not a string"):
+            load_plan_file(plan_path)
+
+    def test_filename_and_declared_app_id_must_agree(self, tmp_path):
+        """Tests that a plan file declaring an app id other than its filename
+        is rejected, since the filename is the app's identity."""
+        plan_path = tmp_path / "other-app.json"
+        plan_path.write_text(
+            json.dumps({"schemaVersion": 1, "app_id": "test-app", "actions": []}),
+            encoding="utf-8",
+        )
+
+        with pytest.raises(StateError, match="filename says 'other-app'"):
+            load_plan_file(plan_path)
+
     def test_unsupported_plan_schema_version_raises(self, tmp_path):
         """Tests that an unsupported plan schema version is rejected."""
-        plan_path = tmp_path / "plan.json"
+        plan_path = tmp_path / "test-app.json"
         plan_path.write_text(
             '{"schemaVersion": 99, "app_id": "test-app", "actions": []}',
             encoding="utf-8",
