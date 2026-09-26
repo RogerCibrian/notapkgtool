@@ -2764,6 +2764,15 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="changed">Changed</h3>
 <ul>
+<li><strong>BREAKING: <code>napt promote apply</code> executes plan files only</strong> - With no
+    plan file in <code>state/plans/</code>, apply used to compute a plan on the spot
+    and apply it. In the reference workflows that was a way around
+    review: a reviewer who held the only pending app by deleting its
+    plan file triggered an apply run that planned the same promotion
+    fresh and executed it. Apply now applies nothing without a plan file
+    and says to run <code>napt promote plan</code>. Run plan before apply; a
+    publication that apply's reconcile step recovers is promoted by the
+    next plan run rather than in the same apply</li>
 <li><strong>BREAKING: <code>--state-dir</code> means the state root for every command</strong> -
     <code>napt discover --state-dir X</code> wrote state files directly into <code>X</code>, while
     <code>napt promote</code> and <code>napt status</code> read <code>X/deployment/</code> and <code>napt build</code>
@@ -2856,6 +2865,36 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="fixed">Fixed</h3>
 <ul>
+<li>Fixed <code>napt promote apply</code> given one recipe deleting every other app's
+    reviewed plan file. Their actions were skipped as having no recipe
+    in the run, which counted as applied, so the files were consumed and
+    the next fleet-wide apply planned and applied those apps without
+    review. Apply now loads only the plan files of the recipes it was
+    given; <code>--plan-file</code> naming an app outside the run is an error</li>
+<li>Fixed the drift check after <code>napt promote apply</code> reporting the Intune
+    entries that retention had just deleted as orphaned releases, two
+    false findings for every retired release</li>
+<li>Fixed two recipe files with the same <code>id</code> (a child that inherits its
+    parent's id with the parent in the same directory, or a copy-pasted
+    id) being planned twice and then applied with whichever file sorted
+    last. <code>napt promote</code> now stops with an error naming both files</li>
+<li>Fixed a Microsoft Graph failure while <code>napt promote apply</code> resolved one
+    app's groups aborting the whole run: the remaining apps were never
+    applied and the drift check never ran. The failure now fails that app
+    only, with its plan kept for retry; a rejected token still stops the
+    run</li>
+<li>Fixed a hand-edited plan file whose actions lack a field or have the
+    wrong shape crashing <code>napt promote apply</code> with a raw traceback; it now
+    reports the action and the field and says to re-run <code>napt promote
+    plan</code>. A plan file whose name and <code>app_id</code> disagree is rejected the
+    same way deployment state is, and <code>--plan-file</code> naming a file that
+    does not exist is an error message rather than a traceback</li>
+<li>Fixed a deployment state file that could not be written after
+    <code>napt promote apply</code> had already changed Intune (locked file,
+    permissions, full disk) aborting the run with a traceback and no
+    record of which app was left out of sync. The app is now reported as
+    failed with the file named and the note that Intune was updated, its
+    plan is kept, and re-running apply repeats the action safely</li>
 <li>Fixed a child recipe that sets a section its parent also sets (the
     documented base-recipe case, such as <code>discovery.url</code> under a parent that
     sets <code>discovery.strategy</code>) crashing every command with a <code>TypeError</code>,
