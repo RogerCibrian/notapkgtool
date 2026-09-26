@@ -445,10 +445,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#why-napt" class="md-nav__link">
+  <a href="#what-napt-automates" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why NAPT?
+        What NAPT automates
       
     </span>
   </a>
@@ -1738,10 +1738,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#why-napt" class="md-nav__link">
+  <a href="#what-napt-automates" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why NAPT?
+        What NAPT automates
       
     </span>
   </a>
@@ -1858,42 +1858,37 @@
 <a href="https://www.python.org/downloads/"><img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11+-blue.svg" /></a>
 <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg" /></a></p>
 <h2 id="overview">Overview</h2>
-<p>NAPT is a Python CLI. It runs on Windows, Linux, and macOS, though packaging (.intunewin creation) requires Windows.</p>
-<h3 id="why-napt">Why NAPT?</h3>
-<p>Packaging applications for Microsoft Intune with PSAppDeployToolkit (PSADT) typically involves a manual, time-consuming process:</p>
-<ol>
-<li>
-<p><strong>Manually check for new versions</strong> - Check vendor sites/APIs for updates. Easy to miss versions or waste time when nothing changed.</p>
-</li>
-<li>
-<p><strong>Create PSADT deployment</strong> - Copy template, manually edit <code>Invoke-AppDeployToolkit.ps1</code> with variables, configure install/uninstall logic. Error-prone and repetitive.</p>
-</li>
-<li>
-<p><strong>Create detection and requirements scripts</strong> - Write PowerShell detection and requirements logic, test thoroughly, maintain version checks. Must update for each new version.</p>
-</li>
-<li>
-<p><strong>Package as .intunewin</strong> - Run IntuneWinAppUtil.exe manually, manage paths, handle errors.</p>
-</li>
-<li>
-<p><strong>Upload to Intune</strong> - Upload package via portal, fill metadata, configure app info and requirements manually.</p>
-</li>
-<li>
-<p><strong>Configure deployment</strong> - Set up rollout assignments manually for each version.</p>
-</li>
-</ol>
-<p>NAPT replaces this with YAML-based recipes and automatic version tracking.</p>
+<p>NAPT is a Python CLI that automates packaging Windows apps for Microsoft
+Intune.
+It runs on Windows, Linux, and macOS; creating .intunewin packages requires
+Windows.</p>
+<h3 id="what-napt-automates">What NAPT automates</h3>
+<p>Without NAPT, each new app version means checking the vendor for a release,
+editing a PSAppDeployToolkit (PSADT) template, writing detection and
+requirements scripts, running IntuneWinAppUtil.exe, uploading in the Intune
+portal, and assigning the app to groups.
+NAPT does each step from one YAML recipe per app.</p>
 <h3 id="key-features">Key features</h3>
 <ul>
-<li><strong>Automatic version tracking</strong> - Discovery from MSI, EXE, URLs, or APIs with caching to skip unnecessary downloads</li>
-<li><strong>YAML-based recipes</strong> - Define app packaging once with layered configuration (Organization → Vendor → Recipe)</li>
-<li><strong>Automated PSADT packaging</strong> - Generate Intune-ready packages with detection and requirements scripts, no manual template editing</li>
-<li><strong>Cross-platform workflow</strong> - Run on Windows, Linux, and macOS (packaging requires Windows)</li>
-<li><strong>Direct Intune upload</strong> - Upload to Microsoft Intune via the Graph API, no portal required</li>
+<li><strong>Version discovery</strong> - Finds new versions from vendor APIs, GitHub
+  releases, download pages, or fixed URLs, and does not download an
+  unchanged installer again</li>
+<li><strong>YAML recipes</strong> - One recipe per app, with layered configuration
+  (organization, vendor, parent recipe, recipe)</li>
+<li><strong>PSADT packaging</strong> - Builds the PSADT deployment with detection and
+  requirements scripts, then the .intunewin package</li>
+<li><strong>Intune upload</strong> - Uploads to Microsoft Intune through the Graph API</li>
+<li><strong>Ring promotion</strong> - <code>napt promote</code> moves each release through deployment
+  rings and reports assignment drift; <code>napt status</code> shows every app's
+  published version, pending release, and ring positions</li>
+<li><strong>Tenant setup and sign-in</strong> - <code>napt auth setup</code> creates the Entra app
+  registration with the permissions NAPT needs; <code>napt auth login</code> signs in</li>
 </ul>
 <h2 id="getting-started">Getting started</h2>
-<p>See the <a href="quick-start/">Quick Start Guide</a> for installation and setup.</p>
+<p>See the <a href="quick-start/">Quick start guide</a> for installation and setup.</p>
 <h2 id="creating-recipes">Creating recipes</h2>
-<p>Recipes are YAML configuration files that define how to discover, download, and package applications.</p>
+<p>Recipes are YAML files that define how to discover, download, and package an
+application.</p>
 <p><strong>Example recipes:</strong></p>
 <ul>
 <li><strong><a href="https://github.com/RogerCibrian/notapkgtool/blob/main/recipes/Google/chrome.yaml">chrome.yaml</a></strong> - url_download strategy with MSI version extraction</li>
@@ -1904,11 +1899,17 @@
 working examples used for development and testing.
 They are not included in the pip package.
 Run <code>napt init</code> to create your own workspace with a starter <code>org.yaml</code>.</p>
-<p>NAPT supports multiple discovery strategies (url_download, web_scrape, api_github, api_json) - see the <a href="user-guide/#discovery-strategies">Discovery Strategies</a> guide for detailed configuration and more examples.</p>
+<p>A recipe uses one of four discovery strategies: <code>url_download</code>, <code>web_scrape</code>,
+<code>api_github</code>, or <code>api_json</code>.
+The <a href="recipe-reference/#discovery-configuration">Recipe reference</a> defines
+their fields;
+<a href="common-tasks/#create-a-recipe-for-a-github-release-app">Common tasks</a>
+walks through a recipe for each.</p>
 <h2 id="contributing">Contributing</h2>
-<p>Ideas and feedback are welcome. See <a href="contributing/">Contributing</a> for guidelines.</p>
+<p>See <a href="contributing/">Contributing</a> to suggest features or report problems.</p>
 <h2 id="license">License</h2>
-<p>This project is licensed under the Apache License 2.0 - see the <a href="https://github.com/RogerCibrian/notapkgtool/blob/main/LICENSE">LICENSE</a> file for details.</p>
+<p>Apache License 2.0; see
+<a href="https://github.com/RogerCibrian/notapkgtool/blob/main/LICENSE">LICENSE</a>.</p>
 <h2 id="author">Author</h2>
 <p><strong>Roger Cibrian</strong></p>
 <h2 id="acknowledgments">Acknowledgments</h2>

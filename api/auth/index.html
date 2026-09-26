@@ -2156,7 +2156,7 @@
 <a class="autorefs autorefs-internal" title="            get_access_token" href="#napt.auth.credentials.get_access_token">get_access_token</a> once. The token comes
 from the first source that works:</p>
 <p>Non-interactive (CI/CD):
-    1. EnvironmentCredential -- service principal via AZURE_CLIENT_ID,
+    1. EnvironmentCredential: service principal via AZURE_CLIENT_ID,
         AZURE_TENANT_ID and either AZURE_CLIENT_SECRET or
         AZURE_CLIENT_CERTIFICATE_PATH.</p>
 <p>Interactive (a person at a terminal):
@@ -2168,7 +2168,7 @@ from the first source that works:</p>
         tenants can be signed in at once; <code>napt auth login --tenant-id</code>
         switches the active one.</p>
 <p>CI/CD through a login step:
-    3. AzureCliCredential -- an existing <code>az login</code> session signed in as a
+    3. AzureCliCredential: an existing <code>az login</code> session signed in as a
         service principal, which is what OIDC login steps such as GitHub
         Actions <code>azure/login</code> leave behind. Recommended over client secrets
         when the CI platform supports it: no secret to store or rotate.
@@ -2176,8 +2176,8 @@ from the first source that works:</p>
         and a session signed in as a person is refused rather than used,
         since its token belongs to the Azure CLI's own application.</p>
 <p><code>napt auth login</code> uses the authorization code flow with PKCE against a
-loopback redirect, or -- on Windows, when the MSAL broker runtime is
-installed -- the Web Account Manager (WAM) broker, which gives single
+loopback redirect or, on Windows when the MSAL broker runtime is
+installed, the Web Account Manager (WAM) broker, which gives single
 sign-on with accounts known to Windows, honors device-based Conditional
 Access, and keeps refresh tokens device-bound. The broker needs an
 interactive Windows session; scheduled tasks, services, and SSH sessions
@@ -4343,7 +4343,7 @@ longer be refreshed, with guidance on what to do.</p>
     <div class="doc doc-contents first">
 
         <p>Entra ID app registration provisioning for <code>napt auth setup</code>.</p>
-<p>Creates -- or brings up to spec -- the app registration that
+<p>Creates, or brings up to spec, the app registration that
 <a class="autorefs autorefs-internal" title="            napt.auth.credentials" href="#napt.auth.credentials">napt.auth.credentials</a> signs in with, so an administrator never has to click
 through the portal:</p>
 <ul>
@@ -4362,8 +4362,8 @@ through the portal:</p>
 or <code>--client-id</code>) is patched with only what is missing, and rerunning on a
 complete registration changes nothing.</p>
 <p>The run is bootstrapped with a short-lived token from the Microsoft Graph
-Command Line Tools first-party application -- the same one <code>Connect-MgGraph</code>
-uses -- requested in the browser and held in memory only. It needs an
+Command Line Tools first-party application (the same one <code>Connect-MgGraph</code>
+uses), requested in the browser and held in memory only. It needs an
 account holding at least the Application Administrator role. NAPT does not
 store that account or its tokens; the browser may keep its own sign-in.</p>
 <p>Redirect URIs and permissions are always written to the application object,

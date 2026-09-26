@@ -723,28 +723,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#common-contributor-tasks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Common contributor tasks
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        See also
-      
-    </span>
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -1727,28 +1705,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#common-contributor-tasks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Common contributor tasks
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        See also
-      
-    </span>
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -1770,9 +1726,8 @@
 
 
 <h1 id="developer-reference">Developer reference</h1>
-<p>Overview of NAPT's codebase structure, architecture, and key concepts for contributors.</p>
+<p>How the <code>napt/</code> package is laid out.</p>
 <h2 id="code-organization">Code organization</h2>
-<p>Here's the file structure:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>napt/
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── __init__.py              # Package overview docstring
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── exceptions.py            # Exception hierarchy
@@ -1788,55 +1743,71 @@
 </span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│   └── registration.py         # App registration provisioning (napt auth setup)
 </span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│
 </span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>├── build/                   # PSADT package building
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│   ├── manager.py              # Package building orchestration
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│   ├── packager.py             # .intunewin package creation
-</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>│   └── template.py             # PSADT template generation
-</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>│
-</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>├── cli/                     # Command-line interface (one module per command)
-</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>│   ├── main.py                 # Parser assembly and dispatch
-</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>│   ├── auth.py                 # napt auth login/logout/status/setup
-</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>│   ├── build.py                # napt build
-</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>│   ├── discover.py             # napt discover
-</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>│   ├── init.py                 # napt init
-</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>│   ├── package.py              # napt package
-</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>│   ├── promote.py              # napt promote plan/apply
-</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>│   ├── status.py               # napt status
-</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>│   ├── upload.py               # napt upload
-</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>│   └── validate.py             # napt validate
-</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>│
-</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>├── config/                  # Configuration loading
-</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>│   └── loader.py               # 3-layer configuration system
-</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>│
-</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>├── discovery/               # Discovery strategies
-</span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>│   ├── api_github.py           # GitHub Releases API strategy
-</span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>│   ├── api_json.py             # Generic JSON API strategy
-</span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>│   ├── base.py                 # Strategy protocol and shared helpers
-</span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>│   ├── registry.py             # Strategy name-to-class table
-</span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>│   ├── url_download.py         # Direct URL download strategy
-</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>│   └── web_scrape.py           # Web scraping strategy
-</span><span id="__span-0-42"><a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a>│
-</span><span id="__span-0-43"><a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>├── download/                # HTTP file downloads
-</span><span id="__span-0-44"><a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a>│   └── download.py             # HTTP downloads with ETag support
-</span><span id="__span-0-45"><a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>│
-</span><span id="__span-0-46"><a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>├── graph/                   # Microsoft Graph client
-</span><span id="__span-0-47"><a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>│   ├── client.py               # HTTP transport with retry and error mapping
-</span><span id="__span-0-48"><a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a>│   └── intune.py               # Win32 app upload, queries, and assignments
-</span><span id="__span-0-49"><a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a>│
-</span><span id="__span-0-50"><a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a>├── psadt/                   # PSADT release management
-</span><span id="__span-0-51"><a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a>│   └── release.py              # PSADT release download and caching
-</span><span id="__span-0-52"><a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a>│
-</span><span id="__span-0-53"><a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a>├── state/                   # State persistence
-</span><span id="__span-0-54"><a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a>│   ├── deployment.py           # Authoritative per-app record of published and pending releases
-</span><span id="__span-0-55"><a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a>│   └── stamp.py                # Provenance stamp linking Intune apps to deployment state
-</span><span id="__span-0-56"><a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a>│
-</span><span id="__span-0-57"><a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a>├── upload/                  # Intune upload pipeline
-</span><span id="__span-0-58"><a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a>│   ├── manager.py              # Upload orchestration
-</span><span id="__span-0-59"><a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a>│   └── intunewin.py            # .intunewin package parser
-</span><span id="__span-0-60"><a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a>│
-</span><span id="__span-0-61"><a id="__codelineno-0-61" name="__codelineno-0-61" href="#__codelineno-0-61"></a>└── versioning/              # Version extraction and ordering
-</span><span id="__span-0-62"><a id="__codelineno-0-62" name="__codelineno-0-62" href="#__codelineno-0-62"></a>    ├── msi.py                  # MSI metadata extraction backends
-</span><span id="__span-0-63"><a id="__codelineno-0-63" name="__codelineno-0-63" href="#__codelineno-0-63"></a>    ├── msix.py                 # MSIX metadata extraction (AppxManifest)
-</span><span id="__span-0-64"><a id="__codelineno-0-64" name="__codelineno-0-64" href="#__codelineno-0-64"></a>    └── ordering.py             # Version ordering, mirroring the device-side comparison
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│   ├── _ps_templates.py        # Loads the .ps1 templates for generated scripts
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│   ├── icons.py                # App icon extraction from installers
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>│   ├── manager.py              # Package building orchestration
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>│   ├── msix_scripts.py         # MSIX detection and requirements scripts
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>│   ├── packager.py             # .intunewin package creation
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>│   ├── registry_scripts.py     # Registry detection and requirements scripts
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>│   ├── template.py             # PSADT template generation
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>│   └── templates/              # PowerShell templates for the generated scripts
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>│
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>├── cli/                     # Command-line interface (one module per command)
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>│   ├── __main__.py             # Runs the CLI as python -m napt.cli
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>│   ├── main.py                 # Parser assembly and dispatch
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>│   ├── auth.py                 # napt auth login/logout/status/setup
+</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>│   ├── build.py                # napt build
+</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>│   ├── discover.py             # napt discover
+</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>│   ├── init.py                 # napt init
+</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>│   ├── package.py              # napt package
+</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>│   ├── promote.py              # napt promote plan/apply
+</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>│   ├── status.py               # napt status
+</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>│   ├── upload.py               # napt upload
+</span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>│   └── validate.py             # napt validate
+</span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>│
+</span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>├── config/                  # Configuration loading
+</span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>│   ├── defaults.py             # Code defaults (the first configuration layer)
+</span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>│   └── loader.py               # Layered configuration loader
+</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>│
+</span><span id="__span-0-42"><a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a>├── discovery/               # Discovery strategies
+</span><span id="__span-0-43"><a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>│   ├── api_github.py           # GitHub Releases API strategy
+</span><span id="__span-0-44"><a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a>│   ├── api_json.py             # Generic JSON API strategy
+</span><span id="__span-0-45"><a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>│   ├── base.py                 # Strategy protocol and shared helpers
+</span><span id="__span-0-46"><a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>│   ├── manager.py              # Discovery orchestration (napt discover)
+</span><span id="__span-0-47"><a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>│   ├── registry.py             # Strategy name-to-class table
+</span><span id="__span-0-48"><a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a>│   ├── resolve.py              # Downloads the installer and settles its version
+</span><span id="__span-0-49"><a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a>│   ├── url_download.py         # Direct URL download strategy
+</span><span id="__span-0-50"><a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a>│   └── web_scrape.py           # Web scraping strategy
+</span><span id="__span-0-51"><a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a>│
+</span><span id="__span-0-52"><a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a>├── download/                # HTTP file downloads
+</span><span id="__span-0-53"><a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a>│   └── download.py             # HTTP downloads with ETag support
+</span><span id="__span-0-54"><a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a>│
+</span><span id="__span-0-55"><a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a>├── graph/                   # Microsoft Graph client
+</span><span id="__span-0-56"><a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a>│   ├── client.py               # HTTP transport with retry and error mapping
+</span><span id="__span-0-57"><a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a>│   └── intune.py               # Win32 app upload, queries, and assignments
+</span><span id="__span-0-58"><a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a>│
+</span><span id="__span-0-59"><a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a>├── promote/                 # Deployment ring promotion
+</span><span id="__span-0-60"><a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a>│   ├── applier.py              # Executes plans against Intune
+</span><span id="__span-0-61"><a id="__codelineno-0-61" name="__codelineno-0-61" href="#__codelineno-0-61"></a>│   ├── drift.py                # Assignment drift detection
+</span><span id="__span-0-62"><a id="__codelineno-0-62" name="__codelineno-0-62" href="#__codelineno-0-62"></a>│   ├── planner.py              # Computes promotions and writes plan files
+</span><span id="__span-0-63"><a id="__codelineno-0-63" name="__codelineno-0-63" href="#__codelineno-0-63"></a>│   ├── preflight.py            # Assignment group validation
+</span><span id="__span-0-64"><a id="__codelineno-0-64" name="__codelineno-0-64" href="#__codelineno-0-64"></a>│   └── reconcile.py            # Recovers lost publish state writebacks
+</span><span id="__span-0-65"><a id="__codelineno-0-65" name="__codelineno-0-65" href="#__codelineno-0-65"></a>│
+</span><span id="__span-0-66"><a id="__codelineno-0-66" name="__codelineno-0-66" href="#__codelineno-0-66"></a>├── psadt/                   # PSADT release management
+</span><span id="__span-0-67"><a id="__codelineno-0-67" name="__codelineno-0-67" href="#__codelineno-0-67"></a>│   └── release.py              # PSADT release download and caching
+</span><span id="__span-0-68"><a id="__codelineno-0-68" name="__codelineno-0-68" href="#__codelineno-0-68"></a>│
+</span><span id="__span-0-69"><a id="__codelineno-0-69" name="__codelineno-0-69" href="#__codelineno-0-69"></a>├── state/                   # State persistence
+</span><span id="__span-0-70"><a id="__codelineno-0-70" name="__codelineno-0-70" href="#__codelineno-0-70"></a>│   ├── deployment.py           # Authoritative per-app record of published and pending releases
+</span><span id="__span-0-71"><a id="__codelineno-0-71" name="__codelineno-0-71" href="#__codelineno-0-71"></a>│   └── stamp.py                # Provenance stamp linking Intune apps to deployment state
+</span><span id="__span-0-72"><a id="__codelineno-0-72" name="__codelineno-0-72" href="#__codelineno-0-72"></a>│
+</span><span id="__span-0-73"><a id="__codelineno-0-73" name="__codelineno-0-73" href="#__codelineno-0-73"></a>├── upload/                  # Intune upload pipeline
+</span><span id="__span-0-74"><a id="__codelineno-0-74" name="__codelineno-0-74" href="#__codelineno-0-74"></a>│   ├── manager.py              # Upload orchestration
+</span><span id="__span-0-75"><a id="__codelineno-0-75" name="__codelineno-0-75" href="#__codelineno-0-75"></a>│   └── intunewin.py            # .intunewin package parser
+</span><span id="__span-0-76"><a id="__codelineno-0-76" name="__codelineno-0-76" href="#__codelineno-0-76"></a>│
+</span><span id="__span-0-77"><a id="__codelineno-0-77" name="__codelineno-0-77" href="#__codelineno-0-77"></a>└── versioning/              # Version extraction and ordering
+</span><span id="__span-0-78"><a id="__codelineno-0-78" name="__codelineno-0-78" href="#__codelineno-0-78"></a>    ├── msi.py                  # MSI metadata extraction backends
+</span><span id="__span-0-79"><a id="__codelineno-0-79" name="__codelineno-0-79" href="#__codelineno-0-79"></a>    ├── msix.py                 # MSIX metadata extraction (AppxManifest)
+</span><span id="__span-0-80"><a id="__codelineno-0-80" name="__codelineno-0-80" href="#__codelineno-0-80"></a>    └── ordering.py             # Version ordering, mirroring the device-side comparison
 </span></code></pre></div>
 <h3 id="data-flow">Data flow</h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Recipe YAML
@@ -1853,32 +1824,28 @@
 </span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    ↓
 </span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>[upload/manager.py] Upload to Microsoft Intune
 </span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    ↓
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>Result (dataclass)
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>[promote/planner.py] Plan ring promotion (one plan file per app)
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>    ↓
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>[promote/applier.py] Apply plans to Intune and update deployment state
 </span></code></pre></div>
 <h2 id="key-concepts">Key concepts</h2>
 <ul>
-<li><strong>Discovery Strategies:</strong> Protocol-based, stateless, listed in an explicit registry table (api_github, api_json, web_scrape). All return a <code>RemoteVersion</code> from configuration alone. <code>url_download</code> is a separate flow (not a registered strategy) because it must download the file to determine the version. Both end in <code>discovery/resolve.py</code>, which reuses the previous download when the strategy reports the same version as last run (or the server answers HTTP 304 for <code>url_download</code>), and otherwise downloads the file, reads the version from an MSI or MSIX installer, and files it under that version</li>
-<li><strong>Configuration:</strong> 3-layer system (org → vendor → recipe) with deep merging</li>
-<li><strong>State Management:</strong> Authoritative per-app deployment state (<code>state/deployment/&lt;id&gt;.json</code>) records what is published and pending. The downloads folder is disposable; discovery reuses what it finds there and never treats it as a record</li>
-<li><strong>Exceptions:</strong> All NAPT domain errors use custom exceptions inheriting from <code>NAPTError</code> (ConfigError, NetworkError, PackagingError, StateError, AuthError) - allows catching all NAPT errors or specific types</li>
-<li><strong>Return Types:</strong> Frozen dataclasses from <code>results.py</code>, one per napt command's underlying operation</li>
-</ul>
-<h2 id="common-contributor-tasks">Common contributor tasks</h2>
-<ul>
-<li><strong>New discovery strategy:</strong> Implement <code>DiscoveryStrategy</code> in a new module under <code>discovery/</code>, then add it to the table in <code>discovery/registry.py</code></li>
-<li><strong>New CLI command:</strong> Create <code>napt/cli/&lt;command&gt;.py</code> with the <code>cmd_&lt;name&gt;()</code> handler and a <code>register(subparsers)</code> hook, call <code>register</code> from <code>main()</code> in <code>napt/cli/main.py</code>, and add <code>tests/cli/test_&lt;command&gt;.py</code> (strict one module per command)</li>
-<li><strong>New config option:</strong> Update schema in <code>config/loader.py</code>, add validation in <code>validation.py</code>, document in recipe schema</li>
-</ul>
-<h2 id="see-also">See also</h2>
-<ul>
-<li><a href="discovery-manager/">Discovery manager</a> - Discovery orchestration</li>
-<li><a href="discovery/">Discovery API</a> - Discovery strategy implementations</li>
-<li><a href="build/">Build API</a> - Package building functions</li>
-<li><a href="upload/">Upload API</a> - Intune upload pipeline</li>
-<li><a href="auth/">Auth API</a> - Entra ID sign-in and app registration</li>
-<li><a href="graph/">Graph API</a> - Microsoft Graph transport and Intune calls</li>
-<li><a href="config/">Config API</a> - Configuration loading</li>
-<li><a href="exceptions/">Exceptions API</a> - Exception hierarchy</li>
+<li><strong>Discovery strategies:</strong> version-first strategies (api_github, api_json,
+  web_scrape) implement <code>DiscoveryStrategy</code> and are listed in
+  <code>discovery/registry.py</code>; <code>url_download</code> is a separate flow.
+  Both end in <code>discovery/resolve.py</code> (see <a href="discovery/">Discovery API</a>).</li>
+<li><strong>Configuration:</strong> Five layers (code defaults, org, vendor, parent, recipe),
+  merged with dicts deep-merged and lists replaced</li>
+<li><strong>State management:</strong> Per-app deployment state
+  (<code>state/deployment/&lt;id&gt;.json</code>) is the authoritative record of what is
+  published and pending.
+  The downloads folder holds installers; discovery reuses what it finds
+  there, and build takes the file whose SHA-256 matches the recorded release.</li>
+<li><strong>Exceptions:</strong> All NAPT domain errors use custom exceptions inheriting from
+  <code>NAPTError</code> (ConfigError, NetworkError, PackagingError, StateError,
+  AuthError)</li>
+<li><strong>Return types:</strong> Frozen dataclasses from <code>results.py</code>, one per napt
+  command's underlying operation</li>
 </ul>
 
 

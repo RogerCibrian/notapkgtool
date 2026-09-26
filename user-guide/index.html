@@ -915,28 +915,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#default-behavior-stateful" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Default behavior (stateful)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#stateless-mode" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Stateless mode
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -2559,28 +2537,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#default-behavior-stateful" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Default behavior (stateful)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#stateless-mode" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Stateless mode
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -2768,23 +2724,33 @@
 
 
 <h1 id="user-guide">User guide</h1>
-<p>This guide covers how each command works, authentication, state, and the
-configuration layers.</p>
 <h2 id="how-napt-works">How NAPT works</h2>
 <h3 id="discovery-process-napt-discover">Discovery process (<code>napt discover</code>)</h3>
-<p>The discovery process finds the latest version and downloads the installer:</p>
 <ol>
-<li><strong>Load Configuration</strong> - Merges organization defaults, vendor defaults, and recipe configuration</li>
-<li><strong>Check Version</strong> - Uses the configured discovery strategy to check for new versions</li>
-<li><strong>Skip or Download</strong>:<ul>
-<li>If the strategy reports the same version as last run (or, for <code>url_download</code>, the server answers <code>304 Not Modified</code>) → Skip download</li>
-<li>Otherwise → Download installer</li>
+<li><strong>Load configuration</strong> - Merges code defaults, org, vendor, parent, and
+   recipe (see <a href="#configuration-layers">Configuration layers</a>).</li>
+<li><strong>Check version</strong> - Uses the configured discovery strategy to check for new
+   versions.</li>
+<li><strong>Skip or download</strong>:<ul>
+<li>If the strategy reports the same version as last run and the
+  installer's own version agreed (see
+  <a href="#the-installers-version-is-the-version">The installer's version is the version</a>),
+  or, for <code>url_download</code>, the server answers <code>304 Not Modified</code>: skip the
+  download.</li>
+<li>Otherwise: download the installer.</li>
 </ul>
 </li>
-<li><strong>Read the Version</strong> - Takes the version from the installer itself (MSI ProductVersion, MSIX Identity), falling back to the version the strategy reported for installers that carry none (EXE). This is the version recorded and used everywhere after</li>
-<li><strong>Record Pending Release</strong> - Updates <code>state/deployment/{app_id}.json</code> with the discovered release as the pending publication candidate when it differs from the published version. The pending slot holds one candidate and the newest discovery wins.</li>
+<li><strong>Read the version</strong> - Takes the version from the installer itself (MSI
+   ProductVersion, MSIX Identity), falling back to the version the strategy
+   reported for installers that carry none (EXE).
+   This is the version recorded and used everywhere after.</li>
+<li><strong>Record pending release</strong> - Updates <code>state/deployment/{app_id}.json</code> with
+   the discovered release as the pending publication candidate when its
+   installer (by SHA-256) differs from the published one.
+   The pending slot holds one candidate and the newest discovery wins.</li>
 </ol>
-<p><strong>Output</strong>: Downloaded installer in <code>downloads/{app_id}/{version}/</code>, updated deployment state</p>
+<p><strong>Output</strong>: Downloaded installer in <code>downloads/{app_id}/{version}/</code>, updated
+deployment state.</p>
 <p><strong>One folder per version</strong>: Each download is filed under its version, the same
 way builds and packages are.
 A vendor that serves every release under one filename (Chrome's
@@ -2792,9 +2758,10 @@ A vendor that serves every release under one filename (Chrome's
 overwrite an installer that is still waiting for approval.</p>
 <p><strong>Saved filename</strong>: The file is saved under the name the server announces, or
 the URL's filename when it announces none.
-NAPT keeps only the final part of that name and replaces <code>$</code>, <code>;</code>, backticks,
-and quote characters with <code>_</code>, because <code>{{installer_filename}}</code> is substituted
-into your install script.
+NAPT keeps only the final part of that name, removes characters Windows
+forbids in filenames (including <code>"</code>), and replaces <code>$</code>, <code>;</code>, backticks,
+single quotes, and typographic quotes with <code>_</code>, because
+<code>{{installer_filename}}</code> is substituted into your install script.
 A warning shows the original and saved names when they differ.
 Always put <code>{{installer_filename}}</code> inside quotes: unquoted, PowerShell runs
 parentheses in a filename as code, and those are too common in real names to
@@ -2811,165 +2778,221 @@ version.
 An MSI or MSIX is judged by its own version, so this only comes up for EXE
 recipes whose pattern (or <code>api_json</code> value) keeps a prefix.</p>
 <h3 id="build-process-napt-build">Build process (<code>napt build</code>)</h3>
-<p>The build process creates a complete PSADT package from the recipe and downloaded installer:</p>
 <ol>
-<li><strong>Load Configuration</strong> - Merges configuration layers (org → vendor → recipe)</li>
-<li><strong>Find Installer</strong> - Reads the release to build from <code>state/deployment/{app_id}.json</code> (the pending release, or the published one when nothing is pending), looks in <code>downloads/{app_id}/{version}/</code>, and takes the file whose SHA-256 matches the recorded hash. A file that changed since discovery is refused. With no recorded release (a <code>--stateless</code> discover and no state), the single installer found in a version folder (<code>downloads/{app_id}/{version}/</code>) is used; more than one stops the build, and a file placed directly in <code>downloads/{app_id}/</code> is not found</li>
-<li><strong>Confirm Version</strong> - The version is the name of the download folder. For an MSI or MSIX, build reads the installer's own version and refuses to continue if it differs from the folder, since that means a file was moved by hand</li>
-<li><strong>Get PSADT Release</strong> - Downloads/caches PSADT Template_v4 from GitHub if not already cached</li>
-<li><strong>Create Build Directory</strong> - Creates versioned directory using discovered app version: <code>builds/{app_id}/{version}/</code></li>
-<li><strong>Copy PSADT Template</strong> - Copies entire PSADT template structure (unmodified) from cache:<ul>
-<li><code>PSAppDeployToolkit/</code> - Core PSADT module</li>
-<li><code>PSAppDeployToolkit.Extensions/</code> - Extension modules</li>
-<li><code>Assets/</code> - Default icons and banners</li>
-<li><code>Config/</code> - Default configuration files</li>
-<li><code>Strings/</code> - Localization strings</li>
-<li><code>Files/</code> - Empty directory for installer files</li>
-<li><code>SupportFiles/</code> - Empty directory for additional files</li>
-<li><code>Invoke-AppDeployToolkit.exe</code> - Compiled launcher</li>
-<li><code>Invoke-AppDeployToolkit.ps1</code> - Template script (will be overwritten)</li>
+<li><strong>Load configuration</strong> - Merges code defaults, org, vendor, parent, and
+   recipe (see <a href="#configuration-layers">Configuration layers</a>).</li>
+<li><strong>Find installer</strong> - Reads the release to build from
+   <code>state/deployment/{app_id}.json</code> (the pending release, or the published
+   one when nothing is pending), looks in <code>downloads/{app_id}/{version}/</code>, and
+   takes the file whose SHA-256 matches the recorded hash.
+   A file that changed since discovery is refused.
+   With no recorded release (a <code>--stateless</code> discover and no state), the
+   single installer found in a version folder (<code>downloads/{app_id}/{version}/</code>)
+   is used; more than one stops the build, and a file placed directly in
+   <code>downloads/{app_id}/</code> is not found.</li>
+<li><strong>Confirm version</strong> - The version is the name of the download folder.
+   For an MSI or MSIX, build reads the installer's own version and refuses to
+   continue if it differs from the folder, since that means a file was moved
+   by hand.</li>
+<li><strong>Get PSADT release</strong> - Downloads PSADT Template_v4 from GitHub into
+   <code>cache/psadt/{version}/</code> if not already cached.</li>
+<li><strong>Create build directory</strong> - Creates <code>builds/{app_id}/{version}/</code>.</li>
+<li><strong>Copy PSADT template</strong> - Copies the cached template into <code>packagefiles/</code>
+   unchanged (see <a href="#directory-structure">Directory structure</a>).</li>
+<li><strong>Generate deployment script</strong> - Generates <code>Invoke-AppDeployToolkit.ps1</code>
+   from the template:<ul>
+<li>Writes the <code>$adtSession</code> values from <code>psadt.app_vars</code> (set <code>AppName</code>,
+  <code>AppVendor</code>, and <code>AppVersion: "{{discovered_version}}"</code> there), plus
+  <code>AppScriptDate</code>, the PSADT version, and <code>AppArch</code> (the installer's
+  architecture).</li>
+<li>Inserts <code>psadt.install</code> and <code>psadt.uninstall</code>.
+  For MSI and MSIX they are generated from the installer unless
+  overridden
+  (<a href="../recipe-reference/#override_msi_commands">override_msi_commands</a>,
+  <a href="../recipe-reference/#override_msix_commands">override_msix_commands</a>);
+  EXE recipes must supply both.</li>
+<li>Preserves PSADT's structure and comments.</li>
 </ul>
 </li>
-<li><strong>Generate Deployment Script</strong> - Generates <code>Invoke-AppDeployToolkit.ps1</code> from template:<ul>
-<li>Substitutes PSADT variables (<code>$appVendor</code>, <code>$appName</code>, <code>$appVersion</code>, etc.) from recipe configuration</li>
-<li>Inserts install script from <code>psadt.install</code> field (for MSI, auto-generates install/uninstall commands from the MSI metadata, the exact filename and ProductName, unless <code>override_msi_commands: true</code>; for MSIX, auto-generates them from the manifest based on <code>intune.run_as_account</code> unless <code>override_msix_commands: true</code>)</li>
-<li>Inserts uninstall script from <code>psadt.uninstall</code> field</li>
-<li>Sets dynamic values (AppScriptDate, discovered version, PSADT version)</li>
-<li>Preserves PSADT's structure and comments</li>
-</ul>
-</li>
-<li><strong>Copy Installer</strong> - Copies downloaded installer file to <code>Files/</code> directory:<ul>
+<li><strong>Copy installer</strong> - Copies the downloaded installer to <code>Files/</code>:<ul>
 <li>Source: <code>downloads/{app_id}/{version}/{installer_filename}</code></li>
-<li>Destination: <code>builds/{app_id}/{version}/Files/{installer_filename}</code></li>
-<li>Installer is accessible in scripts via <code>$($adtSession.DirFiles)</code> (PSADT 4.x)</li>
+<li>Destination: <code>builds/{app_id}/{version}/packagefiles/Files/{installer_filename}</code></li>
+<li>Scripts reach it through <code>$($adtSession.DirFiles)</code> (PSADT 4.x).</li>
 </ul>
 </li>
-<li><strong>Apply Branding</strong> - Replaces PSADT default assets with custom branding (if configured):<ul>
-<li>Reads <code>brand_pack</code> configuration from org/vendor defaults</li>
-<li>Replaces files in <code>Assets/</code> directory (AppIcon.png, Banner.Classic.png, etc.)</li>
-<li>Uses pattern matching to find source files in brand pack directory</li>
+<li><strong>Apply branding</strong> - Replaces PSADT default assets with custom branding
+   (if configured):<ul>
+<li>Reads <code>psadt.brand_pack</code> (usually set in <code>org.yaml</code>; a relative path
+  resolves against <code>defaults/</code>).</li>
+<li>Replaces files in <code>Assets/</code> (AppIcon.png, Banner.Classic.png, and so
+  on).</li>
+<li>Uses pattern matching to find source files in the brand pack directory.</li>
 </ul>
 </li>
-<li><strong>Generate Detection and Requirements Scripts</strong> - Creates PowerShell scripts for Intune Win32 app deployment (detection always generated; requirements only when <code>build_types</code> is <code>both</code> or <code>update_only</code>). See <a href="#detection-and-requirements-scripts">Detection and Requirements Scripts</a> below for details.</li>
+<li><strong>Generate detection and requirements scripts</strong> - Detection is always
+    generated; requirements only when <code>build_types</code> is <code>both</code> or
+    <code>update_only</code>.
+    See <a href="#detection-and-requirements-scripts">Detection and requirements scripts</a>.</li>
 </ol>
-<p><strong>Output</strong>: Complete PSADT package in <code>builds/{app_id}/{version}/</code> with detection script always present, and requirements script when <code>build_types</code> is <code>both</code> or <code>update_only</code>.</p>
+<p><strong>Output</strong>: PSADT package in <code>builds/{app_id}/{version}/</code> with the detection
+script, and the requirements script when <code>build_types</code> is <code>both</code> or
+<code>update_only</code>.</p>
 <h4 id="detection-and-requirements-scripts">Detection and requirements scripts</h4>
-<p>NAPT generates PowerShell scripts used by Intune Win32 app entries to check installation state:</p>
+<p>NAPT generates PowerShell scripts that Intune Win32 app entries use to check
+installation state:</p>
 <ul>
-<li><strong>Detection script</strong> (always generated): Used by the <strong>App</strong> entry and by the <strong>Update</strong> entry when using the two-app model to determine if the app is installed at the expected version. Filename: <code>{AppName}_{Version}-Detection.ps1</code>.</li>
-<li><strong>Requirements script</strong> (when <code>build_types</code> is <code>both</code> or <code>update_only</code>): Used by the <strong>Update</strong> entry to determine if an older version is installed so Intune can offer the update. Filename: <code>{AppName}_{Version}-Requirements.ps1</code>.</li>
+<li><strong>Detection script</strong> (always): <code>{AppName}_{Version}-Detection.ps1</code>, used by
+  the install entry and the update entry.</li>
+<li><strong>Requirements script</strong> (when <code>build_types</code> is <code>both</code> or <code>update_only</code>):
+  <code>{AppName}_{Version}-Requirements.ps1</code>, used by the update entry.</li>
 </ul>
-<p>For MSI and EXE installers, both scripts share the same logic for registry lookup, app name
-resolution, and installer-type filtering; they differ only in how they interpret the version
-comparison (see below). For MSIX installers, scripts query the AppX package database by
-identity name instead of registry scanning; which store is queried depends on
+<p>For MSI and EXE installers, both scripts share the same logic for registry
+lookup, app name resolution, and installer-type filtering; they differ only in
+how they interpret the version comparison (see below).
+For MSIX installers, scripts query the AppX package database by identity name
+instead of scanning the registry; which store is queried depends on
 <code>intune.run_as_account</code> (see below).</p>
 <p><strong>How the scripts work:</strong></p>
 <ul>
 <li>
 <p><strong>Registry locations checked (architecture-aware):</strong></p>
 <ul>
-<li>Scripts use explicit <code>RegistryView</code> (Registry64 or Registry32) for deterministic behavior regardless of PowerShell process bitness</li>
-<li><strong>For x64/arm64 architecture</strong> (or 64-bit view when architecture is "any"):<ul>
+<li>Scripts use an explicit <code>RegistryView</code> (Registry64 or Registry32), so
+  the result does not depend on the PowerShell process bitness.</li>
+<li><strong>For x64/arm64 architecture</strong> (or the 64-bit view when architecture is
+  <code>any</code>):<ul>
 <li><code>HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall</code> (machine-level)</li>
 <li><code>HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall</code> (user-level)</li>
 </ul>
 </li>
-<li><strong>For x86 architecture</strong> (or 32-bit view when architecture is "any" on 64-bit OS):<ul>
+<li><strong>For x86 architecture</strong> (or the 32-bit view when architecture is <code>any</code>
+  on a 64-bit OS):<ul>
 <li><code>HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall</code> (machine-level)</li>
 <li><code>HKCU:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall</code> (user-level)</li>
 </ul>
 </li>
-<li><strong>For x86 architecture on 32-bit OS</strong>:<ul>
+<li><strong>For x86 architecture on a 32-bit OS</strong>:<ul>
 <li><code>HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall</code> (machine-level)</li>
 <li><code>HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall</code> (user-level)</li>
 </ul>
 </li>
-<li><strong>When architecture is "any"</strong> (default): Checks both 64-bit and 32-bit views (all applicable paths above)</li>
+<li><strong>When architecture is <code>any</code></strong>: checks both 64-bit and 32-bit views
+  (all applicable paths above).</li>
 </ul>
 </li>
 <li>
 <p><strong>App name determination:</strong></p>
 <ul>
-<li><strong>MSI installers:</strong> Uses MSI <code>ProductName</code> property (authoritative source for registry DisplayName). For MSIs where the vendor includes version in the ProductName (e.g., "7-Zip 25.01"), use <code>intune.detection.override_msi_display_name: true</code> to specify a custom <code>display_name</code> pattern instead. See <a href="../recipe-reference/#detection">Recipe Reference - detection</a> for details.</li>
-<li><strong>Non-MSI installers:</strong> Requires <code>intune.detection.display_name</code> in recipe configuration. Scripts match registry <code>DisplayName</code> to this value.</li>
+<li><strong>MSI installers:</strong> Uses the MSI <code>ProductName</code> property (the source of
+  the registry <code>DisplayName</code>).
+  For MSIs whose ProductName includes the version (for example
+  "7-Zip 25.01"), set <code>intune.detection.override_msi_display_name: true</code>
+  and a custom <code>display_name</code> pattern.
+  See <a href="../recipe-reference/#detection">detection</a>.</li>
+<li><strong>EXE installers:</strong> Require <code>intune.detection.display_name</code>.
+  Scripts match the registry <code>DisplayName</code> to this value.</li>
 </ul>
 </li>
 <li>
 <p><strong>Installer type filtering:</strong></p>
 <ul>
-<li><strong>MSI installers (strict):</strong> Only match registry entries that are MSI-based (checks <code>WindowsInstaller</code> = 1). Prevents false matches when both MSI and EXE versions exist.</li>
-<li><strong>Non-MSI installers (permissive):</strong> Match any registry entry (MSI or non-MSI) to handle EXE installers that run embedded MSIs internally.</li>
+<li><strong>MSI installers (strict):</strong> Match only MSI-based registry entries
+  (<code>WindowsInstaller</code> = 1), which prevents false matches when both MSI
+  and EXE versions exist.</li>
+<li><strong>EXE installers (permissive):</strong> Match any registry entry (MSI or not),
+  to handle EXE installers that run an embedded MSI.</li>
 </ul>
 </li>
 <li>
 <p><strong>Architecture filtering:</strong></p>
 <ul>
-<li>Controls which registry views are checked based on the installer architecture NAPT resolves at build time (NAPT sets <code>AppArch</code> in the generated script; it is not a recipe <code>app_vars</code> key)</li>
-<li><strong>MSI installers:</strong> architecture is extracted from MSI package metadata (no manual configuration needed)</li>
-<li><strong>Non-MSI installers:</strong> architecture must be specified in <code>intune.detection</code> (e.g., <code>architecture: "x64"</code>)</li>
+<li>Controls which registry views are checked, based on the installer
+  architecture NAPT resolves at build time (NAPT sets <code>AppArch</code> in the
+  generated script; it is not a recipe <code>app_vars</code> key).</li>
+<li><strong>MSI installers:</strong> Architecture is read from the MSI package metadata.</li>
+<li><strong>EXE installers:</strong> Architecture must be set in <code>intune.detection</code>
+  (for example <code>architecture: "x64"</code>); there is no default, and build
+  stops without it.</li>
 <li><strong>Architecture values:</strong><ul>
-<li><code>x64</code> / <code>arm64</code>: Checks only 64-bit registry view (ARM64 uses 64-bit registry)</li>
-<li><code>x86</code>: Checks only 32-bit registry view</li>
-<li><code>any</code> (default if not specified): Checks both 64-bit and 32-bit views for maximum compatibility</li>
+<li><code>x64</code> / <code>arm64</code>: checks only the 64-bit registry view (ARM64 uses
+  the 64-bit registry).</li>
+<li><code>x86</code>: checks only the 32-bit registry view.</li>
+<li><code>any</code>: checks both 64-bit and 32-bit views.
+  An allowed value for EXE recipes, and what a neutral MSIX
+  resolves to.</li>
 </ul>
 </li>
-<li>Prevents false matches when both 32-bit and 64-bit versions of the same software are installed</li>
+<li>Prevents false matches when both 32-bit and 64-bit versions of the same
+  software are installed.</li>
 </ul>
 </li>
 <li>
 <p><strong>MSIX detection (AppX package-based):</strong></p>
 <ul>
-<li>MSIX installers query the Windows AppX package database by package identity name
-  (from <code>AppxManifest.xml</code>), not the registry</li>
+<li>MSIX installers query the Windows AppX package database by package
+  identity name (from <code>AppxManifest.xml</code>), not the registry.</li>
 <li>Which store is queried depends on <code>intune.run_as_account</code>:<ul>
-<li><code>"system"</code> (default): <code>Get-AppxProvisionedPackage -Online</code> (provisioned/all-users store)</li>
+<li><code>"system"</code> (default): <code>Get-AppxProvisionedPackage -Online</code>
+  (provisioned, all-users store)</li>
 <li><code>"user"</code>: <code>Get-AppxPackage -Name</code> (per-user store)</li>
 </ul>
 </li>
-<li>Architecture is auto-detected from the MSIX manifest's <code>ProcessorArchitecture</code> attribute</li>
-<li>The <code>intune.detection.display_name</code>, <code>architecture</code>, and <code>override_msi_display_name</code>
-  fields are not used for MSIX installers</li>
+<li>Architecture is read from the manifest's <code>ProcessorArchitecture</code>
+  attribute.</li>
+<li>The <code>intune.detection.display_name</code>, <code>architecture</code>, and
+  <code>override_msi_display_name</code> fields are not used for MSIX installers.</li>
 </ul>
 </li>
 <li>
 <p><strong>Logging:</strong></p>
 <ul>
-<li><strong>Format:</strong> CMTrace format for compatibility with Intune diagnostics tools</li>
-<li><strong>Primary location</strong> (both contexts): <code>C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\</code><ul>
+<li><strong>Format:</strong> CMTrace, for compatibility with Intune diagnostics tools.</li>
+<li><strong>Primary location</strong> (both contexts):
+  <code>C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\</code><ul>
 <li>Detection: <code>NAPTDetections.log</code> (system) / <code>NAPTDetectionsUser.log</code> (user)</li>
 <li>Requirements: <code>NAPTRequirements.log</code> (system) / <code>NAPTRequirementsUser.log</code> (user)</li>
 </ul>
 </li>
-<li><strong>Fallback locations</strong> (used if primary location fails):<ul>
+<li><strong>Fallback locations</strong> (used if the primary location fails):<ul>
 <li>System context: <code>C:\ProgramData\NAPT\</code></li>
 <li>User context: <code>%LOCALAPPDATA%\NAPT\</code></li>
-<li>Same log file names as primary locations</li>
+<li>Same log file names as the primary locations</li>
 </ul>
 </li>
-<li><strong>Fallback behavior:</strong> Script tries primary first (creates directory if needed, verifies write access). If that fails (insufficient permissions), tries fallback. If both fail, script continues with a warning to stderr but no log file</li>
-<li><strong>Log rotation:</strong> 2-file rotation (.log and .log.old), default 3MB max size per file</li>
+<li><strong>Fallback behavior:</strong> The script tries the primary location first
+  (creating the directory if needed and verifying write access).
+  If that fails, it tries the fallback.
+  If both fail, the script continues with a warning to stderr and no log
+  file.</li>
+<li><strong>Log rotation:</strong> Two files (<code>.log</code> and <code>.log.old</code>), 3MB maximum per
+  file by default.</li>
 </ul>
 </li>
 </ul>
-<p><strong>Detection vs Requirements scripts:</strong></p>
+<p><strong>Detection and requirements scripts compared:</strong></p>
 <ul>
-<li><strong>Detection script</strong> - Checks if the application is installed at the expected version:<ul>
-<li>Version check: Compares installed version to expected version</li>
-<li>Match modes: Exact match (installed = expected) or minimum version (installed &gt;= expected)</li>
-<li>Exit codes: Exit 0 if installed and meets requirement, exit 1 otherwise</li>
+<li><strong>Detection script</strong> - Checks whether the application is installed at the
+  expected version:<ul>
+<li>Match modes: exact match (installed = expected) or minimum version
+  (installed &gt;= expected).</li>
+<li>Exit codes: exits 0 and writes <code>Installed</code> to stdout when detected;
+  exits 1 otherwise.</li>
 </ul>
 </li>
-<li><strong>Requirements script</strong> - Determines if an installed application needs to be updated:<ul>
-<li>Version check: Determines if installed version &lt; target version</li>
-<li>Output: Writes "Required" to stdout if update needed, nothing otherwise</li>
-<li>Exit codes: Always exits 0 (allows Intune to evaluate stdout)</li>
-<li>Intune configuration: Requirement rule with output type String, operator Equals, value "Required"</li>
+<li><strong>Requirements script</strong> - Determines whether an installed application needs
+  the update:<ul>
+<li>Version check: installed version &lt; target version.</li>
+<li>Output: writes <code>Required</code> to stdout if the update is needed, nothing
+  otherwise.</li>
+<li>Exit codes: always exits 0 (Intune evaluates stdout).</li>
+<li>Intune configuration: requirement rule with output type String,
+  operator Equals, value <code>Required</code>.</li>
 </ul>
 </li>
 </ul>
 <p><strong>Output location and packaging:</strong></p>
-<p>Scripts are saved as siblings to the <code>packagefiles/</code> directory and are NOT included in the <code>.intunewin</code> package:</p>
+<p>Scripts are saved as siblings to the <code>packagefiles/</code> directory and are not
+included in the <code>.intunewin</code> package:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>builds/napt-chrome/144.0.7559.110/
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  ├── packagefiles/                                 # PSADT package (packaged into .intunewin)
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  │   └── ...
@@ -2977,7 +3000,9 @@ identity name instead of registry scanning; which store is queried depends on
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  ├── Google-Chrome_144.0.7559.110-Requirements.ps1 # Requirements script (if generated)
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  └── build-manifest.json                           # Installer hash and metadata
 </span></code></pre></div>
-<p><strong>Configuration:</strong> See <a href="../recipe-reference/#intune-configuration">Recipe Reference - Intune Configuration</a> for <code>intune.detection</code> and <code>intune.build_types</code> options.</p>
+<p><strong>Configuration:</strong> See
+<a href="../recipe-reference/#intune-configuration">Intune configuration</a> for the
+<code>intune.detection</code> and <code>intune.build_types</code> options.</p>
 <h3 id="app-icons">App icons</h3>
 <p>During <code>napt build</code>, NAPT extracts the app's icon from the installer and
 saves it to <code>{directories.icons}/{id}.png</code> (default <code>icons/</code>).
@@ -3008,95 +3033,110 @@ Portal.</p>
   itself when the installer changes</li>
 </ul>
 <p>Like <code>downloads/</code> and <code>builds/</code>, the icons directory is a machine-local
-output directory (gitignored); each machine extracts its own icons at
-build time, and NAPT never overwrites an existing icon file.</p>
+output directory (add it to <code>.gitignore</code> with them); each machine extracts
+its own icons at build time, and NAPT never overwrites an existing icon file.</p>
 <p>Icon resolution order at upload: <code>intune.logo_path</code> (if set), then
 <code>icons/{id}.png</code>, then no icon with a warning.
 To replace or pin an icon, see
 <a href="../common-tasks/#set-a-custom-app-icon">Set a custom app icon</a>.</p>
 <h3 id="package-process-napt-package">Package process (<code>napt package</code>)</h3>
-<p>The package process creates a <code>.intunewin</code> file from a PSADT build for the
-recipe's app:</p>
 <ol>
-<li><strong>Resolve Build Directory</strong> - Scans <code>builds/{app_id}/</code> for the most recently
+<li><strong>Resolve build directory</strong> - Scans <code>builds/{app_id}/</code> for the most recently
    modified version directory that contains a <code>packagefiles/</code> folder.
-   Use <code>--version VERSION</code> to target a specific version instead</li>
-<li><strong>Verify Structure</strong> - Validates the build directory has the required PSADT structure:<ul>
+   Use <code>--version VERSION</code> to target a specific version instead.</li>
+<li><strong>Verify structure</strong> - Checks that the build directory has the required
+   PSADT structure:<ul>
 <li><code>PSAppDeployToolkit/</code> directory</li>
 <li><code>Files/</code> directory</li>
 <li><code>Invoke-AppDeployToolkit.ps1</code> script</li>
 <li><code>Invoke-AppDeployToolkit.exe</code> launcher</li>
 </ul>
 </li>
-<li><strong>Get IntuneWinAppUtil</strong> - Downloads/caches <code>IntuneWinAppUtil.exe</code> from Microsoft's GitHub
-   repository. The release is controlled by <code>intunewin.release</code> in <code>defaults/org.yaml</code>
-   (default: <code>"latest"</code>). The tool is cached under <code>cache/tools/{version}/</code> so each
-   pinned release is stored independently</li>
-<li><strong>Create Package</strong> - Runs <code>IntuneWinAppUtil.exe</code> to create <code>.intunewin</code> file:<ul>
-<li>Input: <code>packagefiles/</code> subdirectory of the build (PSADT structure)</li>
-<li>Output: <code>Invoke-AppDeployToolkit.intunewin</code> in <code>packages/{app_id}/{version}/</code></li>
-<li>Previous version directory for this app is removed automatically</li>
+<li><strong>Get IntuneWinAppUtil</strong> - Downloads <code>IntuneWinAppUtil.exe</code> from
+   Microsoft's GitHub repository if not already cached.
+   The release is controlled by <code>intunewin.release</code> in <code>defaults/org.yaml</code>
+   (default: <code>"latest"</code>).
+   The tool is cached under <code>cache/tools/{version}/</code>, so each pinned release
+   is stored independently.</li>
+<li><strong>Create package</strong> - Runs <code>IntuneWinAppUtil.exe</code> to create the
+   <code>.intunewin</code> file:<ul>
+<li>Input: the build's <code>packagefiles/</code> subdirectory (PSADT structure)</li>
+<li>Output: <code>Invoke-AppDeployToolkit.intunewin</code> in
+  <code>packages/{app_id}/{version}/</code></li>
+<li>Only one version is kept on disk per app: the previous version's
+  package folder is removed first, so a failed run leaves no package;
+  re-run <code>napt package</code>.</li>
 </ul>
 </li>
-<li><strong>Copy Detection Scripts</strong> - Copies <code>*-Detection.ps1</code>, <code>*-Requirements.ps1</code>,
-   and <code>build-manifest.json</code> from the build version directory into
-   <code>packages/{app_id}/{version}/</code> so that <code>napt upload</code> is self-contained and
-   does not need access to the builds directory</li>
-<li><strong>Optional Cleanup</strong> - If <code>--clean-source</code> flag is used, removes the build
-   version directory after successful packaging</li>
+<li><strong>Copy detection scripts</strong> - Copies <code>*-Detection.ps1</code>,
+   <code>*-Requirements.ps1</code>, and <code>build-manifest.json</code> from the build version
+   directory into <code>packages/{app_id}/{version}/</code>, so <code>napt upload</code> does not
+   need the builds directory.</li>
+<li><strong>Optional cleanup</strong> - With <code>--clean-source</code>, removes the build version
+   directory after successful packaging.</li>
 </ol>
-<p><strong>Output</strong>: <code>.intunewin</code> and detection scripts in <code>packages/{app_id}/{version}/</code>,
-ready for <code>napt upload</code>. Only one version is kept on disk per app at a time:
-packaging a new version removes the previous one automatically.</p>
+<p><strong>Output</strong>: <code>.intunewin</code> and detection scripts in
+<code>packages/{app_id}/{version}/</code>, ready for <code>napt upload</code>.</p>
 <h3 id="upload-process-napt-upload">Upload process (<code>napt upload</code>)</h3>
-<p>The upload process publishes a packaged app to Microsoft Intune via the
-Graph API. Run <code>napt package</code> before uploading.</p>
+<p>Run <code>napt package</code> first.</p>
 <ol>
-<li><strong>Locate Package</strong> - Scans <code>packages/{app_id}/</code> (<code>directories.package</code>)
+<li><strong>Locate package</strong> - Scans <code>packages/{app_id}/</code> (<code>directories.package</code>)
    for the versioned subdirectory created by <code>napt package</code> and reads
    <code>Invoke-AppDeployToolkit.intunewin</code> from it.
    Verifies the package's installer hash (from the build manifest) against the
    pending release in the app's deployment state; a mismatch aborts the upload,
    so what was recorded at discovery is byte-for-byte what ships.
    When no pending release is recorded, the upload proceeds with a warning,
-   or fails when <code>deployment.require_pending</code> is enabled</li>
-<li><strong>Authenticate</strong> - Uses the CI/CD environment credential or the session from <code>napt auth login</code> (see <a href="#authentication">Authentication</a> below)</li>
-<li><strong>Parse Package Metadata</strong> - Reads encryption metadata from <code>Detection.xml</code> inside the <code>.intunewin</code> ZIP
-4–6. <strong>Create, Upload, Commit (install entry)</strong> - Creates the Win32 app record
-   using the base app name and detection script only, uploads the encrypted
-   payload to Azure Blob Storage, and commits the content version.
-   Skipped when <code>build_types</code> is <code>"update_only"</code>
-7–9. <strong>Create, Upload, Commit (update entry)</strong> - Creates a second Win32 app
-   record using <code>update_name_prefix + name</code> and detection + requirements scripts,
-   uploads the same encrypted payload, and commits.
+   or fails when <code>deployment.require_pending</code> is enabled.</li>
+<li><strong>Authenticate</strong> - Uses the CI/CD environment credential or the session
+   from <code>napt auth login</code> (see <a href="#authentication">Authentication</a> below).</li>
+<li><strong>Parse package metadata</strong> - Reads encryption metadata from <code>Detection.xml</code>
+   inside the <code>.intunewin</code> ZIP.</li>
+<li><strong>Create, upload, commit (install entry)</strong> (steps 4 to 6) - Creates the
+   Win32 app record using the base app name and detection script only,
+   uploads the encrypted payload to Azure Blob Storage, and commits the
+   content version.
+   Skipped when <code>build_types</code> is <code>"update_only"</code>.</li>
+<li><strong>Create, upload, commit (update entry)</strong> (steps 7 to 9, or 4 to 6 with
+   <code>update_only</code>) - Creates a
+   second Win32 app record using <code>update_name_prefix + name</code> and the
+   detection and requirements scripts, uploads the same encrypted payload,
+   and commits.
    Skipped when <code>build_types</code> is <code>"app_only"</code>.
    When <code>build_types</code> is <code>"both"</code> (default), this runs after the install entry
-   is fully committed</li>
+   is fully committed.</li>
 </ol>
 <p>Each created app entry carries a provenance stamp in its Intune notes field:
 <code>napt/v1 id=&lt;recipe-id&gt; entry=&lt;install|update&gt; sha256=&lt;installer-hash&gt;</code>.
 The stamp marks the app as NAPT-managed and ties it to the exact binary it was
 built from; the notes field is reserved for NAPT and is not recipe-configurable.
 On success, the app's deployment state records the published version, hash,
-and both Intune app IDs, and a matching pending slot is cleared.</p>
+and Intune app IDs (null for an entry not created), and a matching pending
+slot is cleared.</p>
 <p>Re-running an upload is safe.
 Before creating anything, NAPT lists the tenant's apps and looks for stamps
 matching this release: a fully published match is adopted as-is, a match whose
-content was never committed (a crashed previous run) gets a fresh content
-upload, and only missing entries are created.
+content was never committed (a crashed previous run) is deleted and recreated
+(it gets a new app ID), since Intune refuses new content on an app whose first
+content was never committed, and only missing entries are created.
 Apps without a NAPT stamp are never touched.</p>
 <p>Adoption keeps the matched app exactly as it is: it does not re-send
 metadata or package content, since the match key is the installer binary.
 If you changed the recipe or package without a new installer release
 (PSADT commands, detection settings, icon), pass <code>--force</code> to update the
 matched apps' metadata and upload a fresh content version.
-<code>--force</code> never creates duplicates.</p>
+<code>--force</code> never creates duplicates.
+With <code>deployment.require_pending: true</code>, upload refuses a package that has no
+pending release, and republishing the already-published binary has none; add
+a <code>pending</code> entry (the published release's <code>version</code>, <code>sha256</code>, and <code>url</code>) to
+<code>state/deployment/&lt;app_id&gt;.json</code> by hand first.</p>
 <p><strong>Output</strong>: Intune Win32 App ID (install entry), Intune Win32 Update ID (update
-entry), app name, version, and package path. Each ID is omitted when its
-corresponding entry is not created</p>
+entry), app name, version, and package path.
+Each ID is omitted when its entry is not created.</p>
 <h4 id="authentication">Authentication</h4>
-<p><code>napt upload</code>, <code>napt promote apply</code>, and <code>napt promote plan --reconcile</code>/<code>--check-drift</code>
-all need a Microsoft Graph token.
+<p><code>napt upload</code>, <code>napt promote apply</code>, and
+<code>napt promote plan --reconcile</code>/<code>--check-drift</code> all need a Microsoft Graph
+token.
 NAPT resolves it the same way every time; <code>napt auth status</code> shows which
 source it picked:</p>
 <table>
@@ -3117,7 +3157,7 @@ source it picked:</p>
 </tr>
 <tr>
 <td>Azure CLI (<code>AzureCliCredential</code>)</td>
-<td>Nothing above applies and the Azure CLI is signed in as a service principal (CI/CD with OIDC through a login step such as GitHub Actions <code>azure/login</code>). Recommended over a client secret whenever your CI platform supports it. A CLI signed in as a person is refused, since its tokens belong to the Azure CLI's own application, not the NAPT registration</td>
+<td>Nothing above applies and the Azure CLI is signed in as a service principal (CI/CD with OIDC through a login step such as GitHub Actions <code>azure/login</code>). A CLI signed in as a person is refused, since its tokens belong to the Azure CLI's own application, not the NAPT registration</td>
 </tr>
 </tbody>
 </table>
@@ -3126,8 +3166,7 @@ If no credential is available, commands fail with <code>Not authenticated.</code
 followed by a hint for each option: run <code>napt auth login</code> interactively, or
 set the <code>AZURE_*</code> variables or sign in with <code>az login</code> for CI/CD.</p>
 <h4 id="app-registration-setup">App registration setup</h4>
-<p>Create the app registration once per organization.
-Two ways to do it:</p>
+<p>Create the app registration once per organization.</p>
 <p><strong>Manual (Entra portal):</strong></p>
 <ol>
 <li>Go to <a href="https://entra.microsoft.com">entra.microsoft.com</a> →
@@ -3159,16 +3198,15 @@ everything in the manual list through Microsoft Graph: creates the
 registration (or finds one named <code>NAPT</code>; use <code>--name</code> or <code>--client-id</code> to
 target another), adds the redirect URIs and the application + delegated
 permissions, creates the service principal, and grants admin consent.
-It then remembers the tenant and client ID so the next step is just
+It then remembers the tenant and client ID, so the next sign-in needs only
 <code>napt auth login</code>.</p>
 <p>The registration is stamped in its <strong>Internal notes</strong> (Branding &amp;
 properties) with a provenance line such as
 <code>napt/v1 spec=1 version=0.10.0 provisioned=2026-08-18</code>; any notes an
 administrator adds below it are preserved.
 Re-running is safe: NAPT compares the registration against what the
-installed version needs and adds only what is missing, so when a NAPT
-release needs a new permission, updating is just running <code>napt auth setup</code>
-again.
+installed version needs and adds only what is missing.
+After upgrading NAPT, re-run <code>napt auth setup</code> to add any new permission.
 A registration that matches by name but carries no stamp (one made in the
 portal, for example) is not touched until you pass <code>--adopt</code>, which adds
 NAPT's redirect URIs, Graph permissions, and admin consent to it and
@@ -3178,6 +3216,9 @@ consent.</p>
 <p>Add <code>--federated-issuer</code> and <code>--federated-subject</code> to also create the
 federated credential for OIDC CI/CD (below) in the same
 run; the values come from your CI platform's OIDC documentation.
+<code>--federated-audience</code> (default <code>api://AzureADTokenExchange</code>) and
+<code>--federated-name</code> (default derived from the subject) override the
+credential's audience and name.
 The administrator sign-in uses the Microsoft Graph Command Line Tools app
 (the same one <code>Connect-MgGraph</code> uses); NAPT does not store that account or
 its tokens, though your browser may keep its own sign-in.
@@ -3235,8 +3276,8 @@ the IDs stay remembered.</p>
 <p>Sign in to each tenant once with its own client ID.
 NAPT remembers every tenant you have signed in to and which one is active;
 <code>napt auth status</code> lists them.
-Switch with just the tenant ID (or its default domain, once known) with
-no prompt as long as that tenant's session is still valid:</p>
+Switch by passing only the tenant ID (or its default domain, once known),
+with no prompt as long as that tenant's session is still valid:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>napt<span class="w"> </span>auth<span class="w"> </span>login<span class="w"> </span>--tenant-id<span class="w"> </span><span class="s2">"&lt;prod tenant ID&gt;"</span><span class="w"> </span>--client-id<span class="w"> </span><span class="s2">"&lt;prod client ID&gt;"</span><span class="w">   </span><span class="c1"># first time</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>napt<span class="w"> </span>auth<span class="w"> </span>login<span class="w"> </span>--tenant-id<span class="w"> </span>contosodev.onmicrosoft.com<span class="w">                           </span><span class="c1"># switch back, silent</span>
 </span></code></pre></div>
@@ -3258,7 +3299,8 @@ GitHub's immutable format above embeds the owner and repository IDs so a
 renamed or recreated repository cannot inherit the trust; repositories
 created or renamed after 2026-07-15 emit it by default, older ones until
 opted in emit <code>repo:owner/name:environment:intune</code>.
-See <a href="https://learn.microsoft.com/en-us/entra/workload-id/workload-identities-github-immutable-subjects">Migrate GitHub Actions federated credentials to immutable subjects</a>
+See
+<a href="https://learn.microsoft.com/en-us/entra/workload-id/workload-identities-github-immutable-subjects">Migrate GitHub Actions federated credentials to immutable subjects</a>
 and GitHub's OIDC reference for the IDs and the opt-in.
 Other platforms use their own subject format (see their OIDC
 documentation); by hand, the same values go under <strong>Certificates &amp; secrets</strong>
@@ -3293,134 +3335,158 @@ Set all three environment variables as pipeline secrets:</p>
 <p>A certificate works the same way with <code>AZURE_CLIENT_CERTIFICATE_PATH</code>
 instead of <code>AZURE_CLIENT_SECRET</code>.</p>
 <h3 id="directory-structure">Directory structure</h3>
-<p>After a complete workflow, your directory structure looks like:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>downloads/
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>  └── napt-chrome/
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>      ├── .download.json                   # What the last discover run resolved
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>      └── 142.0.7444.163/
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>          └── googlechromestandaloneenterprise64.msi
+<p>After a complete workflow, the project holds:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>cache/
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>  ├── psadt/
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>  │   └── 4.1.7/                           # PSADT template, downloaded by napt build
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>  └── tools/
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>      └── &lt;version&gt;/                       # IntuneWinAppUtil.exe, downloaded by napt package
 </span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>builds/
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>  └── napt-chrome/
-</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>      └── 142.0.7444.163/
-</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>          ├── packagefiles/                # PSADT package contents
-</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>          │   ├── PSAppDeployToolkit/      # PSADT module (from template)
-</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>          │   ├── PSAppDeployToolkit.Extensions/
-</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>          │   ├── Assets/                  # Custom branding (if configured)
-</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>          │   ├── Config/
-</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>          │   ├── Strings/
-</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>          │   ├── Files/                   # Installer copied here
-</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>          │   │   └── googlechromestandaloneenterprise64.msi
-</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>          │   ├── SupportFiles/            # Empty (for additional files)
-</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>          │   ├── Invoke-AppDeployToolkit.ps1  # Generated script
-</span><span id="__span-8-20"><a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>          │   └── Invoke-AppDeployToolkit.exe  # From template
-</span><span id="__span-8-21"><a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>          ├── Google-Chrome_142.0.7444.163-Detection.ps1
-</span><span id="__span-8-22"><a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>          ├── Google-Chrome_142.0.7444.163-Requirements.ps1
-</span><span id="__span-8-23"><a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a>          └── build-manifest.json              # Installer hash and metadata
-</span><span id="__span-8-24"><a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a>
-</span><span id="__span-8-25"><a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>packages/
-</span><span id="__span-8-26"><a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a>  └── napt-chrome/
-</span><span id="__span-8-27"><a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a>      └── 142.0.7444.163/                              # One version kept at a time
-</span><span id="__span-8-28"><a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a>          ├── Invoke-AppDeployToolkit.intunewin        # Encrypted package
-</span><span id="__span-8-29"><a id="__codelineno-8-29" name="__codelineno-8-29" href="#__codelineno-8-29"></a>          ├── Google-Chrome_142.0.7444.163-Detection.ps1    # Copied by napt package
-</span><span id="__span-8-30"><a id="__codelineno-8-30" name="__codelineno-8-30" href="#__codelineno-8-30"></a>          ├── Google-Chrome_142.0.7444.163-Requirements.ps1 # Copied by napt package
-</span><span id="__span-8-31"><a id="__codelineno-8-31" name="__codelineno-8-31" href="#__codelineno-8-31"></a>          └── build-manifest.json                      # Copied by napt package; read by napt upload
-</span><span id="__span-8-32"><a id="__codelineno-8-32" name="__codelineno-8-32" href="#__codelineno-8-32"></a>
-</span><span id="__span-8-33"><a id="__codelineno-8-33" name="__codelineno-8-33" href="#__codelineno-8-33"></a>state/
-</span><span id="__span-8-34"><a id="__codelineno-8-34" name="__codelineno-8-34" href="#__codelineno-8-34"></a>  └── deployment/
-</span><span id="__span-8-35"><a id="__codelineno-8-35" name="__codelineno-8-35" href="#__codelineno-8-35"></a>      └── napt-chrome.json                 # Deployment state (authoritative)
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>icons/
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>  └── napt-chrome.png                      # Extracted by napt build, read by napt upload
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>downloads/
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>  └── napt-chrome/
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>      ├── .download.json                   # What the last discover run resolved
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>      └── 142.0.7444.163/
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>          └── googlechromestandaloneenterprise64.msi
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>builds/
+</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>  └── napt-chrome/
+</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>      └── 142.0.7444.163/
+</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>          ├── packagefiles/                # PSADT package contents
+</span><span id="__span-8-20"><a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>          │   ├── PSAppDeployToolkit/      # PSADT module (from template)
+</span><span id="__span-8-21"><a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>          │   ├── PSAppDeployToolkit.Extensions/
+</span><span id="__span-8-22"><a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>          │   ├── Assets/                  # Custom branding (if configured)
+</span><span id="__span-8-23"><a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a>          │   ├── Config/
+</span><span id="__span-8-24"><a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a>          │   ├── Strings/
+</span><span id="__span-8-25"><a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>          │   ├── Files/                   # Installer copied here
+</span><span id="__span-8-26"><a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a>          │   │   └── googlechromestandaloneenterprise64.msi
+</span><span id="__span-8-27"><a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a>          │   ├── SupportFiles/            # Empty (for additional files)
+</span><span id="__span-8-28"><a id="__codelineno-8-28" name="__codelineno-8-28" href="#__codelineno-8-28"></a>          │   ├── Invoke-AppDeployToolkit.ps1  # Generated script
+</span><span id="__span-8-29"><a id="__codelineno-8-29" name="__codelineno-8-29" href="#__codelineno-8-29"></a>          │   └── Invoke-AppDeployToolkit.exe  # From template
+</span><span id="__span-8-30"><a id="__codelineno-8-30" name="__codelineno-8-30" href="#__codelineno-8-30"></a>          ├── Google-Chrome_142.0.7444.163-Detection.ps1
+</span><span id="__span-8-31"><a id="__codelineno-8-31" name="__codelineno-8-31" href="#__codelineno-8-31"></a>          ├── Google-Chrome_142.0.7444.163-Requirements.ps1
+</span><span id="__span-8-32"><a id="__codelineno-8-32" name="__codelineno-8-32" href="#__codelineno-8-32"></a>          └── build-manifest.json              # Installer hash and metadata
+</span><span id="__span-8-33"><a id="__codelineno-8-33" name="__codelineno-8-33" href="#__codelineno-8-33"></a>
+</span><span id="__span-8-34"><a id="__codelineno-8-34" name="__codelineno-8-34" href="#__codelineno-8-34"></a>packages/
+</span><span id="__span-8-35"><a id="__codelineno-8-35" name="__codelineno-8-35" href="#__codelineno-8-35"></a>  └── napt-chrome/
+</span><span id="__span-8-36"><a id="__codelineno-8-36" name="__codelineno-8-36" href="#__codelineno-8-36"></a>      └── 142.0.7444.163/                              # One version kept at a time
+</span><span id="__span-8-37"><a id="__codelineno-8-37" name="__codelineno-8-37" href="#__codelineno-8-37"></a>          ├── Invoke-AppDeployToolkit.intunewin        # Encrypted package
+</span><span id="__span-8-38"><a id="__codelineno-8-38" name="__codelineno-8-38" href="#__codelineno-8-38"></a>          ├── Google-Chrome_142.0.7444.163-Detection.ps1    # Copied by napt package
+</span><span id="__span-8-39"><a id="__codelineno-8-39" name="__codelineno-8-39" href="#__codelineno-8-39"></a>          ├── Google-Chrome_142.0.7444.163-Requirements.ps1 # Copied by napt package
+</span><span id="__span-8-40"><a id="__codelineno-8-40" name="__codelineno-8-40" href="#__codelineno-8-40"></a>          └── build-manifest.json                      # Copied by napt package; read by napt upload
+</span><span id="__span-8-41"><a id="__codelineno-8-41" name="__codelineno-8-41" href="#__codelineno-8-41"></a>
+</span><span id="__span-8-42"><a id="__codelineno-8-42" name="__codelineno-8-42" href="#__codelineno-8-42"></a>state/
+</span><span id="__span-8-43"><a id="__codelineno-8-43" name="__codelineno-8-43" href="#__codelineno-8-43"></a>  ├── deployment/
+</span><span id="__span-8-44"><a id="__codelineno-8-44" name="__codelineno-8-44" href="#__codelineno-8-44"></a>  │   └── napt-chrome.json                 # Deployment state (authoritative)
+</span><span id="__span-8-45"><a id="__codelineno-8-45" name="__codelineno-8-45" href="#__codelineno-8-45"></a>  └── plans/
+</span><span id="__span-8-46"><a id="__codelineno-8-46" name="__codelineno-8-46" href="#__codelineno-8-46"></a>      └── napt-chrome.json                 # Promotion plan, written by napt promote plan
 </span></code></pre></div>
 <h2 id="commands-reference">Commands reference</h2>
 <blockquote>
-<p><strong>Tip:</strong> All commands support <code>--help</code> (or <code>-h</code>) for detailed usage, options, and examples.</p>
+<p><strong>Tip:</strong> All commands support <code>--help</code> (or <code>-h</code>) for detailed usage,
+options, and examples.</p>
 </blockquote>
 <h3 id="napt-init">napt init</h3>
-<p>Initializes a new NAPT project with the recommended directory structure. Creates <code>recipes/</code>, <code>defaults/org.yaml</code>, <code>defaults/vendors/</code>, and <code>state/deployment/</code>. Existing files are preserved by default; use <code>--force</code> to backup and overwrite.</p>
+<p>Initializes a new NAPT project.
+Creates <code>recipes/</code>, <code>defaults/org.yaml</code>, <code>defaults/vendors/</code>, and
+<code>state/deployment/</code>.
+Existing files are preserved by default; use <code>--force</code> to back up and
+overwrite.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>napt<span class="w"> </span>init<span class="w"> </span><span class="o">[</span>DIRECTORY<span class="o">]</span><span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </span></code></pre></div>
 <h3 id="napt-validate">napt validate</h3>
-<p>Validates recipe syntax and configuration without making network calls. Checks YAML syntax, required fields, and strategy configuration. Does not verify URLs are accessible or files can be downloaded.</p>
+<p>Validates recipe syntax and configuration without making network calls.
+Checks YAML syntax, required fields, and strategy configuration.
+It checks the recipe and its parent only: errors in <code>defaults/org.yaml</code> or
+vendor files, and build-time requirements such as the EXE
+<code>intune.detection</code> fields, surface at <code>napt discover</code> or <code>napt build</code>.
+It does not check that URLs are reachable or files can be downloaded.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>napt<span class="w"> </span>validate<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </span></code></pre></div>
 <h3 id="napt-discover">napt discover</h3>
-<p>Discovers the latest version and downloads the installer. Uses version-based caching to skip downloads when versions haven't changed.</p>
+<p>Discovers the latest version and downloads the installer, skipping the
+download when the installer has not changed.
+See <a href="#discovery-process-napt-discover">Discovery process</a> and
+<a href="#skipping-downloads">Skipping downloads</a>.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </span></code></pre></div>
 <h3 id="napt-build">napt build</h3>
-<p>Builds a complete PSADT package from a recipe and downloaded installer. Generates deployment scripts, applies branding, and creates versioned build directories.</p>
+<p>Builds a PSADT package from a recipe and the downloaded installer.
+See <a href="#build-process-napt-build">Build process</a>.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </span></code></pre></div>
 <h3 id="napt-package">napt package</h3>
-<p>Creates a <code>.intunewin</code> package for a recipe's build. The build directory is
-inferred automatically from the recipe's app ID. Without <code>--version</code>, packages
-the most recent build. Only one version is kept on disk per app; previous
-package directories are removed automatically.</p>
+<p>Creates a <code>.intunewin</code> package for a recipe's build.
+Without <code>--version</code>, packages the most recently modified build.
+See <a href="#package-process-napt-package">Package process</a>.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>napt<span class="w"> </span>package<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>napt<span class="w"> </span>package<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span>--version<span class="w"> </span><span class="m">130</span>.0.6723.116
 </span></code></pre></div>
 <h3 id="napt-promote">napt promote</h3>
-<p>Plans and applies ring-based promotion of published apps. <code>promote plan</code>
-computes which releases are ready to promote through deployment rings
-(per <code>deployment.rings</code>) and writes one plan file per app with work
-(<code>state/plans/&lt;app-id&gt;.json</code>); an app's stale plan file is removed when
-nothing is eligible for it. Read-only unless <code>--reconcile</code> is passed.
-Besides the fields apply acts on, each action carries reviewer context:
-a plain-English summary sentence, the Intune entry it touches, the
-version it displaces, and, for a promotion out of a held ring, when
-the release entered that ring and its bake threshold.</p>
+<p>Plans and applies ring-based promotion of published apps.
+<code>promote plan</code> computes which releases are ready to move through the
+deployment rings (per <code>deployment.rings</code>) and writes one plan file per app
+with work (see <a href="#promotion-plan-files">Promotion plan files</a>).
+It is read-only unless <code>--reconcile</code> is passed.</p>
 <p><code>promote apply</code> executes the plans against Intune: assigns install
 entries, promotes releases through rings, unassigns displaced releases,
-and retires them per <code>deployment.retain_versions</code>. It executes only the
-plan files <code>promote plan</code> wrote: it consumes the plan files of the
-recipes it was given from <code>state/plans/</code> (removing each after its app
-applies fully), a recipe without a plan file has nothing to apply, and
-plan files for apps outside the run are left untouched, so applying
-one recipe never consumes another app's reviewed plan.
-Each app's plan is an independent unit: one app's failure, whether a
-Graph error, an unresolvable group, or a state file that cannot be
-written, keeps its plan file for retry and never blocks the others.
-Stale or already-applied actions are skipped with a warning, so
-re-running after a partial failure is safe.
-Assignments NAPT does not manage (admin-made groups, all-device
-targets, exclusions) are always preserved.</p>
+and retires them per <code>deployment.retain_versions</code>.
+It consumes only the plan files of the recipes it was given; a recipe
+without a plan file has nothing to apply, and plan files for other apps are
+left untouched.
+Once the plan files are loaded, each app is an independent unit: one app's
+failure, whether a Graph error, an unresolvable group, or a state file that
+cannot be written, keeps its plan file for retry and never blocks the others.
+A plan file that cannot be loaded (corrupt, reshaped, or misnamed) stops the
+whole run before any app is applied.
+Stale or already-applied actions are skipped with a warning, so re-running
+after a partial failure is safe.
+Assignments NAPT does not manage (admin-made groups, all-device targets,
+exclusions) are always preserved.</p>
 <p>Both commands report <strong>assignment drift</strong>: every discrepancy between what
-deployment state says should be assigned and what Intune actually has:
-removed or changed NAPT assignments, unrecorded or foreign assignments
-on NAPT-managed apps, releases missing from the tenant, and stamped apps
-no state file references. An assignment NAPT has no record of making is
-classified by evidence: one that matches a currently configured target
-is reported as <em>unrecorded</em> (a lost apply writeback, which a later apply
-converges, or an admin pre-empting configured policy), while one
-matching no configured target is reported as <em>unexpected</em> (typically
-admin-made). Drift is warned about and never corrected. Apply checks
-automatically; plan checks with <code>--check-drift</code> (which needs Graph
-credentials; without the flag, plan stays fully offline).</p>
-<p>Both commands also <strong>validate plan groups</strong>. Authenticated plan runs
-(<code>--check-drift</code> or <code>--reconcile</code>) resolve every group named in the
-computed plan and fail, writing no plan files, when one does not
-resolve, so a plan with a group typo never becomes a reviewable
-promotion PR. Apply preflights each app's actions the same way before
-executing any of them, so an unresolvable group fails that app with
-zero tenant mutations instead of stranding a half-applied plan; fix
-the configuration and re-plan. A dead group referenced only by stale
-or already-applied actions never blocks an app, so re-running after a
-partial failure stays safe. Offline plans skip validation
-(warning when they produce actions) and the apply preflight backstops
-whatever they produce.</p>
-<p>Both commands also recover <strong>lost publication writebacks</strong>: when an
-upload succeeded but the state commit recording it never landed (a CI
-push rejected by branch protection, a crashed runner), the tenant holds
-a fully published release that state still lists as pending. Recovery
-re-derives the published record from the same provenance-stamp evidence
-idempotent upload uses, and only when every entry of the release has
-committed content; a partially published release is warned about
-instead, since only a publish re-run can finish it. Apply reconciles
-automatically; plan reconciles with <code>--reconcile</code> (which needs Graph
-credentials and, unlike the rest of plan, writes deployment state).
-In <code>plan --reconcile</code>, reconciliation runs before planning, so a
-recovered release is promotable in the same run; in apply, the plan
-files were computed earlier, so a recovered release waits for the next
-plan run.</p>
+deployment state says should be assigned and what Intune actually has.
+That covers removed or changed NAPT assignments, unrecorded or foreign
+assignments on NAPT-managed apps, releases missing from the tenant, stamped
+apps no state file references, and stamped apps with no recipe.
+Drift is checked against the recipes in the run, so a single-recipe run
+reports every other app's NAPT entries as having no recipe; run drift over
+the whole recipes directory.
+An assignment NAPT has no record of making is classified by evidence: one
+that matches a currently configured target is reported as <em>unrecorded</em> (a
+lost apply writeback, which a later apply converges, or an admin pre-empting
+configured policy), while one matching no configured target is reported as
+<em>unexpected</em> (typically admin-made).
+Drift is warned about and never corrected.
+Apply checks automatically; plan checks with <code>--check-drift</code> (which needs
+Graph credentials; without the flag, plan stays fully offline).</p>
+<p>Both commands also <strong>validate plan groups</strong>.
+Authenticated plan runs (<code>--check-drift</code> or <code>--reconcile</code>) resolve every
+group named in the computed plan and fail, writing no plan files, when one
+does not resolve, so a plan with a group typo never becomes a reviewable
+promotion PR.
+Apply preflights each app's actions the same way before executing any of
+them, so an unresolvable group fails that app with zero tenant mutations
+instead of stranding a half-applied plan; fix the configuration and re-plan.
+A dead group referenced only by stale or already-applied actions never
+blocks an app, so re-running after a partial failure stays safe.
+Offline plans skip validation (warning when they produce actions), and the
+apply preflight backstops whatever they produce.</p>
+<p>Both commands also recover <strong>lost publication writebacks</strong>: when an upload
+succeeded but the state commit recording it never landed (a CI push rejected
+by branch protection, a crashed runner), the tenant holds a fully published
+release that state still lists as pending.
+Recovery re-derives the published record from the same provenance-stamp
+evidence idempotent upload uses, and only when every entry of the release
+has committed content; a partially published release is warned about
+instead, since only a publish re-run can finish it.
+Apply reconciles automatically; plan reconciles with <code>--reconcile</code> (which
+needs Graph credentials and, unlike the rest of plan, writes deployment
+state).
+In <code>plan --reconcile</code>, reconciliation runs before planning, so a recovered
+release is promotable in the same run; in apply, the plan files were
+computed earlier, so a recovered release waits for the next plan run.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>napt<span class="w"> </span>promote<span class="w"> </span>plan<span class="w"> </span><span class="o">[</span>RECIPE_OR_DIR<span class="o">]</span><span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>napt<span class="w"> </span>promote<span class="w"> </span>plan<span class="w"> </span>--check-drift<span class="w"> </span>--reconcile
 </span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>napt<span class="w"> </span>promote<span class="w"> </span>apply<span class="w"> </span><span class="o">[</span>RECIPE_OR_DIR<span class="o">]</span><span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
@@ -3431,8 +3497,8 @@ writeback commits) see
 <a href="../common-tasks/#automate-napt-with-github-actions">Automate NAPT with GitHub Actions</a>.</p>
 <h3 id="napt-status">napt status</h3>
 <p>Shows deployment state across all apps: published version, pending
-release, and which version holds each ring. <code>--format json</code> for
-scripting.</p>
+release, and which version holds each ring.
+<code>--format json</code> for scripting.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>napt<span class="w"> </span>status<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </span></code></pre></div>
 <p>A pending release whose version is lower than the published one is marked
@@ -3450,10 +3516,9 @@ See <a href="#authentication">Authentication</a>.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>napt<span class="w"> </span>auth<span class="w"> </span>setup<span class="w"> </span>--tenant-id<span class="w"> </span>ID<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>napt<span class="w"> </span>auth<span class="w"> </span>login<span class="w"> </span><span class="o">[</span>--tenant-id<span class="w"> </span>ID<span class="o">]</span><span class="w"> </span><span class="o">[</span>--client-id<span class="w"> </span>ID<span class="o">]</span><span class="w"> </span><span class="o">[</span>--no-broker<span class="o">]</span>
 </span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>napt<span class="w"> </span>auth<span class="w"> </span>status
-</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>napt<span class="w"> </span>auth<span class="w"> </span><span class="nb">logout</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>napt<span class="w"> </span>auth<span class="w"> </span><span class="nb">logout</span><span class="w"> </span><span class="o">[</span>--all<span class="o">]</span>
 </span></code></pre></div>
 <h3 id="output-modes">Output modes</h3>
-<p>All commands support verbosity flags to control output detail:</p>
 <table>
 <thead>
 <tr>
@@ -3476,31 +3541,31 @@ See <a href="#authentication">Authentication</a>.</p>
 </tr>
 </tbody>
 </table>
-<p>Use <code>--verbose</code> for normal troubleshooting and <code>--debug</code> when you need to see exactly what NAPT is doing internally.</p>
+<p>Use <code>--verbose</code> for normal troubleshooting and <code>--debug</code> when you need to see
+exactly what NAPT is doing internally.</p>
 <h2 id="discovery-strategies">Discovery strategies</h2>
-<p>Discovery strategies determine how NAPT finds installers and extracts version info.</p>
 <h3 id="available-strategies">Available strategies</h3>
 <table>
 <thead>
 <tr>
 <th>Strategy</th>
-<th>Version Source</th>
-<th>Use Case</th>
+<th>Version source</th>
+<th>Use case</th>
 <th>How "unchanged" is detected</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><strong>api_github</strong></td>
-<td>Git tags</td>
+<td>Latest release tag</td>
 <td>GitHub-hosted releases</td>
-<td>Same tag as last run</td>
+<td>Same version as last run (and the file agreed)</td>
 </tr>
 <tr>
 <td><strong>api_json</strong></td>
 <td>JSON API</td>
 <td>REST APIs with metadata</td>
-<td>Same version field as last run</td>
+<td>Same version as last run (and the file agreed)</td>
 </tr>
 <tr>
 <td><strong>url_download</strong></td>
@@ -3512,22 +3577,22 @@ See <a href="#authentication">Authentication</a>.</p>
 <td><strong>web_scrape</strong></td>
 <td>Download page</td>
 <td>Vendors without APIs</td>
-<td>Same version on the page as last run</td>
+<td>Same version as last run (and the file agreed)</td>
 </tr>
 </tbody>
 </table>
 <blockquote>
-<p><strong>Note:</strong> For complete configuration examples and field documentation for each strategy, see <a href="../recipe-reference/">Recipe Reference</a>.</p>
+<p><strong>Note:</strong> For configuration examples and field documentation for each
+strategy, see <a href="../recipe-reference/">Recipe Reference</a>.</p>
 </blockquote>
 <h3 id="decision-guide">Decision guide</h3>
-<p>Use this flowchart to choose the right strategy:</p>
 <pre class="mermaid"><code>flowchart TD
     Start{JSON API for&lt;br/&gt;version/download?}
-    Start --&gt;|Yes| JSON[api_json&lt;br/&gt;Fast version checks]
+    Start --&gt;|Yes| JSON[api_json&lt;br/&gt;Version from the API]
     Start --&gt;|No| GitHub{Published via&lt;br/&gt;GitHub releases?}
-    GitHub --&gt;|Yes| GHRelease[api_github&lt;br/&gt;Reliable API, fast checks]
+    GitHub --&gt;|Yes| GHRelease[api_github&lt;br/&gt;Version from the release tag]
     GitHub --&gt;|No| DirectURL{Fixed/stable&lt;br/&gt;download URL?}
-    DirectURL --&gt;|Yes| Static[url_download&lt;br/&gt;Must download to check]
+    DirectURL --&gt;|Yes| Static[url_download&lt;br/&gt;Asks the server via ETag]
     DirectURL --&gt;|No| Scrape[web_scrape&lt;br/&gt;Scrape vendor page for link]</code></pre>
 <h2 id="recipe-basics">Recipe basics</h2>
 <p>A recipe is a YAML file that says how to discover, download, and package one
@@ -3536,24 +3601,36 @@ Intune settings.
 Every field is documented in the <a href="../recipe-reference/">Recipe Reference</a>;
 worked examples for each strategy are in <a href="../common-tasks/">Common Tasks</a>.</p>
 <h2 id="state-management-downloads">State management &amp; downloads</h2>
-<p>NAPT keeps its records in two places:</p>
+<p>NAPT keeps files in two places:</p>
 <ul>
-<li><strong>The downloads folder</strong> (<code>downloads/&lt;app_id&gt;/&lt;version&gt;/</code>) - The installers themselves.
-Disposable: deleting it costs one full re-download per app and nothing else.
-Safe to gitignore.</li>
-<li><strong>Deployment state</strong> (<code>state/deployment/&lt;app_id&gt;.json</code>) - Authoritative per-app records of what NAPT has published to Intune (<code>published</code>) and what is awaiting publication (<code>pending</code>).
-Not regenerable.
-Written deterministically (fixed reading-order keys, no timestamps), so unchanged state produces byte-identical files and clean diffs. Commit these files to version control if you want an auditable record or a PR-based review workflow.</li>
+<li><strong>The downloads folder</strong> (<code>downloads/&lt;app_id&gt;/&lt;version&gt;/</code>) - The installers
+  themselves.
+  Disposable: deleting it costs one full re-download per app, unless the
+  vendor no longer serves a pending release's installer (see
+  <a href="../common-tasks/#automate-napt-with-github-actions">Automate NAPT with GitHub Actions</a>
+  for why the installer cache steps matter).
+  Safe to gitignore.</li>
+<li><strong>Deployment state</strong> (<code>state/deployment/&lt;app_id&gt;.json</code>) - The authoritative
+  per-app record of what NAPT has published to Intune (<code>published</code>) and what
+  is awaiting publication (<code>pending</code>).
+  Not regenerable.
+  Written deterministically (fixed reading-order keys, no write-time
+  timestamps), so unchanged state produces byte-identical files and clean
+  diffs.
+  Commit these files to version control if you want an auditable record or a
+  PR-based review workflow.</li>
 </ul>
 <h3 id="skipping-downloads">Skipping downloads</h3>
-<p><code>napt discover</code> avoids downloading an installer it already has, which matters most for CI/CD running frequent scheduled checks.
-The downloads folder is the only thing it consults, so restoring that folder between runs (for example with <code>actions/cache</code>) is all a pipeline needs to do.</p>
+<p><code>napt discover</code> avoids downloading an installer it already has, which matters
+most for CI/CD running frequent scheduled checks.
+The downloads folder is the only thing it consults, so restoring that folder
+between runs (for example with <code>actions/cache</code>) is all a pipeline needs to do.</p>
 <p>How the check works depends on the discovery strategy:</p>
 <pre class="mermaid"><code>flowchart TD
     Start([napt discover]) --&gt; Strategy{Strategy Type?}
 
     Strategy --&gt;|Version-First&lt;br/&gt;api_github, api_json, web_scrape| CheckVersion[Check Version via API/Page]
-    Strategy --&gt;|File-First&lt;br/&gt;url_download| HaveFile{Last download&lt;br/&gt;still on disk?}
+    Strategy --&gt;|File-First&lt;br/&gt;url_download| HaveFile{Same URL, and file&lt;br/&gt;still on disk?}
 
     CheckVersion --&gt; SameVersion{Same version&lt;br/&gt;as last run?}
     SameVersion --&gt;|Yes, and it matched&lt;br/&gt;the file's version| Skip1([Skip download&lt;br/&gt;Use that file])
@@ -3566,70 +3643,134 @@ The downloads folder is the only thing it consults, so restoring that folder bet
     ETagResponse --&gt;|304 Not Modified| Skip2([Skip download&lt;br/&gt;Use that file])
     ETagResponse --&gt;|200 OK Changed| Download2
 
-    Download1 --&gt; ReadVersion[Read version&lt;br/&gt;from MSI or MSIX]
+    Download1 --&gt; ReadVersion[Read version&lt;br/&gt;MSI/MSIX: from the file&lt;br/&gt;EXE: reported]
     Download2 --&gt; ReadVersion
     ReadVersion --&gt; Pending[Record pending release]
     Skip1 --&gt; Pending
     Skip2 --&gt; Pending
     Pending --&gt; Ready([Ready for napt build])</code></pre>
-<p>Every download writes <code>downloads/&lt;app_id&gt;/.download.json</code>, which records what that run resolved: the version the strategy reported, the server's <code>ETag</code> and <code>Last-Modified</code>, and the installer's own version, filename, and hash.
-The file is a hint, not a record: if it is missing or unreadable, NAPT downloads the full file and writes a new one.</p>
-<p><strong>Version-first strategies</strong> (api_github, api_json, web_scrape) learn a version before downloading.
-When it is the same version the last run reported, the installer on disk is reused without a request.</p>
-<p><strong>url_download</strong> cannot know the version without the file, so it asks the server whether the file changed.
-The next run sends the recorded <code>ETag</code> and <code>Last-Modified</code> back as a conditional request; a <code>304 Not Modified</code> answer reuses the installer.
-The values are only sent while that installer is still on disk.</p>
+<p>Every download writes <code>downloads/&lt;app_id&gt;/.download.json</code>, which records what
+that run resolved: the URL, the version the strategy reported, the server's
+<code>ETag</code> and <code>Last-Modified</code>, and the installer's own version, filename, and
+hash.
+The file is a hint, not a record: if it is missing or unreadable, NAPT
+downloads the full file and writes a new one.</p>
+<p><strong>Version-first strategies</strong> (api_github, api_json, web_scrape) learn a
+version before downloading.
+When it is the same version the last run reported and the installer's own
+version agreed (see
+<a href="#the-installers-version-is-the-version">The installer's version is the version</a>),
+the installer on disk is reused without a request.</p>
+<p><strong>url_download</strong> cannot know the version without the file, so it asks the
+server whether the file changed.
+The next run sends the recorded <code>ETag</code> (or <code>Last-Modified</code> when there is
+none) back as a conditional request; a <code>304 Not Modified</code> answer reuses the
+installer.
+The values are only sent while the URL is unchanged and that installer is
+still on disk; a changed URL means a full download.</p>
 <h3 id="the-installers-version-is-the-version">The installer's version is the version</h3>
 <p>The version a page or API reports is only the trigger for a download.
-Once the file is on disk, an MSI or MSIX installer reports its own version, and that is what NAPT records: it names the download folder, becomes the pending release, and later names the build and package folders, fills <code>{{discovered_version}}</code>, and is the version the detection script compares against on a device.
-An EXE carries no readable version, so for it the reported version is used as is.</p>
-<p>When the two differ only in format (<code>4.41.106</code> against <code>4.41.106.0</code>), discover notes it in its log and treats them as the same version, because a device would too.</p>
-<p>A real disagreement (the page says 2.1, the file is 2.0) means the vendor is serving an older file than it advertises, or the recipe's <code>version_pattern</code> captured the wrong value.
+Once the file is on disk, an MSI or MSIX installer reports its own version,
+and that is what NAPT records: it names the download folder, becomes the
+pending release, and later names the build and package folders, fills
+<code>{{discovered_version}}</code>, and is the version the detection script compares
+against on a device.
+An EXE carries no readable version, so for it the reported version is used
+as is.</p>
+<p>When the two differ only in format (<code>4.41.106</code> against <code>4.41.106.0</code>),
+discover notes it in its log and treats them as the same version, because a
+device would too.</p>
+<p>A real disagreement (the page says 2.1, the file is 2.0) means the vendor is
+serving an older file than it advertises, or the recipe's <code>version_pattern</code>
+captured the wrong value.
 The recorded release is truthful either way: 2.0 is what gets recorded.
-Discover also stops trusting the page's version as proof that nothing changed, since it was already wrong about this file once.
-Every run logs a warning naming both values and asks the server whether the file changed, using the saved <code>ETag</code>; a <code>304 Not Modified</code> reuses the file, a <code>200</code> fetches whatever the server now serves.
-A server that sends no <code>ETag</code> or <code>Last-Modified</code> gets a full download each run instead.
-Once the page's version and the file's agree again, the request-free skip returns.
-If the warning never goes away, the recipe's <code>version_pattern</code> is the likely cause.</p>
-<p><strong>A version that goes down</strong> (a vendor pulling a release) is handled like any other change: the older version gets its own folder and its own download.
+Discover also stops trusting the page's version as proof that nothing
+changed, since it was already wrong about this file once.
+Every run logs a warning naming both values and asks the server whether the
+file changed, using the saved <code>ETag</code>; a <code>304 Not Modified</code> reuses the file, a
+<code>200</code> fetches whatever the server now serves.
+A server that sends no <code>ETag</code> or <code>Last-Modified</code> gets a full download each run
+instead.
+Once the page's version and the file's agree again, the request-free skip
+returns.
+If the warning never goes away, the recipe's <code>version_pattern</code> is the likely
+cause.</p>
+<p><strong>A version that goes down</strong> (a vendor pulling a release) is handled like any
+other change: the older version gets its own folder and its own download.
 NAPT never relabels an installer it already has.</p>
 <h3 id="downgrades">Downgrades</h3>
-<p>NAPT treats a release as new when its installer differs from the published one, whichever direction the version moved.
-When a vendor replaces <code>2.0.0</code> with <code>1.9.0</code>, <code>napt discover</code> records <code>1.9.0</code> as the pending release like any other, and nothing is published until you approve it.</p>
-<p>What NAPT adds is a label, so the decision is made knowingly:</p>
+<p>NAPT treats a release as new when its installer differs from the published
+one, whichever direction the version moved.
+When a vendor replaces <code>2.0.0</code> with <code>1.9.0</code>, <code>napt discover</code> records <code>1.9.0</code>
+as the pending release like any other, and nothing is published until you
+approve it.</p>
+<p>NAPT labels it:</p>
 <ul>
-<li><code>napt discover</code> logs a warning that the pending release is lower than the published one.</li>
-<li><code>napt status</code> marks the app <code>[DOWNGRADE]</code> (<code>"pending_is_downgrade": true</code> in JSON).</li>
-<li>The <a href="../common-tasks/#workflow-1-discover-opens-publish-prs">reference discover workflow</a> reads that field and opens the PR as <code>Publish &lt;Name&gt; 1.9.0 (downgrade from 2.0.0)</code> with a warning at the top of the body.</li>
+<li><code>napt discover</code> logs a warning that the pending release is lower than the
+  published one.</li>
+<li><code>napt status</code> marks the app <code>[DOWNGRADE]</code> (<code>"pending_is_downgrade": true</code>
+  in JSON).</li>
+<li>The
+  <a href="../common-tasks/#workflow-1-discover-opens-publish-prs">reference discover workflow</a>
+  reads that field and opens the PR as
+  <code>Publish &lt;Name&gt; 1.9.0 (downgrade from 2.0.0)</code> with a warning at the top of
+  the body.</li>
 </ul>
-<p>The label is worked out each time from the two versions in deployment state; it is not stored.</p>
-<p><strong>Publishing a downgrade does not roll devices back.</strong>
-Detection and requirements scripts treat "this version or higher" as installed, so a device already on <code>2.0.0</code> reports the app as installed and is left alone.
+<p>The label is worked out each time from the two versions in deployment state;
+it is not stored.</p>
+<p><strong>Publishing a downgrade does not roll devices back</strong> with the default
+<code>intune.detection.exact_match: false</code>.
+Detection and requirements scripts then treat "this version or higher" as
+installed, so a device already on <code>2.0.0</code> reports the app as installed and is
+left alone.
 Only new installs receive <code>1.9.0</code>.
-To move existing devices down, uninstall the newer version first.</p>
-<p><strong>How versions are ordered:</strong> NAPT uses the same comparison as the detection script on the device, so the label means "devices on the published version will not take this".
-Each <code>.</code> or <code>-</code> separated part contributes its leading digits, and a part with no leading digits counts as 0.
-A prerelease tag is therefore not ranked (<code>1.0-rc1</code> equals <code>1.0</code>), and a <code>v</code> prefix turns the first number into 0 (<code>v2.0</code> reads as <code>0.0</code>).
-Capture only the numeric version in the recipe's <code>version_pattern</code> to avoid both.</p>
+To move existing devices down, uninstall the newer version first.
+With <code>exact_match: true</code>, detection tests for the exact version, so a device
+on <code>2.0.0</code> reports <code>1.9.0</code> as not installed and a required install
+assignment installs <code>1.9.0</code> over it.</p>
+<p><strong>How versions are ordered:</strong> NAPT uses the same comparison as the detection
+script on the device, so the label means "devices on the published version
+will not take this".
+Each <code>.</code> or <code>-</code> separated part contributes its leading digits, and a part with
+no leading digits counts as 0.
+A prerelease tag is therefore not ranked (<code>1.0-rc1</code> equals <code>1.0</code>); capture
+only the numeric version in the recipe's <code>version_pattern</code>.
+A version must also start with a digit (see
+<a href="#discovery-process-napt-discover">Discovery process</a>).</p>
 <h3 id="deployment-state">Deployment state</h3>
-<p>Each app gets its own file, <code>state/deployment/&lt;app_id&gt;.json</code>, so concurrent changes to different apps never conflict and each file's diff is scoped to one app.
+<p>Each app gets its own file, <code>state/deployment/&lt;app_id&gt;.json</code>, so concurrent
+changes to different apps never conflict and each file's diff is scoped to
+one app.
 Every file carries a <code>schemaVersion</code> (currently 1); NAPT refuses files
 whose schemaVersion is missing or unsupported.
 A file names its app once at the top with <code>app_id</code> (which must match the
 filename; a copied or renamed file is rejected) and the recipe's display
 <code>name</code> (refreshed on every save), then holds five sections:</p>
 <ul>
-<li><code>published</code> - The release currently in Intune, with its SHA-256 hash and Intune app IDs. Null until the first upload. Publishing uploads the release without assigning it; <code>napt promote</code> deploys it through the rings afterwards.</li>
-<li><code>install_assigned</code> - The release the install entry is currently assigned to (the result of a promotion plan's <code>assign</code> action).</li>
-<li><code>pending</code> - The discovered release awaiting publication (version, download URL, SHA-256 hash). A single slot: a newer discovery replaces an unpublished candidate (newest wins), and discovering the already-published release clears it. Identity is the SHA-256 hash, so a vendor re-release of the same version with a different binary counts as new.</li>
-<li><code>rings</code> - Which version currently holds each deployment ring, with the timestamp it entered (written by <code>napt promote apply</code>).</li>
-<li><code>retained</code> - Displaced versions kept in Intune for rollback per <code>deployment.retain_versions</code> (written by <code>napt promote apply</code>).</li>
+<li><code>published</code> - The release currently in Intune, with its SHA-256 hash and
+  Intune app IDs.
+  Null until the first upload.
+  Publishing uploads the release without assigning it; <code>napt promote</code>
+  deploys it through the rings afterwards.</li>
+<li><code>install_assigned</code> - The release the install entry is currently assigned
+  to (the result of a promotion plan's <code>assign</code> action).</li>
+<li><code>pending</code> - The discovered release awaiting publication (version, download
+  URL, SHA-256 hash).
+  A single slot: a newer discovery replaces an unpublished candidate (newest
+  wins), and discovering the already-published release clears it.
+  Identity is the SHA-256 hash, so a vendor re-release of the same version
+  with a different binary counts as new.</li>
+<li><code>rings</code> - Which version currently holds each deployment ring, with the
+  timestamp it entered (written by <code>napt promote apply</code>).</li>
+<li><code>retained</code> - Displaced versions kept in Intune for rollback per
+  <code>deployment.retain_versions</code> (written by <code>napt promote apply</code>).</li>
 </ul>
 <p>Keys follow reading order (lifecycle order at the top level, <code>version</code>
 first and hashes last inside blocks) because these files are what a
-publish PR diff shows its reviewer.
-<code>napt discover</code> records the pending candidate.
-Later pipeline stages consume it.</p>
+publish PR diff shows its reviewer.</p>
+<p><code>napt discover --stateless</code> neither reads nor writes deployment state, so no
+pending release is recorded (useful for one-off checks); installers already
+in the downloads folder are still reused.</p>
 <h3 id="promotion-plan-files">Promotion plan files</h3>
 <p><code>napt promote plan</code> evaluates ring eligibility as a pure function of
 deployment state, configuration, and the clock, and writes the result as
@@ -3665,100 +3806,100 @@ timestamps) so the file diff reads on its own in review:</p>
 <p>An app's plan file exists exactly when that app has eligible actions: a
 plan run that finds nothing for an app removes its stale plan file.
 Each file's git status is therefore the per-app CI signal that a
-promotion review is needed; there are no special exit codes (<code>napt</code> always exits
-0 on success, 1 on error).
+promotion review is needed; there are no special exit codes (<code>napt</code> exits
+0 on success, 1 on error, and 2 on a usage error).
 Plan output is deterministic, so re-running plan against unchanged state
 produces byte-identical files.
 <code>napt promote apply</code> executes each plan as an allowlist (entries that no
 longer validate against current state are skipped, never improvised) and
 removes each file after its app applies fully.
-Given one recipe, it touches only that app's plan file.
-A hand-edited action that no longer has the shape shown above, or a
-file whose name and <code>app_id</code> disagree, is rejected with a message to
-re-run <code>napt promote plan</code>.
+Given one recipe, it consumes only that app's plan file.
+A plan file that is corrupt, carries an action that no longer has the shape
+shown above, or has a name that disagrees with its <code>app_id</code> is rejected, and
+the whole apply run stops before anything is applied.
+A reshaped or corrupt file's message says to re-run <code>napt promote plan</code>; a
+name mismatch says to fix whichever of the two is wrong.
 To hold one app's promotions during review, delete its plan file; the
 other apps' plans are unaffected, and the next plan run re-proposes
 whatever is still eligible.</p>
-<h3 id="default-behavior-stateful">Default behavior (stateful)</h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Deployment state tracking enabled by default</span>
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
-</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
-</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="c1"># Creates/updates: state/deployment/napt-chrome.json</span>
-</span></code></pre></div>
-<h3 id="stateless-mode">Stateless mode</h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Leave deployment state alone for one-off checks</span>
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span>--stateless
-</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
-</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c1"># Deployment state is neither read nor written, so no pending release is recorded</span>
-</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="c1"># Installers already in the downloads folder are still reused</span>
-</span></code></pre></div>
 <h2 id="configuration-layers">Configuration layers</h2>
 <p>NAPT layers configuration so you don't repeat settings across recipes.
 All defaults live in code; configuration files are optional layers on top.</p>
 <h3 id="how-configuration-works">How configuration works</h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>Code defaults (always complete)     &lt;- baseline, ships with napt
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>    |
-</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>./defaults/org.yaml                 &lt;- organization defaults (optional)
-</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>    |
-</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>./defaults/vendors/&lt;Vendor&gt;.yaml    &lt;- vendor defaults (optional)
-</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a>    |
-</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>parent recipe                       &lt;- named by the recipe's parent field (optional)
-</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a>    |
-</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a>recipe.yaml                         &lt;- the app itself, wins over everything
+<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>Code defaults (always complete)     &lt;- baseline, ships with napt
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>    |
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>defaults/org.yaml                   &lt;- organization defaults (optional; nearest
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>    |                                  one found walking up from the recipe)
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>defaults/vendors/&lt;Vendor&gt;.yaml      &lt;- vendor defaults (optional)
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>    |
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>parent recipe                       &lt;- named by the recipe's parent field (optional)
+</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>    |
+</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a>recipe.yaml                         &lt;- the app itself, wins over everything
 </span></code></pre></div>
-<p><strong>Key principles:</strong></p>
 <ul>
-<li>Code provides complete, working defaults for all settings</li>
-<li>Config files only set what you need to change</li>
-<li>Missing fields always fall back to code defaults</li>
-<li>Old configs never break when NAPT adds new features</li>
-<li>Any setting can be set at any layer: org, vendor, parent, or recipe</li>
+<li>Missing fields always fall back to code defaults.</li>
+<li>Any setting can be set at any layer: org, vendor, parent, or recipe.</li>
 <li>Dicts merge key by key; lists and scalars replace the value beneath them,
-  so a recipe that sets <code>deployment.rings</code> replaces the whole list</li>
+  so a recipe that sets <code>deployment.rings</code> replaces the whole list.</li>
 </ul>
 <h3 id="the-configuration-layers">The configuration layers</h3>
 <ol>
 <li>
-<p><strong>Organization defaults</strong> (<code>defaults/org.yaml</code>) - Base settings for all apps.
-Optional; only needed if you want to customize settings organization-wide.
-Contains PSADT settings, update policies, and build configuration.</p>
+<p><strong>Organization defaults</strong> (<code>defaults/org.yaml</code>) - Base settings for all
+   apps.
+   Optional; only needed if you want to customize settings organization-wide.
+   Contains PSADT, Intune, deployment, and directory settings.
+   NAPT finds the <code>defaults/</code> folder by walking up from the recipe's folder
+   to the nearest <code>defaults/org.yaml</code>.</p>
 </li>
 <li>
-<p><strong>Vendor defaults</strong> (<code>defaults/vendors/&lt;Vendor&gt;.yaml</code>) - Vendor-specific settings.
-Optional; only loaded if vendor is detected (e.g., Google-specific settings).</p>
+<p><strong>Vendor defaults</strong> (<code>defaults/vendors/&lt;Vendor&gt;.yaml</code>) - Vendor-specific
+   settings.
+   Optional; the vendor is the name of the recipe's parent directory.
+   Loaded only when <code>defaults/org.yaml</code> exists (it may contain just
+   <code>apiVersion: napt/v1</code>); without it, vendor files are silently ignored.</p>
 </li>
 <li>
-<p><strong>Parent recipe</strong> (the <code>parent</code> field) - Another recipe merged beneath this one.
-Optional; lets several recipes share a base without repeating it.
-A parent cannot declare its own parent.
-See <a href="../recipe-reference/#parent">parent</a> for the field and the file naming convention.</p>
+<p><strong>Parent recipe</strong> (the <code>parent</code> field) - Another recipe merged beneath this
+   one.
+   Optional; lets several recipes share a base without repeating it.
+   A parent cannot declare its own parent.
+   The parent lives outside <code>recipes/</code> (for example in <code>recipe-bases/</code>), and
+   each child sets its own <code>name</code> and <code>id</code> and replaces the app's plain
+   recipe; see
+   <a href="../common-tasks/#share-a-base-recipe-between-apps">Share a base recipe between apps</a>.
+   See <a href="../recipe-reference/#parent">parent</a> for the field and the file naming
+   convention.</p>
 </li>
 <li>
-<p><strong>Recipe configuration</strong> (<code>recipes/&lt;Vendor&gt;/&lt;app&gt;.yaml</code>) - App-specific settings.
-Always required; defines the specific app and wins over every other layer.</p>
+<p><strong>Recipe configuration</strong> (<code>recipes/&lt;Vendor&gt;/&lt;app&gt;.yaml</code>) - App-specific
+   settings.
+   Always required; defines the specific app and wins over every other layer.</p>
 </li>
 </ol>
 <h3 id="example">Example</h3>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1"># defaults/org.yaml</span>
-</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="nt">psadt</span><span class="p">:</span>
-</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">  </span><span class="nt">release</span><span class="p">:</span><span class="w"> </span><span class="s">"latest"</span>
-</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
-</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="w">    </span><span class="nt">AppVendor</span><span class="p">:</span><span class="w"> </span><span class="s">"Unknown"</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># defaults/org.yaml</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="nt">psadt</span><span class="p">:</span>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">  </span><span class="nt">release</span><span class="p">:</span><span class="w"> </span><span class="s">"latest"</span>
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="w">    </span><span class="nt">AppVendor</span><span class="p">:</span><span class="w"> </span><span class="s">"Unknown"</span>
 </span></code></pre></div>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c1"># defaults/vendors/Google.yaml</span>
-</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="nt">psadt</span><span class="p">:</span>
-</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
-</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="w">    </span><span class="nt">AppVendor</span><span class="p">:</span><span class="w"> </span><span class="s">"Google</span><span class="nv"> </span><span class="s">LLC"</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1"># defaults/vendors/Google.yaml</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="nt">psadt</span><span class="p">:</span>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">    </span><span class="nt">AppVendor</span><span class="p">:</span><span class="w"> </span><span class="s">"Google</span><span class="nv"> </span><span class="s">LLC"</span>
 </span></code></pre></div>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># recipes/Google/chrome.yaml</span>
-</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"Google</span><span class="nv"> </span><span class="s">Chrome"</span>
-</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">"napt-chrome"</span>
-</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="nt">discovery</span><span class="p">:</span>
-</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">url_download</span>
-</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a><span class="w">  </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">"https://dl.google.com/..."</span>
-</span><span id="__span-24-7"><a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a><span class="nt">psadt</span><span class="p">:</span>
-</span><span id="__span-24-8"><a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a><span class="w">  </span><span class="nt">release</span><span class="p">:</span><span class="w"> </span><span class="s">"4.1.7"</span><span class="w">   </span><span class="c1"># overrides org default of "latest" for this recipe only</span>
-</span><span id="__span-24-9"><a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a><span class="c1"># AppVendor will be "Google LLC" (from vendor defaults)</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1"># recipes/Google/chrome.yaml</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"Google</span><span class="nv"> </span><span class="s">Chrome"</span>
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">"napt-chrome"</span>
+</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="nt">discovery</span><span class="p">:</span>
+</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">url_download</span>
+</span><span id="__span-22-7"><a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a><span class="w">  </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">"https://dl.google.com/..."</span>
+</span><span id="__span-22-8"><a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a><span class="nt">psadt</span><span class="p">:</span>
+</span><span id="__span-22-9"><a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a><span class="w">  </span><span class="nt">release</span><span class="p">:</span><span class="w"> </span><span class="s">"4.1.7"</span><span class="w">   </span><span class="c1"># overrides org default of "latest" for this recipe only</span>
+</span><span id="__span-22-10"><a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a><span class="c1"># AppVendor will be "Google LLC" (from vendor defaults)</span>
 </span></code></pre></div>
 <h3 id="directory-flag-defaults">Directory flag defaults</h3>
 <p>All directory flags follow the same pattern: CLI flag overrides config;
@@ -3839,8 +3980,17 @@ to its own:</p>
 <td><code>directories.package</code></td>
 <td><code>packages</code></td>
 </tr>
+<tr>
+<td><code>napt upload</code></td>
+<td>(none)</td>
+<td>Reads the package, state, and icons from config</td>
+<td><code>directories.package</code>, <code>directories.state</code>, <code>directories.icons</code></td>
+<td><code>packages</code>, <code>state</code>, <code>icons</code></td>
+</tr>
 </tbody>
 </table>
+<p>Upload has no directory flags, so when you upload, set directory overrides in
+config rather than per run.</p>
 <p>Input and output share a config key across adjacent commands:
 <code>discover --output-dir</code> and <code>build --downloads-dir</code> both read from
 <code>directories.discover</code>, so the output of one is automatically
@@ -3849,25 +3999,25 @@ the input of the next without extra configuration.</p>
 <code>icons</code>) holds app icons written by <code>napt build</code> and read by <code>napt upload</code>.
 See <a href="#app-icons">App icons</a>.</p>
 <p>To change the defaults org-wide, add to <code>defaults/org.yaml</code>:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="nt">directories</span><span class="p">:</span>
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="w">  </span><span class="nt">discover</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/downloads"</span><span class="w">  </span><span class="c1"># used by both discover and build</span>
-</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="w">  </span><span class="nt">build</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/builds"</span><span class="w">        </span><span class="c1"># used by both build and package</span>
-</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="w">  </span><span class="nt">package</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/packages"</span>
-</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a><span class="w">  </span><span class="nt">icons</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/icons"</span><span class="w">         </span><span class="c1"># written by build, read by upload</span>
-</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a><span class="w">  </span><span class="nt">state</span><span class="p">:</span><span class="w"> </span><span class="s">"deployment-state"</span><span class="w">        </span><span class="c1"># per-app deployment state (authoritative)</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="nt">directories</span><span class="p">:</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">  </span><span class="nt">discover</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/downloads"</span><span class="w">  </span><span class="c1"># used by both discover and build</span>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="w">  </span><span class="nt">build</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/builds"</span><span class="w">        </span><span class="c1"># used by both build and package</span>
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="w">  </span><span class="nt">package</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/packages"</span>
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="w">  </span><span class="nt">icons</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/icons"</span><span class="w">         </span><span class="c1"># written by build, read by upload</span>
+</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a><span class="w">  </span><span class="nt">state</span><span class="p">:</span><span class="w"> </span><span class="s">"deployment-state"</span><span class="w">        </span><span class="c1"># napt status then needs --state-dir deployment-state</span>
 </span></code></pre></div>
-<p>Any CLI flag still overrides the config value for that single run:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="c1"># Uses config default (or built-in if not configured)</span>
-</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
-</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>
-</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="c1"># Overrides for this run only</span>
-</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span>--output-dir<span class="w"> </span>/tmp/downloads
-</span><span id="__span-26-6"><a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span>--downloads-dir<span class="w"> </span>/tmp/downloads
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># Uses config default (or built-in if not configured)</span>
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>
+</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="c1"># Overrides for this run only</span>
+</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span>--output-dir<span class="w"> </span>/tmp/downloads
+</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span>--downloads-dir<span class="w"> </span>/tmp/downloads
 </span></code></pre></div>
 <p>To pin the <code>IntuneWinAppUtil.exe</code> release <code>napt package</code> uses, see
 <a href="../recipe-reference/#intunewinapputil-configuration"><code>intunewin.release</code></a>.</p>
 <h2 id="cross-platform-support">Cross-platform support</h2>
-<p><strong>NAPT is a Windows tool</strong> for Microsoft Intune packaging. Develop on any platform, package on Windows.</p>
+<p><strong>NAPT is a Windows tool</strong> for Microsoft Intune packaging.
+Develop on any platform, package on Windows.</p>
 <h3 id="platform-compatibility-matrix">Platform compatibility matrix</h3>
 <table>
 <thead>
@@ -3881,45 +4031,49 @@ See <a href="#app-icons">App icons</a>.</p>
 <tbody>
 <tr>
 <td><strong>Windows</strong></td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
 </tr>
 <tr>
 <td><strong>Linux</strong></td>
-<td>✅</td>
-<td>✅</td>
-<td>⚫ Windows Only</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No (Windows only)</td>
 </tr>
 <tr>
 <td><strong>macOS</strong></td>
-<td>✅</td>
-<td>✅</td>
-<td>⚫ Windows Only</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No (Windows only)</td>
 </tr>
 </tbody>
 </table>
 <h3 id="why-windows-for-packaging">Why Windows for packaging?</h3>
-<p>The <code>napt package</code> command uses Microsoft's <a href="https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool">IntuneWinAppUtil.exe</a>, which is a Windows-only .NET application. This is the official tool for creating .intunewin packages.</p>
+<p>The <code>napt package</code> command uses Microsoft's
+<a href="https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool">IntuneWinAppUtil.exe</a>,
+which is a Windows-only .NET application.</p>
 <h3 id="mixed-platform-workflow">Mixed platform workflow</h3>
-<p>Running everything on Windows is the simple case. To develop on Linux or
-macOS and package on Windows:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="c1"># On Linux/macOS: Discovery and build</span>
-</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
-</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
-</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a>
-</span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a><span class="c1"># Transfer build directory to Windows (e.g., via shared storage)</span>
-</span><span id="__span-27-6"><a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a><span class="c1"># On Windows: Package</span>
-</span><span id="__span-27-7"><a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a>napt<span class="w"> </span>package<span class="w"> </span>recipes/Google/chrome.yaml
+<p>To develop on Linux or macOS and package on Windows:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="c1"># On Linux/macOS: Discovery and build</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
+</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>
+</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a><span class="c1"># Transfer build directory to Windows (e.g., via shared storage)</span>
+</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a><span class="c1"># On Windows: Package</span>
+</span><span id="__span-25-7"><a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a>napt<span class="w"> </span>package<span class="w"> </span>recipes/Google/chrome.yaml
 </span></code></pre></div>
 <h2 id="best-practices">Best practices</h2>
 <h3 id="recipe-organization">Recipe organization</h3>
-<p>Organize recipes by vendor: <code>recipes/&lt;Vendor&gt;/&lt;app&gt;.yaml</code>. NAPT detects the vendor from the recipe's parent directory name (falling back to <code>psadt.app_vars.AppVendor</code>) and loads <code>defaults/vendors/&lt;Vendor&gt;.yaml</code> if it exists.</p>
+<p>Organize recipes by vendor: <code>recipes/&lt;Vendor&gt;/&lt;app&gt;.yaml</code>.
+NAPT detects the vendor from the recipe's parent directory name and loads
+<code>defaults/vendors/&lt;Vendor&gt;.yaml</code> if it exists, provided <code>defaults/org.yaml</code>
+exists too (see <a href="#the-configuration-layers">The configuration layers</a>).</p>
 <h3 id="scripting">Scripting</h3>
-<p>All commands return standard exit codes (<code>0</code> = success, <code>1</code> = error), making them easy to use in automation scripts:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="k">if</span><span class="w"> </span>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a><span class="w">    </span>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
-</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a><span class="k">fi</span>
+<p>Commands exit 0 on success, 1 on error, and 2 on a usage error:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="k">if</span><span class="w"> </span>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="w">    </span>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
+</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="k">fi</span>
 </span></code></pre></div>
 <h2 id="troubleshooting">Troubleshooting</h2>
 <p>For discovery failures (unknown strategy, version extraction, rate limits,

@@ -1962,12 +1962,12 @@ every save) and holds five sections:</p>
 <ul>
 <li><code>published</code>: The release currently in Intune, with its SHA-256 hash
     and Intune app IDs. Null until the first upload. Publishing uploads
-    the release without assigning it — <code>napt promote</code> deploys it
+    the release without assigning it; <code>napt promote</code> deploys it
     through the rings afterwards.</li>
 <li><code>install_assigned</code>: The release the install entry is currently
     assigned to (the result of a <code>promote</code> plan's <code>assign</code> action).</li>
 <li><code>pending</code>: The discovered release awaiting publication, with version,
-    download URL, and SHA-256 hash. A single slot — a newer discovery
+    download URL, and SHA-256 hash. A single slot: a newer discovery
     replaces an unpublished candidate (newest wins). Null when nothing is
     awaiting publication.</li>
 <li><code>rings</code>: Which version currently holds each deployment ring. Written
@@ -1977,8 +1977,8 @@ every save) and holds five sections:</p>
 <p>Serialization is deterministic (fixed reading-order keys, fixed
 indentation, no timestamps), so re-running a command that produces no
 logical change produces a byte-identical file and a clean git diff.
-Keys follow reading order — lifecycle order at the top level, <code>version</code>
-first and hashes last inside blocks — because these files are what a
+Keys follow reading order (lifecycle order at the top level, <code>version</code>
+first and hashes last inside blocks) because these files are what a
 publish PR diff shows its reviewer.</p>
 
 
@@ -2135,7 +2135,7 @@ publish PR diff shows its reviewer.</p>
     <div class="doc doc-contents ">
 
         <p>Creates an empty deployment state structure.</p>
-<p>The identity fields (<code>app_id</code>, <code>name</code>) are stamped at save time —
+<p>The identity fields (<code>app_id</code>, <code>name</code>) are stamped at save time:
 <code>app_id</code> from the filename, <code>name</code> by whichever writer holds the
 recipe configuration.</p>
 
@@ -2196,7 +2196,7 @@ recipe configuration.</p>
 <span class="normal"><a href="#__codelineno-0-133">133</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-115"><a id="__codelineno-0-115" name="__codelineno-0-115"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_default_deployment_state</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
 </span><span id="__span-0-116"><a id="__codelineno-0-116" name="__codelineno-0-116"></a><span class="w">    </span><span class="sd">"""Creates an empty deployment state structure.</span>
 </span><span id="__span-0-117"><a id="__codelineno-0-117" name="__codelineno-0-117"></a>
-</span><span id="__span-0-118"><a id="__codelineno-0-118" name="__codelineno-0-118"></a><span class="sd">    The identity fields (``app_id``, ``name``) are stamped at save time —</span>
+</span><span id="__span-0-118"><a id="__codelineno-0-118" name="__codelineno-0-118"></a><span class="sd">    The identity fields (``app_id``, ``name``) are stamped at save time:</span>
 </span><span id="__span-0-119"><a id="__codelineno-0-119" name="__codelineno-0-119"></a><span class="sd">    ``app_id`` from the filename, ``name`` by whichever writer holds the</span>
 </span><span id="__span-0-120"><a id="__codelineno-0-120" name="__codelineno-0-120"></a><span class="sd">    recipe configuration.</span>
 </span><span id="__span-0-121"><a id="__codelineno-0-121" name="__codelineno-0-121"></a>
@@ -2233,7 +2233,7 @@ recipe configuration.</p>
 
         <p>Loads deployment state for one app.</p>
 <p>Returns a default empty structure when the file does not exist. Does
-not create the file — deployment state is only written when there is
+not create the file; deployment state is only written when there is
 something to record.</p>
 
 
@@ -2373,7 +2373,7 @@ replaced.</p>
 </span><span id="__span-0-137"><a id="__codelineno-0-137" name="__codelineno-0-137"></a><span class="w">    </span><span class="sd">"""Loads deployment state for one app.</span>
 </span><span id="__span-0-138"><a id="__codelineno-0-138" name="__codelineno-0-138"></a>
 </span><span id="__span-0-139"><a id="__codelineno-0-139" name="__codelineno-0-139"></a><span class="sd">    Returns a default empty structure when the file does not exist. Does</span>
-</span><span id="__span-0-140"><a id="__codelineno-0-140" name="__codelineno-0-140"></a><span class="sd">    not create the file — deployment state is only written when there is</span>
+</span><span id="__span-0-140"><a id="__codelineno-0-140" name="__codelineno-0-140"></a><span class="sd">    not create the file; deployment state is only written when there is</span>
 </span><span id="__span-0-141"><a id="__codelineno-0-141" name="__codelineno-0-141"></a><span class="sd">    something to record.</span>
 </span><span id="__span-0-142"><a id="__codelineno-0-142" name="__codelineno-0-142"></a>
 </span><span id="__span-0-143"><a id="__codelineno-0-143" name="__codelineno-0-143"></a><span class="sd">    Args:</span>

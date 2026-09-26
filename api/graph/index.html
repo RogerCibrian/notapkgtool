@@ -2132,8 +2132,8 @@ function through which Intune app management, assignment, and app
 registration calls reach Graph, along with the header builders callers
 pass to it. Endpoint-specific wrappers live in
 <a class="autorefs autorefs-internal" title="            napt.graph.intune" href="#napt.graph.intune">napt.graph.intune</a> and <a class="autorefs autorefs-internal" title="            napt.auth.registration" href="../auth/#napt.auth.registration">napt.auth.registration</a>.</p>
-<p>Graph calls retry transient failures -- HTTP 429 (honoring Retry-After),
-transient server errors, and connection drops -- with bounded exponential
+<p>Graph calls retry transient failures (HTTP 429 honoring Retry-After,
+transient server errors, and connection drops) with bounded exponential
 backoff before raising. Resource-creating POSTs retry only unambiguous
 throttling responses, so a lost reply to a processed create is never
 resubmitted as a duplicate.</p>
@@ -2389,7 +2389,7 @@ resubmitted as a duplicate.</p>
 retry with exponential backoff, as do connection-level failures.
 Non-idempotent calls (resource-creating POSTs) retry only statuses
 that guarantee the request was shed before processing, and never
-connection failures — a lost reply to a processed create must not
+connection failures: a lost reply to a processed create must not
 be resubmitted. Every other response is checked immediately, so
 permission and validation errors surface without retrying. The last
 attempt's failure is raised with full response detail. Each request
@@ -2737,7 +2737,7 @@ exhausted, or on a connection failure.</p>
 </span><span id="__span-0-171"><a id="__codelineno-0-171" name="__codelineno-0-171"></a><span class="sd">    retry with exponential backoff, as do connection-level failures.</span>
 </span><span id="__span-0-172"><a id="__codelineno-0-172" name="__codelineno-0-172"></a><span class="sd">    Non-idempotent calls (resource-creating POSTs) retry only statuses</span>
 </span><span id="__span-0-173"><a id="__codelineno-0-173" name="__codelineno-0-173"></a><span class="sd">    that guarantee the request was shed before processing, and never</span>
-</span><span id="__span-0-174"><a id="__codelineno-0-174" name="__codelineno-0-174"></a><span class="sd">    connection failures — a lost reply to a processed create must not</span>
+</span><span id="__span-0-174"><a id="__codelineno-0-174" name="__codelineno-0-174"></a><span class="sd">    connection failures: a lost reply to a processed create must not</span>
 </span><span id="__span-0-175"><a id="__codelineno-0-175" name="__codelineno-0-175"></a><span class="sd">    be resubmitted. Every other response is checked immediately, so</span>
 </span><span id="__span-0-176"><a id="__codelineno-0-176" name="__codelineno-0-176"></a><span class="sd">    permission and validation errors surface without retrying. The last</span>
 </span><span id="__span-0-177"><a id="__codelineno-0-177" name="__codelineno-0-177"></a><span class="sd">    attempt's failure is raised with full response detail. Each request</span>
@@ -2787,7 +2787,7 @@ exhausted, or on a connection failure.</p>
 </span><span id="__span-0-221"><a id="__codelineno-0-221" name="__codelineno-0-221"></a>            <span class="k">if</span> <span class="ow">not</span> <span class="n">idempotent</span><span class="p">:</span>
 </span><span id="__span-0-222"><a id="__codelineno-0-222" name="__codelineno-0-222"></a>                <span class="c1"># The request may have been processed before the</span>
 </span><span id="__span-0-223"><a id="__codelineno-0-223" name="__codelineno-0-223"></a>                <span class="c1"># connection died; resubmitting could duplicate the</span>
-</span><span id="__span-0-224"><a id="__codelineno-0-224" name="__codelineno-0-224"></a>                <span class="c1"># resource. Surface it — re-running converges through</span>
+</span><span id="__span-0-224"><a id="__codelineno-0-224" name="__codelineno-0-224"></a>                <span class="c1"># resource. Surface it; re-running converges through</span>
 </span><span id="__span-0-225"><a id="__codelineno-0-225" name="__codelineno-0-225"></a>                <span class="c1"># the flow-level stamp adoption.</span>
 </span><span id="__span-0-226"><a id="__codelineno-0-226" name="__codelineno-0-226"></a>                <span class="k">raise</span> <span class="n">NetworkError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">context</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
 </span><span id="__span-0-227"><a id="__codelineno-0-227" name="__codelineno-0-227"></a>            <span class="n">err</span> <span class="o">=</span> <span class="n">exc</span>
