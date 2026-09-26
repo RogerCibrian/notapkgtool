@@ -174,9 +174,11 @@ Status:          success
 
 Re-running `napt discover` skips the download when nothing changed; the fetch
 step reports `[DISCOVERY] File not modified` instead.
-Add `--stateless` to leave deployment state alone (no pending release is
-recorded), or `--output-dir <dir>` to download somewhere other than
-`downloads/`.
+Add `--stateless` to skip recording the pending release; the download and
+reuse logic is unchanged.
+`--output-dir <dir>` downloads somewhere other than `downloads/`.
+To force a download, see
+[Discover reuses an installer you want downloaded again](common-tasks.md#issue-discover-reuses-an-installer-you-want-downloaded-again).
 
 ### 4. Build the PSADT package
 
