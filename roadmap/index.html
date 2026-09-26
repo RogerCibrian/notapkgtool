@@ -1799,23 +1799,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Recently completed">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#napt-auth-setup-command" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        napt auth setup command
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
     </ul>
@@ -2130,23 +2113,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Recently completed">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#napt-auth-setup-command" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        napt auth setup command
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
     </ul>
@@ -2193,13 +2159,6 @@
 </tr>
 </thead>
 <tbody>
-<tr>
-<td><code>napt auth setup</code> Command</td>
-<td>✅ Completed</td>
-<td>User-Facing</td>
-<td>Medium</td>
-<td>High</td>
-</tr>
 <tr>
 <td>Pre/Post Install/Uninstall Script Support</td>
 <td>💡 Idea</td>
@@ -2281,9 +2240,9 @@
 </table>
 <p><strong>Summary:</strong></p>
 <ul>
-<li>✅ <strong>Completed</strong> (since the last release): 1</li>
+<li>✅ <strong>Completed</strong> (since the last release): 0</li>
 <li>💡 <strong>Ideas</strong>: 11</li>
-<li><strong>Total</strong>: 12 features</li>
+<li><strong>Total</strong>: 11 features</li>
 </ul>
 <hr />
 <h2 id="active-work">Active work</h2>
@@ -2486,28 +2445,7 @@ signing)</p>
 <h2 id="declined-wont-implement">Declined / won't implement</h2>
 <hr />
 <h2 id="recently-completed">Recently completed</h2>
-<h4 id="napt-auth-setup-command"><code>napt auth setup</code> command</h4>
-<p><strong>Status</strong>: ✅ Completed
-<strong>Complexity</strong>: Medium
-<strong>Value</strong>: High</p>
-<p><strong>Description</strong>: <code>napt auth setup --tenant-id &lt;id&gt;</code> creates the NAPT app
-registration in Microsoft Entra ID directly through Microsoft Graph (no
-Azure CLI dependency), or brings an existing one up to spec: redirect URIs,
-application and delegated Graph permissions, service principal, and admin
-consent.
-Shipped alongside <code>napt auth login</code>, <code>status</code>, and <code>logout</code>.</p>
-<p><strong>Notes</strong>:</p>
-<ul>
-<li>Re-running is safe: compares the registration with what the installed
-  NAPT version needs and adds only what is missing, never removing anything</li>
-<li><code>--federated-issuer</code> / <code>--federated-subject</code> add a federated credential
-  so CI/CD can authenticate through OIDC without a client secret</li>
-<li>Registrations are stamped with a provenance note; an unstamped name
-  match is left untouched unless <code>--adopt</code> is given</li>
-<li><code>--print-only</code> prints the equivalent portal checklist for tenants where
-  the automated path is not allowed</li>
-</ul>
-<p><strong>Related</strong>: See <a href="../user-guide/#app-registration-setup">User Guide - App Registration Setup</a>.</p>
+<p><em>Nothing since the last release.</em></p>
 <hr />
 <p>Everything shipped in earlier releases is in the <a href="../changelog/">changelog</a>.</p>
 
