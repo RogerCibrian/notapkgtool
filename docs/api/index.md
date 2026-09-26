@@ -128,15 +128,3 @@ Recipe YAML
 - **Return types:** Frozen dataclasses from `results.py`, one per napt
   command's underlying operation
 
-## Common contributor tasks
-
-- **New discovery strategy:** Implement `DiscoveryStrategy` in a new module
-  under `discovery/`, then add it to the table in `discovery/registry.py`
-- **New CLI command:** Create `napt/cli/<command>.py` with the `cmd_<name>()`
-  handler and a `register(subparsers)` hook, call `register` from `main()` in
-  `napt/cli/main.py`, and add `tests/cli/test_<command>.py` (strict one module
-  per command)
-- **New recipe field:** Run `/add-recipe-field <name>`.
-  Defaults go in `config/defaults.py`, checks in `validation.py`, and the
-  definition in [Recipe reference](../recipe-reference.md).
-
