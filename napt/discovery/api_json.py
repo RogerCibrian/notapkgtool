@@ -26,39 +26,20 @@ Recipe Example:
       download_url_path: "download_url"                 # required, JSONPath
       version_pattern: "v?([0-9.]+)"                    # optional, regex
       headers:                                          # optional
-        Authorization: "Bearer ${API_TOKEN}"
+        Authorization: "${API_AUTH_HEADER}"             # "Bearer <token>"
         Accept: "application/json"
     ```
 
-    Nested response, with auth header:
-    ```yaml
-    discovery:
-      strategy: api_json
-      api_url: "https://vendor.example.com/api/releases"
-      version_path: "stable.version"
-      download_url_path: "stable.platforms.windows.x64"
-      headers:
-        Authorization: "Bearer ${API_TOKEN}"
-    ```
-
-Configuration Fields:
-    - **api_url** (required): JSON endpoint URL.
-    - **version_path** (required): JSONPath expression locating the
-        version string in the response (e.g. ``"version"``,
-        ``"release.version"``).
-    - **download_url_path** (required): JSONPath expression locating
-        the installer download URL in the response.
-    - **version_pattern** (optional): Regex applied to the value found
-        at ``version_path``. Uses capture group 1 if present, otherwise
-        the full match. Without it the value is used as is; add it when
-        the API wraps the version in a prefix or suffix (``"v2.0"``,
-        ``"2.0 (stable)"``).
-    - **headers** (optional): HTTP headers to send. Values support
-        ``${ENV_VAR}`` expansion.
+The [recipe reference](../recipe-reference.md#api_json-strategy) defines
+each field.
 
 Note:
-    JSONPath uses the ``jsonpath-ng`` library. Environment-variable
-    expansion (``${VAR}``) is applied to string values in ``headers``.
+    JSONPath uses the ``jsonpath-ng`` library. A header value that is exactly
+    ``${VAR}`` is replaced with that environment variable; when the variable
+    is unset, the header is dropped and a verbose log line says so. Text
+    around a ``${VAR}`` is not substituted, so a bearer token goes in the
+    variable as the whole value (``API_AUTH_HEADER`` holding
+    ``Bearer <token>``).
 
 """
 

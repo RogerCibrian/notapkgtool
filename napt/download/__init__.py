@@ -14,8 +14,8 @@
 
 """Download operations for NAPT.
 
-Provides robust HTTP(S) file download with conditional requests, retry logic,
-atomic writes, and integrity verification.
+Provides HTTP(S) file download with conditional requests, retries, atomic
+writes, and SHA-256 verification.
 
 Modules:
     download - HTTP downloads with ETag support (download_file, make_session).

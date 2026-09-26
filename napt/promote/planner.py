@@ -15,35 +15,36 @@
 """Promotion planning for NAPT deployment rings.
 
 Computes promotion actions as a pure function of (deployment state,
-configuration, clock) — no Graph calls, no side effects beyond the plan
+configuration, clock): no Graph calls, no side effects beyond the plan
 file. Re-running plan against unchanged inputs produces byte-identical
 output, so committed plan files diff cleanly and CI can use the plan
 file's change status to decide whether to open a review.
 
 Two action types are planned per app, one per Intune entry:
 
-- ``assign``: Point new installs at the published release — assign its
+- ``assign``: Point new installs at the published release: assign its
     install entry to the configured ``deployment.install`` groups,
     displacing the previous release's install assignment.
-- ``promote``: Move the published release one ring forward — assign its
+- ``promote``: Move the published release one ring forward: assign its
     update entry to the target ring's groups. ``from_ring: null`` marks
     a first rollout (the release enters the first ring); otherwise the
     release has held ``from_ring`` for at least that ring's
     ``promote_after_days``.
 
 Every action carries a plain-English ``summary`` sentence plus the
-reviewer context behind it — the entry it touches, the version it
-``displaces``, and bake timestamps — so a committed plan file reads on
+reviewer context behind it (the entry it touches, the version it
+``displaces``, and bake timestamps), so a committed plan file reads on
 its own in review.
 
-A ring without ``promote_after_days`` never advances automatically —
+A ring without ``promote_after_days`` never advances automatically:
 releases hold it until the configuration changes (the natural terminal
 ring, or a deliberate manual gate).
 
 Plans are written per app (default ``state/plans/<app_id>.json``), and
 an app's plan file exists exactly when that app has eligible actions; a
 stale plan file is removed when a plan run finds none for its app. Exit
-codes follow NAPT's uniform contract (0 success, 1 error) — CI detects
+codes follow NAPT's uniform contract (0 success, 1 error, 2 usage error);
+CI detects
 pending work from the plan files' git status, not from exit codes.
 """
 
@@ -144,7 +145,7 @@ def _plan_app_actions(
     Besides the fields apply keys on (app id, sha256, ring), every
     action carries reviewer context: a plain-English ``summary``
     sentence, the Intune ``entry`` it touches, the version it
-    ``displaces``, and — for a promotion out of a held ring — when the
+    ``displaces``, and (for a promotion out of a held ring) when the
     release entered that ring and the ring's bake threshold. Only
     values stable across runs are included (never clock-derived ones),
     preserving byte-identical plans for unchanged inputs.
@@ -352,7 +353,7 @@ def load_recipe_configs(recipes: Path) -> dict[str, dict[str, Any]]:
 def resolve_state_dir(recipes: Path) -> Path:
     """Resolves the configured state directory for a plan run.
 
-    ``directories.state`` is org policy — consistent across a project —
+    ``directories.state`` is org policy (consistent across a project),
     so the first recipe's effective configuration determines it for a
     fleet-wide run.
 
@@ -436,13 +437,13 @@ def write_plan_files(
     An app's plan file exists exactly when that app has planned actions,
     so each file's git status is the per-app signal that a promotion
     review is needed. Only apps covered by this run (``app_ids``) are
-    written or cleaned up — plan files for apps outside the run are left
+    written or cleaned up; plan files for apps outside the run are left
     untouched, so planning a single recipe never clobbers the rest of
     the fleet's plans.
 
     The app's id and display name are written once at the file's top
     level rather than repeated per action; promote apply re-injects them
-    when it loads the file. Output is deterministic — a fixed key order
+    when it loads the file. Output is deterministic: a fixed key order
     (reading order, ``summary`` first, not alphabetical), fixed
     indentation, no clock-derived values.
 

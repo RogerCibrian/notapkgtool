@@ -42,6 +42,9 @@ Recipe Example:
       url: "https://vendor.example.com/installer.msi"
     ```
 
+The [recipe reference](../recipe-reference.md#url_download-strategy) defines
+each field.
+
 """
 
 from __future__ import annotations

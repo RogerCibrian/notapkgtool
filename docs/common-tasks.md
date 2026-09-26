@@ -1,8 +1,10 @@
 # Common tasks
 
-Step-by-step guides you can copy and adapt.
+Copy-paste workflows.
+For how each step works, see the [user guide](user-guide.md).
 
-> **Tip:** Run `napt <command> --help` for options and examples, e.g. `napt discover --help`.
+> **Tip:** Run `napt <command> --help` for options and examples.
+> For example, `napt discover --help`.
 
 ## Initialize a new NAPT project
 
@@ -54,9 +56,13 @@ my-intune-packages/
     └── deployment/           # Per-app deployment state (written by discover, upload, promote)
 ```
 
+`napt init` creates no `.gitignore`.
+Add the folders NAPT writes on each machine to your own: `downloads/`,
+`builds/`, `packages/`, `icons/`, and `cache/`.
+
 ### Handling existing files
 
-NAPT safely skips existing files by default:
+`napt init` skips files that already exist:
 
 ```console
 $ napt init
@@ -171,7 +177,7 @@ psadt:
     AppName: "Git for Windows"
     AppVersion: "{{discovered_version}}"
   install: |
-    Start-ADTProcess -FilePath "Git-{{discovered_version}}-64-bit.exe" -ArgumentList "/VERYSILENT /NORESTART"
+    Start-ADTProcess -FilePath "{{installer_filename}}" -ArgumentList "/VERYSILENT /NORESTART"
   uninstall: |
     Uninstall-ADTApplication -Name "Git"
 ```
@@ -196,7 +202,8 @@ napt discover recipes/Git/git.yaml --verbose
 
 ## Create a recipe for a vendor download page
 
-Use this when the vendor has a download page listing installers (no API available).
+Use this when the vendor has a download page listing installers (no API
+available).
 
 **Example: 7-Zip**
 
@@ -227,17 +234,9 @@ psadt:
     AppVersion: "{{discovered_version}}"
 ```
 
-**Install/uninstall commands are auto-generated for MSI:**
-
-- **No `psadt.install` / `psadt.uninstall` needed** - NAPT generates
-  `Start-ADTMsiProcess -Action Install` with the exact downloaded filename
-  (plus `ALLUSERS=1` for system deployments) and
-  `Uninstall-ADTApplication` matching the MSI's ProductName exactly
-- **Uninstall survives ProductCode changes** - Matching is by name, not
-  ProductCode, and the name is re-extracted from each downloaded MSI
-- **Custom commands** - Set `psadt.override_msi_commands: true` and provide
-  your own `install`/`uninstall` (e.g., for MST transforms or extra MSI
-  properties)
+NAPT generates the install and uninstall commands from the MSI.
+To supply your own (for example, an MST transform), see
+[override_msi_commands](recipe-reference.md#override_msi_commands).
 
 2. Validate and test:
 
@@ -252,9 +251,11 @@ napt discover recipes/7-Zip/7zip-x64-msi.yaml --verbose
 - `link_selector`: CSS selector to find the download link
 - `version_pattern`: Regex to extract version from URL
 - `version_format`: Format string to transform version (optional)
-- `intune.detection`: Configure when vendor includes version in DisplayName (e.g., "7-Zip 25.01")
+- `intune.detection`: Configure when the vendor puts the version in the
+  DisplayName (for example, "7-Zip 25.01")
   - `display_name`: Pattern with wildcards to match the installed app name
-  - `override_msi_display_name`: Set to `true` to override MSI's versioned DisplayName
+  - `override_msi_display_name`: Set to `true` to override the MSI's
+    versioned DisplayName
 
 ## Create a recipe for a JSON API endpoint
 
@@ -278,7 +279,12 @@ discovery:
   download_url_path: "download_url"
   version_pattern: "v?([0-9.]+)"   # Optional: narrow the version value with a regex
   headers:                         # Optional HTTP headers (e.g., for authentication)
-    Authorization: "Bearer ${API_TOKEN}"
+    Authorization: "${API_AUTH_HEADER}"
+
+intune:
+  detection:
+    display_name: "Application Name"
+    architecture: "x64"
 
 psadt:
   app_vars:
@@ -290,7 +296,8 @@ psadt:
     Uninstall-ADTApplication -Name "Application Name"
 ```
 
-2. Set the token in your environment (see [Handle authentication tokens](#handle-authentication-tokens)).
+2. Set `API_AUTH_HEADER` in your environment (see
+   [Handle authentication tokens](#handle-authentication-tokens)).
 
 3. Validate and test:
 
@@ -308,15 +315,14 @@ napt discover recipes/Vendor/app.yaml --verbose
 
 ## Create a recipe for an MSIX installer
 
-Use this when the application distributes an `.msix` installer. NAPT extracts
-metadata from `AppxManifest.xml` and auto-generates install/uninstall commands.
+Use this when the application distributes an `.msix` installer.
 
 **Example: Slack (MSIX via JSON API)**
 
 1. Create the recipe file:
 
 ```yaml
-# recipes/Slack/slack.yaml
+# recipes/Slack/slack-msix.yaml
 apiVersion: napt/v1
 
 name: "Slack"
@@ -326,9 +332,7 @@ discovery:
   strategy: api_json
   api_url: "https://slack.com/api/desktop.latestRelease?arch=x64&variant=msix&redirect=false"
   version_path: "version"
-  download_url_path: "url"
-
-# No psadt.install or psadt.uninstall needed: NAPT generates them from the manifest
+  download_url_path: "download_url"
 
 psadt:
   app_vars:
@@ -339,50 +343,25 @@ psadt:
 2. Validate and test:
 
 ```bash
-napt validate recipes/Slack/slack.yaml
-napt discover recipes/Slack/slack.yaml --verbose
+napt validate recipes/Slack/slack-msix.yaml
+napt discover recipes/Slack/slack-msix.yaml --verbose
 ```
 
-**What makes MSIX different:**
-
-- **No `psadt.install` / `psadt.uninstall` needed** - NAPT auto-generates
-  commands from the MSIX manifest based on `intune.run_as_account`
-- **No `intune.detection` needed** - Detection queries the AppX package
-  database by identity name (not registry scanning); the store queried
-  matches `intune.run_as_account`
-- **Architecture auto-detected** - Extracted from `ProcessorArchitecture` in
-  the MSIX manifest
-- **`RequireAdmin` auto-defaulted** - Defaults to `false` for
-  `run_as_account: "user"` since per-user installs don't require elevation
-
-**Choosing install scope:**
-
-Use `intune.run_as_account` to control whether the install is provisioned for
-all users or installed for the current user only:
-
-```yaml
-intune:
-  run_as_account: "system"  # Default: provisioned (all users)
-  # run_as_account: "user"  # Per-user install
-```
-
-**Overriding auto-generated commands:**
-
-Only needed for non-standard cases such as license files.
-Set `override_msix_commands: true`:
-
-```yaml
-psadt:
-  override_msix_commands: true
-  install: |
-    Add-AppxProvisionedPackage -Online -PackagePath "$($adtSession.DirFiles)\app.msix" -LicensePath "$($adtSession.DirFiles)\license.xml" -SkipLicense
-  uninstall: |
-    Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq "Vendor.App" } | Remove-AppxProvisionedPackage -Online
-```
+NAPT generates install, uninstall, and detection from the MSIX manifest and
+reads the architecture from it, so the recipe needs no `psadt.install`,
+`psadt.uninstall`, or `intune.detection`.
+`intune.run_as_account` picks a provisioned install (`system`, the default)
+or a per-user one (`user`).
+For license files or other custom commands, see
+[override_msix_commands](recipe-reference.md#override_msix_commands).
 
 ## Create a recipe for a fixed download URL
 
-Use this when the vendor has a stable download URL (like Chrome enterprise MSI).
+Use this when the vendor has a stable download URL (like Chrome enterprise
+MSI) and the installer is an MSI or MSIX.
+`url_download` reads the version from the downloaded installer, which works
+for those two types only; for any other installer use a version-first
+strategy (`api_github`, `api_json`, or `web_scrape`).
 
 **Example: Google Chrome**
 
@@ -422,27 +401,34 @@ commands; see the 7-Zip example above.
 
 ## Handle authentication tokens
 
-Many discovery APIs require a token.
-
 ### Environment variables (recommended)
 
-1. **Set token in environment:**
+`discovery.token` and each value under `discovery.headers` are replaced
+from the environment only when the whole value is exactly `${VAR}`.
+A value such as `"Bearer ${API_TOKEN}"` is sent as written, so put the
+full header value, scheme included, in the variable.
+When the variable is not set, the header is dropped (or the `api_github`
+request goes out unauthenticated) and discovery continues.
+
+1. **Set the variable in your environment:**
    ```powershell
-   # Set environment variable on Windows:
-   $env:API_TOKEN="your-token-here"
+   # Windows
+   $env:API_AUTH_HEADER="Bearer <token>"
    ```
    ```bash
-   # Set environment variable on Linux/macOS:
-   export API_TOKEN="your-token-here"
+   # Linux/macOS
+   export API_AUTH_HEADER="Bearer <token>"
    ```
 
-2. **Reference in recipe:**
+2. **Reference it in the recipe:**
    ```yaml
    discovery:
      strategy: api_json
      api_url: "https://api.vendor.com/latest"
+     version_path: "version"
+     download_url_path: "download_url"
      headers:
-       Authorization: "Bearer ${API_TOKEN}"
+       Authorization: "${API_AUTH_HEADER}"
    ```
 
 3. **In CI/CD, use secrets:**
@@ -450,24 +436,24 @@ Many discovery APIs require a token.
    # GitHub Actions
    - name: Discover version
      env:
-       API_TOKEN: ${{ secrets.API_TOKEN }}
+       API_AUTH_HEADER: ${{ secrets.API_AUTH_HEADER }}
      run: napt discover recipes/Vendor/app.yaml
    ```
 
 ### Recipe-level tokens (less secure)
 
-If you must store tokens in recipes (not recommended for production):
+A token can also go in the recipe, where it is committed with the file:
 
 ```yaml
 discovery:
   strategy: api_github
   repo: "owner/repo"
-  token: "ghp_your_token_here"  # Not recommended - use env vars instead
+  token: "ghp_your_token_here"
 ```
 
 ## Test recipes before production
 
-Run this before shipping a new or edited recipe.
+Run these checks on a new recipe, and again after editing one.
 
 1. **Syntax validation:**
    ```bash
@@ -481,8 +467,8 @@ Run this before shipping a new or edited recipe.
 
 3. **Verify downloaded file:**
    ```bash
-   # Check file exists and has content
-   ls -lh downloads/
+   # Installers are filed as downloads/<id>/<version>/<file>
+   ls -lhR downloads/napt-app/
    ```
 
 4. **Test build:**
@@ -509,23 +495,20 @@ Run this before shipping a new or edited recipe.
 
 ## Deploy to Intune
 
-Upload a packaged app to Microsoft Intune. Requires `napt package` to have run first.
+Upload a packaged app to Microsoft Intune.
+Requires `napt package` to have run first.
 
 ### App registration setup (one time per organization)
 
-Fastest path, as at least an Application Administrator:
+Run as an Application Administrator (or a role above it):
 
 ```bash
-napt auth setup --tenant-id "<Directory (tenant) ID>"            # portal-free
-
-# Also trust a CI platform through OIDC (GitHub Actions, main branch shown):
-napt auth setup --tenant-id "<Directory (tenant) ID>" \
-  --federated-issuer https://token.actions.githubusercontent.com \
-  --federated-subject repo:owner/intune-apps:ref:refs/heads/main
+# Creates the registration without the Entra portal
+napt auth setup --tenant-id "<Directory (tenant) ID>"
 ```
 
 To do it by hand, follow
-[App Registration Setup](user-guide.md#app-registration-setup) in the user
+[App registration setup](user-guide.md#app-registration-setup) in the user
 guide (or run `napt auth setup ... --print-only` for the checklist).
 
 ### Developer setup (one time)
@@ -544,35 +527,10 @@ The IDs are remembered, so later sessions are just `napt auth login`, and
 
 ### CI/CD setup (one time)
 
-Prefer OIDC federation when your platform supports it (GitHub Actions does):
-add a federated credential to the app registration and let `azure/login`
-mint the token, so there is no secret to store or rotate.
-See [App registration setup](user-guide.md#app-registration-setup).
-
-```yaml
-# GitHub Actions example; the federated credential is scoped to the
-# "intune" environment, so only jobs that declare it receive tokens
-permissions:
-  id-token: write
-  contents: read
-
-jobs:
-  upload:
-    runs-on: ubuntu-latest
-    environment: intune
-    steps:
-      - uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          allow-no-subscriptions: true
-      - name: Upload to Intune
-        run: napt upload recipes/Google/chrome.yaml
-```
-
-Otherwise create a client secret (**Certificates & secrets** > **New client
-secret**), store the client ID, tenant ID, and secret as pipeline secrets,
-and pass them as environment variables:
+Use OIDC federation where your CI platform supports it, or a client secret
+otherwise; [App registration setup](user-guide.md#app-registration-setup)
+has both, including the federated credential and the `azure/login` job.
+With a client secret, pass the three values as environment variables:
 
 ```yaml
 - name: Upload to Intune
@@ -599,6 +557,7 @@ $ napt upload recipes/Google/chrome.yaml
 Uploading package for recipe: /path/to/recipes/Google/chrome.yaml
 
 [1/9] Locating .intunewin package...
+[UPLOAD] Package matches pending release (sha256 <sha256>)
 [2/9] Authenticating with Azure...
 [3/9] Parsing package metadata...
 [4/9] Creating app record for 'Google Chrome'...
@@ -609,6 +568,7 @@ Uploading package for recipe: /path/to/recipes/Google/chrome.yaml
 [UPLOAD] Created Intune app: <update id>
 [8/9] Uploading to Azure Blob Storage...
 [9/9] Committing content version...
+[STATE] Recorded published release <version> in <state file>
 ======================================================================
 UPLOAD RESULTS
 ======================================================================
@@ -624,9 +584,11 @@ Status:          success
 [SUCCESS] Package uploaded to Intune successfully!
 ```
 
-With the default `intune.build_types: "both"`, the install entry and the
-`[Update]` entry are each created, uploaded, and committed (nine steps).
-`app_only` or `update_only` runs six.
+With `intune.build_types` set to `app_only` or `update_only`, upload shows
+six steps.
+When no pending release is recorded, the `Package matches` line becomes a
+`No pending release recorded` warning (or an error under
+[`require_pending`](#require-recorded-releases-before-upload)).
 
 ### Full pipeline example
 
@@ -647,8 +609,8 @@ napt upload recipes/Google/chrome.yaml
 ### Override publisher and description
 
 By default, the publisher is inferred from the vendor directory name
-(e.g., `recipes/Google/` → `"Google"`). Override per-recipe with the
-`intune:` section:
+(for example, `recipes/Google/` gives `"Google"`).
+Override it per recipe in the `intune:` section:
 
 ```yaml
 apiVersion: napt/v1
@@ -667,44 +629,42 @@ intune:
   info_url: "https://chromeenterprise.google"
 
 psadt:
-  # ... rest of recipe
+  app_vars:
+    AppName: "Google Chrome"
+    AppVersion: "{{discovered_version}}"
 ```
 
 ### Override upload behavior
 
-Control how Intune handles installation, restarts, and script execution
-per-recipe using the `intune:` section.
-All fields have defaults and can also be set in `defaults/org.yaml` for
-org-wide policy.
+Set these per recipe in the `intune:` section, or in `defaults/org.yaml` for
+the whole organization:
 
 ```yaml
 intune:
-  # Run installer and scripts as the logged-in user instead of SYSTEM.
-  # Required for apps that install into the user profile. Default: "system".
+  # Run installer and scripts as the logged-in user instead of SYSTEM
   run_as_account: "user"
 
-  # Suppress any device restart after install (useful for background updates).
-  # Default: "basedOnReturnCode". Allowed: allow, suppress, force, basedOnReturnCode.
+  # Suppress any device restart after install
   device_restart_behavior: "suppress"
 
-  # Increase timeout for large or slow installers. Default: 60.
+  # Allow more time for large or slow installers
   max_run_time_minutes: 120
 
-  # Feature the app in Company Portal. Default: false.
+  # Feature the app in Company Portal
   is_featured: true
 
-  # Prevent self-service uninstall from Company Portal. Default: true.
+  # Prevent self-service uninstall from Company Portal
   allow_available_uninstall: false
 
-  # Require scripts to be code-signed before Intune will run them. Default: false.
+  # Require scripts to be code-signed before Intune runs them
   enforce_signature_check: true
 
-  # Run installer and scripts in a 32-bit PowerShell context. Default: false.
+  # Run installer and scripts in a 32-bit PowerShell context
   run_as_32_bit: true
 ```
 
-See [recipe-reference.md](recipe-reference.md#intune-configuration) for all
-allowed values.
+See [Intune configuration](recipe-reference.md#intune-configuration) for
+defaults and allowed values.
 
 ### Require recorded releases before upload
 
@@ -717,17 +677,21 @@ deployment:
   require_pending: true
 ```
 
-For a legitimate manual upload under this policy, run `napt discover` first.
+For a manual upload under this policy, run `napt discover` first.
+Discover records nothing when the vendor serves the release that is already
+published, so to republish that release add the pending entry by hand (see
+[Fix a broken published app](#fix-a-broken-published-app)).
 See [`require_pending`](recipe-reference.md#require_pending) for exact
 behavior.
 
 ### Promote updates through rings
 
-Roll updates out gradually: pilot devices first, everyone else after the
-release has proven itself.
+A release is assigned to the first ring's groups, then to each later ring
+once it has held the previous one for `promote_after_days`.
 
 1. **Define rings once in `defaults/org.yaml`** (groups are Entra ID
-   display names or object IDs):
+   display names or object IDs, or the reserved `All Users` and
+   `All Devices`):
 
    ```yaml
    deployment:
@@ -748,18 +712,11 @@ release has proven itself.
    napt promote plan
    ```
 
-   A newly uploaded release starts its rollout in the first ring; a
-   release that has held its ring for `promote_after_days` is promoted to
-   the next.
-   The same plan also points new installs (the install entry) at the new
-   release, so net-new devices get it as soon as the first ring does.
-   Eligible actions are written per app to `state/plans/<app-id>.json`;
-   review the files, or commit them and gate the apply on a pull request.
-   Every action opens with a plain-English summary sentence and carries
-   the details behind it (the release, the groups it will assign, the
-   version it displaces, and for a promotion out of a held ring, when the
-   release entered it and the ring's bake threshold) so the files read
-   as the review record.
+   Plan writes one file per app with eligible actions to
+   `state/plans/<app-id>.json`.
+   Review the files, or commit them and gate apply on a pull request.
+   [Promotion plan files](user-guide.md#promotion-plan-files) describes
+   their contents.
 
 3. **Apply**: execute the plan against Intune:
 
@@ -767,21 +724,15 @@ release has proven itself.
    napt promote apply
    ```
 
-   Ring groups are assigned to the release's `[Update]` entry as required
-   installs; the displaced older release is unassigned and retired per
-   `deployment.retain_versions`.
-   Each app's plan file is consumed after that app applies fully, and one
-   app's failure keeps its plan file for retry without blocking the rest.
-   Every apply also prints a drift check: discrepancies between
-   deployment state and Intune (removed assignments, admin-made changes,
-   stray apps) are warned about, never corrected.
-   Use `napt promote plan --check-drift` for the same report without
-   applying anything.
-   Both commands also fail fast on a group typo or deleted Entra ID
-   group: an authenticated plan refuses to write plans that name an
-   unresolvable group, and apply checks every group an app's plan is
-   about to assign before touching that app, so a bad group fails that
-   app with zero changes instead of a half-applied plan.
+   Apply assigns each ring's groups to the release's `[Update]` entry as
+   required installs, unassigns and retires the release it displaces, and
+   consumes each app's plan file once that app applies.
+   It also checks for drift and prints any discrepancies it finds.
+   A plan run with `--check-drift` or `--reconcile` checks every group the
+   plan would assign and writes no plan files, for any app, when one does
+   not resolve; plain `napt promote plan` does not check groups.
+   [napt promote](user-guide.md#napt-promote) covers failures, drift, and
+   group checks.
    Run `napt status` to see where every app stands.
 
 Run plan and apply on a schedule and promotion becomes automatic: each
@@ -819,10 +770,9 @@ Use a 256x256 PNG or JPEG under 700KB for best results in Company Portal.
 cp my-better-icon.png icons/napt-7zip-x64-msi.png
 ```
 
-NAPT never overwrites a file in `icons/`, so this survives future builds
-on this machine but does not travel with the repo (the directory is
-gitignored).
-Delete the file and rebuild to force re-extraction.
+NAPT never overwrites a file in `icons/`.
+The file stays on this machine only (keep `icons/` in your `.gitignore`);
+delete it and rebuild to extract again.
 
 ### Fix a broken published app
 
@@ -842,7 +792,23 @@ A fresh app object gets a clean evaluation on every device:
    Deleting first matters: NAPT recognizes its own apps by their
    provenance stamp, so re-running upload against the existing broken app
    would adopt it instead of creating a new one.
-2. Rebuild and upload:
+2. With `deployment.require_pending: true`, record the release again by
+   hand.
+   Upload refuses without a pending release, and `napt discover` records
+   nothing while the vendor serves the published binary.
+   In `state/deployment/<id>.json`, set `pending` to the published
+   release's `version` and `sha256` and its download `url`:
+   ```json
+   "pending": {
+     "version": "<published version>",
+     "sha256": "<published sha256>",
+     "url": "<installer download URL>"
+   },
+   ```
+   If that version's installer is no longer in
+   `downloads/<id>/<version>/`, fetch it with `napt discover --stateless`,
+   which leaves the entry alone (a plain `napt discover` clears it again).
+3. Rebuild and upload:
    ```bash
    napt build recipes/Vendor/app.yaml
    napt package recipes/Vendor/app.yaml
@@ -850,7 +816,7 @@ A fresh app object gets a clean evaluation on every device:
    ```
    Upload finds no stamped apps, creates fresh entries, and records the
    new app IDs in deployment state automatically.
-3. Recreate the assignments the old app had.
+4. Recreate the assignments the old app had.
 
 If the vendor has shipped a newer version since the broken publish, you
 can also just run the normal pipeline; the new release creates new app
@@ -860,7 +826,8 @@ entries anyway, and the broken version's entries can be deleted.
 
 If you caught the problem before any assignment took effect (the app is
 still unassigned, or you spotted a wrong command during portal review),
-there is no retry throttling to escape, and an in-place fix is faster:
+there is no retry throttling to escape, and an in-place fix is faster
+(under `require_pending`, add the pending entry from step 2 first):
 
 ```bash
 napt build recipes/Vendor/app.yaml
@@ -883,10 +850,16 @@ Adapt names, schedules, and branch rules to your org.
 
 - **Publish PRs** (one per app): `napt discover` records a pending
   release in `state/deployment/<id>.json`; CI opens a per-app PR with
-  that diff. The title carries the decision
+  that diff.
+  The title carries the decision
   (`Publish Google Chrome 140.0.7339.128`) and the body is a generated
   fact sheet: version, currently published version, installer URL,
-  SHA-256, what merging does, and how to hold or reject.
+  SHA-256, what merging does, and how to hold it (closing is not a durable
+  rejection).
+  A downgrade is titled `Publish <Name> <version> (downgrade from
+  <published>)`, and when discovery empties the pending slot the PR is
+  titled `Clear pending release for <Name>` and publishes nothing (see
+  [Downgrades](user-guide.md#downgrades)).
   Merging approves the release: a workflow builds, packages,
   and uploads it, with the hash gate guaranteeing the approved binary is
   exactly what ships.
@@ -896,9 +869,9 @@ Adapt names, schedules, and branch rules to your org.
   opens with a risk line (`**This plan:** 2 to pilot, 1 to production`),
   lists every app's plan summaries and the run's drift warnings, and
   carries a `promotes-to-production` label when the final ring is
-  targeted. Merging
-  approves the promotions: a workflow runs `napt promote apply`, which
-  executes each app's plan as an allowlist, independently.
+  targeted.
+  Merging approves the promotions: a workflow runs `napt promote apply`,
+  which executes each app's plan as an allowlist, independently.
   To hold one app's promotions, delete its plan file in the PR; the
   next scheduled plan will re-propose it, and the other apps merge and
   apply unaffected.
@@ -1100,7 +1073,7 @@ on:
     paths: ["state/deployment/**"]
 # Serializes publish runs (bursts of merges dedupe to the newest run).
 # Deliberately NOT shared with promote-apply: a merge that touches both
-# deployment state and the plan file triggers both workflows, and runs
+# deployment state and plan files triggers both workflows, and runs
 # sharing a group cancel each other instead of queueing.
 concurrency: napt-publish
 permissions:
@@ -1427,10 +1400,12 @@ jobs:
 When several recipes differ only in a few fields, put the shared part in
 one file and name it as the `parent` of each app recipe.
 
-1. Write the base recipe. It is a complete recipe; keep it out of the
-   vendor folders so NAPT never runs it on its own:
+1. Write the base in a folder outside `recipes/`, so neither the workflows
+   nor `napt promote` pick it up as an app.
+   It needs `apiVersion`, `name`, `id`, and a `discovery` block only
+   because NAPT validates it as a recipe.
    ```yaml
-   # recipes/_base/chromium-family.yaml
+   # recipe-bases/chromium-family.yaml
    apiVersion: napt/v1
    name: "Chromium base"
    id: "chromium-base"
@@ -1445,19 +1420,24 @@ one file and name it as the `parent` of each app recipe.
        exact_match: false
    ```
 
-2. Write each app as a child that sets only what differs. Name it
-   `<app>.override.yaml`:
+2. Write each app as a child named `<app>.override.yaml` that sets its own
+   `name` and `id` and only what else differs.
+   The `parent` path is relative to the child:
    ```yaml
    # recipes/Google/chrome.override.yaml
    apiVersion: napt/v1
-   parent: ../_base/chromium-family.yaml
+   parent: ../../recipe-bases/chromium-family.yaml
    name: "Google Chrome"
    id: "napt-chrome"
    discovery:
      url: "https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi"
    ```
+   The child replaces the app's plain recipe: delete
+   `recipes/Google/chrome.yaml` when you add it.
+   Two files with one `id` stop `napt promote` for every app.
 
-3. Validate the child. The output names the parent it merged:
+3. Validate the child.
+   The output names the parent it merged:
    ```bash
    napt validate recipes/Google/chrome.override.yaml
    ```
@@ -1466,18 +1446,7 @@ Run every command against the child, never the base.
 The merge order and list behavior are in
 [Configuration layers](user-guide.md#configuration-layers).
 
-## Update existing recipes
-
-When a recipe needs changes (new version format, different download URL, etc.).
-
-1. Edit the recipe file.
-
-2. Validate and test it the same way as a new recipe: see
-   [Test recipes before production](#test-recipes-before-production).
-
 ## Troubleshoot discovery failures
-
-Common issues and solutions when `napt discover` fails.
 
 ### Issue: "Unknown discovery strategy"
 
@@ -1485,15 +1454,15 @@ Common issues and solutions when `napt discover` fails.
 
 **Solution:**
 
-1. Check strategy name spelling (must be: `api_github`, `api_json`, `url_download`, or `web_scrape`)
+1. Check strategy name spelling (must be: `api_github`, `api_json`,
+   `url_download`, or `web_scrape`)
 
 2. Validate recipe: `napt validate recipes/App/app.yaml`
 
-3. Check for typos in strategy configuration
+### Issue: "Failed to extract the version" or "Version path ... did not match"
 
-### Issue: "Version extraction failed"
-
-**Problem:** NAPT can't extract version from the downloaded file or API response.
+**Problem:** NAPT can't extract the version from the downloaded file or API
+response.
 
 **Solution:**
 
@@ -1508,6 +1477,28 @@ Common issues and solutions when `napt discover` fails.
 3. For `api_json`, check that `version_path` points to the correct JSON field
 
 4. For `web_scrape`, verify `version_pattern` regex matches the URL format
+
+### Issue: "Version ... does not start with a number"
+
+**Problem:** The discovered version starts with something other than a digit
+(for example, `v2.0` or `latest`).
+Devices compare versions numerically and would read it as 0.
+
+**Solution:** Tighten `version_pattern` so its capture group keeps only the
+part from the first digit on; the error message suggests the value.
+For `api_json`, also check that `version_path` points at the version field.
+See the strategy's fields in
+[Discovery configuration](recipe-reference.md#discovery-configuration).
+
+### Issue: "Discovered version ... cannot be used as a folder name"
+
+**Problem:** The version contains characters other than letters, digits,
+`.`, `-`, `_`, and `+`, so NAPT cannot use it as a download folder name.
+
+**Solution:** Narrow `version_pattern` (or, for `api_json`, `version_path`)
+so it captures only the version.
+If the version comes from the installer itself (MSI or MSIX), check the
+installer's metadata.
 
 ### Issue: "GitHub API rate limit"
 
@@ -1526,7 +1517,7 @@ Common issues and solutions when `napt discover` fails.
 3. Set `GITHUB_TOKEN` in your environment (see
    [Handle authentication tokens](#handle-authentication-tokens))
 
-### Issue: "Download failed" or "Network error"
+### Issue: "download failed for ..."
 
 **Problem:** Can't download the installer file.
 
@@ -1534,11 +1525,10 @@ Common issues and solutions when `napt discover` fails.
 
 1. Check URL is accessible: `curl -I <url>` or open in browser
 
-2. Verify authentication if required (API tokens, headers)
+2. For `api_json` or `api_github`, check the token (see
+   [Handle authentication tokens](#handle-authentication-tokens))
 
-3. Check network connectivity and firewall rules
-
-4. Use `--verbose` to see HTTP request/response details
+3. Use `--verbose` to see HTTP request/response details
 
 ### Issue: discover reuses an installer you want downloaded again
 
@@ -1547,14 +1537,16 @@ Common issues and solutions when `napt discover` fails.
 
 **Solution:**
 
-The downloads folder is disposable: delete the app's folder and rediscover.
+Delete the app's folder and rediscover.
+If a pending release is awaiting approval and the vendor no longer serves
+it, keep that version's folder: build needs that exact file.
 
 ```bash
 rm -r downloads/<app_id>
 napt discover recipes/app.yaml
 ```
 
-### Issue: "Deployment state corrupted"
+### Issue: "Corrupted deployment state file"
 
 **Problem:** A file under `state/deployment/` has invalid JSON.
 
@@ -1572,8 +1564,8 @@ napt discover recipes/app.yaml --stateless
 
 ### Issue: MSI version extraction fails on Linux/macOS
 
-**Problem:** `napt discover` or `napt build` cannot read the MSI ProductVersion
-on a non-Windows machine.
+**Problem:** `napt discover` or `napt build` cannot read the MSI
+ProductVersion on a non-Windows machine.
 
 **Solution:** Install `msitools`, which provides the `msiinfo` backend:
 
@@ -1583,8 +1575,9 @@ sudo dnf install msitools      # RHEL/Fedora
 brew install msitools          # macOS
 ```
 
-## What's next?
+## Related pages
 
-- **[User Guide](user-guide.md)** - Deep dive into discovery strategies, state management, and configuration
-- **[Creating Recipes](user-guide.md#discovery-strategies)** - Detailed strategy configuration guides
-- **[Examples](https://github.com/RogerCibrian/notapkgtool/tree/main/recipes)** - Browse working recipe examples
+- [User guide](user-guide.md): how discovery, state, and configuration work
+- [Recipe reference](recipe-reference.md): every recipe field
+- [Examples](https://github.com/RogerCibrian/notapkgtool/tree/main/recipes):
+  working recipes

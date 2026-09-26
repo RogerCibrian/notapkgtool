@@ -8,41 +8,43 @@
 
 ## Overview
 
-NAPT is a Python CLI. It runs on Windows, Linux, and macOS, though packaging (.intunewin creation) requires Windows.
+NAPT is a Python CLI that automates packaging Windows apps for Microsoft
+Intune.
+It runs on Windows, Linux, and macOS; creating .intunewin packages requires
+Windows.
 
-### Why NAPT?
+### What NAPT automates
 
-Packaging applications for Microsoft Intune with PSAppDeployToolkit (PSADT) typically involves a manual, time-consuming process:
-
-1. **Manually check for new versions** - Check vendor sites/APIs for updates. Easy to miss versions or waste time when nothing changed.
-
-2. **Create PSADT deployment** - Copy template, manually edit `Invoke-AppDeployToolkit.ps1` with variables, configure install/uninstall logic. Error-prone and repetitive.
-
-3. **Create detection and requirements scripts** - Write PowerShell detection and requirements logic, test thoroughly, maintain version checks. Must update for each new version.
-
-4. **Package as .intunewin** - Run IntuneWinAppUtil.exe manually, manage paths, handle errors.
-
-5. **Upload to Intune** - Upload package via portal, fill metadata, configure app info and requirements manually.
-
-6. **Configure deployment** - Set up rollout assignments manually for each version.
-
-NAPT replaces this with YAML-based recipes and automatic version tracking.
+Without NAPT, each new app version means checking the vendor for a release,
+editing a PSAppDeployToolkit (PSADT) template, writing detection and
+requirements scripts, running IntuneWinAppUtil.exe, uploading in the Intune
+portal, and assigning the app to groups.
+NAPT does each step from one YAML recipe per app.
 
 ### Key features
 
-- **Automatic version tracking** - Discovery from MSI, EXE, URLs, or APIs with caching to skip unnecessary downloads
-- **YAML-based recipes** - Define app packaging once with layered configuration (Organization → Vendor → Recipe)
-- **Automated PSADT packaging** - Generate Intune-ready packages with detection and requirements scripts, no manual template editing
-- **Cross-platform workflow** - Run on Windows, Linux, and macOS (packaging requires Windows)
-- **Direct Intune upload** - Upload to Microsoft Intune via the Graph API, no portal required
+- **Version discovery** - Finds new versions from vendor APIs, GitHub
+  releases, download pages, or fixed URLs, and does not download an
+  unchanged installer again
+- **YAML recipes** - One recipe per app, with layered configuration
+  (organization, vendor, parent recipe, recipe)
+- **PSADT packaging** - Builds the PSADT deployment with detection and
+  requirements scripts, then the .intunewin package
+- **Intune upload** - Uploads to Microsoft Intune through the Graph API
+- **Ring promotion** - `napt promote` moves each release through deployment
+  rings and reports assignment drift; `napt status` shows every app's
+  published version, pending release, and ring positions
+- **Tenant setup and sign-in** - `napt auth setup` creates the Entra app
+  registration with the permissions NAPT needs; `napt auth login` signs in
 
 ## Getting started
 
-See the [Quick Start Guide](quick-start.md) for installation and setup.
+See the [Quick start guide](quick-start.md) for installation and setup.
 
 ## Creating recipes
 
-Recipes are YAML configuration files that define how to discover, download, and package applications.
+Recipes are YAML files that define how to discover, download, and package an
+application.
 
 **Example recipes:**
 
@@ -55,15 +57,21 @@ working examples used for development and testing.
 They are not included in the pip package.
 Run `napt init` to create your own workspace with a starter `org.yaml`.
 
-NAPT supports multiple discovery strategies (url_download, web_scrape, api_github, api_json) - see the [Discovery Strategies](user-guide.md#discovery-strategies) guide for detailed configuration and more examples.
+A recipe uses one of four discovery strategies: `url_download`, `web_scrape`,
+`api_github`, or `api_json`.
+The [Recipe reference](recipe-reference.md#discovery-configuration) defines
+their fields;
+[Common tasks](common-tasks.md#create-a-recipe-for-a-github-release-app)
+walks through a recipe for each.
 
 ## Contributing
 
-Ideas and feedback are welcome. See [Contributing](contributing.md) for guidelines.
+See [Contributing](contributing.md) to suggest features or report problems.
 
 ## License
 
-This project is licensed under the Apache License 2.0 - see the [LICENSE](https://github.com/RogerCibrian/notapkgtool/blob/main/LICENSE) file for details.
+Apache License 2.0; see
+[LICENSE](https://github.com/RogerCibrian/notapkgtool/blob/main/LICENSE).
 
 ## Author
 

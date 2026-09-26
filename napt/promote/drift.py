@@ -16,7 +16,7 @@
 
 Compares what deployment state says should be assigned in Intune against
 what actually is, and reports every discrepancy as a finding. Strictly
-observational: drift is warned about and never corrected — manual admin
+observational: drift is warned about and never corrected; manual admin
 changes are deliberately left alone.
 
 Finding kinds:
@@ -29,7 +29,7 @@ Finding kinds:
     intent.
 - ``unrecorded_assignment``: A NAPT-stamped app carries an assignment
     that matches a currently configured target, but NAPT has no record
-    of making it — either an apply writeback was lost (a later apply
+    of making it: either an apply writeback was lost (a later apply
     converges it) or it was made outside NAPT. Left alone.
 - ``unexpected_assignment``: A NAPT-stamped app carries an assignment
     NAPT has no record of making and that matches no configured target
@@ -40,7 +40,7 @@ Finding kinds:
 
 Authorship is always inferred, never known: Graph assignments carry no
 provenance field, so deployment state records are the only memory of
-what NAPT assigned — and a lost writeback loses that memory.
+what NAPT assigned, and a lost writeback loses that memory.
 """
 
 from __future__ import annotations

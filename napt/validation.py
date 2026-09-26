@@ -22,14 +22,23 @@ Validation Checks:
 
 - YAML syntax is valid
 - Required top-level fields present (apiVersion, name, id, discovery)
-- apiVersion is supported
+- apiVersion is present (a value other than napt/v1 is a warning)
+- id is usable as a folder name (letters, digits, '.', '-', '_', '+',
+  starting with a letter or digit)
 - parent, when declared, is a string and the file carries the
   ``.override.yaml`` suffix (a mismatch either way is a warning)
 - discovery.strategy exists and is registered
 - Strategy-specific configuration is valid
+- A section present but left empty (psadt, psadt.app_vars, intune,
+  intune.detection, logging, deployment) is an error
+- intune.minimum_supported_windows_release matches the Windows10_21H2 or
+  Windows11_23H2 form
 - intune.detection fields are valid (types, values, unknown field warnings)
 - psadt.app_vars only contains user-settable keys
+- psadt.override_msi_commands and psadt.override_msix_commands are booleans
 - logging section fields are valid
+- deployment section fields are valid (ring names and groups,
+  promote_after_days, install, retain_versions)
 """
 
 from __future__ import annotations
@@ -113,7 +122,7 @@ _DEPLOYMENT_RING_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
 
 # Allowed keys for psadt.app_vars.
 # NAPT-managed keys (AppArch, DeployAppScriptVersion, DeployAppScriptFriendlyName,
-# DeployAppScriptParameters) are excluded — setting them in recipes is an error.
+# DeployAppScriptParameters) are excluded; setting them in recipes is an error.
 _PSADT_APP_VAR_KEYS: frozenset[str] = frozenset(
     {
         "AppVendor",

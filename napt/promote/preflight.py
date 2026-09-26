@@ -14,8 +14,8 @@
 
 """Group validation for promotion plans.
 
-A planned action names its assignment groups, so an unresolvable group —
-a typo in ring configuration, a deleted Entra ID group — is knowable
+A planned action names its assignment groups, so an unresolvable group
+(a typo in ring configuration, a deleted Entra ID group) is knowable
 before anything mutates the tenant. Checking up front turns what would
 be a mid-run abort (leaving a half-applied plan) into either a failed
 plan that never reaches review, or an apply that refuses to start that
@@ -24,7 +24,7 @@ app's plan.
 Used by the authenticated ``napt promote plan`` modes (a plan with an
 unresolvable group fails instead of becoming a reviewable promotion PR)
 and by ``napt promote apply`` as a per-app preflight before executing
-any of that app's actions. Offline plans skip validation — the apply
+any of that app's actions. Offline plans skip validation; the apply
 preflight is the backstop for anything they produce.
 """
 

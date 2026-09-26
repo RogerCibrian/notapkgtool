@@ -1,29 +1,49 @@
 # Recipe reference
 
-Complete documentation of every recipe field and configuration pattern.
+Field definitions for recipes and for `defaults/org.yaml` and vendor files,
+which share the schema.
 
-> **Tip:** For practical examples and workflows, see [Common Tasks](common-tasks.md). For strategy selection guidance, see [Discovery Strategies](user-guide.md#discovery-strategies) in the User Guide.
+> **Tip:** For copy-paste workflows, see [Common tasks](common-tasks.md).
+> For choosing a strategy, see
+> [Discovery strategies](user-guide.md#discovery-strategies).
+
+`napt validate` checks the recipe and its parent.
+Values from `defaults/` are checked when any other command loads the recipe.
+`napt validate` type-checks the `intune`, `logging`, and `deployment` sections,
+`psadt.app_vars`, the `psadt.override_*` flags, and each strategy's required
+fields and patterns, and warns on unknown keys in `intune`, `logging`, and
+`deployment`.
+Other keys are accepted as written: a wrong type in, for example,
+`prerelease`, `token`, `brand_pack`, or `install` surfaces only when a command
+uses the value.
 
 ## Top-level fields
 
 ```yaml
-apiVersion: napt/v1        # Required: Recipe format version
-parent: ../_base/app.yaml  # Optional: Recipe merged beneath this one
-name: "Application Name"   # Required: Display name
-id: "napt-app-id"          # Required: Unique identifier
-discovery:                  # Required: How to find and download the installer
+apiVersion: napt/v1          # Required: recipe format version
+name: "Application Name"     # Required: display name
+id: "napt-app-id"            # Required: identifier and folder name
+discovery:                   # Required: how to find and download the installer
   strategy: api_github
-  # ... strategy-specific fields
-psadt:                      # Optional for MSI/MSIX; EXE needs install and uninstall
+  repo: "owner/repository"
+  asset_pattern: ".*-x64\\.exe$"
+psadt:                       # EXE needs install and uninstall
   install: |
-    # ...
+    Start-ADTProcess -FilePath "{{installer_filename}}" -ArgumentList "/S"
   uninstall: |
-    # ...
-intune:                     # Optional: Intune-specific settings
-  # ...
-logging:                    # Optional: On-device script logging settings
-  # ...
+    Uninstall-ADTApplication -Name "Application Name"
+intune:                      # Optional: Intune settings
+  detection:                 # EXE needs display_name and architecture
+    display_name: "Application Name"
+    architecture: "x64"
+logging:                     # Optional: on-device script logging
+  log_rotation_mb: 3
 ```
+
+A section key with nothing under it is a validation error; remove the key
+instead.
+`parent`, `directories`, `intunewin`, and `deployment` are the other top-level
+keys; each has its own section below.
 
 ### apiVersion
 
@@ -31,25 +51,29 @@ logging:                    # Optional: On-device script logging settings
 **Required:** Yes
 **Values:** `napt/v1` (the only version so far)
 
-Recipe format version.
+Any other value is a validation warning.
 
 ### name
 
 **Type:** `string`
 **Required:** Yes
 
-Display name for the application. Used in PSADT dialogs and package metadata.
+Display name of the Intune app entries (the update entry adds
+[`update_name_prefix`](#update_name_prefix)) and the name recorded in
+deployment state.
+PSADT dialogs show `psadt.app_vars.AppName`, which is not filled from `name`.
 
 ### id
 
 **Type:** `string`
 **Required:** Yes
-**Convention:** Lowercase, alphanumeric, hyphens (e.g., `napt-chrome`, `napt-git`)
+**Convention:** Lowercase, alphanumeric, hyphens (e.g., `napt-chrome`,
+`napt-git`)
 
-Unique identifier for the application.
-It names the app's folders, so it must work as a folder name as-is: letters,
+Names the app's folders, so it must work as a folder name as-is: letters,
 digits, `.`, `-`, `_`, and `+`, starting with a letter or digit.
 `napt validate` rejects anything else, including path separators and `..`.
+Two recipe files with the same `id` stop `napt promote`.
 Used to generate:
 
 - Download directory: `downloads/{id}/{version}/`
@@ -66,8 +90,17 @@ beneath this one.
 This recipe wins wherever both set a value; the parent fills in everything
 else.
 A parent is an ordinary recipe and cannot declare a `parent` of its own.
-`name` and `id` must be set in this file when the parent's values are not
-wanted, since they identify the app in Intune and in NAPT's state.
+
+Keep the parent outside the recipe directory that commands scan (for
+example, `recipe-bases/` next to `recipes/`):
+NAPT would otherwise load it as a recipe of its own.
+Set `name` and `id` in the child, since they identify the app in Intune and
+in NAPT's state, and two files with one `id` stop `napt promote`.
+
+**Example (in `recipes/Google/chrome.override.yaml`):**
+```yaml
+parent: ../../recipe-bases/chromium-family.yaml
+```
 
 Name a recipe that declares `parent` as `<app>.override.yaml` so the
 relationship shows in every listing.
@@ -77,41 +110,43 @@ direction, and reports the parent it merged.
 Relative paths a parent sets, such as `intune.logo_path`, resolve against
 this file's directory, not the parent's.
 See [Configuration layers](user-guide.md#configuration-layers) for where the
-parent sits in the merge order and how lists merge.
+parent sits in the merge order and how lists merge, and
+[Share a base recipe between apps](common-tasks.md#share-a-base-recipe-between-apps)
+for the steps.
 
 ## Discovery configuration
 
-The `discovery` section defines how NAPT finds and downloads the installer. The structure
-depends on the chosen `strategy`.
+`discovery` tells NAPT where to find the installer.
+Its other fields depend on `strategy`.
 
-**Common Fields (All Strategies):**
+- `strategy` (required): `api_github`, `api_json`, `url_download`, or
+  `web_scrape`.
 
-- `strategy`: Required. One of: `api_github`, `api_json`, `url_download`, `web_scrape`
+**Why `version_pattern` differs by strategy:**
 
-**Why `version_pattern` differs by strategy:** the regex exists to pull a
-version out of something that is not one, so each strategy needs it in
-proportion to how raw its source is.
-`web_scrape` requires it, because the version is buried in a link URL.
-`api_github` defaults it to `v?([0-9.]+)`, because Git tags conventionally
-carry a `v`.
-`api_json` leaves it off unless you set it, because a JSON version field is
-usually already a version; add it only when the API wraps the value.
-`url_download` has no such field, because the version is read from the
-installer itself.
+- `web_scrape`: required; the version is inside a link URL.
+- `api_github`: defaults to `v?([0-9.]+)`, since tags usually carry a `v`.
+- `api_json`: off unless set; use it when the API wraps the value.
+- `url_download`: none; the version comes from the installer, and a
+  `version_pattern` set here is ignored.
+
+For an EXE, the captured value is the version; see
+[Discovery process](user-guide.md#discovery-process-napt-discover) for the
+rules it must meet.
+For an MSI or MSIX, the installer's own version is recorded instead.
 
 ### api_github strategy
-
-**Best for:** Open-source projects on GitHub with releases and semantic versioned tags.
 
 **Configuration:**
 
 ```yaml
 discovery:
   strategy: api_github
-  repo: "owner/repository"          # Required: GitHub repository in owner/repo format
-  asset_pattern: ".*\\.exe$"        # Required: Regex pattern to match installer filename
-  version_pattern: "v?([0-9.]+)"    # Optional: Regex pattern to extract version from Git tag
+  repo: "owner/repository"          # Required: GitHub repository
+  asset_pattern: ".*\\.exe$"        # Required: regex for the installer filename
+  version_pattern: "v?([0-9.]+)"    # Optional: regex for the version in the tag
   token: "${GITHUB_TOKEN}"          # Optional: GitHub personal access token
+  prerelease: false                 # Optional: currently has no effect
 ```
 
 #### repo
@@ -120,15 +155,14 @@ discovery:
 **Required:** Yes
 **Format:** `owner/repository` (e.g., `git-for-windows/git`)
 
-GitHub repository identifier in owner/repository format.
-
 #### asset_pattern
 
 **Type:** `string` (regex)
 **Required:** Yes
 
-Regular expression pattern to match the installer filename in release assets. The pattern is
-matched against asset filenames from the GitHub Releases API.
+Regex searched in each release asset's filename; the first match is
+downloaded.
+Matching is case-sensitive; prefix `(?i)` to ignore case.
 
 **Examples:**
 - `"Git-.*-64-bit\\.exe$"` - Matches Git installers for 64-bit
@@ -143,14 +177,15 @@ matched against asset filenames from the GitHub Releases API.
 **Required:** No
 **Default:** `"v?([0-9.]+)"`
 
-Regular expression pattern to extract version from the Git tag. Should include capture groups
-for version components.
+Regex searched in the release's Git tag to extract the version.
 
 **Examples:**
 - `"v?([0-9.]+)"` - Extracts version from tags like `v2.51.2` or `2.51.2`
 - `"release-([0-9]+\\.[0-9]+)"` - Extracts version from tags like `release-1.5`
 
-**Note:** The first capture group is used as the version string.
+**Note:** The first capture group is used as the version string; a pattern with
+no capture group uses the whole match.
+A pattern that does not match stops discovery with an error.
 
 #### token
 
@@ -158,12 +193,16 @@ for version components.
 **Required:** No
 **Default:** None
 
-GitHub personal access token for authenticated API requests. Use environment variable
-substitution (e.g., `"${GITHUB_TOKEN}"`) for security.
+GitHub personal access token for authenticated API requests.
+Write it as `"${GITHUB_TOKEN}"` so the token stays out of the file (see
+[Environment variables](#environment-variables-variable_name)).
+An unset variable is not an error: the request is sent unauthenticated, so a
+missing secret shows up only as a rate-limit error.
 
 **When to use:**
 
-- Avoid GitHub API rate limits (60 requests/hour unauthenticated, 5000/hour authenticated)
+- Avoid GitHub API rate limits (60 requests/hour unauthenticated, 5000/hour
+  authenticated)
 - Access private repositories
 
 #### prerelease
@@ -172,16 +211,11 @@ substitution (e.g., `"${GITHUB_TOKEN}"`) for security.
 **Required:** No
 **Default:** `false`
 
-Whether a release marked as a pre-release on GitHub may be selected. NAPT always
-looks at the most recent release only; when it is a pre-release and this field
-is `false`, discovery fails with an error rather than walking back to an older
-stable release. Set to `true` for projects whose latest release is routinely a
-pre-release.
+Currently has no effect.
+NAPT reads GitHub's latest-release endpoint, which never returns a
+pre-release, so `true` never selects one and `false` never raises an error.
 
 ### api_json strategy
-
-**Best for:** Vendors with JSON REST APIs, cloud services with version endpoints, or APIs
-requiring authentication.
 
 **Configuration:**
 
@@ -193,7 +227,7 @@ discovery:
   download_url_path: "download_url"          # Required: JSONPath to download URL field
   version_pattern: "v?([0-9.]+)"             # Optional: regex to narrow the version value
   headers:                                   # Optional: HTTP headers for authentication
-    Authorization: "Bearer ${API_TOKEN}"
+    Authorization: "${API_AUTH_HEADER}"      # Variable holds "Bearer <token>"
 ```
 
 #### api_url
@@ -208,20 +242,22 @@ JSON API endpoint URL that returns version and download URL information.
 **Type:** `string` (JSONPath)
 **Required:** Yes
 
-JSONPath expression to extract the version field from the API response. Supports nested paths.
+JSONPath expression to extract the version field from the API response.
+Supports nested paths.
 
 **Examples:**
 - `"version"` - Direct field: `{"version": "1.2.3"}`
 - `"data.version"` - Nested field: `{"data": {"version": "1.2.3"}}`
-- `"release.latest.version"` - Deeply nested: `{"release": {"latest": {"version": "1.2.3"}}}`
+- `"release.latest.version"` - Deeply nested:
+  `{"release": {"latest": {"version": "1.2.3"}}}`
 
 #### download_url_path
 
 **Type:** `string` (JSONPath)
 **Required:** Yes
 
-JSONPath expression to extract the download URL field from the API response. Supports nested
-paths (same format as `version_path`).
+JSONPath expression to extract the download URL field from the API response.
+Supports nested paths (same format as `version_path`).
 
 #### version_pattern
 
@@ -229,19 +265,16 @@ paths (same format as `version_path`).
 **Required:** No
 **Default:** None (the value at `version_path` is used as is)
 
-Regular expression applied to the value found at `version_path`. Use it when the
-API wraps the version in a prefix or suffix that a device would misread: version
-comparison on the device takes each part's leading digits, so `"v2.0"` reads as
-version 0. For that reason `napt discover` refuses a version that does not start
-with a digit, and the error names the value to capture.
+Regex applied to the value found at `version_path`.
+Use it when the API wraps the version (`v2.0`, `2.0 (stable)`).
 
 **Examples:**
 - `"v?([0-9.]+)"` - Extracts `2.0` from `v2.0` or `2.0`
 - `"([0-9.]+)"` - Extracts `2.0` from `2.0 (stable)`
 
 **Note:** The first capture group is used as the version string; a pattern with
-no capture group uses the whole match. A pattern that does not match stops
-discovery with an error.
+no capture group uses the whole match.
+A pattern that does not match stops discovery with an error.
 
 #### headers
 
@@ -250,19 +283,18 @@ discovery with an error.
 **Default:** None
 
 HTTP headers to include in the API request, typically for authentication.
-Values support `${VARIABLE_NAME}` substitution (see
-[Variable substitution](#variable-substitution)).
+A value that is exactly `${VARIABLE_NAME}` is replaced from the environment;
+`Bearer ${TOKEN}` is sent as written, so put the whole header value in the
+variable (see [Environment variables](#environment-variables-variable_name)).
 
-**Example:**
+**Example (fragment of `discovery`):**
 ```yaml
 headers:
-  Authorization: "Bearer ${API_TOKEN}"
+  Authorization: "${API_AUTH_HEADER}"   # Variable holds "Bearer <token>"
   X-API-Key: "${VENDOR_API_KEY}"
 ```
 
 ### url_download strategy
-
-**Best for:** Vendors with stable download URLs and MSI or MSIX installers, which carry their own version.
 
 **Configuration:**
 
@@ -277,18 +309,15 @@ discovery:
 **Type:** `string` (URL)
 **Required:** Yes
 
-Stable download URL for the installer. **Important:** This URL must not change when new versions
-are released. If the URL changes with each version, use `web_scrape` strategy instead.
+Stable download URL for the installer.
+It must not change between versions; if it does, use `web_scrape`.
 
-Downloads the file from `url`, using HTTP conditional requests (ETags) to skip
-unchanged files. MSI files supply their version from the ProductVersion
-property and MSIX files from their Identity, with no configuration; other file
-types need a version-first strategy (api_github, api_json, web_scrape) instead.
+The version is read from the file: MSI ProductVersion or MSIX Identity.
+Other file types need `api_github`, `api_json`, or `web_scrape`.
+How unchanged files are skipped:
+[Skipping downloads](user-guide.md#skipping-downloads).
 
 ### web_scrape strategy
-
-**Best for:** Vendors with download pages listing installers when no direct download URL or API
-is available.
 
 **Configuration:**
 
@@ -313,8 +342,9 @@ URL of the vendor download page that contains links to installer files.
 **Type:** `string` (CSS selector)
 **Required:** One of `link_selector` or `link_pattern`
 
-CSS selector to find the download link on the page. Uses standard CSS selector syntax.
-Preferred over `link_pattern` when the page structure allows it.
+CSS selector to find the download link on the page.
+Prefer it over `link_pattern` when the page's markup allows.
+If both are set, `link_selector` is used and `link_pattern` is ignored.
 
 **Examples:**
 - `'a[href$=".msi"]'` - Matches links ending in `.msi`
@@ -322,8 +352,8 @@ Preferred over `link_pattern` when the page structure allows it.
 - `'#download-button'` - Matches element with `download-button` ID
 - `'a[href*="installer"]'` - Matches links containing "installer"
 
-**Note:** The selector should match exactly one link. If multiple links match, the first match
-is used.
+**Note:** The selector should match exactly one link.
+If multiple links match, the first match is used.
 
 #### link_pattern
 
@@ -332,8 +362,9 @@ is used.
 
 Regular expression applied to the raw page HTML to find the download link when
 a CSS selector cannot pin it down (for example, a URL embedded in a script
-block). Must contain exactly one capture group around the link URL; the first
-match is used.
+block).
+The first capture group is the link; with no group, the whole match is.
+The first match on the page is used.
 
 **Example:**
 
@@ -350,16 +381,15 @@ discovery:
 **Type:** `string` (regex)
 **Required:** Yes
 
-Regular expression pattern to extract version from the discovered download URL. Should include
-capture groups for version components.
+Regex that extracts the version from the discovered download URL.
+Capture groups feed `version_format`; with none, the whole match is the
+version.
 
 **Examples:**
 - `"app-(\\d+\\.\\d+)\\.msi"` - Extracts `1.5` from `app-1.5.msi`
-- `"7z(\\d{2})(\\d{2})-x64"` - Captures year and month from `7z2501-x64.msi` (groups: `25`, `01`)
+- `"7z(\\d{2})(\\d{2})-x64"` - Captures year and month from `7z2501-x64.msi`
+  (groups: `25`, `01`)
 - `"v([0-9.]+)"` - Extracts version from `v2.51.2` (captures `2.51.2`)
-
-**Note:** Use capture groups `( )` to extract version components. The first capture group is
-used by default, or use `version_format` to combine multiple groups.
 
 #### version_format
 
@@ -367,15 +397,13 @@ used by default, or use `version_format` to combine multiple groups.
 **Required:** No
 **Default:** Use first capture group as-is
 
-Format string to combine multiple capture groups from `version_pattern`. Uses Python format
-string syntax with `{0}`, `{1}`, etc. for capture groups.
+Format string to combine multiple capture groups from `version_pattern`.
+Uses Python format string syntax with `{0}`, `{1}`, etc. for capture groups.
 
 **Examples:**
 - `"{0}.{1}"` - Combines two groups: `"25"` + `"01"` → `"25.01"`
 - `"{1}.{0}"` - Reverses order: `"01"` + `"25"` → `"01.25"`
 - `"{0}.{1}.0"` - Pads to three parts: `"2"` + `"51"` → `"2.51.0"`
-
-The combined result is the version, so it must still start with a digit.
 
 ## PSADT configuration
 
@@ -404,7 +432,18 @@ PSADT release version to use. Can be:
 - `"latest"` - Use the latest PSADT release from GitHub
 - Specific version: `"4.1.7"` - Use a specific PSADT version
 
-**Note:** Typically set in organization defaults (`defaults/org.yaml`) rather than per-recipe.
+**Note:** Typically set in organization defaults (`defaults/org.yaml`) rather
+than per-recipe.
+
+### cache_dir
+
+**Type:** `string` (path)
+**Required:** No
+**Default:** `"cache/psadt"`
+
+Folder where `napt build` keeps downloaded PSADT releases.
+Relative to the working directory, not the recipe.
+Usually set in `defaults/org.yaml`.
 
 ### brand_pack
 
@@ -413,7 +452,8 @@ PSADT release version to use. Can be:
 **Default:** None (PSADT's default assets are used)
 
 Replaces PSADT's default dialog assets (logo, banner) with your organization's
-files in every build. Set in `defaults/org.yaml` rather than per-recipe.
+files in every build.
+Set in `defaults/org.yaml` rather than per-recipe.
 
 ```yaml
 psadt:
@@ -426,37 +466,51 @@ psadt:
         target: "Assets/Banner.Classic"
 ```
 
-- `path` is resolved relative to the directory containing `defaults/` (or the
-  recipe's directory when there is none). A path that does not exist is
-  skipped with a verbose log line rather than an error.
+- `path` is resolved relative to the `defaults/` directory (next to
+  `org.yaml`), or the recipe's directory when there is no `defaults/org.yaml`.
+  A path that does not exist is skipped with a verbose log line rather than
+  an error.
 - Each mapping copies the first file matching `source` to `target`, appending
-  the source file's extension. Mappings whose glob matches nothing are skipped.
+  the source file's extension.
+  Mappings whose glob matches nothing are skipped.
 
 ### app_vars
 
 **Type:** `object` (key-value pairs)
 **Required:** No
-**Default:** Merged from organization and vendor defaults
+**Default:** Per key, below; merged from organization, vendor, and parent
+layers
 
-PSADT application variables set in the generated `Invoke-AppDeployToolkit.ps1` file.
+PSADT application variables set in the generated `Invoke-AppDeployToolkit.ps1`
+file.
+Only these keys are allowed; any other key is a validation error:
 
-**Common Variables:**
+| Key | Default |
+|-----|---------|
+| `AppVendor` | None |
+| `AppName` | None (see [`name`](#name)) |
+| `AppVersion` | None (use `"{{discovered_version}}"`) |
+| `AppLang` | `"EN"` |
+| `AppRevision` | `"01"` |
+| `AppSuccessExitCodes` | `[0]` |
+| `AppRebootExitCodes` | `[1641, 3010]` |
+| `AppProcessesToClose` | `[]` |
+| `AppScriptVersion` | `"1.0.0"` |
+| `AppScriptDate` | Today's date (`YYYY-MM-DD`) |
+| `AppScriptAuthor` | `"napt"` |
+| `RequireAdmin` | Computed from [`run_as_account`](#run_as_account) unless a configuration layer sets it |
+| `InstallName` | None |
+| `InstallTitle` | None |
 
-- `AppName`: Display name shown in PSADT dialogs
-- `AppVersion`: Application version (use `{{discovered_version}}` for auto-substitution)
-- `AppVendor`: Vendor name (typically set in vendor defaults)
-- `AppLang`: Application language
+NAPT sets `AppArch` itself from the installer architecture, so it is not in
+the list.
 
-NAPT sets `AppArch` itself from the installer architecture; `napt validate`
-rejects it as an `app_vars` key.
-
-Values support the build-time variables in
+String values support the build-time variables in
 [Variable substitution](#variable-substitution); use `{{discovered_version}}`
 in `AppVersion` so the version matches the downloaded installer.
 
-For org-wide values such as `AppVendor`, set them once in `defaults/org.yaml`
-(or a vendor file) instead of repeating them per recipe; the configuration
-layers are deep-merged into every recipe.
+Set shared values such as `AppVendor` in `defaults/org.yaml` or a vendor file
+([Configuration layers](user-guide.md#configuration-layers)).
 
 ### override_msi_commands
 
@@ -468,28 +522,33 @@ layers are deep-merged into every recipe.
 When `true`, uses recipe `install` and `uninstall` scripts instead of the
 auto-generated MSI commands.
 
-**MSI auto-generation:** For MSI installers, NAPT auto-generates install and
-uninstall commands from the downloaded MSI's metadata:
+**Generated commands:**
 
-- **Install (`intune.run_as_account: system`, default):** `Start-ADTMsiProcess -Action Install -FilePath '{filename}' -AdditionalArgumentList "ALLUSERS=1"`
-- **Install (`user`):** `Start-ADTMsiProcess -Action Install -FilePath '{filename}'`
-- **Uninstall:** `Uninstall-ADTApplication -Name '{ProductName}' -NameMatch 'Exact' -ApplicationType 'MSI'`
+- **Install (`intune.run_as_account: system`, default):**
+  `Start-ADTMsiProcess -Action Install -FilePath '{filename}' -AdditionalArgumentList "ALLUSERS=1"`
+- **Install (`user`):**
+  `Start-ADTMsiProcess -Action Install -FilePath '{filename}'`
+- **Uninstall:**
+  `Uninstall-ADTApplication -Name '{ProductName}' -NameMatch 'Exact' -ApplicationType 'MSI'`
 
-PSADT's configuration supplies the silent-install arguments (`/qn REBOOT=ReallySuppress`)
-and verbose MSI logging automatically; `-AdditionalArgumentList` appends `ALLUSERS=1`
-to those defaults to force a per-machine installation.
-Uninstall matches the MSI ProductName exactly (extracted at build time), not the
-ProductCode, so it keeps working when vendors change the ProductCode between versions.
+PSADT adds its default MSI arguments (`/qn REBOOT=ReallySuppress`) and
+logging; `ALLUSERS=1` is appended to force a per-machine install.
+Uninstall matches the MSI ProductName exactly (extracted at build time), not
+the ProductCode, so it keeps working when vendors change the ProductCode
+between versions.
 
 **Behavior:**
 
-- `false` (default): Auto-generated commands are used; recipe `install`/`uninstall` are ignored with a warning if set
-- `true`: Recipe `install` and/or `uninstall` are used; auto-generated commands fill in any that are missing
-- `true` but neither `install` nor `uninstall` set: Error (nothing to override with)
+- `false` (default): Auto-generated commands are used; recipe
+  `install`/`uninstall` are ignored with a warning if set
+- `true`: Recipe `install` and/or `uninstall` are used; auto-generated
+  commands fill in any that are missing
+- `true` but neither `install` nor `uninstall` set: Error (nothing to
+  override with)
 - Non-MSI installers: Flag is ignored
 
-**When to use:** Apps that need MST transforms, extra MSI properties, or uninstall
-logic that differs from the standard pipeline.
+**When to use:** Apps that need MST transforms, extra MSI properties, or
+uninstall logic that differs from the standard pipeline.
 
 **Example:**
 ```yaml
@@ -511,31 +570,36 @@ psadt:
 When `true`, uses recipe `install` and `uninstall` scripts instead of the
 auto-generated MSIX commands.
 
-**MSIX auto-generation:** For MSIX installers, NAPT auto-generates install and
-uninstall commands from manifest metadata.
-The commands vary based on `intune.run_as_account`:
+**Generated commands**, from the manifest, by `intune.run_as_account`:
 
-- **Install (`system`, default):** `Add-AppxProvisionedPackage -Online -PackagePath (Join-Path $adtSession.DirFiles '{filename}') -SkipLicense`
-- **Uninstall (`system`, default):** `Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq '{identity_name}' } | Remove-AppxProvisionedPackage -Online`
-- **Install (`user`):** `Add-AppxPackage -Path (Join-Path $adtSession.DirFiles '{filename}')`
-- **Uninstall (`user`):** `Get-AppxPackage -Name '{identity_name}' | Remove-AppxPackage`
+- **Install (`system`, default):**
+  `Add-AppxProvisionedPackage -Online -PackagePath (Join-Path $adtSession.DirFiles '{filename}') -SkipLicense`
+- **Uninstall (`system`, default):**
+  `Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq '{identity_name}' } | Remove-AppxProvisionedPackage -Online`
+- **Install (`user`):**
+  `Add-AppxPackage -Path (Join-Path $adtSession.DirFiles '{filename}')`
+- **Uninstall (`user`):**
+  `Get-AppxPackage -Name '{identity_name}' | Remove-AppxPackage`
 
 **Behavior:**
 
-- `false` (default): Auto-generated commands are used; recipe `install`/`uninstall` are ignored with a warning if set
-- `true`: Recipe `install` and/or `uninstall` are used; auto-generated commands fill in any that are missing
-- `true` but neither `install` nor `uninstall` set: Error (nothing to override with)
+- `false` (default): Auto-generated commands are used; recipe
+  `install`/`uninstall` are ignored with a warning if set
+- `true`: Recipe `install` and/or `uninstall` are used; auto-generated
+  commands fill in any that are missing
+- `true` but neither `install` nor `uninstall` set: Error (nothing to
+  override with)
 - Non-MSIX installers: Flag is ignored
 
-**When to use:** Apps that require a license file during provisioning or uninstall
-logic that differs from the standard pipeline.
+**When to use:** Apps that require a license file during provisioning or
+uninstall logic that differs from the standard pipeline.
 
 **Example:**
 ```yaml
 psadt:
   override_msix_commands: true
   install: |
-    Add-AppxProvisionedPackage -Online -PackagePath "$($adtSession.DirFiles)\app.msix" -LicensePath "$($adtSession.DirFiles)\license.xml" -SkipLicense
+    Add-AppxProvisionedPackage -Online -PackagePath (Join-Path $adtSession.DirFiles "{{installer_filename}}") -LicensePath "$($adtSession.DirFiles)\license.xml"
   uninstall: |
     Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -eq "Vendor.App" } | Remove-AppxProvisionedPackage -Online
 ```
@@ -543,10 +607,12 @@ psadt:
 ### install
 
 **Type:** `string` (multiline)
-**Required:** Yes (EXE); auto-generated for MSI and MSIX unless overridden
+**Required:** For EXE installers (checked by `napt build`, not
+`napt validate`); auto-generated for MSI and MSIX unless overridden
 
-PowerShell script executed during installation. Inserted into the generated
-`Invoke-AppDeployToolkit.ps1` in the installation section.
+PowerShell script executed during installation.
+Inserted into the generated `Invoke-AppDeployToolkit.ps1` in the installation
+section.
 
 Supports the same build-time variables as `app_vars` (see
 [Variable substitution](#variable-substitution)); these are substituted when
@@ -557,17 +623,11 @@ the script is generated and are not PowerShell variables.
 - `$($adtSession.DirFiles)`: Path to the installer files directory
 - `$adtSession.AppName`, `$adtSession.AppVersion`, etc.: Values from `app_vars`
 
-**Commonly Used PSADT Functions:**
-
-- `Start-ADTProcess`: Execute EXE installers with parameters
-- `Start-ADTMsiProcess`: Install MSI files with parameters
-- `Uninstall-ADTApplication`: Uninstall applications by name
-
 **Note:** PSADT resolves a relative `-FilePath` against the `Files` directory
 and does not expand wildcards.
 Use `{{installer_filename}}` instead of a wildcard pattern.
 
-**Example (EXE installer):**
+**Example (EXE installer, fragment of `psadt`):**
 ```yaml
 install: |
   Start-ADTProcess -FilePath "{{installer_filename}}" -ArgumentList "/S"
@@ -576,19 +636,19 @@ install: |
 ### uninstall
 
 **Type:** `string` (multiline)
-**Required:** Yes (EXE); auto-generated for MSI and MSIX unless overridden
+**Required:** For EXE installers (checked by `napt build`, not
+`napt validate`); auto-generated for MSI and MSIX unless overridden
 
-PowerShell script executed during uninstallation. Same available variables as `install`.
+PowerShell script executed during uninstallation.
+Same available variables as `install`.
 
-**Example (EXE installer):**
+**Example (EXE installer, fragment of `psadt`):**
 ```yaml
 uninstall: |
   Uninstall-ADTApplication -Name "Application Name"
 ```
 
 ## Intune configuration
-
-The `intune` section configures Win32 app settings for Intune packaging and upload.
 
 ```yaml
 intune:
@@ -643,8 +703,8 @@ generated):
 **Required:** No
 **Default:** `"[Update] "`
 
-Prefix added to the app name for the Update app entry in Intune. The Update app display name is:
-`update_name_prefix + name`.
+Prefix added to the app name for the Update app entry in Intune.
+The Update app display name is `update_name_prefix + name`.
 
 **Example:**
 ```yaml
@@ -662,9 +722,11 @@ intune:
 **Required:** No
 **Default:** `"Windows10_21H2"`
 
-Minimum Windows 10/11 feature update required to install the app, enforced during Intune
-assignment. Format: `"Windows10_<release>"` or `"Windows11_<release>"` where release is
-the feature update name (e.g., `"Windows10_21H2"`, `"Windows10_22H2"`, `"Windows11_23H2"`).
+Minimum Windows 10/11 feature update required to install the app, enforced
+during Intune assignment.
+Format: `"Windows10_<release>"` or `"Windows11_<release>"` where release is
+the feature update name (e.g., `"Windows10_21H2"`, `"Windows10_22H2"`,
+`"Windows11_23H2"`).
 Older four-digit release names are also accepted (e.g., `"Windows10_1809"`).
 
 ### install_command
@@ -673,8 +735,8 @@ Older four-digit release names are also accepted (e.g., `"Windows10_1809"`).
 **Required:** No
 **Default:** `"Invoke-AppDeployToolkit.exe -DeploymentType Install -DeployMode Silent"`
 
-Command line used by Intune to install the app. Rarely needs changing unless you need custom
-PSADT deployment parameters.
+Command line used by Intune to install the app.
+Rarely needs changing unless you need custom PSADT deployment parameters.
 
 ### uninstall_command
 
@@ -699,8 +761,8 @@ prominent placement on the home screen.
 **Required:** No
 **Default:** `true`
 
-When `true`, the "Uninstall" action is available in the Company Portal for Available
-assignments.
+When `true`, the "Uninstall" action is available in the Company Portal for
+Available assignments.
 Set to `false` to prevent self-service uninstall for this app.
 
 ### run_as_account
@@ -710,25 +772,27 @@ Set to `false` to prevent self-service uninstall for this app.
 **Default:** `"system"`
 **Allowed values:** `"system"`, `"user"`
 
-Execution account for the installer and detection/requirements scripts.
+Execution account for the installer and the requirements script.
 Use `"system"` for most enterprise deployments.
 Use `"user"` for apps that must be installed in the user's profile context.
 
 **MSIX installers:** This field also controls which AppX cmdlets are
-auto-generated and which package store is queried by detection and
-requirements scripts:
+auto-generated and which package store the detection and requirements
+scripts query:
 
 | Value | Install cmdlet | Detection |
 |-------|---------------|-----------|
 | `"system"` (default) | `Add-AppxProvisionedPackage` (all users) | `Get-AppxProvisionedPackage` |
 | `"user"` | `Add-AppxPackage` (current user) | `Get-AppxPackage` |
 
-**`RequireAdmin` default:** For user-context installs, NAPT defaults
-`psadt.app_vars.RequireAdmin` to `false`.
+**`RequireAdmin` default:** NAPT sets `psadt.app_vars.RequireAdmin` to
+`false` for `user` and `true` for `system`, but only when no configuration
+layer (org, vendor, parent, or recipe) sets `RequireAdmin`.
 PSADT will error if `RequireAdmin` is `true` but the process is not running
 as an administrator.
+Do not set it in `defaults/org.yaml` if any app runs as `user`.
 If your environment grants local admin to users and you want PSADT to enforce
-it, set `RequireAdmin: true` explicitly in `psadt.app_vars`.
+it, set `RequireAdmin: true` explicitly in that recipe's `psadt.app_vars`.
 
 ### device_restart_behavior
 
@@ -764,7 +828,8 @@ Increase for apps with long installation times (e.g., large Office deployments).
 
 When `true`, Intune requires detection and requirements scripts to be
 code-signed before execution.
-Leave as `false` unless your organization enforces PowerShell script signing policy.
+Leave as `false` unless your organization enforces PowerShell script signing
+policy.
 
 ### run_as_32_bit
 
@@ -788,10 +853,11 @@ App description displayed in the Intune portal and Company Portal app.
 
 **Type:** `string`
 **Required:** No
-**Default:** Vendor directory name (e.g., `recipes/Google/` → `"Google"`)
+**Default:** The name of the folder that contains the recipe file (e.g.,
+`recipes/Google/chrome.yaml` → `"Google"`)
 
-Publisher name shown in Intune and the Company Portal. Override when the directory name doesn't
-match the official publisher name.
+Publisher name shown in Intune and the Company Portal.
+Override when the folder name doesn't match the official publisher name.
 
 ### privacy_url
 
@@ -799,7 +865,8 @@ match the official publisher name.
 **Required:** No
 **Default:** None
 
-Link to the vendor's privacy policy. Shown in the Intune portal.
+Link to the vendor's privacy policy.
+Shown in the Intune portal.
 
 ### info_url
 
@@ -807,7 +874,8 @@ Link to the vendor's privacy policy. Shown in the Intune portal.
 **Required:** No
 **Default:** None
 
-Link to more information about the app. Shown in the Intune portal.
+Link to more information about the app.
+Shown in the Intune portal.
 
 ### logo_path
 
@@ -815,12 +883,15 @@ Link to more information about the app. Shown in the Intune portal.
 **Required:** No
 **Default:** None
 
-Path to a PNG or JPEG (`.png`, `.jpg`, `.jpeg`) icon file to use as the app icon in Intune and the Company Portal.
+Path to a PNG or JPEG (`.png`, `.jpg`, `.jpeg`) icon file to use as the app
+icon in Intune and the Company Portal.
 The file must be under 700KB (Intune rejects icons over 750KB).
 Relative paths are resolved from the recipe file's location.
-When set in `defaults/org.yaml` (or a vendor file) and no file exists at the recipe-relative location, the path resolves from the `defaults/` directory instead, so an org-wide logo can live next to `org.yaml`.
+Set in `defaults/org.yaml` or a vendor file, the path falls back to
+`defaults/` when no file exists next to the recipe.
 
-When `logo_path` is not set, `napt build` extracts an icon from the installer into `icons/{id}.png` and `napt upload` uses that file automatically.
+When `logo_path` is not set, `napt build` extracts an icon from the installer
+into `icons/{id}.png` and `napt upload` uses that file automatically.
 Setting `logo_path` always wins and disables extraction.
 See [App icons](user-guide.md#app-icons) for the extraction rules.
 
@@ -830,7 +901,8 @@ See [App icons](user-guide.md#app-icons) for the extraction rules.
 **Required:** No
 **Default:** None
 
-Developer or maintainer name. Shown in the Intune portal's app details.
+Developer or maintainer name.
+Shown in the Intune portal's app details.
 
 ### owner
 
@@ -838,57 +910,51 @@ Developer or maintainer name. Shown in the Intune portal's app details.
 **Required:** No
 **Default:** None
 
-Business owner of the application. Shown in the Intune portal's app details.
+Business owner of the application.
+Shown in the Intune portal's app details.
 
 ### detection
 
-The `intune.detection` subsection configures detection and requirements script generation for
-Intune Win32 app deployments.
-
-**MSI/EXE installers:** Scripts check Windows uninstall registry keys to determine
-application installation state.
-
-**MSIX installers:** Scripts use `Get-AppxPackage` to query the AppX package database by
-package identity name. The `display_name`, `architecture`, and `override_msi_display_name`
-fields are not used for MSIX (metadata is extracted from `AppxManifest.xml`).
+These fields apply to MSI and EXE installers; MSIX takes its name and
+architecture from its manifest.
+How the scripts work:
+[Detection and requirements scripts](user-guide.md#detection-and-requirements-scripts).
 
 ```yaml
-# MSI/EXE detection configuration
 intune:
   detection:
-    display_name: "Application Name"  # See below
-    architecture: "x64"               # See below
-    exact_match: false                # See below
-    override_msi_display_name: false  # See below
+    display_name: "Application Name"
+    architecture: "x64"
+    exact_match: false
+    override_msi_display_name: false
 ```
 
 #### display_name
 
 **Type:** `string`
-**Required:** Yes for non-MSI installers, ignored for MSI installers
+**Required:** For EXE installers (checked by `napt build`, not
+`napt validate`); ignored for MSI unless `override_msi_display_name` is set,
+and for MSIX (a warning is logged if set)
 
-Application name used in scripts to match registry `DisplayName`. This value is also used in
-generated script filenames.
+Application name used in scripts to match registry `DisplayName`.
+For MSI, the MSI `ProductName` is used instead, since it is what the registry
+shows.
+This value is also used in generated script filenames.
 
-**Behavior:**
+**Note:** The value is sanitized for use in Windows filenames (spaces become
+hyphens, invalid characters removed).
+Script filenames follow the pattern `{DisplayName}_{Version}-Detection.ps1`
+and `{DisplayName}_{Version}-Requirements.ps1`.
 
-- **MSI installers:** Ignored (a warning is logged if set). MSI `ProductName` is used as the
-  authoritative source since it directly corresponds to the registry `DisplayName`.
-- **Non-MSI installers (EXE, etc.):** Required. Scripts check Windows uninstall registry keys
-  for this exact `DisplayName` value.
-
-**Note:** The value is sanitized for use in Windows filenames (spaces become hyphens, invalid
-characters removed). Script filenames follow the pattern:
-`{DisplayName}_{Version}-Detection.ps1` and `{DisplayName}_{Version}-Requirements.ps1`.
-
-**Template Variable Support:** `{{discovered_version}}` is automatically substituted with the
-discovered version. Use this when the registry DisplayName includes the version number (e.g.,
+**Build-time variables:** `{{discovered_version}}` is replaced with the
+release's version.
+Use this when the registry DisplayName includes the version number (e.g.,
 "7-Zip 25.01 (x64)").
-This is the only build-time variable supported here; `{{installer_filename}}` never appears
-in a registry DisplayName.
+This is the only build-time variable supported here; `{{installer_filename}}`
+never appears in a registry DisplayName.
 
-**Wildcard Support:** When `display_name` contains wildcards (`*` or `?`), scripts use
-PowerShell's `-like` operator instead of exact `-eq` matching:
+**Wildcards:** When `display_name` contains wildcards (`*` or `?`), scripts
+use PowerShell's `-like` operator instead of exact `-eq` matching:
 
 | Wildcard | Meaning | Example |
 |----------|---------|---------|
@@ -902,28 +968,21 @@ intune:
     display_name: "7-Zip {{discovered_version}} (x64)"  # Matches "7-Zip 25.01 (x64)"
 ```
 
-**Example with wildcard (for MSI with override):**
-```yaml
-intune:
-  detection:
-    display_name: "7-Zip * (x64 edition)"  # Matches any 7-Zip x64 version
-    override_msi_display_name: true
-```
+For a wildcard example, see
+[`override_msi_display_name`](#override_msi_display_name).
 
 #### architecture
 
 **Type:** `string`
-**Required:** Yes for non-MSI installers, ignored for MSI installers
+**Required:** For EXE installers (checked by `napt build`, not
+`napt validate`); ignored for MSI and MSIX (a warning is logged if set)
 **Allowed values:** `x86`, `x64`, `arm64`, `any`
 
-Specifies the installer's binary architecture. Controls which registry views detection and
-requirements scripts check, and which device architectures the app is offered to in Intune.
-
-**Behavior:**
-
-- **MSI installers:** Ignored (a warning is logged if set). Architecture is auto-detected from
-  the MSI Summary Information `Template` property.
-- **Non-MSI installers (EXE, etc.):** Required. Must be set in recipe configuration.
+Specifies the installer's binary architecture.
+Controls which registry views detection and requirements scripts check, and
+which device architectures the app is offered to in Intune.
+For MSI, it is read from the MSI Summary Information `Template` property; for
+MSIX, from the manifest.
 
 **Allowed values:**
 
@@ -940,12 +999,14 @@ requirements scripts check, and which device architectures the app is offered to
 **Required:** No
 **Default:** `false`
 
-If `true`, the detection script requires an exact version match. If `false`, detection passes if
-the installed version is greater than or equal to the required version.
+If `true`, the detection script requires an exact version match.
+If `false`, detection passes if the installed version is greater than or equal
+to the required version.
 
-- `exact_match: false` (default): Allows users to have newer versions without triggering
-  reinstall
-- `exact_match: true`: Requires exact version match (useful for compliance scenarios)
+- `exact_match: false` (default): Allows users to have newer versions without
+  triggering reinstall
+- `exact_match: true`: Requires exact version match (useful for compliance
+  scenarios)
 
 #### override_msi_display_name
 
@@ -966,21 +1027,19 @@ number that changes with each release (e.g., "7-Zip 25.01").
 - `true`: Uses `display_name` field (must be set)
 - Non-MSI installers: Flag is ignored (a warning is logged if set)
 
-**Example:**
+**Example (wildcard):**
 ```yaml
 intune:
   detection:
-    display_name: "7-Zip * (x64 edition)"
+    display_name: "7-Zip * (x64 edition)"  # Matches any 7-Zip x64 version
     override_msi_display_name: true
 ```
-
-See [Detection and requirements scripts](user-guide.md#detection-and-requirements-scripts)
-in the User Guide for how the generated scripts work and where they are stored.
 
 ## IntuneWinAppUtil configuration
 
 The `intunewin` section controls the Microsoft packaging tool `napt package`
-uses. Set in `defaults/org.yaml`; it is not a per-recipe setting.
+uses.
+Usually set in `defaults/org.yaml`.
 
 ```yaml
 intunewin:
@@ -996,23 +1055,22 @@ intunewin:
 Which `IntuneWinAppUtil.exe` release to download and run. Can be:
 
 - `"latest"` - Use the latest release from Microsoft's GitHub repository
-- Specific version: `"1.8.6"` - Pin to a known-good release for reproducible packaging
+- Specific version: `"1.8.6"` - Pin to a known-good release for reproducible
+  packaging
 
-Each release is cached independently under `cache/tools/{version}/`, so changing
-the pin never overwrites a previously downloaded tool.
+Each release is cached independently under `cache/tools/{version}/`, so
+changing the pin never overwrites a previously downloaded tool.
 
 ## Logging configuration
 
-The `logging` section controls on-device logging for detection and requirements scripts.
-Logs are written in CMTrace format (compatible with the Configuration Manager Trace Log
-Tool).
+The `logging` section controls on-device logging for detection and
+requirements scripts.
+Usually set in `defaults/org.yaml`.
 
 ```yaml
 logging:
   log_rotation_mb: 3      # Optional: max log file size in MB
 ```
-
-This setting is typically configured in `defaults/org.yaml` rather than per-recipe.
 
 ### log_rotation_mb
 
@@ -1020,10 +1078,36 @@ This setting is typically configured in `defaults/org.yaml` rather than per-reci
 **Required:** No
 **Default:** `3`
 
-Maximum log file size in megabytes before rotation. Scripts use a 2-file rotation scheme
-(`.log` and `.log.old`).
-Log file locations are described in
+Maximum log file size in megabytes before rotation.
+Scripts use a 2-file rotation scheme (`.log` and `.log.old`).
+Log format and locations are described in
 [Detection and requirements scripts](user-guide.md#detection-and-requirements-scripts).
+
+## Directories configuration
+
+The `directories` section sets where commands read and write their files.
+It is org policy: set it in `defaults/org.yaml`.
+Paths are relative to the working directory.
+Command-line flags override these values for one run (see
+[Directory flag defaults](user-guide.md#directory-flag-defaults)); `napt upload`
+has no directory flags and reads its locations from this section only.
+
+```yaml
+directories:
+  discover: "downloads"
+  build: "builds"
+  package: "packages"
+  icons: "icons"
+  state: "state"
+```
+
+| Key | Default | Holds |
+|-----|---------|-------|
+| `discover` | `"downloads"` | Installers written by `napt discover`, read by `napt build` |
+| `build` | `"builds"` | Builds written by `napt build`, read by `napt package` |
+| `package` | `"packages"` | Packages written by `napt package`, read by `napt upload` |
+| `icons` | `"icons"` | Icons extracted by `napt build`, read by `napt upload` |
+| `state` | `"state"` | Deployment state and promotion plan files |
 
 ## Deployment configuration
 
@@ -1063,13 +1147,18 @@ these display names must be referenced by its object ID.
 **Required:** No
 **Default:** `false`
 
-When enabled, `napt upload` fails if the app's deployment state has no
-pending release matching the package (nothing reaches Intune without a
-recorded release).
+A recorded pending release must always match the package, whether or not
+this is set.
+When enabled, `napt upload` also fails when no pending release is recorded,
+so nothing reaches Intune without a recorded release.
 Enable this when publishes are gated through review of committed deployment
 state.
-For a manual upload under this policy, run `napt discover` first or add a
-pending entry (version, sha256, url) to the app's deployment state file.
+
+For a manual upload under this policy, run `napt discover` first.
+Republishing an already-published binary (for example, to
+[fix a broken published app](common-tasks.md#fix-a-broken-published-app))
+has no pending release; add a `pending` entry to the app's deployment state
+file by hand, with the published release's `version`, `sha256`, and `url`.
 
 ### rings
 
@@ -1081,6 +1170,9 @@ Ordered deployment rings for update promotion.
 Each ring requires a unique `name` and a non-empty `groups` list;
 `promote_after_days` (optional) sets how many days a version holds the ring
 before becoming eligible for the next one.
+Without it the ring is a manual gate: releases hold it until you change the
+configuration.
+Leave it off the last ring.
 
 Rings are evaluated by `napt promote plan` and executed by
 `napt promote apply` (ring groups are assigned to the `[Update]` entry as
@@ -1099,10 +1191,8 @@ org-wide choice is `groups: ["All Users"]` for Company Portal
 self-service.
 The assignment is planned by `napt promote plan` and executed once per
 release by `napt promote apply`.
-The cutover happens with the release's first promotion: the same plan
-that starts a release's rollout in the first ring also points new
-installs at it, so net-new devices receive the release before it has
-baked through the rings.
+New installs move to a release in the same plan that puts it in the first
+ring, before it has baked through the rings.
 
 ### retain_versions
 
@@ -1116,8 +1206,6 @@ Enforced by `napt promote apply`; only NAPT-stamped apps are ever deleted.
 
 ## Variable substitution
 
-Recipes use two distinct substitution mechanisms with different syntax.
-
 ### NAPT build-time variables: `{{...}}`
 
 NAPT substitutes these while generating the package (they are not PowerShell
@@ -1125,35 +1213,36 @@ variables):
 
 | Variable | Value | Supported fields |
 |----------|-------|------------------|
-| `{{discovered_version}}` | The release's version: the installer's own for MSI and MSIX, the strategy's for EXE (see [The installer's version is the version](user-guide.md#the-installers-version-is-the-version)) | `psadt.app_vars`, `psadt.install`, `psadt.uninstall`, `intune.detection.display_name` |
-| `{{installer_filename}}` | Exact filename of the downloaded installer | `psadt.app_vars`, `psadt.install`, `psadt.uninstall` |
+| `{{discovered_version}}` | The release's version: the installer's own for MSI and MSIX, the strategy's for EXE (see [The installer's version is the version](user-guide.md#the-installers-version-is-the-version)) | `psadt.app_vars` (string values), `psadt.install`, `psadt.uninstall`, `intune.detection.display_name` |
+| `{{installer_filename}}` | Exact filename of the downloaded installer | `psadt.app_vars` (string values), `psadt.install`, `psadt.uninstall` |
 
 `napt build` logs a warning if an `app_vars` value or an install/uninstall
 script contains a `{{snake_case}}` token that is not a supported variable.
 
 ### Environment variables: `${VARIABLE_NAME}`
 
-Environment variable substitution exists for secrets that must not be committed
-to YAML.
-It works **only** in `discovery.token` and `discovery.headers`.
+Environment variable substitution exists for secrets that must not be
+committed to YAML.
+It works **only** in `discovery.token` (`api_github`) and the values of
+`discovery.headers` (`api_json`).
 
-For non-secret org-wide values (e.g., `AppVendor`), use the configuration layers
-(`defaults/org.yaml`, `defaults/vendors/{Vendor}.yaml`) instead.
-
-### Syntax
+Only a whole value that is exactly `${VARIABLE_NAME}` is replaced; text around
+it is sent as written, so `"Bearer ${API_TOKEN}"` reaches the server
+literally.
+For a bearer token, put the whole header value in the variable:
 
 ```yaml
 discovery:
-  token: "${GITHUB_TOKEN}"               # Environment variable (secrets only)
+  strategy: api_json
+  api_url: "https://api.vendor.com/latest"
+  version_path: "version"
+  download_url_path: "download_url"
   headers:
-    Authorization: "Bearer ${API_TOKEN}" # Environment variable (secrets only)
-
-psadt:
-  app_vars:
-    AppVersion: "{{discovered_version}}" # NAPT build-time substitution
-  install: |
-    Start-ADTProcess -FilePath "{{installer_filename}}" -ArgumentList "/S"
+    Authorization: "${API_AUTH_HEADER}"   # API_AUTH_HEADER="Bearer <token>"
 ```
+
+An unset variable is not an error, and is logged only at verbose level: the
+header is dropped, or the `token` request goes out unauthenticated.
 
 For setting the variables locally and in CI/CD, see
 [Handle authentication tokens](common-tasks.md#handle-authentication-tokens).
@@ -1189,7 +1278,5 @@ psadt:
 
 ## See also
 
-- [Common Tasks](common-tasks.md) - Practical workflows and examples
-- [Discovery Strategies](user-guide.md#discovery-strategies) - Strategy selection guide
-- [User Guide](user-guide.md) - Complete user documentation
-- [PSADT Reference](https://psappdeploytoolkit.com/) - Complete PSADT function reference
+- [PSADT reference](https://psappdeploytoolkit.com/): PSADT functions used in
+  `install` and `uninstall`

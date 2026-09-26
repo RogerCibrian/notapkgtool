@@ -54,7 +54,7 @@ class Logger(Protocol):
     def info(self, prefix: str, message: str) -> None:
         """Print an informational message (always visible).
 
-        Use for notable events that are not warnings — e.g., replacing a
+        Use for notable events that are not warnings, e.g., replacing a
         previous artifact, skipping a step for a known reason.
 
         Args:
@@ -184,7 +184,8 @@ def get_global_logger() -> Logger:
         The current global logger instance.
 
     Note:
-        The default global logger is silent. Use set_global_logger() to
+        The default global logger is non-verbose: it prints steps, info,
+        warnings, and progress. Use set_global_logger() to
         configure it, or pass a logger instance directly to functions.
     """
     return _global_logger

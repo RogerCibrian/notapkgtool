@@ -22,7 +22,8 @@ The configuration hierarchy is:
     1. Code defaults (this module) - always present
     2. Organization defaults (defaults/org.yaml) - optional overrides
     3. Vendor defaults (defaults/vendors/{Vendor}.yaml) - optional overrides
-    4. Recipe configuration - required, app-specific settings
+    4. Parent recipe (the file named by `parent`) - optional
+    5. Recipe configuration - required, app-specific settings
 
 This design ensures that NAPT works out of the box without requiring any
 configuration files, while still allowing full customization when needed.

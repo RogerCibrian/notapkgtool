@@ -23,7 +23,6 @@ Design Principles:
     - Generate script by substitution, not modification
     - Preserve PSADT's structure and comments
     - Support dynamic values (AppScriptDate, discovered version)
-    - Merge org defaults with recipe overrides
 """
 
 from __future__ import annotations
@@ -145,7 +144,7 @@ def _build_adtsession_vars(
         version: Discovered application version.
         psadt_version: PSADT version being used.
         architecture: Resolved installer architecture (e.g., "x64", "x86",
-            "arm64", "any"). "any" is skipped — AppArch is left unset.
+            "arm64", "any"). "any" is skipped; AppArch is left unset.
         installer_filename: Installer filename in the Files directory.
 
     Returns:

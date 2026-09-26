@@ -14,7 +14,7 @@
 
 """Entra ID app registration provisioning for `napt auth setup`.
 
-Creates -- or brings up to spec -- the app registration that
+Creates, or brings up to spec, the app registration that
 [napt.auth.credentials][] signs in with, so an administrator never has to click
 through the portal:
 
@@ -34,8 +34,8 @@ or ``--client-id``) is patched with only what is missing, and rerunning on a
 complete registration changes nothing.
 
 The run is bootstrapped with a short-lived token from the Microsoft Graph
-Command Line Tools first-party application -- the same one `Connect-MgGraph`
-uses -- requested in the browser and held in memory only. It needs an
+Command Line Tools first-party application (the same one `Connect-MgGraph`
+uses), requested in the browser and held in memory only. It needs an
 account holding at least the Application Administrator role. NAPT does not
 store that account or its tokens; the browser may keep its own sign-in.
 

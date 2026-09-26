@@ -5,7 +5,6 @@
 ### Prerequisites
 
 - Python 3.11 or higher
-- Git
 
 ### Choose your installation method
 
@@ -29,9 +28,10 @@ napt --version
 
 #### Option 2: Poetry (for development)
 
-> **Note:** Clones the main branch, so you're working with the latest code.
+> **Note:** This installs unreleased code from `main`.
 
-**Prerequisites:** Poetry must be installed. See [Poetry Installation Guide](https://python-poetry.org/docs/#installation)
+**Prerequisites:** Git and
+[Poetry](https://python-poetry.org/docs/#installation).
 
 ```powershell
 # Clone repository
@@ -50,8 +50,9 @@ napt --version
 
 ### Platform requirements
 
-Windows needs nothing extra. Linux and macOS need `msitools` for MSI version
-extraction and cannot create .intunewin packages (that step requires Windows):
+Windows needs nothing extra.
+Linux and macOS need `msitools` to read MSI installers (discover and build)
+and cannot create .intunewin packages (that step requires Windows):
 
 ```bash
 # Debian/Ubuntu
@@ -71,17 +72,16 @@ mixed-platform workflow.
 
 ### Command-line options
 
-All commands support:
+Every command and subcommand accepts:
 
-- `--help` or `-h` - Show detailed help and examples for any command
-- `--verbose` - Show progress details and additional information
-- `--debug` - Show full diagnostics including configuration dumps
+- `-h`, `--help` - Show help and examples
+- `-v`, `--verbose` - Show progress details and additional information
+- `-d`, `--debug` - Show full diagnostics including configuration dumps
 
-Example: `napt discover --help` or `napt build --verbose`
+For `napt promote` and `napt auth`, pass `-v` and `-d` to the subcommand
+(`napt promote plan -v`, not `napt promote -v`).
 
 ### Initialize a new project
-
-Set up the recommended directory structure for a new NAPT project:
 
 ```bash
 # Initialize in current directory
@@ -90,71 +90,43 @@ napt init
 # Initialize in a specific directory
 napt init /path/to/project
 
-# Overwrite existing files (backs up originals)
+# Replace defaults/org.yaml with a fresh template
+# (the old one is kept as defaults/org.yaml.backup)
 napt init --force
 ```
 
-This creates:
-
-- `recipes/` - Directory for your recipe files
-- `defaults/org.yaml` - Organization-wide configuration (commented template)
-- `defaults/vendors/` - Directory for vendor-specific defaults
-- `state/deployment/` - Per-app deployment state files
-
-### Validate a recipe
-
-Quick validation checks syntax and configuration without downloading anything:
-
-```bash
-napt validate recipes/Google/chrome.yaml
-```
-
-### Discover latest version
-
-Download the installer and extract version information:
-
-```bash
-# Discover version and download installer
-# Records the release in deployment state by default
-napt discover recipes/Google/chrome.yaml
-
-# Specify custom output directory
-napt discover recipes/Google/chrome.yaml --output-dir ./installers
-
-# Leave deployment state alone (no pending release is recorded)
-napt discover recipes/Google/chrome.yaml --stateless
-```
-
-Re-running `napt discover` skips the download when nothing changed; the fetch
-step reports `[DISCOVERY] File not modified` instead.
-
-### Build PSADT package
-
-Create a complete PSADT package ready for deployment:
-
-```bash
-# Build PSADT package from recipe and downloaded installer
-napt build recipes/Google/chrome.yaml
-
-# Specify custom downloads and output directories
-napt build recipes/Google/chrome.yaml --downloads-dir ./downloads --output-dir ./builds
-```
-
-### Create .intunewin package
-
-Package the PSADT build for Microsoft Intune:
-
-```bash
-# Create .intunewin from recipe (infers most recent build automatically)
-napt package recipes/Google/chrome.yaml
-
-# Specify output directory and clean source after packaging
-napt package recipes/Google/chrome.yaml --output-dir ./packages --clean-source
-```
+`napt init` creates `recipes/`, `defaults/org.yaml` (a commented template),
+`defaults/vendors/`, and `state/deployment/`.
 
 ## Complete workflow: recipe to package
 
-### 1. Validate recipe
+### 1. Create a recipe
+
+`napt init` leaves `recipes/` empty.
+Save this recipe as `recipes/Google/chrome.yaml`:
+
+```yaml
+apiVersion: napt/v1
+name: "Google Chrome"
+id: "napt-chrome"
+
+discovery:
+  strategy: url_download
+  url: "https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi"
+
+psadt:
+  app_vars:
+    AppName: "Google Chrome"
+    AppVersion: "{{discovered_version}}"
+```
+
+NAPT downloads the MSI from the fixed URL and reads the version from it.
+[Create a recipe for a fixed download URL](common-tasks.md#create-a-recipe-for-a-fixed-download-url)
+explains what to customize.
+
+### 2. Validate the recipe
+
+`napt validate` checks syntax and configuration without network calls:
 
 ```console
 $ napt validate recipes/Google/chrome.yaml
@@ -172,7 +144,7 @@ App Count:   1
 [SUCCESS] Recipe is valid!
 ```
 
-### 2. Discover and download latest version
+### 3. Discover and download the latest version
 
 ```console
 $ napt discover recipes/Google/chrome.yaml
@@ -181,8 +153,9 @@ Discovering version for recipe: /path/to/recipes/Google/chrome.yaml
 [1/4] Loading configuration...
 [2/4] Discovering version...
 [3/4] Fetching installer...
-[DOWNLOAD] 100%
+[DOWNLOAD] Complete: googlechromestandaloneenterprise64.msi (<hash>...) in <seconds>s at <speed> MB/s
 [4/4] Updating state...
+[STATE] Recorded pending release <version> in state/deployment/napt-chrome.json
 ======================================================================
 DISCOVERY RESULTS
 ======================================================================
@@ -191,7 +164,7 @@ App ID:          napt-chrome
 Strategy:        url_download
 Version:         <version>
 Version Source:  msi
-File Path:       /path/to/downloads/napt-chrome/<version>/googlechromestandaloneenterprise64.msi
+File Path:       downloads/napt-chrome/<version>/googlechromestandaloneenterprise64.msi
 SHA-256:         <sha256>
 Status:          success
 ======================================================================
@@ -199,7 +172,17 @@ Status:          success
 [SUCCESS] Version discovered successfully!
 ```
 
-### 3. Build PSADT package
+Re-running `napt discover` skips the download when nothing changed; the fetch
+step reports `[DISCOVERY] File not modified` instead.
+Add `--stateless` to skip recording the pending release; the download and
+reuse logic is unchanged.
+`--output-dir <dir>` downloads somewhere other than `downloads/`.
+To force a download, see
+[Discover reuses an installer you want downloaded again](common-tasks.md#issue-discover-reuses-an-installer-you-want-downloaded-again).
+
+### 4. Build the PSADT package
+
+Build the PSADT deployment folder:
 
 ```console
 $ napt build recipes/Google/chrome.yaml
@@ -208,8 +191,14 @@ Building PSADT package for recipe: /path/to/recipes/Google/chrome.yaml
 [1/8] Loading configuration...
 [2/8] Finding installer...
 [3/8] Determining version...
+[BUILD] Building Google Chrome v<version>
+[BUILD] Extracted app icon (256px): icons/napt-chrome.png
 [4/8] Getting PSADT release...
+[PSADT] Downloading PSADT <psadt version>...
+[BUILD] Using PSADT <psadt version>
 [5/8] Creating build structure...
+[BUILD] Auto-generated MSI install: Start-ADTMsiProcess -Action Install -FilePath 'googlechromestandaloneenterprise64.msi' -AdditionalArgumentList "ALLUSERS=1"
+[BUILD] Auto-generated MSI uninstall: Uninstall-ADTApplication -Name 'Google Chrome' -NameMatch 'Exact' -ApplicationType 'MSI'
 [6/8] Applying branding...
 [7/8] Generating detection script...
 [8/8] Generating requirements script...
@@ -220,22 +209,29 @@ App Name:        Google Chrome
 App ID:          napt-chrome
 Version:         <version>
 PSADT Version:   <psadt version>
-Build Directory: /path/to/builds/napt-chrome/<version>/packagefiles
+Build Directory: builds/napt-chrome/<version>/packagefiles
 Status:          success
 ======================================================================
 
 [SUCCESS] PSADT package built successfully!
 ```
 
-### 4. Create .intunewin package
+`--downloads-dir` and `--output-dir` change where build looks for the
+installer and where it writes the build.
+
+### 5. Create the .intunewin package
+
+This step requires Windows.
 
 ```console
 $ napt package recipes/Google/chrome.yaml
-Creating .intunewin package from: /path/to/builds/napt-chrome/<version>
-Output directory: /path/to/packages
+Creating .intunewin package from: builds/napt-chrome/<version>
+Output directory: packages
 
 [1/5] Verifying build structure...
 [2/5] Getting IntuneWinAppUtil tool...
+[PACKAGE] Downloading IntuneWinAppUtil.exe <tool version>...
+[PACKAGE] IntuneWinAppUtil.exe <tool version> cached successfully
 [3/5] Creating .intunewin package...
 [4/5] Copying detection scripts...
 [5/5] Package complete
@@ -244,20 +240,30 @@ PACKAGE RESULTS
 ======================================================================
 App ID:          napt-chrome
 Version:         <version>
-Package Path:    /path/to/packages/napt-chrome/<version>/Invoke-AppDeployToolkit.intunewin
-Build Directory: /path/to/builds/napt-chrome/<version>
+Package Path:    packages/napt-chrome/<version>/Invoke-AppDeployToolkit.intunewin
+Build Directory: builds/napt-chrome/<version>
 Status:          success
 ======================================================================
 
 [SUCCESS] .intunewin package created successfully!
 ```
 
+`--output-dir` sets the parent folder for the package; `--clean-source`
+removes the build folder after packaging.
+
 **Result:** Ready-to-upload .intunewin file in `packages/napt-chrome/<version>/`
 
 ## What's next?
 
-- **[Deploy to Intune](common-tasks.md#deploy-to-intune)** - Set up authentication with `napt auth`, upload the package with `napt upload`, and roll it out with `napt promote`
-- **[Common Tasks](common-tasks.md)** - Step-by-step guides, including a recipe walkthrough for each discovery strategy
-- **[User Guide](user-guide.md)** - How each command works, configuration layers, and state
-- **[Examples](https://github.com/RogerCibrian/notapkgtool/tree/main/recipes)** - Browse example recipes for Chrome, Git, and more
+- **[Deploy to Intune](common-tasks.md#deploy-to-intune)** - Continue from
+  the package you just built: create the app registration with
+  `napt auth setup`, sign in with `napt auth login`, upload with
+  `napt upload`, then roll the release out through the rings with
+  `napt promote plan` and `napt promote apply`
+- **[Common tasks](common-tasks.md)** - Step-by-step guides, including a
+  recipe walkthrough for each discovery strategy
+- **[User guide](user-guide.md)** - How each command works, configuration
+  layers, and state
+- **[Examples](https://github.com/RogerCibrian/notapkgtool/tree/main/recipes)** -
+  Browse example recipes for Chrome, Git, and more
 
