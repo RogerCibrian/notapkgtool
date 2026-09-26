@@ -366,6 +366,26 @@ class TestRecordPublished:
         assert state["published"]["version"] == "2.0.0"
         assert state["published"]["intune_app_id"] == "c"
 
+    def test_publishing_a_retained_release_removes_it_from_retained(self):
+        """Tests that rolling back to a retained release takes it off the
+        retained list, since the published release is not a rollback
+        candidate."""
+        state = create_default_deployment_state()
+        state["retained"] = [
+            {"version": "1.0.0", "sha256": "aaa"},
+            {"version": "1.5.0", "sha256": "555"},
+        ]
+
+        record_published(
+            state,
+            version="1.0.0",
+            sha256="aaa",
+            intune_app_id="a",
+            intune_update_app_id="b",
+        )
+
+        assert state["retained"] == [{"version": "1.5.0", "sha256": "555"}]
+
 
 class TestSummarizeDeploymentStates:
     """Tests for deployment state aggregation."""

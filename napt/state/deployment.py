@@ -286,7 +286,9 @@ def record_published(
     Replaces the ``published`` section and clears the pending slot when
     the pending candidate is the release that was just published. A
     pending candidate with a different hash (a newer discovery) is left
-    in place.
+    in place. A release rolled back to is removed from the retained
+    list: the published release is not a rollback candidate, and leaving
+    it there would let retention count it and mis-order the list.
 
     Args:
         state: Deployment state dictionary to update in place.
@@ -308,6 +310,10 @@ def record_published(
     pending = state.get("pending")
     if pending and pending.get("sha256") == sha256:
         state["pending"] = None
+
+    retained = state.get("retained")
+    if retained:
+        state["retained"] = [e for e in retained if e.get("sha256") != sha256]
 
 
 def summarize_deployment_states(deployment_dir: Path) -> list[dict[str, Any]]:
