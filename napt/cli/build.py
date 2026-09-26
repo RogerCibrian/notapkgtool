@@ -32,9 +32,10 @@ def cmd_build(args: argparse.Namespace) -> int:
     """Handler for 'napt build' command.
 
     Builds a PSADT package from a recipe and downloaded installer. This command
-    loads the recipe configuration, finds the downloaded installer, extracts
-    version from the installer file (filesystem is truth), downloads/caches
-    the specified PSADT release, creates build directory structure, copies
+    loads the recipe configuration, reads the release to build from
+    deployment state, finds the installer by its recorded hash, checks an MSI
+    or MSIX version against its folder, downloads/caches the specified PSADT
+    release, creates build directory structure, copies
     PSADT files pristine from cache, generates Invoke-AppDeployToolkit.ps1
     with recipe values, copies installer to Files/ directory, and applies
     custom branding.

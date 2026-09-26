@@ -540,7 +540,7 @@ def _upload_single_app(
 
     Reconcile-before-act: when a NAPT-stamped app already matches this
     publish instance (recipe id, entry type, installer hash), the app is
-    adopted instead of duplicated — skipped entirely if its content is
+    adopted instead of duplicated: skipped entirely if its content is
     committed, or deleted and recreated if a previous run crashed between
     app creation and commit (Intune refuses new content versions for an
     app whose first content version was never committed, so such an
@@ -672,16 +672,17 @@ def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
     manifest) is verified against the pending release recorded in the app's
     deployment state, so what was recorded at discovery is byte-for-byte
     what ships. A hash mismatch aborts the upload. When no pending release
-    is recorded, the upload proceeds with a warning — or fails when
+    is recorded, the upload proceeds with a warning, or fails when
     deployment.require_pending is enabled. On success, the deployment
     state records the published version, hash, and Intune app IDs, and a
     matching pending slot is cleared.
 
     Re-running an upload is safe: existing NAPT-stamped apps matching this
-    publish instance (recipe id, entry type, installer hash) are adopted —
-    or their interrupted content upload resumed — instead of duplicated.
-    Adoption keeps the app as it is; it does not re-send metadata or
-    content. Pass force=True to update matched apps' metadata and upload a
+    publish instance (recipe id, entry type, installer hash) are adopted
+    instead of duplicated; one whose content was never committed is deleted
+    and recreated, so it gets a new app ID. Adoption keeps the app as it is;
+    it does not re-send metadata or content. Pass force=True to update
+    matched apps' metadata and upload a
     fresh content version (e.g., after changing PSADT commands or detection
     settings without a new installer release).
 

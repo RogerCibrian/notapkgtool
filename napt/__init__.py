@@ -21,25 +21,11 @@ NAPT provides:
 
 - YAML-based recipe configuration
 - Automatic version discovery from multiple sources
-- Robust download with conditional requests and integrity verification
-- Automatic update policies (version-based, hash-based, or combined)
+- Downloads with conditional requests, retries, and SHA-256 hashing
 - PSADT package generation with Template_v4
 - .intunewin package creation for Intune deployment
 - Direct upload to Microsoft Intune
 - Ring-based deployment promotion with drift detection
 
-Quick Start:
-Validate recipe syntax:
-
-    $ napt validate recipes/Google/chrome.yaml
-
-Discover latest version and download installer:
-
-    $ napt discover recipes/Google/chrome.yaml
-
-For full CLI documentation:
-
-    $ napt --help
-
-For more details, see the individual module docstrings.
+Run `napt --help` for the command list.
 """

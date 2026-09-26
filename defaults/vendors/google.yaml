@@ -1,4 +1,3 @@
-defaults:
-  psadt:
-    app_vars:
-      AppVendor: "Google"
+psadt:
+  app_vars:
+    AppVendor: "Google"

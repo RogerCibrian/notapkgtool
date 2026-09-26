@@ -26,8 +26,8 @@ Commands:
     promote: Plan and apply deployment ring promotion
     status: Show deployment state across all apps
 
-Each command lives in its own module named after it -- `napt/cli/validate.py`
-owns `napt validate` -- holding the command's `cmd_*` handlers and a
+Each command lives in its own module named after it (`napt/cli/validate.py`
+owns `napt validate`), holding the command's `cmd_*` handlers and a
 `register(subparsers)` hook that adds its parser. `napt/cli/main.py`
 assembles the top-level parser, calls each command's `register`, and
 dispatches to the selected handler.
@@ -36,6 +36,7 @@ Exit Codes:
 
 - 0: Success
 - 1: Error (configuration, download, or validation failure)
+- 2: Usage error (unknown flag, missing argument)
 
 Note:
     The CLI uses argparse for command parsing (stdlib, zero dependencies).

@@ -25,5 +25,5 @@ state and Intune: a machine-parseable line in each published app's notes
 field that marks the app as NAPT-managed and ties it to the publish
 instance recorded here.
 
-The --stateless flag disables deployment state reads and writes.
+`napt discover --stateless` neither reads nor writes deployment state.
 """

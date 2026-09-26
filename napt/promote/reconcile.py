@@ -15,7 +15,7 @@
 """Publication recovery for lost deployment state writebacks.
 
 A publish run records the pending-to-published transition in deployment
-state after uploading, but that record can be lost — most commonly when
+state after uploading, but that record can be lost, most commonly when
 a CI runner uploads successfully and then fails to push the state commit
 (branch protection, network). The tenant then holds a fully published
 release that state still lists as pending, which blocks promotion
@@ -28,7 +28,7 @@ Intune, stamped for the pending release's installer hash and with
 committed content, the publication demonstrably succeeded and
 ``published`` is recorded exactly as the publish run would have. This
 trusts provenance stamps and committed content the same way idempotent
-upload adoption already does — no new trust is introduced.
+upload adoption already does, so no new trust is introduced.
 
 Unlike drift detection, which never corrects, reconciliation writes
 deployment state: it completes NAPT's own half-persisted transaction
@@ -39,7 +39,7 @@ Finding kinds:
 - ``recovered``: The publication was fully committed in the tenant and
     has been recorded as published.
 - ``incomplete``: Some required entries are missing or their content was
-    never committed; nothing is recorded — re-run publish to finish.
+    never committed; nothing is recorded; re-run publish to finish.
 """
 
 from __future__ import annotations
@@ -76,8 +76,8 @@ def reconcile_publications(
     entries matching the pending installer hash. When every entry
     required by the app's ``build_types`` exists with committed content,
     records the release as published (clearing the pending slot) exactly
-    as the original publish run would have. Partial evidence — some
-    entries missing or uncommitted — is warned about but never recorded,
+    as the original publish run would have. Partial evidence (some
+    entries missing or uncommitted) is warned about but never recorded,
     because only a publish re-run can finish the upload.
 
     Apps whose pending release has no stamped entries at all are the

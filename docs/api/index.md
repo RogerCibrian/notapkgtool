@@ -1,10 +1,8 @@
 # Developer reference
 
-Overview of NAPT's codebase structure, architecture, and key concepts for contributors.
+How the `napt/` package is laid out.
 
 ## Code organization
-
-Here's the file structure:
 
 ```
 napt/
@@ -22,11 +20,17 @@ napt/
 │   └── registration.py         # App registration provisioning (napt auth setup)
 │
 ├── build/                   # PSADT package building
+│   ├── _ps_templates.py        # Loads the .ps1 templates for generated scripts
+│   ├── icons.py                # App icon extraction from installers
 │   ├── manager.py              # Package building orchestration
+│   ├── msix_scripts.py         # MSIX detection and requirements scripts
 │   ├── packager.py             # .intunewin package creation
-│   └── template.py             # PSADT template generation
+│   ├── registry_scripts.py     # Registry detection and requirements scripts
+│   ├── template.py             # PSADT template generation
+│   └── templates/              # PowerShell templates for the generated scripts
 │
 ├── cli/                     # Command-line interface (one module per command)
+│   ├── __main__.py             # Runs the CLI as python -m napt.cli
 │   ├── main.py                 # Parser assembly and dispatch
 │   ├── auth.py                 # napt auth login/logout/status/setup
 │   ├── build.py                # napt build
@@ -39,13 +43,16 @@ napt/
 │   └── validate.py             # napt validate
 │
 ├── config/                  # Configuration loading
-│   └── loader.py               # 3-layer configuration system
+│   ├── defaults.py             # Code defaults (the first configuration layer)
+│   └── loader.py               # Layered configuration loader
 │
 ├── discovery/               # Discovery strategies
 │   ├── api_github.py           # GitHub Releases API strategy
 │   ├── api_json.py             # Generic JSON API strategy
 │   ├── base.py                 # Strategy protocol and shared helpers
+│   ├── manager.py              # Discovery orchestration (napt discover)
 │   ├── registry.py             # Strategy name-to-class table
+│   ├── resolve.py              # Downloads the installer and settles its version
 │   ├── url_download.py         # Direct URL download strategy
 │   └── web_scrape.py           # Web scraping strategy
 │
@@ -55,6 +62,13 @@ napt/
 ├── graph/                   # Microsoft Graph client
 │   ├── client.py               # HTTP transport with retry and error mapping
 │   └── intune.py               # Win32 app upload, queries, and assignments
+│
+├── promote/                 # Deployment ring promotion
+│   ├── applier.py              # Executes plans against Intune
+│   ├── drift.py                # Assignment drift detection
+│   ├── planner.py              # Computes promotions and writes plan files
+│   ├── preflight.py            # Assignment group validation
+│   └── reconcile.py            # Recovers lost publish state writebacks
 │
 ├── psadt/                   # PSADT release management
 │   └── release.py              # PSADT release download and caching
@@ -90,31 +104,39 @@ Recipe YAML
     ↓
 [upload/manager.py] Upload to Microsoft Intune
     ↓
-Result (dataclass)
+[promote/planner.py] Plan ring promotion (one plan file per app)
+    ↓
+[promote/applier.py] Apply plans to Intune and update deployment state
 ```
 
 ## Key concepts
 
-- **Discovery Strategies:** Protocol-based, stateless, listed in an explicit registry table (api_github, api_json, web_scrape). All return a `RemoteVersion` from configuration alone. `url_download` is a separate flow (not a registered strategy) because it must download the file to determine the version. Both end in `discovery/resolve.py`, which reuses the previous download when the strategy reports the same version as last run (or the server answers HTTP 304 for `url_download`), and otherwise downloads the file, reads the version from an MSI or MSIX installer, and files it under that version
-- **Configuration:** 3-layer system (org → vendor → recipe) with deep merging
-- **State Management:** Authoritative per-app deployment state (`state/deployment/<id>.json`) records what is published and pending. The downloads folder is disposable; discovery reuses what it finds there and never treats it as a record
-- **Exceptions:** All NAPT domain errors use custom exceptions inheriting from `NAPTError` (ConfigError, NetworkError, PackagingError, StateError, AuthError) - allows catching all NAPT errors or specific types
-- **Return Types:** Frozen dataclasses from `results.py`, one per napt command's underlying operation
+- **Discovery strategies:** version-first strategies (api_github, api_json,
+  web_scrape) implement `DiscoveryStrategy` and are listed in
+  `discovery/registry.py`; `url_download` is a separate flow.
+  Both end in `discovery/resolve.py` (see [Discovery API](discovery.md)).
+- **Configuration:** Five layers (code defaults, org, vendor, parent, recipe),
+  merged with dicts deep-merged and lists replaced
+- **State management:** Per-app deployment state
+  (`state/deployment/<id>.json`) is the authoritative record of what is
+  published and pending.
+  The downloads folder holds installers; discovery reuses what it finds
+  there, and build takes the file whose SHA-256 matches the recorded release.
+- **Exceptions:** All NAPT domain errors use custom exceptions inheriting from
+  `NAPTError` (ConfigError, NetworkError, PackagingError, StateError,
+  AuthError)
+- **Return types:** Frozen dataclasses from `results.py`, one per napt
+  command's underlying operation
 
 ## Common contributor tasks
 
-- **New discovery strategy:** Implement `DiscoveryStrategy` in a new module under `discovery/`, then add it to the table in `discovery/registry.py`
-- **New CLI command:** Create `napt/cli/<command>.py` with the `cmd_<name>()` handler and a `register(subparsers)` hook, call `register` from `main()` in `napt/cli/main.py`, and add `tests/cli/test_<command>.py` (strict one module per command)
-- **New config option:** Update schema in `config/loader.py`, add validation in `validation.py`, document in recipe schema
-
-## See also
-
-- [Discovery manager](discovery-manager.md) - Discovery orchestration
-- [Discovery API](discovery.md) - Discovery strategy implementations
-- [Build API](build.md) - Package building functions
-- [Upload API](upload.md) - Intune upload pipeline
-- [Auth API](auth.md) - Entra ID sign-in and app registration
-- [Graph API](graph.md) - Microsoft Graph transport and Intune calls
-- [Config API](config.md) - Configuration loading
-- [Exceptions API](exceptions.md) - Exception hierarchy
+- **New discovery strategy:** Implement `DiscoveryStrategy` in a new module
+  under `discovery/`, then add it to the table in `discovery/registry.py`
+- **New CLI command:** Create `napt/cli/<command>.py` with the `cmd_<name>()`
+  handler and a `register(subparsers)` hook, call `register` from `main()` in
+  `napt/cli/main.py`, and add `tests/cli/test_<command>.py` (strict one module
+  per command)
+- **New recipe field:** Run `/add-recipe-field <name>`.
+  Defaults go in `config/defaults.py`, checks in `validation.py`, and the
+  definition in [Recipe reference](../recipe-reference.md).
 

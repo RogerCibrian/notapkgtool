@@ -20,7 +20,7 @@ Every command that talks to Intune (`napt upload`, `napt promote apply`,
 from the first source that works:
 
 Non-interactive (CI/CD):
-    1. EnvironmentCredential -- service principal via AZURE_CLIENT_ID,
+    1. EnvironmentCredential: service principal via AZURE_CLIENT_ID,
         AZURE_TENANT_ID and either AZURE_CLIENT_SECRET or
         AZURE_CLIENT_CERTIFICATE_PATH.
 
@@ -34,7 +34,7 @@ Interactive (a person at a terminal):
         switches the active one.
 
 CI/CD through a login step:
-    3. AzureCliCredential -- an existing `az login` session signed in as a
+    3. AzureCliCredential: an existing `az login` session signed in as a
         service principal, which is what OIDC login steps such as GitHub
         Actions `azure/login` leave behind. Recommended over client secrets
         when the CI platform supports it: no secret to store or rotate.
@@ -43,8 +43,8 @@ CI/CD through a login step:
         since its token belongs to the Azure CLI's own application.
 
 `napt auth login` uses the authorization code flow with PKCE against a
-loopback redirect, or -- on Windows, when the MSAL broker runtime is
-installed -- the Web Account Manager (WAM) broker, which gives single
+loopback redirect or, on Windows when the MSAL broker runtime is
+installed, the Web Account Manager (WAM) broker, which gives single
 sign-on with accounts known to Windows, honors device-based Conditional
 Access, and keeps refresh tokens device-bound. The broker needs an
 interactive Windows session; scheduled tasks, services, and SSH sessions

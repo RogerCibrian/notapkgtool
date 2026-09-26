@@ -16,7 +16,7 @@
 
 This module implements a layered configuration system that allows NAPT to
 work out of the box while supporting full customization. Each layer wins
-over the previous, promoting DRY (Don't Repeat Yourself) principles.
+over the previous one.
 
 Configuration Layers:
     1. **Code defaults** (napt/config/defaults.py)
@@ -31,7 +31,8 @@ Configuration Layers:
 
     3. **Vendor defaults** (defaults/vendors/{Vendor}.yaml)
        - Vendor-specific settings (e.g., Google-specific settings)
-       - Optional; only loaded if vendor is detected
+       - Optional; loaded when the vendor is detected and defaults/org.yaml
+         exists
        - Wins over organization defaults
 
     4. **Parent recipe** (the file named by the recipe's ``parent`` field)
@@ -52,18 +53,19 @@ Merge Behavior:
     - **Scalars**: Overwritten (strings, numbers, booleans)
 
 Path Resolution:
-    Relative paths in configuration are resolved against the RECIPE FILE
-    location, making recipes relocatable and portable. A parent's relative
-    paths resolve against the child recipe, not the parent file. Currently
-    resolved paths:
+    Relative paths in two fields are resolved after merging:
 
-    - psadt.brand_pack.path
-    - intune.logo_path
+    - psadt.brand_pack.path resolves against defaults/ (the recipe directory
+      when no defaults/org.yaml is found).
+    - intune.logo_path resolves against the recipe directory, then defaults/
+      if no file is there.
 
 Dynamic Injection:
     Some fields are injected at load time:
 
     - psadt.app_vars.AppScriptDate: Today's date (YYYY-MM-DD)
+    - psadt.app_vars.RequireAdmin: true unless intune.run_as_account is user;
+      a value set in any config layer wins
 
 Error Handling:
     - ConfigError: Recipe file doesn't exist, YAML parse errors, empty files,
@@ -73,9 +75,9 @@ Error Handling:
 Note:
     - Code defaults are always applied first (NAPT works without config files)
     - The loader walks upward from the recipe to find defaults/org.yaml
-    - Organization and vendor defaults are optional layers
+    - Organization and vendor defaults are optional; vendor defaults need
+      defaults/org.yaml to be found
     - Vendor is detected from directory name (recipes/Google/) or recipe content
-    - Paths are resolved relative to the recipe, not the working directory
     - Dynamic fields are best-effort (warnings on failure, not errors)
 
 """
@@ -401,7 +403,7 @@ def _inject_dynamic_values(
 
         user_layers = {"org_yaml", "vendor_yaml", "parent", "recipe"}
         if require_admin_source in user_layers:
-            # User explicitly set RequireAdmin — respect their value
+            # User explicitly set RequireAdmin; respect their value
             pass
         else:
             # Compute from run_as_account
@@ -441,12 +443,13 @@ def load_effective_config(
 
     1. Read recipe YAML and its parent recipe, if it declares one
     2. Find defaults root by scanning upwards for defaults/org.yaml
-    3. Load org defaults (required if defaults root exists)
+    3. Load org defaults from defaults/org.yaml
     4. Determine vendor (param vendor > folder name > recipe contents)
     5. Load vendor defaults if present
     6. Merge: org -> vendor -> parent -> recipe (dicts deep-merge, lists
        replace)
-    7. Resolve known relative paths (relative to the recipe directory)
+    7. Resolve known relative paths (see Path resolution in the module
+       docstring)
     8. Inject dynamic fields (AppScriptDate = today if absent)
 
     The returned dict does not carry the ``parent`` field; the parent's
@@ -458,9 +461,7 @@ def load_effective_config(
             from the folder name or recipe contents.
 
     Returns:
-        A merged configuration dict ready for downstream processors. If no defaults
-            were found in the tree, the recipe is returned as-is (with path
-            resolution and injection).
+        The merged configuration; code defaults are always included.
 
     Raises:
         ConfigError: On YAML parse errors, empty files, invalid structure, a

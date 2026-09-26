@@ -15,8 +15,8 @@
 """PSADT release management for NAPT.
 
 This module handles fetching, downloading, and caching PSAppDeployToolkit
-releases from the official GitHub repository. It reuses NAPT's existing
-GitHub release discovery infrastructure for consistency.
+releases from the official GitHub repository. Queries the GitHub releases API
+for PSAppDeployToolkit directly.
 
 Key Features:
 
@@ -26,7 +26,6 @@ Key Features:
 - Version resolution ("latest" keyword support)
 
 Note:
-    - Reuses notapkgtool.discovery.api_github for API calls
     - Caches releases by version: cache/psadt/{version}/
     - Downloads .zip releases and extracts to cache
     - Validates extracted PSADT structure (PSAppDeployToolkit/ folder exists)

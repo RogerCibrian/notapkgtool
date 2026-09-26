@@ -26,12 +26,12 @@ every save) and holds five sections:
 
 - ``published``: The release currently in Intune, with its SHA-256 hash
     and Intune app IDs. Null until the first upload. Publishing uploads
-    the release without assigning it — ``napt promote`` deploys it
+    the release without assigning it; ``napt promote`` deploys it
     through the rings afterwards.
 - ``install_assigned``: The release the install entry is currently
     assigned to (the result of a ``promote`` plan's ``assign`` action).
 - ``pending``: The discovered release awaiting publication, with version,
-    download URL, and SHA-256 hash. A single slot — a newer discovery
+    download URL, and SHA-256 hash. A single slot: a newer discovery
     replaces an unpublished candidate (newest wins). Null when nothing is
     awaiting publication.
 - ``rings``: Which version currently holds each deployment ring. Written
@@ -41,8 +41,8 @@ every save) and holds five sections:
 Serialization is deterministic (fixed reading-order keys, fixed
 indentation, no timestamps), so re-running a command that produces no
 logical change produces a byte-identical file and a clean git diff.
-Keys follow reading order — lifecycle order at the top level, ``version``
-first and hashes last inside blocks — because these files are what a
+Keys follow reading order (lifecycle order at the top level, ``version``
+first and hashes last inside blocks) because these files are what a
 publish PR diff shows its reviewer.
 """
 
@@ -115,7 +115,7 @@ def deployment_state_path(state_dir: Path, recipe_id: str) -> Path:
 def create_default_deployment_state() -> dict[str, Any]:
     """Creates an empty deployment state structure.
 
-    The identity fields (``app_id``, ``name``) are stamped at save time —
+    The identity fields (``app_id``, ``name``) are stamped at save time:
     ``app_id`` from the filename, ``name`` by whichever writer holds the
     recipe configuration.
 
@@ -137,7 +137,7 @@ def load_deployment_state(state_path: Path) -> dict[str, Any]:
     """Loads deployment state for one app.
 
     Returns a default empty structure when the file does not exist. Does
-    not create the file — deployment state is only written when there is
+    not create the file; deployment state is only written when there is
     something to record.
 
     Args:

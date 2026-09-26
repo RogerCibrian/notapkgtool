@@ -1,9 +1,6 @@
 # Top-level API version
 apiVersion: napt/v1
 
-# Friendly project name (appears in logs/reports)
-project: "napt - Windows Apps"
-
 psadt:
   # PSADT release to use - "latest" or specific version (e.g., "4.1.7")
   release: "latest"

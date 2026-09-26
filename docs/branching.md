@@ -1,16 +1,18 @@
 # Branching strategy
 
-NAPT uses **GitHub Flow** - a simple, branch-based workflow that keeps `main` always deployable.
+This is the maintainer's workflow; see [Contributing](contributing.md) for how
+to propose changes (code contributions are not accepted before 1.0).
+
+NAPT uses GitHub Flow: every change goes through a branch and a squash-merged
+pull request into `main`.
 
 ## Core principles
 
-1. **`main` branch is always stable** - Production-ready code only
+1. **`main` passes lint, type checks, and tests**
 2. **Feature branches for all work** - Every change starts from a branch
 3. **Pull Requests for review** - All changes reviewed before merging
 
 ## Quick start
-
-The most common workflow for making changes:
 
 ### 1. Start new work
 
@@ -36,11 +38,10 @@ git push origin feat/your-feature-name
 
 ### 3. Create pull request
 
-1. Push your branch to GitHub
-2. Create a Pull Request on GitHub
-3. Fill out the description using the [PR template](#pull-request-process)
-4. Request review from maintainers
-5. Address any feedback
+1. Create a Pull Request on GitHub
+2. Fill out the description using the [PR template](#pull-request-process)
+3. Request review from maintainers
+4. Address any feedback
 
 ### 4. After merge
 
@@ -88,7 +89,7 @@ The prefix is the conventional commit type the PR will squash to:
 - Avoid generic names like `fix-bug` or `updates`
 - No issue numbers in branch names (use commit messages instead)
 
-**Good Examples:**
+**Good examples:**
 ```
 feat/add-exe-version-extraction
 fix/download-resume-logic
@@ -96,7 +97,7 @@ docs/add-cross-platform-examples
 refactor/simplify-config-loader
 ```
 
-**Bad Examples:**
+**Bad examples:**
 ```
 my-branch              # No type prefix
 feat/stuff             # Not descriptive
@@ -108,7 +109,7 @@ fix-bug                # Too generic
 
 ### Commit message format
 
-Use conventional commit format for clarity:
+Commit messages use conventional commit format:
 
 ```
 <type>: <description>
@@ -136,14 +137,14 @@ Use conventional commit format for clarity:
 - No period at end of subject
 - Separate subject from body with blank line
 
-**Good Examples:**
+**Good examples:**
 ```bash
 git commit -m "feat: Add RPM version extraction support"
 git commit -m "fix: Handle missing ETag headers gracefully"
 git commit -m "docs: Add examples for Linux MSI extraction"
 ```
 
-**Bad Examples:**
+**Bad examples:**
 ```bash
 git commit -m "added stuff"           # Not descriptive
 git commit -m "Fix bug"               # No type prefix
@@ -152,7 +153,10 @@ git commit -m "WIP"                   # Too vague
 
 ## Pull request process
 
-When creating a PR, the [PR template](https://github.com/RogerCibrian/notapkgtool/blob/main/.github/PULL_REQUEST_TEMPLATE.md) auto-populates with sections for Description, Motivation, Changes, Testing, and Checklist.
+When creating a PR, the
+[PR template](https://github.com/RogerCibrian/notapkgtool/blob/main/.github/PULL_REQUEST_TEMPLATE.md)
+auto-populates with sections for Description, Motivation, Changes, Testing,
+and Checklist.
 
 ## Merge strategy
 
@@ -170,12 +174,10 @@ When merging on GitHub:
 
 **Example:**
 ```
-feat: Add RPM version extraction support
+fix: Keep retained releases in order after a rollback
 
-- Implement RPM ProductVersion parser using rpm-py-installer
-- Add cross-platform support for RPM files (Linux/macOS)
-- Add comprehensive test coverage with mock RPM files
-- Update documentation with RPM examples
+- A displaced release now becomes the newest retained entry
+- Publishing a release removes it from the retained list
 
 Closes #42
 ```
@@ -186,12 +188,14 @@ promotion), and that squashes like any other PR.
 
 ### Tips
 
-- Don't worry about messy commits in your branch - they'll be squashed
-- Focus on clear PR descriptions - they become the squash commit message
+- Don't worry about messy commits in your branch; they'll be squashed
+- The PR title becomes the squash subject; the default body is the branch's
+  commit messages, so replace it with a summary when merging (see
+  [Merging](#merging), step 3)
 - Use conventional commit prefixes in PR titles for easy squashing
 - If you accidentally use wrong merge method, you can revert and redo
 
-## Troubleshooting & scenarios
+## Scenarios
 
 ### Multiple related changes
 
@@ -215,7 +219,6 @@ For features taking multiple days/weeks:
 1. Keep branch updated with `main` regularly
 2. Break into smaller PRs if possible
 3. Use draft PRs to show progress
-4. Consider feature flags for incomplete features
 
 ### Urgent hotfixes
 
@@ -242,8 +245,5 @@ git push origin fix/security-vulnerability
 ### Don't
 
 - Never commit directly to `main`
-- Don't create long-lived feature branches
-- Don't use generic branch/commit names
-- Don't merge without tests passing
-- Don't force push to shared branches
-- Don't include unrelated changes in one PR
+- Don't force push shared branches
+- Don't mix unrelated changes in one PR

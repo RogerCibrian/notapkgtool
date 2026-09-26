@@ -127,6 +127,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed the shipped Git and VS Code recipes naming an installer file that is
+    not in the package (`Git-<version>-64-bit.exe` where the vendor's file is
+    `Git-<version>.<build>-64-bit.exe`), so the install failed on every
+    device. Both now use `{{installer_filename}}`
+- Fixed the shipped `defaults/vendors/google.yaml` never applying: its
+    content sat under a `defaults:` key that the loader does not read
+- Fixed `poetry install` creating the virtual environment outside the
+    project on a machine without a user-level Poetry setting, so the quick
+    start's activation step failed. A `poetry.toml` now keeps it in `.venv`
 - Fixed retention deleting the wrong release after a rollback. A release
     that had been rolled back to kept its old place at the head of the
     retained list, so when the next release displaced it, retention
@@ -336,7 +345,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - One app's failure (unresolvable group, Graph error) keeps its plan
         file for retry and no longer blocks the other apps' promotions;
         failed apps are reported and fail the run after the others apply
-    - To hold one app's promotions during review, delete its plan file —
+    - To hold one app's promotions during review, delete its plan file;
         no more hand-editing action entries inside a shared JSON
     - Plan actions now carry reviewer context: the app's display name,
         and for ring advancement, when the release entered the ring it is
@@ -349,10 +358,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     the file, and keys follow reading order instead of alphabetical
     - The action vocabulary now matches the feature: `promote` moves a
         release one ring forward (`from_ring: null` marks a first
-        rollout) and `assign` points new installs at it — replacing
+        rollout) and `assign` points new installs at it, replacing
         `enter_ring`, `advance_ring`, and `assign_install`
     - `displaces` means the older release loses the assignment but stays
-        in Intune for rollback per `deployment.retain_versions` — NAPT
+        in Intune for rollback per `deployment.retain_versions`; NAPT
         never uses Intune's Win32 supersedence feature
     - `napt promote plan` and `apply` print the same summary sentences,
         so console output and plan files never disagree
@@ -365,8 +374,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Each file names its app once at the top: `app_id` (stamped from
         the filename; a copied or renamed state file is now rejected)
         and the recipe's display `name`, refreshed on every save
-    - Keys follow reading order — lifecycle order at the top level,
-        `version` first and hashes last inside blocks — instead of
+    - Keys follow reading order (lifecycle order at the top level,
+        `version` first and hashes last inside blocks) instead of
         alphabetical
 - **Reviewer-friendly GitOps PRs** - The reference workflows in Common
     Tasks now generate the review surface instead of one-line PRs
@@ -393,9 +402,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         stamp adoption
     - Every Graph request carries a `client-request-id` for Microsoft
         support correlation
-    - All remaining HTTP calls — GitHub release lookups (PSADT,
-        IntuneWinAppUtil, `api_github` discovery), vendor page and API
-        fetches (`web_scrape`, `api_json`), and tool downloads — now
+    - All remaining HTTP calls (GitHub release lookups for PSADT,
+        IntuneWinAppUtil, and `api_github` discovery; vendor page and API
+        fetches for `web_scrape` and `api_json`; and tool downloads) now
         share the installer download layer's retrying session instead
         of being single-shot
 
@@ -421,7 +430,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     state commit). Recovery uses the same provenance-stamp evidence as
     idempotent upload adoption, requires every entry of the release to
     have committed content, and makes the recovered release promotable in
-    the same run. Partially published releases are warned about instead —
+    the same run. Partially published releases are warned about instead;
     re-run `napt upload` to finish them
     
 ### Changed
@@ -433,7 +442,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     apply converges, or an admin pre-empting configured policy) and
     `unexpected_assignment` when it matches no configured target. The
     old `unexpected_assignment` message asserted "was not made by NAPT",
-    which drift cannot actually know — Intune assignments carry no
+    which drift cannot actually know: Intune assignments carry no
     authorship, so state records are the only memory
 
 ### Fixed
@@ -488,8 +497,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`napt promote plan`** - Computes which releases enter or advance the
     configured deployment rings (plus first-time install-entry
     assignments) and writes a reviewable `state/plan.json`. The plan file
-    exists exactly when there is work — a run that finds nothing removes
-    a stale plan — so its git status drives review workflows. Read-only;
+    exists exactly when there is work (a run that finds nothing removes
+    a stale plan), so its git status drives review workflows. Read-only;
     applying plans arrives with `napt promote apply`
 - **`napt status`** - Shows deployed version, pending release, and ring
     positions across all apps; `--format json` for scripting
@@ -717,7 +726,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`napt package` now takes `<recipe>` instead of `<build_dir>`** - All commands now take a recipe path for consistent CLI usage. The build directory is inferred automatically from the recipe's app ID by scanning the builds output directory for the most recent completed build
 - **`napt package` outputs to versioned paths** - Package output is now
     `packages/{app_id}/{version}/Invoke-AppDeployToolkit.intunewin`. Only one
-    version is kept per app — the previous version directory is removed
+    version is kept per app; the previous version directory is removed
     automatically when a new one is packaged (single-slot). Detection and
     requirements scripts are copied alongside the `.intunewin` file so
     `napt upload` is self-contained and does not need the builds directory

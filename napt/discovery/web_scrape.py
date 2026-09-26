@@ -18,7 +18,7 @@ Fetches a vendor download page, locates a download link, and extracts
 the version from that link's URL. Use this when a vendor has neither a
 JSON API nor a GitHub releases feed.
 
-Recipe Example (CSS selector — recommended):
+Recipe Example (CSS selector, recommended):
     ```yaml
     discovery:
       strategy: web_scrape
@@ -28,29 +28,8 @@ Recipe Example (CSS selector — recommended):
       version_format: "{0}.{1}"     # transforms ("25", "01") -> "25.01"
     ```
 
-Recipe Example (regex fallback):
-    ```yaml
-    discovery:
-      strategy: web_scrape
-      page_url: "https://vendor.example.com/downloads"
-      link_pattern: 'href="(/files/app-v[0-9.]+-x64\\.msi)"'
-      version_pattern: "app-v([0-9.]+)-x64"
-    ```
-
-Configuration Fields:
-    - **page_url** (required): URL of the page to scrape.
-    - **link_selector** (optional): CSS selector identifying the download
-        link's ``<a>`` element. Recommended over regex.
-    - **link_pattern** (optional): Regex with one capture group around
-        the link URL. Used when a CSS selector cannot pin the link down.
-        Exactly one of ``link_selector`` / ``link_pattern`` is required.
-    - **version_pattern** (required): Regex applied to the discovered
-        link URL to extract the version. Capture groups are pulled out
-        and combined with ``version_format``.
-    - **version_format** (optional, default ``"{0}"``): Python format
-        string referencing capture groups by index (``{0}``, ``{1}``,
-        ...). Use this when a single version field needs to be assembled
-        from multiple captures.
+The [recipe reference](../recipe-reference.md#web_scrape-strategy) defines
+each field, including the ``link_pattern`` regex fallback.
 
 Finding a CSS Selector:
     1. Open the download page in Chrome / Edge / Firefox.
@@ -64,8 +43,7 @@ Finding a CSS Selector:
 Note:
     The selector / pattern is expected to match exactly one link; the
     first match is used. Relative URLs in the page are resolved against
-    ``page_url``. CSS selector support requires BeautifulSoup4; the
-    regex fallback does not.
+    ``page_url``.
 
 """
 

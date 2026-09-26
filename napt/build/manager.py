@@ -18,7 +18,8 @@ This module orchestrates the complete build process for creating PSADT
 packages from recipes and downloaded installers.
 
 Design Principles:
-    - Filesystem is source of truth for version information
+    - The release to build comes from deployment state; the installer is the
+      file in that version's download folder whose SHA-256 matches
     - Entire PSADT Template_v4 structure copied unmodified
     - Invoke-AppDeployToolkit.ps1 is generated from template (not copied)
     - Build directories are versioned: {app_id}/{version}/

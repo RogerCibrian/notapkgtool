@@ -20,8 +20,8 @@ registration calls reach Graph, along with the header builders callers
 pass to it. Endpoint-specific wrappers live in
 [napt.graph.intune][] and [napt.auth.registration][].
 
-Graph calls retry transient failures -- HTTP 429 (honoring Retry-After),
-transient server errors, and connection drops -- with bounded exponential
+Graph calls retry transient failures (HTTP 429 honoring Retry-After,
+transient server errors, and connection drops) with bounded exponential
 backoff before raising. Resource-creating POSTs retry only unambiguous
 throttling responses, so a lost reply to a processed create is never
 resubmitted as a duplicate.
@@ -37,8 +37,8 @@ import requests
 from napt.exceptions import AuthError, ConfigError, NetworkError
 
 # The Intune app management API (mobileApps, Win32LobApp) has never fully
-# graduated to v1.0. Fields critical to Win32 app uploads — allowedArchitectures,
-# maxRunTimeInMinutes, displayVersion, allowAvailableUninstall — are beta-only.
+# graduated to v1.0. Fields critical to Win32 app uploads (allowedArchitectures,
+# maxRunTimeInMinutes, displayVersion, allowAvailableUninstall) are beta-only.
 # The Intune portal, Intune PowerShell SDK, and Microsoft's own tooling all use
 # the beta endpoint. Do not change this to v1.0.
 GRAPH_BASE = "https://graph.microsoft.com/beta"
@@ -114,8 +114,8 @@ def _check_response(response: requests.Response, context: str) -> dict:
 
 # Microsoft Graph throttles the Intune endpoints (HTTP 429 with a
 # Retry-After header, per app per tenant) and sheds load with transient
-# server errors. Most Graph calls NAPT makes are idempotent — reads,
-# full-set assignment writes, PATCHes and DELETEs by id — and retry the
+# server errors. Most Graph calls NAPT makes are idempotent (reads,
+# full-set assignment writes, PATCHes and DELETEs by id) and retry the
 # full transient set. Resource-creating POSTs are not: a connection
 # drop or gateway error (500/502/504) can hide a create that actually
 # succeeded, and resubmitting would duplicate the resource, so they
@@ -171,7 +171,7 @@ def graph_request(
     retry with exponential backoff, as do connection-level failures.
     Non-idempotent calls (resource-creating POSTs) retry only statuses
     that guarantee the request was shed before processing, and never
-    connection failures — a lost reply to a processed create must not
+    connection failures: a lost reply to a processed create must not
     be resubmitted. Every other response is checked immediately, so
     permission and validation errors surface without retrying. The last
     attempt's failure is raised with full response detail. Each request
@@ -221,7 +221,7 @@ def graph_request(
             if not idempotent:
                 # The request may have been processed before the
                 # connection died; resubmitting could duplicate the
-                # resource. Surface it — re-running converges through
+                # resource. Surface it; re-running converges through
                 # the flow-level stamp adoption.
                 raise NetworkError(f"{context}: {exc}") from exc
             err = exc

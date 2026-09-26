@@ -26,28 +26,19 @@ Recipe Example:
       repo: "git-for-windows/git"            # required, "owner/name"
       asset_pattern: "Git-.*-64-bit\\.exe$"  # required, regex on asset filename
       version_pattern: "v?([0-9.]+)"         # optional, default strips "v"
-      prerelease: false                      # optional, default false
-      token: "${GITHUB_TOKEN}"               # optional, supports env expansion
+      token: "${GITHUB_TOKEN}"               # optional
     ```
 
-Configuration Fields:
-    - **repo** (required): GitHub repo as ``"owner/name"``.
-    - **asset_pattern** (required): Regex matched against asset filename.
-        First match wins. Case-sensitive by default; prefix with ``(?i)``
-        for case-insensitive matching.
-    - **version_pattern** (optional): Regex for extracting the version
-        from the release tag. Uses capture group 1 if present, otherwise
-        the full match. Default: ``v?([0-9.]+)``.
-    - **prerelease** (optional, default false): When true, includes
-        pre-release versions; otherwise the latest release must be stable.
-    - **token** (optional): GitHub personal access token. Raises the API
-        rate limit from 60 to 5000 requests/hour. Supports ``${ENV_VAR}``
-        expansion. Public repos do not require any special permissions.
+The [recipe reference](../recipe-reference.md#api_github-strategy) defines
+each field.
 
 Note:
-    GitHub returns the most recent release first. If no asset matches,
-    or the latest release is a pre-release while ``prerelease: false``,
-    discovery raises an error rather than walking back through history.
+    The request always goes to the latest-release endpoint, which never
+    returns a pre-release, so ``prerelease`` currently has no effect. If no
+    asset matches, discovery raises an error rather than walking back
+    through history. A ``token`` that is exactly ``${VAR}`` is replaced with
+    that environment variable; when the variable is unset, the request is
+    sent unauthenticated and a verbose log line says so.
 
 """
 

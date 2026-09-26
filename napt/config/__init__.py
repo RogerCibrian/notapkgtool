@@ -14,18 +14,15 @@
 
 """Configuration loading and management for NAPT.
 
-Loads, merges, and validates YAML-based configuration files with a layered
-approach:
-
-- Organization-wide defaults (defaults/org.yaml)
-- Vendor-specific defaults (defaults/vendors/{Vendor}.yaml)
-- Recipe-specific configuration (recipes/{Vendor}/{app}.yaml)
+Loads and merges YAML configuration in five layers: code defaults,
+defaults/org.yaml, defaults/vendors/{Vendor}.yaml, the parent recipe, and the
+recipe.
 
 The loader performs deep merging where dicts are merged recursively and
-lists/scalars are replaced (last wins). Relative paths are resolved against
-the recipe file location for relocatability.
+lists/scalars are replaced (last wins). See the Path resolution section of
+[loader][napt.config.loader] for how relative paths resolve.
 
 Modules:
-    loader: The 3-layer configuration loader (load_effective_config).
+    loader: The layered configuration loader (load_effective_config).
     defaults: Built-in default configuration and the org.yaml template.
 """
