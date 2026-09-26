@@ -5,9 +5,6 @@ site_url: https://rogercibrian.github.io/notapkgtool
 repo_url: https://github.com/RogerCibrian/notapkgtool
 repo_name: RogerCibrian/notapkgtool
 
-exclude_docs: |
-  plans/
-
 theme:
   name: material
   features:
