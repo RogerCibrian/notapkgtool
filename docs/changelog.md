@@ -127,6 +127,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed retention deleting the wrong release after a rollback. A release
+    that had been rolled back to kept its old place at the head of the
+    retained list, so when the next release displaced it, retention
+    deleted it (the release just in production) and kept the one it had
+    been rolled back from. A displaced release now becomes the newest
+    retained entry, and publishing a release removes it from the retained
+    list
 - Fixed `napt promote apply` given one recipe deleting every other app's
     reviewed plan file. Their actions were skipped as having no recipe
     in the run, which counted as applied, so the files were consumed and

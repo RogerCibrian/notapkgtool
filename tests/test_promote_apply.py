@@ -413,6 +413,46 @@ class TestApplyPromoteActions:
         deleted = [c.args[1] for c in mocks["delete_mobile_app"].call_args_list]
         assert deleted == ["install-ancient", "update-ancient"]
 
+    def test_displaced_release_moves_to_the_end_of_retained(self, tmp_path):
+        """Tests that a release displaced for the second time (after a
+        rollback) becomes the newest retained entry, so retention deletes
+        the older release rather than the one just displaced."""
+        _write_recipe(tmp_path, rings=_RINGS, retain_versions=1)
+        # 1.0.0 was displaced by 1.5.0 once, then rolled back to and is
+        # holding pilot again; 1.5.0 is the newer retained entry. Now
+        # 2.0.0 displaces 1.0.0.
+        _write_state(
+            tmp_path,
+            published=_published(),
+            rings={
+                "pilot": {
+                    "version": "1.0.0",
+                    "sha256": "a" * 64,
+                    "entered_at": "2026-07-01T00:00:00+00:00",
+                }
+            },
+            retained=[
+                {"version": "1.0.0", "sha256": "a" * 64},
+                {"version": "1.5.0", "sha256": "5" * 64},
+            ],
+        )
+        state_path = deployment_state_path(
+            tmp_path / "state" / "deployment", "test-app"
+        )
+        _write_plan(tmp_path, [_promote_action()])
+        tenant = _tenant() + [
+            _stamped("test-app", "install", "5" * 64, "install-mid"),
+            _stamped("test-app", "update", "5" * 64, "update-mid"),
+        ]
+
+        summary, mocks = _run_apply(tmp_path, existing_apps=tenant)
+
+        assert len(summary["applied"]) == 1
+        deleted = [c.args[1] for c in mocks["delete_mobile_app"].call_args_list]
+        assert deleted == ["install-mid", "update-mid"]
+        state = load_deployment_state(state_path)
+        assert state["retained"] == [{"version": "1.0.0", "sha256": "a" * 64}]
+
     def test_retired_entries_are_not_reported_as_drift(self, tmp_path):
         """Tests that the drift check does not report the entries retention
         deleted in the same run as orphaned."""

@@ -383,7 +383,10 @@ def _holds_any_ring(state: dict[str, Any], sha256: str) -> bool:
 def _retire_release(run: _ApplyRun, app_id: str, version: str, sha256: str) -> None:
     """Retires a fully displaced release per the retention policy.
 
-    The release joins the retained list (newest last). Releases beyond
+    The release joins the retained list as its newest entry; a release
+    displaced for a second time (rolled back to, then superseded again)
+    moves to the end rather than keeping its old position, so the
+    ordering stays oldest first. Releases beyond
     ``deployment.retain_versions`` have their stamped Intune apps
     deleted, oldest first. The currently published release is never
     deleted.
@@ -399,12 +402,12 @@ def _retire_release(run: _ApplyRun, app_id: str, version: str, sha256: str) -> N
     state = run.state_for(app_id)
     retained: list[dict[str, Any]] = state.setdefault("retained", [])
 
-    if not any(entry.get("sha256") == sha256 for entry in retained):
-        retained.append({"version": version, "sha256": sha256})
-        logger.info(
-            "PROMOTE",
-            f"{app_id}: retained displaced release {version} for rollback",
-        )
+    retained[:] = [entry for entry in retained if entry.get("sha256") != sha256]
+    retained.append({"version": version, "sha256": sha256})
+    logger.info(
+        "PROMOTE",
+        f"{app_id}: retained displaced release {version} for rollback",
+    )
 
     retain_limit: int = run.configs[app_id]["deployment"]["retain_versions"]
     published = state.get("published") or {}
