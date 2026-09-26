@@ -255,9 +255,11 @@ removes the build folder after packaging.
 
 ## What's next?
 
-- **[Deploy to Intune](common-tasks.md#deploy-to-intune)** - Set up
-  authentication with `napt auth`, upload the package with `napt upload`, and
-  roll it out with `napt promote`
+- **[Deploy to Intune](common-tasks.md#deploy-to-intune)** - Continue from
+  the package you just built: create the app registration with
+  `napt auth setup`, sign in with `napt auth login`, upload with
+  `napt upload`, then roll the release out through the rings with
+  `napt promote plan` and `napt promote apply`
 - **[Common tasks](common-tasks.md)** - Step-by-step guides, including a
   recipe walkthrough for each discovery strategy
 - **[User guide](user-guide.md)** - How each command works, configuration
