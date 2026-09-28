@@ -58,6 +58,7 @@ from typing import Any
 
 from napt.config.loader import load_effective_config
 from napt.exceptions import ConfigError, StateError
+from napt.files import write_text_atomic
 from napt.logging import get_global_logger
 from napt.state.deployment import deployment_state_path, load_deployment_state
 
@@ -469,25 +470,20 @@ def write_plan_files(
             if plan_path.exists():
                 plan_path.unlink()
             continue
-        plan_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(plan_path, "w", encoding="utf-8") as f:
-            json.dump(
+        plan = {
+            "schemaVersion": PLAN_SCHEMA_VERSION,
+            "app_id": app_id,
+            "name": app_actions[0]["name"],
+            "actions": [
                 {
-                    "schemaVersion": PLAN_SCHEMA_VERSION,
-                    "app_id": app_id,
-                    "name": app_actions[0]["name"],
-                    "actions": [
-                        {
-                            key: value
-                            for key, value in action.items()
-                            if key not in ("app_id", "name")
-                        }
-                        for action in app_actions
-                    ],
-                },
-                f,
-                indent=2,
-            )
-            f.write("\n")  # Trailing newline for git
+                    key: value
+                    for key, value in action.items()
+                    if key not in ("app_id", "name")
+                }
+                for action in app_actions
+            ],
+        }
+        # Trailing newline for git.
+        write_text_atomic(plan_path, json.dumps(plan, indent=2) + "\n")
         written.append(plan_path)
     return written

@@ -8,6 +8,9 @@ Tests state persistence including:
 
 from __future__ import annotations
 
+import json
+from unittest.mock import patch
+
 import pytest
 
 from napt.exceptions import StateError
@@ -49,6 +52,75 @@ class TestDeploymentStateFiles:
 
         assert state == create_default_deployment_state()
         assert not state_path.exists()
+
+    def test_failed_save_leaves_the_old_file_intact(self, tmp_path):
+        """Tests that a write that fails before the rename keeps the previous
+        state file unchanged instead of leaving a truncated one."""
+        state_path = tmp_path / "napt-chrome.json"
+        state = create_default_deployment_state()
+        record_pending(state, version="1.0.0", sha256="aaa", url="https://x/1.msi")
+        save_deployment_state(state, state_path)
+        before = state_path.read_bytes()
+        record_pending(state, version="2.0.0", sha256="bbb", url="https://x/2.msi")
+
+        with (
+            patch("napt.files.os.replace", side_effect=OSError(28, "No space")),
+            pytest.raises(OSError),
+        ):
+            save_deployment_state(state, state_path)
+
+        assert state_path.read_bytes() == before
+        assert [p.name for p in tmp_path.iterdir()] == ["napt-chrome.json"]
+
+    @pytest.mark.parametrize(
+        ("field", "value", "expected"),
+        [
+            ("pending", "2.0.0", "'pending'"),
+            ("pending", {"sha256": "bbb", "url": "https://x"}, "'pending'"),
+            ("published", {"version": "1.0.0"}, "'published'"),
+            ("install_assigned", ["1.0.0"], "'install_assigned'"),
+            ("rings", [], "'rings'"),
+            ("rings", {"pilot": {"version": "1.0.0"}}, "'rings'"),
+            ("retained", {"version": "1.0.0"}, "'retained'"),
+            ("retained", [{"version": "1.0.0"}], "'retained'"),
+        ],
+        ids=[
+            "pending-string",
+            "pending-without-version",
+            "published-without-sha256",
+            "install_assigned-list",
+            "rings-list",
+            "ring-without-sha256",
+            "retained-dict",
+            "retained-entry-without-sha256",
+        ],
+    )
+    def test_hand_edited_shape_raises_state_error(
+        self, tmp_path, field, value, expected
+    ):
+        """Tests that a state file whose section has the wrong shape is
+        rejected with a message naming the section, not a traceback later."""
+        state_path = tmp_path / "napt-chrome.json"
+        state = create_default_deployment_state()
+        save_deployment_state(state, state_path)
+        data = json.loads(state_path.read_text(encoding="utf-8"))
+        data[field] = value
+        state_path.write_text(json.dumps(data), encoding="utf-8")
+
+        with pytest.raises(StateError, match=expected) as info:
+            load_deployment_state(state_path)
+
+        assert "napt-chrome.json" in str(info.value)
+
+    @pytest.mark.parametrize("content", ["[]", '"x"', "1"])
+    def test_top_level_not_an_object_raises_state_error(self, tmp_path, content):
+        """Tests that a state file whose top level is not an object is
+        rejected as corrupted."""
+        state_path = tmp_path / "napt-chrome.json"
+        state_path.write_text(content, encoding="utf-8")
+
+        with pytest.raises(StateError, match="not an object"):
+            load_deployment_state(state_path)
 
     def test_save_stamps_schema_version(self, tmp_path):
         """Tests that saving always writes the schema version."""
@@ -393,6 +465,20 @@ class TestSummarizeDeploymentStates:
     def test_missing_directory_returns_empty(self, tmp_path):
         """Tests that a nonexistent directory summarizes to nothing."""
         assert summarize_deployment_states(tmp_path / "nope") == []
+
+    def test_pending_without_version_is_a_state_error(self, tmp_path):
+        """Tests that a hand-edited pending entry missing its version is
+        reported as a corrupted state file rather than crashing."""
+        deployment_dir = tmp_path / "deployment"
+        state = create_default_deployment_state()
+        save_deployment_state(state, deployment_state_path(deployment_dir, "alpha"))
+        path = deployment_state_path(deployment_dir, "alpha")
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["pending"] = {"sha256": "a", "url": "u"}
+        path.write_text(json.dumps(data), encoding="utf-8")
+
+        with pytest.raises(StateError, match="'pending'"):
+            summarize_deployment_states(deployment_dir)
 
     def test_summarizes_apps_sorted(self, tmp_path):
         """Tests that summaries are sorted and carry the key fields."""

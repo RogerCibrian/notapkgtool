@@ -413,6 +413,37 @@ class TestUrlDownloadSidecar:
         assert result.file_path.read_bytes() == b"msi"
         assert "Could not write" in capsys.readouterr().out
 
+    def test_failed_sidecar_write_leaves_the_old_sidecar_intact(
+        self, tmp_test_dir, capsys
+    ):
+        """Tests that a sidecar write that fails before the rename keeps the
+        previous sidecar unchanged instead of leaving a truncated one."""
+        import os
+        from pathlib import Path
+        from unittest.mock import patch
+
+        app_dir = tmp_test_dir / "test-app"
+        _seed_previous_download(app_dir)
+        before = (app_dir / ".download.json").read_text(encoding="utf-8")
+        real_replace = os.replace
+
+        def _replace(src, dst):
+            # Only the sidecar's rename fails; the installer's own
+            # .part rename must still succeed.
+            if Path(dst).name == ".download.json":
+                raise OSError(28, "No space")
+            return real_replace(src, dst)
+
+        with requests_mock.Mocker() as m:
+            m.get(_SIDECAR_URL, content=b"msi", headers={"Content-Length": "3"})
+            with patch("napt.files.os.replace", side_effect=_replace):
+                result = _run_with_msi_version(self.APP_CONFIG, tmp_test_dir, "2.0.0")
+
+        assert result.file_path.read_bytes() == b"msi"
+        assert (app_dir / ".download.json").read_text(encoding="utf-8") == before
+        assert [p.name for p in app_dir.iterdir() if p.is_file()] == [".download.json"]
+        assert "Could not write" in capsys.readouterr().out
+
     def test_failed_download_leaves_sidecar_untouched(self, tmp_test_dir):
         """Tests that the sidecar is only rewritten after a finished download."""
         app_dir = tmp_test_dir / "test-app"

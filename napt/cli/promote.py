@@ -157,6 +157,7 @@ def cmd_promote_plan(args: argparse.Namespace) -> int:
                     state_dir / "deployment",
                     existing_apps,
                     group_id_cache=group_id_cache,
+                    report_unknown_apps=recipes.is_dir(),
                 )
         else:
             actions = plan_promotions(recipes, state_dir=state_dir / "deployment")

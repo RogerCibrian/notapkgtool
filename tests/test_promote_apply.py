@@ -650,6 +650,49 @@ class TestApplyOrchestration:
         assert not plan_a.exists()
         assert plan_b.exists()
 
+    def test_corrupt_plan_file_fails_only_its_app(self, tmp_path):
+        """Tests that a plan file that cannot be loaded fails that app with
+        the file kept, while the other apps' plans still apply."""
+        _write_recipe(tmp_path, app_id="app-bad", rings=_RINGS)
+        _write_recipe(tmp_path, app_id="app-good", rings=_RINGS)
+        _write_state(tmp_path, app_id="app-bad", published=_published())
+        _write_state(tmp_path, app_id="app-good", published=_published())
+        good_action = _promote_action()
+        good_action["app_id"] = "app-good"
+        good_plan = _write_plan(tmp_path, [good_action])
+        bad_plan = plan_path_for(tmp_path / "state", "app-bad")
+        bad_plan.write_text("not json{{{", encoding="utf-8")
+        tenant = [_stamped("app-good", "update", "b" * 64, "update-good")]
+
+        summary, mocks = _run_apply(tmp_path, existing_apps=tenant)
+
+        assert [a["app_id"] for a in summary["applied"]] == ["app-good"]
+        assert [f["app_id"] for f in summary["failed"]] == ["app-bad"]
+        assert "Corrupted plan file" in summary["failed"][0]["error"]
+        assert bad_plan.exists()
+        assert not good_plan.exists()
+        assert [c.args[1] for c in mocks["assign_app"].call_args_list] == [
+            "update-good"
+        ]
+
+    def test_single_recipe_drift_skips_the_unknown_app_check(self, tmp_path):
+        """Tests that applying one recipe does not report every other
+        NAPT-managed app in the tenant as having no recipe."""
+        recipe_a = _write_recipe(tmp_path, app_id="app-a", rings=_RINGS)
+        _write_recipe(tmp_path, app_id="app-b", rings=_RINGS)
+        _write_state(tmp_path, app_id="app-a", published=_published())
+        _write_state(tmp_path, app_id="app-b", published=_published())
+        tenant = [
+            _stamped("app-a", "update", "b" * 64, "update-a"),
+            _stamped("app-b", "update", "b" * 64, "update-b"),
+        ]
+
+        summary, _ = _run_apply(
+            tmp_path, existing_apps=tenant, recipes=recipe_a, real_drift=True
+        )
+
+        assert [f["kind"] for f in summary["drift"] if f["kind"] == "unknown_app"] == []
+
     def test_missing_plan_file_raises(self, tmp_path):
         """Tests that --plan-file naming a file that does not exist is a
         StateError, not a traceback."""

@@ -57,6 +57,7 @@ import shutil
 
 from napt.download.download import download_file
 from napt.exceptions import ConfigError, NetworkError, NotModifiedError
+from napt.files import write_text_atomic
 from napt.logging import get_global_logger
 from napt.paths import is_safe_path_component, safe_filename
 from napt.versioning.msi import extract_msi_metadata
@@ -406,9 +407,7 @@ def _write_sidecar(
         "sha256": result.sha256,
     }
     try:
-        (app_dir / _SIDECAR_NAME).write_text(
-            json.dumps(data, indent=2) + "\n", encoding="utf-8"
-        )
+        write_text_atomic(app_dir / _SIDECAR_NAME, json.dumps(data, indent=2) + "\n")
     except OSError as err:
         get_global_logger().warning(
             "DISCOVERY",

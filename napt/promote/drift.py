@@ -203,6 +203,7 @@ def detect_drift(
     deployment_dir: Path,
     existing_apps: list[dict[str, Any]],
     group_id_cache: dict[str, str] | None = None,
+    report_unknown_apps: bool = True,
 ) -> list[dict[str, Any]]:
     """Detects assignment drift between deployment state and Intune.
 
@@ -214,6 +215,10 @@ def detect_drift(
         group_id_cache: Shared cache for group name resolution, so a
             caller that already resolved groups (apply, plan validation)
             re-resolves nothing. A new cache is used when omitted.
+        report_unknown_apps: Whether a stamped app whose recipe id is not
+            in ``configs`` is reported. True when ``configs`` covers the
+            whole fleet; a run over one recipe passes False, since the
+            other apps' entries are not unknown, just outside the run.
 
     Returns:
         Finding dicts, each with "app_id", "kind", and "detail" keys,
@@ -238,17 +243,18 @@ def detect_drift(
         if stamp is None:
             continue
         if stamp["id"] not in configs:
-            findings.append(
-                {
-                    "app_id": stamp["id"],
-                    "kind": "unknown_app",
-                    "detail": (
-                        f"stamped app '{app.get('displayName', app['id'])}' "
-                        f"references recipe id '{stamp['id']}', which has "
-                        "no recipe"
-                    ),
-                }
-            )
+            if report_unknown_apps:
+                findings.append(
+                    {
+                        "app_id": stamp["id"],
+                        "kind": "unknown_app",
+                        "detail": (
+                            f"stamped app '{app.get('displayName', app['id'])}' "
+                            f"references recipe id '{stamp['id']}', which has "
+                            "no recipe"
+                        ),
+                    }
+                )
             continue
         stamped_by_recipe.setdefault(stamp["id"], []).append((stamp, app))
 
