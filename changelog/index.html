@@ -2962,6 +2962,35 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="fixed">Fixed</h3>
 <ul>
+<li>Fixed a version-first strategy reusing last run's installer when the
+    download link changed at an unchanged version (a switched asset
+    pattern, a re-published release), which recorded the new link beside
+    the old file's hash. The link, minus its query string, is now part of
+    the check, and a changed link is verified with a conditional request</li>
+<li>Fixed reuse trusting the sidecar's recorded hash. The installer on disk
+    is re-hashed first, and a file that no longer matches is downloaded
+    again</li>
+<li>Fixed a vendor re-releasing a version under the same filename
+    overwriting the installer the published release was built from. The
+    previous file is kept beside the new one with its hash in the name</li>
+<li>Fixed two <code>napt discover</code> runs for one app on one machine sharing a
+    download folder, so the second run deleted the first run's partial
+    download. Each run now uses its own folder, and a folder a crashed run
+    left behind is removed after a day</li>
+<li>Fixed a version with a part of more than 18 digits being recorded
+    although the device's detection script cannot compare it; discovery
+    now refuses it. Non-ASCII digits no longer count as numbers when
+    versions are compared, matching the device</li>
+<li>Fixed a GitHub API response that is not JSON escaping <code>napt discover</code>
+    as a traceback</li>
+<li>Fixed a version or link pattern whose optional capture group matched
+    nothing yielding the version <code>None</code> (or, for <code>web_scrape</code>, the text
+    "None"); it is now reported as the pattern not matching</li>
+<li>Fixed a <code>Content-Disposition</code> filename encoded in a charset Python does
+    not know aborting the download instead of falling back to the plain
+    filename</li>
+<li>Fixed an installer's metadata error (an MSI platform NAPT does not
+    support, missing tooling) being reported as a download failure</li>
 <li>Fixed the Azure Blob SAS signature appearing in the error and log text
     when an upload's transport failed</li>
 <li>Fixed a rejected service principal credential (an expired client secret in

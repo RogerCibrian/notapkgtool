@@ -3722,9 +3722,9 @@ between runs (for example with <code>actions/cache</code>) is all a pipeline nee
     Strategy --&gt;|Version-First&lt;br/&gt;api_github, api_json, web_scrape| CheckVersion[Check Version via API/Page]
     Strategy --&gt;|File-First&lt;br/&gt;url_download| HaveFile{Same URL, and file&lt;br/&gt;still on disk?}
 
-    CheckVersion --&gt; SameVersion{Same version&lt;br/&gt;as last run?}
+    CheckVersion --&gt; SameVersion{Same version and&lt;br/&gt;link as last run?}
     SameVersion --&gt;|Yes, and it matched&lt;br/&gt;the file's version| Skip1([Skip download&lt;br/&gt;Use that file])
-    SameVersion --&gt;|Yes, but the file&lt;br/&gt;disagreed| CheckETag
+    SameVersion --&gt;|Same version, but the&lt;br/&gt;file disagreed or the&lt;br/&gt;link changed| CheckETag
     SameVersion --&gt;|No| Download1[Download File]
 
     HaveFile --&gt;|Yes| CheckETag[Conditional request&lt;br/&gt;with saved ETag]
@@ -3747,10 +3747,15 @@ The file is a hint, not a record: if it is missing or unreadable, NAPT
 downloads the full file and writes a new one.</p>
 <p><strong>Version-first strategies</strong> (api_github, api_json, web_scrape) learn a
 version before downloading.
-When it is the same version the last run reported and the installer's own
-version agreed (see
+When it is the same version the last run reported, from the same link, and
+the installer's own version agreed (see
 <a href="#the-installers-version-is-the-version">The installer's version is the version</a>),
-the installer on disk is reused without a request.</p>
+the installer on disk is reused without a request.
+The link is compared without its query string, where some vendor pages put
+a token that changes on every visit.
+A different link at the same version (a switched asset, a re-published
+release) is checked with a conditional request instead, the way
+<code>url_download</code> works.</p>
 <p><strong>url_download</strong> cannot know the version without the file, so it asks the
 server whether the file changed.
 The next run sends the recorded <code>ETag</code> (or <code>Last-Modified</code> when there is
@@ -3758,6 +3763,12 @@ none) back as a conditional request; a <code>304 Not Modified</code> answer reus
 installer.
 The values are only sent while the URL is unchanged and that installer is
 still on disk; a changed URL means a full download.</p>
+<p>Before any reuse, the installer on disk is checked against the hash the
+sidecar recorded; a file that no longer matches is downloaded again.
+A download that reports the same version as a file already on disk but has
+different bytes (a vendor re-releasing a version under one filename) takes
+the filename, and the previous file is kept beside it with its hash in the
+name, so a release built from it can still be rebuilt.</p>
 <h3 id="the-installers-version-is-the-version">The installer's version is the version</h3>
 <p>The version a page or API reports is only the trigger for a download.
 Once the file is on disk, an MSI or MSIX installer reports its own version,
