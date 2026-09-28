@@ -64,6 +64,14 @@ def test_version_parts_keeps_leading_digits_only():
     assert version_parts("v2.10-rc1.7x") == [0, 10, 0, 7]
 
 
+def test_version_parts_counts_ascii_digits_only():
+    """Tests that a segment starting with a non-ASCII digit counts as 0,
+    since the device's Int64 cast refuses such digits and the mirror must
+    not read a number the device cannot."""
+    # Arabic-Indic one, then an ASCII segment.
+    assert version_parts("١٢.3") == [0, 3]
+
+
 def test_is_downgrade():
     """Tests that only a lower version counts as a downgrade."""
     assert is_downgrade("1.9.0", "2.0.0")

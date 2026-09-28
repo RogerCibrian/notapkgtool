@@ -33,7 +33,10 @@ from __future__ import annotations
 import re
 
 _SEGMENT_SEPARATORS = re.compile(r"[.\-]")
-_LEADING_DIGITS = re.compile(r"\d+")
+# ASCII only. The device's script casts the matched digits to Int64, which
+# refuses other Unicode digits, so this mirror must not read a number the
+# device cannot; a segment starting with one counts as 0 here.
+_LEADING_DIGITS = re.compile(r"\d+", re.ASCII)
 
 
 def version_parts(version: str) -> list[int]:

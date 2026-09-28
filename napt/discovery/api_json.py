@@ -51,7 +51,7 @@ from typing import Any
 from jsonpath_ng import parse as jsonpath_parse
 import requests
 
-from napt.discovery.base import RemoteVersion, bounded
+from napt.discovery.base import RemoteVersion, bounded, first_capture
 from napt.download.download import make_session
 from napt.exceptions import ConfigError, NetworkError
 from napt.secrets import bound_hosts, check_secret_use, expand_secrets, guarded_get
@@ -314,10 +314,10 @@ def _apply_version_pattern(version_pattern: str, value: str) -> str:
         raise ConfigError(
             f"Invalid version_pattern regex: {version_pattern!r}"
         ) from err
-    match = pattern.search(value)
-    if not match:
+    captured = first_capture(pattern, value)
+    if captured is None:
         raise ConfigError(
             f"Version pattern {version_pattern!r} did not match the API's "
             f"version value {value!r}"
         )
-    return match.group(1) if pattern.groups else match.group(0)
+    return captured

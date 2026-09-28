@@ -922,9 +922,9 @@ flowchart TD
     Strategy -->|Version-First<br/>api_github, api_json, web_scrape| CheckVersion[Check Version via API/Page]
     Strategy -->|File-First<br/>url_download| HaveFile{Same URL, and file<br/>still on disk?}
 
-    CheckVersion --> SameVersion{Same version<br/>as last run?}
+    CheckVersion --> SameVersion{Same version and<br/>link as last run?}
     SameVersion -->|Yes, and it matched<br/>the file's version| Skip1([Skip download<br/>Use that file])
-    SameVersion -->|Yes, but the file<br/>disagreed| CheckETag
+    SameVersion -->|Same version, but the<br/>file disagreed or the<br/>link changed| CheckETag
     SameVersion -->|No| Download1[Download File]
 
     HaveFile -->|Yes| CheckETag[Conditional request<br/>with saved ETag]
@@ -950,10 +950,15 @@ downloads the full file and writes a new one.
 
 **Version-first strategies** (api_github, api_json, web_scrape) learn a
 version before downloading.
-When it is the same version the last run reported and the installer's own
-version agreed (see
+When it is the same version the last run reported, from the same link, and
+the installer's own version agreed (see
 [The installer's version is the version](#the-installers-version-is-the-version)),
 the installer on disk is reused without a request.
+The link is compared without its query string, where some vendor pages put
+a token that changes on every visit.
+A different link at the same version (a switched asset, a re-published
+release) is checked with a conditional request instead, the way
+`url_download` works.
 
 **url_download** cannot know the version without the file, so it asks the
 server whether the file changed.
@@ -962,6 +967,13 @@ none) back as a conditional request; a `304 Not Modified` answer reuses the
 installer.
 The values are only sent while the URL is unchanged and that installer is
 still on disk; a changed URL means a full download.
+
+Before any reuse, the installer on disk is checked against the hash the
+sidecar recorded; a file that no longer matches is downloaded again.
+A download that reports the same version as a file already on disk but has
+different bytes (a vendor re-releasing a version under one filename) takes
+the filename, and the previous file is kept beside it with its hash in the
+name, so a release built from it can still be rebuilt.
 
 ### The installer's version is the version
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from unittest.mock import patch
 
@@ -14,7 +15,7 @@ from napt.discovery.base import RemoteVersion
 from napt.discovery.registry import get_strategy
 from napt.discovery.url_download import run_url_download
 from napt.discovery.web_scrape import WebScrapeStrategy
-from napt.exceptions import ConfigError, NetworkError
+from napt.exceptions import ConfigError, NetworkError, PackagingError
 from napt.versioning.msi import MSIMetadata
 from napt.versioning.msix import MSIXMetadata
 
@@ -81,7 +82,7 @@ class TestUrlDownloadFlow:
         app_dir = tmp_test_dir / "test-app"
         assert result.file_path == app_dir / "1.2.3" / "installer.msi"
         assert result.file_path.exists()
-        assert not (app_dir / ".incoming").exists()
+        assert not [p for p in app_dir.iterdir() if p.name.startswith(".incoming")]
         assert len(result.sha256) == 64
         assert result.cached is False
         assert result.download_url == "https://example.com/installer.msi"
@@ -168,8 +169,22 @@ class TestUrlDownloadFlow:
             with pytest.raises(NetworkError, match="Failed to download"):
                 run_url_download(app_config, tmp_test_dir)
 
-    def test_extraction_failure_raises(self, tmp_test_dir):
-        """Tests that MSI extraction failures raise NetworkError."""
+    @pytest.mark.parametrize(
+        ("raised", "expected", "fragment"),
+        [
+            # The installer's own problems keep their own type and message.
+            (ConfigError("Unknown platform 'Itanium'"), ConfigError, "Itanium"),
+            (PackagingError("Template is empty"), PackagingError, "Template"),
+            # Missing tooling and anything unexpected are packaging failures,
+            # not network ones: the download itself succeeded.
+            (NotImplementedError("msitools"), PackagingError, "msitools"),
+            (RuntimeError("boom"), PackagingError, "Failed to extract"),
+        ],
+    )
+    def test_extraction_failure_keeps_its_meaning(
+        self, tmp_test_dir, raised, expected, fragment
+    ):
+        """Tests that a metadata error is not relabelled as a download error."""
         app_config = {
             "id": "test-app",
             "discovery": {"url": "https://example.com/installer.msi"},
@@ -182,8 +197,8 @@ class TestUrlDownloadFlow:
                 headers={"Content-Length": str(len(fake_content))},
             )
             with patch("napt.discovery.resolve.extract_msi_metadata") as mock_extract:
-                mock_extract.side_effect = NetworkError("Invalid MSI")
-                with pytest.raises(NetworkError, match="Failed to extract"):
+                mock_extract.side_effect = raised
+                with pytest.raises(expected, match=fragment):
                     run_url_download(app_config, tmp_test_dir)
 
     def test_discovers_version_from_msix(self, tmp_test_dir):
@@ -225,6 +240,10 @@ class TestUrlDownloadFlow:
 _SIDECAR_URL = "https://example.com/installer.msi"
 
 
+_CACHED_BYTES = b"fake cached msi"
+_CACHED_SHA256 = hashlib.sha256(_CACHED_BYTES).hexdigest()
+
+
 def _seed_previous_download(
     app_dir,
     *,
@@ -234,12 +253,15 @@ def _seed_previous_download(
     etag='W/"abc123"',
     with_installer=True,
 ):
-    """Writes a sidecar file and, by default, the installer it points at."""
+    """Writes a sidecar file and, by default, the installer it points at.
+
+    The recorded hash is the installer's real hash, since reuse re-checks
+    the file against it."""
     app_dir.mkdir(parents=True)
     if with_installer:
         installer = app_dir / version / filename
         installer.parent.mkdir(parents=True, exist_ok=True)
-        installer.write_bytes(b"fake cached msi")
+        installer.write_bytes(_CACHED_BYTES)
     (app_dir / ".download.json").write_text(
         json.dumps(
             {
@@ -249,7 +271,7 @@ def _seed_previous_download(
                 "last_modified": None,
                 "version": version,
                 "filename": filename,
-                "sha256": "cached_sha256",
+                "sha256": _CACHED_SHA256,
             }
         ),
         encoding="utf-8",
@@ -333,7 +355,7 @@ class TestUrlDownloadSidecar:
         expected = tmp_test_dir / "test-app" / "2.1.0" / "MyApp Setup.msi"
         assert result.file_path == expected
         assert result.version == "2.1.0"
-        assert result.sha256 == "cached_sha256"
+        assert result.sha256 == _CACHED_SHA256
         assert result.cached is True
 
     def test_changed_file_gets_its_own_version_folder(self, tmp_test_dir):
@@ -482,7 +504,25 @@ class TestUrlDownloadSidecar:
 
         assert list(app_dir.iterdir()) == []
 
-    @pytest.mark.parametrize("version", ["2.0", "2024.10.15-hotfix2", "01.02"])
+    @pytest.mark.parametrize(
+        "version",
+        ["1.9999999999999999999", "9999999999999999999", "1.0.1234567890123456789"],
+    )
+    def test_version_segment_past_int64_is_refused(self, tmp_test_dir, version):
+        """Tests that a segment a device cannot cast to Int64 stops
+        discovery, since its detection script would throw on it."""
+        app_dir = tmp_test_dir / "test-app"
+
+        with requests_mock.Mocker() as m:
+            m.get(_SIDECAR_URL, content=b"msi", headers={"Content-Length": "3"})
+            with pytest.raises(ConfigError, match="more than 18 digits"):
+                _run_with_msi_version(self.APP_CONFIG, tmp_test_dir, version)
+
+        assert list(app_dir.iterdir()) == []
+
+    @pytest.mark.parametrize(
+        "version", ["2.0", "2024.10.15-hotfix2", "01.02", "1.123456789012345678"]
+    )
     def test_version_with_leading_digit_is_accepted(self, tmp_test_dir, version):
         """Tests that a version starting with a digit passes, whatever follows."""
         with requests_mock.Mocker() as m:
@@ -734,6 +774,38 @@ class TestWebScrapeStrategyErrors:
             with pytest.raises(ConfigError, match="did not match anything"):
                 strategy.discover(app_config)
 
+    def test_unmatched_optional_link_group_is_no_match(self):
+        """Tests that a link_pattern group that took no part in the match
+        is reported as no match instead of joining None onto the page URL."""
+        strategy = WebScrapeStrategy()
+        app_config = {
+            "discovery": {
+                "page_url": "https://example.com/dl.html",
+                "link_pattern": r"(/files/[^\"]+)?download",
+                "version_pattern": r"(\d+\.\d+)",
+            }
+        }
+        with requests_mock.Mocker() as m:
+            m.get("https://example.com/dl.html", text="<a>download</a>")
+            with pytest.raises(ConfigError, match="did not match anything on page"):
+                strategy.discover(app_config)
+
+    def test_unmatched_optional_version_group_is_no_match(self):
+        """Tests that a version_pattern group that took no part in the match
+        is reported as no match instead of formatting the text None."""
+        strategy = WebScrapeStrategy()
+        app_config = {
+            "discovery": {
+                "page_url": "https://example.com/dl.html",
+                "link_selector": "a",
+                "version_pattern": r"installer(-(\d+))?",
+            }
+        }
+        with requests_mock.Mocker() as m:
+            m.get("https://example.com/dl.html", text='<a href="/installer.exe">x</a>')
+            with pytest.raises(ConfigError, match="did not match"):
+                strategy.discover(app_config)
+
     def test_version_pattern_no_match_raises(self):
         """Tests that a version_pattern not matching the URL raises ConfigError."""
         strategy = WebScrapeStrategy()
@@ -884,6 +956,55 @@ class TestApiGithubStrategyErrors:
                 status_code=404,
             )
             with pytest.raises(NetworkError, match="not found"):
+                strategy.discover(app_config)
+
+    def test_non_json_response_raises(self):
+        """Tests that a 200 that is not JSON is a NetworkError, not a
+        traceback."""
+        strategy = ApiGithubStrategy()
+        app_config = {"discovery": {"repo": "owner/repo", "asset_pattern": ".*"}}
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://api.github.com/repos/owner/repo/releases/latest",
+                text="<html>maintenance</html>",
+            )
+            with pytest.raises(NetworkError, match="Invalid JSON"):
+                strategy.discover(app_config)
+
+    def test_json_that_is_not_an_object_raises(self):
+        """Tests that a JSON body of the wrong shape is a NetworkError."""
+        strategy = ApiGithubStrategy()
+        app_config = {"discovery": {"repo": "owner/repo", "asset_pattern": ".*"}}
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://api.github.com/repos/owner/repo/releases/latest",
+                json=["unexpected"],
+            )
+            with pytest.raises(NetworkError, match="Unexpected GitHub API response"):
+                strategy.discover(app_config)
+
+    def test_unmatched_optional_group_is_no_match(self):
+        """Tests that a capture group that took no part in the match is
+        reported as the pattern not matching, not as version None."""
+        strategy = ApiGithubStrategy()
+        app_config = {
+            "discovery": {
+                "repo": "owner/repo",
+                "asset_pattern": ".*",
+                "version_pattern": r"release-?(\d+)?",
+            }
+        }
+        release_data = {
+            "tag_name": "release",
+            "prerelease": False,
+            "assets": [{"name": "a.msi", "browser_download_url": "https://x/a.msi"}],
+        }
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://api.github.com/repos/owner/repo/releases/latest",
+                json=release_data,
+            )
+            with pytest.raises(ConfigError, match="did not match"):
                 strategy.discover(app_config)
 
     def test_rate_limited_raises(self):
@@ -1180,6 +1301,12 @@ class TestApiJsonVersionPattern:
     def test_absent_pattern_uses_the_value_as_is(self):
         """Tests that without a pattern the API's value is not touched."""
         assert self._discover("v2.0").version == "v2.0"
+
+    def test_unmatched_optional_group_is_no_match(self):
+        """Tests that a group that took no part in the match is reported as
+        the pattern not matching, not as version None."""
+        with pytest.raises(ConfigError, match="did not match"):
+            self._discover("release", r"release-?(\d+)?")
 
     def test_capture_group_narrows_the_value(self):
         """Tests that capture group 1 becomes the version."""
