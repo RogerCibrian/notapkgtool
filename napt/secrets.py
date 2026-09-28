@@ -269,7 +269,7 @@ def bound_hosts(config: dict[str, Any], values: Iterable[str]) -> set[str] | Non
     return allowed or set()
 
 
-def get_with_secrets(
+def guarded_get(
     session: requests.Session,
     url: str,
     headers: dict[str, str],

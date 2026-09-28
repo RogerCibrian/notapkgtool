@@ -54,7 +54,7 @@ import requests
 from napt.discovery.base import RemoteVersion, bounded
 from napt.download.download import make_session
 from napt.exceptions import ConfigError, NetworkError
-from napt.secrets import bound_hosts, check_secret_use, expand_secrets, get_with_secrets
+from napt.secrets import bound_hosts, check_secret_use, expand_secrets, guarded_get
 
 
 class ApiJsonStrategy:
@@ -132,7 +132,7 @@ class ApiJsonStrategy:
         logger.verbose("DISCOVERY", f"Calling API: GET {api_url}")
         try:
             with make_session() as session:
-                response = get_with_secrets(
+                response = guarded_get(
                     session, api_url, expanded_headers, hosts=hosts, timeout=30
                 )
         except requests.exceptions.RequestException as err:

@@ -12,7 +12,7 @@ from napt.secrets import (
     bound_hosts,
     check_secret_use,
     expand_secrets,
-    get_with_secrets,
+    guarded_get,
     secret_names,
 )
 
@@ -70,7 +70,7 @@ class TestCheckSecretUse:
         )
         assert len(errors) == 1
         assert "Refusing to send secret API_TOKEN to evil.example.com" in errors[0]
-        assert "api.vendor.com" in errors[0]
+        assert errors[0].endswith("binds it to api.vendor.com")
 
     @pytest.mark.parametrize(
         "url",
@@ -178,7 +178,7 @@ class TestBoundHosts:
         assert bound_hosts({}, ["${T}"]) == set()
 
 
-class TestGetWithSecrets:
+class TestGuardedGet:
     """Tests for the redirect guard."""
 
     def test_without_secrets_redirects_are_followed(self):
@@ -190,9 +190,7 @@ class TestGetWithSecrets:
                 headers={"Location": "https://b.com/y"},
             )
             m.get("https://b.com/y", json={"ok": True})
-            resp = get_with_secrets(
-                session, "https://a.com/x", {}, hosts=None, timeout=5
-            )
+            resp = guarded_get(session, "https://a.com/x", {}, hosts=None, timeout=5)
         assert resp.json() == {"ok": True}
 
     def test_redirect_within_bound_hosts_is_followed(self):
@@ -204,7 +202,7 @@ class TestGetWithSecrets:
                 headers={"Location": "/y"},
             )
             m.get("https://a.com/y", json={"ok": True})
-            resp = get_with_secrets(
+            resp = guarded_get(
                 session,
                 "https://a.com/x",
                 {"Authorization": "s"},
@@ -225,7 +223,7 @@ class TestGetWithSecrets:
             )
             m.get("https://evil.example.com/y", json={"ok": True})
             with pytest.raises(NetworkError, match="evil.example.com"):
-                get_with_secrets(
+                guarded_get(
                     session,
                     "https://a.com/x",
                     {"X-API-Key": "s"},
@@ -243,7 +241,7 @@ class TestGetWithSecrets:
                 headers={"Location": "http://a.com/y"},
             )
             with pytest.raises(NetworkError, match="https"):
-                get_with_secrets(
+                guarded_get(
                     session,
                     "https://a.com/x",
                     {"X-API-Key": "s"},
@@ -276,7 +274,7 @@ class TestGetWithSecrets:
                 headers={"Location": location},
             )
             with pytest.raises(NetworkError, match="Refusing to follow"):
-                get_with_secrets(
+                guarded_get(
                     session,
                     "https://a.com/x",
                     {"X-API-Key": "s"},
@@ -294,7 +292,7 @@ class TestGetWithSecrets:
                 headers={"Location": "https://a.com/x"},
             )
             with pytest.raises(NetworkError, match="redirect"):
-                get_with_secrets(
+                guarded_get(
                     session,
                     "https://a.com/x",
                     {"X-API-Key": "s"},
@@ -307,6 +305,4 @@ class TestGetWithSecrets:
         with requests_mock.Mocker() as m, make_session() as session:
             m.get("https://a.com/x", exc=requests.ConnectionError("down"))
             with pytest.raises(requests.ConnectionError):
-                get_with_secrets(
-                    session, "https://a.com/x", {}, hosts={"a.com"}, timeout=5
-                )
+                guarded_get(session, "https://a.com/x", {}, hosts={"a.com"}, timeout=5)
