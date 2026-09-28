@@ -731,11 +731,9 @@ and retires them per `deployment.retain_versions`.
 It consumes only the plan files of the recipes it was given; a recipe
 without a plan file has nothing to apply, and plan files for other apps are
 left untouched.
-Once the plan files are loaded, each app is an independent unit: one app's
-failure, whether a Graph error, an unresolvable group, or a state file that
+Each app is an independent unit: one app's failure, whether a plan file that
+cannot be loaded, a Graph error, an unresolvable group, or a state file that
 cannot be written, keeps its plan file for retry and never blocks the others.
-A plan file that cannot be loaded (corrupt, reshaped, or misnamed) stops the
-whole run before any app is applied.
 Stale or already-applied actions are skipped with a warning, so re-running
 after a partial failure is safe.
 Assignments NAPT does not manage (admin-made groups, all-device targets,
@@ -746,9 +744,8 @@ deployment state says should be assigned and what Intune actually has.
 That covers removed or changed NAPT assignments, unrecorded or foreign
 assignments on NAPT-managed apps, releases missing from the tenant, stamped
 apps no state file references, and stamped apps with no recipe.
-Drift is checked against the recipes in the run, so a single-recipe run
-reports every other app's NAPT entries as having no recipe; run drift over
-the whole recipes directory.
+Stamped apps with no recipe are reported only when the run covers a recipes
+directory; a run over one recipe file leaves the other apps' entries alone.
 An assignment NAPT has no record of making is classified by evidence: one
 that matches a currently configured target is reported as *unrecorded* (a
 lost apply writeback, which a later apply converges, or an admin pre-empting
@@ -1121,10 +1118,12 @@ longer validate against current state are skipped, never improvised) and
 removes each file after its app applies fully.
 Given one recipe, it consumes only that app's plan file.
 A plan file that is corrupt, carries an action that no longer has the shape
-shown above, or has a name that disagrees with its `app_id` is rejected, and
-the whole apply run stops before anything is applied.
+shown above, or has a name that disagrees with its `app_id` is rejected:
+that app is reported as failed, its file is kept, and the other apps apply.
 A reshaped or corrupt file's message says to re-run `napt promote plan`; a
 name mismatch says to fix whichever of the two is wrong.
+A `--plan-file` path that does not exist stops the run before anything is
+applied, since that file was named on the command line.
 To hold one app's promotions during review, delete its plan file; the
 other apps' plans are unaffected, and the next plan run re-proposes
 whatever is still eligible.

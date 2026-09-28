@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed a write that fails part-way (a full disk, a killed process) leaving
+    a truncated deployment state file, plan file, or download sidecar that
+    the next command reports as corrupted. Each is now written to a
+    temporary file and renamed into place, so the previous file survives a
+    failed write
+- Fixed a hand-edited deployment state file with a section of the wrong
+    shape (a `pending` entry missing its version, a ring entry without a
+    hash) crashing `napt status` or `napt promote` with a traceback. The
+    file is now rejected with a message naming the section
+- Fixed one plan file that cannot be loaded stopping `napt promote apply`
+    before any app was applied. That app is now reported as failed with its
+    file kept, and the other apps apply
+- Fixed `napt promote apply` and `napt promote plan --check-drift` given a
+    single recipe file reporting every other NAPT-managed app in the tenant
+    as having no recipe. The unknown-app check now runs only when the
+    command was given a recipes directory
+
 ## [0.11.0] - 2026-09-26
 
 ### Added

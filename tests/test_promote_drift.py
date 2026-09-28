@@ -338,6 +338,29 @@ class TestDetectDrift:
 
         assert [f["kind"] for f in findings] == ["unknown_app"]
 
+    def test_unknown_recipe_check_can_be_skipped(self, tmp_path):
+        """Tests that a run over part of the fleet can leave out the
+        unknown-app check, since apps outside the run are not unknown."""
+        config = _config(rings=_RINGS)
+        deployment_dir = _write_state(tmp_path)
+
+        with (
+            patch(
+                "napt.promote.drift.resolve_assignment_target",
+                side_effect=lambda token, group, cache=None: _group_target(group),
+            ),
+            patch("napt.promote.drift.get_app_assignments", return_value=[]),
+        ):
+            findings = detect_drift(
+                TOKEN,
+                {config["id"]: config},
+                deployment_dir,
+                [_stamped("other-app", "update", "a" * 64, "update-x")],
+                report_unknown_apps=False,
+            )
+
+        assert findings == []
+
     def test_install_assignment_checked(self, tmp_path):
         """Tests that install-entry expectations are checked too."""
         config = _config(install_groups=["All Users"])

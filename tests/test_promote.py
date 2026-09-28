@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 import json
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 import yaml
@@ -476,6 +477,25 @@ def _action(app_id: str = "a") -> dict[str, Any]:
 
 class TestWritePlanFiles:
     """Tests for per-app plan file lifecycle."""
+
+    def test_failed_write_leaves_the_old_plan_intact(self, tmp_path):
+        """Tests that a write that fails before the rename keeps the previous
+        plan file unchanged and leaves no temporary file behind."""
+        state_dir = tmp_path / "state"
+        write_plan_files([_action()], state_dir, ["a"])
+        plan_path = plan_path_for(state_dir, "a")
+        before = plan_path.read_bytes()
+        changed = _action()
+        changed["ring"] = "broad"
+
+        with (
+            patch("napt.files.os.replace", side_effect=OSError(28, "No space")),
+            pytest.raises(OSError),
+        ):
+            write_plan_files([changed], state_dir, ["a"])
+
+        assert plan_path.read_bytes() == before
+        assert [p.name for p in plan_path.parent.iterdir()] == ["a.json"]
 
     def test_writes_deterministic_plan(self, tmp_path):
         """Tests that identical actions produce byte-identical plan files."""

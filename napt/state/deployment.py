@@ -53,6 +53,7 @@ from pathlib import Path
 from typing import Any
 
 from napt.exceptions import StateError
+from napt.files import write_text_atomic
 from napt.versioning.ordering import is_downgrade
 
 # Schema version written to every deployment state file. Loaders reject
@@ -148,8 +149,9 @@ def load_deployment_state(state_path: Path) -> dict[str, Any]:
 
     Raises:
         StateError: If the file exists but contains invalid JSON, its
-            schemaVersion is missing or unsupported, or its declared
-            app_id disagrees with the filename. Deployment state is
+            schemaVersion is missing or unsupported, its declared app_id
+            disagrees with the filename, or a section does not have the
+            shape NAPT writes (a hand edit). Deployment state is
             authoritative, so a corrupted file is never silently
             replaced.
 
@@ -165,6 +167,11 @@ def load_deployment_state(state_path: Path) -> dict[str, Any]:
             "Deployment state is authoritative and is not auto-replaced. "
             "Fix the JSON or restore the file from a backup."
         ) from err
+    if not isinstance(state, dict):
+        raise StateError(
+            f"Corrupted deployment state file: {state_path}: the top level "
+            "is not an object. Fix the JSON or restore the file from git."
+        )
 
     found = state.get("schemaVersion")
     if found != DEPLOYMENT_STATE_SCHEMA_VERSION:
@@ -182,7 +189,65 @@ def load_deployment_state(state_path: Path) -> dict[str, Any]:
             "The file was likely copied or renamed. Fix whichever is "
             "wrong before continuing."
         )
+    _check_shape(state, state_path)
     return state
+
+
+def _is_release(value: Any) -> bool:
+    """Returns True for an object carrying string version and sha256 fields."""
+    return (
+        isinstance(value, dict)
+        and isinstance(value.get("version"), str)
+        and isinstance(value.get("sha256"), str)
+    )
+
+
+def _check_shape(state: dict[str, Any], state_path: Path) -> None:
+    """Rejects a section that does not have the shape NAPT writes.
+
+    NAPT never writes such a file; one comes from a hand edit. Failing
+    here names the section, where the code that reads it later would
+    fail with a bare KeyError or AttributeError.
+
+    Args:
+        state: The parsed state.
+        state_path: Path to the file, for the message.
+
+    Raises:
+        StateError: If a release section, a ring entry, or a retained
+            entry is missing its version or sha256 or is not an object.
+
+    """
+
+    def problem(what: str) -> StateError:
+        return StateError(
+            f"Deployment state file {state_path}: {what}. Deployment state "
+            "is authoritative; fix the JSON or restore the file from git."
+        )
+
+    for key in ("published", "install_assigned", "pending"):
+        value = state.get(key)
+        if value is not None and not _is_release(value):
+            raise problem(
+                f"'{key}' must be null or an object with 'version' and "
+                "'sha256' strings"
+            )
+    rings = state.get("rings")
+    if rings is not None and (
+        not isinstance(rings, dict) or not all(_is_release(e) for e in rings.values())
+    ):
+        raise problem(
+            "'rings' must map each ring name to an object with 'version' and "
+            "'sha256' strings"
+        )
+    retained = state.get("retained")
+    if retained is not None and (
+        not isinstance(retained, list) or not all(_is_release(e) for e in retained)
+    ):
+        raise problem(
+            "'retained' must be a list of objects with 'version' and 'sha256' "
+            "strings"
+        )
 
 
 def save_deployment_state(state: dict[str, Any], state_path: Path) -> None:
@@ -192,7 +257,8 @@ def save_deployment_state(state: dict[str, Any], state_path: Path) -> None:
     the ``app_id`` (from the filename, which is the identity). Output is
     byte-identical for logically identical state: keys follow reading
     order, indentation is fixed at 2 spaces, rings are sorted by name,
-    and no timestamps or run-specific values are written.
+    and no timestamps or run-specific values are written. The file lands
+    in one rename, so a failed write leaves the previous file in place.
 
     Args:
         state: Deployment state dictionary to save.
@@ -204,7 +270,6 @@ def save_deployment_state(state: dict[str, Any], state_path: Path) -> None:
     """
     state["schemaVersion"] = DEPLOYMENT_STATE_SCHEMA_VERSION
     state["app_id"] = state_path.stem
-    state_path.parent.mkdir(parents=True, exist_ok=True)
 
     ordered = _in_reading_order(state, _TOP_LEVEL_ORDER)
     for block, order in _BLOCK_ORDERS.items():
@@ -221,9 +286,8 @@ def save_deployment_state(state: dict[str, Any], state_path: Path) -> None:
             for entry in ordered["retained"]
         ]
 
-    with open(state_path, "w", encoding="utf-8") as f:
-        json.dump(ordered, f, indent=2)
-        f.write("\n")  # Trailing newline for git
+    # Trailing newline for git.
+    write_text_atomic(state_path, json.dumps(ordered, indent=2) + "\n")
 
 
 def record_pending(

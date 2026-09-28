@@ -596,8 +596,8 @@ def apply_plan(
     another app's reviewed plan. Each app's plan is an independent
     unit: its groups are preflighted before any of its actions execute,
     so an unresolvable group fails that app with zero mutations, and a
-    failure while preflighting or applying one app records the
-    failure, keeps its plan file for retry, and continues with the
+    failure while loading, preflighting, or applying one app records
+    the failure, keeps its plan file for retry, and continues with the
     remaining apps. A dead group referenced only by stale or
     already-applied actions never blocks an app. Deployment state is
     saved after each applied action, so a failed run resumes safely:
@@ -633,7 +633,9 @@ def apply_plan(
             run has no recipe for.
         NetworkError: On Graph API failures outside a per-app unit
             (listing the tenant, reconciliation, the drift check).
-        StateError: On corrupted deployment state or plan file.
+        StateError: On corrupted deployment state, or an explicit
+            ``plan_file`` that does not exist. A plan file that cannot
+            be loaded fails its own app instead.
 
     """
     logger = get_global_logger()
@@ -656,19 +658,20 @@ def apply_plan(
         access_token, configs, deployment_dir, run.existing_apps
     )
 
-    # Each unit is one app's plan: (plan file to consume, its actions).
-    # The filename is the app's identity (load_plan_file rejects a file
-    # whose declared app id disagrees), so the stem decides which files
-    # belong to this run before any content is read.
-    units: list[tuple[Path, list[dict[str, Any]]]]
+    # Each plan file is one app's unit of work. The filename is the app's
+    # identity (load_plan_file rejects a file whose declared app id
+    # disagrees), so the stem decides which files belong to this run
+    # before any content is read.
     if plan_file is not None:
+        if not plan_file.is_file():
+            raise StateError(f"Cannot read plan file {plan_file}: no such file")
         if plan_file.stem not in configs:
             raise ConfigError(
                 f"Plan file {plan_file} is for app '{plan_file.stem}', which "
                 f"is not among the recipes given ({recipes}). Pass that "
                 "app's recipe, or the recipes directory."
             )
-        units = [(plan_file, load_plan_file(plan_file))]
+        units = [plan_file]
         logger.info("PROMOTE", f"Applying plan file: {plan_file}")
     else:
         plan_paths = sorted(plans_dir_for(state_dir).glob("*.json"))
@@ -679,12 +682,11 @@ def apply_plan(
                 f"Left {len(outside)} plan file(s) for apps outside this run "
                 f"untouched: {', '.join(path.stem for path in outside)}",
             )
-        mine = [path for path in plan_paths if path.stem in configs]
-        units = [(path, load_plan_file(path)) for path in mine]
-        if mine:
+        units = [path for path in plan_paths if path.stem in configs]
+        if units:
             logger.info(
                 "PROMOTE",
-                f"Applying {len(mine)} plan file(s) from {plans_dir_for(state_dir)}",
+                f"Applying {len(units)} plan file(s) from {plans_dir_for(state_dir)}",
             )
         else:
             logger.info(
@@ -693,24 +695,28 @@ def apply_plan(
             )
 
     failed: list[dict[str, Any]] = []
-    for plan_path, actions in units:
-        if not actions:
-            plan_path.unlink()  # An empty plan file holds no decisions.
-            continue
+    for plan_path in units:
         unit_id = plan_path.stem
 
+        # Everything an app's unit does, from reading its plan file to
+        # its last action, sits inside one per-app isolation: a plan
+        # file that cannot be loaded, an unresolvable group, or a Graph
+        # or state failure fails this app only, keeps its file, and the
+        # loop moves on. A rejected token (AuthError) still aborts the
+        # run, since it would fail every app the same way.
+        #
         # Preflight: every group a live action of this app will touch
         # must resolve before any of its actions execute, so an
         # unresolvable group fails this app with zero mutations instead
         # of stranding a half-applied plan. Skipped actions are excluded:
         # a dead group referenced only by a stale or already-applied
         # action never blocks the app. Resolutions are cached for the
-        # action loop below. The preflight's own Graph calls sit inside
-        # the same per-app isolation as the actions, so a transient
-        # failure there fails this app only; a rejected token (AuthError)
-        # still aborts the run, since it would fail every app the same
-        # way.
+        # action loop below.
         try:
+            actions = load_plan_file(plan_path)
+            if not actions:
+                plan_path.unlink()  # An empty plan file holds no decisions.
+                continue
             live = [a for a in actions if _action_skip_reason(run, a) is None]
             problems = unresolvable_groups(access_token, live, run.group_id_cache)
             if problems:
@@ -751,6 +757,7 @@ def apply_plan(
         deployment_dir,
         run.existing_apps,
         group_id_cache=run.group_id_cache,
+        report_unknown_apps=recipes.is_dir(),
     )
 
     return {
