@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
-from napt.cli.validate import cmd_validate
+from napt.cli.validate import _display_path, cmd_validate
 from napt.exceptions import ConfigError
 from napt.results import ValidationResult
 from tests.cli.conftest import _args, _mock_result
@@ -155,3 +156,147 @@ class TestDebugProvenance:
         ):
             with pytest.raises(TypeError):
                 cmd_validate(_args(recipe=str(recipe), debug=True))
+
+
+class TestDirectoryMode:
+    """Tests for validating a directory of recipes."""
+
+    @staticmethod
+    def _write(recipes, name: str, body: str):
+        path = recipes / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(body)
+        return path
+
+    def test_all_valid_returns_zero(self, tmp_path, capsys):
+        """Tests that a directory of valid recipes lists each and returns 0."""
+        recipes = tmp_path / "recipes"
+        self._write(
+            recipes,
+            "a/one.yaml",
+            "apiVersion: napt/v1\nname: One\nid: one\n"
+            "discovery:\n  strategy: url_download\n  url: https://x/a.msi\n",
+        )
+        self._write(
+            recipes,
+            "b/two.yaml",
+            "apiVersion: napt/v1\nname: Two\nid: two\n"
+            "discovery:\n  strategy: url_download\n  url: https://x/b.msi\n",
+        )
+
+        assert cmd_validate(_args(recipe=str(recipes))) == 0
+
+        out = capsys.readouterr().out
+        assert "[OK]" in out
+        assert "one.yaml" in out
+        assert "two.yaml" in out
+        assert "[FAIL]" not in out
+
+    def test_any_invalid_returns_one_with_errors_listed(self, tmp_path, capsys):
+        """Tests that one bad recipe fails the run and its errors are shown
+        under its path, while the good one still reads as OK."""
+        recipes = tmp_path / "recipes"
+        self._write(
+            recipes,
+            "one.yaml",
+            "apiVersion: napt/v1\nname: One\nid: one\n"
+            "discovery:\n  strategy: url_download\n  url: https://x/a.msi\n",
+        )
+        self._write(recipes, "two.yaml", "apiVersion: napt/v1\nname: Two\nid: two\n")
+
+        assert cmd_validate(_args(recipe=str(recipes))) == 1
+
+        out = capsys.readouterr().out
+        assert "[OK]" in out
+        assert "[FAIL]" in out
+        assert "two.yaml" in out
+        assert "Missing required field: discovery" in out
+
+    def test_duplicate_ids_fail_the_run(self, tmp_path, capsys):
+        """Tests that a parent and child sharing an id are reported."""
+        recipes = tmp_path / "recipes"
+        self._write(
+            recipes,
+            "base.yaml",
+            "apiVersion: napt/v1\nname: One\nid: one\n"
+            "discovery:\n  strategy: url_download\n  url: https://x/a.msi\n",
+        )
+        self._write(
+            recipes, "base.override.yaml", "apiVersion: napt/v1\nparent: base.yaml\n"
+        )
+
+        assert cmd_validate(_args(recipe=str(recipes))) == 1
+
+        out = capsys.readouterr().out
+        assert "Recipe id 'one' is declared by both" in out
+
+    def test_warnings_are_listed_under_the_recipe(self, tmp_path, capsys):
+        """Tests that a recipe that validates with warnings shows them."""
+        recipes = tmp_path / "recipes"
+        self._write(
+            recipes,
+            "one.yaml",
+            "apiVersion: napt/v1\nname: One\nid: one\n"
+            "discovery:\n  strategy: url_download\n  url: https://x/a.msi\n"
+            "intune:\n  colour: blue\n",
+        )
+
+        assert cmd_validate(_args(recipe=str(recipes))) == 0
+
+        out = capsys.readouterr().out
+        assert "[OK]" in out
+        assert "[WARNING] intune: Unknown field 'colour'" in out
+
+    def test_debug_prints_provenance_per_recipe(self, tmp_path, capsys):
+        """Tests that --debug adds a provenance block for each valid recipe."""
+        recipes = tmp_path / "recipes"
+        self._write(
+            recipes,
+            "one.yaml",
+            "apiVersion: napt/v1\nname: One\nid: one\n"
+            "discovery:\n  strategy: url_download\n  url: https://x/a.msi\n",
+        )
+        self._write(
+            recipes,
+            "two.yaml",
+            "apiVersion: napt/v1\nname: Two\nid: two\n"
+            "discovery:\n  strategy: url_download\n  url: https://x/b.msi\n",
+        )
+
+        assert cmd_validate(_args(recipe=str(recipes), debug=True)) == 0
+
+        out = capsys.readouterr().out
+        assert out.count("CONFIGURATION PROVENANCE") == 2
+        assert "Recipe: one.yaml" in out
+        assert "Recipe: two.yaml" in out
+
+
+class TestDisplayPath:
+    """Tests for the path shown beside each directory-mode result."""
+
+    def test_recipe_under_the_root_is_shown_relative(self, tmp_path):
+        """Tests that a recipe inside the scanned directory is shortened."""
+        result = ValidationResult(
+            status="valid",
+            errors=[],
+            warnings=[],
+            app_count=1,
+            recipe_path=str(tmp_path / "recipes" / "a" / "one.yaml"),
+        )
+
+        assert _display_path(result, tmp_path / "recipes") == str(
+            Path("a") / "one.yaml"
+        )
+
+    def test_recipe_outside_the_root_is_shown_as_recorded(self, tmp_path):
+        """Tests that a path not under the root is printed unchanged."""
+        elsewhere = str(tmp_path / "other" / "one.yaml")
+        result = ValidationResult(
+            status="invalid",
+            errors=["x"],
+            warnings=[],
+            app_count=0,
+            recipe_path=elsewhere,
+        )
+
+        assert _display_path(result, tmp_path / "recipes") == elsewhere

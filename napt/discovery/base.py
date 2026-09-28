@@ -52,8 +52,35 @@ from pathlib import Path
 import re
 from typing import Any, Protocol
 
-from napt.exceptions import ConfigError
+from napt.exceptions import ConfigError, NetworkError
 from napt.paths import is_safe_path_component
+
+# Longest remote string (a tag, an asset name, a version value, a matched
+# link) a recipe's regex is run over. Real values are a few dozen
+# characters; the cap keeps a hostile server from handing a pathological
+# pattern unbounded input.
+MAX_PATTERN_INPUT = 4096
+
+
+def bounded(value: str, what: str) -> str:
+    """Returns a remote string once it is short enough to match a pattern on.
+
+    Args:
+        value: The string a recipe pattern will run over.
+        what: What the string is, for the error message.
+
+    Returns:
+        The value unchanged.
+
+    Raises:
+        NetworkError: If the value is longer than ``MAX_PATTERN_INPUT``.
+    """
+    if len(value) > MAX_PATTERN_INPUT:
+        raise NetworkError(
+            f"{what} is {len(value)} characters long; NAPT matches recipe "
+            f"patterns against at most {MAX_PATTERN_INPUT}"
+        )
+    return value
 
 
 @dataclass(frozen=True)

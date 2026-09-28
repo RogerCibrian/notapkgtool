@@ -401,6 +401,10 @@ NAPT never opens a browser on its own.
 If no credential is available, commands fail with `Not authenticated.`
 followed by a hint for each option: run `napt auth login` interactively, or
 set the `AZURE_*` variables or sign in with `az login` for CI/CD.
+A credential that is configured but rejected (an expired client secret in
+`AZURE_CLIENT_SECRET`, an Azure CLI session whose token request Entra ID
+refuses) is reported as rejected, with Entra ID's message, rather than as
+not authenticated.
 
 #### App registration setup
 
@@ -676,14 +680,19 @@ napt init [DIRECTORY] [OPTIONS]
 ### napt validate
 
 Validates recipe syntax and configuration without making network calls.
-Checks YAML syntax, required fields, and strategy configuration.
-It checks the recipe and its parent only: errors in `defaults/org.yaml` or
-vendor files, and build-time requirements such as the EXE
-`intune.detection` fields, surface at `napt discover` or `napt build`.
-It does not check that URLs are reachable or files can be downloaded.
+Checks the effective configuration (`defaults/org.yaml`, vendor defaults,
+parent, recipe): YAML syntax, required fields, strategy configuration, and
+that every `${VAR}` a recipe sends is declared under `secrets` and bound to
+the request host.
+Given a directory, checks every recipe under it and reports two files that
+resolve to the same id.
+Build-time requirements such as the EXE `intune.detection` fields surface at
+`napt build`, and it does not check that URLs are reachable or files can be
+downloaded.
 
 ```bash
 napt validate recipes/Google/chrome.yaml [OPTIONS]
+napt validate recipes/ [OPTIONS]
 ```
 
 ### napt discover
@@ -1148,7 +1157,9 @@ recipe.yaml                         <- the app itself, wins over everything
 ```
 
 - Missing fields always fall back to code defaults.
-- Any setting can be set at any layer: org, vendor, parent, or recipe.
+- Any setting can be set at any layer: org, vendor, parent, or recipe, except
+  `secrets`, which is honored from `defaults/org.yaml` only (see
+  [Secrets configuration](recipe-reference.md#secrets-configuration)).
 - Dicts merge key by key; lists and scalars replace the value beneath them,
   so a recipe that sets `deployment.rings` replaces the whole list.
 
@@ -1157,7 +1168,7 @@ recipe.yaml                         <- the app itself, wins over everything
 1. **Organization defaults** (`defaults/org.yaml`) - Base settings for all
    apps.
    Optional; only needed if you want to customize settings organization-wide.
-   Contains PSADT, Intune, deployment, and directory settings.
+   Contains PSADT, Intune, deployment, directory, and secrets settings.
    NAPT finds the `defaults/` folder by walking up from the recipe's folder
    to the nearest `defaults/org.yaml`.
 

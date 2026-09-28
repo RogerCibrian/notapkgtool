@@ -7,8 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`secrets` section in `defaults/org.yaml`** - Declares the environment
+    variables a recipe may send with its discovery request and the hosts
+    each may go to. Only org.yaml can declare them: a vendor file, parent
+    recipe, or recipe that tries fails validation, so a vendored recipe can
+    neither reach the runner's other secrets nor send a declared one
+    somewhere else
+- **`napt validate` checks a directory** - Every recipe under it is
+    validated, and two files that resolve to the same id are reported, the
+    same check `napt promote` makes
+
 ### Changed
 
+- **BREAKING: Header secrets must be declared and bound to a host** - A
+    `${VAR}` in `discovery.headers` now expands only when `defaults/org.yaml`
+    declares `VAR` under `secrets` with the `api_url` host among its hosts,
+    and the URL must use https. The same applies to the `api_github`
+    `token`, whose host is `api.github.com`. Declare each variable your
+    recipes use with its host
+- **BREAKING: `${VAR}` expands anywhere in a value** - `Bearer ${API_TOKEN}`
+    now sends the token with its scheme. A variable that held the whole
+    header value (`API_AUTH_HEADER="Bearer <token>"`) keeps working as
+    `"${API_AUTH_HEADER}"` once declared
+- **BREAKING: An unset `${VAR}` stops discovery** - The header used to be
+    dropped (or the `api_github` request sent unauthenticated) with a
+    verbose-only note; a missing secret is now an error naming the variable
+- **`napt validate` checks the effective configuration** - The merge of
+    org.yaml, vendor defaults, parent, and recipe that every other command
+    loads, so an error in any layer is reported before a pipeline runs
+    into it
+- A discovery request that carries a secret follows redirects only to the
+    hosts the secret is bound to
 - **Reference publish workflow continues past a failing app** - One app's
     failed build, package, or upload (or a vendor no longer serving its
     approved installer) used to end the loop, skip every app after it,
@@ -22,6 +53,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed the Azure Blob SAS signature appearing in the error and log text
+    when an upload's transport failed
+- Fixed a rejected service principal credential (an expired client secret in
+    `AZURE_CLIENT_SECRET`, or an Azure CLI session whose token request Entra
+    ID refuses) being reported as `Not authenticated`. The rejection is now
+    reported with Entra ID's message
+- Fixed recipe patterns running over remote strings of any length. A tag,
+    asset name, version value, or matched link longer than 4096 characters,
+    or a download page larger than 5 MB, now stops discovery with an error
 - Fixed a write that fails part-way (a full disk, a killed process) leaving
     a truncated deployment state file, plan file, or download sidecar that
     the next command reports as corrupted. Each is now written to a

@@ -1009,7 +1009,7 @@ class TestApiGithubValidateConfig:
 
 
 # =============================================================================
-# ApiJsonStrategy — error cases and validate_config
+# ApiJsonStrategy: error cases and validate_config
 # =============================================================================
 
 
@@ -1107,17 +1107,19 @@ class TestApiJsonStrategyErrors:
             with pytest.raises(ConfigError, match="did not match"):
                 strategy.discover(app_config)
 
-    def test_env_var_header_expansion(self, monkeypatch):
-        """Tests that ${VAR} placeholders in headers are expanded from env."""
+    def test_declared_secret_expands_inside_header_value(self, monkeypatch):
+        """Tests that ${VAR} anywhere in a header value is replaced from the
+        environment when org.yaml binds the variable to the API host."""
         monkeypatch.setenv("TEST_API_TOKEN", "secret123")
         strategy = ApiJsonStrategy()
         app_config = {
+            "secrets": {"TEST_API_TOKEN": {"hosts": ["api.example.com"]}},
             "discovery": {
                 "api_url": "https://api.example.com/latest",
                 "version_path": "version",
                 "download_url_path": "download_url",
-                "headers": {"Authorization": "${TEST_API_TOKEN}"},
-            }
+                "headers": {"Authorization": "Bearer ${TEST_API_TOKEN}"},
+            },
         }
         with requests_mock.Mocker() as m:
             m.get(
@@ -1128,7 +1130,7 @@ class TestApiJsonStrategyErrors:
                 },
             )
             version_info = strategy.discover(app_config)
-            assert m.last_request.headers.get("Authorization") == "secret123"
+            assert m.last_request.headers.get("Authorization") == "Bearer secret123"
         assert version_info.version == "1.0.0"
 
     def test_nested_json_path(self):
@@ -1312,3 +1314,321 @@ class TestApiJsonValidateConfig:
             }
         )
         assert any("headers" in e for e in errors)
+
+    def test_header_value_must_be_a_string(self):
+        """Tests that a non-string header value is reported."""
+        errors = ApiJsonStrategy().validate_config(
+            {
+                "discovery": {
+                    "api_url": "https://api.example.com",
+                    "version_path": "version",
+                    "download_url_path": "url",
+                    "headers": {"X-Count": 5},
+                }
+            }
+        )
+        assert any("headers.X-Count" in e and "string" in e for e in errors)
+
+    def test_undeclared_secret_in_header_is_reported(self):
+        """Tests that a header naming a variable org.yaml does not declare
+        fails validation, before any request could be made."""
+        errors = ApiJsonStrategy().validate_config(
+            {
+                "discovery": {
+                    "api_url": "https://api.example.com",
+                    "version_path": "version",
+                    "download_url_path": "url",
+                    "headers": {"Authorization": "${AZURE_CLIENT_SECRET}"},
+                }
+            }
+        )
+        assert any("AZURE_CLIENT_SECRET" in e for e in errors)
+
+    def test_secret_bound_to_another_host_is_reported(self):
+        """Tests that a declared secret whose hosts exclude api_url fails."""
+        errors = ApiJsonStrategy().validate_config(
+            {
+                "secrets": {"API_TOKEN": {"hosts": ["api.vendor.com"]}},
+                "discovery": {
+                    "api_url": "https://evil.example.com/latest",
+                    "version_path": "version",
+                    "download_url_path": "url",
+                    "headers": {"Authorization": "${API_TOKEN}"},
+                },
+            }
+        )
+        assert any("Refusing to send secret API_TOKEN" in e for e in errors)
+
+    def test_secret_bound_to_the_api_host_is_valid(self):
+        """Tests that a declared secret sent to its bound host passes."""
+        errors = ApiJsonStrategy().validate_config(
+            {
+                "secrets": {"API_TOKEN": {"hosts": ["api.vendor.com"]}},
+                "discovery": {
+                    "api_url": "https://api.vendor.com/latest",
+                    "version_path": "version",
+                    "download_url_path": "url",
+                    "headers": {"Authorization": "Bearer ${API_TOKEN}"},
+                },
+            }
+        )
+        assert errors == []
+
+
+class TestApiJsonSecrets:
+    """Tests that api_json only sends secrets where org.yaml allows."""
+
+    _API = "https://api.example.com/latest"
+
+    def _config(self, headers, secrets=None):
+        return {
+            "secrets": secrets or {},
+            "discovery": {
+                "api_url": self._API,
+                "version_path": "version",
+                "download_url_path": "download_url",
+                "headers": headers,
+            },
+        }
+
+    def test_undeclared_variable_is_refused_before_any_request(self, monkeypatch):
+        """Tests that a recipe cannot reach a variable org.yaml does not
+        declare, even when it is set in the environment."""
+        monkeypatch.setenv("AZURE_CLIENT_SECRET", "s")
+        config = self._config({"Authorization": "${AZURE_CLIENT_SECRET}"})
+        with requests_mock.Mocker() as m:
+            m.get(self._API, json={"version": "1", "download_url": "https://x/a"})
+            with pytest.raises(ConfigError, match="AZURE_CLIENT_SECRET"):
+                ApiJsonStrategy().discover(config)
+        assert m.call_count == 0
+
+    def test_unset_declared_secret_is_an_error(self, monkeypatch):
+        """Tests that a missing secret stops discovery instead of sending
+        the request without the header."""
+        monkeypatch.delenv("API_TOKEN", raising=False)
+        config = self._config(
+            {"Authorization": "${API_TOKEN}"},
+            {"API_TOKEN": {"hosts": ["api.example.com"]}},
+        )
+        with requests_mock.Mocker() as m:
+            m.get(self._API, json={"version": "1", "download_url": "https://x/a"})
+            with pytest.raises(ConfigError, match="API_TOKEN"):
+                ApiJsonStrategy().discover(config)
+        assert m.call_count == 0
+
+    def test_secret_bound_elsewhere_is_refused(self, monkeypatch):
+        """Tests that a secret bound to another host never leaves for api_url."""
+        monkeypatch.setenv("API_TOKEN", "s")
+        config = self._config(
+            {"Authorization": "${API_TOKEN}"},
+            {"API_TOKEN": {"hosts": ["api.vendor.com"]}},
+        )
+        with requests_mock.Mocker() as m:
+            m.get(self._API, json={"version": "1", "download_url": "https://x/a"})
+            with pytest.raises(ConfigError, match="Refusing to send secret"):
+                ApiJsonStrategy().discover(config)
+        assert m.call_count == 0
+
+    def test_redirect_to_another_host_is_refused(self, monkeypatch):
+        """Tests that the API cannot bounce a secret-bearing request to
+        another host."""
+        monkeypatch.setenv("API_TOKEN", "s")
+        config = self._config(
+            {"X-API-Key": "${API_TOKEN}"},
+            {"API_TOKEN": {"hosts": ["api.example.com"]}},
+        )
+        with requests_mock.Mocker() as m:
+            m.get(
+                self._API,
+                status_code=302,
+                headers={"Location": "https://evil.example.com/latest"},
+            )
+            m.get(
+                "https://evil.example.com/latest",
+                json={"version": "1", "download_url": "https://x/a"},
+            )
+            with pytest.raises(NetworkError, match="evil.example.com"):
+                ApiJsonStrategy().discover(config)
+        assert m.call_count == 1
+
+    def test_plain_headers_still_follow_redirects(self):
+        """Tests that a request without secrets behaves as before."""
+        config = self._config({"Accept": "application/json"})
+        with requests_mock.Mocker() as m:
+            m.get(
+                self._API,
+                status_code=302,
+                headers={"Location": "https://cdn.example.com/latest"},
+            )
+            m.get(
+                "https://cdn.example.com/latest",
+                json={"version": "1", "download_url": "https://x/a"},
+            )
+            assert ApiJsonStrategy().discover(config).version == "1"
+
+    def test_oversized_version_value_is_refused(self):
+        """Tests that a version value longer than any real version is not
+        handed to the recipe's regex."""
+        config = self._config({})
+        config["discovery"]["version_pattern"] = r"v?([0-9.]+)"
+        with requests_mock.Mocker() as m:
+            m.get(
+                self._API,
+                json={"version": "1" * 5000, "download_url": "https://x/a"},
+            )
+            with pytest.raises(NetworkError, match="characters long"):
+                ApiJsonStrategy().discover(config)
+
+
+class TestApiGithubToken:
+    """Tests for the api_github token under the secrets binding."""
+
+    _API = "https://api.github.com/repos/owner/repo/releases/latest"
+    _RELEASE = {
+        "tag_name": "v1.2.3",
+        "prerelease": False,
+        "assets": [
+            {"name": "installer.msi", "browser_download_url": "https://x/i.msi"}
+        ],
+    }
+
+    def _config(self, token, secrets=None):
+        return {
+            "secrets": secrets or {},
+            "discovery": {
+                "repo": "owner/repo",
+                "asset_pattern": r".*\.msi$",
+                "token": token,
+            },
+        }
+
+    _DECLARED = {"GITHUB_TOKEN": {"hosts": ["api.github.com"]}}
+
+    def test_declared_token_variable_is_sent(self, monkeypatch):
+        """Tests that a token org.yaml binds to api.github.com is sent."""
+        monkeypatch.setenv("GITHUB_TOKEN", "ghp_x")
+        with requests_mock.Mocker() as m:
+            m.get(self._API, json=self._RELEASE)
+            ApiGithubStrategy().discover(
+                self._config("${GITHUB_TOKEN}", self._DECLARED)
+            )
+            assert m.last_request.headers["Authorization"] == "token ghp_x"
+
+    def test_undeclared_token_variable_is_refused(self, monkeypatch):
+        """Tests that the token, like a header, cannot name a variable
+        org.yaml does not declare, even one that is set."""
+        monkeypatch.setenv("AZURE_CLIENT_SECRET", "s")
+        with requests_mock.Mocker() as m:
+            m.get(self._API, json=self._RELEASE)
+            with pytest.raises(ConfigError, match="AZURE_CLIENT_SECRET"):
+                ApiGithubStrategy().discover(self._config("${AZURE_CLIENT_SECRET}"))
+        assert m.call_count == 0
+
+    def test_unset_token_variable_is_an_error(self, monkeypatch):
+        """Tests that an unset token variable stops discovery rather than
+        sending the request unauthenticated."""
+        monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+        with requests_mock.Mocker() as m:
+            m.get(self._API, json=self._RELEASE)
+            with pytest.raises(ConfigError, match="not set"):
+                ApiGithubStrategy().discover(
+                    self._config("${GITHUB_TOKEN}", self._DECLARED)
+                )
+        assert m.call_count == 0
+
+    def test_declared_token_bound_elsewhere_is_refused(self, monkeypatch):
+        """Tests that a secret org.yaml binds to another host is not sent
+        to GitHub."""
+        monkeypatch.setenv("VENDOR_KEY", "k")
+        config = self._config(
+            "${VENDOR_KEY}", {"VENDOR_KEY": {"hosts": ["api.vendor.com"]}}
+        )
+        with requests_mock.Mocker() as m:
+            m.get(self._API, json=self._RELEASE)
+            with pytest.raises(ConfigError, match="Refusing to send secret"):
+                ApiGithubStrategy().discover(config)
+        assert m.call_count == 0
+
+    def test_declared_token_bound_elsewhere_fails_validation(self):
+        """Tests that napt validate reports the same refusal."""
+        errors = ApiGithubStrategy().validate_config(
+            self._config("${VENDOR_KEY}", {"VENDOR_KEY": {"hosts": ["api.vendor.com"]}})
+        )
+        assert any("Refusing to send secret VENDOR_KEY" in e for e in errors)
+
+    def test_literal_token_is_sent_only_to_github(self):
+        """Tests that a token written into the recipe is still bound to
+        api.github.com, so a redirect elsewhere does not carry it."""
+        with requests_mock.Mocker() as m:
+            m.get(self._API, json=self._RELEASE)
+            ApiGithubStrategy().discover(self._config("plain-token"))
+            assert m.last_request.headers["Authorization"] == "token plain-token"
+
+        with requests_mock.Mocker() as m:
+            m.get(
+                self._API,
+                status_code=302,
+                headers={"Location": "https://evil.example.com/latest"},
+            )
+            m.get("https://evil.example.com/latest", json=self._RELEASE)
+            with pytest.raises(NetworkError, match="evil.example.com"):
+                ApiGithubStrategy().discover(self._config("plain-token"))
+        assert m.call_count == 1
+
+    def test_non_string_token_fails_validation(self):
+        """Tests that a token that is not a string is reported."""
+        errors = ApiGithubStrategy().validate_config(self._config(5))
+        assert "discovery.token: Must be a string" in errors
+
+    def test_oversized_tag_is_refused(self):
+        """Tests that an absurdly long tag is not handed to version_pattern."""
+        release = dict(self._RELEASE, tag_name="v" + "1" * 5000)
+        with requests_mock.Mocker() as m:
+            m.get(self._API, json=release)
+            with pytest.raises(NetworkError, match="characters long"):
+                ApiGithubStrategy().discover(self._config(None))
+
+    def test_oversized_asset_name_is_refused(self):
+        """Tests that an absurdly long asset name is not handed to
+        asset_pattern."""
+        release = dict(
+            self._RELEASE,
+            assets=[{"name": "a" * 5000, "browser_download_url": "https://x/a"}],
+        )
+        with requests_mock.Mocker() as m:
+            m.get(self._API, json=release)
+            with pytest.raises(NetworkError, match="characters long"):
+                ApiGithubStrategy().discover(self._config(None))
+
+
+class TestWebScrapeLimits:
+    """Tests that web_scrape bounds what recipe patterns run over."""
+
+    def _config(self, **overrides):
+        discovery = {
+            "page_url": "https://example.com/download.html",
+            "link_pattern": r'href="([^"]+\.msi)"',
+            "version_pattern": r"(\d+\.\d+)",
+        }
+        discovery.update(overrides)
+        return {"discovery": discovery}
+
+    def test_oversized_page_is_refused(self):
+        """Tests that a page larger than any download page is rejected
+        before link_pattern runs over it."""
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://example.com/download.html",
+                content=b"<a>" + b"x" * (5 * 1024 * 1024 + 1),
+            )
+            with pytest.raises(NetworkError, match="bytes"):
+                WebScrapeStrategy().discover(self._config())
+
+    def test_oversized_link_is_refused(self):
+        """Tests that an absurdly long matched link is not handed to
+        version_pattern."""
+        html = f'<a href="/{"a" * 5000}/1.0.msi">x</a>'
+        with requests_mock.Mocker() as m:
+            m.get("https://example.com/download.html", text=html)
+            with pytest.raises(NetworkError, match="characters long"):
+                WebScrapeStrategy().discover(self._config())

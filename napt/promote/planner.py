@@ -56,7 +56,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-from napt.config.loader import load_effective_config
+from napt.config.loader import (
+    collect_recipe_paths,
+    duplicate_recipe_id_message,
+    load_effective_config,
+)
 from napt.exceptions import ConfigError, StateError
 from napt.files import write_text_atomic
 from napt.logging import get_global_logger
@@ -293,32 +297,6 @@ def _plan_app_actions(
     return actions
 
 
-def _collect_recipe_paths(recipes: Path) -> list[Path]:
-    """Collects recipe file paths from a file or directory.
-
-    Args:
-        recipes: A recipe YAML file, or a directory scanned recursively
-            for ``*.yaml`` / ``*.yml`` files.
-
-    Returns:
-        Sorted recipe file paths.
-
-    Raises:
-        ConfigError: If the path does not exist or contains no recipes.
-
-    """
-    if recipes.is_file():
-        return [recipes]
-    if recipes.is_dir():
-        found = sorted(
-            path for pattern in ("*.yaml", "*.yml") for path in recipes.rglob(pattern)
-        )
-        if not found:
-            raise ConfigError(f"No recipe files found under {recipes}")
-        return found
-    raise ConfigError(f"Recipe path not found: {recipes}")
-
-
 def load_recipe_configs(recipes: Path) -> dict[str, dict[str, Any]]:
     """Loads effective configurations for a recipe file or directory.
 
@@ -336,15 +314,12 @@ def load_recipe_configs(recipes: Path) -> dict[str, dict[str, Any]]:
     """
     configs: dict[str, dict[str, Any]] = {}
     sources: dict[str, Path] = {}
-    for path in _collect_recipe_paths(recipes):
+    for path in collect_recipe_paths(recipes):
         config = load_effective_config(path)
         app_id: str = config["id"]
         if app_id in sources:
             raise ConfigError(
-                f"Recipe id '{app_id}' is declared by both {sources[app_id]} "
-                f"and {path}. Give each recipe its own id, or move a parent "
-                "recipe that shares its child's id out of the directory "
-                "being scanned."
+                duplicate_recipe_id_message(app_id, sources[app_id], path)
             )
         sources[app_id] = path
         configs[app_id] = config
@@ -369,7 +344,7 @@ def resolve_state_dir(recipes: Path) -> Path:
             cannot be loaded.
 
     """
-    first = _collect_recipe_paths(recipes)[0]
+    first = collect_recipe_paths(recipes)[0]
     config = load_effective_config(first)
     return Path(config["directories"]["state"])
 

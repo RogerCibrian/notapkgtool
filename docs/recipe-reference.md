@@ -42,8 +42,8 @@ logging:                     # Optional: on-device script logging
 
 A section key with nothing under it is a validation error; remove the key
 instead.
-`parent`, `directories`, `intunewin`, and `deployment` are the other top-level
-keys; each has its own section below.
+`parent`, `directories`, `intunewin`, `deployment`, and `secrets` are the
+other top-level keys; each has its own section below.
 
 ### apiVersion
 
@@ -196,8 +196,9 @@ A pattern that does not match stops discovery with an error.
 GitHub personal access token for authenticated API requests.
 Write it as `"${GITHUB_TOKEN}"` so the token stays out of the file (see
 [Environment variables](#environment-variables-variable_name)).
-An unset variable is not an error: the request is sent unauthenticated, so a
-missing secret shows up only as a rate-limit error.
+The variable must be declared under [secrets](#secrets-configuration) in
+`defaults/org.yaml` with `api.github.com` among its hosts; an undeclared or
+unset variable stops discovery with an error.
 
 **When to use:**
 
@@ -227,7 +228,7 @@ discovery:
   download_url_path: "download_url"          # Required: JSONPath to download URL field
   version_pattern: "v?([0-9.]+)"             # Optional: regex to narrow the version value
   headers:                                   # Optional: HTTP headers for authentication
-    Authorization: "${API_AUTH_HEADER}"      # Variable holds "Bearer <token>"
+    Authorization: "Bearer ${API_TOKEN}"     # API_TOKEN declared under secrets in org.yaml
 ```
 
 #### api_url
@@ -283,14 +284,18 @@ A pattern that does not match stops discovery with an error.
 **Default:** None
 
 HTTP headers to include in the API request, typically for authentication.
-A value that is exactly `${VARIABLE_NAME}` is replaced from the environment;
-`Bearer ${TOKEN}` is sent as written, so put the whole header value in the
-variable (see [Environment variables](#environment-variables-variable_name)).
+Values must be strings.
+`${VARIABLE_NAME}` anywhere in a value is replaced from the environment,
+provided `defaults/org.yaml` declares the variable under
+[secrets](#secrets-configuration) with the `api_url` host among its hosts
+(see [Environment variables](#environment-variables-variable_name)).
+A variable that is not declared, is bound to other hosts, or is not set
+stops discovery with an error before the request is sent.
 
 **Example (fragment of `discovery`):**
 ```yaml
 headers:
-  Authorization: "${API_AUTH_HEADER}"   # Variable holds "Bearer <token>"
+  Authorization: "Bearer ${API_TOKEN}"
   X-API-Key: "${VENDOR_API_KEY}"
 ```
 
@@ -1204,6 +1209,42 @@ How many superseded versions stay in Intune for rollback before deletion.
 `0` deletes a version as soon as it holds no rings.
 Enforced by `napt promote apply`; only NAPT-stamped apps are ever deleted.
 
+## Secrets configuration
+
+The `secrets` section declares the environment variables a recipe may send
+with its discovery request, and the hosts each may be sent to.
+It is org policy and is honored from `defaults/org.yaml` only: an entry in a
+vendor file, a parent recipe, or a recipe is a validation error, and the
+loader never merges it.
+A recipe, including one vendored from another repository, can therefore
+reach only the variables listed here and only for the listed hosts, so the
+runner's other secrets (`AZURE_CLIENT_SECRET`, cloud keys) stay out of every
+discovery request.
+
+```yaml
+secrets:
+  API_TOKEN:
+    hosts: ["api.vendor.com"]
+  VENDOR_API_KEY:
+    hosts: ["api.vendor.com", "downloads.vendor.com"]
+```
+
+Each key is an environment variable name.
+A recipe references it as `${API_TOKEN}` in `discovery.headers` (`api_json`)
+or `discovery.token` (`api_github`); see
+[Environment variables](#environment-variables-variable_name).
+
+### hosts
+
+**Type:** `list` of strings
+**Required:** Yes
+
+Hostnames the variable may be sent to, without scheme, path, or port.
+Matching is by exact hostname, case-insensitively, and the request must use
+https.
+A request that carries a declared secret follows a redirect only to a host in
+this list; a redirect elsewhere stops discovery with an error.
+
 ## Variable substitution
 
 ### NAPT build-time variables: `{{...}}`
@@ -1226,10 +1267,9 @@ committed to YAML.
 It works **only** in `discovery.token` (`api_github`) and the values of
 `discovery.headers` (`api_json`).
 
-Only a whole value that is exactly `${VARIABLE_NAME}` is replaced; text around
-it is sent as written, so `"Bearer ${API_TOKEN}"` reaches the server
-literally.
-For a bearer token, put the whole header value in the variable:
+`${VARIABLE_NAME}` is replaced wherever it appears in the value, so a bearer
+token is written with its scheme in the recipe and the variable holds the
+token alone:
 
 ```yaml
 discovery:
@@ -1238,11 +1278,16 @@ discovery:
   version_path: "version"
   download_url_path: "download_url"
   headers:
-    Authorization: "${API_AUTH_HEADER}"   # API_AUTH_HEADER="Bearer <token>"
+    Authorization: "Bearer ${API_TOKEN}"
 ```
 
-An unset variable is not an error, and is logged only at verbose level: the
-header is dropped, or the `token` request goes out unauthenticated.
+The variable must be declared under [secrets](#secrets-configuration) in
+`defaults/org.yaml` with the request host among its hosts: the `api_url`
+host for a header, `api.github.com` for the `api_github` token.
+An undeclared variable, a host the variable is not bound to, a plain-http
+URL, or an unset variable stops discovery with an error before the request
+is sent, and `napt validate` reports the first three without running
+anything.
 
 For setting the variables locally and in CI/CD, see
 [Handle authentication tokens](common-tasks.md#handle-authentication-tokens).

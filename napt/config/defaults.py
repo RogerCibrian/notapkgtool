@@ -117,6 +117,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "retain_versions": 1,
         "require_pending": False,
     },
+    # Secrets recipes may send with discovery requests, each bound to the
+    # hosts it may go to. Honored from defaults/org.yaml only.
+    "secrets": {},
 }
 
 
@@ -241,4 +244,16 @@ apiVersion: napt/v1
 #
 #   # Superseded versions kept in Intune for rollback before deletion.
 #   retain_versions: 1
+
+# secrets:
+#   # Environment variables a recipe may send with its discovery request,
+#   # and the hosts each may go to. A recipe writes ${NAME} in
+#   # discovery.headers (api_json) or discovery.token (api_github); the
+#   # request must go to a listed host over https. A variable not listed
+#   # here cannot be referenced by any recipe. Only this file may declare
+#   # secrets.
+#   GITHUB_TOKEN:
+#     hosts: ["api.github.com"]
+#   API_TOKEN:
+#     hosts: ["api.vendor.com"]
 """  # noqa: E501

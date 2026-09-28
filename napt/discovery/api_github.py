@@ -36,27 +36,31 @@ Note:
     The request always goes to the latest-release endpoint, which never
     returns a pre-release, so ``prerelease`` currently has no effect. If no
     asset matches, discovery raises an error rather than walking back
-    through history. A ``token`` that is exactly ``${VAR}`` is replaced with
-    that environment variable; when the variable is unset, the request is
-    sent unauthenticated and a verbose log line says so.
+    through history. ``${VAR}`` in ``token`` is replaced with that
+    environment variable, provided ``defaults/org.yaml`` declares it under
+    ``secrets`` and binds it to ``api.github.com`` (see [napt.secrets][]);
+    an undeclared or unset variable stops discovery.
 
 """
 
 from __future__ import annotations
 
-import os
 import re
 from typing import Any
 
 import requests
 
-from napt.discovery.base import RemoteVersion
+from napt.discovery.base import RemoteVersion, bounded
 from napt.download.download import make_session
 from napt.exceptions import ConfigError, NetworkError
+from napt.secrets import bound_hosts, check_secret_use, expand_secrets, get_with_secrets
 
 # Strategy-specific defaults for optional recipe fields.
 _DEFAULT_VERSION_PATTERN = r"v?([0-9.]+)"
 _DEFAULT_PRERELEASE = False
+
+# The only host the token is ever sent to.
+_GITHUB_API_HOST = "api.github.com"
 
 
 class ApiGithubStrategy:
@@ -81,10 +85,13 @@ class ApiGithubStrategy:
             ``"api_github"`` as the source identifier.
 
         Raises:
-            ConfigError: On missing or malformed required configuration,
-                or when patterns do not match the release.
-            NetworkError: On API failure, missing assets, or rejected
-                pre-releases.
+            ConfigError: On missing or malformed required configuration, a
+                token secret org.yaml does not declare, binds to another
+                host, or that is not set, or when patterns do not match the
+                release.
+            NetworkError: On API failure, missing assets, rejected
+                pre-releases, or a tag or asset name too long to match a
+                pattern on.
 
         """
         from napt.logging import get_global_logger
@@ -111,18 +118,23 @@ class ApiGithubStrategy:
 
         version_pattern = source.get("version_pattern", _DEFAULT_VERSION_PATTERN)
         prerelease = source.get("prerelease", _DEFAULT_PRERELEASE)
-        token = source.get("token")
+        raw_token = source.get("token")
 
-        # Expand environment variables in token (e.g., ${GITHUB_TOKEN})
-        if token:
-            if token.startswith("${") and token.endswith("}"):
-                env_var = token[2:-1]
-                token = os.environ.get(env_var)
-                if not token:
-                    logger.verbose(
-                        "DISCOVERY",
-                        f"Warning: Environment variable {env_var} not set",
-                    )
+        api_url = f"https://{_GITHUB_API_HOST}/repos/{repo}/releases/latest"
+
+        # Expand ${VAR} in the token; an undeclared or unset variable stops
+        # discovery rather than sending the request unauthenticated. A
+        # literal token is bound to api.github.com like a declared one, so
+        # no redirect carries it elsewhere.
+        token = None
+        hosts: set[str] | None = None
+        if raw_token:
+            token = expand_secrets(
+                app_config, str(raw_token), api_url, "discovery.token"
+            )
+            hosts = bound_hosts(app_config, [str(raw_token)])
+            if hosts is None:
+                hosts = {_GITHUB_API_HOST}
 
         logger.verbose("DISCOVERY", "Strategy: api_github (version-first)")
         logger.verbose("DISCOVERY", f"Repository: {repo}")
@@ -133,7 +145,6 @@ class ApiGithubStrategy:
             logger.verbose("DISCOVERY", "Including pre-releases")
 
         # Fetch latest release from GitHub API
-        api_url = f"https://api.github.com/repos/{repo}/releases/latest"
         headers = {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
@@ -148,7 +159,9 @@ class ApiGithubStrategy:
 
         try:
             with make_session() as session:
-                response = session.get(api_url, headers=headers, timeout=30)
+                response = get_with_secrets(
+                    session, api_url, headers, hosts=hosts, timeout=30
+                )
         except requests.exceptions.RequestException as err:
             raise NetworkError(f"Failed to fetch GitHub release: {err}") from err
 
@@ -178,6 +191,7 @@ class ApiGithubStrategy:
         tag_name = release_data.get("tag_name", "")
         if not tag_name:
             raise NetworkError("Release has no tag_name field")
+        tag_name = bounded(str(tag_name), "The release tag")
 
         logger.verbose("DISCOVERY", f"Release tag: {tag_name}")
 
@@ -228,7 +242,7 @@ class ApiGithubStrategy:
             ) from err
 
         for asset in assets:
-            asset_name = asset.get("name", "")
+            asset_name = bounded(str(asset.get("name", "")), "An asset name")
             if pattern.search(asset_name):
                 matched_asset = asset
                 logger.verbose("DISCOVERY", f"Matched asset: {asset_name}")
@@ -312,5 +326,19 @@ class ApiGithubStrategy:
                     re.compile(pattern)
                 except re.error as err:
                     errors.append(f"Invalid version_pattern regex: {err}")
+
+        token = source.get("token")
+        if token is not None:
+            if not isinstance(token, str):
+                errors.append("discovery.token: Must be a string")
+            else:
+                errors.extend(
+                    check_secret_use(
+                        app_config,
+                        token,
+                        f"https://{_GITHUB_API_HOST}/",
+                        "discovery.token",
+                    )
+                )
 
         return errors

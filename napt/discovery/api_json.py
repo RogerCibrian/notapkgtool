@@ -26,7 +26,7 @@ Recipe Example:
       download_url_path: "download_url"                 # required, JSONPath
       version_pattern: "v?([0-9.]+)"                    # optional, regex
       headers:                                          # optional
-        Authorization: "${API_AUTH_HEADER}"             # "Bearer <token>"
+        Authorization: "Bearer ${API_TOKEN}"            # declared in org.yaml
         Accept: "application/json"
     ```
 
@@ -34,28 +34,27 @@ The [recipe reference](../recipe-reference.md#api_json-strategy) defines
 each field.
 
 Note:
-    JSONPath uses the ``jsonpath-ng`` library. A header value that is exactly
-    ``${VAR}`` is replaced with that environment variable; when the variable
-    is unset, the header is dropped and a verbose log line says so. Text
-    around a ``${VAR}`` is not substituted, so a bearer token goes in the
-    variable as the whole value (``API_AUTH_HEADER`` holding
-    ``Bearer <token>``).
+    JSONPath uses the ``jsonpath-ng`` library. ``${VAR}`` anywhere in a
+    header value is replaced with that environment variable, provided
+    ``defaults/org.yaml`` declares it under ``secrets`` and binds it to the
+    API host; see [napt.secrets][]. An undeclared or unset variable stops
+    discovery before the request is sent.
 
 """
 
 from __future__ import annotations
 
 import json
-import os
 import re
 from typing import Any
 
 from jsonpath_ng import parse as jsonpath_parse
 import requests
 
-from napt.discovery.base import RemoteVersion
+from napt.discovery.base import RemoteVersion, bounded
 from napt.download.download import make_session
 from napt.exceptions import ConfigError, NetworkError
+from napt.secrets import bound_hosts, check_secret_use, expand_secrets, get_with_secrets
 
 
 class ApiJsonStrategy:
@@ -78,10 +77,14 @@ class ApiJsonStrategy:
             the source identifier.
 
         Raises:
-            ConfigError: On missing required configuration, when the
-                JSONPath expressions do not match the response, or when
-                ``version_pattern`` is invalid or does not match.
-            NetworkError: On API request failure.
+            ConfigError: On missing required configuration, a header
+                secret that org.yaml does not allow for the API host or
+                that is not set, when the JSONPath expressions do not
+                match the response, or when ``version_pattern`` is invalid
+                or does not match.
+            NetworkError: On API request failure, a redirect that would
+                carry a secret off its bound hosts, or a version value too
+                long to match a pattern on.
 
         """
         from napt.logging import get_global_logger
@@ -108,38 +111,30 @@ class ApiJsonStrategy:
             )
 
         # Optional configuration
-        headers = source.get("headers", {})
+        headers = {str(k): str(v) for k, v in (source.get("headers") or {}).items()}
 
         logger.verbose("DISCOVERY", "Strategy: api_json (version-first)")
         logger.verbose("DISCOVERY", f"API URL: {api_url}")
         logger.verbose("DISCOVERY", f"Version path: {version_path}")
         logger.verbose("DISCOVERY", f"Download URL path: {download_url_path}")
 
-        # Expand environment variables in headers
-        expanded_headers = {}
-        for key, value in headers.items():
-            if (
-                isinstance(value, str)
-                and value.startswith("${")
-                and value.endswith("}")
-            ):
-                env_var = value[2:-1]
-                env_value = os.environ.get(env_var)
-                if not env_value:
-                    logger.verbose(
-                        "DISCOVERY",
-                        f"Warning: Environment variable {env_var} not set",
-                    )
-                else:
-                    expanded_headers[key] = env_value
-            else:
-                expanded_headers[key] = value
+        # Expand secrets in headers; a header org.yaml does not allow for
+        # this host, or whose variable is unset, stops discovery here.
+        expanded_headers = {
+            name: expand_secrets(
+                app_config, value, api_url, f"discovery.headers.{name}"
+            )
+            for name, value in headers.items()
+        }
+        hosts = bound_hosts(app_config, headers.values())
 
         # Make API request (the shared session retries transient failures)
         logger.verbose("DISCOVERY", f"Calling API: GET {api_url}")
         try:
             with make_session() as session:
-                response = session.get(api_url, headers=expanded_headers, timeout=30)
+                response = get_with_secrets(
+                    session, api_url, expanded_headers, hosts=hosts, timeout=30
+                )
         except requests.exceptions.RequestException as err:
             raise NetworkError(f"Failed to call API: {err}") from err
 
@@ -179,6 +174,7 @@ class ApiJsonStrategy:
             raise ConfigError(
                 f"Failed to extract version using path {version_path!r}: {err}"
             ) from err
+        version_str = bounded(version_str, "The API's version value")
 
         logger.verbose("DISCOVERY", f"Extracted version: {version_str}")
 
@@ -273,8 +269,18 @@ class ApiJsonStrategy:
                 errors.append(f"Invalid download_url_path JSONPath: {err}")
 
         # Optional fields validation
-        if "headers" in source and not isinstance(source["headers"], dict):
+        headers = source.get("headers")
+        if "headers" in source and not isinstance(headers, dict):
             errors.append("discovery.headers must be a dictionary")
+        elif isinstance(headers, dict):
+            api_url = source.get("api_url")
+            api_url = api_url if isinstance(api_url, str) else ""
+            for name, value in headers.items():
+                field_path = f"discovery.headers.{name}"
+                if not isinstance(value, str):
+                    errors.append(f"{field_path}: Must be a string")
+                    continue
+                errors.extend(check_secret_use(app_config, value, api_url, field_path))
 
         if "version_pattern" in source:
             if not isinstance(source["version_pattern"], str):

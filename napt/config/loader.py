@@ -51,6 +51,8 @@ Merge Behavior:
     - **Dicts**: Recursively merged (keys from overlay win over base)
     - **Lists**: Completely replaced (NOT appended/extended)
     - **Scalars**: Overwritten (strings, numbers, booleans)
+    - **secrets**: Taken from defaults/org.yaml alone; a vendor file,
+      parent, or recipe that declares one fails validation
 
 Path Resolution:
     Relative paths in two fields are resolved after merging:
@@ -190,8 +192,7 @@ def load_parent(
     The ``parent`` field names another recipe file relative to the
     declaring recipe's directory. The parent is merged beneath the
     declaring recipe by
-    [load_effective_config][napt.config.loader.load_effective_config] and by
-    ``napt validate``.
+    [merge_effective_config][napt.config.loader.merge_effective_config].
 
     Args:
         recipe_path: Path to the recipe that may declare ``parent``.
@@ -229,31 +230,47 @@ def load_parent(
     return parent_path, parent_obj
 
 
-def merge_parent(
-    recipe_path: Path, recipe_obj: dict[str, Any]
-) -> tuple[dict[str, Any], Path | None]:
-    """Merges a recipe over its parent without the other configuration layers.
-
-    Used by ``napt validate``, which checks a recipe's own schema rather than
-    the fully merged configuration. The recipe's ``parent`` field survives
-    the merge so schema validation can see it.
+def collect_recipe_paths(recipes: Path) -> list[Path]:
+    """Collects recipe file paths from a file or directory.
 
     Args:
-        recipe_path: Path to the recipe that may declare ``parent``.
-        recipe_obj: The parsed recipe dictionary.
+        recipes: A recipe YAML file, or a directory scanned recursively
+            for ``*.yaml`` / ``*.yml`` files.
 
     Returns:
-        The merged dictionary and the parent path, or the recipe unchanged
-            and None when it declares no parent.
+        Sorted recipe file paths.
 
     Raises:
-        ConfigError: See [load_parent][napt.config.loader.load_parent].
+        ConfigError: If the path does not exist or contains no recipes.
     """
-    loaded = load_parent(recipe_path, recipe_obj)
-    if loaded is None:
-        return recipe_obj, None
-    parent_path, parent_obj = loaded
-    return _deep_merge_dicts(parent_obj, recipe_obj), parent_path
+    if recipes.is_file():
+        return [recipes]
+    if recipes.is_dir():
+        found = sorted(
+            path for pattern in ("*.yaml", "*.yml") for path in recipes.rglob(pattern)
+        )
+        if not found:
+            raise ConfigError(f"No recipe files found under {recipes}")
+        return found
+    raise ConfigError(f"Recipe path not found: {recipes}")
+
+
+def duplicate_recipe_id_message(app_id: str, first: Path, second: Path) -> str:
+    """Words the error for two recipe files that resolve to one id.
+
+    Args:
+        app_id: The shared id.
+        first: The file that declared it first.
+        second: The file that declared it again.
+
+    Returns:
+        The message, naming both files and the usual cause.
+    """
+    return (
+        f"Recipe id '{app_id}' is declared by both {first} and {second}. Give "
+        f"each recipe its own id, or move a parent recipe that shares its "
+        f"child's id out of the directory being scanned."
+    )
 
 
 def _find_defaults_root(start_dir: Path) -> Path | None:
@@ -432,12 +449,12 @@ def _print_yaml_content(data: dict[str, Any], indent: int = 0) -> None:
             logger.debug("CONFIG", " " * indent + line)
 
 
-def load_effective_config(
+def merge_effective_config(
     recipe_path: Path,
     *,
     vendor: str | None = None,
-) -> dict[str, Any]:
-    """Loads and merges the effective configuration for a recipe.
+) -> tuple[dict[str, Any], Path | None]:
+    """Merges the configuration layers for a recipe without validating them.
 
     Performs the following operations:
 
@@ -447,13 +464,14 @@ def load_effective_config(
     4. Determine vendor (param vendor > folder name > recipe contents)
     5. Load vendor defaults if present
     6. Merge: org -> vendor -> parent -> recipe (dicts deep-merge, lists
-       replace)
+       replace); the ``secrets`` section is taken from org.yaml alone
     7. Resolve known relative paths (see Path resolution in the module
        docstring)
     8. Inject dynamic fields (AppScriptDate = today if absent)
 
-    The returned dict does not carry the ``parent`` field; the parent's
-    contents are already merged in.
+    The merged dict carries the recipe's ``parent`` field and a
+    ``_provenance`` entry naming the layer that set each value, so
+    validation can check both.
 
     Args:
         recipe_path: Path to the recipe YAML file.
@@ -461,7 +479,8 @@ def load_effective_config(
             from the folder name or recipe contents.
 
     Returns:
-        The merged configuration; code defaults are always included.
+        The merged configuration and the parent recipe's path (None when
+            the recipe declares no parent).
 
     Raises:
         ConfigError: On YAML parse errors, empty files, invalid structure, a
@@ -509,6 +528,9 @@ def load_effective_config(
 
     org_defaults_path: Path | None = None
     vendor_name: str | None = vendor
+    # The secrets section as org.yaml wrote it. Restored over the merge
+    # below so no other layer can declare a secret or widen its hosts.
+    org_secrets: Any = {}
 
     if defaults_root:
         # 3) Load org defaults
@@ -522,6 +544,7 @@ def load_effective_config(
             if isinstance(org_defaults, dict):
                 logger.debug("CONFIG", "--- Content from org.yaml ---")
                 _print_yaml_content(org_defaults)
+                org_secrets = org_defaults.get("secrets", {})
                 merged = _deep_merge_dicts(
                     merged,
                     org_defaults,
@@ -576,6 +599,10 @@ def load_effective_config(
     )
     layers_merged += 1
 
+    # Secrets are org policy and nothing else may touch them. Provenance
+    # still records what the other layers tried, and validation reports it.
+    merged["secrets"] = copy.deepcopy(org_secrets)
+
     logger.verbose("CONFIG", f"Deep merging {layers_merged} layer(s)")
     # Show final config structure
     top_level_keys = list(merged.keys())
@@ -598,11 +625,42 @@ def load_effective_config(
 
     # Store provenance for downstream consumers
     merged["_provenance"] = provenance
+    return merged, parent_path
 
-    # 9) Validate the merged config (errors raise, warnings are logged)
+
+def load_effective_config(
+    recipe_path: Path,
+    *,
+    vendor: str | None = None,
+) -> dict[str, Any]:
+    """Loads, merges, and validates the effective configuration for a recipe.
+
+    Merges the layers with
+    [merge_effective_config][napt.config.loader.merge_effective_config],
+    then validates the result: errors raise, warnings are logged. The
+    returned dict does not carry the ``parent`` field; the parent's contents
+    are already merged in.
+
+    Args:
+        recipe_path: Path to the recipe YAML file.
+        vendor: Optional vendor name. If not provided, vendor is detected
+            from the folder name or recipe contents.
+
+    Returns:
+        The merged configuration; code defaults are always included.
+
+    Raises:
+        ConfigError: On YAML parse errors, empty files, invalid structure, a
+            missing recipe or parent file, a parent chain, or a
+            configuration that fails validation.
+    """
+    from napt.logging import get_global_logger
     from napt.validation import validate_config
 
-    result = validate_config(merged, recipe_path=str(recipe_path))
+    logger = get_global_logger()
+    merged, parent_path = merge_effective_config(recipe_path, vendor=vendor)
+
+    result = validate_config(merged, recipe_path=str(recipe_path.resolve()))
     if result.errors:
         where = f" (parent: {parent_path})" if parent_path is not None else ""
         raise ConfigError(f"Invalid configuration{where}: {'; '.join(result.errors)}")
@@ -611,6 +669,6 @@ def load_effective_config(
 
     # The parent's contents are merged in; the pointer itself is not config.
     merged.pop("parent", None)
-    provenance.pop("parent", None)
+    merged["_provenance"].pop("parent", None)
 
     return merged
