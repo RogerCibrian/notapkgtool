@@ -18,9 +18,9 @@ Extracts version information and other metadata from MSI and MSIX files,
 and orders version strings the way managed devices do.
 
 Modules:
-    ordering - Version ordering that mirrors the device-side comparison.
-    msi - MSI metadata extraction using PowerShell COM (Windows) or
+    ordering: Version ordering that mirrors the device-side comparison.
+    msi: MSI metadata extraction using PowerShell COM (Windows) or
         msitools (Linux/macOS).
-    msix - MSIX metadata extraction using zipfile and XML parsing
+    msix: MSIX metadata extraction using zipfile and XML parsing
         (cross-platform).
 """

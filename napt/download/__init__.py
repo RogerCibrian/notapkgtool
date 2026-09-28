@@ -18,5 +18,5 @@ Provides HTTP(S) file download with conditional requests, retries, atomic
 writes, and SHA-256 verification.
 
 Modules:
-    download - HTTP downloads with ETag support (download_file, make_session).
+    download: HTTP downloads with ETag support (download_file, make_session).
 """

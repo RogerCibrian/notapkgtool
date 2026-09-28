@@ -841,12 +841,14 @@ It never creates duplicates.
 
 ## Automate NAPT with GitHub Actions
 
-NAPT performs no git or CI operations itself: it reads and writes
-deterministic files and leaves the choreography to your pipeline.
-What follows is a review-gated flow on GitHub Actions.
+NAPT performs no git or CI operations: it reads and writes files, and your
+pipeline commits them and opens pull requests.
+The workflows below gate every change to Intune on a pull request.
 Adapt names, schedules, and branch rules to your org.
+They assume the default `directories.*` paths (`downloads/`, `state/`);
+adjust the paths in them if `org.yaml` changes those.
 
-**The model.** Two PR streams gate everything:
+**The model.** Two kinds of pull request gate changes to Intune:
 
 - **Publish PRs** (one per app): `napt discover` records a pending
   release in `state/deployment/<id>.json`; CI opens a per-app PR with
@@ -879,18 +881,24 @@ Adapt names, schedules, and branch rules to your org.
 **Writeback commits.** After upload and apply, NAPT has recorded new
 facts (Intune app IDs, ring positions) in the working tree that must
 reach `main`, so those workflows push a `[skip ci]` commit.
-Two consequences to set up once:
+Three things to set up once:
 
 - The workflow identity needs permission to push to `main`, either
   allow the Actions bot through branch protection or use a bot/app
   token with bypass rights.
 - `[skip ci]` keeps the writeback from re-triggering workflows.
+- Workflows 1 and 3 open pull requests with the Actions token, which
+  GitHub refuses until Settings > Actions > General > "Allow GitHub
+  Actions to create and approve pull requests" is enabled.
 
 **Secrets.** `AZURE_CLIENT_ID` and `AZURE_TENANT_ID` for the app
-registration, plus either a federated credential (OIDC, recommended; swap
-the `env:` block in the examples below for an `azure/login` step) or
-`AZURE_CLIENT_SECRET`
-(see [App Registration Setup](user-guide.md#app-registration-setup)).
+registration, plus either `AZURE_CLIENT_SECRET` or a federated credential
+(OIDC, recommended).
+For OIDC, swap the `env:` block in the examples below for an `azure/login`
+step, add `id-token: write` to the job's `permissions`, and put
+`environment: intune` on the job so the environment-scoped credential
+matches
+(see [App registration setup](user-guide.md#app-registration-setup)).
 
 **Recommended org.yaml hardening:**
 
@@ -927,14 +935,11 @@ jobs:
           restore-keys: installers-
       - name: Discover all recipes
         shell: bash
-        # Actions' `shell: bash` runs with -e, so an unguarded loop would
-        # end at the first failing recipe (a vendor outage, a version the
-        # pattern cannot handle) and silently skip every recipe after it.
-        # Failures are collected instead, the successful apps still get
-        # their PRs below, and the last step fails the job.
+        # Collect failures so later recipes still run; the last step
+        # fails the job.
         run: |
           : > discover-failures.txt
-          git ls-files 'recipes/*.yaml' 'recipes/**/*.yaml' | while read -r recipe; do
+          git ls-files 'recipes/*.y*ml' 'recipes/**/*.y*ml' | while read -r recipe; do
             napt discover "$recipe" || {
               echo "::error::napt discover failed for $recipe"
               echo "$recipe" >> discover-failures.txt
@@ -1071,6 +1076,9 @@ on:
   push:
     branches: [main]
     paths: ["state/deployment/**"]
+  # For re-runs: start a new run from the Actions tab rather than
+  # re-running a failed job, which would check out the old commit.
+  workflow_dispatch:
 # Serializes publish runs (bursts of merges dedupe to the newest run).
 # Deliberately NOT shared with promote-apply: a merge that touches both
 # deployment state and plan files triggers both workflows, and runs
@@ -1099,8 +1107,11 @@ jobs:
           restore-keys: installers-
       - name: Publish every app with an approved pending release
         shell: bash
+        # Collect failures so later apps still publish; the last step
+        # fails the job.
         run: |
-          git ls-files 'recipes/*.yaml' 'recipes/**/*.yaml' | while read -r recipe; do
+          : > publish-failures.txt
+          git ls-files 'recipes/*.y*ml' 'recipes/**/*.y*ml' | while read -r recipe; do
             id=$(python -c "import sys, yaml; print(yaml.safe_load(open(sys.argv[1], encoding='utf-8'))['id'])" "$recipe")
             state="state/deployment/$id.json"
             [ -f "$state" ] || continue
@@ -1113,19 +1124,25 @@ jobs:
             # (downloads/<id>/<version>/<file>), hence the two-level glob.
             psha=$(python -c "import json, sys; print(json.load(open(sys.argv[1], encoding='utf-8'))['pending']['sha256'])" "$state")
             if ! sha256sum "downloads/$id/"*/* 2>/dev/null | grep -q "^$psha "; then
-              napt discover "$recipe" --stateless
-              # Fail fast when the vendor no longer serves the approved
-              # binary (napt build would refuse it anyway).
+              napt discover "$recipe" --stateless || true
+              # The vendor no longer serves the approved binary (napt
+              # build would refuse it anyway); the approval is stranded
+              # until a new discover PR supersedes it.
               sha256sum "downloads/$id/"*/* 2>/dev/null | grep -q "^$psha " || {
-                echo "::error::$id: vendor no longer serves the approved release ($psha); the approval is stranded until a new discover PR supersedes it"
-                exit 1
+                echo "::error::$id: vendor no longer serves the approved release ($psha)"
+                echo "$id" >> publish-failures.txt
+                continue
               }
             fi
-            napt build "$recipe"
-            napt package "$recipe"
-            napt upload "$recipe"
+            napt build "$recipe" && napt package "$recipe" && napt upload "$recipe" || {
+              echo "::error::publish failed for $id"
+              echo "$id" >> publish-failures.txt
+            }
           done
+      # Runs even when an app failed: the apps that did upload have their
+      # Intune app IDs recorded on this runner and nowhere else.
       - name: Write back recorded app IDs
+        if: always()
         shell: bash
         run: |
           git config user.name "napt-bot"
@@ -1141,28 +1158,35 @@ jobs:
             git pull --rebase origin main
           done
           git push
+      - name: Fail the run if any app failed to publish
+        if: always()
+        shell: bash
+        run: |
+          [ -s publish-failures.txt ] || exit 0
+          echo "Publish failed for:"
+          cat publish-failures.txt
+          exit 1
 ```
+
+One app's failure does not hold up the others: the loop records it, the
+remaining apps still build and upload, the writeback commits every app
+that did publish, and the final step fails the run with the failed apps
+named.
 
 **Why the installer cache steps matter.**
 Without them, the publish runner re-downloads from the vendor, which
 couples an already-approved publish to the vendor still serving that
 exact binary; a pulled or replaced file strands the approval at the
 hash gate.
-The cache steps above hand the publish runner the very binary that was
-reviewed; the sha256 check in the loop falls back to a fresh download
-when the cache is stale or evicted (GitHub evicts caches unused for
-about a week), so the flow degrades gracefully.
-This is safe by construction: the upload hash gate validates whatever
-binary the runner provides, so a cache can never ship the wrong bytes.
+The cache hands the publish runner the binary that was reviewed.
+When the cache is stale or evicted (GitHub evicts caches unused for about
+a week), the sha256 check falls back to a fresh download.
+A cache cannot ship the wrong bytes: build and upload both check the
+pending release's hash.
 
-The restore step in the discover workflow serves a second purpose:
-bandwidth.
-`napt discover` skips the download when the installer has not changed;
-[Skipping downloads](user-guide.md#skipping-downloads) explains how.
-Everything it consults lives in `downloads/`, and a fresh runner starts
-without it, so restoring `downloads/` from the last run is what lets the
-scheduled discover skip re-downloading installers that have not changed,
-which adds up quickly for recipe sets full of large installers.
+The discover workflow restores `downloads/` so `napt discover` can skip
+installers it already has
+([Skipping downloads](user-guide.md#skipping-downloads)).
 Keep the `path` values of the save and restore steps identical:
 `actions/cache` makes the path list part of the cache version, so a
 mismatch reads as a silent cache miss.
@@ -1221,8 +1245,8 @@ jobs:
           # line first, then each app's action summaries (the same
           # sentences NAPT wrote into the files), the hold instruction,
           # and the plan run's drift warnings. Prints "production" when
-          # the plan assigns the final ring (ring policy is org-wide,
-          # so the last ring comes from org.yaml).
+          # the plan assigns the final ring (assumes rings are set only
+          # in org.yaml).
           label=$(python - <<'PY'
           import json
           from pathlib import Path
@@ -1318,6 +1342,10 @@ on:
   push:
     branches: [main]
     paths: ["state/plans/**"]
+  # For re-runs: start a new run from the Actions tab rather than
+  # re-running a failed job, which would check out the old commit.
+  # Safe: apply executes only plan files already merged to main.
+  workflow_dispatch:
 # Own group (not shared with publish) - see the publish workflow's
 # concurrency comment.
 concurrency: napt-promote-apply
@@ -1367,13 +1395,16 @@ jobs:
 - Promotions merged but applied later are always safe: bake time only
   grows, and apply validates every entry against current state anyway.
 - Apply treats each app's plan file as an independent unit: a failure
-  (an unresolvable group, a Graph error) fails that app, keeps its plan
-  file on `main` for the next apply, and never blocks the other apps,
-  which is why the writeback above runs even when the apply step fails.
+  (a plan file that cannot be loaded, an unresolvable group, a Graph
+  error) fails that app, keeps its plan file on `main` for the next
+  apply, and never blocks the other apps, which is why the writeback
+  above runs even when the apply step fails.
 - Resolving a failed app depends on the failure class.
-  A transient Graph error needs no fix: re-run the apply workflow;
-  already-applied actions skip, the rest complete, and the plan file is
-  consumed.
+  A transient Graph error needs no fix: start a new apply run from the
+  Actions tab (`workflow_dispatch`); already-applied actions skip, the
+  rest complete, and the plan file is consumed.
+  Do not re-run the failed job: a job re-run checks out the commit the
+  run started from, whose state predates the earlier writeback.
   An unresolvable group needs the configuration fixed (or the Entra ID
   group restored) and then a re-plan, not just a re-run: plan files bake
   in group names at plan time, so the fix reaches Intune when the next
@@ -1382,18 +1413,20 @@ jobs:
   Until then, apply keeps failing that one app, and only that one.
   A corrupted state file restores from git history like any other
   committed file.
-- All four workflows are idempotent: re-running any of them converges
+- All four workflows are idempotent: a new run of any of them converges
   to the same result (upload adopts existing apps, apply skips
   already-applied actions).
 - A publish whose writeback push fails (branch protection, a crashed
   runner) self-heals: the next plan run's `--reconcile` re-records the
   publication from tenant evidence, the promotion PR carries the repair,
   and the recovered release is planned for its first ring in the same
-  run. Re-running the failed publish also converges, just sooner.
+  run.
+  A new publish run also converges, just sooner.
 - `windows-latest` runners are required for `napt package`
-  (IntuneWinAppUtil.exe is Windows-only). The discover workflow alone
-  could run on Linux with `msitools` installed, since discover reads the
-  version out of every MSI it downloads.
+  (IntuneWinAppUtil.exe is Windows-only).
+  The discover workflow alone could run on Linux with `msitools`
+  installed, since discover reads the version out of every MSI it
+  downloads.
 
 ## Share a base recipe between apps
 

@@ -25,7 +25,7 @@ file:
     GitHub Actions `azure/login` (AzureCliCredential).
 
 Modules:
-    credentials - Token resolution, the interactive session store, and
+    credentials: Token resolution, the interactive session store, and
         the `napt auth login/logout/status` operations.
-    registration - App registration provisioning for `napt auth setup`.
+    registration: App registration provisioning for `napt auth setup`.
 """

@@ -19,10 +19,10 @@ PSADT release management, script generation, file copying, and branding
 application.
 
 Modules:
-    manager - Package building orchestration (build_package).
-    packager - .intunewin package creation (create_intunewin).
-    template - Invoke-AppDeployToolkit.ps1 generation.
-    icons - Icon extraction from installers.
-    registry_scripts - Detection/requirements script generation (registry).
-    msix_scripts - Detection/requirements script generation (MSIX).
+    manager: Package building orchestration (build_package).
+    packager: .intunewin package creation (create_intunewin).
+    template: Invoke-AppDeployToolkit.ps1 generation.
+    icons: Icon extraction from installers.
+    registry_scripts: Detection/requirements script generation (registry).
+    msix_scripts: Detection/requirements script generation (MSIX).
 """

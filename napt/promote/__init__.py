@@ -34,9 +34,9 @@ push after a successful upload) are recovered from tenant evidence on
 every apply and on ``plan --reconcile``.
 
 Modules:
-    planner - Plan computation and plan file writing.
-    applier - Plan execution against Intune.
-    preflight - Group resolution validation before assignment.
-    drift - Assignment drift detection.
-    reconcile - Lost publication writeback recovery.
+    planner: Plan computation and plan file writing.
+    applier: Plan execution against Intune.
+    preflight: Group resolution validation before assignment.
+    drift: Assignment drift detection.
+    reconcile: Lost publication writeback recovery.
 """

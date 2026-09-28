@@ -18,5 +18,5 @@ Handles PSAppDeployToolkit (PSADT) release management, caching, and
 integration with NAPT's build system.
 
 Modules:
-    release - PSADT release download, caching, and version resolution.
+    release: PSADT release download, caching, and version resolution.
 """
