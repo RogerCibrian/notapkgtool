@@ -32,20 +32,34 @@ Skipping Downloads:
     and hash. The next run compares its trigger against that record:
 
     - A version-first strategy that reports the same version as last time
-        reuses the installer without a request, provided that version and
-        the installer's own agree as a device would compare them
-        (``4.41.106`` and ``4.41.106.0`` do). When they disagree, the
-        report was already wrong about this file once (a page updated
+        from the same link reuses the installer without a request,
+        provided that version and the installer's own agree as a device
+        would compare them (``4.41.106`` and ``4.41.106.0`` do). The link
+        is compared without its query string, where some vendor pages put
+        a token that changes on every visit. When the version agrees but
+        the link changed (a switched asset, a re-published release), or
+        when the version and the installer's own disagree (a page updated
         before the file behind it, or a pattern capturing the wrong
-        value), so it cannot vouch that nothing changed: the run warns
-        and asks the server instead, as ``url_download`` does.
+        value), the report cannot vouch that nothing changed: the run asks
+        the server instead, as ``url_download`` does.
     - ``url_download`` has no version to compare, so it sends the
         ``ETag`` / ``Last-Modified`` back as a conditional request and
         reuses the installer when the server answers HTTP 304.
 
-    The sidecar is a hint, not a record. Anything wrong with it means one
-    full download, never an error, and it is written only after the
+    The sidecar is a hint, not a record. Anything wrong with it, including
+    an installer on disk that no longer matches the recorded hash, means
+    one full download, never an error, and it is written only after the
     installer is in place.
+
+Filing:
+    A download lands in a per-run folder (``downloads/<id>/.incoming-*``)
+    until its version is known, so two runs for one app never touch each
+    other's partial file; a folder a crashed run left behind is removed
+    once it is a day old. A file already filed under the same version with
+    different bytes (a vendor re-releasing a version under one filename)
+    is kept beside the new one under a hash-suffixed name, because the
+    published release may have been built from it and ``napt build``
+    selects the installer by hash.
 """
 
 from __future__ import annotations
@@ -54,9 +68,12 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 import shutil
+import tempfile
+import time
+from urllib.parse import urlsplit, urlunsplit
 
-from napt.download.download import download_file
-from napt.exceptions import ConfigError, NetworkError, NotModifiedError
+from napt.download.download import download_file, sha256_file
+from napt.exceptions import ConfigError, NetworkError, NotModifiedError, PackagingError
 from napt.files import write_text_atomic
 from napt.logging import get_global_logger
 from napt.paths import is_safe_path_component, safe_filename
@@ -66,8 +83,12 @@ from napt.versioning.ordering import compare_versions
 
 from .base import StrategyResult, require_usable_version
 
-# Holding folder for a download whose version is not known yet.
-_INCOMING_DIR = ".incoming"
+# Holding folders for a download whose version is not known yet: one per
+# run, named with this prefix.
+_INCOMING_PREFIX = ".incoming"
+
+# Age after which a holding folder is taken to be a crashed run's leftover.
+_STALE_INCOMING_SECONDS = 24 * 60 * 60
 
 # Per-app record of what discovery last resolved (downloads/<id>/<name>).
 _SIDECAR_NAME = ".download.json"
@@ -120,7 +141,8 @@ def resolve_installer(
         ConfigError: If the file's version cannot be used as a folder
             name, or if ``url_download`` fetched a file that cannot report
             a version.
-        NetworkError: On download or version-extraction failures.
+        NetworkError: On download failures.
+        PackagingError: If the installer's version cannot be read.
 
     """
     logger = get_global_logger()
@@ -128,11 +150,21 @@ def resolve_installer(
 
     try:
         if discovered_version is not None:
-            # The reported version is the whole trigger. The URL is not part
-            # of it, because some vendor pages embed a changing token in
-            # every download link.
+            # The reported version and the link are the trigger. The link
+            # is compared without its query string, where some vendor
+            # pages put a token that changes on every visit.
             if previous is None or previous.discovered_version != discovered_version:
                 return _download_and_file(url, app_dir, source, discovered_version)
+            if _without_query(url) != _without_query(previous.url):
+                # Same version behind a different link: a switched asset
+                # or a re-published release. The version cannot vouch for
+                # the file, so ask the server.
+                logger.info(
+                    "DISCOVERY",
+                    f"Download link changed at version {discovered_version}; "
+                    "checking the server",
+                )
+                return _refresh(previous, url, app_dir, source, discovered_version)
             if compare_versions(discovered_version, previous.version) == 0:
                 logger.info(
                     "DISCOVERY",
@@ -148,10 +180,16 @@ def resolve_installer(
         if previous is None or previous.url != url:
             return _download_and_file(url, app_dir, source, None)
         return _refresh(previous, url, app_dir, source, None)
-    except (NetworkError, ConfigError):
+    except (NetworkError, ConfigError, PackagingError):
         raise
     except Exception as err:
         raise NetworkError(f"Failed to download {url}: {err}") from err
+
+
+def _without_query(url: str) -> str:
+    """Returns a URL without its query string and fragment."""
+    parts = urlsplit(url)
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
 
 
 def _refresh(
@@ -180,7 +218,8 @@ def _refresh(
         Resolved version, its source, file path, and SHA-256 hash.
 
     Raises:
-        NetworkError: On download or version-extraction failure.
+        NetworkError: On download failure.
+        PackagingError: If the installer's version cannot be read.
         ConfigError: If the version cannot be used as a folder name, or
             if there is no version at all.
 
@@ -247,11 +286,13 @@ def _download_and_file(
     """Downloads an installer, reads its version, and files it under that version.
 
     The version is only known once the file is on disk, so the download
-    lands in ``<app_dir>/.incoming`` first and is then moved to
-    ``<app_dir>/<version>/``. Installers of other versions are never
-    touched, which matters for vendors that serve every release under one
-    filename. The sidecar file is written last, so an interrupted run can
-    leave an installer without a sidecar but never the reverse.
+    lands in a per-run ``<app_dir>/.incoming-*`` folder first and is then
+    moved to ``<app_dir>/<version>/``. Installers of other versions are
+    never touched, which matters for vendors that serve every release
+    under one filename, and a file already filed under this version with
+    different bytes is kept beside the new one under a hash-suffixed name.
+    The sidecar file is written last, so an interrupted run can leave an
+    installer without a sidecar but never the reverse.
 
     Args:
         url: Download URL.
@@ -269,15 +310,16 @@ def _download_and_file(
 
     Raises:
         NotModifiedError: If the server answers HTTP 304.
-        NetworkError: On download or version-extraction failure.
+        NetworkError: On download failure.
+        PackagingError: If the installer's version cannot be read.
         ConfigError: If the version cannot be used as a folder name, or
             if there is no version at all.
 
     """
     logger = get_global_logger()
-    incoming = app_dir / _INCOMING_DIR
-    # Clear leftovers from an interrupted run.
-    shutil.rmtree(incoming, ignore_errors=True)
+    _remove_stale_incoming(app_dir)
+    app_dir.mkdir(parents=True, exist_ok=True)
+    incoming = Path(tempfile.mkdtemp(prefix=f"{_INCOMING_PREFIX}-", dir=app_dir))
     try:
         dl = download_file(url, incoming, etag=etag, last_modified=last_modified)
         installer_version = _installer_version(dl.file_path)
@@ -304,6 +346,7 @@ def _download_and_file(
         require_usable_version(version)
         final_path = app_dir / version / dl.file_path.name
         final_path.parent.mkdir(parents=True, exist_ok=True)
+        _keep_displaced(final_path, dl.sha256)
         dl.file_path.replace(final_path)
     finally:
         shutil.rmtree(incoming, ignore_errors=True)
@@ -320,6 +363,56 @@ def _download_and_file(
     return result
 
 
+def _remove_stale_incoming(app_dir: Path) -> None:
+    """Removes holding folders old enough to be a crashed run's leftovers.
+
+    A fresh one may belong to another run for the same app that is still
+    downloading, so it is left alone.
+
+    Args:
+        app_dir: The app's download directory (``downloads/<id>``).
+    """
+    if not app_dir.is_dir():
+        return
+    cutoff = time.time() - _STALE_INCOMING_SECONDS
+    for folder in app_dir.glob(f"{_INCOMING_PREFIX}*"):
+        try:
+            if folder.is_dir() and folder.stat().st_mtime < cutoff:
+                shutil.rmtree(folder, ignore_errors=True)
+        except OSError:
+            continue
+
+
+def _keep_displaced(final_path: Path, sha256: str) -> None:
+    """Moves an installer aside when a different file is about to take its name.
+
+    A vendor that re-releases a version under one filename would otherwise
+    overwrite the bytes the published release was built from. The old
+    file keeps its version folder and gains its hash in its name;
+    ``napt build`` finds installers by hash, so the release stays
+    buildable.
+
+    Args:
+        final_path: Where the new download is about to be filed.
+        sha256: The new download's hash.
+    """
+    if not final_path.is_file():
+        return
+    existing = sha256_file(final_path)
+    if existing == sha256:
+        return
+    aside = final_path.with_name(f"{final_path.stem}.{existing[:8]}{final_path.suffix}")
+    if aside.exists():
+        # The same bytes were set aside by an earlier re-release.
+        return
+    final_path.replace(aside)
+    get_global_logger().info(
+        "DISCOVERY",
+        f"{final_path.name} already held a different file for this version; "
+        f"kept it as {aside.name}",
+    )
+
+
 def _installer_version(file_path: Path) -> str | None:
     """Reads the version an installer reports about itself.
 
@@ -331,7 +424,10 @@ def _installer_version(file_path: Path) -> str | None:
         for an installer type that carries no readable version.
 
     Raises:
-        NetworkError: If metadata extraction fails.
+        ConfigError: If the installer's metadata is unusable (an MSI
+            platform NAPT does not support).
+        PackagingError: If the metadata cannot be read, including when
+            the tooling to read it is missing.
 
     """
     suffix = file_path.suffix.lower()
@@ -341,8 +437,10 @@ def _installer_version(file_path: Path) -> str | None:
         if suffix == ".msi":
             return extract_msi_metadata(file_path).product_version
         return extract_msix_metadata(file_path).version
+    except (ConfigError, PackagingError):
+        raise
     except Exception as err:
-        raise NetworkError(
+        raise PackagingError(
             f"Failed to extract the version from {file_path}: {err}"
         ) from err
 
@@ -352,7 +450,8 @@ def _load_sidecar(app_dir: Path) -> _PreviousDownload | None:
 
     The sidecar is a disposable hint, so every problem with it means "no
     previous download" rather than an error: a missing or unreadable file,
-    a field of the wrong shape, or an installer that is no longer on disk.
+    a field of the wrong shape, an installer that is no longer on disk, or
+    one whose bytes no longer match the recorded hash.
 
     Args:
         app_dir: The app's download directory (``downloads/<id>``).
@@ -384,7 +483,20 @@ def _load_sidecar(app_dir: Path) -> _PreviousDownload | None:
         )
     except (OSError, ValueError, KeyError, TypeError):
         return None
-    return previous if usable else None
+    if not usable:
+        return None
+    try:
+        on_disk = sha256_file(previous.file_path)
+    except OSError:
+        return None
+    if on_disk != previous.sha256:
+        get_global_logger().warning(
+            "DISCOVERY",
+            f"{previous.file_path} no longer matches the hash recorded for it; "
+            "downloading again",
+        )
+        return None
+    return previous
 
 
 def _write_sidecar(

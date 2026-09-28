@@ -62,6 +62,27 @@ from napt.paths import is_safe_path_component
 MAX_PATTERN_INPUT = 4096
 
 
+def first_capture(pattern: re.Pattern[str], text: str) -> str | None:
+    """Returns what a recipe pattern captures from a remote string.
+
+    A pattern with capture groups yields group 1, otherwise the whole
+    match. A group that took no part in the match (an optional group whose
+    text was absent) counts as no match: it would otherwise turn into the
+    text ``None`` or a missing link.
+
+    Args:
+        pattern: The compiled recipe pattern.
+        text: The string to search.
+
+    Returns:
+        The captured text, or None when the pattern did not match.
+    """
+    match = pattern.search(text)
+    if match is None:
+        return None
+    return match.group(1) if pattern.groups else match.group(0)
+
+
 def bounded(value: str, what: str) -> str:
     """Returns a remote string once it is short enough to match a pattern on.
 
@@ -193,15 +214,17 @@ def require_usable_version(version: str) -> None:
     none counting as 0. A version whose first part has no digits (``v2.0``,
     ``latest``) therefore reads as version 0 there: every device would
     report it installed and no device would ever upgrade to it. Such a
-    version is refused so the recipe gets fixed instead.
+    version is refused so the recipe gets fixed instead. The scripts cast
+    each part to a 64-bit integer, so a part of more than 18 digits, which
+    may not fit, is refused as well.
 
     Args:
         version: Version read from the installer, or reported by a
             strategy for an installer that carries no version of its own.
 
     Raises:
-        ConfigError: If the version is not a plain folder name, or does
-            not start with a digit.
+        ConfigError: If the version is not a plain folder name, does not
+            start with a digit, or has a part of more than 18 digits.
     """
     if not is_safe_path_component(version):
         raise ConfigError(
@@ -223,3 +246,12 @@ def require_usable_version(version: str) -> None:
             "versions numerically and would read it as 0, which blocks "
             f"upgrades. {hint}"
         )
+    for segment in re.split(r"[.\-]", version):
+        digits = re.match(r"\d+", segment)
+        if digits and len(digits.group()) > 18:
+            raise ConfigError(
+                f"Version {version!a} has a part with more than 18 digits "
+                f"({digits.group()!a}). Devices compare version parts as 64-bit "
+                "integers, and their detection script would fail on it. Check "
+                "the recipe's version pattern, or the installer's metadata."
+            )

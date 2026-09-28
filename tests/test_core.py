@@ -128,6 +128,7 @@ def _web_scrape_recipe(
     create_yaml_file,
     extension="exe",
     version_pattern=r"app-v([0-9.]+)-installer",
+    link_selector=None,
 ):
     """Creates a web_scrape recipe whose version comes from the link's filename."""
     return create_yaml_file(
@@ -139,7 +140,7 @@ def _web_scrape_recipe(
             "discovery": {
                 "strategy": "web_scrape",
                 "page_url": _PAGE,
-                "link_selector": f'a[href$=".{extension}"]',
+                "link_selector": link_selector or f'a[href$=".{extension}"]',
                 "version_pattern": version_pattern,
             },
         },
@@ -341,15 +342,16 @@ class TestVersionFirstResolution:
         assert len(installer_requests) == 2
         assert all("If-None-Match" not in r.headers for r in installer_requests)
 
-    def test_reuse_ignores_a_changed_download_url(self, tmp_test_dir, create_yaml_file):
-        """Tests that the same release behind a new link does not defeat the skip."""
-        recipe_path = _web_scrape_recipe(create_yaml_file)
+    def test_reuse_ignores_a_changed_query_string(self, tmp_test_dir, create_yaml_file):
+        """Tests that a per-visit token in the link does not defeat the skip."""
+        recipe_path = _web_scrape_recipe(create_yaml_file, link_selector="a")
 
         with requests_mock.Mocker() as m:
             _serve(m, "1.2.3", b"exe bytes")
             discover_recipe(recipe_path, tmp_test_dir, state_dir=tmp_test_dir / "state")
             m.get(
-                _PAGE, text='<a href="/mirror2/app-v1.2.3-installer.exe">Download</a>'
+                _PAGE,
+                text='<a href="/app-v1.2.3-installer.exe?token=day2">Download</a>',
             )
             with patch("napt.discovery.resolve.download_file") as mock_download:
                 result = discover_recipe(
@@ -358,6 +360,213 @@ class TestVersionFirstResolution:
 
         mock_download.assert_not_called()
         assert result.version == "1.2.3"
+
+    def test_changed_link_at_the_same_version_asks_the_server(
+        self, tmp_test_dir, create_yaml_file
+    ):
+        """Tests that a different link (a switched asset, a re-published
+        release) at an unchanged version is fetched, not reused, so state
+        never pairs the new link with the old file's hash."""
+        recipe_path = _web_scrape_recipe(create_yaml_file)
+
+        with requests_mock.Mocker() as m:
+            _serve(m, "1.2.3", b"x64 bytes")
+            discover_recipe(recipe_path, tmp_test_dir, state_dir=tmp_test_dir / "state")
+            m.get(_PAGE, text='<a href="/arm64/app-v1.2.3-installer.exe">Download</a>')
+            m.get(
+                "https://example.com/arm64/app-v1.2.3-installer.exe",
+                content=b"arm64 bytes",
+                headers={"Content-Length": "11"},
+            )
+            result = discover_recipe(
+                recipe_path, tmp_test_dir, state_dir=tmp_test_dir / "state"
+            )
+
+        assert result.sha256 == hashlib.sha256(b"arm64 bytes").hexdigest()
+        assert result.file_path.read_bytes() == b"arm64 bytes"
+        sidecar = json.loads(
+            (tmp_test_dir / "test-app" / ".download.json").read_text(encoding="utf-8")
+        )
+        assert sidecar["url"].endswith("/arm64/app-v1.2.3-installer.exe")
+        assert sidecar["sha256"] == result.sha256
+
+    def test_changed_link_still_reuses_on_304(self, tmp_test_dir, create_yaml_file):
+        """Tests that a changed link is checked conditionally, so a mirror
+        serving the same file costs one 304 and no download."""
+        recipe_path = _web_scrape_recipe(create_yaml_file)
+
+        with requests_mock.Mocker() as m:
+            m.get(_PAGE, text='<a href="/app-v1.2.3-installer.exe">Download</a>')
+            m.get(
+                "https://example.com/app-v1.2.3-installer.exe",
+                content=b"exe bytes",
+                headers={"Content-Length": "9", "ETag": '"same"'},
+            )
+            first = discover_recipe(
+                recipe_path, tmp_test_dir, state_dir=tmp_test_dir / "state"
+            )
+            m.get(_PAGE, text='<a href="/mirror/app-v1.2.3-installer.exe">Download</a>')
+            m.get(
+                "https://example.com/mirror/app-v1.2.3-installer.exe", status_code=304
+            )
+            second = discover_recipe(
+                recipe_path, tmp_test_dir, state_dir=tmp_test_dir / "state"
+            )
+            mirror_requests = [r for r in m.request_history if "/mirror/" in r.url]
+
+        assert len(mirror_requests) == 1
+        assert mirror_requests[0].headers["If-None-Match"] == '"same"'
+        assert second.file_path == first.file_path
+        assert second.sha256 == first.sha256
+
+    def test_tampered_installer_is_downloaded_again(
+        self, tmp_test_dir, create_yaml_file
+    ):
+        """Tests that reuse re-checks the file on disk against the sidecar's
+        hash, so a replaced file is never recorded under the old hash."""
+        recipe_path = _web_scrape_recipe(create_yaml_file)
+
+        with requests_mock.Mocker() as m:
+            _serve(m, "1.2.3", b"exe bytes")
+            first = discover_recipe(
+                recipe_path, tmp_test_dir, state_dir=tmp_test_dir / "state"
+            )
+            first.file_path.write_bytes(b"something else")
+            second = discover_recipe(
+                recipe_path, tmp_test_dir, state_dir=tmp_test_dir / "state"
+            )
+            installer_requests = [
+                r for r in m.request_history if r.url.endswith(".exe")
+            ]
+
+        assert len(installer_requests) == 2
+        assert second.sha256 == hashlib.sha256(b"exe bytes").hexdigest()
+        assert second.file_path.read_bytes() == b"exe bytes"
+
+    def test_same_version_redownload_keeps_the_displaced_file(
+        self, tmp_test_dir, create_yaml_file
+    ):
+        """Tests that a vendor re-releasing a version under the same filename
+        does not destroy the bytes the published release was built from."""
+        recipe_path = create_yaml_file(
+            "recipe.yaml",
+            {
+                "apiVersion": "napt/v1",
+                "name": "Test App",
+                "id": "test-app",
+                "discovery": {
+                    "strategy": "url_download",
+                    "url": "https://example.com/setup.msi",
+                },
+            },
+        )
+        state_dir = tmp_test_dir / "state"
+
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://example.com/setup.msi",
+                [
+                    {"content": b"old", "headers": {"ETag": '"e1"'}},
+                    {"content": b"new!", "headers": {"ETag": '"e2"'}},
+                ],
+            )
+            with patch("napt.discovery.resolve.extract_msi_metadata") as extract:
+                extract.return_value = MSIMetadata(
+                    product_name="", product_version="5.0", architecture="x64"
+                )
+                first = discover_recipe(recipe_path, tmp_test_dir, state_dir=state_dir)
+                second = discover_recipe(recipe_path, tmp_test_dir, state_dir=state_dir)
+
+        folder = tmp_test_dir / "test-app" / "5.0"
+        assert second.file_path == folder / "setup.msi"
+        assert second.file_path.read_bytes() == b"new!"
+        displaced = folder / f"setup.{first.sha256[:8]}.msi"
+        assert displaced.read_bytes() == b"old"
+        assert sorted(p.name for p in folder.iterdir()) == sorted(
+            ["setup.msi", displaced.name]
+        )
+
+    def test_repeated_redownload_of_the_same_bytes_keeps_one_aside_copy(
+        self, tmp_test_dir, create_yaml_file
+    ):
+        """Tests that displacing the same file twice does not lose the
+        aside copy or fail on its existing name."""
+        recipe_path = create_yaml_file(
+            "recipe.yaml",
+            {
+                "apiVersion": "napt/v1",
+                "name": "Test App",
+                "id": "test-app",
+                "discovery": {
+                    "strategy": "url_download",
+                    "url": "https://example.com/setup.msi",
+                },
+            },
+        )
+        state_dir = tmp_test_dir / "state"
+
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://example.com/setup.msi",
+                [
+                    {"content": b"old", "headers": {"ETag": '"e1"'}},
+                    {"content": b"new!", "headers": {"ETag": '"e2"'}},
+                    {"content": b"old", "headers": {"ETag": '"e3"'}},
+                    {"content": b"new!", "headers": {"ETag": '"e4"'}},
+                ],
+            )
+            with patch("napt.discovery.resolve.extract_msi_metadata") as extract:
+                extract.return_value = MSIMetadata(
+                    product_name="", product_version="5.0", architecture="x64"
+                )
+                for _ in range(4):
+                    discover_recipe(recipe_path, tmp_test_dir, state_dir=state_dir)
+
+        folder = tmp_test_dir / "test-app" / "5.0"
+        old_sha = hashlib.sha256(b"old").hexdigest()[:8]
+        new_sha = hashlib.sha256(b"new!").hexdigest()[:8]
+        assert (folder / "setup.msi").read_bytes() == b"new!"
+        assert (folder / f"setup.{old_sha}.msi").read_bytes() == b"old"
+        assert (folder / f"setup.{new_sha}.msi").read_bytes() == b"new!"
+        assert len(list(folder.iterdir())) == 3
+
+    def test_another_runs_download_folder_is_left_alone(
+        self, tmp_test_dir, create_yaml_file
+    ):
+        """Tests that a run never removes a download folder another run for
+        the same app is still using."""
+        recipe_path = _web_scrape_recipe(create_yaml_file)
+        app_dir = tmp_test_dir / "test-app"
+        other = app_dir / ".incoming"
+        other.mkdir(parents=True)
+        (other / "app.exe.part").write_bytes(b"half")
+
+        with requests_mock.Mocker() as m:
+            _serve(m, "1.2.3", b"exe bytes")
+            discover_recipe(recipe_path, tmp_test_dir, state_dir=tmp_test_dir / "state")
+
+        assert (other / "app.exe.part").read_bytes() == b"half"
+        assert not [p for p in app_dir.iterdir() if p.name.startswith(".incoming-")]
+
+    def test_stale_download_folders_are_removed(self, tmp_test_dir, create_yaml_file):
+        """Tests that a per-run folder left by a crashed run is cleaned up
+        once it is old enough that no run can still be using it."""
+        import os
+        import time
+
+        recipe_path = _web_scrape_recipe(create_yaml_file)
+        app_dir = tmp_test_dir / "test-app"
+        stale = app_dir / ".incoming-stale"
+        stale.mkdir(parents=True)
+        (stale / "app.exe.part").write_bytes(b"half")
+        two_days_ago = time.time() - 2 * 24 * 3600
+        os.utime(stale, (two_days_ago, two_days_ago))
+
+        with requests_mock.Mocker() as m:
+            _serve(m, "1.2.3", b"exe bytes")
+            discover_recipe(recipe_path, tmp_test_dir, state_dir=tmp_test_dir / "state")
+
+        assert not stale.exists()
 
     def test_older_version_is_downloaded_not_relabelled(
         self, tmp_test_dir, create_yaml_file

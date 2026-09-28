@@ -50,7 +50,7 @@ from typing import Any
 
 import requests
 
-from napt.discovery.base import RemoteVersion, bounded
+from napt.discovery.base import RemoteVersion, bounded, first_capture
 from napt.download.download import make_session
 from napt.exceptions import ConfigError, NetworkError
 from napt.secrets import bound_hosts, check_secret_use, expand_secrets, guarded_get
@@ -178,7 +178,15 @@ class ApiGithubStrategy:
                 f"{response.reason}"
             )
 
-        release_data = response.json()
+        try:
+            release_data = response.json()
+        except ValueError as err:
+            raise NetworkError(
+                f"Invalid JSON response from the GitHub API. Response: "
+                f"{response.text[:200]}"
+            ) from err
+        if not isinstance(release_data, dict):
+            raise NetworkError(f"Unexpected GitHub API response: {response.text[:200]}")
 
         # Check if this is a prerelease and we don't want those
         if release_data.get("prerelease", False) and not prerelease:
@@ -197,18 +205,12 @@ class ApiGithubStrategy:
 
         try:
             pattern = re.compile(version_pattern)
-            match = pattern.search(tag_name)
-            if not match:
+            version_str = first_capture(pattern, tag_name)
+            if version_str is None:
                 raise ConfigError(
                     f"Version pattern {version_pattern!r} did not match "
                     f"tag {tag_name!r}"
                 )
-
-            # Capture group 1 if present, else the full match
-            if pattern.groups > 0:
-                version_str = match.group(1)
-            else:
-                version_str = match.group(0)
 
         except re.error as err:
             raise ConfigError(

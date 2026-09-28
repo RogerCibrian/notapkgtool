@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests_mock
@@ -133,6 +134,51 @@ def test_content_disposition_malformed_filename_star_falls_back(
         result = download_file(url, tmp_test_dir)
 
     assert result.file_path.name == "fallback.msi"
+
+
+def test_content_disposition_unknown_charset_falls_back(tmp_test_dir: Path) -> None:
+    """Tests that an RFC 5987 charset Python does not know falls through to
+    filename= instead of failing the download."""
+    url = "https://example.com/dl"
+    data = b"abc"
+
+    with requests_mock.Mocker() as m:
+        m.get(
+            url,
+            content=data,
+            headers={
+                "Content-Disposition": (
+                    "attachment; filename*=x-unknown''setup%20v2.msi; "
+                    'filename="fallback.msi"'
+                ),
+                "Content-Length": str(len(data)),
+            },
+        )
+        result = download_file(url, tmp_test_dir)
+
+    assert result.file_path.name == "fallback.msi"
+
+
+def test_download_logs_under_approved_prefixes(tmp_test_dir: Path) -> None:
+    """Tests that download progress and completion use the transport and
+    file prefixes, not one of their own."""
+    url = "https://example.com/file.bin"
+    data = b"x" * 4096
+    logger = MagicMock()
+
+    with requests_mock.Mocker() as m:
+        m.get(url, content=data, headers={"Content-Length": str(len(data))})
+        with patch("napt.download.download.get_global_logger", return_value=logger):
+            download_file(url, tmp_test_dir)
+
+    prefixes = {
+        call.args[0]
+        for method in ("info", "warning", "verbose", "debug", "progress")
+        for call in getattr(logger, method).call_args_list
+    }
+    assert prefixes
+    assert "DOWNLOAD" not in prefixes
+    assert prefixes <= {"HTTP", "FILE"}
 
 
 def test_checksum_mismatch_raises_and_cleans_part_file(tmp_test_dir: Path) -> None:

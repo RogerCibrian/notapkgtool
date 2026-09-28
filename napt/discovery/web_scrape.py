@@ -56,7 +56,7 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 import requests
 
-from napt.discovery.base import RemoteVersion, bounded
+from napt.discovery.base import RemoteVersion, bounded, first_capture
 from napt.download.download import make_session
 from napt.exceptions import ConfigError, NetworkError
 
@@ -182,18 +182,11 @@ class WebScrapeStrategy:
             # Use regex fallback
             try:
                 pattern = re.compile(link_pattern)
-                match = pattern.search(html_content)
-
-                if not match:
+                href = first_capture(pattern, html_content)
+                if href is None:
                     raise ConfigError(
                         f"Regex pattern {link_pattern!r} did not match anything on page"
                     )
-
-                # Get first capture group or full match
-                if pattern.groups > 0:
-                    href = match.group(1)
-                else:
-                    href = match.group(0)
 
                 logger.verbose("DISCOVERY", f"Found link via regex: {href}")
 
@@ -225,8 +218,14 @@ class WebScrapeStrategy:
                     f"URL {download_url!r}"
                 )
 
-            # Get captured groups
+            # Get captured groups. One that took no part in the match would
+            # format as the text "None", so it counts as no match.
             groups = match.groups()
+            if any(group is None for group in groups):
+                raise ConfigError(
+                    f"Version pattern {version_pattern!r} did not match "
+                    f"URL {download_url!r}: a capture group matched nothing"
+                )
 
             if not groups:
                 # No capture groups, use full match

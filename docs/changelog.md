@@ -53,6 +53,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed a version-first strategy reusing last run's installer when the
+    download link changed at an unchanged version (a switched asset
+    pattern, a re-published release), which recorded the new link beside
+    the old file's hash. The link, minus its query string, is now part of
+    the check, and a changed link is verified with a conditional request
+- Fixed reuse trusting the sidecar's recorded hash. The installer on disk
+    is re-hashed first, and a file that no longer matches is downloaded
+    again
+- Fixed a vendor re-releasing a version under the same filename
+    overwriting the installer the published release was built from. The
+    previous file is kept beside the new one with its hash in the name
+- Fixed two `napt discover` runs for one app on one machine sharing a
+    download folder, so the second run deleted the first run's partial
+    download. Each run now uses its own folder, and a folder a crashed run
+    left behind is removed after a day
+- Fixed a version with a part of more than 18 digits being recorded
+    although the device's detection script cannot compare it; discovery
+    now refuses it. Non-ASCII digits no longer count as numbers when
+    versions are compared, matching the device
+- Fixed a GitHub API response that is not JSON escaping `napt discover`
+    as a traceback
+- Fixed a version or link pattern whose optional capture group matched
+    nothing yielding the version `None` (or, for `web_scrape`, the text
+    "None"); it is now reported as the pattern not matching
+- Fixed a `Content-Disposition` filename encoded in a charset Python does
+    not know aborting the download instead of falling back to the plain
+    filename
+- Fixed an installer's metadata error (an MSI platform NAPT does not
+    support, missing tooling) being reported as a download failure
 - Fixed the Azure Blob SAS signature appearing in the error and log text
     when an upload's transport failed
 - Fixed a rejected service principal credential (an expired client secret in

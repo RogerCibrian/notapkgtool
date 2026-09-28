@@ -15,7 +15,7 @@ import pytest
 import requests_mock
 
 from napt.discovery.manager import discover_recipe
-from napt.exceptions import NetworkError
+from napt.exceptions import PackagingError
 from napt.versioning.msi import MSIMetadata
 
 
@@ -176,9 +176,9 @@ class TestErrorPropagation:
             )
 
             with patch("napt.discovery.resolve.extract_msi_metadata") as mock_extract:
-                mock_extract.side_effect = NetworkError("Invalid MSI")
+                mock_extract.side_effect = RuntimeError("Invalid MSI")
 
-                with pytest.raises(NetworkError, match="Failed to extract"):
+                with pytest.raises(PackagingError, match="Failed to extract"):
                     discover_recipe(
                         recipe_path,
                         tmp_test_dir,

@@ -88,8 +88,8 @@ def _filename_from_cd(content_disposition: str) -> str | None:
             try:
                 charset, _, encoded = value.split("'", 2)
                 ext_name = unquote(encoded, encoding=charset or "utf-8")
-            except ValueError:
-                pass  # Malformed, skip
+            except (ValueError, LookupError):
+                pass  # Malformed, or a charset Python does not know: skip
         elif lower.startswith("filename="):
             value = part.split("=", 1)[1].strip().strip('"')
             if value:
@@ -336,7 +336,7 @@ def download_file(
                 if total_size:
                     pct = int(downloaded * 100 / total_size)
                     if pct != last_percent:
-                        logger.progress("DOWNLOAD", f"{pct}%")
+                        logger.progress("HTTP", f"{pct}%")
                         last_percent = pct
 
         resp.close()
@@ -371,7 +371,7 @@ def download_file(
         elapsed = time.time() - started_at
         speed_mb = (downloaded / (1024 * 1024)) / elapsed if elapsed > 0 else 0
         logger.info(
-            "DOWNLOAD",
+            "HTTP",
             f"Complete: {target.name} ({digest[:8]}...) "
             f"in {elapsed:.1f}s at {speed_mb:.1f} MB/s",
         )
