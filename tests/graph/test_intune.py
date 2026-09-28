@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 import requests_mock as req_mock
 
 from napt.exceptions import ConfigError, NetworkError
@@ -195,6 +196,82 @@ def test_upload_to_azure_blob_retries_transient_403(tmp_path: Path) -> None:
 
     # One failed block PUT + its retry + the block list commit
     assert m.call_count == 3
+
+
+_SIGNED_SAS = "https://blob.example.com/c/f?sv=2020&sr=b&sig=SECRETSIGNATURE"
+
+
+def test_upload_to_azure_blob_connection_error_hides_the_sas_signature(
+    tmp_path: Path,
+) -> None:
+    """Tests that a transport error, whose text carries the request URL,
+    is reported without the SAS signature."""
+    payload = tmp_path / "payload.intunewin"
+    payload.write_bytes(b"data")
+
+    with req_mock.Mocker() as m:
+        m.put(
+            req_mock.ANY,
+            exc=requests.ConnectionError(
+                "HTTPSConnectionPool(host='blob.example.com'): Max retries "
+                "exceeded with url: /c/f?sv=2020&sr=b&sig=SECRETSIGNATURE"
+            ),
+        )
+        with patch(_INTUNE_SLEEP):
+            with pytest.raises(NetworkError) as exc:
+                upload_to_azure_blob(_SIGNED_SAS, payload)
+
+    assert "SECRETSIGNATURE" not in str(exc.value)
+    assert "sig=" in str(exc.value)
+
+
+def test_upload_to_azure_blob_response_body_hides_the_sas_signature(
+    tmp_path: Path,
+) -> None:
+    """Tests that a rejected request whose body echoes the URL is reported
+    without the SAS signature."""
+    payload = tmp_path / "payload.intunewin"
+    payload.write_bytes(b"data")
+
+    with req_mock.Mocker() as m:
+        m.put(
+            req_mock.ANY,
+            status_code=400,
+            text="bad request for /c/f?sig=SECRETSIGNATURE&sr=b",
+        )
+        with patch(_INTUNE_SLEEP):
+            with pytest.raises(NetworkError) as exc:
+                upload_to_azure_blob(_SIGNED_SAS, payload)
+
+    assert "SECRETSIGNATURE" not in str(exc.value)
+
+
+def test_upload_to_azure_blob_retry_warning_hides_the_sas_signature(
+    tmp_path: Path,
+) -> None:
+    """Tests that the retry warning line is redacted too."""
+    payload = tmp_path / "payload.intunewin"
+    payload.write_bytes(b"data")
+    logger = MagicMock()
+
+    with req_mock.Mocker() as m:
+        m.put(
+            req_mock.ANY,
+            [
+                {"exc": requests.ConnectionError("url: /c/f?sig=SECRETSIGNATURE")},
+                {"status_code": 201},
+                {"status_code": 201},
+            ],
+        )
+        with (
+            patch(_INTUNE_SLEEP),
+            patch("napt.logging.get_global_logger", return_value=logger),
+        ):
+            upload_to_azure_blob(_SIGNED_SAS, payload)
+
+    logged = " ".join(str(call) for call in logger.warning.call_args_list)
+    assert "SECRETSIGNATURE" not in logged
+    assert "sig=" in logged
 
 
 def test_upload_to_azure_blob_non_retryable_status_fails_fast(

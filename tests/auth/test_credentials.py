@@ -7,6 +7,7 @@ import json
 from unittest.mock import MagicMock, patch
 
 from azure.core.exceptions import ClientAuthenticationError
+from azure.identity import CredentialUnavailableError
 import pytest
 
 from napt.auth import credentials
@@ -55,7 +56,7 @@ def user_dir(tmp_path, monkeypatch):
 def chain_fails():
     """Makes the non-interactive azure-identity chain report no credential."""
     cred = MagicMock()
-    cred.get_token.side_effect = ClientAuthenticationError("no cred")
+    cred.get_token.side_effect = CredentialUnavailableError("no cred")
     with (
         patch("napt.auth.credentials.get_credential", return_value=cred),
         # Keep the developer's real `az login` session out of the tests.
@@ -563,7 +564,7 @@ def test_get_status_reports_azure_cli(user_dir, chain_fails) -> None:
 def test_azure_cli_token_is_none_when_unavailable() -> None:
     """Tests that a missing or signed-out Azure CLI yields None, not an error."""
     cred = MagicMock()
-    cred.get_token.side_effect = ClientAuthenticationError("az not found")
+    cred.get_token.side_effect = CredentialUnavailableError("az not found")
     with patch("napt.auth.credentials.AzureCliCredential", return_value=cred):
         assert credentials._azure_cli_token() is None
 
@@ -600,3 +601,49 @@ def test_azure_cli_token_refuses_user_session() -> None:
         with pytest.raises(AuthError, match="signed in as a user") as exc:
             credentials._azure_cli_token()
     assert "napt auth login" in str(exc.value)
+
+
+# ---------------------------------------------------------------------------
+# Configured but rejected credentials
+# ---------------------------------------------------------------------------
+
+
+def test_rejected_service_principal_is_reported(user_dir, monkeypatch) -> None:
+    """Tests that AZURE_* variables that Entra rejects (an expired client
+    secret) are reported as such, not as 'Not authenticated'."""
+    monkeypatch.setenv("AZURE_CLIENT_SECRET", "s")
+    cred = MagicMock()
+    cred.get_token.side_effect = ClientAuthenticationError(
+        "AADSTS7000222: The provided client secret keys are expired"
+    )
+    with patch("napt.auth.credentials.get_credential", return_value=cred):
+        with pytest.raises(AuthError, match="AADSTS7000222") as exc:
+            get_access_token()
+    message = str(exc.value)
+    assert "rejected" in message
+    assert "AZURE_CLIENT_SECRET" in message
+    assert "Not authenticated" not in message
+
+
+def test_rejected_service_principal_fails_status_too(user_dir, monkeypatch) -> None:
+    """Tests that napt auth status reports the rejection instead of
+    falling through to 'not signed in'."""
+    monkeypatch.setenv("AZURE_CLIENT_SECRET", "s")
+    cred = MagicMock()
+    cred.get_token.side_effect = ClientAuthenticationError("AADSTS7000215 invalid")
+    with patch("napt.auth.credentials.get_credential", return_value=cred):
+        with pytest.raises(AuthError, match="AADSTS7000215"):
+            get_status()
+
+
+def test_azure_cli_token_reports_a_session_that_cannot_issue_a_token() -> None:
+    """Tests that an az session whose token request Entra rejects (an
+    expired service principal secret) is an error, not a silent None."""
+    cred = MagicMock()
+    cred.get_token.side_effect = ClientAuthenticationError(
+        "AADSTS7000222: The provided client secret keys are expired"
+    )
+    with patch("napt.auth.credentials.AzureCliCredential", return_value=cred):
+        with pytest.raises(AuthError, match="AADSTS7000222") as exc:
+            credentials._azure_cli_token()
+    assert "az login" in str(exc.value)

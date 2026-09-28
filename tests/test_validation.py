@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from napt.validation import validate_recipe
+from napt.validation import validate_recipe, validate_recipes
 
 
 class TestValidateRecipe:
@@ -116,7 +116,7 @@ name: "Test"
 
         assert result.status == "invalid"
         assert len(result.errors) == 1
-        assert "YAML syntax" in result.errors[0]
+        assert "parsing YAML" in result.errors[0]
 
     def test_empty_file(self, tmp_path):
         """Test that empty YAML file is handled."""
@@ -136,10 +136,16 @@ name: "Test"
         result = validate_recipe(recipe)
 
         assert result.status == "invalid"
-        assert any("dictionary" in err.lower() for err in result.errors)
+        assert any("mapping" in err.lower() for err in result.errors)
 
     def test_missing_api_version(self, tmp_path):
         """Test that missing apiVersion is detected."""
+        # An org.yaml of its own, so the walk upward does not reach a
+        # defaults/org.yaml that supplies apiVersion.
+        (tmp_path / "defaults").mkdir()
+        (tmp_path / "defaults" / "org.yaml").write_text(
+            "logging:\n  log_rotation_mb: 3\n"
+        )
         recipe = tmp_path / "recipe.yaml"
         recipe.write_text("""
 name: "Test"
@@ -1115,3 +1121,296 @@ class TestParentValidation:
 
         assert result.status == "invalid"
         assert any("non-empty string" in err for err in result.errors)
+
+
+_API_JSON_RECIPE = """
+apiVersion: napt/v1
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: api_json
+  api_url: "https://api.vendor.com/latest"
+  version_path: "version"
+  download_url_path: "download_url"
+  headers:
+    Authorization: "Bearer ${API_TOKEN}"
+"""
+
+
+def _write_org(tmp_path, body: str) -> None:
+    """Writes defaults/org.yaml so the recipe under tmp_path picks it up."""
+    defaults = tmp_path / "defaults"
+    defaults.mkdir(exist_ok=True)
+    (defaults / "org.yaml").write_text("apiVersion: napt/v1\n" + body)
+
+
+def _write_recipe(tmp_path, body: str, name: str = "app.yaml"):
+    recipe = tmp_path / "recipes" / name
+    recipe.parent.mkdir(parents=True, exist_ok=True)
+    recipe.write_text(body)
+    return recipe
+
+
+class TestEffectiveConfigValidation:
+    """Tests that validate_recipe checks the effective configuration."""
+
+    def test_org_yaml_error_is_reported(self, tmp_path):
+        """Tests that an invalid org.yaml value surfaces for the recipe."""
+        _write_org(tmp_path, "intune:\n  build_types: sideways\n")
+        recipe = _write_recipe(tmp_path, _DEPLOYMENT_RECIPE_HEADER)
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("intune.build_types" in err for err in result.errors)
+
+    def test_org_yaml_warning_is_reported(self, tmp_path):
+        """Tests that an unknown org.yaml field warns for the recipe."""
+        _write_org(tmp_path, "intune:\n  colour: blue\n")
+        recipe = _write_recipe(tmp_path, _DEPLOYMENT_RECIPE_HEADER)
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "valid"
+        assert any("colour" in warning for warning in result.warnings)
+
+    def test_result_carries_the_app_id(self, tmp_path):
+        """Tests that the validated recipe's id is on the result."""
+        recipe = _write_recipe(tmp_path, _DEPLOYMENT_RECIPE_HEADER)
+
+        assert validate_recipe(recipe).app_id == "test-app"
+
+    def test_broken_org_yaml_is_reported_not_raised(self, tmp_path):
+        """Tests that org.yaml that cannot be parsed is an invalid result."""
+        _write_org(tmp_path, "intune: [\n")
+        recipe = _write_recipe(tmp_path, _DEPLOYMENT_RECIPE_HEADER)
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("org.yaml" in err for err in result.errors)
+
+
+class TestSecretsValidation:
+    """Tests for the org.yaml secrets section and its use by recipes."""
+
+    def test_header_secret_declared_for_the_host_is_valid(self, tmp_path):
+        """Tests the happy path: org.yaml binds the variable to api_url's host."""
+        _write_org(tmp_path, "secrets:\n  API_TOKEN:\n    hosts: [api.vendor.com]\n")
+        recipe = _write_recipe(tmp_path, _API_JSON_RECIPE)
+
+        result = validate_recipe(recipe)
+
+        assert result.errors == []
+        assert result.status == "valid"
+
+    def test_header_secret_without_declaration_is_invalid(self, tmp_path):
+        """Tests that a header referencing an undeclared variable fails."""
+        _write_org(tmp_path, "")
+        recipe = _write_recipe(tmp_path, _API_JSON_RECIPE)
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any(
+            "discovery.headers.Authorization" in err and "API_TOKEN" in err
+            for err in result.errors
+        )
+
+    def test_header_secret_bound_to_another_host_is_invalid(self, tmp_path):
+        """Tests that the binding check runs against the recipe's api_url."""
+        _write_org(tmp_path, "secrets:\n  API_TOKEN:\n    hosts: [api.other.com]\n")
+        recipe = _write_recipe(tmp_path, _API_JSON_RECIPE)
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("Refusing to send secret API_TOKEN" in err for err in result.errors)
+
+    def test_secrets_declared_by_the_recipe_are_invalid(self, tmp_path):
+        """Tests that a recipe cannot declare its own secrets."""
+        _write_org(tmp_path, "")
+        recipe = _write_recipe(
+            tmp_path,
+            _API_JSON_RECIPE + "secrets:\n  API_TOKEN:\n    hosts: [api.vendor.com]\n",
+        )
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any(
+            "secrets.API_TOKEN" in err and "org.yaml" in err for err in result.errors
+        )
+
+    def test_secrets_declared_by_a_parent_are_invalid(self, tmp_path):
+        """Tests that a parent recipe (an upstream file) cannot declare a
+        secret or bind one to its own host."""
+        _write_org(tmp_path, "secrets:\n  API_TOKEN:\n    hosts: [api.vendor.com]\n")
+        _write_recipe(
+            tmp_path,
+            _API_JSON_RECIPE.replace("api.vendor.com", "evil.example.com")
+            + "secrets:\n  API_TOKEN:\n    hosts: [evil.example.com]\n"
+            + "  OTHER:\n    hosts: [evil.example.com]\n",
+            name="base.yaml",
+        )
+        child = _write_recipe(
+            tmp_path,
+            "apiVersion: napt/v1\nparent: base.yaml\nname: Child\nid: child\n",
+            name="child.override.yaml",
+        )
+
+        result = validate_recipe(child)
+
+        assert result.status == "invalid"
+        assert any("secrets.API_TOKEN" in err for err in result.errors)
+        assert any("secrets.OTHER" in err for err in result.errors)
+        assert any("parent" in err for err in result.errors)
+        # The parent's host list never reaches the binding check.
+        assert any("Refusing to send secret API_TOKEN" in err for err in result.errors)
+
+    def test_secrets_declared_by_a_vendor_file_are_invalid(self, tmp_path):
+        """Tests that a vendor defaults file cannot declare secrets."""
+        _write_org(tmp_path, "")
+        vendors = tmp_path / "defaults" / "vendors"
+        vendors.mkdir()
+        (vendors / "Vendor.yaml").write_text(
+            "secrets:\n  API_TOKEN:\n    hosts: [api.vendor.com]\n"
+        )
+        recipe = _write_recipe(tmp_path, _API_JSON_RECIPE, name="Vendor/app.yaml")
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any(
+            "secrets.API_TOKEN" in err and "vendor" in err for err in result.errors
+        )
+
+    def test_secrets_overwritten_by_the_recipe_with_a_scalar_is_invalid(self, tmp_path):
+        """Tests that a recipe replacing the whole section with a non-mapping
+        is reported as the recipe's doing, not as a shape error alone."""
+        _write_org(tmp_path, "")
+        recipe = _write_recipe(tmp_path, _DEPLOYMENT_RECIPE_HEADER + "secrets: 5\n")
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any("secrets: declared in the recipe" in err for err in result.errors)
+
+    @pytest.mark.parametrize(
+        ("body", "fragment"),
+        [
+            ("secrets: 5\n", "secrets: Must be a dictionary"),
+            ("secrets:\n", "secrets: Must be a dictionary"),
+            ("secrets:\n  API_TOKEN: 5\n", "secrets.API_TOKEN: Must be a dictionary"),
+            (
+                "secrets:\n  API_TOKEN: {}\n",
+                "secrets.API_TOKEN: Missing required field: hosts",
+            ),
+            (
+                "secrets:\n  API_TOKEN:\n    hosts: []\n",
+                "secrets.API_TOKEN: Missing required field: hosts",
+            ),
+            (
+                "secrets:\n  API_TOKEN:\n    hosts: api.vendor.com\n",
+                "secrets.API_TOKEN.hosts: Must be list",
+            ),
+            (
+                "secrets:\n  API_TOKEN:\n    hosts: [https://api.vendor.com/x]\n",
+                "secrets.API_TOKEN.hosts[0]: Must be a hostname",
+            ),
+            (
+                "secrets:\n  API_TOKEN:\n    hosts: ['']\n",
+                "secrets.API_TOKEN.hosts[0]: Must be a hostname",
+            ),
+            (
+                "secrets:\n  not a name:\n    hosts: [api.vendor.com]\n",
+                "secrets: 'not a name' is not an environment variable name",
+            ),
+        ],
+    )
+    def test_malformed_secrets_section(self, tmp_path, body, fragment):
+        """Tests that a malformed secrets section is reported by path."""
+        _write_org(tmp_path, body)
+        recipe = _write_recipe(tmp_path, _DEPLOYMENT_RECIPE_HEADER)
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert any(fragment in err for err in result.errors), result.errors
+
+    def test_unknown_secret_entry_field_warns(self, tmp_path):
+        """Tests that a misspelled entry field is a warning."""
+        _write_org(
+            tmp_path,
+            "secrets:\n  API_TOKEN:\n    hosts: [api.vendor.com]\n    host: x\n",
+        )
+        recipe = _write_recipe(tmp_path, _DEPLOYMENT_RECIPE_HEADER)
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "valid"
+        assert any(
+            "secrets.API_TOKEN: Unknown field 'host'" in w for w in result.warnings
+        )
+
+
+class TestValidateRecipes:
+    """Tests for validating a recipe file or a directory of recipes."""
+
+    def test_file_returns_one_result(self, tmp_path):
+        """Tests that a single file validates as before."""
+        recipe = _write_recipe(tmp_path, _DEPLOYMENT_RECIPE_HEADER)
+
+        results = validate_recipes(recipe)
+
+        assert [r.status for r in results] == ["valid"]
+        assert results[0].recipe_path == str(recipe)
+
+    def test_directory_validates_every_recipe(self, tmp_path):
+        """Tests that each recipe under the directory gets its own result."""
+        _write_recipe(tmp_path, _DEPLOYMENT_RECIPE_HEADER, name="a/one.yaml")
+        _write_recipe(
+            tmp_path, "apiVersion: napt/v1\nname: Two\nid: two\n", name="b/two.yml"
+        )
+
+        results = validate_recipes(tmp_path / "recipes")
+
+        assert [r.status for r in results] == ["valid", "invalid"]
+        assert results[0].recipe_path.endswith("one.yaml")
+        assert any("discovery" in err for err in results[1].errors)
+
+    def test_duplicate_ids_are_reported_on_the_second_file(self, tmp_path):
+        """Tests that two recipes resolving to one id are both named."""
+        parent = _write_recipe(tmp_path, _DEPLOYMENT_RECIPE_HEADER, name="base.yaml")
+        child = _write_recipe(
+            tmp_path,
+            "apiVersion: napt/v1\nparent: base.yaml\n",
+            name="base.override.yaml",
+        )
+
+        results = validate_recipes(tmp_path / "recipes")
+
+        assert [r.status for r in results].count("invalid") == 1
+        dup = next(r for r in results if r.status == "invalid")
+        assert dup.app_count == 0
+        assert any(
+            "test-app" in err and parent.name in err and child.name in err
+            for err in dup.errors
+        )
+
+    def test_missing_path_is_a_single_invalid_result(self, tmp_path):
+        """Tests that a path that does not exist is reported, not raised."""
+        results = validate_recipes(tmp_path / "nope")
+
+        assert len(results) == 1
+        assert results[0].status == "invalid"
+
+    def test_empty_directory_is_a_single_invalid_result(self, tmp_path):
+        """Tests that a directory with no recipes is reported, not raised."""
+        (tmp_path / "recipes").mkdir()
+
+        results = validate_recipes(tmp_path / "recipes")
+
+        assert len(results) == 1
+        assert results[0].status == "invalid"
+        assert any("No recipe files" in err for err in results[0].errors)

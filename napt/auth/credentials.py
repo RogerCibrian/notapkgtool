@@ -69,7 +69,11 @@ import sys
 from typing import Any
 
 from azure.core.exceptions import ClientAuthenticationError
-from azure.identity import AzureCliCredential, EnvironmentCredential
+from azure.identity import (
+    AzureCliCredential,
+    CredentialUnavailableError,
+    EnvironmentCredential,
+)
 import msal
 import msal_extensions
 import requests
@@ -101,6 +105,21 @@ _HINT_NOT_LOGGED_IN = (
     "  CI/CD:        set AZURE_CLIENT_ID, AZURE_TENANT_ID and either\n"
     "                AZURE_CLIENT_SECRET / AZURE_CLIENT_CERTIFICATE_PATH,\n"
     "                or sign in with 'az login' (e.g. azure/login in CI)\n"
+)
+
+_HINT_SERVICE_PRINCIPAL_REJECTED = (
+    "Entra ID rejected the service principal credential from AZURE_CLIENT_ID,\n"
+    "AZURE_TENANT_ID and AZURE_CLIENT_SECRET (or AZURE_CLIENT_CERTIFICATE_PATH).\n"
+    "A client secret expires: create a new one on the app registration and\n"
+    "update the value where the pipeline stores it.\n\n"
+    "Entra ID said: {error}\n"
+)
+
+_HINT_AZURE_CLI_REJECTED = (
+    "The Azure CLI session could not get a Microsoft Graph token. The service\n"
+    "principal it signed in with may have an expired secret; sign in again\n"
+    "with 'az login' using a current one.\n\n"
+    "Azure CLI said: {error}\n"
 )
 
 _HINT_AZURE_CLI_USER = (
@@ -422,7 +441,8 @@ def get_credential() -> EnvironmentCredential:
 
     Returns:
         The environment-backed credential; acquiring a token from it fails
-        with ClientAuthenticationError when the variables are not all set.
+        with CredentialUnavailableError when the variables are not all set
+        and with ClientAuthenticationError when Entra ID rejects them.
     """
     return EnvironmentCredential()
 
@@ -433,22 +453,46 @@ def _describe_noninteractive_method() -> str:
     return "service principal"
 
 
+def _service_principal_token() -> str | None:
+    """Returns a Graph token from the ``AZURE_*`` variables, or ``None``.
+
+    ``None`` means the variables are not (all) set, so the chain moves on.
+    Variables that are set but that Entra ID rejects, such as an expired
+    client secret, are an error: moving on would report "Not
+    authenticated" for a credential that is configured and wrong.
+
+    Raises:
+        AuthError: If Entra ID rejects the configured credential.
+    """
+    try:
+        return get_credential().get_token(*GRAPH_SCOPES).token
+    except CredentialUnavailableError:
+        return None
+    except ClientAuthenticationError as err:
+        raise AuthError(_HINT_SERVICE_PRINCIPAL_REJECTED.format(error=err)) from err
+
+
 def _azure_cli_token() -> str | None:
     """Returns a Graph token from an ``az login`` service principal session.
 
-    ``None`` covers every way the Azure CLI can be unavailable: not
-    installed, not signed in, or unable to issue a token for Graph. A
-    session signed in as a person is refused: its token is issued to the
-    Azure CLI's own application, so Entra and Intune would attribute NAPT's
-    actions to that app rather than the NAPT registration.
+    ``None`` covers the Azure CLI being unavailable: not installed or not
+    signed in. A session that exists but cannot get a Graph token (Entra
+    ID rejects the service principal, say for an expired secret) is an
+    error, so it is not reported as "Not authenticated". A session signed
+    in as a person is refused: its token is issued to the Azure CLI's own
+    application, so Entra and Intune would attribute NAPT's actions to that
+    app rather than the NAPT registration.
 
     Raises:
-        AuthError: If the Azure CLI is signed in as a user.
+        AuthError: If the Azure CLI session cannot get a token, or is
+            signed in as a user.
     """
     try:
         token = AzureCliCredential().get_token(*GRAPH_SCOPES).token
-    except ClientAuthenticationError:
+    except CredentialUnavailableError:
         return None
+    except ClientAuthenticationError as err:
+        raise AuthError(_HINT_AZURE_CLI_REJECTED.format(error=err)) from err
     claims = _decode_claims(token)
     is_app_only = claims.get("idtyp") == "app" or (
         "scp" not in claims and bool(claims.get("roles"))
@@ -781,13 +825,12 @@ def get_status() -> AuthStatus | None:
 
     Raises:
         AuthError: If a credential is configured but fails (for example, a
-            saved session that can no longer be refreshed).
+            saved session that can no longer be refreshed, or ``AZURE_*``
+            variables that Entra ID rejects).
     """
-    try:
-        token = get_credential().get_token(*GRAPH_SCOPES).token
+    token = _service_principal_token()
+    if token is not None:
         return _status_from_token(token, _describe_noninteractive_method())
-    except ClientAuthenticationError:
-        pass
 
     config = _interactive_config()
     if config is not None:
@@ -815,8 +858,11 @@ def get_access_token() -> str:
         Bearer token string for use in Authorization headers.
 
     Raises:
-        AuthError: If no credential is available or the saved session can no
-            longer be refreshed, with guidance on what to do.
+        AuthError: If no credential is available, a configured one is
+            rejected (``AZURE_*`` variables with an expired secret, an
+            Azure CLI session that cannot get a token), or the saved
+            session can no longer be refreshed, with guidance on what to
+            do.
 
     Example:
         Get a token and use it in a request:
@@ -828,10 +874,9 @@ def get_access_token() -> str:
             ```
 
     """
-    try:
-        return get_credential().get_token(*GRAPH_SCOPES).token
-    except ClientAuthenticationError:
-        pass
+    token = _service_principal_token()
+    if token is not None:
+        return token
 
     config = _interactive_config()
     if config is not None:

@@ -15,7 +15,7 @@ from typing import Any
 import pytest
 
 from napt.config.defaults import DEFAULT_CONFIG, ORG_YAML_TEMPLATE
-from napt.config.loader import load_effective_config
+from napt.config.loader import collect_recipe_paths, load_effective_config
 from napt.exceptions import ConfigError
 
 
@@ -381,6 +381,7 @@ discovery:
             ("intune", "detection"),
             ("logging", "log_rotation_mb"),
             ("intunewin", "release"),
+            ("secrets", "hosts"),
         ]
 
         for parent, key in nested_checks:
@@ -838,3 +839,90 @@ class TestEmptySections:
 
         with pytest.raises(ConfigError, match=f"{path}: Must be a dictionary"):
             load_effective_config(recipe)
+
+
+class TestSecretsLayer:
+    """Tests that only org.yaml can declare secrets."""
+
+    @staticmethod
+    def _write(tmp_test_dir, org_body: str, recipe_body: str):
+        defaults = tmp_test_dir / "defaults"
+        defaults.mkdir()
+        (defaults / "org.yaml").write_text("apiVersion: napt/v1\n" + org_body)
+        recipes = tmp_test_dir / "recipes"
+        recipes.mkdir()
+        recipe = recipes / "app.yaml"
+        recipe.write_text(
+            "apiVersion: napt/v1\nname: App\nid: app\n"
+            "discovery:\n  strategy: url_download\n  url: https://x/a.msi\n"
+            + recipe_body
+        )
+        return recipe
+
+    def test_org_secrets_are_loaded(self, tmp_test_dir):
+        """Tests that org.yaml secrets reach the effective configuration."""
+        recipe = self._write(
+            tmp_test_dir, "secrets:\n  API_TOKEN:\n    hosts: [api.vendor.com]\n", ""
+        )
+
+        config = load_effective_config(recipe)
+
+        assert config["secrets"] == {"API_TOKEN": {"hosts": ["api.vendor.com"]}}
+
+    def test_no_secrets_section_means_none_declared(self, tmp_test_dir):
+        """Tests that the section defaults to empty."""
+        recipe = self._write(tmp_test_dir, "", "")
+
+        assert load_effective_config(recipe)["secrets"] == {}
+
+    def test_recipe_cannot_add_a_secret(self, tmp_test_dir):
+        """Tests that a recipe-declared secret fails the load."""
+        recipe = self._write(
+            tmp_test_dir, "", "secrets:\n  API_TOKEN:\n    hosts: [evil.example.com]\n"
+        )
+
+        with pytest.raises(ConfigError, match="secrets.API_TOKEN"):
+            load_effective_config(recipe)
+
+    def test_recipe_cannot_add_a_host_to_an_org_secret(self, tmp_test_dir):
+        """Tests that a recipe cannot widen where an org secret may go."""
+        recipe = self._write(
+            tmp_test_dir,
+            "secrets:\n  API_TOKEN:\n    hosts: [api.vendor.com]\n",
+            "secrets:\n  API_TOKEN:\n    hosts: [evil.example.com]\n",
+        )
+
+        with pytest.raises(ConfigError, match="secrets.API_TOKEN"):
+            load_effective_config(recipe)
+
+
+class TestCollectRecipePaths:
+    """Tests for the shared recipe path collector."""
+
+    def test_file_is_returned_as_is(self, tmp_test_dir):
+        """Tests that a file path yields itself."""
+        recipe = tmp_test_dir / "a.yaml"
+        recipe.touch()
+
+        assert collect_recipe_paths(recipe) == [recipe]
+
+    def test_directory_is_scanned_recursively_and_sorted(self, tmp_test_dir):
+        """Tests that .yaml and .yml files under the directory are found."""
+        (tmp_test_dir / "b").mkdir()
+        (tmp_test_dir / "b" / "two.yml").touch()
+        (tmp_test_dir / "a.yaml").touch()
+        (tmp_test_dir / "notes.txt").touch()
+
+        found = collect_recipe_paths(tmp_test_dir)
+
+        assert found == [tmp_test_dir / "a.yaml", tmp_test_dir / "b" / "two.yml"]
+
+    def test_missing_path_raises(self, tmp_test_dir):
+        """Tests that a path that does not exist is a ConfigError."""
+        with pytest.raises(ConfigError, match="not found"):
+            collect_recipe_paths(tmp_test_dir / "nope")
+
+    def test_empty_directory_raises(self, tmp_test_dir):
+        """Tests that a directory without recipes is a ConfigError."""
+        with pytest.raises(ConfigError, match="No recipe files"):
+            collect_recipe_paths(tmp_test_dir)

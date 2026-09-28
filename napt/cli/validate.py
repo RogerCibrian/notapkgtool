@@ -14,8 +14,10 @@
 
 """The `napt validate` command.
 
-Checks recipe YAML for syntax errors and configuration issues without
-downloading files or making network calls.
+Checks a recipe's effective configuration (org.yaml, vendor defaults,
+parent, recipe) for syntax errors and configuration issues without
+downloading files or making network calls. Given a directory, checks every
+recipe under it and reports two files that resolve to the same id.
 """
 
 from __future__ import annotations
@@ -27,7 +29,8 @@ from typing import Any
 from napt.config.loader import load_effective_config
 from napt.exceptions import NAPTError
 from napt.logging import get_logger, set_global_logger
-from napt.validation import validate_recipe
+from napt.results import ValidationResult
+from napt.validation import validate_recipe, validate_recipes
 
 
 def _print_provenance(
@@ -50,7 +53,7 @@ def _print_provenance(
             if isinstance(cfg_value, dict):
                 _print_provenance(cfg_value, prov_value, full_key)
         else:
-            # Leaf value — print provenance
+            # Leaf value: print provenance
             cfg_value = config.get(key)
             value_repr = repr(cfg_value)
             if len(value_repr) > 60:
@@ -58,37 +61,33 @@ def _print_provenance(
             print(f"  {full_key}: {value_repr} ({prov_value})")
 
 
-def cmd_validate(args: argparse.Namespace) -> int:
-    """Handler for 'napt validate' command.
-
-    Validates recipe syntax and configuration without downloading files or
-    making network calls. This is useful for quick feedback during recipe
-    development and for CI/CD pre-checks.
+def _print_provenance_block(recipe_path: Path) -> None:
+    """Prints the provenance of a recipe's effective configuration.
 
     Args:
-        args: Parsed command-line arguments containing
-            recipe path and verbose flag.
-
-    Returns:
-        Exit code (0 for valid recipe, 1 for invalid).
-
-    Note:
-        Prints validation results, errors, and warnings to stdout.
-
+        recipe_path: The recipe whose configuration to describe.
     """
-    # Configure global logger
-    logger = get_logger(verbose=args.verbose, debug=args.debug)
-    set_global_logger(logger)
+    try:
+        config = load_effective_config(recipe_path)
+        provenance = config.get("_provenance")
+        if provenance:
+            print()
+            print("CONFIGURATION PROVENANCE")
+            print("-" * 70)
+            _print_provenance(config, provenance)
+            print("-" * 70)
+    except NAPTError as err:
+        # An invalid recipe cannot be merged; say so rather than hide it.
+        print()
+        print(f"Provenance unavailable: {err}")
 
-    recipe_path = Path(args.recipe).resolve()
 
-    print(f"Validating recipe: {recipe_path}")
-    print()
+def _print_single(result: ValidationResult) -> None:
+    """Prints the full report for one recipe.
 
-    # Validate the recipe
-    result = validate_recipe(recipe_path)
-
-    # Display results
+    Args:
+        result: The recipe's validation result.
+    """
     print("=" * 70)
     print("VALIDATION RESULTS")
     print("=" * 70)
@@ -115,30 +114,101 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
     print("=" * 70)
 
+
+def _display_path(result: ValidationResult, root: Path) -> str:
+    """Names a recipe relative to the directory being validated.
+
+    Args:
+        result: The recipe's validation result.
+        root: The directory given on the command line.
+
+    Returns:
+        The relative path when the recipe is under the root, else the path
+            as recorded.
+    """
+    try:
+        return str(Path(result.recipe_path).relative_to(root))
+    except ValueError:
+        return result.recipe_path
+
+
+def _print_directory(results: list[ValidationResult], root: Path) -> None:
+    """Prints one line per recipe with its errors and warnings beneath.
+
+    Args:
+        results: One result per recipe file.
+        root: The directory given on the command line.
+    """
+    for result in results:
+        tag = "[OK]  " if result.status == "valid" else "[FAIL]"
+        print(f"{tag} {_display_path(result, root)}")
+        for error in result.errors:
+            print(f"       [X] {error}")
+        for warning in result.warnings:
+            print(f"       [WARNING] {warning}")
+
+
+def cmd_validate(args: argparse.Namespace) -> int:
+    """Handler for 'napt validate' command.
+
+    Validates recipe syntax and configuration without downloading files or
+    making network calls. This is useful for quick feedback during recipe
+    development and for CI/CD pre-checks.
+
+    Args:
+        args: Parsed command-line arguments containing
+            the recipe or directory path and verbose flag.
+
+    Returns:
+        Exit code (0 when every recipe is valid, 1 otherwise).
+
+    Note:
+        Prints validation results, errors, and warnings to stdout.
+
+    """
+    # Configure global logger
+    logger = get_logger(verbose=args.verbose, debug=args.debug)
+    set_global_logger(logger)
+
+    recipe_path = Path(args.recipe).resolve()
+
+    if recipe_path.is_dir():
+        print(f"Validating recipes under: {recipe_path}")
+        print()
+        results = validate_recipes(recipe_path)
+        _print_directory(results, recipe_path)
+        if args.debug:
+            for result in results:
+                if result.status == "valid":
+                    print()
+                    print(f"Recipe: {_display_path(result, recipe_path)}")
+                    _print_provenance_block(Path(result.recipe_path))
+        failed = sum(1 for result in results if result.status != "valid")
+        print()
+        print("=" * 70)
+        if failed:
+            print(f"[FAILED] {failed} of {len(results)} recipe(s) failed validation.")
+            return 1
+        print(f"[SUCCESS] All {len(results)} recipe(s) are valid.")
+        return 0
+
+    print(f"Validating recipe: {recipe_path}")
+    print()
+
+    result = validate_recipe(recipe_path)
+    _print_single(result)
+
     # Show provenance in debug mode (useful for both valid and invalid recipes)
     if args.debug:
-        try:
-            config = load_effective_config(recipe_path)
-            provenance = config.get("_provenance")
-            if provenance:
-                print()
-                print("CONFIGURATION PROVENANCE")
-                print("-" * 70)
-                _print_provenance(config, provenance)
-                print("-" * 70)
-        except NAPTError as err:
-            # An invalid recipe cannot be merged; say so rather than hide it.
-            print()
-            print(f"Provenance unavailable: {err}")
+        _print_provenance_block(recipe_path)
 
     if result.status == "valid":
         print()
         print("[SUCCESS] Recipe is valid!")
         return 0
-    else:
-        print()
-        print(f"[FAILED] Recipe validation failed with {len(result.errors)} error(s).")
-        return 1
+    print()
+    print(f"[FAILED] Recipe validation failed with {len(result.errors)} error(s).")
+    return 1
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:
@@ -151,10 +221,13 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         "validate",
         help="Validate recipe syntax and configuration (no downloads)",
         description=(
-            "Check recipe YAML for syntax errors and configuration issues "
-            "without making network calls.\n\n"
+            "Check a recipe's effective configuration (org.yaml, vendor "
+            "defaults, parent, recipe) for syntax errors and configuration "
+            "issues without making network calls. Given a directory, check "
+            "every recipe under it.\n\n"
             "Examples:\n"
             "  napt validate recipes/Google/chrome.yaml\n"
+            "  napt validate recipes/\n"
             "  napt validate recipes/Google/chrome.yaml --verbose\n\n"
             "See docs for more examples and workflows."
         ),
@@ -162,7 +235,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     )
     parser_validate.add_argument(
         "recipe",
-        help="Path to the recipe YAML file",
+        help="Path to a recipe YAML file, or a directory of recipes",
     )
     parser_validate.add_argument(
         "-v",

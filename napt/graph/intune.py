@@ -500,6 +500,22 @@ _BLOB_RETRY_STATUS = (403, 408, 429, 500, 502, 503, 504)
 _BLOB_RETRY_ATTEMPTS = 5
 _BLOB_RETRY_INITIAL_DELAY = 2.0
 
+# The signature in a SAS query string. Anyone holding it can write the
+# blob until the SAS expires, so it never goes into a log or error.
+_SAS_SIGNATURE = re.compile(r"(?i)(sig=)[^&\s'\"]+")
+
+
+def _redact_sas(text: str) -> str:
+    """Hides SAS signatures in text that may carry a blob URL.
+
+    Args:
+        text: Error or response text.
+
+    Returns:
+        The text with every ``sig=`` value replaced.
+    """
+    return _SAS_SIGNATURE.sub(r"\1<redacted>", text)
+
 
 def _blob_put_with_retry(
     url: str,
@@ -512,9 +528,11 @@ def _blob_put_with_retry(
 
     A freshly provisioned SAS URI can be rejected with HTTP 403 ("SAS
     identifier cannot be found") for a few seconds until the signature
-    propagates to the storage front end, so 403 is retryable here —
+    propagates to the storage front end, so 403 is retryable here,
     unlike Graph API calls, where it means missing permissions. Retries
-    use exponential backoff starting at 2 seconds.
+    use exponential backoff starting at 2 seconds. Error and log text is
+    redacted, since a transport error quotes the URL, SAS signature
+    included.
 
     Args:
         url: Blob endpoint including the SAS query string.
@@ -538,11 +556,11 @@ def _blob_put_with_retry(
             resp = requests.put(url, data=data, headers=headers, timeout=timeout)
         except requests.RequestException as exc:
             err = exc
-            detail = str(exc)
+            detail = _redact_sas(str(exc))
         else:
             if resp.ok:
                 return
-            detail = f"HTTP {resp.status_code}\n{resp.text}"
+            detail = _redact_sas(f"HTTP {resp.status_code}\n{resp.text}")
             if resp.status_code not in _BLOB_RETRY_STATUS:
                 raise NetworkError(f"{context}: {detail}")
 

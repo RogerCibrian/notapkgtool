@@ -17,6 +17,10 @@
 This module provides validation functions for checking recipe syntax and
 configuration without making network calls or downloading files. This is
 useful for quick feedback during recipe development and in CI/CD pipelines.
+``napt validate`` checks the effective configuration (code defaults,
+org.yaml, vendor defaults, parent, recipe), the same merge every other
+command loads, so an error in any layer is reported before a pipeline
+runs into it.
 
 Validation Checks:
 
@@ -39,15 +43,24 @@ Validation Checks:
 - logging section fields are valid
 - deployment section fields are valid (ring names and groups,
   promote_after_days, install, retain_versions)
+- secrets section entries are shaped as ``NAME: {hosts: [...]}``, come
+  from defaults/org.yaml alone, and every ``${NAME}`` a recipe sends is
+  declared and bound to the request host (see [napt.secrets][])
+- A directory of recipes contains no two files with the same id
 """
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
+import re
 from typing import Any
 
-import yaml
-
+from napt.config.loader import (
+    collect_recipe_paths,
+    duplicate_recipe_id_message,
+    merge_effective_config,
+)
 from napt.discovery.registry import get_strategy
 from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
@@ -118,6 +131,26 @@ _DEPLOYMENT_RING_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
     "name": (str, None, "ring name"),
     "groups": (list, None, "Entra ID groups assigned by this ring"),
     "promote_after_days": (int, None, "days before eligible for the next ring"),
+}
+
+# Schema for one secrets entry
+_SECRET_ENTRY_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
+    "hosts": (list, None, "hosts the secret may be sent to"),
+}
+
+# An environment variable name, as the secrets section keys them.
+_ENV_VAR_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
+# A bare hostname for a secrets entry: no scheme, path, port, or wildcard.
+_HOSTNAME = re.compile(r"[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9-]+)*")
+
+# Provenance layers that may declare secrets, and how the others are named
+# in error messages.
+_SECRET_LAYERS = frozenset({"org_yaml", "code_default"})
+_LAYER_NAMES = {
+    "vendor_yaml": "the vendor defaults file",
+    "parent": "the parent recipe",
+    "recipe": "the recipe",
 }
 
 # Allowed keys for psadt.app_vars.
@@ -541,6 +574,99 @@ def _validate_deployment_section(
         errors.append("deployment.retain_versions: Must be >= 0")
 
 
+def _foreign_layers(provenance: object) -> list[str]:
+    """Names the layers other than org.yaml that set values under a key.
+
+    Args:
+        provenance: The provenance entry for the key: a layer name, or a
+            dict of them for a section.
+
+    Returns:
+        Display names of the offending layers, sorted; empty when only
+        org.yaml (or the code default) set the values.
+    """
+    found: set[str] = set()
+
+    def _walk(entry: object) -> None:
+        if isinstance(entry, dict):
+            for value in entry.values():
+                _walk(value)
+        elif isinstance(entry, str) and entry not in _SECRET_LAYERS:
+            found.add(entry)
+
+    _walk(provenance)
+    return [_LAYER_NAMES.get(layer, layer) for layer in sorted(found)]
+
+
+def _validate_secrets_section(
+    config: dict[str, Any],
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    """Validates the top-level secrets: section.
+
+    Every entry must be shaped as ``NAME: {hosts: [hostname, ...]}`` and
+    come from defaults/org.yaml. The config loader keeps other layers'
+    entries out of the merged section; their attempt is still visible in
+    the provenance and reported here so the author learns why the secret
+    is not honored.
+
+    Args:
+        config: The full merged configuration.
+        errors: List to append errors to.
+        warnings: List to append warnings to.
+    """
+    provenance = config.get("_provenance")
+    section_prov = provenance.get("secrets") if isinstance(provenance, dict) else None
+    if isinstance(section_prov, dict):
+        for name, entry_prov in section_prov.items():
+            layers = _foreign_layers(entry_prov)
+            if layers:
+                errors.append(
+                    f"secrets.{name}: declared in {', '.join(layers)}; secrets "
+                    f"are declared only in defaults/org.yaml"
+                )
+    else:
+        layers = _foreign_layers(section_prov)
+        if layers:
+            errors.append(
+                f"secrets: declared in {', '.join(layers)}; secrets are declared "
+                f"only in defaults/org.yaml"
+            )
+
+    if "secrets" in config and config["secrets"] is None:
+        errors.append(_EMPTY_SECTION.format("secrets"))
+        return
+    secrets = config.get("secrets")
+    if secrets is None:
+        return
+    if not isinstance(secrets, dict):
+        errors.append("secrets: Must be a dictionary")
+        return
+
+    for name, entry in secrets.items():
+        if not isinstance(name, str) or not _ENV_VAR_NAME.fullmatch(name):
+            errors.append(
+                f"secrets: {name!r} is not an environment variable name "
+                f"(letters, digits, and underscores, not starting with a digit)"
+            )
+        path = f"secrets.{name}"
+        if not isinstance(entry, dict):
+            errors.append(f"{path}: Must be a dictionary")
+            continue
+        _validate_section(entry, _SECRET_ENTRY_FIELDS, path, errors, warnings)
+        hosts = entry.get("hosts")
+        if "hosts" not in entry or hosts == []:
+            errors.append(f"{path}: Missing required field: hosts")
+        elif isinstance(hosts, list):
+            for index, host in enumerate(hosts):
+                if not isinstance(host, str) or not _HOSTNAME.fullmatch(host.strip()):
+                    errors.append(
+                        f"{path}.hosts[{index}]: Must be a hostname such as "
+                        f"api.vendor.com (no scheme, path, or port)"
+                    )
+
+
 def _validate_parent_field(
     config: dict[str, Any],
     recipe_path: str,
@@ -586,14 +712,16 @@ def validate_config(
     Checks required fields, types, strategy registration, and section-level
     validation. Used by both ``validate_recipe`` (CLI) and
     ``load_effective_config`` (pipeline commands) so that one set of rules
-    applies everywhere.
+    applies everywhere. When the dict carries the loader's ``_provenance``
+    entry, the secrets check also reports entries that a layer other than
+    org.yaml tried to declare.
 
     Args:
         config: The merged configuration dictionary to validate.
         recipe_path: Optional path string for error context.
 
     Returns:
-        Validation status, errors, warnings, and app count.
+        Validation status, errors, warnings, app count, and the app id.
 
     """
     logger = get_global_logger()
@@ -686,6 +814,7 @@ def validate_config(
     _validate_intune_section(config, errors, warnings)
     _validate_logging_section(config, errors, warnings)
     _validate_deployment_section(config, errors, warnings)
+    _validate_secrets_section(config, errors, warnings)
 
     # Determine final status
     status = "valid" if len(errors) == 0 else "invalid"
@@ -696,28 +825,32 @@ def validate_config(
     else:
         logger.verbose("VALIDATION", f"Recipe has {len(errors)} error(s)")
 
+    app_id = config.get("id")
     return ValidationResult(
         status=status,
         errors=errors,
         warnings=warnings,
         app_count=app_count,
         recipe_path=recipe_path,
+        app_id=app_id if isinstance(app_id, str) and app_id else None,
     )
 
 
 def validate_recipe(recipe_path: Path) -> ValidationResult:
-    """Validates a recipe file's own schema.
+    """Validates a recipe's effective configuration.
 
-    Parses the YAML file, merges it over its parent recipe when it declares
-    one, and validates the result. Organization and vendor defaults are not
-    applied. This is the entry point for ``napt validate``.
+    Merges the recipe with its parent, vendor defaults, and org.yaml the
+    way every other command does, then validates the result, so an error
+    in any layer is reported here. A file that cannot be read or merged (a
+    missing file, a YAML syntax error, a missing parent) is an invalid
+    result rather than an exception.
 
     Args:
         recipe_path: Path to the recipe YAML file to validate.
 
     Returns:
-        Validation status, errors, warnings, app count, and the parent path
-            when the recipe declares one.
+        Validation status, errors, warnings, app count, app id, and the
+            parent path when the recipe declares one.
 
     Example:
         Validate a recipe and check results:
@@ -734,59 +867,11 @@ def validate_recipe(recipe_path: Path) -> ValidationResult:
 
     """
     logger = get_global_logger()
-
     recipe_path_str = str(recipe_path)
-
     logger.verbose("VALIDATION", f"Validating recipe: {recipe_path}")
 
-    # Check file exists
-    if not recipe_path.exists():
-        return ValidationResult(
-            status="invalid",
-            errors=[f"Recipe file not found: {recipe_path}"],
-            warnings=[],
-            app_count=0,
-            recipe_path=recipe_path_str,
-        )
-
-    # Parse YAML
     try:
-        with open(recipe_path, encoding="utf-8") as f:
-            recipe = yaml.safe_load(f)
-    except yaml.YAMLError as err:
-        return ValidationResult(
-            status="invalid",
-            errors=[f"Invalid YAML syntax: {err}"],
-            warnings=[],
-            app_count=0,
-            recipe_path=recipe_path_str,
-        )
-    except Exception as err:
-        return ValidationResult(
-            status="invalid",
-            errors=[f"Failed to read recipe file: {err}"],
-            warnings=[],
-            app_count=0,
-            recipe_path=recipe_path_str,
-        )
-
-    logger.verbose("VALIDATION", "YAML syntax is valid")
-
-    # Validate recipe is a dict
-    if not isinstance(recipe, dict):
-        return ValidationResult(
-            status="invalid",
-            errors=["Recipe must be a YAML dictionary/mapping"],
-            warnings=[],
-            app_count=0,
-            recipe_path=recipe_path_str,
-        )
-
-    # Merge over the parent recipe, if declared
-    from napt.config.loader import merge_parent
-
-    try:
-        recipe, parent_path = merge_parent(recipe_path, recipe)
+        merged, parent_path = merge_effective_config(recipe_path)
     except ConfigError as err:
         return ValidationResult(
             status="invalid",
@@ -795,18 +880,62 @@ def validate_recipe(recipe_path: Path) -> ValidationResult:
             app_count=0,
             recipe_path=recipe_path_str,
         )
+    logger.verbose("VALIDATION", "YAML syntax is valid")
     if parent_path is not None:
         logger.verbose("VALIDATION", f"Parent recipe: {parent_path}")
 
-    # Validate the parsed config dict
-    result = validate_config(recipe, recipe_path=recipe_path_str)
+    result = validate_config(merged, recipe_path=recipe_path_str)
     if parent_path is None:
         return result
-    return ValidationResult(
-        status=result.status,
-        errors=result.errors,
-        warnings=result.warnings,
-        app_count=result.app_count,
-        recipe_path=result.recipe_path,
-        parent_path=str(parent_path),
-    )
+    return replace(result, parent_path=str(parent_path))
+
+
+def validate_recipes(path: Path) -> list[ValidationResult]:
+    """Validates a recipe file or every recipe under a directory.
+
+    Each file is validated with
+    [validate_recipe][napt.validation.validate_recipe]. For a directory,
+    two files that resolve to the same id are also reported (a parent
+    recipe scanned beside the child that inherits its id is the usual
+    cause), since ``napt promote`` refuses such a directory.
+
+    Args:
+        path: A recipe YAML file, or a directory scanned recursively.
+
+    Returns:
+        One result per recipe file, in path order; a single invalid result
+            when the path does not exist or holds no recipes.
+    """
+    try:
+        paths = collect_recipe_paths(path)
+    except ConfigError as err:
+        return [
+            ValidationResult(
+                status="invalid",
+                errors=[str(err)],
+                warnings=[],
+                app_count=0,
+                recipe_path=str(path),
+            )
+        ]
+
+    results: list[ValidationResult] = []
+    sources: dict[str, Path] = {}
+    for recipe_path in paths:
+        result = validate_recipe(recipe_path)
+        if result.status == "valid" and result.app_id is not None:
+            first = sources.get(result.app_id)
+            if first is None:
+                sources[result.app_id] = recipe_path
+            else:
+                result = replace(
+                    result,
+                    status="invalid",
+                    app_count=0,
+                    errors=[
+                        *result.errors,
+                        duplicate_recipe_id_message(result.app_id, first, recipe_path),
+                    ],
+                )
+        results.append(result)
+    return results

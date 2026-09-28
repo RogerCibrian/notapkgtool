@@ -87,6 +87,7 @@ nav:
     - paths: api/paths.md
     - powershell: api/powershell.md
     - results: api/results.md
+    - secrets: api/secrets.md
     - validation: api/validation.md
     - version: api/version.md
     - auth: api/auth.md

@@ -279,7 +279,7 @@ discovery:
   download_url_path: "download_url"
   version_pattern: "v?([0-9.]+)"   # Optional: narrow the version value with a regex
   headers:                         # Optional HTTP headers (e.g., for authentication)
-    Authorization: "${API_AUTH_HEADER}"
+    Authorization: "Bearer ${API_TOKEN}"
 
 intune:
   detection:
@@ -296,7 +296,8 @@ psadt:
     Uninstall-ADTApplication -Name "Application Name"
 ```
 
-2. Set `API_AUTH_HEADER` in your environment (see
+2. Declare `API_TOKEN` under `secrets` in `defaults/org.yaml` and set it in
+   your environment (see
    [Handle authentication tokens](#handle-authentication-tokens)).
 
 3. Validate and test:
@@ -403,24 +404,33 @@ commands; see the 7-Zip example above.
 
 ### Environment variables (recommended)
 
-`discovery.token` and each value under `discovery.headers` are replaced
-from the environment only when the whole value is exactly `${VAR}`.
-A value such as `"Bearer ${API_TOKEN}"` is sent as written, so put the
-full header value, scheme included, in the variable.
-When the variable is not set, the header is dropped (or the `api_github`
-request goes out unauthenticated) and discovery continues.
+`discovery.token` and each value under `discovery.headers` may reference an
+environment variable as `${VAR}`, anywhere in the value.
+The variable must be declared in `defaults/org.yaml` under `secrets` with
+the host it may be sent to (`api.github.com` for the `api_github` token);
+`napt discover` refuses an undeclared variable, a host the variable is not
+bound to, or an unset variable before sending the request, and
+`napt validate` reports the first two (see
+[Secrets configuration](recipe-reference.md#secrets-configuration)).
 
-1. **Set the variable in your environment:**
+1. **Declare the variable and its host in `defaults/org.yaml`:**
+   ```yaml
+   secrets:
+     API_TOKEN:
+       hosts: ["api.vendor.com"]
+   ```
+
+2. **Set the variable in your environment:**
    ```powershell
    # Windows
-   $env:API_AUTH_HEADER="Bearer <token>"
+   $env:API_TOKEN="<token>"
    ```
    ```bash
    # Linux/macOS
-   export API_AUTH_HEADER="Bearer <token>"
+   export API_TOKEN="<token>"
    ```
 
-2. **Reference it in the recipe:**
+3. **Reference it in the recipe:**
    ```yaml
    discovery:
      strategy: api_json
@@ -428,17 +438,25 @@ request goes out unauthenticated) and discovery continues.
      version_path: "version"
      download_url_path: "download_url"
      headers:
-       Authorization: "${API_AUTH_HEADER}"
+       Authorization: "Bearer ${API_TOKEN}"
    ```
 
-3. **In CI/CD, use secrets:**
+4. **In CI/CD, use secrets:**
    ```yaml
    # GitHub Actions
    - name: Discover version
      env:
-       API_AUTH_HEADER: ${{ secrets.API_AUTH_HEADER }}
+       API_TOKEN: ${{ secrets.API_TOKEN }}
      run: napt discover recipes/Vendor/app.yaml
    ```
+
+For a GitHub token, the declaration is:
+
+```yaml
+secrets:
+  GITHUB_TOKEN:
+    hosts: ["api.github.com"]
+```
 
 ### Recipe-level tokens (less secure)
 
@@ -459,6 +477,8 @@ Run these checks on a new recipe, and again after editing one.
    ```bash
    napt validate recipes/Vendor/app.yaml
    ```
+   `napt validate recipes/` checks every recipe at once, including that no
+   two files share an id.
 
 2. **Test discovery:**
    ```bash
@@ -1547,7 +1567,8 @@ installer's metadata.
      repo: "owner/repo"
      token: "${GITHUB_TOKEN}"
    ```
-3. Set `GITHUB_TOKEN` in your environment (see
+3. Declare `GITHUB_TOKEN` under `secrets` in `defaults/org.yaml` with
+   `api.github.com` as its host and set it in your environment (see
    [Handle authentication tokens](#handle-authentication-tokens))
 
 ### Issue: "download failed for ..."

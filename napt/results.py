@@ -163,6 +163,7 @@ class ValidationResult:
         recipe_path: String path to the validated recipe file.
         parent_path: String path to the parent recipe merged beneath it, or
             None when the recipe declares no parent.
+        app_id: The recipe's id, or None when it has no usable one.
     """
 
     status: str
@@ -171,3 +172,4 @@ class ValidationResult:
     app_count: int
     recipe_path: str
     parent_path: str | None = None
+    app_id: str | None = None

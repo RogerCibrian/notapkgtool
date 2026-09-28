@@ -12,6 +12,7 @@ napt/
 ├── paths.py                 # Safe filenames and folder names from external input
 ├── powershell.py            # PowerShell string quoting for generated scripts
 ├── results.py               # Result dataclasses returned by napt commands
+├── secrets.py               # Secrets a recipe may send, bound to hosts by org.yaml
 ├── validation.py            # Recipe validation logic
 ├── version.py               # NAPT's own version, read from package metadata
 │

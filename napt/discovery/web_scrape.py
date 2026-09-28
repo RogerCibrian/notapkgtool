@@ -56,12 +56,16 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 import requests
 
-from napt.discovery.base import RemoteVersion
+from napt.discovery.base import RemoteVersion, bounded
 from napt.download.download import make_session
 from napt.exceptions import ConfigError, NetworkError
 
 # Strategy-specific defaults for optional recipe fields.
 _DEFAULT_VERSION_FORMAT = "{0}"
+
+# Largest page NAPT parses. Download pages are tens of kilobytes; the cap
+# bounds what a recipe's link_pattern and the HTML parser run over.
+_MAX_PAGE_BYTES = 5 * 1024 * 1024
 
 
 class WebScrapeStrategy:
@@ -88,7 +92,8 @@ class WebScrapeStrategy:
         Raises:
             ConfigError: On missing required configuration or when
                 a selector / pattern matches nothing.
-            NetworkError: On page fetch failure.
+            NetworkError: On page fetch failure, a page larger than NAPT
+                parses, or a matched link too long to match a pattern on.
 
         """
         from napt.logging import get_global_logger
@@ -140,8 +145,13 @@ class WebScrapeStrategy:
                 f"Failed to fetch page: {response.status_code} {response.reason}"
             )
 
+        if len(response.content) > _MAX_PAGE_BYTES:
+            raise NetworkError(
+                f"Page is {len(response.content)} bytes; NAPT parses download "
+                f"pages of at most {_MAX_PAGE_BYTES} bytes"
+            )
         html_content = response.text
-        logger.verbose("DISCOVERY", f"Page fetched ({len(html_content)} bytes)")
+        logger.verbose("DISCOVERY", f"Page fetched ({len(response.content)} bytes)")
 
         # Find download link using CSS selector or regex
         download_url = None
@@ -201,6 +211,7 @@ class WebScrapeStrategy:
                 "'discovery.link_pattern' in config"
             )
 
+        download_url = bounded(download_url, "The matched download link")
         logger.verbose("DISCOVERY", f"Download URL: {download_url}")
 
         # Extract version from the download URL
