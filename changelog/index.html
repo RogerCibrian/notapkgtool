@@ -1538,6 +1538,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Unreleased">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1575,7 +1592,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#fixed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1625,7 +1642,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_1" class="md-nav__link">
+  <a href="#fixed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1703,7 +1720,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_2" class="md-nav__link">
+  <a href="#fixed_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1792,7 +1809,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_3" class="md-nav__link">
+  <a href="#fixed_4" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1820,7 +1837,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#fixed_4" class="md-nav__link">
+  <a href="#fixed_5" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1870,7 +1887,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_5" class="md-nav__link">
+  <a href="#fixed_6" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1987,7 +2004,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_6" class="md-nav__link">
+  <a href="#fixed_7" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -2037,7 +2054,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_7" class="md-nav__link">
+  <a href="#fixed_8" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -2187,6 +2204,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Unreleased">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2224,7 +2258,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#fixed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -2274,7 +2308,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_1" class="md-nav__link">
+  <a href="#fixed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -2352,7 +2386,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_2" class="md-nav__link">
+  <a href="#fixed_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -2441,7 +2475,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_3" class="md-nav__link">
+  <a href="#fixed_4" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -2469,7 +2503,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#fixed_4" class="md-nav__link">
+  <a href="#fixed_5" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -2519,7 +2553,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_5" class="md-nav__link">
+  <a href="#fixed_6" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -2636,7 +2670,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_6" class="md-nav__link">
+  <a href="#fixed_7" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -2686,7 +2720,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_7" class="md-nav__link">
+  <a href="#fixed_8" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -2754,6 +2788,25 @@
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 <h2 id="unreleased"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.11.0...HEAD">Unreleased</a></h2>
+<h3 id="fixed">Fixed</h3>
+<ul>
+<li>Fixed a write that fails part-way (a full disk, a killed process) leaving
+    a truncated deployment state file, plan file, or download sidecar that
+    the next command reports as corrupted. Each is now written to a
+    temporary file and renamed into place, so the previous file survives a
+    failed write</li>
+<li>Fixed a hand-edited deployment state file with a section of the wrong
+    shape (a <code>pending</code> entry missing its version, a ring entry without a
+    hash) crashing <code>napt status</code> or <code>napt promote</code> with a traceback. The
+    file is now rejected with a message naming the section</li>
+<li>Fixed one plan file that cannot be loaded stopping <code>napt promote apply</code>
+    before any app was applied. That app is now reported as failed with its
+    file kept, and the other apps apply</li>
+<li>Fixed <code>napt promote apply</code> and <code>napt promote plan --check-drift</code> given a
+    single recipe file reporting every other NAPT-managed app in the tenant
+    as having no recipe. The unknown-app check now runs only when the
+    command was given a recipes directory</li>
+</ul>
 <h2 id="0110-2026-09-26"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.10.0...0.11.0">0.11.0</a> - 2026-09-26</h2>
 <h3 id="added">Added</h3>
 <ul>
@@ -2886,7 +2939,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
     <code>2.0</code>; detection compares just the numeric parts, so nothing is lost.
     <code>psadt.release</code> and <code>intunewin.release</code> follow the rule too</li>
 </ul>
-<h3 id="fixed">Fixed</h3>
+<h3 id="fixed_1">Fixed</h3>
 <ul>
 <li>Fixed the shipped Git and VS Code recipes naming an installer file that is
     not in the package (<code>Git-&lt;version&gt;-64-bit.exe</code> where the vendor's file is
@@ -3094,7 +3147,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
     no longer tried; use a service principal or OIDC federation</li>
 <li>Removed the unused <code>--tenant-id</code> option from <code>napt upload</code></li>
 </ul>
-<h3 id="fixed_1">Fixed</h3>
+<h3 id="fixed_2">Fixed</h3>
 <ul>
 <li><code>napt upload</code> now honors <code>directories.package</code> instead of always looking
     in <code>packages/</code>, so a custom package directory in <code>defaults/org.yaml</code> no
@@ -3219,7 +3272,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
     which drift cannot actually know: Intune assignments carry no
     authorship, so state records are the only memory</li>
 </ul>
-<h3 id="fixed_2">Fixed</h3>
+<h3 id="fixed_3">Fixed</h3>
 <ul>
 <li>Fixed three defects in the reference GitHub Actions workflows: the
     <code>publish</code> and <code>promote-apply</code> writeback pushes now rebase and retry
@@ -3367,7 +3420,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
     file types now warn and fall back to the extracted icon instead of
     uploading with a guessed MIME type</li>
 </ul>
-<h3 id="fixed_3">Fixed</h3>
+<h3 id="fixed_4">Fixed</h3>
 <ul>
 <li>Fixed the version variable never being substituted in <code>psadt.install</code>
     and <code>psadt.uninstall</code> scripts, where it reached PowerShell as literal
@@ -3379,7 +3432,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
     working directory instead of the recipe file's location as documented</li>
 </ul>
 <h2 id="051-2026-06-22"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.5.0...0.5.1">0.5.1</a> - 2026-06-22</h2>
-<h3 id="fixed_4">Fixed</h3>
+<h3 id="fixed_5">Fixed</h3>
 <ul>
 <li>Fixed system-scope MSIX detection and requirements scripts matching any
     installed package instead of only the target app, which could cause Intune
@@ -3455,7 +3508,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
     <code>directories.discover</code>, <code>directories.build</code>, and <code>directories.package</code>.
     Update <code>defaults/org.yaml</code> if you set these keys</li>
 </ul>
-<h3 id="fixed_5">Fixed</h3>
+<h3 id="fixed_6">Fixed</h3>
 <ul>
 <li><strong>Cached installer filename now survives re-runs</strong> - NAPT stores the actual
     downloaded filename in state after each download. On subsequent runs,
@@ -3552,7 +3605,7 @@ command that produces and the command that consumes the directory</li>
 <li><strong>BREAKING: Recipe Format Change</strong> - Changed recipe format from <code>apps:</code> array to <code>app:</code> single object. Recipes now define a single application per file instead of an array. This simplifies the schema and matches actual usage (only one app was ever processed per recipe).</li>
 <li><strong>Documentation Rendering</strong> - Fixed module docstrings to follow Google-style format with proper indentation for mkdocstrings</li>
 </ul>
-<h3 id="fixed_6">Fixed</h3>
+<h3 id="fixed_7">Fixed</h3>
 <ul>
 <li>Fixed ETag preservation bug causing alternating download/cached behavior in url_download strategy</li>
 <li>Fixed docstring formatting issues across multiple modules (missing blank lines, incorrect Args sections)</li>
@@ -3575,7 +3628,7 @@ command that produces and the command that consumes the directory</li>
 <li><strong>Recipe Format</strong> - PSADT <code>install</code>/<code>uninstall</code> blocks now generate PSAppDeployToolkit v4 scripts</li>
 <li><strong>Console Output</strong> - Replaced Unicode symbols with ASCII for Windows compatibility (<code>✓</code> → <code>[OK]</code>, etc.)</li>
 </ul>
-<h3 id="fixed_7">Fixed</h3>
+<h3 id="fixed_8">Fixed</h3>
 <ul>
 <li><strong>PSADT Template Handling</strong> - Correctly identifies and copies PSAppDeployToolkit_Template_v4.zip files</li>
 <li><strong>ETag Preservation</strong> - Fixed bug causing alternating download/cached behavior in url_download strategy</li>
