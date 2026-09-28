@@ -18,6 +18,6 @@ Shared by every stage that talks to Intune or Entra ID: `napt upload`,
 `napt promote`, and `napt auth setup`.
 
 Modules:
-    client - HTTP transport with retry, throttling, and error mapping.
-    intune - Win32 app upload, app queries, and assignment calls.
+    client: HTTP transport with retry, throttling, and error mapping.
+    intune: Win32 app upload, app queries, and assignment calls.
 """

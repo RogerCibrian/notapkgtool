@@ -1,0 +1,3 @@
+# icons
+
+::: napt.build.icons

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Reference publish workflow continues past a failing app** - One app's
+    failed build, package, or upload (or a vendor no longer serving its
+    approved installer) used to end the loop, skip every app after it,
+    and skip the writeback, so an app uploaded earlier in the same run had
+    its Intune app IDs recorded nowhere. The workflow in the docs now
+    records the failure, publishes the remaining apps, always runs the
+    writeback, and fails the run at the end with the failed apps named.
+    The publish and apply workflows also gain `workflow_dispatch`, since
+    re-running a failed job checks out the old commit
+- **Reference workflows scan `.yml` recipes too**, matching `napt promote`
+
 ### Fixed
 
 - Fixed a write that fails part-way (a full disk, a killed process) leaving

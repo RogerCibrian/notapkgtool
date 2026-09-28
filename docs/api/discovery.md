@@ -1,5 +1,7 @@
 # discovery
 
+::: napt.discovery
+
 ::: napt.discovery.base
 
 ::: napt.discovery.registry

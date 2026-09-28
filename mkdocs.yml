@@ -96,12 +96,14 @@ nav:
       - packager: api/packager.md
       - registry_scripts: api/registry_scripts.md
       - msix_scripts: api/msix_scripts.md
+      - icons: api/icons.md
     - config: api/config.md
     - discovery:
       - discovery: api/discovery.md
       - manager: api/discovery-manager.md
     - download: api/download.md
     - graph: api/graph.md
+    - promote: api/promote.md
     - psadt: api/psadt.md
     - state: api/state.md
     - upload: api/upload.md

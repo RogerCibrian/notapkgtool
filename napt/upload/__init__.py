@@ -19,6 +19,6 @@ to Microsoft Intune via the Graph API. Authentication comes from
 [napt.auth][] and the Graph calls from [napt.graph][].
 
 Modules:
-    manager - Upload orchestration (load config, auth, upload flow).
-    intunewin - .intunewin ZIP parser (reads Detection.xml encryption metadata).
+    manager: Upload orchestration (load config, auth, upload flow).
+    intunewin: .intunewin ZIP parser (reads Detection.xml encryption metadata).
 """
