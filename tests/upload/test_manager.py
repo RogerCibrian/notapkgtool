@@ -5,7 +5,10 @@ from __future__ import annotations
 import base64
 from contextlib import ExitStack
 import copy
+import json
+import os
 from pathlib import Path
+import time
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -13,7 +16,7 @@ import pytest
 
 from napt.config.defaults import DEFAULT_CONFIG
 from napt.config.loader import _deep_merge_dicts
-from napt.exceptions import NetworkError, PackagingError
+from napt.exceptions import ConfigError, NetworkError, PackagingError
 from napt.state.deployment import (
     create_default_deployment_state,
     deployment_state_path,
@@ -114,7 +117,7 @@ def test_upload_package_app_only_creates_one_app(
 ) -> None:
     """Tests that build_types 'app_only' creates only the install app entry."""
     monkeypatch.chdir(tmp_path)
-    make_package_dir(tmp_path)
+    make_package_dir(tmp_path, build_types="app_only")
 
     recipe_path = tmp_path / "recipes" / "Vendor" / "test-app.yaml"
     recipe_path.parent.mkdir(parents=True)
@@ -154,7 +157,7 @@ def test_upload_package_update_only_creates_one_app(
 ) -> None:
     """Tests that build_types 'update_only' creates only the update app entry."""
     monkeypatch.chdir(tmp_path)
-    make_package_dir(tmp_path)
+    make_package_dir(tmp_path, build_types="update_only")
 
     recipe_path = tmp_path / "recipes" / "Vendor" / "test-app.yaml"
     recipe_path.parent.mkdir(parents=True)
@@ -194,7 +197,7 @@ def test_upload_package_propagates_network_error(
 ) -> None:
     """Tests that a NetworkError from the Graph API propagates out of upload_package."""
     monkeypatch.chdir(tmp_path)
-    make_package_dir(tmp_path)
+    make_package_dir(tmp_path, build_types="app_only")
 
     recipe_path = tmp_path / "recipes" / "Vendor" / "test-app.yaml"
     recipe_path.parent.mkdir(parents=True)
@@ -222,7 +225,8 @@ def test_upload_package_honors_directories_package(
 ) -> None:
     """Tests that upload reads from directories.package, not a fixed packages/."""
     monkeypatch.chdir(tmp_path)
-    make_package_dir(tmp_path / "artifacts")  # -> artifacts/packages/test-app/1.0.0
+    # -> artifacts/packages/test-app/1.0.0
+    make_package_dir(tmp_path / "artifacts", build_types="app_only")
 
     recipe_path = tmp_path / "recipes" / "Vendor" / "test-app.yaml"
     recipe_path.parent.mkdir(parents=True)
@@ -625,7 +629,9 @@ def test_upload_hash_mismatch_aborts_before_graph(
     """Tests that a pending/package hash mismatch aborts before any Graph call."""
     monkeypatch.chdir(tmp_path)
     make_package_dir(tmp_path, installer_sha256="a" * 64)
-    _seed_pending(tmp_path, sha256="b" * 64, version="2.0.0")
+    # Same version, different binary: the package folder exists but was
+    # built from something other than the recorded release.
+    _seed_pending(tmp_path, sha256="b" * 64, version="1.0.0")
 
     with pytest.raises(PackagingError, match="hash mismatch"):
         _run_upload(tmp_path, fake_metadata)
@@ -672,7 +678,7 @@ def test_upload_app_only_records_null_update_id(
 ) -> None:
     """Tests that app_only records a null update entry ID in published state."""
     monkeypatch.chdir(tmp_path)
-    make_package_dir(tmp_path, installer_sha256="a" * 64)
+    make_package_dir(tmp_path, installer_sha256="a" * 64, build_types="app_only")
 
     _run_upload(tmp_path, fake_metadata, build_types="app_only")
 
@@ -887,3 +893,235 @@ def test_upload_require_pending_passes_with_matching_pending(
     )
 
     assert result.status == "success"
+
+
+def _seed_published(tmp_path: Path, sha256: str, version: str = "1.0.0") -> Path:
+    """Writes a deployment state file with a published release and no pending."""
+    state_path = deployment_state_path(tmp_path / "state" / "deployment", "test-app")
+    state = create_default_deployment_state()
+    state["published"] = {
+        "version": version,
+        "sha256": sha256,
+        "intune_app_id": "old-install",
+        "intune_update_app_id": "old-update",
+    }
+    save_deployment_state(state, state_path)
+    return state_path
+
+
+def test_upload_require_pending_accepts_the_published_release(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that a re-run after writeback, or --force, uploads the package
+    that matches the published release even with require_pending on."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path, installer_sha256="a" * 64)
+    _seed_published(tmp_path, sha256="a" * 64)
+
+    result, _ = _run_upload(
+        tmp_path,
+        fake_metadata,
+        force=True,
+        config_overrides={"deployment": {"require_pending": True}},
+    )
+
+    assert result.status == "success"
+
+
+def test_upload_require_pending_blocks_a_package_matching_nothing(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that a package matching neither pending nor published is
+    refused under require_pending, before any Graph call."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path, installer_sha256="c" * 64)
+    _seed_published(tmp_path, sha256="a" * 64)
+
+    with pytest.raises(PackagingError, match="require_pending"):
+        _run_upload(
+            tmp_path,
+            fake_metadata,
+            config_overrides={"deployment": {"require_pending": True}},
+        )
+
+
+# =============================================================================
+# Deterministic package resolution
+# =============================================================================
+
+
+def test_upload_takes_the_recorded_release_not_the_newest_folder(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that the package folder comes from deployment state, never from
+    which folder was modified last."""
+    monkeypatch.chdir(tmp_path)
+    old_dir = make_package_dir(tmp_path, version="1.0.0", installer_sha256="a" * 64)
+    new_dir = make_package_dir(tmp_path, version="2.0.0", installer_sha256="b" * 64)
+    os.utime(old_dir, (time.time() - 100, time.time() - 100))
+    os.utime(new_dir, (time.time(), time.time()))
+    _seed_pending(tmp_path, sha256="a" * 64, version="1.0.0")
+
+    result, _ = _run_upload(tmp_path, fake_metadata)
+
+    assert result.version == "1.0.0"
+    assert result.package_path.resolve().parent == old_dir.resolve()
+
+
+def test_upload_recorded_release_without_package_says_so(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that a recorded release that was never packaged names the
+    version and the command to run."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path, version="1.0.0", installer_sha256="a" * 64)
+    _seed_pending(tmp_path, sha256="b" * 64, version="2.0.0")
+
+    with pytest.raises(ConfigError, match="2.0.0") as info:
+        _run_upload(tmp_path, fake_metadata)
+    assert "napt package" in str(info.value)
+
+
+def test_upload_several_packages_without_state_is_an_error(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that with no recorded release and several packages, upload
+    refuses instead of guessing."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path, version="1.0.0", installer_sha256="a" * 64)
+    make_package_dir(tmp_path, version="2.0.0", installer_sha256="b" * 64)
+
+    with pytest.raises(ConfigError, match="1.0.0") as info:
+        _run_upload(tmp_path, fake_metadata)
+    assert "2.0.0" in str(info.value)
+
+
+def test_upload_single_package_without_state_is_used(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that with no recorded release the only package is unambiguous."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path, version="3.0.0", installer_sha256="a" * 64)
+
+    result, _ = _run_upload(tmp_path, fake_metadata)
+
+    assert result.version == "3.0.0"
+
+
+def test_upload_intunewin_hash_mismatch_aborts_before_graph(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that a .intunewin that no longer matches what package recorded
+    is refused before any Graph call."""
+    monkeypatch.chdir(tmp_path)
+    pkg_dir = make_package_dir(tmp_path, installer_sha256="a" * 64)
+    (pkg_dir / "Invoke-AppDeployToolkit.intunewin").write_bytes(b"tampered")
+
+    with pytest.raises(PackagingError, match="intunewin") as info:
+        _run_upload(tmp_path, fake_metadata)
+    assert "napt package" in str(info.value)
+
+
+def test_upload_build_types_mismatch_aborts_before_graph(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that a recipe changed since the build is refused up front,
+    instead of committing the install entry and failing on the update."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path, installer_sha256="a" * 64, build_types="app_only")
+
+    with pytest.raises(ConfigError, match="build_types") as info:
+        _run_upload(tmp_path, fake_metadata, build_types="both")
+    assert "napt build" in str(info.value)
+
+
+def test_upload_corrupt_manifest_is_a_config_error(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that a manifest that is not JSON is reported, not a traceback."""
+    monkeypatch.chdir(tmp_path)
+    pkg_dir = make_package_dir(tmp_path, installer_sha256="a" * 64)
+    (pkg_dir / "build-manifest.json").write_text("{not json", encoding="utf-8")
+
+    with pytest.raises(ConfigError, match="build-manifest.json"):
+        _run_upload(tmp_path, fake_metadata)
+
+
+def test_upload_manifest_that_is_not_an_object_is_a_config_error(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that a manifest holding a JSON array is reported."""
+    monkeypatch.chdir(tmp_path)
+    pkg_dir = make_package_dir(tmp_path, installer_sha256="a" * 64)
+    (pkg_dir / "build-manifest.json").write_text("[]", encoding="utf-8")
+
+    with pytest.raises(ConfigError, match="not a JSON object"):
+        _run_upload(tmp_path, fake_metadata)
+
+
+@pytest.mark.parametrize(
+    "key", ["win32_build_types", "detection_script_path", "intunewin_sha256"]
+)
+def test_upload_manifest_missing_a_required_key_is_a_config_error(
+    tmp_path: Path, monkeypatch, fake_metadata, key
+) -> None:
+    """Tests that a manifest without a field upload relies on is reported."""
+    monkeypatch.chdir(tmp_path)
+    pkg_dir = make_package_dir(tmp_path, installer_sha256="a" * 64)
+    manifest_path = pkg_dir / "build-manifest.json"
+    data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    del data[key]
+    manifest_path.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(ConfigError, match=f"has no {key}"):
+        _run_upload(tmp_path, fake_metadata)
+
+
+def test_upload_missing_intunewin_named_by_the_manifest_is_an_error(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that a package whose .intunewin is gone is reported by name."""
+    monkeypatch.chdir(tmp_path)
+    pkg_dir = make_package_dir(tmp_path, installer_sha256="a" * 64)
+    (pkg_dir / "Invoke-AppDeployToolkit.intunewin").unlink()
+
+    with pytest.raises(PackagingError, match="Invoke-AppDeployToolkit.intunewin"):
+        _run_upload(tmp_path, fake_metadata)
+
+
+@pytest.mark.parametrize(
+    ("build_types", "script"),
+    [("app_only", "test-app-Detection.ps1"), ("both", "test-app-Requirements.ps1")],
+)
+def test_upload_missing_script_named_by_the_manifest_is_a_config_error(
+    tmp_path: Path, monkeypatch, fake_metadata, build_types, script
+) -> None:
+    """Tests that a script the manifest names but the folder lacks stops the
+    upload before any Graph call."""
+    monkeypatch.chdir(tmp_path)
+    pkg_dir = make_package_dir(
+        tmp_path, installer_sha256="a" * 64, build_types=build_types
+    )
+    (pkg_dir / script).unlink()
+
+    with pytest.raises(ConfigError, match="script") as info:
+        _run_upload(tmp_path, fake_metadata, build_types=build_types)
+    assert "napt package" in str(info.value)
+
+
+def test_upload_reads_scripts_named_by_the_manifest(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that a stale script left in the folder is never picked over
+    the one the manifest names, whatever their names sort as."""
+    monkeypatch.chdir(tmp_path)
+    pkg_dir = make_package_dir(
+        tmp_path, installer_sha256="a" * 64, build_types="app_only"
+    )
+    (pkg_dir / "AAA-Stale-Detection.ps1").write_text("# stale", encoding="utf-8")
+
+    _, mocks = _run_upload(tmp_path, fake_metadata, build_types="app_only")
+
+    payload = mocks["create_app"].call_args.args[1]
+    detection = next(r for r in payload["rules"] if r["ruleType"] == "detection")
+    assert base64.b64decode(detection["scriptContent"]) == b"# detection"

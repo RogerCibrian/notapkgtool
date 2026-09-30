@@ -113,6 +113,35 @@ def deployment_state_path(state_dir: Path, recipe_id: str) -> Path:
     return state_dir / f"{recipe_id}.json"
 
 
+def working_release(state_dir: Path, recipe_id: str) -> dict[str, Any] | None:
+    """Reads the release the pipeline commands act on for an app.
+
+    That is the pending release (awaiting publication), or the published
+    release when nothing is pending, which is the case when rebuilding,
+    re-packaging, or re-uploading the current version. ``napt build``,
+    ``napt package``, and ``napt upload`` all resolve their input from this
+    entry and verify it by hash, so none of them has to guess which folder
+    on disk is the right one.
+
+    Args:
+        state_dir: State root (``directories.state``); the app's file lives
+            under its ``deployment/`` subfolder.
+        recipe_id: Recipe identifier (from recipe's 'id' field).
+
+    Returns:
+        The release entry (``version``, ``sha256``, and for a pending
+            release ``url``), or None when no release is recorded.
+
+    Raises:
+        StateError: If the deployment state file exists but is corrupted
+            or has an unsupported schema version.
+    """
+    state = load_deployment_state(
+        deployment_state_path(state_dir / "deployment", recipe_id)
+    )
+    return state.get("pending") or state.get("published")
+
+
 def create_default_deployment_state() -> dict[str, Any]:
     """Creates an empty deployment state structure.
 

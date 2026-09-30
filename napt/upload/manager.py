@@ -14,9 +14,16 @@
 
 """Upload orchestrator for NAPT Intune deployment.
 
-Coordinates the full upload pipeline: loading recipe config, inferring the
-package path, authenticating, parsing the .intunewin file, building app
-metadata, and executing the Graph API upload flow.
+Coordinates the full upload pipeline: loading recipe config, locating the
+package of the recorded release, verifying it, authenticating, parsing the
+.intunewin file, building app metadata, and executing the Graph API upload
+flow.
+
+The package is found through deployment state and the build manifest,
+never by guessing: the version comes from the recorded release (pending,
+else published), the manifest names the .intunewin file and the scripts,
+and the .intunewin is re-hashed against what ``napt package`` recorded
+before anything is sent.
 """
 
 from __future__ import annotations
@@ -30,6 +37,7 @@ from typing import Any
 from napt.auth.credentials import get_access_token
 from napt.build.icons import MAX_ICON_BYTES
 from napt.config.loader import load_effective_config
+from napt.download.download import sha256_file
 from napt.exceptions import ConfigError, PackagingError
 from napt.graph.intune import (
     commit_content_version,
@@ -50,6 +58,7 @@ from napt.state.deployment import (
     load_deployment_state,
     record_published,
     save_deployment_state,
+    working_release,
 )
 from napt.state.stamp import (
     ENTRY_INSTALL,
@@ -112,56 +121,94 @@ _ARCH_MAP: dict[str, str | None] = {
 }
 
 
-def _infer_package_dir(packages_dir: Path, app_id: str) -> tuple[Path, str]:
-    """Find the versioned package directory and .intunewin file for an app.
+def _locate_package_dir(
+    packages_dir: Path, app_id: str, release: dict[str, Any] | None
+) -> Path:
+    """Finds the versioned package directory for the release to upload.
 
-    Scans {packages_dir}/{app_id}/ for a single version subdirectory created
-    by 'napt package'. The package directory is self-contained: it holds the
-    .intunewin file and the detection/requirements scripts copied during
-    packaging, so upload does not need to access the builds directory.
+    The version comes from the recorded release, so every machine with
+    the state file picks the same folder. With no recorded release, the
+    only package is used; several packages then need a recorded release,
+    since picking one by modification time would upload whichever was
+    touched last.
 
     Args:
         packages_dir: Root packages directory (``directories.package``).
         app_id: Application identifier (from recipe app.id).
+        release: The recorded release from deployment state, or None.
 
     Returns:
-        A tuple of (package_path, version_str) where package_path is the
-            .intunewin file and version_str is the version name (directory
-            name).
+        The version directory ``{packages_dir}/{app_id}/{version}/``.
 
     Raises:
-        ConfigError: If no package directory exists for the app, or the
-            .intunewin file is missing from the version directory.
+        ConfigError: If no package directory exists for the app, the
+            recorded release was never packaged, or several packages exist
+            and none is recorded.
 
     """
     app_package_dir = packages_dir / app_id
 
-    if not app_package_dir.exists():
+    if not app_package_dir.is_dir():
         raise ConfigError(
             f"No package found for '{app_id}' in {packages_dir}. "
             "Run 'napt package' first."
         )
 
-    version_dirs = [d for d in app_package_dir.iterdir() if d.is_dir()]
+    if release is not None:
+        version_dir = app_package_dir / release["version"]
+        if not (version_dir / "build-manifest.json").is_file():
+            raise ConfigError(
+                f"Deployment state records release {release['version']} for "
+                f"'{app_id}', but there is no package of it in "
+                f"{app_package_dir}. Run 'napt package' first."
+            )
+        return version_dir
 
+    version_dirs = sorted(
+        d for d in app_package_dir.iterdir() if (d / "build-manifest.json").is_file()
+    )
     if not version_dirs:
         raise ConfigError(
             f"No packaged version found for '{app_id}' in {app_package_dir}. "
             "Run 'napt package' first."
         )
-
-    # Single-slot: there should be exactly one version dir, but take the most
-    # recently modified in case of an interrupted previous run.
-    version_dir = max(version_dirs, key=lambda d: d.stat().st_mtime)
-    intunewin_files = list(version_dir.glob("*.intunewin"))
-
-    if not intunewin_files:
+    if len(version_dirs) > 1:
+        names = ", ".join(d.name for d in version_dirs)
         raise ConfigError(
-            f"No .intunewin file found in {version_dir}\n"
-            "Run 'napt package' to recreate the package."
+            f"'{app_id}' has no recorded release and several packages ({names}). "
+            "Run 'napt discover' to record the release, then 'napt package'."
         )
+    return version_dirs[0]
 
-    return intunewin_files[0], version_dir.name
+
+def _verify_package_file(package_dir: Path, manifest: dict[str, Any]) -> Path:
+    """Finds the .intunewin the manifest names and checks it is unchanged.
+
+    Args:
+        package_dir: Versioned package directory.
+        manifest: The package's manifest.
+
+    Returns:
+        Path to the .intunewin file.
+
+    Raises:
+        PackagingError: If the file is missing or its hash differs from
+            the one 'napt package' recorded.
+
+    """
+    package_path = package_dir / manifest["intunewin_filename"]
+    if not package_path.is_file():
+        raise PackagingError(
+            f"{package_path} is missing. Run 'napt package' to recreate the package."
+        )
+    actual = sha256_file(package_path)
+    if actual != manifest["intunewin_sha256"]:
+        raise PackagingError(
+            f"The .intunewin in {package_dir} does not match the hash "
+            f"'napt package' recorded (expected {manifest['intunewin_sha256']}, "
+            f"found {actual}). Run 'napt package' to recreate the package."
+        )
+    return package_path
 
 
 def _load_icon_bytes(path: Path, logger: Any) -> bytes | None:
@@ -275,9 +322,10 @@ def _read_build_manifest(package_dir: Path) -> dict[str, Any]:
         The parsed build manifest.
 
     Raises:
-        ConfigError: If the manifest is missing, or its architecture or
-            installer_sha256 fields are absent or unrecognized. Run
-            'napt build' and 'napt package' to recreate the package.
+        ConfigError: If the manifest is missing, not JSON, or lacks a field
+            upload relies on (architecture, installer hash, build types,
+            script and package names). Run 'napt build' and 'napt package'
+            to recreate the package.
 
     """
     manifest_path = package_dir / "build-manifest.json"
@@ -286,7 +334,29 @@ def _read_build_manifest(package_dir: Path) -> dict[str, Any]:
             f"Build manifest not found in {package_dir}. "
             "Run 'napt package' to recreate the package."
         )
-    manifest: dict[str, Any] = json.loads(manifest_path.read_text(encoding="utf-8"))
+    try:
+        manifest: dict[str, Any] = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as err:
+        raise ConfigError(
+            f"Cannot read build-manifest.json in {package_dir}: {err}. "
+            "Run 'napt package' to recreate the package."
+        ) from err
+    if not isinstance(manifest, dict):
+        raise ConfigError(
+            f"build-manifest.json in {package_dir} is not a JSON object. "
+            "Run 'napt package' to recreate the package."
+        )
+    for key in (
+        "win32_build_types",
+        "detection_script_path",
+        "intunewin_filename",
+        "intunewin_sha256",
+    ):
+        if not isinstance(manifest.get(key), str) or not manifest[key]:
+            raise ConfigError(
+                f"build-manifest.json in {package_dir} has no {key}. "
+                "Run 'napt build' and 'napt package' to recreate the package."
+            )
 
     arch_raw: str = manifest.get("architecture") or ""
     if not arch_raw:
@@ -373,15 +443,15 @@ def _build_app_metadata(
 
     allowed_architectures: str | None = _ARCH_MAP[manifest["architecture"]]
 
-    # Detection script (always required)
-    detection_scripts = sorted(package_dir.glob("*-Detection.ps1"))
-    if not detection_scripts:
+    # Detection script (always required), the one the manifest names
+    detection_script = package_dir / manifest["detection_script_path"]
+    if not detection_script.is_file():
         raise ConfigError(
-            f"Detection script not found in {package_dir}. "
-            "Run 'napt package' to recreate the package."
+            f"Detection script {detection_script.name} not found in "
+            f"{package_dir}. Run 'napt package' to recreate the package."
         )
-    detection_content = base64.b64encode(detection_scripts[0].read_bytes()).decode()
-    logger.verbose("UPLOAD", f"Detection script: {detection_scripts[0].name}")
+    detection_content = base64.b64encode(detection_script.read_bytes()).decode()
+    logger.verbose("UPLOAD", f"Detection script: {detection_script.name}")
 
     enforce_sig: bool = intune["enforce_signature_check"]
     run_as_32_bit: bool = intune["run_as_32_bit"]
@@ -397,22 +467,23 @@ def _build_app_metadata(
         }
     ]
 
-    # Requirements script (update entries only)
+    # Requirements script (update entries only), the one the manifest names
     if build_types == "update_only":
-        req_scripts = sorted(package_dir.glob("*-Requirements.ps1"))
-        if not req_scripts:
+        req_name = manifest.get("requirements_script_path")
+        req_script = package_dir / req_name if isinstance(req_name, str) else None
+        if req_script is None or not req_script.is_file():
             raise ConfigError(
                 f"Requirements script not found in {package_dir} "
                 "(when build_types is "
                 "'both' or 'update_only'). "
-                "Run 'napt package' to recreate the package."
+                "Run 'napt build' and 'napt package' to recreate the package."
             )
-        req_content = base64.b64encode(req_scripts[0].read_bytes()).decode()
-        logger.verbose("UPLOAD", f"Requirements script: {req_scripts[0].name}")
+        req_content = base64.b64encode(req_script.read_bytes()).decode()
+        logger.verbose("UPLOAD", f"Requirements script: {req_script.name}")
         rules.append(
             {
                 "@odata.type": "#microsoft.graph.win32LobAppPowerShellScriptRule",
-                "displayName": req_scripts[0].name,
+                "displayName": req_script.name,
                 "ruleType": "requirement",
                 "enforceSignatureCheck": enforce_sig,
                 "runAs32Bit": run_as_32_bit,
@@ -650,17 +721,20 @@ def _upload_single_app(
 def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
     """Upload a packaged app to Microsoft Intune via the Graph API.
 
-    Loads the recipe config, infers the .intunewin package path, authenticates
-    using the available Azure credential, parses encryption metadata from the
-    package, and executes the full Graph API upload flow.
+    Loads the recipe config, locates the package of the release deployment
+    state records, verifies it, authenticates using the available Azure
+    credential, parses encryption metadata from the package, and executes
+    the full Graph API upload flow.
 
     When intune.build_types is "both" (the default), two Intune app entries are
     created: an install entry (detection script only) and an update entry
     (detection + requirements scripts). Each entry is created, uploaded, and
-    committed in sequence before moving to the next.
+    committed in sequence before moving to the next. The recipe's
+    build_types must be the one the package was built with.
 
-    The package directory is inferred as packages/{app.id}/{version}/.
-    Run 'napt package' before calling this function.
+    The package directory is packages/{app.id}/{version}/ for the recorded
+    release (pending, else published), or the only package when none is
+    recorded. Run 'napt package' before calling this function.
 
     Authentication needs no configuration file:
 
@@ -668,14 +742,16 @@ def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
     - CI/CD: set AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_CLIENT_SECRET, or use
         OIDC federation
 
-    Before any Graph call, the package's installer hash (from the build
+    Before any Graph call, the .intunewin is re-hashed against what 'napt
+    package' recorded, and the package's installer hash (from the build
     manifest) is verified against the pending release recorded in the app's
     deployment state, so what was recorded at discovery is byte-for-byte
-    what ships. A hash mismatch aborts the upload. When no pending release
-    is recorded, the upload proceeds with a warning, or fails when
-    deployment.require_pending is enabled. On success, the deployment
-    state records the published version, hash, and Intune app IDs, and a
-    matching pending slot is cleared.
+    what ships. A hash mismatch aborts the upload. A package matching the
+    published release (a re-run after writeback, or a --force refresh)
+    passes too. When it matches neither, the upload proceeds with a
+    warning, or fails when deployment.require_pending is enabled. On
+    success, the deployment state records the published version, hash, and
+    Intune app IDs, and a matching pending slot is cleared.
 
     Re-running an upload is safe: existing NAPT-stamped apps matching this
     publish instance (recipe id, entry type, installer hash) are adopted
@@ -698,14 +774,17 @@ def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
             intune_update_app_id is None when build_types is "app_only".
 
     Raises:
-        ConfigError: If the package directory is not found, or detection/
-            requirements scripts are absent from the package directory.
-            Run 'napt package' to create or recreate the package.
+        ConfigError: If the package of the recorded release is not found,
+            several packages exist with none recorded, the manifest is
+            unusable, the recipe's build_types differs from the package's,
+            or a script the manifest names is missing. Run 'napt package'
+            to create or recreate the package.
         AuthError: If all Azure credential methods fail.
         NetworkError: If Graph API or Azure Blob Storage calls fail.
-        PackagingError: If the .intunewin file is malformed, the
-            package's installer hash does not match the pending release
-            in deployment state, or no pending release is recorded while
+        PackagingError: If the .intunewin file is malformed or no longer
+            matches the hash 'napt package' recorded, the package's
+            installer hash does not match the pending release in deployment
+            state, or it matches neither pending nor published while
             deployment.require_pending is enabled.
         StateError: On a corrupted deployment state file.
 
@@ -735,24 +814,39 @@ def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
     # Resolve the app icon once; it is shared by the install and update entries
     large_icon = _resolve_large_icon(config)
 
-    # Step 1: Locate the package directory
+    # Step 1: Locate the package of the recorded release and verify it
     total_steps = 9 if build_types == "both" else 6
     logger.step(1, total_steps, "Locating .intunewin package...")
+    state_dir = Path(config["directories"]["state"])
+    state_path = deployment_state_path(state_dir / "deployment", app_id)
+    state = load_deployment_state(state_path)
+    release = working_release(state_dir, app_id)
     packages_dir = Path(config["directories"]["package"])
-    package_path, version = _infer_package_dir(packages_dir, app_id)
+    package_dir = _locate_package_dir(packages_dir, app_id, release)
+    version = package_dir.name
+    manifest = _read_build_manifest(package_dir)
+    package_path = _verify_package_file(package_dir, manifest)
+    installer_sha256: str = manifest["installer_sha256"]
     logger.verbose("UPLOAD", f"Package: {package_path}")
     logger.verbose("UPLOAD", f"Version: {version}")
 
-    manifest = _read_build_manifest(package_path.parent)
-    installer_sha256: str = manifest["installer_sha256"]
+    # The package was built for one build_types; the metadata below comes
+    # from the recipe. They must agree, or one entry would be committed
+    # before the other fails on a script the package does not hold.
+    built_types: str = manifest["win32_build_types"]
+    if built_types != build_types:
+        raise ConfigError(
+            f"The package of '{app_id}' was built with build_types "
+            f"'{built_types}', but the recipe now says '{build_types}'. Run "
+            "'napt build' and 'napt package' so the package matches the recipe."
+        )
 
     # Verify provenance against deployment state before any Graph call:
-    # what was recorded at discovery must be byte-for-byte what ships.
-    state_path = deployment_state_path(
-        Path(config["directories"]["state"]) / "deployment", app_id
-    )
-    state = load_deployment_state(state_path)
+    # what was recorded at discovery must be byte-for-byte what ships. A
+    # package matching the published release is a re-run after writeback
+    # or a --force refresh, and passes too.
     pending = state.get("pending")
+    published = state.get("published")
     if pending:
         if pending.get("sha256") != installer_sha256:
             raise PackagingError(
@@ -768,10 +862,16 @@ def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
         logger.info(
             "UPLOAD", f"Package matches pending release (sha256 {installer_sha256})"
         )
+    elif published and published.get("sha256") == installer_sha256:
+        logger.info(
+            "UPLOAD",
+            f"Package matches the published release (sha256 {installer_sha256})",
+        )
     elif config["deployment"]["require_pending"]:
         raise PackagingError(
             f"No pending release recorded for '{app_id}' and "
-            "deployment.require_pending is enabled.\n"
+            "deployment.require_pending is enabled, and the package does not "
+            "match the published release.\n"
             "Run 'napt discover' to record the release, or add a pending "
             f"entry (version, sha256, url) to {state_path}."
         )

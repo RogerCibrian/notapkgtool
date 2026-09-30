@@ -289,51 +289,63 @@ To replace or pin an icon, see
 
 ### Package process (`napt package`)
 
-1. **Resolve build directory** - Scans `builds/{app_id}/` for the most recently
-   modified version directory that contains a `packagefiles/` folder.
-   Use `--version VERSION` to target a specific version instead.
-2. **Verify structure** - Checks that the build directory has the required
-   PSADT structure:
-    - `PSAppDeployToolkit/` directory
-    - `Files/` directory
-    - `Invoke-AppDeployToolkit.ps1` script
-    - `Invoke-AppDeployToolkit.exe` launcher
+1. **Resolve the build** - Packages the build of the release recorded in
+   deployment state (pending, else published), the same release `napt build`
+   built, so every machine with the state file packages the same version.
+   With no recorded release, the only completed build under
+   `builds/{app_id}/` is used; several builds then need `--version VERSION`.
+   Nothing is chosen by modification time.
+2. **Verify the build** - Checks that `packagefiles/` has the required PSADT
+   structure (`PSAppDeployToolkit/`, `Files/`,
+   `Invoke-AppDeployToolkit.ps1`, `Invoke-AppDeployToolkit.exe`), that the
+   installer inside it matches the hash in `build-manifest.json`, and that
+   this hash is the recorded release's.
+   A mismatch stops packaging; run `napt build` again.
 3. **Get IntuneWinAppUtil** - Downloads `IntuneWinAppUtil.exe` from
    Microsoft's GitHub repository if not already cached.
    The release is controlled by `intunewin.release` in `defaults/org.yaml`
    (default: `"latest"`).
    The tool is cached under `cache/tools/{version}/`, so each pinned release
    is stored independently.
-4. **Create package** - Runs `IntuneWinAppUtil.exe` to create the
-   `.intunewin` file:
+4. **Create package** - Replaces `packages/{app_id}/{version}/` and runs
+   `IntuneWinAppUtil.exe` into it:
     - Input: the build's `packagefiles/` subdirectory (PSADT structure)
     - Output: `Invoke-AppDeployToolkit.intunewin` in
       `packages/{app_id}/{version}/`
-    - Only one version is kept on disk per app: the previous version's
-      package folder is removed first, so a failed run leaves no package;
-      re-run `napt package`.
-5. **Copy detection scripts** - Copies `*-Detection.ps1`,
-   `*-Requirements.ps1`, and `build-manifest.json` from the build version
-   directory into `packages/{app_id}/{version}/`, so `napt upload` does not
-   need the builds directory.
-6. **Optional cleanup** - With `--clean-source`, removes the build version
-   directory after successful packaging.
+    - Other versions' package folders are never touched, and a failed run
+      leaves them as they were.
+5. **Copy detection scripts and write the manifest** - Copies the detection
+   and requirements scripts named in `build-manifest.json` from the build
+   version directory into `packages/{app_id}/{version}/`, then writes the
+   manifest there with the `.intunewin` filename and hash added, so
+   `napt upload` does not need the builds directory and can verify the
+   package before sending it.
 
-**Output**: `.intunewin` and detection scripts in
+**Output**: `.intunewin`, detection scripts, and the manifest in
 `packages/{app_id}/{version}/`, ready for `napt upload`.
+Two runs of `IntuneWinAppUtil.exe` never produce the same bytes (the tool
+generates a fresh encryption key each time), so re-packaging always yields a
+new `.intunewin`, and two packages of one version cannot be compared by hash.
 
 ### Upload process (`napt upload`)
 
 Run `napt package` first.
 
-1. **Locate package** - Scans `packages/{app_id}/` (`directories.package`)
-   for the versioned subdirectory created by `napt package` and reads
-   `Invoke-AppDeployToolkit.intunewin` from it.
-   Verifies the package's installer hash (from the build manifest) against the
-   pending release in the app's deployment state; a mismatch aborts the upload,
-   so what was recorded at discovery is byte-for-byte what ships.
-   When no pending release is recorded, the upload proceeds with a warning,
-   or fails when `deployment.require_pending` is enabled.
+1. **Locate and verify the package** - Opens
+   `packages/{app_id}/{version}/` (`directories.package`) for the release
+   recorded in deployment state (pending, else published), or the only
+   package when none is recorded, and reads the `.intunewin` file and the
+   scripts named in its `build-manifest.json`.
+   Re-hashes the `.intunewin` against the hash `napt package` recorded, and
+   verifies the package's installer hash (from the build manifest) against
+   the pending release in the app's deployment state; a mismatch aborts the
+   upload, so what was recorded at discovery is byte-for-byte what ships.
+   A package matching the published release (a re-run after writeback, or
+   `--force`) passes too.
+   When it matches neither, the upload proceeds with a warning, or fails when
+   `deployment.require_pending` is enabled.
+   The recipe's `build_types` must be the one the package was built with;
+   otherwise the upload stops before any Graph call.
 2. **Authenticate** - Uses the CI/CD environment credential or the session
    from `napt auth login` (see [Authentication](#authentication) below).
 3. **Parse package metadata** - Reads encryption metadata from `Detection.xml`
@@ -718,7 +730,8 @@ napt build recipes/Google/chrome.yaml [OPTIONS]
 ### napt package
 
 Creates a `.intunewin` package for a recipe's build.
-Without `--version`, packages the most recently modified build.
+Without `--version`, packages the build of the release recorded in deployment
+state, or the only build when none is recorded.
 See [Package process](#package-process-napt-package).
 
 ```bash
@@ -819,9 +832,11 @@ See [Downgrades](#downgrades).
 
 ### napt upload
 
-Uploads the `.intunewin` package to Microsoft Intune via the Graph API.
+Uploads the `.intunewin` package of the recorded release to Microsoft Intune
+via the Graph API.
 Uses the CI/CD environment credential when set, otherwise the session from
 `napt auth login`.
+See [Upload process](#upload-process-napt-upload).
 
 ```bash
 napt upload recipes/Google/chrome.yaml [OPTIONS]
@@ -1249,6 +1264,7 @@ to its own:
 | `napt discover` | `--output-dir` | Where to save downloaded installers | `directories.discover` | `downloads` |
 | `napt discover` | `--state-dir` | Per-app deployment state (`<dir>/deployment/`) | `directories.state` | `state` |
 | `napt build` | `--state-dir` | Where to read the release to build (`<dir>/deployment/`) | `directories.state` | `state` |
+| `napt package` | `--state-dir` | Where to read the release to package (`<dir>/deployment/`) | `directories.state` | `state` |
 | `napt promote` | `--state-dir` | Deployment state and plan files | `directories.state` | `state` |
 | `napt status` | `--state-dir` | Deployment state to summarize (no config lookup) | - | `state` |
 | `napt build` | `--downloads-dir` | Where to find the installer | `directories.discover` | `downloads` |
