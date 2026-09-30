@@ -49,7 +49,7 @@ from napt.build.registry_scripts import (
     generate_requirements_script,
 )
 from napt.config.loader import load_effective_config
-from napt.download.download import DOWNLOAD_PART_SUFFIX, sha256_file
+from napt.download.download import sha256_file
 from napt.exceptions import ConfigError, PackagingError, StateError
 from napt.paths import is_safe_path_component
 from napt.powershell import (
@@ -245,7 +245,7 @@ def _find_installer_file(
             [
                 p
                 for p in version_dir.iterdir()
-                if p.is_file() and p.suffix != DOWNLOAD_PART_SUFFIX
+                if p.is_file() and p.suffix.lower() in _INSTALLER_SUFFIXES
             ]
             if version_dir.is_dir()
             else []
@@ -286,6 +286,24 @@ def _find_installer_file(
     )
 
 
+def _write_build_file(path: Path, text: str, encoding: str) -> None:
+    """Writes a generated build file, reporting a refused write by path.
+
+    Args:
+        path: Where to write.
+        text: The file's content.
+        encoding: Text encoding; generated scripts use
+            ``PS_SCRIPT_ENCODING``.
+
+    Raises:
+        PackagingError: If the file cannot be written.
+    """
+    try:
+        path.write_text(text, encoding=encoding)
+    except OSError as err:
+        raise PackagingError(f"Cannot write {path}: {err}") from err
+
+
 def _create_build_directory(base_dir: Path, app_id: str, version: str) -> Path:
     """Create the build directory structure.
 
@@ -307,8 +325,8 @@ def _create_build_directory(base_dir: Path, app_id: str, version: str) -> Path:
             (build_dir/packagefiles/).
 
     Raises:
-        PackagingError: If the version cannot be used as a folder name.
-        OSError: If directory creation fails.
+        PackagingError: If the version cannot be used as a folder name, or
+            the directory cannot be created.
     """
     from napt.logging import get_global_logger
 
@@ -324,13 +342,18 @@ def _create_build_directory(base_dir: Path, app_id: str, version: str) -> Path:
     version_dir = base_dir / app_id / version
     packagefiles_dir = version_dir / "packagefiles"
 
-    if version_dir.exists():
-        logger.verbose("BUILD", f"Build directory exists: {version_dir}")
-        logger.verbose("BUILD", "Removing existing build...")
-        shutil.rmtree(version_dir)
+    try:
+        if version_dir.exists():
+            logger.verbose("BUILD", f"Build directory exists: {version_dir}")
+            logger.verbose("BUILD", "Removing existing build...")
+            shutil.rmtree(version_dir)
 
-    # Create the packagefiles subdirectory
-    packagefiles_dir.mkdir(parents=True, exist_ok=True)
+        # Create the packagefiles subdirectory
+        packagefiles_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as err:
+        raise PackagingError(
+            f"Cannot create build directory {packagefiles_dir}: {err}"
+        ) from err
 
     logger.verbose("BUILD", f"Created build directory: {packagefiles_dir}")
 
@@ -355,8 +378,8 @@ def _copy_psadt_template(psadt_cache_dir: Path, build_dir: Path) -> None:
             should be copied.
 
     Raises:
-        PackagingError: If PSADT cache directory or required files don't exist.
-        OSError: If copy operation fails.
+        PackagingError: If PSADT cache directory or required files don't
+            exist, or the copy fails.
     """
     from napt.logging import get_global_logger
 
@@ -367,15 +390,20 @@ def _copy_psadt_template(psadt_cache_dir: Path, build_dir: Path) -> None:
     logger.verbose("BUILD", f"Copying PSADT template from cache: {psadt_cache_dir}")
 
     # Copy all files and directories from the template root
-    for item in psadt_cache_dir.iterdir():
-        dest = build_dir / item.name
+    try:
+        for item in psadt_cache_dir.iterdir():
+            dest = build_dir / item.name
 
-        if item.is_dir():
-            shutil.copytree(item, dest)
-            logger.verbose("BUILD", f"  Copied directory: {item.name}/")
-        else:
-            shutil.copy2(item, dest)
-            logger.verbose("BUILD", f"  Copied file: {item.name}")
+            if item.is_dir():
+                shutil.copytree(item, dest)
+                logger.verbose("BUILD", f"  Copied directory: {item.name}/")
+            else:
+                shutil.copy2(item, dest)
+                logger.verbose("BUILD", f"  Copied file: {item.name}")
+    except OSError as err:
+        raise PackagingError(
+            f"Cannot copy the PSADT template into {build_dir}: {err}"
+        ) from err
 
     logger.verbose("BUILD", "[OK] PSADT template copied")
 
@@ -388,7 +416,7 @@ def _copy_installer(installer_file: Path, build_dir: Path) -> None:
         build_dir: Build directory (packagefiles subdirectory).
 
     Raises:
-        OSError: If copy operation fails.
+        PackagingError: If the copy fails.
     """
     from napt.logging import get_global_logger
 
@@ -398,7 +426,12 @@ def _copy_installer(installer_file: Path, build_dir: Path) -> None:
 
     logger.verbose("BUILD", f"Copying installer: {installer_file.name}")
 
-    shutil.copy2(installer_file, dest)
+    try:
+        shutil.copy2(installer_file, dest)
+    except OSError as err:
+        raise PackagingError(
+            f"Cannot copy installer {installer_file.name} to {files_dir}: {err}"
+        ) from err
 
     logger.verbose("BUILD", "[OK] Installer copied to Files/")
 
@@ -416,7 +449,7 @@ def _apply_branding(config: dict[str, Any], build_dir: Path) -> None:
 
     Raises:
         FileNotFoundError: If branding files don't exist.
-        OSError: If file copy operation fails.
+        PackagingError: If a brand asset cannot be copied.
     """
     from napt.logging import get_global_logger
 
@@ -460,11 +493,14 @@ def _apply_branding(config: dict[str, Any], build_dir: Path) -> None:
         target = build_dir / target_path
         target_with_ext = Path(str(target) + source_file.suffix)
 
-        # Ensure parent directory exists
-        target_with_ext.parent.mkdir(parents=True, exist_ok=True)
-
-        # Copy file
-        shutil.copy2(source_file, target_with_ext)
+        try:
+            target_with_ext.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_file, target_with_ext)
+        except OSError as err:
+            raise PackagingError(
+                f"Cannot copy brand asset {source_file.name} to "
+                f"{target_with_ext}: {err}"
+            ) from err
         logger.verbose("BUILD", f"  {source_file.name} -> {target_with_ext.name}")
 
     logger.verbose("BUILD", "[OK] Branding applied")
@@ -843,7 +879,7 @@ def _write_build_manifest(
         Path to the generated manifest file.
 
     Raises:
-        OSError: If the manifest file cannot be written.
+        PackagingError: If the manifest file cannot be written.
 
     """
     from napt.logging import get_global_logger
@@ -875,7 +911,7 @@ def _write_build_manifest(
         manifest_path.write_text(manifest_json, encoding="utf-8")
         logger.verbose("BUILD", f"Build manifest written to: {manifest_path}")
     except OSError as err:
-        raise OSError(
+        raise PackagingError(
             f"Failed to write build manifest to {manifest_path}: {err}"
         ) from err
 
@@ -1389,7 +1425,7 @@ def build_package(
 
     # Write generated script
     script_dest = build_dir / "Invoke-AppDeployToolkit.ps1"
-    script_dest.write_text(invoke_script, encoding=PS_SCRIPT_ENCODING)
+    _write_build_file(script_dest, invoke_script, PS_SCRIPT_ENCODING)
     logger.verbose("BUILD", "[OK] Generated Invoke-AppDeployToolkit.ps1")
 
     # Copy installer

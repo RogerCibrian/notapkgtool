@@ -226,3 +226,10 @@ class TestExtractMsixMetadata:
         metadata = extract_msix_metadata(msix_path)
 
         assert metadata.publisher == ""
+
+    def test_malformed_manifest_xml(self, tmp_path):
+        """Tests that a manifest that is not well-formed XML is reported."""
+        msix_path = _create_msix(tmp_path / "app.msix", "<Package><Identity")
+
+        with pytest.raises(PackagingError, match="not valid XML"):
+            extract_msix_metadata(msix_path)

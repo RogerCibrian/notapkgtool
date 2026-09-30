@@ -46,6 +46,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass
+import os
 from pathlib import Path
 import shutil
 import struct
@@ -600,23 +601,38 @@ if ($null -eq $db) {{
 $view = $db.OpenView("SELECT Value FROM Property WHERE Property = 'ARPPRODUCTICON'")
 $view.Execute()
 $record = $view.Fetch()
-if ($record) {{ $record.StringData(1) }} else {{ '' }}
+$arpIcon = if ($record) {{ $record.StringData(1) }} else {{ '' }}
 $view.Close()
 if ($db.TablePersistent('Icon') -ne 1) {{
-    '{_NO_ICON_TABLE_MARKER}'
+    $marker = '{_NO_ICON_TABLE_MARKER}'
 }} else {{
     $db.Export('Icon', {quoted_dir}, 'Icon.idt')
-    'NAPT_ICON_EXPORTED'
+    $marker = 'NAPT_ICON_EXPORTED'
 }}
+$utf8 = New-Object System.Text.UTF8Encoding $false
+[System.IO.File]::WriteAllLines(
+    $env:NAPT_ICON_OUT, [string[]]@($arpIcon, $marker), $utf8
+)
 """
+    # PowerShell writes captured stdout in the console's OEM code page,
+    # which Python would decode as the locale code page and mangle every
+    # non-ASCII character of the icon name, so the values go through a
+    # UTF-8 file instead. Its path travels in an environment variable.
+    with tempfile.NamedTemporaryFile(
+        prefix="napt-icon-", suffix=".txt", delete=False
+    ) as handle:
+        out_path = Path(handle.name)
     try:
-        ps_result = subprocess.run(
+        subprocess.run(
             ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_script],
             check=True,
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=30,
+            env={**os.environ, "NAPT_ICON_OUT": str(out_path)},
         )
+        lines = out_path.read_text(encoding="utf-8-sig").splitlines()
     except subprocess.CalledProcessError as err:
         stderr_output = err.stderr if err.stderr else "No stderr captured"
         raise PackagingError(
@@ -625,8 +641,11 @@ if ($db.TablePersistent('Icon') -ne 1) {{
         ) from err
     except subprocess.TimeoutExpired:
         raise PackagingError("PowerShell MSI icon export timed out") from None
+    except OSError as err:
+        raise PackagingError(f"PowerShell MSI icon export failed: {err}") from err
+    finally:
+        out_path.unlink(missing_ok=True)
 
-    lines = ps_result.stdout.splitlines()
     arp_icon = lines[0].strip() if lines else ""
     marker = lines[1].strip() if len(lines) > 1 else ""
     if marker == _NO_ICON_TABLE_MARKER:

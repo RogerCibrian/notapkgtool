@@ -69,6 +69,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from napt.exceptions import PackagingError
+
 
 @dataclass(frozen=True)
 class MSIXDetectionConfig:
@@ -141,7 +143,7 @@ def generate_msix_detection_script(
         Path to the generated detection script.
 
     Raises:
-        OSError: If the script file cannot be written.
+        PackagingError: If the script file cannot be written.
 
     Example:
         Generate script with default settings:
@@ -208,8 +210,8 @@ def generate_msix_detection_script(
         output_path.write_bytes(script_bytes)
         logger.verbose("DETECTION", f"Detection script written to: {output_path}")
     except OSError as err:
-        raise OSError(
-            f"Failed to write detection script to {output_path}: {err}"
+        raise PackagingError(
+            f"Cannot write detection script {output_path}: {err}"
         ) from err
 
     return output_path
@@ -232,7 +234,7 @@ def generate_msix_requirements_script(
         Path to the generated requirements script.
 
     Raises:
-        OSError: If the script file cannot be written.
+        PackagingError: If the script file cannot be written.
 
     Example:
         Generate script with default settings:
@@ -301,8 +303,8 @@ def generate_msix_requirements_script(
         output_path.write_bytes(script_bytes)
         logger.verbose("REQUIREMENTS", f"Requirements script written to: {output_path}")
     except OSError as err:
-        raise OSError(
-            f"Failed to write requirements script to {output_path}: {err}"
+        raise PackagingError(
+            f"Cannot write requirements script {output_path}: {err}"
         ) from err
 
     return output_path

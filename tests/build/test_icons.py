@@ -37,6 +37,7 @@ from napt.build.icons import (
     _select_png_frame,
     extract_icon_png,
 )
+from napt.exceptions import PackagingError
 from napt.powershell import ps_single_quote
 
 # Typographic single quote, which PowerShell accepts as a string delimiter.
@@ -458,6 +459,17 @@ class TestIterIconCandidates:
         assert order == ["big", "small"]
 
 
+def _write_icon_out(kwargs, arp: str, marker: str) -> None:
+    """Writes what the PowerShell script hands back through its UTF-8 file.
+
+    The values travel through a file named in the NAPT_ICON_OUT environment
+    variable, never through stdout, whose code page would mangle them.
+    """
+    out_path = kwargs.get("env", {}).get("NAPT_ICON_OUT")
+    if out_path:
+        Path(out_path).write_text(f"{arp}\n{marker}\n", encoding="utf-8")
+
+
 class TestMsiIconBlobsWindows:
     """Tests for the PowerShell COM Icon table backend (mocked)."""
 
@@ -471,11 +483,47 @@ class TestMsiIconBlobsWindows:
                     idt_lines.append(f"{name}\t{name}.ibd")
                     (stream_dir / f"{name}.ibd").write_bytes(data)
                 (export_dir / "Icon.idt").write_text("\n".join(idt_lines) + "\n")
+            _write_icon_out(kwargs, arp, marker)
             return subprocess.CompletedProcess(
                 cmd, 0, stdout=f"{arp}\n{marker}\n", stderr=""
             )
 
         return side_effect
+
+    def test_arp_icon_name_survives_the_console_code_page(self, tmp_path):
+        """Tests that the ARP icon name is read from the script's UTF-8 file,
+        so a non-ASCII name is not decoded through the console code page."""
+        export_dir = tmp_path / "export"
+        export_dir.mkdir()
+        name = "Café Setup.ico"
+
+        # What stdout would carry after a cp437/cp1252 round trip: the
+        # e-acute comes back as a single low-9 quotation mark.
+        mangled = f"Caf{chr(0x201A)} Setup.ico"
+
+        def side_effect(cmd, **kwargs):
+            _write_icon_out(kwargs, name, "NAPT_NO_ICON_TABLE")
+            return subprocess.CompletedProcess(
+                cmd, 0, stdout=f"{mangled}\nNAPT_NO_ICON_TABLE\n", stderr=""
+            )
+
+        with mock.patch("napt.build.icons.subprocess.run", side_effect=side_effect):
+            arp, blobs = _msi_icon_blobs_windows(tmp_path / "x.msi", export_dir)
+
+        assert arp == name
+        assert blobs == {}
+
+    def test_export_the_os_refuses_is_a_packaging_error(self, tmp_path):
+        """Tests that PowerShell failing to launch is reported, not a traceback."""
+        export_dir = tmp_path / "export"
+        export_dir.mkdir()
+
+        with mock.patch(
+            "napt.build.icons.subprocess.run",
+            side_effect=OSError(2, "No such file or directory"),
+        ):
+            with pytest.raises(PackagingError, match="icon export failed"):
+                _msi_icon_blobs_windows(tmp_path / "x.msi", export_dir)
 
     def test_paths_are_quoted_in_script(self, tmp_path):
         """Tests that hostile MSI and export paths cannot close their strings."""
@@ -534,6 +582,7 @@ class TestMsiIconBlobsWindows:
         (export_dir / "Icon.idt").write_text("garbage with no tabs\n")
 
         def side_effect(cmd, **kwargs):
+            _write_icon_out(kwargs, "", "NAPT_ICON_EXPORTED")
             return subprocess.CompletedProcess(
                 cmd, 0, stdout="\nNAPT_ICON_EXPORTED\n", stderr=""
             )

@@ -35,6 +35,7 @@ from napt.build.manager import (
     _release_to_build,
     _require_exe_scripts,
     _resolve_app_info,
+    _write_build_file,
     _write_build_manifest,
 )
 from napt.exceptions import ConfigError, PackagingError, StateError
@@ -212,6 +213,16 @@ class TestFindInstallerFile:
         """Tests that a leftover .part file is never hashed or returned."""
         downloads_dir = tmp_path / "downloads"
         content = _save_download(downloads_dir, "napt-app", "2.0", "setup.exe.part")
+        release = {"version": "2.0", "sha256": _sha256(content)}
+
+        with pytest.raises(PackagingError, match="matches the recorded release"):
+            _find_installer_file(downloads_dir, "napt-app", release)
+
+    def test_recorded_release_applies_the_same_file_type_rule(self, tmp_path):
+        """Tests that a recorded release only ever resolves to a file NAPT can
+        build, the same rule the stateless lookup applies."""
+        downloads_dir = tmp_path / "downloads"
+        content = _save_download(downloads_dir, "napt-app", "2.0", "bundle.zip")
         release = {"version": "2.0", "sha256": _sha256(content)}
 
         with pytest.raises(PackagingError, match="matches the recorded release"):
@@ -417,6 +428,14 @@ class TestCreateBuildDirectory:
 
         assert (victim / "keep.txt").exists()
 
+    def test_unwritable_base_is_a_packaging_error(self, tmp_path):
+        """Tests that a builds path that cannot hold folders is reported."""
+        base_dir = tmp_path / "builds"
+        base_dir.write_text("not a directory")
+
+        with pytest.raises(PackagingError, match="Cannot create"):
+            _create_build_directory(base_dir, "test-app", "1.0.0")
+
 
 class TestCopyPSADTPristine:
     """Tests for copying PSADT files (unit tests with fake data)."""
@@ -448,6 +467,18 @@ class TestCopyPSADTPristine:
         with pytest.raises(PackagingError, match="PSADT.*not found"):
             _copy_psadt_template(cache_dir, build_dir)
 
+    def test_copy_failure_is_a_packaging_error(self, fake_psadt_template, tmp_path):
+        """Tests that a copy the file system refuses is reported by path."""
+        build_dir = tmp_path / "build"
+        build_dir.mkdir()
+
+        with patch(
+            "napt.build.manager.shutil.copytree",
+            side_effect=OSError(28, "No space left on device"),
+        ):
+            with pytest.raises(PackagingError, match="No space left"):
+                _copy_psadt_template(fake_psadt_template, build_dir)
+
 
 class TestCopyInstaller:
     """Tests for copying installer files."""
@@ -466,6 +497,20 @@ class TestCopyInstaller:
         dest = files_dir / "app.msi"
         assert dest.exists()
         assert dest.read_bytes() == b"fake msi content"
+
+    def test_copy_failure_is_a_packaging_error(self, tmp_path):
+        """Tests that a copy the file system refuses is reported by path."""
+        installer = tmp_path / "app.msi"
+        installer.write_bytes(b"fake msi content")
+        build_dir = tmp_path / "build"
+        (build_dir / "Files").mkdir(parents=True)
+
+        with patch(
+            "napt.build.manager.shutil.copy2",
+            side_effect=OSError(13, "Permission denied"),
+        ):
+            with pytest.raises(PackagingError, match="app.msi"):
+                _copy_installer(installer, build_dir)
 
 
 class TestApplyBranding:
@@ -488,6 +533,23 @@ class TestApplyBranding:
         target = build_dir / "Assets" / "AppIcon.png"
         assert target.exists()
         assert target.read_bytes() == b"custom icon data"
+
+    def test_apply_branding_copy_failure_is_a_packaging_error(
+        self, fake_psadt_template, fake_brand_pack, tmp_path
+    ):
+        """Tests that a brand asset the file system refuses to copy is
+        reported by path, not as an OSError traceback."""
+        build_dir = tmp_path / "build"
+        build_dir.mkdir()
+        _copy_psadt_template(fake_psadt_template, build_dir)
+        _brand_dir, config = fake_brand_pack
+
+        with patch(
+            "napt.build.manager.shutil.copy2",
+            side_effect=OSError(13, "Permission denied"),
+        ):
+            with pytest.raises(PackagingError, match="Permission denied"):
+                _apply_branding(config, build_dir)
 
     def test_apply_branding_no_config(self, tmp_path):
         """Test when no branding configured."""
@@ -522,8 +584,51 @@ class TestApplyBranding:
         _apply_branding(config, build_dir)
 
 
+class TestWriteBuildFile:
+    """Tests for the guarded write every generated build file goes through."""
+
+    def test_writes_the_text(self, tmp_path):
+        """Tests that the file lands with the given encoding."""
+        target = tmp_path / "Invoke-AppDeployToolkit.ps1"
+
+        _write_build_file(target, "Write-Host hi\n", "utf-8-sig")
+
+        assert target.read_bytes().startswith(b"\xef\xbb\xbf")
+        assert target.read_text(encoding="utf-8-sig") == "Write-Host hi\n"
+
+    def test_write_failure_is_a_packaging_error(self, tmp_path):
+        """Tests that a file the file system refuses to write is reported by
+        path, not as an OSError traceback."""
+        target = tmp_path / "Invoke-AppDeployToolkit.ps1"
+        target.mkdir()
+
+        with pytest.raises(PackagingError, match="Invoke-AppDeployToolkit.ps1"):
+            _write_build_file(target, "x", "utf-8")
+
+
 class TestWriteBuildManifest:
     """Tests for build manifest generation."""
+
+    def test_write_failure_is_a_packaging_error(self, tmp_path):
+        """Tests that a manifest the file system refuses to write is reported
+        by path, not as an OSError traceback."""
+        version_dir = tmp_path / "builds" / "test-app" / "1.0.0"
+        build_dir = version_dir / "packagefiles"
+        build_dir.mkdir(parents=True)
+        (version_dir / "build-manifest.json").mkdir()
+
+        with pytest.raises(PackagingError, match="build-manifest.json"):
+            _write_build_manifest(
+                build_dir=build_dir,
+                app_id="test-app",
+                app_name="Test App",
+                version="1.0.0",
+                build_types="both",
+                architecture="x64",
+                installer_sha256="a" * 64,
+                detection_script_path=None,
+                requirements_script_path=None,
+            )
 
     def test_manifest_contains_required_fields(self, tmp_path):
         """Test that manifest contains all required fields."""

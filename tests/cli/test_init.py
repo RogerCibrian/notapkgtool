@@ -50,6 +50,32 @@ class TestCmdInit:
         out = capsys.readouterr().out
         assert "Backed Up" in out
 
+    def test_force_twice_replaces_the_backup(self, tmp_path, capsys):
+        """Tests that a second --force run replaces the earlier backup instead
+        of failing because it exists."""
+        org_yaml = tmp_path / "defaults" / "org.yaml"
+        org_yaml.parent.mkdir(parents=True)
+        org_yaml.write_text("first")
+        cmd_init(_args(directory=str(tmp_path), force=True))
+        org_yaml.write_text("second")
+
+        code = cmd_init(_args(directory=str(tmp_path), force=True))
+
+        assert code == 0
+        assert (tmp_path / "defaults" / "org.yaml.backup").read_text() == "second"
+        assert org_yaml.read_text() != "second"
+
+    def test_unusable_directory_is_reported(self, tmp_path, capsys):
+        """Tests that a target that cannot hold the project is an error line,
+        not a traceback."""
+        target = tmp_path / "a-file"
+        target.write_text("x")
+
+        code = cmd_init(_args(directory=str(target), force=False))
+
+        assert code == 1
+        assert "Error:" in capsys.readouterr().out
+
     def test_org_yaml_contains_template_content(self, tmp_path):
         """Tests that the created org.yaml matches ORG_YAML_TEMPLATE exactly."""
         from napt.config.defaults import ORG_YAML_TEMPLATE
