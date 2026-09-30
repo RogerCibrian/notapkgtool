@@ -2945,6 +2945,12 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
     or package is used; several then need <code>--version</code> (package) or a
     recorded release (upload). <code>napt package</code> gains <code>--state-dir</code>, like
     <code>napt build</code></li>
+<li><strong>Tool downloads are verified</strong> - The PSADT archive is checked against
+    the digest the release publishes (its size for releases before the 4.1
+    line, which have no digest), and <code>IntuneWinAppUtil.exe</code> against the
+    size and hash the repository reports for it, before either is cached.
+    A release whose archive lacks the Template_v4 entries NAPT builds from
+    is refused with each missing entry named</li>
 <li><strong>Every step verifies the one before it</strong> - <code>napt package</code> re-hashes the
     installer inside the build against the build manifest and against the
     recorded release, and records the <code>.intunewin</code> hash in the package's
@@ -2983,6 +2989,31 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="fixed">Fixed</h3>
 <ul>
+<li>Fixed a PSADT download interrupted part-way leaving a partial toolkit in
+    the cache that every later build accepted, and the toolkit zip left in
+    the cache folder shipping inside every later package. The toolkit is
+    now extracted in a working folder and moved into the cache only once
+    complete</li>
+<li>Fixed a disk-write failure during <code>napt build</code> (a full disk, a locked
+    file, a read-only path) surfacing as an <code>OSError</code> traceback instead of
+    an error naming the path</li>
+<li>Fixed an MSIX whose <code>AppxManifest.xml</code> is not well-formed XML crashing
+    <code>napt build</code> with a traceback</li>
+<li>Fixed a GitHub response that is not JSON crashing the PSADT release
+    lookup with a traceback</li>
+<li>Fixed IntuneWinAppUtil failing to launch (a non-Windows host, a damaged
+    file) surfacing as a traceback instead of a packaging error</li>
+<li>Fixed <code>napt init --force</code> failing on Windows when run a second time,
+    because the earlier <code>org.yaml.backup</code> was still there, and <code>napt init</code>
+    crashing with a traceback when the target cannot hold the project</li>
+<li>Fixed the ARP icon name of an MSI being decoded through the console
+    code page, which mangled non-ASCII product names; it now goes through
+    the same UTF-8 handoff as the MSI metadata</li>
+<li>Fixed <code>napt build</code> with a recorded release accepting any file whose hash
+    matched, including one it cannot build; both lookups now apply the
+    same installer file types</li>
+<li>Fixed the PSADT release lookup reading a tag such as <code>4.1.7-rc1</code> as
+    <code>4.1.7</code></li>
 <li>Fixed re-packaging a version after a detection script was renamed
     leaving the old script beside the new one, with <code>napt upload</code> sending
     whichever sorted first</li>
