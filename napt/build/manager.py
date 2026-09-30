@@ -59,7 +59,7 @@ from napt.powershell import (
 )
 from napt.psadt.release import get_psadt_release
 from napt.results import BuildResult
-from napt.state.deployment import deployment_state_path, load_deployment_state
+from napt.state.deployment import working_release
 from napt.versioning.msi import (
     MSIMetadata,
     extract_msi_metadata,
@@ -138,9 +138,7 @@ def _release_to_build(
     """
     if state_dir is None:
         state_dir = Path(config["directories"]["state"])
-    deployment_dir = state_dir / "deployment"
-    state = load_deployment_state(deployment_state_path(deployment_dir, config["id"]))
-    return state.get("pending") or state.get("published")
+    return working_release(state_dir, config["id"])
 
 
 def _get_installer_version(installer_file: Path) -> str:

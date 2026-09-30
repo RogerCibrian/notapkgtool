@@ -21,6 +21,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING: `napt package` keeps other versions' packages** - The
+    previous version's package folder used to be deleted before the new
+    one was made (and before the packaging tool was even fetched), so a
+    failed run left the app with no package. NAPT now never deletes
+    another version's files: `package` replaces only the folder of the
+    version it is packaging. `--clean-source` is removed for the same
+    reason; delete build folders yourself when you want them gone
+- **BREAKING: `napt package` and `napt upload` resolve the release from
+    deployment state** - Both used to take the most recently modified
+    folder. They now package and upload the build and package of the
+    release deployment state records (pending, else published), the same
+    release `napt build` builds. With no recorded release, the only build
+    or package is used; several then need `--version` (package) or a
+    recorded release (upload). `napt package` gains `--state-dir`, like
+    `napt build`
+- **Every step verifies the one before it** - `napt package` re-hashes the
+    installer inside the build against the build manifest and against the
+    recorded release, and records the `.intunewin` hash in the package's
+    manifest; `napt upload` re-hashes the `.intunewin` against that record
+    and reads the script names from the manifest instead of taking the
+    first matching file
 - **BREAKING: Header secrets must be declared and bound to a host** - A
     `${VAR}` in `discovery.headers` now expands only when `defaults/org.yaml`
     declares `VAR` under `secrets` with the `api_url` host among its hosts,
@@ -53,6 +74,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed re-packaging a version after a detection script was renamed
+    leaving the old script beside the new one, with `napt upload` sending
+    whichever sorted first
+- Fixed `napt upload` taking `build_types` from the recipe instead of from
+    what was built: a recipe changed after the build committed the install
+    entry, failed on the update entry's missing script, and recorded
+    nothing. The mismatch is now refused before any Graph call
+- Fixed `napt upload` with `deployment.require_pending` refusing a package
+    that matches the published release, which blocked the re-run after a
+    writeback and `--force`
+- Fixed a corrupt `build-manifest.json` crashing `napt package` and
+    `napt upload` with a traceback
+- Fixed the IntuneWinAppUtil release lookup reading a tag such as
+    `v1.8.6-rc1` as `1.8.6` and then failing to download it
 - Fixed a version-first strategy reusing last run's installer when the
     download link changed at an unchanged version (a switched asset
     pattern, a re-published release), which recorded the new link beside

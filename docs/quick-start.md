@@ -248,8 +248,9 @@ Status:          success
 [SUCCESS] .intunewin package created successfully!
 ```
 
-`--output-dir` sets the parent folder for the package; `--clean-source`
-removes the build folder after packaging.
+`--output-dir` sets the parent folder for the package.
+Earlier versions' packages are left in place; NAPT never deletes another
+version's files.
 
 **Result:** Ready-to-upload .intunewin file in `packages/napt-chrome/<version>/`
 

@@ -22,6 +22,7 @@ from napt.state.deployment import (
     record_published,
     save_deployment_state,
     summarize_deployment_states,
+    working_release,
 )
 
 
@@ -529,3 +530,39 @@ class TestSummarizeDeploymentStates:
         rows = summarize_deployment_states(deployment_dir)
 
         assert rows[0]["pending_is_downgrade"] is expected
+
+
+class TestWorkingRelease:
+    """Tests for the release a pipeline command acts on."""
+
+    PENDING = {"version": "2.0.0", "sha256": "b" * 64, "url": "https://x/b"}
+    PUBLISHED = {"version": "1.0.0", "sha256": "a" * 64}
+
+    def _save(self, tmp_path, **sections):
+        state = create_default_deployment_state()
+        state.update(sections)
+        save_deployment_state(
+            state, deployment_state_path(tmp_path / "deployment", "app")
+        )
+
+    def test_pending_wins(self, tmp_path):
+        """Tests that a pending release is the one to build, package, and upload."""
+        self._save(tmp_path, pending=self.PENDING, published=self.PUBLISHED)
+
+        assert working_release(tmp_path, "app") == self.PENDING
+
+    def test_published_when_nothing_pending(self, tmp_path):
+        """Tests that the published release is used when nothing is pending."""
+        self._save(tmp_path, published=self.PUBLISHED)
+
+        assert working_release(tmp_path, "app") == self.PUBLISHED
+
+    def test_none_without_state(self, tmp_path):
+        """Tests that an app with no state file has no working release."""
+        assert working_release(tmp_path, "app") is None
+
+    def test_none_when_nothing_recorded(self, tmp_path):
+        """Tests that a state file with neither section yields None."""
+        self._save(tmp_path)
+
+        assert working_release(tmp_path, "app") is None

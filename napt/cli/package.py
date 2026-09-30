@@ -14,7 +14,10 @@
 
 """The `napt package` command.
 
-Packages a PSADT build into a .intunewin file for Intune deployment.
+Packages a PSADT build into a .intunewin file for Intune deployment. The
+build to package is the one for the release deployment state records
+(pending, else published), the same release `napt build` built, so the
+command never has to guess among the builds on disk.
 """
 
 from __future__ import annotations
@@ -26,33 +29,51 @@ from napt.build.packager import create_intunewin
 from napt.config.loader import load_effective_config
 from napt.exceptions import ConfigError, NAPTError, NetworkError, PackagingError
 from napt.logging import get_logger, set_global_logger
+from napt.state.deployment import working_release
 
 
-def _resolve_build_dir_from_recipe(
+def _completed_builds(app_build_dir: Path) -> list[Path]:
+    """Lists the version folders under an app's builds that hold a build."""
+    return sorted(
+        d
+        for d in app_build_dir.iterdir()
+        if d.is_dir() and (d / "packagefiles").is_dir()
+    )
+
+
+def _resolve_build(
     recipe_path: Path,
     version: str | None = None,
     builds_dir: Path | None = None,
-) -> Path:
-    """Infer the PSADT build version directory from a recipe.
+    state_dir: Path | None = None,
+) -> tuple[Path, str | None]:
+    """Chooses the build to package and the installer hash it must carry.
 
-    Loads the effective config from the recipe, derives the build output
-    directory, and returns the version directory to pass to create_intunewin.
+    The release comes from deployment state (pending, else published), so
+    the choice is the same on every machine that has the state file. With
+    no recorded release, the only completed build is used; several builds
+    then need ``--version``, since picking one by modification time would
+    package whichever was touched last.
 
     Args:
         recipe_path: Path to the recipe YAML file.
-        version: Specific version to target (e.g., "144.0.7559.110").
-            If None, picks the most recently modified version directory
-            that contains a packagefiles/ subdirectory.
+        version: Specific version to package. When it is the recorded
+            release's version, the build is still verified against that
+            release's hash.
         builds_dir: Directory containing builds. If None, reads from
             config directories.build.
+        state_dir: State root. If None, reads from config directories.state.
 
     Returns:
-        Path to the version directory (e.g., builds/napt-chrome/144.0.7559.110/).
+        The build version directory, and the hash of the recorded release
+            the build must match (None when no release is recorded or the
+            chosen version is another one).
 
     Raises:
-        ConfigError: If the recipe cannot be loaded, the specified version
-            does not exist, no builds exist for the app, or no version
-            directory contains a packagefiles/ folder.
+        ConfigError: If the recipe cannot be loaded, no builds exist for
+            the app, the recorded or requested version has no completed
+            build, or several builds exist and none is recorded.
+        StateError: If the deployment state file is corrupted.
 
     """
     config = load_effective_config(recipe_path)
@@ -61,6 +82,8 @@ def _resolve_build_dir_from_recipe(
         builds_dir if builds_dir is not None else Path(config["directories"]["build"])
     )
     app_build_dir = build_output_dir / app_id
+    if state_dir is None:
+        state_dir = Path(config["directories"]["state"])
 
     if not app_build_dir.exists():
         raise ConfigError(
@@ -68,56 +91,68 @@ def _resolve_build_dir_from_recipe(
             "Run 'napt build' first."
         )
 
+    release = working_release(state_dir, app_id)
+
+    if version is None and release is not None:
+        version = release["version"]
+        specific_dir = app_build_dir / version
+        if not (specific_dir / "packagefiles").is_dir():
+            raise ConfigError(
+                f"Deployment state records release {version} for '{app_id}', "
+                f"but there is no build of it in {app_build_dir}. Run "
+                "'napt build' first."
+            )
+        return specific_dir, release["sha256"]
+
     if version is not None:
         specific_dir = app_build_dir / version
-        if not specific_dir.is_dir() or not (specific_dir / "packagefiles").is_dir():
+        if not (specific_dir / "packagefiles").is_dir():
             raise ConfigError(
                 f"Build version '{version}' not found for '{app_id}' "
                 f"in {app_build_dir}. Run 'napt build' first."
             )
-        return specific_dir
+        expected = (
+            release["sha256"]
+            if release is not None and release["version"] == version
+            else None
+        )
+        return specific_dir, expected
 
-    # Find version directories that contain a packagefiles/ subdirectory,
-    # sorted by modification time (most recent first).
-    version_dirs = sorted(
-        (
-            d
-            for d in app_build_dir.iterdir()
-            if d.is_dir() and (d / "packagefiles").is_dir()
-        ),
-        key=lambda d: d.stat().st_mtime,
-        reverse=True,
-    )
-
-    if not version_dirs:
+    builds = _completed_builds(app_build_dir)
+    if not builds:
         raise ConfigError(
             f"No completed builds found for '{app_id}' in {app_build_dir}. "
             "Run 'napt build' first."
         )
-
-    return version_dirs[0]
+    if len(builds) > 1:
+        names = ", ".join(d.name for d in builds)
+        raise ConfigError(
+            f"'{app_id}' has no recorded release and several builds "
+            f"({names}). Run 'napt discover' to record the release, or pass "
+            "--version to choose one."
+        )
+    return builds[0], None
 
 
 def cmd_package(args: argparse.Namespace) -> int:
     """Handler for 'napt package' command.
 
     Creates a .intunewin package from a PSADT build for the given recipe.
-    Infers the build directory from the recipe's app ID, removes any
-    previously packaged version (single-slot), copies detection scripts
-    alongside the .intunewin file so 'napt upload' is self-contained, and
-    optionally cleans the source build directory after packaging.
+    Packages the build of the release deployment state records, verifies
+    it against the recorded installer hash, replaces that version's package
+    folder, and copies the detection scripts alongside the .intunewin file
+    so 'napt upload' is self-contained.
 
     Args:
         args: Parsed command-line arguments containing recipe path, version,
-            output directory, clean flag, and debug flags.
+            directories, and debug flags.
 
     Returns:
         Exit code (0 for success, 1 for failure).
 
     Note:
-        Without --version, picks the most recently modified build. Run
-        'napt build' before 'napt package'. Downloads IntuneWinAppUtil.exe
-        if not cached. Optionally removes the build directory if --clean-source.
+        Run 'napt build' before 'napt package'. Downloads IntuneWinAppUtil.exe
+        if not cached.
 
     """
     # Configure global logger
@@ -126,16 +161,20 @@ def cmd_package(args: argparse.Namespace) -> int:
 
     recipe_path = Path(args.recipe).resolve()
     builds_dir = Path(args.builds_dir).resolve() if args.builds_dir else None
+    state_dir = Path(args.state_dir).resolve() if args.state_dir else None
 
     if not recipe_path.exists():
         print(f"Error: Recipe file not found: {recipe_path}")
         return 1
 
     try:
-        build_dir = _resolve_build_dir_from_recipe(
-            recipe_path, version=args.version, builds_dir=builds_dir
+        build_dir, expected_sha256 = _resolve_build(
+            recipe_path,
+            version=args.version,
+            builds_dir=builds_dir,
+            state_dir=state_dir,
         )
-    except ConfigError as err:
+    except NAPTError as err:
         print(f"Error: {err}")
         return 1
 
@@ -156,8 +195,8 @@ def cmd_package(args: argparse.Namespace) -> int:
         result = create_intunewin(
             build_dir,
             output_dir=output_dir,
-            clean_source=args.clean_source,
             tool_release=tool_release,
+            expected_sha256=expected_sha256,
         )
     except (ConfigError, NetworkError, PackagingError) as err:
         print(f"Error: {err}")
@@ -182,10 +221,7 @@ def cmd_package(args: argparse.Namespace) -> int:
     print(f"App ID:          {result.app_id}")
     print(f"Version:         {result.version}")
     print(f"Package Path:    {result.package_path}")
-    if args.clean_source:
-        print(f"Build Directory: {result.build_dir} (removed)")
-    else:
-        print(f"Build Directory: {result.build_dir}")
+    print(f"Build Directory: {result.build_dir}")
     print(f"Status:          {result.status}")
     print("=" * 70)
     print()
@@ -205,13 +241,14 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         help="Create .intunewin package from a PSADT build",
         description=(
             "Package a PSADT build for a recipe into a .intunewin file for "
-            "Intune deployment. Without --version, packages the most recently "
-            "modified build. Only one packaged version is kept on disk per app "
-            "(previous version is removed automatically).\n\n"
+            "Intune deployment. Packages the build of the release recorded in "
+            "deployment state (pending, else published); with no recorded "
+            "release, the only build, or the one named by --version. The "
+            "version's package folder is replaced; other versions are left "
+            "alone.\n\n"
             "Examples:\n"
             "  napt package recipes/Google/chrome.yaml\n"
             "  napt package recipes/Google/chrome.yaml --version 130.0.6723.116\n"
-            "  napt package recipes/Google/chrome.yaml --clean-source\n"
             "  napt package recipes/Google/chrome.yaml --verbose\n\n"
             "See docs for more examples and workflows."
         ),
@@ -225,7 +262,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         "--version",
         default=None,
         metavar="VERSION",
-        help="Specific build version to package (default: most recent build)",
+        help="Build version to package (default: the recorded release)",
     )
     parser_package.add_argument(
         "--builds-dir",
@@ -243,9 +280,12 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         ),
     )
     parser_package.add_argument(
-        "--clean-source",
-        action="store_true",
-        help="Remove the build directory after packaging",
+        "--state-dir",
+        default=None,
+        help=(
+            "State root whose deployment/ folder records the release "
+            "(default: from config or ./state)"
+        ),
     )
     parser_package.add_argument(
         "-v",
