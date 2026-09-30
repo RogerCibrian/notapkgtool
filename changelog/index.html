@@ -2930,6 +2930,27 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="changed">Changed</h3>
 <ul>
+<li><strong>BREAKING: <code>napt package</code> keeps other versions' packages</strong> - The
+    previous version's package folder used to be deleted before the new
+    one was made (and before the packaging tool was even fetched), so a
+    failed run left the app with no package. NAPT now never deletes
+    another version's files: <code>package</code> replaces only the folder of the
+    version it is packaging. <code>--clean-source</code> is removed for the same
+    reason; delete build folders yourself when you want them gone</li>
+<li><strong>BREAKING: <code>napt package</code> and <code>napt upload</code> resolve the release from
+    deployment state</strong> - Both used to take the most recently modified
+    folder. They now package and upload the build and package of the
+    release deployment state records (pending, else published), the same
+    release <code>napt build</code> builds. With no recorded release, the only build
+    or package is used; several then need <code>--version</code> (package) or a
+    recorded release (upload). <code>napt package</code> gains <code>--state-dir</code>, like
+    <code>napt build</code></li>
+<li><strong>Every step verifies the one before it</strong> - <code>napt package</code> re-hashes the
+    installer inside the build against the build manifest and against the
+    recorded release, and records the <code>.intunewin</code> hash in the package's
+    manifest; <code>napt upload</code> re-hashes the <code>.intunewin</code> against that record
+    and reads the script names from the manifest instead of taking the
+    first matching file</li>
 <li><strong>BREAKING: Header secrets must be declared and bound to a host</strong> - A
     <code>${VAR}</code> in <code>discovery.headers</code> now expands only when <code>defaults/org.yaml</code>
     declares <code>VAR</code> under <code>secrets</code> with the <code>api_url</code> host among its hosts,
@@ -2962,6 +2983,20 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="fixed">Fixed</h3>
 <ul>
+<li>Fixed re-packaging a version after a detection script was renamed
+    leaving the old script beside the new one, with <code>napt upload</code> sending
+    whichever sorted first</li>
+<li>Fixed <code>napt upload</code> taking <code>build_types</code> from the recipe instead of from
+    what was built: a recipe changed after the build committed the install
+    entry, failed on the update entry's missing script, and recorded
+    nothing. The mismatch is now refused before any Graph call</li>
+<li>Fixed <code>napt upload</code> with <code>deployment.require_pending</code> refusing a package
+    that matches the published release, which blocked the re-run after a
+    writeback and <code>--force</code></li>
+<li>Fixed a corrupt <code>build-manifest.json</code> crashing <code>napt package</code> and
+    <code>napt upload</code> with a traceback</li>
+<li>Fixed the IntuneWinAppUtil release lookup reading a tag such as
+    <code>v1.8.6-rc1</code> as <code>1.8.6</code> and then failing to download it</li>
 <li>Fixed a version-first strategy reusing last run's installer when the
     download link changed at an unchanged version (a switched asset
     pattern, a re-published release), which recorded the new link beside
