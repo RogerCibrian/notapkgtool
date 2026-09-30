@@ -21,8 +21,10 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from typing import Any
 
 from napt.config.defaults import ORG_YAML_TEMPLATE
+from napt.exceptions import ConfigError
 from napt.logging import get_logger, set_global_logger
 
 
@@ -55,6 +57,93 @@ def cmd_init(args: argparse.Namespace) -> int:
     print(f"Initializing NAPT project in: {target_dir}")
     print()
 
+    try:
+        created, skipped, backed_up = _create_layout(target_dir, args.force, logger)
+    except ConfigError as err:
+        print(f"Error: {err}")
+        return 1
+
+    # Display results
+    print()
+    print("=" * 70)
+    print("INITIALIZATION RESULTS")
+    print("=" * 70)
+    print(f"Project Root:    {target_dir}")
+    print()
+
+    if created:
+        print(f"Created ({len(created)}):")
+        for item in created:
+            print(f"  [OK] {item}")
+        print()
+
+    if backed_up:
+        print(f"Backed Up ({len(backed_up)}):")
+        for item in backed_up:
+            print(f"  [OK] {item}")
+        print()
+
+    if skipped:
+        print(f"Skipped ({len(skipped)}):")
+        for item in skipped:
+            print(f"  [SKIP] {item}")
+        print()
+
+    print("=" * 70)
+    print()
+
+    if skipped and not args.force:
+        print("Note: Existing files were preserved. Use --force to overwrite.")
+        print()
+
+    print("[SUCCESS] Project initialized!")
+    return 0
+
+
+def _create_layout(
+    target_dir: Path, force: bool, logger: Any
+) -> tuple[list[str], list[str], list[str]]:
+    """Creates the project folders and the org.yaml template.
+
+    Args:
+        target_dir: The project root.
+        force: Whether to back up an existing org.yaml and write a fresh one.
+        logger: The command's logger.
+
+    Returns:
+        A tuple (created, skipped, backed_up), where
+            created lists the relative paths this run made,
+            skipped lists the ones that already existed and were left alone,
+            backed_up lists the ones moved aside before being recreated.
+
+    Raises:
+        ConfigError: If a folder or file cannot be created there.
+    """
+    try:
+        return _create_layout_files(target_dir, force, logger)
+    except OSError as err:
+        raise ConfigError(
+            f"Cannot initialize a project in {target_dir}: {err}"
+        ) from err
+
+
+def _create_layout_files(
+    target_dir: Path, force: bool, logger: Any
+) -> tuple[list[str], list[str], list[str]]:
+    """Does the file system work of [_create_layout][napt.cli.init._create_layout].
+
+    Args:
+        target_dir: The project root.
+        force: Whether to back up an existing org.yaml and write a fresh one.
+        logger: The command's logger.
+
+    Returns:
+        The same tuple as
+            [_create_layout][napt.cli.init._create_layout].
+
+    Raises:
+        OSError: If a folder or file cannot be created.
+    """
     # Track what we create/skip
     created: list[str] = []
     skipped: list[str] = []
@@ -99,10 +188,11 @@ def cmd_init(args: argparse.Namespace) -> int:
     # Create defaults/org.yaml
     org_yaml_path = target_dir / "defaults" / "org.yaml"
     if org_yaml_path.exists():
-        if args.force:
-            # Backup existing file
+        if force:
+            # Backup existing file; a backup from an earlier --force run is
+            # replaced, since rename would refuse an existing target.
             backup_path = org_yaml_path.with_suffix(".yaml.backup")
-            org_yaml_path.rename(backup_path)
+            org_yaml_path.replace(backup_path)
             backed_up.append(f"defaults/org.yaml -> {backup_path.name}")
             logger.verbose(
                 "INIT", f"Backed up: defaults/org.yaml -> {backup_path.name}"
@@ -122,41 +212,7 @@ def cmd_init(args: argparse.Namespace) -> int:
         created.append("defaults/org.yaml")
         logger.verbose("INIT", "Created: defaults/org.yaml")
 
-    # Display results
-    print()
-    print("=" * 70)
-    print("INITIALIZATION RESULTS")
-    print("=" * 70)
-    print(f"Project Root:    {target_dir}")
-    print()
-
-    if created:
-        print(f"Created ({len(created)}):")
-        for item in created:
-            print(f"  [OK] {item}")
-        print()
-
-    if backed_up:
-        print(f"Backed Up ({len(backed_up)}):")
-        for item in backed_up:
-            print(f"  [OK] {item}")
-        print()
-
-    if skipped:
-        print(f"Skipped ({len(skipped)}):")
-        for item in skipped:
-            print(f"  [SKIP] {item}")
-        print()
-
-    print("=" * 70)
-    print()
-
-    if skipped and not args.force:
-        print("Note: Existing files were preserved. Use --force to overwrite.")
-        print()
-
-    print("[SUCCESS] Project initialized!")
-    return 0
+    return created, skipped, backed_up
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:

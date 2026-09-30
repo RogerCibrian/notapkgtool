@@ -36,6 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     or package is used; several then need `--version` (package) or a
     recorded release (upload). `napt package` gains `--state-dir`, like
     `napt build`
+- **Tool downloads are verified** - The PSADT archive is checked against
+    the digest the release publishes (its size for releases before the 4.1
+    line, which have no digest), and `IntuneWinAppUtil.exe` against the
+    size and hash the repository reports for it, before either is cached.
+    A release whose archive lacks the Template_v4 entries NAPT builds from
+    is refused with each missing entry named
 - **Every step verifies the one before it** - `napt package` re-hashes the
     installer inside the build against the build manifest and against the
     recorded release, and records the `.intunewin` hash in the package's
@@ -74,6 +80,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed a PSADT download interrupted part-way leaving a partial toolkit in
+    the cache that every later build accepted, and the toolkit zip left in
+    the cache folder shipping inside every later package. The toolkit is
+    now extracted in a working folder and moved into the cache only once
+    complete
+- Fixed a disk-write failure during `napt build` (a full disk, a locked
+    file, a read-only path) surfacing as an `OSError` traceback instead of
+    an error naming the path
+- Fixed an MSIX whose `AppxManifest.xml` is not well-formed XML crashing
+    `napt build` with a traceback
+- Fixed a GitHub response that is not JSON crashing the PSADT release
+    lookup with a traceback
+- Fixed IntuneWinAppUtil failing to launch (a non-Windows host, a damaged
+    file) surfacing as a traceback instead of a packaging error
+- Fixed `napt init --force` failing on Windows when run a second time,
+    because the earlier `org.yaml.backup` was still there, and `napt init`
+    crashing with a traceback when the target cannot hold the project
+- Fixed the ARP icon name of an MSI being decoded through the console
+    code page, which mangled non-ASCII product names; it now goes through
+    the same UTF-8 handoff as the MSI metadata
+- Fixed `napt build` with a recorded release accepting any file whose hash
+    matched, including one it cannot build; both lookups now apply the
+    same installer file types
+- Fixed the PSADT release lookup reading a tag such as `4.1.7-rc1` as
+    `4.1.7`
 - Fixed re-packaging a version after a detection script was renamed
     leaving the old script beside the new one, with `napt upload` sending
     whichever sorted first

@@ -8,6 +8,8 @@ Tests MSIX detection and requirements script generation including:
 
 from __future__ import annotations
 
+import pytest
+
 from napt.build.msix_scripts import (
     MSIXDetectionConfig,
     MSIXRequirementsConfig,
@@ -317,3 +319,28 @@ class TestGenerateMSIXRequirementsScript:
 
         assert "Get-AppxPackage -Name" in content
         assert "Get-AppxProvisionedPackage" not in content
+
+
+@pytest.mark.parametrize(
+    ("generate", "config"),
+    [
+        (
+            generate_msix_detection_script,
+            MSIXDetectionConfig(identity_name="a.b", app_name="A", version="1.0"),
+        ),
+        (
+            generate_msix_requirements_script,
+            MSIXRequirementsConfig(identity_name="a.b", app_name="A", version="1.0"),
+        ),
+    ],
+)
+def test_msix_script_write_failure_is_a_packaging_error(tmp_path, generate, config):
+    """Tests that a script the file system refuses to write is reported as a
+    packaging error naming the path, not an OSError traceback."""
+    from napt.exceptions import PackagingError
+
+    output_path = tmp_path / "script.ps1"
+    output_path.mkdir()  # a directory where the file should go
+
+    with pytest.raises(PackagingError, match="script.ps1"):
+        generate(config, output_path)

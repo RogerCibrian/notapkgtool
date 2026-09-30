@@ -41,7 +41,9 @@ Filing:
 
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -58,9 +60,61 @@ from napt.results import PackageResult
 
 INTUNEWIN_REPO = "microsoft/Microsoft-Win32-Content-Prep-Tool"
 INTUNEWIN_GITHUB_API = f"https://api.github.com/repos/{INTUNEWIN_REPO}/releases/latest"
-INTUNEWIN_DOWNLOAD_URL = (
-    f"https://github.com/{INTUNEWIN_REPO}/raw/{{tag}}/IntuneWinAppUtil.exe"
+# The tool's releases carry no assets; the executable lives in the
+# repository, and the contents API reports its size, git blob hash, and
+# download URL for a tag.
+INTUNEWIN_CONTENTS_API = (
+    f"https://api.github.com/repos/{INTUNEWIN_REPO}/contents/IntuneWinAppUtil.exe"
 )
+
+
+def _github_headers() -> dict[str, str]:
+    """Builds the headers for a GitHub API call.
+
+    Every call here counts against the API's unauthenticated limit of 60
+    requests per hour, so a ``GITHUB_TOKEN`` in the environment is sent
+    when present.
+
+    Returns:
+        The Accept header, plus Authorization when a token is set.
+    """
+    headers = {"Accept": "application/vnd.github+json"}
+    token = os.environ.get("GITHUB_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
+def _github_json(response: requests.Response, what: str) -> dict[str, Any]:
+    """Reads a GitHub API response body as a JSON object.
+
+    Args:
+        response: A successful API response.
+        what: What was asked for, for the error message.
+
+    Returns:
+        The parsed object.
+
+    Raises:
+        NetworkError: If the body is not JSON, or not an object.
+    """
+    try:
+        data = response.json()
+    except ValueError as err:
+        raise NetworkError(
+            f"Invalid JSON response from the GitHub API for {what}. Response: "
+            f"{response.text[:200]}"
+        ) from err
+    if not isinstance(data, dict):
+        raise NetworkError(
+            f"Unexpected GitHub API response for {what}: {response.text[:200]}"
+        )
+    return data
+
+
+def _git_blob_sha(content: bytes) -> str:
+    """Computes the git blob SHA-1 the contents API reports for a file."""
+    return hashlib.sha1(b"blob %d\0" % len(content) + content).hexdigest()
 
 
 def fetch_latest_intunewin_version() -> str:
@@ -87,27 +141,22 @@ def fetch_latest_intunewin_version() -> str:
         Uses GitHub's public API (60 requests/hour limit without auth).
         Set GITHUB_TOKEN environment variable for higher rate limits.
     """
-    import os
-
     from napt.logging import get_global_logger
 
     logger = get_global_logger()
     logger.verbose("PACKAGE", f"Querying GitHub API: {INTUNEWIN_GITHUB_API}")
 
-    headers = {"Accept": "application/vnd.github+json"}
-    token = os.environ.get("GITHUB_TOKEN")
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-
     try:
         with make_session() as session:
-            response = session.get(INTUNEWIN_GITHUB_API, headers=headers, timeout=30)
+            response = session.get(
+                INTUNEWIN_GITHUB_API, headers=_github_headers(), timeout=30
+            )
         response.raise_for_status()
-        data = response.json()
     except requests.RequestException as err:
         raise NetworkError(
             f"Failed to fetch latest IntuneWinAppUtil version: {err}"
         ) from err
+    data = _github_json(response, "the latest IntuneWinAppUtil release")
 
     # The whole tag must be the version: a suffix such as "-rc1" would
     # otherwise be dropped and the download by tag would miss.
@@ -155,7 +204,11 @@ def _get_intunewin_tool(cache_dir: Path, release: str) -> Path:
     """Download and cache IntuneWinAppUtil.exe for a specific release.
 
     Resolves "latest" to the current release via the GitHub API, then
-    downloads and caches the tool under a versioned subdirectory.
+    downloads and caches the tool under a versioned subdirectory. The
+    executable is looked up through the contents API for the tag, which
+    reports its size and git blob hash, and the download is checked against
+    both before it is cached. That verifies the bytes are the file the
+    repository holds at that tag, not that the tag is one you approved.
 
     Args:
         cache_dir: Base directory for caching tool releases.
@@ -167,7 +220,9 @@ def _get_intunewin_tool(cache_dir: Path, release: str) -> Path:
 
     Raises:
         ConfigError: If release is not "latest" or a plain version.
-        NetworkError: If the GitHub API query or download fails.
+        NetworkError: If the GitHub API query or download fails, the tag
+            does not exist, or the download does not match what the
+            repository reports.
     """
     from napt.logging import get_global_logger
 
@@ -195,31 +250,67 @@ def _get_intunewin_tool(cache_dir: Path, release: str) -> Path:
     logger.info("PACKAGE", f"Downloading IntuneWinAppUtil.exe {version}...")
 
     # The repo uses inconsistent tag formats (e.g. "v1.8.6" and "1.8.3"),
-    # so try both and use whichever resolves.
-    response = None
+    # so look the file up under both and use whichever resolves.
+    headers = _github_headers()
+    entry: dict[str, Any] | None = None
     with make_session() as session:
         for tag in [f"v{version}", version]:
-            url = INTUNEWIN_DOWNLOAD_URL.format(tag=tag)
             try:
-                r = session.get(url, timeout=60)
-                if r.status_code == 404:
+                lookup = session.get(
+                    INTUNEWIN_CONTENTS_API,
+                    params={"ref": tag},
+                    headers=headers,
+                    timeout=30,
+                )
+                if lookup.status_code == 404:
                     continue
-                r.raise_for_status()
-                response = r
-                break
+                lookup.raise_for_status()
             except requests.RequestException as err:
                 raise NetworkError(
-                    f"Failed to download IntuneWinAppUtil.exe {version}: {err}"
+                    f"Failed to look up IntuneWinAppUtil.exe {version}: {err}"
                 ) from err
+            entry = _github_json(lookup, f"IntuneWinAppUtil.exe at tag {tag}")
+            break
 
-    if response is None:
+        if entry is None:
+            raise NetworkError(
+                f"IntuneWinAppUtil.exe {version} not found "
+                f"(tried tags v{version} and {version})"
+            )
+        download_url = entry.get("download_url")
+        if not isinstance(download_url, str) or not download_url:
+            raise NetworkError(
+                f"The GitHub API reports no download URL for IntuneWinAppUtil.exe "
+                f"{version}"
+            )
+        try:
+            response = session.get(download_url, timeout=60)
+            response.raise_for_status()
+        except requests.RequestException as err:
+            raise NetworkError(
+                f"Failed to download IntuneWinAppUtil.exe {version}: {err}"
+            ) from err
+
+    # Check the download against what the repository reports for the file.
+    content = response.content
+    size = entry.get("size")
+    if isinstance(size, int) and len(content) != size:
         raise NetworkError(
-            f"IntuneWinAppUtil.exe {version} not found "
-            f"(tried tags v{version} and {version})"
+            f"Downloaded IntuneWinAppUtil.exe {version} is {len(content)} bytes; "
+            f"the repository reports {size} bytes. The download was cut short; "
+            "try again."
         )
+    sha = entry.get("sha")
+    if isinstance(sha, str) and _git_blob_sha(content) != sha.lower():
+        raise NetworkError(
+            f"Downloaded IntuneWinAppUtil.exe {version} does not match the hash "
+            f"the repository reports for it ({sha}). Try again; if it persists, "
+            "the download is being altered in transit."
+        )
+    logger.verbose("PACKAGE", "Download matches the repository's size and hash")
 
     tool_path.parent.mkdir(parents=True, exist_ok=True)
-    tool_path.write_bytes(response.content)
+    tool_path.write_bytes(content)
 
     logger.info("PACKAGE", f"IntuneWinAppUtil.exe {version} cached successfully")
 
@@ -287,6 +378,11 @@ def _execute_packaging(
     except subprocess.TimeoutExpired as err:
         raise PackagingError(
             f"IntuneWinAppUtil.exe timed out after {err.timeout}s"
+        ) from err
+    except OSError as err:
+        raise PackagingError(
+            f"Cannot run IntuneWinAppUtil.exe ({tool_path}): {err}. The tool "
+            "runs on Windows only; 'napt package' needs a Windows host."
         ) from err
 
     # The output folder was empty, so the tool's package is the only one.

@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from napt.build.registry_scripts import (
     RequirementsConfig,
     generate_requirements_script,
@@ -426,3 +428,16 @@ class TestGenerateRequirementsScript:
 
         remaining = re.findall(r"\$Napt[A-Z]\w*", content)
         assert remaining == [], f"Unreplaced $Napt* variables: {remaining}"
+
+
+def test_requirements_script_write_failure_is_a_packaging_error(tmp_path):
+    """Tests that a script the file system refuses to write is reported as a
+    packaging error naming the path, not an OSError traceback."""
+    from napt.exceptions import PackagingError
+
+    config = RequirementsConfig(app_name="Test App", version="1.0.0")
+    output_path = tmp_path / "requirements.ps1"
+    output_path.mkdir()  # a directory where the file should go
+
+    with pytest.raises(PackagingError, match="requirements.ps1"):
+        generate_requirements_script(config, output_path)

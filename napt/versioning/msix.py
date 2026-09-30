@@ -107,8 +107,8 @@ def extract_msix_metadata(file_path: str | Path) -> MSIXMetadata:
 
     Raises:
         PackagingError: If the MSIX file does not exist, is not a valid
-            ZIP archive, does not contain AppxManifest.xml, or is missing
-            required fields.
+            ZIP archive, does not contain AppxManifest.xml, holds one that
+            is not well-formed XML, or is missing required fields.
         ConfigError: If the MSIX architecture is not supported by Intune.
 
     Example:
@@ -150,7 +150,12 @@ def extract_msix_metadata(file_path: str | Path) -> MSIXMetadata:
             f"Cannot read {msix_path.name}: not a valid ZIP/MSIX archive."
         ) from err
 
-    root = ET.fromstring(manifest_bytes)
+    try:
+        root = ET.fromstring(manifest_bytes)
+    except ET.ParseError as err:
+        raise PackagingError(
+            f"AppxManifest.xml in {msix_path.name} is not valid XML: {err}"
+        ) from err
 
     # Parse Identity element
     identity = root.find(f"{{{_MANIFEST_NS}}}Identity")

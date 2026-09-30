@@ -60,6 +60,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from napt.exceptions import PackagingError
+
 # Type alias for architecture values
 ArchitectureMode = Literal["x86", "x64", "arm64", "any"]
 
@@ -150,7 +152,7 @@ def generate_detection_script(config: DetectionConfig, output_path: Path) -> Pat
         Path to the generated detection script.
 
     Raises:
-        OSError: If the script file cannot be written.
+        PackagingError: If the script file cannot be written.
 
     Example:
         Generate script with default settings:
@@ -220,8 +222,8 @@ def generate_detection_script(config: DetectionConfig, output_path: Path) -> Pat
         output_path.write_bytes(script_bytes)
         logger.verbose("DETECTION", f"Detection script written to: {output_path}")
     except OSError as err:
-        raise OSError(
-            f"Failed to write detection script to {output_path}: {err}"
+        raise PackagingError(
+            f"Cannot write detection script {output_path}: {err}"
         ) from err
 
     return output_path
@@ -243,7 +245,7 @@ def generate_requirements_script(config: RequirementsConfig, output_path: Path) 
         Path to the generated requirements script.
 
     Raises:
-        OSError: If the script file cannot be written.
+        PackagingError: If the script file cannot be written.
 
     Example:
         Generate script with default settings:
@@ -314,8 +316,8 @@ def generate_requirements_script(config: RequirementsConfig, output_path: Path) 
         output_path.write_bytes(script_bytes)
         logger.verbose("REQUIREMENTS", f"Requirements script written to: {output_path}")
     except OSError as err:
-        raise OSError(
-            f"Failed to write requirements script to {output_path}: {err}"
+        raise PackagingError(
+            f"Cannot write requirements script {output_path}: {err}"
         ) from err
 
     return output_path
