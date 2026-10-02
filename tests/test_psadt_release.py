@@ -214,7 +214,9 @@ class TestGetPSADTRelease:
 
         assert result == tmp_path / "cache" / "4.1.7"
         api_calls = [
-            r.url for r in requests_mock.request_history if "api.github.com" in r.url
+            r.url
+            for r in requests_mock.request_history
+            if r.hostname == "api.github.com"
         ]
         assert api_calls == [self._LATEST]
 
