@@ -147,7 +147,6 @@ discovery:
   asset_pattern: ".*\\.exe$"        # Required: regex for the installer filename
   version_pattern: "v?([0-9.]+)"    # Optional: regex for the version in the tag
   token: "${GITHUB_TOKEN}"          # Optional: GitHub personal access token
-  prerelease: false                 # Optional: currently has no effect
 ```
 
 #### repo
@@ -426,7 +425,8 @@ psadt:
 PSADT release version to use. Can be:
 
 - `"latest"` - Use the latest PSADT release from GitHub
-- Specific version: `"4.1.7"` - Use a specific PSADT version
+- Specific version: `"4.1.7"` - Use a specific PSADT version.
+  A leading `v` (`"v4.1.7"`) is accepted and names the same version.
 
 **Note:** Typically set in organization defaults (`defaults/org.yaml`) rather
 than per-recipe.
@@ -1057,7 +1057,8 @@ Which `IntuneWinAppUtil.exe` release to download and run. Can be:
 
 - `"latest"` - Use the latest release from Microsoft's GitHub repository
 - Specific version: `"1.8.6"` - Pin to a known-good release for reproducible
-  packaging
+  packaging.
+  A leading `v` (`"v1.8.6"`) is accepted and names the same version.
 
 Each release is cached independently under `cache/tools/{version}/`, so
 changing the pin never overwrites a previously downloaded tool.

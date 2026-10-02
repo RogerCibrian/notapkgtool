@@ -8,6 +8,7 @@ How the `napt/` package is laid out.
 napt/
 ├── __init__.py              # Package overview docstring
 ├── exceptions.py            # Exception hierarchy
+├── github.py                # GitHub API access shared by discovery and the tool downloads
 ├── logging.py               # Logging configuration
 ├── paths.py                 # Safe filenames and folder names from external input
 ├── powershell.py            # PowerShell string quoting for generated scripts

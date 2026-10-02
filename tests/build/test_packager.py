@@ -21,15 +21,19 @@ import pytest
 import requests
 
 from napt.build.packager import (
-    INTUNEWIN_CONTENTS_API,
-    INTUNEWIN_GITHUB_API,
+    INTUNEWIN_REPO,
     _execute_packaging,
     _get_intunewin_tool,
     _verify_build_structure,
     create_intunewin,
-    fetch_latest_intunewin_version,
 )
 from napt.exceptions import ConfigError, NetworkError, PackagingError
+from napt.github import API_BASE
+
+INTUNEWIN_GITHUB_API = f"{API_BASE}/repos/{INTUNEWIN_REPO}/releases/latest"
+INTUNEWIN_CONTENTS_API = (
+    f"{API_BASE}/repos/{INTUNEWIN_REPO}/contents/IntuneWinAppUtil.exe"
+)
 
 # All tests in this file are unit tests (fast, mocked)
 
@@ -64,6 +68,7 @@ def _make_build_dir(
     packagefiles = version_dir / "packagefiles"
     packagefiles.mkdir(parents=True)
     (packagefiles / "PSAppDeployToolkit").mkdir()
+    (packagefiles / "PSAppDeployToolkit" / "PSAppDeployToolkit.psd1").write_text("#")
     (packagefiles / "Files").mkdir()
     (packagefiles / "Files" / "setup.msi").write_bytes(_INSTALLER_BYTES)
     (packagefiles / "Invoke-AppDeployToolkit.ps1").write_text("script")
@@ -101,44 +106,53 @@ _DOWNLOAD_URL_PREFIX = (
 )
 
 
-class TestFetchLatestIntunewinVersion:
-    """Tests for fetching latest IntuneWinAppUtil version from GitHub."""
+def _cache_tool(cache_dir: Path, version: str) -> Path:
+    """Places a cached tool for a version and returns its path."""
+    tool_path = cache_dir / version / "IntuneWinAppUtil.exe"
+    tool_path.parent.mkdir(parents=True)
+    tool_path.write_bytes(b"fake exe")
+    return tool_path
 
-    def test_fetch_latest_success_bare_tag(self, requests_mock):
+
+class TestLatestIntunewinVersion:
+    """Tests for resolving 'latest' through the GitHub API.
+
+    Each test caches the expected version first, so resolving is the only
+    request made.
+    """
+
+    def test_latest_bare_tag(self, tmp_path, requests_mock):
         """Tests version extraction when tag has no v prefix."""
+        tool_path = _cache_tool(tmp_path / "tools", "1.8.6")
         requests_mock.get(INTUNEWIN_GITHUB_API, json={"tag_name": "1.8.6"})
 
-        assert fetch_latest_intunewin_version() == "1.8.6"
+        assert _get_intunewin_tool(tmp_path / "tools", "latest") == tool_path
 
-    def test_fetch_latest_success_v_prefix(self, requests_mock):
+    def test_latest_v_prefix(self, tmp_path, requests_mock):
         """Tests that v prefix is stripped from tag name."""
+        tool_path = _cache_tool(tmp_path / "tools", "1.8.6")
         requests_mock.get(INTUNEWIN_GITHUB_API, json={"tag_name": "v1.8.6"})
 
-        assert fetch_latest_intunewin_version() == "1.8.6"
+        assert _get_intunewin_tool(tmp_path / "tools", "latest") == tool_path
 
-    def test_fetch_latest_api_error(self, requests_mock):
+    def test_latest_api_error(self, tmp_path, requests_mock):
         """Tests NetworkError on GitHub API failure."""
         requests_mock.get(INTUNEWIN_GITHUB_API, status_code=500)
 
-        with pytest.raises(
-            NetworkError, match="Failed to fetch latest IntuneWinAppUtil"
-        ):
-            fetch_latest_intunewin_version()
+        with pytest.raises(NetworkError, match="latest release of microsoft"):
+            _get_intunewin_tool(tmp_path / "tools", "latest")
 
-    def test_fetch_latest_invalid_tag(self, requests_mock):
-        """Tests NetworkError when tag name cannot be parsed."""
-        requests_mock.get(INTUNEWIN_GITHUB_API, json={"tag_name": "not-a-version"})
-
-        with pytest.raises(NetworkError, match="Could not extract version"):
-            fetch_latest_intunewin_version()
-
-    @pytest.mark.parametrize("tag", ["v1.8.6-rc1", "1.8.6.beta", "v1.8.6 hotfix"])
-    def test_fetch_latest_tag_with_a_suffix_is_rejected(self, requests_mock, tag):
+    @pytest.mark.parametrize(
+        "tag", ["not-a-version", "v1.8.6-rc1", "1.8.6.beta", "v1.8.6 hotfix"]
+    )
+    def test_latest_tag_that_is_not_a_version_is_rejected(
+        self, tmp_path, requests_mock, tag
+    ):
         """Tests that a tag with a suffix is never cut down to a bare version."""
         requests_mock.get(INTUNEWIN_GITHUB_API, json={"tag_name": tag})
 
         with pytest.raises(NetworkError, match="Could not extract version"):
-            fetch_latest_intunewin_version()
+            _get_intunewin_tool(tmp_path / "tools", "latest")
 
 
 def _blob_sha(data: bytes) -> str:
@@ -195,15 +209,14 @@ class TestGetIntunewinTool:
         with pytest.raises(ConfigError, match="Invalid intunewin.release"):
             _get_intunewin_tool(tmp_path / "tools", "../../outside")
 
-    @patch("napt.build.packager.fetch_latest_intunewin_version")
-    def test_latest_resolves_via_api(self, mock_fetch, tmp_path, requests_mock):
-        """Tests that 'latest' calls fetch_latest_intunewin_version."""
-        mock_fetch.return_value = "1.8.6"
+    def test_latest_resolves_via_api(self, tmp_path, requests_mock):
+        """Tests that 'latest' is resolved and then downloaded by its tag."""
+        requests_mock.get(INTUNEWIN_GITHUB_API, json={"tag_name": "v1.8.6"})
         _serve_tool(requests_mock, "v1.8.6")
 
-        _get_intunewin_tool(tmp_path / "tools", "latest")
+        result = _get_intunewin_tool(tmp_path / "tools", "latest")
 
-        mock_fetch.assert_called_once()
+        assert result == tmp_path / "tools" / "1.8.6" / "IntuneWinAppUtil.exe"
 
     def test_v_prefix_stripped_from_release(self, tmp_path, requests_mock):
         """Tests that a user-specified v prefix is normalised."""
@@ -299,7 +312,7 @@ class TestGetIntunewinTool:
             exc=requests.ConnectionError("no route"),
         )
 
-        with pytest.raises(NetworkError, match="Failed to look up"):
+        with pytest.raises(NetworkError, match="Failed to fetch"):
             _get_intunewin_tool(tmp_path / "tools", "1.8.6")
 
     def test_lookup_without_a_download_url_is_a_network_error(
@@ -325,6 +338,46 @@ class TestGetIntunewinTool:
         with pytest.raises(NetworkError, match="Failed to download"):
             _get_intunewin_tool(tmp_path / "tools", "1.8.6")
 
+    def test_interrupted_write_leaves_no_cached_exe(
+        self, tmp_path, requests_mock, monkeypatch
+    ):
+        """Tests that a download that fails to land on disk is not cached."""
+        _serve_tool(requests_mock, "v1.8.6")
+
+        def _fail(path, data):
+            raise OSError("disk full")
+
+        monkeypatch.setattr("napt.build.packager.write_bytes_atomic", _fail)
+
+        with pytest.raises(PackagingError, match="Cannot write"):
+            _get_intunewin_tool(tmp_path / "tools", "1.8.6")
+        assert not (tmp_path / "tools" / "1.8.6" / "IntuneWinAppUtil.exe").exists()
+
+    def test_rate_limit_is_reported(self, tmp_path, requests_mock):
+        """Tests that an exhausted rate limit is named as the cause."""
+        requests_mock.get(
+            INTUNEWIN_GITHUB_API,
+            status_code=403,
+            headers={"X-RateLimit-Remaining": "0"},
+        )
+
+        with pytest.raises(NetworkError, match="rate limit"):
+            _get_intunewin_tool(tmp_path / "tools", "latest")
+
+    def test_latest_looks_the_file_up_by_the_tag_as_spelled(
+        self, tmp_path, requests_mock
+    ):
+        """Tests that a bare latest tag is not first tried with a v prefix."""
+        requests_mock.get(INTUNEWIN_GITHUB_API, json={"tag_name": "1.8.3"})
+        _serve_tool(requests_mock, "1.8.3")
+
+        _get_intunewin_tool(tmp_path / "tools", "latest")
+
+        refs = [
+            r.qs["ref"][0] for r in requests_mock.request_history if "contents" in r.url
+        ]
+        assert refs == ["1.8.3"]
+
     def test_lookup_sends_the_github_token(self, tmp_path, requests_mock, monkeypatch):
         """Tests that a GITHUB_TOKEN in the environment authenticates the
         lookup, since it counts against the API's unauthenticated limit."""
@@ -347,6 +400,7 @@ class TestVerifyBuildStructure:
 
         # Create required structure
         (build_dir / "PSAppDeployToolkit").mkdir()
+        (build_dir / "PSAppDeployToolkit" / "PSAppDeployToolkit.psd1").write_text("#")
         (build_dir / "Files").mkdir()
         (build_dir / "Invoke-AppDeployToolkit.ps1").write_text("script")
         (build_dir / "Invoke-AppDeployToolkit.exe").write_bytes(b"exe")
