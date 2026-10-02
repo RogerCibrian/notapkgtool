@@ -3769,8 +3769,8 @@ unset variable stops discovery with an error.</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">discovery</span><span class="p">:</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_json</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">api_url</span><span class="p">:</span><span class="w"> </span><span class="s">"https://api.vendor.com/latest"</span><span class="w">   </span><span class="c1"># Required: JSON API endpoint URL</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">version_path</span><span class="p">:</span><span class="w"> </span><span class="s">"version"</span><span class="w">                    </span><span class="c1"># Required: JSONPath to version field</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">download_url_path</span><span class="p">:</span><span class="w"> </span><span class="s">"download_url"</span><span class="w">          </span><span class="c1"># Required: JSONPath to download URL field</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">version_path</span><span class="p">:</span><span class="w"> </span><span class="s">"version"</span><span class="w">                    </span><span class="c1"># Required: dotted path to the version</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">download_url_path</span><span class="p">:</span><span class="w"> </span><span class="s">"download_url"</span><span class="w">          </span><span class="c1"># Required: dotted path to the download URL</span>
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nt">version_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">"v?([0-9.]+)"</span><span class="w">             </span><span class="c1"># Optional: regex to narrow the version value</span>
 </span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="nt">headers</span><span class="p">:</span><span class="w">                                   </span><span class="c1"># Optional: HTTP headers for authentication</span>
 </span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="nt">Authorization</span><span class="p">:</span><span class="w"> </span><span class="s">"Bearer</span><span class="nv"> </span><span class="s">${API_TOKEN}"</span><span class="w">     </span><span class="c1"># API_TOKEN declared under secrets in org.yaml</span>
@@ -3780,20 +3780,22 @@ unset variable stops discovery with an error.</p>
 <strong>Required:</strong> Yes</p>
 <p>JSON API endpoint URL that returns version and download URL information.</p>
 <h4 id="version_path">version_path</h4>
-<p><strong>Type:</strong> <code>string</code> (JSONPath)
+<p><strong>Type:</strong> <code>string</code> (dotted path)
 <strong>Required:</strong> Yes</p>
-<p>JSONPath expression to extract the version field from the API response.
-Supports nested paths.</p>
+<p>Path to the version in the API response: keys separated by dots, with
+<code>[n]</code> to pick an entry of a list.
+The value must be a string or a number.</p>
 <p><strong>Examples:</strong>
 - <code>"version"</code> - Direct field: <code>{"version": "1.2.3"}</code>
 - <code>"data.version"</code> - Nested field: <code>{"data": {"version": "1.2.3"}}</code>
-- <code>"release.latest.version"</code> - Deeply nested:
-  <code>{"release": {"latest": {"version": "1.2.3"}}}</code></p>
+- <code>"builds[0].version"</code> - First entry of a list:
+  <code>{"builds": [{"version": "1.2.3"}, ...]}</code></p>
 <h4 id="download_url_path">download_url_path</h4>
-<p><strong>Type:</strong> <code>string</code> (JSONPath)
+<p><strong>Type:</strong> <code>string</code> (dotted path)
 <strong>Required:</strong> Yes</p>
-<p>JSONPath expression to extract the download URL field from the API response.
-Supports nested paths (same format as <code>version_path</code>).</p>
+<p>Path to the download URL in the API response (same format as
+<code>version_path</code>).
+The value must be a non-empty string.</p>
 <h4 id="version_pattern_1">version_pattern</h4>
 <p><strong>Type:</strong> <code>string</code> (regex)
 <strong>Required:</strong> No
@@ -3856,7 +3858,7 @@ How unchanged files are skipped:
 <strong>Required:</strong> One of <code>link_selector</code> or <code>link_pattern</code></p>
 <p>CSS selector to find the download link on the page.
 Prefer it over <code>link_pattern</code> when the page's markup allows.
-If both are set, <code>link_selector</code> is used and <code>link_pattern</code> is ignored.</p>
+Setting both is a validation error.</p>
 <p><strong>Examples:</strong>
 - <code>'a[href$=".msi"]'</code> - Matches links ending in <code>.msi</code>
 - <code>'a.download-link'</code> - Matches links with <code>download-link</code> class
@@ -3895,7 +3897,8 @@ version.</p>
 <strong>Required:</strong> No
 <strong>Default:</strong> Use first capture group as-is</p>
 <p>Format string to combine multiple capture groups from <code>version_pattern</code>.
-Uses Python format string syntax with <code>{0}</code>, <code>{1}</code>, etc. for capture groups.</p>
+Uses Python format string syntax with <code>{0}</code>, <code>{1}</code>, etc. for capture groups.
+A format string that is malformed or names a field is a validation error.</p>
 <p><strong>Examples:</strong>
 - <code>"{0}.{1}"</code> - Combines two groups: <code>"25"</code> + <code>"01"</code> → <code>"25.01"</code>
 - <code>"{1}.{0}"</code> - Reverses order: <code>"01"</code> + <code>"25"</code> → <code>"01.25"</code>

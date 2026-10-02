@@ -2030,7 +2030,24 @@ org.yaml tried to declare.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>napt/validation.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-896">896</a></span>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-879">879</a></span>
+<span class="normal"><a href="#__codelineno-0-880">880</a></span>
+<span class="normal"><a href="#__codelineno-0-881">881</a></span>
+<span class="normal"><a href="#__codelineno-0-882">882</a></span>
+<span class="normal"><a href="#__codelineno-0-883">883</a></span>
+<span class="normal"><a href="#__codelineno-0-884">884</a></span>
+<span class="normal"><a href="#__codelineno-0-885">885</a></span>
+<span class="normal"><a href="#__codelineno-0-886">886</a></span>
+<span class="normal"><a href="#__codelineno-0-887">887</a></span>
+<span class="normal"><a href="#__codelineno-0-888">888</a></span>
+<span class="normal"><a href="#__codelineno-0-889">889</a></span>
+<span class="normal"><a href="#__codelineno-0-890">890</a></span>
+<span class="normal"><a href="#__codelineno-0-891">891</a></span>
+<span class="normal"><a href="#__codelineno-0-892">892</a></span>
+<span class="normal"><a href="#__codelineno-0-893">893</a></span>
+<span class="normal"><a href="#__codelineno-0-894">894</a></span>
+<span class="normal"><a href="#__codelineno-0-895">895</a></span>
+<span class="normal"><a href="#__codelineno-0-896">896</a></span>
 <span class="normal"><a href="#__codelineno-0-897">897</a></span>
 <span class="normal"><a href="#__codelineno-0-898">898</a></span>
 <span class="normal"><a href="#__codelineno-0-899">899</a></span>
@@ -2103,114 +2120,97 @@ org.yaml tried to declare.</p>
 <span class="normal"><a href="#__codelineno-0-966">966</a></span>
 <span class="normal"><a href="#__codelineno-0-967">967</a></span>
 <span class="normal"><a href="#__codelineno-0-968">968</a></span>
-<span class="normal"><a href="#__codelineno-0-969">969</a></span>
-<span class="normal"><a href="#__codelineno-0-970">970</a></span>
-<span class="normal"><a href="#__codelineno-0-971">971</a></span>
-<span class="normal"><a href="#__codelineno-0-972">972</a></span>
-<span class="normal"><a href="#__codelineno-0-973">973</a></span>
-<span class="normal"><a href="#__codelineno-0-974">974</a></span>
-<span class="normal"><a href="#__codelineno-0-975">975</a></span>
-<span class="normal"><a href="#__codelineno-0-976">976</a></span>
-<span class="normal"><a href="#__codelineno-0-977">977</a></span>
-<span class="normal"><a href="#__codelineno-0-978">978</a></span>
-<span class="normal"><a href="#__codelineno-0-979">979</a></span>
-<span class="normal"><a href="#__codelineno-0-980">980</a></span>
-<span class="normal"><a href="#__codelineno-0-981">981</a></span>
-<span class="normal"><a href="#__codelineno-0-982">982</a></span>
-<span class="normal"><a href="#__codelineno-0-983">983</a></span>
-<span class="normal"><a href="#__codelineno-0-984">984</a></span>
-<span class="normal"><a href="#__codelineno-0-985">985</a></span>
-<span class="normal"><a href="#__codelineno-0-986">986</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-896"><a id="__codelineno-0-896" name="__codelineno-0-896"></a><span class="k">def</span><span class="w"> </span><span class="nf">validate_config</span><span class="p">(</span>
-</span><span id="__span-0-897"><a id="__codelineno-0-897" name="__codelineno-0-897"></a>    <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
-</span><span id="__span-0-898"><a id="__codelineno-0-898" name="__codelineno-0-898"></a>    <span class="n">recipe_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span>
-</span><span id="__span-0-899"><a id="__codelineno-0-899" name="__codelineno-0-899"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ValidationResult</span><span class="p">:</span>
-</span><span id="__span-0-900"><a id="__codelineno-0-900" name="__codelineno-0-900"></a><span class="w">    </span><span class="sd">"""Validates a merged configuration dict.</span>
+<span class="normal"><a href="#__codelineno-0-969">969</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-879"><a id="__codelineno-0-879" name="__codelineno-0-879"></a><span class="k">def</span><span class="w"> </span><span class="nf">validate_config</span><span class="p">(</span>
+</span><span id="__span-0-880"><a id="__codelineno-0-880" name="__codelineno-0-880"></a>    <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+</span><span id="__span-0-881"><a id="__codelineno-0-881" name="__codelineno-0-881"></a>    <span class="n">recipe_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span>
+</span><span id="__span-0-882"><a id="__codelineno-0-882" name="__codelineno-0-882"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ValidationResult</span><span class="p">:</span>
+</span><span id="__span-0-883"><a id="__codelineno-0-883" name="__codelineno-0-883"></a><span class="w">    </span><span class="sd">"""Validates a merged configuration dict.</span>
+</span><span id="__span-0-884"><a id="__codelineno-0-884" name="__codelineno-0-884"></a>
+</span><span id="__span-0-885"><a id="__codelineno-0-885" name="__codelineno-0-885"></a><span class="sd">    Checks required fields, types, strategy registration, and section-level</span>
+</span><span id="__span-0-886"><a id="__codelineno-0-886" name="__codelineno-0-886"></a><span class="sd">    validation. Used by both ``validate_recipe`` (CLI) and</span>
+</span><span id="__span-0-887"><a id="__codelineno-0-887" name="__codelineno-0-887"></a><span class="sd">    ``load_effective_config`` (pipeline commands) so that one set of rules</span>
+</span><span id="__span-0-888"><a id="__codelineno-0-888" name="__codelineno-0-888"></a><span class="sd">    applies everywhere. When the dict carries the loader's ``_provenance``</span>
+</span><span id="__span-0-889"><a id="__codelineno-0-889" name="__codelineno-0-889"></a><span class="sd">    entry, the secrets check also reports entries that a layer other than</span>
+</span><span id="__span-0-890"><a id="__codelineno-0-890" name="__codelineno-0-890"></a><span class="sd">    org.yaml tried to declare.</span>
+</span><span id="__span-0-891"><a id="__codelineno-0-891" name="__codelineno-0-891"></a>
+</span><span id="__span-0-892"><a id="__codelineno-0-892" name="__codelineno-0-892"></a><span class="sd">    Args:</span>
+</span><span id="__span-0-893"><a id="__codelineno-0-893" name="__codelineno-0-893"></a><span class="sd">        config: The merged configuration dictionary to validate.</span>
+</span><span id="__span-0-894"><a id="__codelineno-0-894" name="__codelineno-0-894"></a><span class="sd">        recipe_path: Optional path string for error context.</span>
+</span><span id="__span-0-895"><a id="__codelineno-0-895" name="__codelineno-0-895"></a>
+</span><span id="__span-0-896"><a id="__codelineno-0-896" name="__codelineno-0-896"></a><span class="sd">    Returns:</span>
+</span><span id="__span-0-897"><a id="__codelineno-0-897" name="__codelineno-0-897"></a><span class="sd">        Validation status, errors, warnings, app count, and the app id.</span>
+</span><span id="__span-0-898"><a id="__codelineno-0-898" name="__codelineno-0-898"></a>
+</span><span id="__span-0-899"><a id="__codelineno-0-899" name="__codelineno-0-899"></a><span class="sd">    """</span>
+</span><span id="__span-0-900"><a id="__codelineno-0-900" name="__codelineno-0-900"></a>    <span class="n">logger</span> <span class="o">=</span> <span class="n">get_global_logger</span><span class="p">()</span>
 </span><span id="__span-0-901"><a id="__codelineno-0-901" name="__codelineno-0-901"></a>
-</span><span id="__span-0-902"><a id="__codelineno-0-902" name="__codelineno-0-902"></a><span class="sd">    Checks required fields, types, strategy registration, and section-level</span>
-</span><span id="__span-0-903"><a id="__codelineno-0-903" name="__codelineno-0-903"></a><span class="sd">    validation. Used by both ``validate_recipe`` (CLI) and</span>
-</span><span id="__span-0-904"><a id="__codelineno-0-904" name="__codelineno-0-904"></a><span class="sd">    ``load_effective_config`` (pipeline commands) so that one set of rules</span>
-</span><span id="__span-0-905"><a id="__codelineno-0-905" name="__codelineno-0-905"></a><span class="sd">    applies everywhere. When the dict carries the loader's ``_provenance``</span>
-</span><span id="__span-0-906"><a id="__codelineno-0-906" name="__codelineno-0-906"></a><span class="sd">    entry, the secrets check also reports entries that a layer other than</span>
-</span><span id="__span-0-907"><a id="__codelineno-0-907" name="__codelineno-0-907"></a><span class="sd">    org.yaml tried to declare.</span>
+</span><span id="__span-0-902"><a id="__codelineno-0-902" name="__codelineno-0-902"></a>    <span class="n">errors</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="__span-0-903"><a id="__codelineno-0-903" name="__codelineno-0-903"></a>    <span class="n">warnings</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="__span-0-904"><a id="__codelineno-0-904" name="__codelineno-0-904"></a>
+</span><span id="__span-0-905"><a id="__codelineno-0-905" name="__codelineno-0-905"></a>    <span class="c1"># Types of every top-level field, empty sections, and unknown keys.</span>
+</span><span id="__span-0-906"><a id="__codelineno-0-906" name="__codelineno-0-906"></a>    <span class="n">top_level</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_INTERNAL_KEYS</span><span class="p">}</span>
+</span><span id="__span-0-907"><a id="__codelineno-0-907" name="__codelineno-0-907"></a>    <span class="n">_validate_section</span><span class="p">(</span><span class="n">top_level</span><span class="p">,</span> <span class="n">_TOP_LEVEL_FIELDS</span><span class="p">,</span> <span class="s2">""</span><span class="p">,</span> <span class="n">errors</span><span class="p">,</span> <span class="n">warnings</span><span class="p">)</span>
 </span><span id="__span-0-908"><a id="__codelineno-0-908" name="__codelineno-0-908"></a>
-</span><span id="__span-0-909"><a id="__codelineno-0-909" name="__codelineno-0-909"></a><span class="sd">    Args:</span>
-</span><span id="__span-0-910"><a id="__codelineno-0-910" name="__codelineno-0-910"></a><span class="sd">        config: The merged configuration dictionary to validate.</span>
-</span><span id="__span-0-911"><a id="__codelineno-0-911" name="__codelineno-0-911"></a><span class="sd">        recipe_path: Optional path string for error context.</span>
+</span><span id="__span-0-909"><a id="__codelineno-0-909" name="__codelineno-0-909"></a>    <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"apiVersion"</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">,</span> <span class="s2">"id"</span><span class="p">,</span> <span class="s2">"discovery"</span><span class="p">):</span>
+</span><span id="__span-0-910"><a id="__codelineno-0-910" name="__codelineno-0-910"></a>        <span class="k">if</span> <span class="n">field</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">config</span><span class="p">:</span>
+</span><span id="__span-0-911"><a id="__codelineno-0-911" name="__codelineno-0-911"></a>            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Missing required field: </span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span><span id="__span-0-912"><a id="__codelineno-0-912" name="__codelineno-0-912"></a>
-</span><span id="__span-0-913"><a id="__codelineno-0-913" name="__codelineno-0-913"></a><span class="sd">    Returns:</span>
-</span><span id="__span-0-914"><a id="__codelineno-0-914" name="__codelineno-0-914"></a><span class="sd">        Validation status, errors, warnings, app count, and the app id.</span>
-</span><span id="__span-0-915"><a id="__codelineno-0-915" name="__codelineno-0-915"></a>
-</span><span id="__span-0-916"><a id="__codelineno-0-916" name="__codelineno-0-916"></a><span class="sd">    """</span>
-</span><span id="__span-0-917"><a id="__codelineno-0-917" name="__codelineno-0-917"></a>    <span class="n">logger</span> <span class="o">=</span> <span class="n">get_global_logger</span><span class="p">()</span>
-</span><span id="__span-0-918"><a id="__codelineno-0-918" name="__codelineno-0-918"></a>
-</span><span id="__span-0-919"><a id="__codelineno-0-919" name="__codelineno-0-919"></a>    <span class="n">errors</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="__span-0-920"><a id="__codelineno-0-920" name="__codelineno-0-920"></a>    <span class="n">warnings</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="__span-0-921"><a id="__codelineno-0-921" name="__codelineno-0-921"></a>
-</span><span id="__span-0-922"><a id="__codelineno-0-922" name="__codelineno-0-922"></a>    <span class="c1"># Types of every top-level field, empty sections, and unknown keys.</span>
-</span><span id="__span-0-923"><a id="__codelineno-0-923" name="__codelineno-0-923"></a>    <span class="n">top_level</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_INTERNAL_KEYS</span><span class="p">}</span>
-</span><span id="__span-0-924"><a id="__codelineno-0-924" name="__codelineno-0-924"></a>    <span class="n">_validate_section</span><span class="p">(</span><span class="n">top_level</span><span class="p">,</span> <span class="n">_TOP_LEVEL_FIELDS</span><span class="p">,</span> <span class="s2">""</span><span class="p">,</span> <span class="n">errors</span><span class="p">,</span> <span class="n">warnings</span><span class="p">)</span>
-</span><span id="__span-0-925"><a id="__codelineno-0-925" name="__codelineno-0-925"></a>
-</span><span id="__span-0-926"><a id="__codelineno-0-926" name="__codelineno-0-926"></a>    <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"apiVersion"</span><span class="p">,</span> <span class="s2">"name"</span><span class="p">,</span> <span class="s2">"id"</span><span class="p">,</span> <span class="s2">"discovery"</span><span class="p">):</span>
-</span><span id="__span-0-927"><a id="__codelineno-0-927" name="__codelineno-0-927"></a>        <span class="k">if</span> <span class="n">field</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">config</span><span class="p">:</span>
-</span><span id="__span-0-928"><a id="__codelineno-0-928" name="__codelineno-0-928"></a>            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Missing required field: </span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="__span-0-929"><a id="__codelineno-0-929" name="__codelineno-0-929"></a>
-</span><span id="__span-0-930"><a id="__codelineno-0-930" name="__codelineno-0-930"></a>    <span class="n">api_version</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"apiVersion"</span><span class="p">)</span>
-</span><span id="__span-0-931"><a id="__codelineno-0-931" name="__codelineno-0-931"></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">api_version</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-</span><span id="__span-0-932"><a id="__codelineno-0-932" name="__codelineno-0-932"></a>        <span class="k">if</span> <span class="n">api_version</span> <span class="o">!=</span> <span class="s2">"napt/v1"</span><span class="p">:</span>
-</span><span id="__span-0-933"><a id="__codelineno-0-933" name="__codelineno-0-933"></a>            <span class="n">warnings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-</span><span id="__span-0-934"><a id="__codelineno-0-934" name="__codelineno-0-934"></a>                <span class="sa">f</span><span class="s2">"apiVersion '</span><span class="si">{</span><span class="n">api_version</span><span class="si">}</span><span class="s2">' may not be supported (expected: napt/v1)"</span>
-</span><span id="__span-0-935"><a id="__codelineno-0-935" name="__codelineno-0-935"></a>            <span class="p">)</span>
-</span><span id="__span-0-936"><a id="__codelineno-0-936" name="__codelineno-0-936"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"VALIDATION"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"apiVersion: </span><span class="si">{</span><span class="n">api_version</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="__span-0-913"><a id="__codelineno-0-913" name="__codelineno-0-913"></a>    <span class="n">api_version</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"apiVersion"</span><span class="p">)</span>
+</span><span id="__span-0-914"><a id="__codelineno-0-914" name="__codelineno-0-914"></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">api_version</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+</span><span id="__span-0-915"><a id="__codelineno-0-915" name="__codelineno-0-915"></a>        <span class="k">if</span> <span class="n">api_version</span> <span class="o">!=</span> <span class="s2">"napt/v1"</span><span class="p">:</span>
+</span><span id="__span-0-916"><a id="__codelineno-0-916" name="__codelineno-0-916"></a>            <span class="n">warnings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+</span><span id="__span-0-917"><a id="__codelineno-0-917" name="__codelineno-0-917"></a>                <span class="sa">f</span><span class="s2">"apiVersion '</span><span class="si">{</span><span class="n">api_version</span><span class="si">}</span><span class="s2">' may not be supported (expected: napt/v1)"</span>
+</span><span id="__span-0-918"><a id="__codelineno-0-918" name="__codelineno-0-918"></a>            <span class="p">)</span>
+</span><span id="__span-0-919"><a id="__codelineno-0-919" name="__codelineno-0-919"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"VALIDATION"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"apiVersion: </span><span class="si">{</span><span class="n">api_version</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="__span-0-920"><a id="__codelineno-0-920" name="__codelineno-0-920"></a>
+</span><span id="__span-0-921"><a id="__codelineno-0-921" name="__codelineno-0-921"></a>    <span class="n">app_id</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span>
+</span><span id="__span-0-922"><a id="__codelineno-0-922" name="__codelineno-0-922"></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">app_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+</span><span id="__span-0-923"><a id="__codelineno-0-923" name="__codelineno-0-923"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">app_id</span><span class="p">:</span>
+</span><span id="__span-0-924"><a id="__codelineno-0-924" name="__codelineno-0-924"></a>            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"Field 'id' cannot be empty"</span><span class="p">)</span>
+</span><span id="__span-0-925"><a id="__codelineno-0-925" name="__codelineno-0-925"></a>        <span class="k">elif</span> <span class="ow">not</span> <span class="n">is_safe_path_component</span><span class="p">(</span><span class="n">app_id</span><span class="p">):</span>
+</span><span id="__span-0-926"><a id="__codelineno-0-926" name="__codelineno-0-926"></a>            <span class="c1"># The id names the app's download, build, package, and state</span>
+</span><span id="__span-0-927"><a id="__codelineno-0-927" name="__codelineno-0-927"></a>            <span class="c1"># folders, so it must be usable as a folder name as-is.</span>
+</span><span id="__span-0-928"><a id="__codelineno-0-928" name="__codelineno-0-928"></a>            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+</span><span id="__span-0-929"><a id="__codelineno-0-929" name="__codelineno-0-929"></a>                <span class="s2">"Field 'id' may contain only letters, digits, '.', '-', '_', "</span>
+</span><span id="__span-0-930"><a id="__codelineno-0-930" name="__codelineno-0-930"></a>                <span class="s2">"and '+', and must start with a letter or digit"</span>
+</span><span id="__span-0-931"><a id="__codelineno-0-931" name="__codelineno-0-931"></a>            <span class="p">)</span>
+</span><span id="__span-0-932"><a id="__codelineno-0-932" name="__codelineno-0-932"></a>
+</span><span id="__span-0-933"><a id="__codelineno-0-933" name="__codelineno-0-933"></a>    <span class="n">_validate_parent_field</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">recipe_path</span><span class="p">,</span> <span class="n">warnings</span><span class="p">)</span>
+</span><span id="__span-0-934"><a id="__codelineno-0-934" name="__codelineno-0-934"></a>
+</span><span id="__span-0-935"><a id="__codelineno-0-935" name="__codelineno-0-935"></a>    <span class="n">app_name</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"name"</span><span class="p">,</span> <span class="s2">"unnamed"</span><span class="p">)</span>
+</span><span id="__span-0-936"><a id="__codelineno-0-936" name="__codelineno-0-936"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"VALIDATION"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Validating: </span><span class="si">{</span><span class="n">app_name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span><span id="__span-0-937"><a id="__codelineno-0-937" name="__codelineno-0-937"></a>
-</span><span id="__span-0-938"><a id="__codelineno-0-938" name="__codelineno-0-938"></a>    <span class="n">app_id</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span>
-</span><span id="__span-0-939"><a id="__codelineno-0-939" name="__codelineno-0-939"></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">app_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-</span><span id="__span-0-940"><a id="__codelineno-0-940" name="__codelineno-0-940"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">app_id</span><span class="p">:</span>
-</span><span id="__span-0-941"><a id="__codelineno-0-941" name="__codelineno-0-941"></a>            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"Field 'id' cannot be empty"</span><span class="p">)</span>
-</span><span id="__span-0-942"><a id="__codelineno-0-942" name="__codelineno-0-942"></a>        <span class="k">elif</span> <span class="ow">not</span> <span class="n">is_safe_path_component</span><span class="p">(</span><span class="n">app_id</span><span class="p">):</span>
-</span><span id="__span-0-943"><a id="__codelineno-0-943" name="__codelineno-0-943"></a>            <span class="c1"># The id names the app's download, build, package, and state</span>
-</span><span id="__span-0-944"><a id="__codelineno-0-944" name="__codelineno-0-944"></a>            <span class="c1"># folders, so it must be usable as a folder name as-is.</span>
-</span><span id="__span-0-945"><a id="__codelineno-0-945" name="__codelineno-0-945"></a>            <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-</span><span id="__span-0-946"><a id="__codelineno-0-946" name="__codelineno-0-946"></a>                <span class="s2">"Field 'id' may contain only letters, digits, '.', '-', '_', "</span>
-</span><span id="__span-0-947"><a id="__codelineno-0-947" name="__codelineno-0-947"></a>                <span class="s2">"and '+', and must start with a letter or digit"</span>
-</span><span id="__span-0-948"><a id="__codelineno-0-948" name="__codelineno-0-948"></a>            <span class="p">)</span>
-</span><span id="__span-0-949"><a id="__codelineno-0-949" name="__codelineno-0-949"></a>
-</span><span id="__span-0-950"><a id="__codelineno-0-950" name="__codelineno-0-950"></a>    <span class="n">_validate_parent_field</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">recipe_path</span><span class="p">,</span> <span class="n">warnings</span><span class="p">)</span>
+</span><span id="__span-0-938"><a id="__codelineno-0-938" name="__codelineno-0-938"></a>    <span class="n">discovery</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"discovery"</span><span class="p">)</span>
+</span><span id="__span-0-939"><a id="__codelineno-0-939" name="__codelineno-0-939"></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">discovery</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+</span><span id="__span-0-940"><a id="__codelineno-0-940" name="__codelineno-0-940"></a>        <span class="n">_validate_discovery_section</span><span class="p">(</span><span class="n">discovery</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">app_name</span><span class="p">,</span> <span class="n">errors</span><span class="p">,</span> <span class="n">warnings</span><span class="p">)</span>
+</span><span id="__span-0-941"><a id="__codelineno-0-941" name="__codelineno-0-941"></a>
+</span><span id="__span-0-942"><a id="__codelineno-0-942" name="__codelineno-0-942"></a>    <span class="n">_validate_psadt_section</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">errors</span><span class="p">,</span> <span class="n">warnings</span><span class="p">)</span>
+</span><span id="__span-0-943"><a id="__codelineno-0-943" name="__codelineno-0-943"></a>    <span class="n">_validate_intune_section</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">errors</span><span class="p">,</span> <span class="n">warnings</span><span class="p">)</span>
+</span><span id="__span-0-944"><a id="__codelineno-0-944" name="__codelineno-0-944"></a>    <span class="n">_validate_table_section</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s2">"logging"</span><span class="p">,</span> <span class="n">_LOGGING_FIELDS</span><span class="p">,</span> <span class="n">errors</span><span class="p">,</span> <span class="n">warnings</span><span class="p">)</span>
+</span><span id="__span-0-945"><a id="__codelineno-0-945" name="__codelineno-0-945"></a>    <span class="n">_validate_table_section</span><span class="p">(</span>
+</span><span id="__span-0-946"><a id="__codelineno-0-946" name="__codelineno-0-946"></a>        <span class="n">config</span><span class="p">,</span> <span class="s2">"directories"</span><span class="p">,</span> <span class="n">_DIRECTORIES_FIELDS</span><span class="p">,</span> <span class="n">errors</span><span class="p">,</span> <span class="n">warnings</span>
+</span><span id="__span-0-947"><a id="__codelineno-0-947" name="__codelineno-0-947"></a>    <span class="p">)</span>
+</span><span id="__span-0-948"><a id="__codelineno-0-948" name="__codelineno-0-948"></a>    <span class="n">_validate_table_section</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s2">"intunewin"</span><span class="p">,</span> <span class="n">_INTUNEWIN_FIELDS</span><span class="p">,</span> <span class="n">errors</span><span class="p">,</span> <span class="n">warnings</span><span class="p">)</span>
+</span><span id="__span-0-949"><a id="__codelineno-0-949" name="__codelineno-0-949"></a>    <span class="n">_validate_deployment_section</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">errors</span><span class="p">,</span> <span class="n">warnings</span><span class="p">)</span>
+</span><span id="__span-0-950"><a id="__codelineno-0-950" name="__codelineno-0-950"></a>    <span class="n">_validate_secrets_section</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">errors</span><span class="p">,</span> <span class="n">warnings</span><span class="p">)</span>
 </span><span id="__span-0-951"><a id="__codelineno-0-951" name="__codelineno-0-951"></a>
-</span><span id="__span-0-952"><a id="__codelineno-0-952" name="__codelineno-0-952"></a>    <span class="n">app_name</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"name"</span><span class="p">,</span> <span class="s2">"unnamed"</span><span class="p">)</span>
-</span><span id="__span-0-953"><a id="__codelineno-0-953" name="__codelineno-0-953"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"VALIDATION"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Validating: </span><span class="si">{</span><span class="n">app_name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="__span-0-954"><a id="__codelineno-0-954" name="__codelineno-0-954"></a>
-</span><span id="__span-0-955"><a id="__codelineno-0-955" name="__codelineno-0-955"></a>    <span class="n">discovery</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"discovery"</span><span class="p">)</span>
-</span><span id="__span-0-956"><a id="__codelineno-0-956" name="__codelineno-0-956"></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">discovery</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-</span><span id="__span-0-957"><a id="__codelineno-0-957" name="__codelineno-0-957"></a>        <span class="n">_validate_discovery_section</span><span class="p">(</span><span class="n">discovery</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">app_name</span><span class="p">,</span> <span class="n">errors</span><span class="p">,</span> <span class="n">warnings</span><span class="p">)</span>
-</span><span id="__span-0-958"><a id="__codelineno-0-958" name="__codelineno-0-958"></a>
-</span><span id="__span-0-959"><a id="__codelineno-0-959" name="__codelineno-0-959"></a>    <span class="n">_validate_psadt_section</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">errors</span><span class="p">,</span> <span class="n">warnings</span><span class="p">)</span>
-</span><span id="__span-0-960"><a id="__codelineno-0-960" name="__codelineno-0-960"></a>    <span class="n">_validate_intune_section</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">errors</span><span class="p">,</span> <span class="n">warnings</span><span class="p">)</span>
-</span><span id="__span-0-961"><a id="__codelineno-0-961" name="__codelineno-0-961"></a>    <span class="n">_validate_table_section</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s2">"logging"</span><span class="p">,</span> <span class="n">_LOGGING_FIELDS</span><span class="p">,</span> <span class="n">errors</span><span class="p">,</span> <span class="n">warnings</span><span class="p">)</span>
-</span><span id="__span-0-962"><a id="__codelineno-0-962" name="__codelineno-0-962"></a>    <span class="n">_validate_table_section</span><span class="p">(</span>
-</span><span id="__span-0-963"><a id="__codelineno-0-963" name="__codelineno-0-963"></a>        <span class="n">config</span><span class="p">,</span> <span class="s2">"directories"</span><span class="p">,</span> <span class="n">_DIRECTORIES_FIELDS</span><span class="p">,</span> <span class="n">errors</span><span class="p">,</span> <span class="n">warnings</span>
-</span><span id="__span-0-964"><a id="__codelineno-0-964" name="__codelineno-0-964"></a>    <span class="p">)</span>
-</span><span id="__span-0-965"><a id="__codelineno-0-965" name="__codelineno-0-965"></a>    <span class="n">_validate_table_section</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s2">"intunewin"</span><span class="p">,</span> <span class="n">_INTUNEWIN_FIELDS</span><span class="p">,</span> <span class="n">errors</span><span class="p">,</span> <span class="n">warnings</span><span class="p">)</span>
-</span><span id="__span-0-966"><a id="__codelineno-0-966" name="__codelineno-0-966"></a>    <span class="n">_validate_deployment_section</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">errors</span><span class="p">,</span> <span class="n">warnings</span><span class="p">)</span>
-</span><span id="__span-0-967"><a id="__codelineno-0-967" name="__codelineno-0-967"></a>    <span class="n">_validate_secrets_section</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">errors</span><span class="p">,</span> <span class="n">warnings</span><span class="p">)</span>
-</span><span id="__span-0-968"><a id="__codelineno-0-968" name="__codelineno-0-968"></a>
-</span><span id="__span-0-969"><a id="__codelineno-0-969" name="__codelineno-0-969"></a>    <span class="c1"># Determine final status</span>
-</span><span id="__span-0-970"><a id="__codelineno-0-970" name="__codelineno-0-970"></a>    <span class="n">status</span> <span class="o">=</span> <span class="s2">"valid"</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">errors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s2">"invalid"</span>
-</span><span id="__span-0-971"><a id="__codelineno-0-971" name="__codelineno-0-971"></a>    <span class="n">app_count</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">status</span> <span class="o">==</span> <span class="s2">"valid"</span> <span class="k">else</span> <span class="mi">0</span>
-</span><span id="__span-0-972"><a id="__codelineno-0-972" name="__codelineno-0-972"></a>
-</span><span id="__span-0-973"><a id="__codelineno-0-973" name="__codelineno-0-973"></a>    <span class="k">if</span> <span class="n">status</span> <span class="o">==</span> <span class="s2">"valid"</span><span class="p">:</span>
-</span><span id="__span-0-974"><a id="__codelineno-0-974" name="__codelineno-0-974"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"VALIDATION"</span><span class="p">,</span> <span class="s2">"Recipe is valid!"</span><span class="p">)</span>
-</span><span id="__span-0-975"><a id="__codelineno-0-975" name="__codelineno-0-975"></a>    <span class="k">else</span><span class="p">:</span>
-</span><span id="__span-0-976"><a id="__codelineno-0-976" name="__codelineno-0-976"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"VALIDATION"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Recipe has </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">errors</span><span class="p">)</span><span class="si">}</span><span class="s2"> error(s)"</span><span class="p">)</span>
-</span><span id="__span-0-977"><a id="__codelineno-0-977" name="__codelineno-0-977"></a>
-</span><span id="__span-0-978"><a id="__codelineno-0-978" name="__codelineno-0-978"></a>    <span class="n">app_id</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span>
-</span><span id="__span-0-979"><a id="__codelineno-0-979" name="__codelineno-0-979"></a>    <span class="k">return</span> <span class="n">ValidationResult</span><span class="p">(</span>
-</span><span id="__span-0-980"><a id="__codelineno-0-980" name="__codelineno-0-980"></a>        <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="p">,</span>
-</span><span id="__span-0-981"><a id="__codelineno-0-981" name="__codelineno-0-981"></a>        <span class="n">errors</span><span class="o">=</span><span class="n">errors</span><span class="p">,</span>
-</span><span id="__span-0-982"><a id="__codelineno-0-982" name="__codelineno-0-982"></a>        <span class="n">warnings</span><span class="o">=</span><span class="n">warnings</span><span class="p">,</span>
-</span><span id="__span-0-983"><a id="__codelineno-0-983" name="__codelineno-0-983"></a>        <span class="n">app_count</span><span class="o">=</span><span class="n">app_count</span><span class="p">,</span>
-</span><span id="__span-0-984"><a id="__codelineno-0-984" name="__codelineno-0-984"></a>        <span class="n">recipe_path</span><span class="o">=</span><span class="n">recipe_path</span><span class="p">,</span>
-</span><span id="__span-0-985"><a id="__codelineno-0-985" name="__codelineno-0-985"></a>        <span class="n">app_id</span><span class="o">=</span><span class="n">app_id</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">app_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">app_id</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-986"><a id="__codelineno-0-986" name="__codelineno-0-986"></a>    <span class="p">)</span>
+</span><span id="__span-0-952"><a id="__codelineno-0-952" name="__codelineno-0-952"></a>    <span class="c1"># Determine final status</span>
+</span><span id="__span-0-953"><a id="__codelineno-0-953" name="__codelineno-0-953"></a>    <span class="n">status</span> <span class="o">=</span> <span class="s2">"valid"</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">errors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s2">"invalid"</span>
+</span><span id="__span-0-954"><a id="__codelineno-0-954" name="__codelineno-0-954"></a>    <span class="n">app_count</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">status</span> <span class="o">==</span> <span class="s2">"valid"</span> <span class="k">else</span> <span class="mi">0</span>
+</span><span id="__span-0-955"><a id="__codelineno-0-955" name="__codelineno-0-955"></a>
+</span><span id="__span-0-956"><a id="__codelineno-0-956" name="__codelineno-0-956"></a>    <span class="k">if</span> <span class="n">status</span> <span class="o">==</span> <span class="s2">"valid"</span><span class="p">:</span>
+</span><span id="__span-0-957"><a id="__codelineno-0-957" name="__codelineno-0-957"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"VALIDATION"</span><span class="p">,</span> <span class="s2">"Recipe is valid!"</span><span class="p">)</span>
+</span><span id="__span-0-958"><a id="__codelineno-0-958" name="__codelineno-0-958"></a>    <span class="k">else</span><span class="p">:</span>
+</span><span id="__span-0-959"><a id="__codelineno-0-959" name="__codelineno-0-959"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"VALIDATION"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Recipe has </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">errors</span><span class="p">)</span><span class="si">}</span><span class="s2"> error(s)"</span><span class="p">)</span>
+</span><span id="__span-0-960"><a id="__codelineno-0-960" name="__codelineno-0-960"></a>
+</span><span id="__span-0-961"><a id="__codelineno-0-961" name="__codelineno-0-961"></a>    <span class="n">app_id</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"id"</span><span class="p">)</span>
+</span><span id="__span-0-962"><a id="__codelineno-0-962" name="__codelineno-0-962"></a>    <span class="k">return</span> <span class="n">ValidationResult</span><span class="p">(</span>
+</span><span id="__span-0-963"><a id="__codelineno-0-963" name="__codelineno-0-963"></a>        <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="p">,</span>
+</span><span id="__span-0-964"><a id="__codelineno-0-964" name="__codelineno-0-964"></a>        <span class="n">errors</span><span class="o">=</span><span class="n">errors</span><span class="p">,</span>
+</span><span id="__span-0-965"><a id="__codelineno-0-965" name="__codelineno-0-965"></a>        <span class="n">warnings</span><span class="o">=</span><span class="n">warnings</span><span class="p">,</span>
+</span><span id="__span-0-966"><a id="__codelineno-0-966" name="__codelineno-0-966"></a>        <span class="n">app_count</span><span class="o">=</span><span class="n">app_count</span><span class="p">,</span>
+</span><span id="__span-0-967"><a id="__codelineno-0-967" name="__codelineno-0-967"></a>        <span class="n">recipe_path</span><span class="o">=</span><span class="n">recipe_path</span><span class="p">,</span>
+</span><span id="__span-0-968"><a id="__codelineno-0-968" name="__codelineno-0-968"></a>        <span class="n">app_id</span><span class="o">=</span><span class="n">app_id</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">app_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">app_id</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-969"><a id="__codelineno-0-969" name="__codelineno-0-969"></a>    <span class="p">)</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -2314,7 +2314,24 @@ parent path when the recipe declares one.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>napt/validation.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-989"> 989</a></span>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-972"> 972</a></span>
+<span class="normal"><a href="#__codelineno-0-973"> 973</a></span>
+<span class="normal"><a href="#__codelineno-0-974"> 974</a></span>
+<span class="normal"><a href="#__codelineno-0-975"> 975</a></span>
+<span class="normal"><a href="#__codelineno-0-976"> 976</a></span>
+<span class="normal"><a href="#__codelineno-0-977"> 977</a></span>
+<span class="normal"><a href="#__codelineno-0-978"> 978</a></span>
+<span class="normal"><a href="#__codelineno-0-979"> 979</a></span>
+<span class="normal"><a href="#__codelineno-0-980"> 980</a></span>
+<span class="normal"><a href="#__codelineno-0-981"> 981</a></span>
+<span class="normal"><a href="#__codelineno-0-982"> 982</a></span>
+<span class="normal"><a href="#__codelineno-0-983"> 983</a></span>
+<span class="normal"><a href="#__codelineno-0-984"> 984</a></span>
+<span class="normal"><a href="#__codelineno-0-985"> 985</a></span>
+<span class="normal"><a href="#__codelineno-0-986"> 986</a></span>
+<span class="normal"><a href="#__codelineno-0-987"> 987</a></span>
+<span class="normal"><a href="#__codelineno-0-988"> 988</a></span>
+<span class="normal"><a href="#__codelineno-0-989"> 989</a></span>
 <span class="normal"><a href="#__codelineno-0-990"> 990</a></span>
 <span class="normal"><a href="#__codelineno-0-991"> 991</a></span>
 <span class="normal"><a href="#__codelineno-0-992"> 992</a></span>
@@ -2348,75 +2365,58 @@ parent path when the recipe declares one.</p>
 <span class="normal"><a href="#__codelineno-0-1020">1020</a></span>
 <span class="normal"><a href="#__codelineno-0-1021">1021</a></span>
 <span class="normal"><a href="#__codelineno-0-1022">1022</a></span>
-<span class="normal"><a href="#__codelineno-0-1023">1023</a></span>
-<span class="normal"><a href="#__codelineno-0-1024">1024</a></span>
-<span class="normal"><a href="#__codelineno-0-1025">1025</a></span>
-<span class="normal"><a href="#__codelineno-0-1026">1026</a></span>
-<span class="normal"><a href="#__codelineno-0-1027">1027</a></span>
-<span class="normal"><a href="#__codelineno-0-1028">1028</a></span>
-<span class="normal"><a href="#__codelineno-0-1029">1029</a></span>
-<span class="normal"><a href="#__codelineno-0-1030">1030</a></span>
-<span class="normal"><a href="#__codelineno-0-1031">1031</a></span>
-<span class="normal"><a href="#__codelineno-0-1032">1032</a></span>
-<span class="normal"><a href="#__codelineno-0-1033">1033</a></span>
-<span class="normal"><a href="#__codelineno-0-1034">1034</a></span>
-<span class="normal"><a href="#__codelineno-0-1035">1035</a></span>
-<span class="normal"><a href="#__codelineno-0-1036">1036</a></span>
-<span class="normal"><a href="#__codelineno-0-1037">1037</a></span>
-<span class="normal"><a href="#__codelineno-0-1038">1038</a></span>
-<span class="normal"><a href="#__codelineno-0-1039">1039</a></span>
-<span class="normal"><a href="#__codelineno-0-1040">1040</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-989"><a id="__codelineno-0-989" name="__codelineno-0-989"></a><span class="k">def</span><span class="w"> </span><span class="nf">validate_recipe</span><span class="p">(</span><span class="n">recipe_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ValidationResult</span><span class="p">:</span>
-</span><span id="__span-0-990"><a id="__codelineno-0-990" name="__codelineno-0-990"></a><span class="w">    </span><span class="sd">"""Validates a recipe's effective configuration.</span>
-</span><span id="__span-0-991"><a id="__codelineno-0-991" name="__codelineno-0-991"></a>
-</span><span id="__span-0-992"><a id="__codelineno-0-992" name="__codelineno-0-992"></a><span class="sd">    Merges the recipe with its parent, vendor defaults, and org.yaml the</span>
-</span><span id="__span-0-993"><a id="__codelineno-0-993" name="__codelineno-0-993"></a><span class="sd">    way every other command does, then validates the result, so an error</span>
-</span><span id="__span-0-994"><a id="__codelineno-0-994" name="__codelineno-0-994"></a><span class="sd">    in any layer is reported here. A file that cannot be read or merged (a</span>
-</span><span id="__span-0-995"><a id="__codelineno-0-995" name="__codelineno-0-995"></a><span class="sd">    missing file, a YAML syntax error, a missing parent) is an invalid</span>
-</span><span id="__span-0-996"><a id="__codelineno-0-996" name="__codelineno-0-996"></a><span class="sd">    result rather than an exception.</span>
-</span><span id="__span-0-997"><a id="__codelineno-0-997" name="__codelineno-0-997"></a>
-</span><span id="__span-0-998"><a id="__codelineno-0-998" name="__codelineno-0-998"></a><span class="sd">    Args:</span>
-</span><span id="__span-0-999"><a id="__codelineno-0-999" name="__codelineno-0-999"></a><span class="sd">        recipe_path: Path to the recipe YAML file to validate.</span>
+<span class="normal"><a href="#__codelineno-0-1023">1023</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-972"><a id="__codelineno-0-972" name="__codelineno-0-972"></a><span class="k">def</span><span class="w"> </span><span class="nf">validate_recipe</span><span class="p">(</span><span class="n">recipe_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ValidationResult</span><span class="p">:</span>
+</span><span id="__span-0-973"><a id="__codelineno-0-973" name="__codelineno-0-973"></a><span class="w">    </span><span class="sd">"""Validates a recipe's effective configuration.</span>
+</span><span id="__span-0-974"><a id="__codelineno-0-974" name="__codelineno-0-974"></a>
+</span><span id="__span-0-975"><a id="__codelineno-0-975" name="__codelineno-0-975"></a><span class="sd">    Merges the recipe with its parent, vendor defaults, and org.yaml the</span>
+</span><span id="__span-0-976"><a id="__codelineno-0-976" name="__codelineno-0-976"></a><span class="sd">    way every other command does, then validates the result, so an error</span>
+</span><span id="__span-0-977"><a id="__codelineno-0-977" name="__codelineno-0-977"></a><span class="sd">    in any layer is reported here. A file that cannot be read or merged (a</span>
+</span><span id="__span-0-978"><a id="__codelineno-0-978" name="__codelineno-0-978"></a><span class="sd">    missing file, a YAML syntax error, a missing parent) is an invalid</span>
+</span><span id="__span-0-979"><a id="__codelineno-0-979" name="__codelineno-0-979"></a><span class="sd">    result rather than an exception.</span>
+</span><span id="__span-0-980"><a id="__codelineno-0-980" name="__codelineno-0-980"></a>
+</span><span id="__span-0-981"><a id="__codelineno-0-981" name="__codelineno-0-981"></a><span class="sd">    Args:</span>
+</span><span id="__span-0-982"><a id="__codelineno-0-982" name="__codelineno-0-982"></a><span class="sd">        recipe_path: Path to the recipe YAML file to validate.</span>
+</span><span id="__span-0-983"><a id="__codelineno-0-983" name="__codelineno-0-983"></a>
+</span><span id="__span-0-984"><a id="__codelineno-0-984" name="__codelineno-0-984"></a><span class="sd">    Returns:</span>
+</span><span id="__span-0-985"><a id="__codelineno-0-985" name="__codelineno-0-985"></a><span class="sd">        Validation status, errors, warnings, app count, app id, and the</span>
+</span><span id="__span-0-986"><a id="__codelineno-0-986" name="__codelineno-0-986"></a><span class="sd">            parent path when the recipe declares one.</span>
+</span><span id="__span-0-987"><a id="__codelineno-0-987" name="__codelineno-0-987"></a>
+</span><span id="__span-0-988"><a id="__codelineno-0-988" name="__codelineno-0-988"></a><span class="sd">    Example:</span>
+</span><span id="__span-0-989"><a id="__codelineno-0-989" name="__codelineno-0-989"></a><span class="sd">        Validate a recipe and check results:</span>
+</span><span id="__span-0-990"><a id="__codelineno-0-990" name="__codelineno-0-990"></a><span class="sd">            ```python</span>
+</span><span id="__span-0-991"><a id="__codelineno-0-991" name="__codelineno-0-991"></a><span class="sd">            from pathlib import Path</span>
+</span><span id="__span-0-992"><a id="__codelineno-0-992" name="__codelineno-0-992"></a>
+</span><span id="__span-0-993"><a id="__codelineno-0-993" name="__codelineno-0-993"></a><span class="sd">            result = validate_recipe(Path("recipes/app.yaml"))</span>
+</span><span id="__span-0-994"><a id="__codelineno-0-994" name="__codelineno-0-994"></a><span class="sd">            if result.status == "valid":</span>
+</span><span id="__span-0-995"><a id="__codelineno-0-995" name="__codelineno-0-995"></a><span class="sd">                print("Recipe is valid!")</span>
+</span><span id="__span-0-996"><a id="__codelineno-0-996" name="__codelineno-0-996"></a><span class="sd">            else:</span>
+</span><span id="__span-0-997"><a id="__codelineno-0-997" name="__codelineno-0-997"></a><span class="sd">                for error in result.errors:</span>
+</span><span id="__span-0-998"><a id="__codelineno-0-998" name="__codelineno-0-998"></a><span class="sd">                    print(f"Error: {error}")</span>
+</span><span id="__span-0-999"><a id="__codelineno-0-999" name="__codelineno-0-999"></a><span class="sd">            ```</span>
 </span><span id="__span-0-1000"><a id="__codelineno-0-1000" name="__codelineno-0-1000"></a>
-</span><span id="__span-0-1001"><a id="__codelineno-0-1001" name="__codelineno-0-1001"></a><span class="sd">    Returns:</span>
-</span><span id="__span-0-1002"><a id="__codelineno-0-1002" name="__codelineno-0-1002"></a><span class="sd">        Validation status, errors, warnings, app count, app id, and the</span>
-</span><span id="__span-0-1003"><a id="__codelineno-0-1003" name="__codelineno-0-1003"></a><span class="sd">            parent path when the recipe declares one.</span>
-</span><span id="__span-0-1004"><a id="__codelineno-0-1004" name="__codelineno-0-1004"></a>
-</span><span id="__span-0-1005"><a id="__codelineno-0-1005" name="__codelineno-0-1005"></a><span class="sd">    Example:</span>
-</span><span id="__span-0-1006"><a id="__codelineno-0-1006" name="__codelineno-0-1006"></a><span class="sd">        Validate a recipe and check results:</span>
-</span><span id="__span-0-1007"><a id="__codelineno-0-1007" name="__codelineno-0-1007"></a><span class="sd">            ```python</span>
-</span><span id="__span-0-1008"><a id="__codelineno-0-1008" name="__codelineno-0-1008"></a><span class="sd">            from pathlib import Path</span>
-</span><span id="__span-0-1009"><a id="__codelineno-0-1009" name="__codelineno-0-1009"></a>
-</span><span id="__span-0-1010"><a id="__codelineno-0-1010" name="__codelineno-0-1010"></a><span class="sd">            result = validate_recipe(Path("recipes/app.yaml"))</span>
-</span><span id="__span-0-1011"><a id="__codelineno-0-1011" name="__codelineno-0-1011"></a><span class="sd">            if result.status == "valid":</span>
-</span><span id="__span-0-1012"><a id="__codelineno-0-1012" name="__codelineno-0-1012"></a><span class="sd">                print("Recipe is valid!")</span>
-</span><span id="__span-0-1013"><a id="__codelineno-0-1013" name="__codelineno-0-1013"></a><span class="sd">            else:</span>
-</span><span id="__span-0-1014"><a id="__codelineno-0-1014" name="__codelineno-0-1014"></a><span class="sd">                for error in result.errors:</span>
-</span><span id="__span-0-1015"><a id="__codelineno-0-1015" name="__codelineno-0-1015"></a><span class="sd">                    print(f"Error: {error}")</span>
-</span><span id="__span-0-1016"><a id="__codelineno-0-1016" name="__codelineno-0-1016"></a><span class="sd">            ```</span>
-</span><span id="__span-0-1017"><a id="__codelineno-0-1017" name="__codelineno-0-1017"></a>
-</span><span id="__span-0-1018"><a id="__codelineno-0-1018" name="__codelineno-0-1018"></a><span class="sd">    """</span>
-</span><span id="__span-0-1019"><a id="__codelineno-0-1019" name="__codelineno-0-1019"></a>    <span class="n">logger</span> <span class="o">=</span> <span class="n">get_global_logger</span><span class="p">()</span>
-</span><span id="__span-0-1020"><a id="__codelineno-0-1020" name="__codelineno-0-1020"></a>    <span class="n">recipe_path_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">recipe_path</span><span class="p">)</span>
-</span><span id="__span-0-1021"><a id="__codelineno-0-1021" name="__codelineno-0-1021"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"VALIDATION"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Validating recipe: </span><span class="si">{</span><span class="n">recipe_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="__span-0-1022"><a id="__codelineno-0-1022" name="__codelineno-0-1022"></a>
-</span><span id="__span-0-1023"><a id="__codelineno-0-1023" name="__codelineno-0-1023"></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="__span-0-1024"><a id="__codelineno-0-1024" name="__codelineno-0-1024"></a>        <span class="n">merged</span><span class="p">,</span> <span class="n">parent_path</span> <span class="o">=</span> <span class="n">merge_effective_config</span><span class="p">(</span><span class="n">recipe_path</span><span class="p">)</span>
-</span><span id="__span-0-1025"><a id="__codelineno-0-1025" name="__codelineno-0-1025"></a>    <span class="k">except</span> <span class="n">ConfigError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
-</span><span id="__span-0-1026"><a id="__codelineno-0-1026" name="__codelineno-0-1026"></a>        <span class="k">return</span> <span class="n">ValidationResult</span><span class="p">(</span>
-</span><span id="__span-0-1027"><a id="__codelineno-0-1027" name="__codelineno-0-1027"></a>            <span class="n">status</span><span class="o">=</span><span class="s2">"invalid"</span><span class="p">,</span>
-</span><span id="__span-0-1028"><a id="__codelineno-0-1028" name="__codelineno-0-1028"></a>            <span class="n">errors</span><span class="o">=</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">)],</span>
-</span><span id="__span-0-1029"><a id="__codelineno-0-1029" name="__codelineno-0-1029"></a>            <span class="n">warnings</span><span class="o">=</span><span class="p">[],</span>
-</span><span id="__span-0-1030"><a id="__codelineno-0-1030" name="__codelineno-0-1030"></a>            <span class="n">app_count</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-</span><span id="__span-0-1031"><a id="__codelineno-0-1031" name="__codelineno-0-1031"></a>            <span class="n">recipe_path</span><span class="o">=</span><span class="n">recipe_path_str</span><span class="p">,</span>
-</span><span id="__span-0-1032"><a id="__codelineno-0-1032" name="__codelineno-0-1032"></a>        <span class="p">)</span>
-</span><span id="__span-0-1033"><a id="__codelineno-0-1033" name="__codelineno-0-1033"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"VALIDATION"</span><span class="p">,</span> <span class="s2">"YAML syntax is valid"</span><span class="p">)</span>
-</span><span id="__span-0-1034"><a id="__codelineno-0-1034" name="__codelineno-0-1034"></a>    <span class="k">if</span> <span class="n">parent_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-0-1035"><a id="__codelineno-0-1035" name="__codelineno-0-1035"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"VALIDATION"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Parent recipe: </span><span class="si">{</span><span class="n">parent_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="__span-0-1036"><a id="__codelineno-0-1036" name="__codelineno-0-1036"></a>
-</span><span id="__span-0-1037"><a id="__codelineno-0-1037" name="__codelineno-0-1037"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">validate_config</span><span class="p">(</span><span class="n">merged</span><span class="p">,</span> <span class="n">recipe_path</span><span class="o">=</span><span class="n">recipe_path_str</span><span class="p">)</span>
-</span><span id="__span-0-1038"><a id="__codelineno-0-1038" name="__codelineno-0-1038"></a>    <span class="k">if</span> <span class="n">parent_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-0-1039"><a id="__codelineno-0-1039" name="__codelineno-0-1039"></a>        <span class="k">return</span> <span class="n">result</span>
-</span><span id="__span-0-1040"><a id="__codelineno-0-1040" name="__codelineno-0-1040"></a>    <span class="k">return</span> <span class="n">replace</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">parent_path</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">parent_path</span><span class="p">))</span>
+</span><span id="__span-0-1001"><a id="__codelineno-0-1001" name="__codelineno-0-1001"></a><span class="sd">    """</span>
+</span><span id="__span-0-1002"><a id="__codelineno-0-1002" name="__codelineno-0-1002"></a>    <span class="n">logger</span> <span class="o">=</span> <span class="n">get_global_logger</span><span class="p">()</span>
+</span><span id="__span-0-1003"><a id="__codelineno-0-1003" name="__codelineno-0-1003"></a>    <span class="n">recipe_path_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">recipe_path</span><span class="p">)</span>
+</span><span id="__span-0-1004"><a id="__codelineno-0-1004" name="__codelineno-0-1004"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"VALIDATION"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Validating recipe: </span><span class="si">{</span><span class="n">recipe_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="__span-0-1005"><a id="__codelineno-0-1005" name="__codelineno-0-1005"></a>
+</span><span id="__span-0-1006"><a id="__codelineno-0-1006" name="__codelineno-0-1006"></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="__span-0-1007"><a id="__codelineno-0-1007" name="__codelineno-0-1007"></a>        <span class="n">merged</span><span class="p">,</span> <span class="n">parent_path</span> <span class="o">=</span> <span class="n">merge_effective_config</span><span class="p">(</span><span class="n">recipe_path</span><span class="p">)</span>
+</span><span id="__span-0-1008"><a id="__codelineno-0-1008" name="__codelineno-0-1008"></a>    <span class="k">except</span> <span class="n">ConfigError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+</span><span id="__span-0-1009"><a id="__codelineno-0-1009" name="__codelineno-0-1009"></a>        <span class="k">return</span> <span class="n">ValidationResult</span><span class="p">(</span>
+</span><span id="__span-0-1010"><a id="__codelineno-0-1010" name="__codelineno-0-1010"></a>            <span class="n">status</span><span class="o">=</span><span class="s2">"invalid"</span><span class="p">,</span>
+</span><span id="__span-0-1011"><a id="__codelineno-0-1011" name="__codelineno-0-1011"></a>            <span class="n">errors</span><span class="o">=</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">)],</span>
+</span><span id="__span-0-1012"><a id="__codelineno-0-1012" name="__codelineno-0-1012"></a>            <span class="n">warnings</span><span class="o">=</span><span class="p">[],</span>
+</span><span id="__span-0-1013"><a id="__codelineno-0-1013" name="__codelineno-0-1013"></a>            <span class="n">app_count</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__span-0-1014"><a id="__codelineno-0-1014" name="__codelineno-0-1014"></a>            <span class="n">recipe_path</span><span class="o">=</span><span class="n">recipe_path_str</span><span class="p">,</span>
+</span><span id="__span-0-1015"><a id="__codelineno-0-1015" name="__codelineno-0-1015"></a>        <span class="p">)</span>
+</span><span id="__span-0-1016"><a id="__codelineno-0-1016" name="__codelineno-0-1016"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"VALIDATION"</span><span class="p">,</span> <span class="s2">"YAML syntax is valid"</span><span class="p">)</span>
+</span><span id="__span-0-1017"><a id="__codelineno-0-1017" name="__codelineno-0-1017"></a>    <span class="k">if</span> <span class="n">parent_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-1018"><a id="__codelineno-0-1018" name="__codelineno-0-1018"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"VALIDATION"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Parent recipe: </span><span class="si">{</span><span class="n">parent_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="__span-0-1019"><a id="__codelineno-0-1019" name="__codelineno-0-1019"></a>
+</span><span id="__span-0-1020"><a id="__codelineno-0-1020" name="__codelineno-0-1020"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">validate_config</span><span class="p">(</span><span class="n">merged</span><span class="p">,</span> <span class="n">recipe_path</span><span class="o">=</span><span class="n">recipe_path_str</span><span class="p">)</span>
+</span><span id="__span-0-1021"><a id="__codelineno-0-1021" name="__codelineno-0-1021"></a>    <span class="k">if</span> <span class="n">parent_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-1022"><a id="__codelineno-0-1022" name="__codelineno-0-1022"></a>        <span class="k">return</span> <span class="n">result</span>
+</span><span id="__span-0-1023"><a id="__codelineno-0-1023" name="__codelineno-0-1023"></a>    <span class="k">return</span> <span class="n">replace</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">parent_path</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">parent_path</span><span class="p">))</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -2506,7 +2506,24 @@ when the path does not exist or holds no recipes.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>napt/validation.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1043">1043</a></span>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1026">1026</a></span>
+<span class="normal"><a href="#__codelineno-0-1027">1027</a></span>
+<span class="normal"><a href="#__codelineno-0-1028">1028</a></span>
+<span class="normal"><a href="#__codelineno-0-1029">1029</a></span>
+<span class="normal"><a href="#__codelineno-0-1030">1030</a></span>
+<span class="normal"><a href="#__codelineno-0-1031">1031</a></span>
+<span class="normal"><a href="#__codelineno-0-1032">1032</a></span>
+<span class="normal"><a href="#__codelineno-0-1033">1033</a></span>
+<span class="normal"><a href="#__codelineno-0-1034">1034</a></span>
+<span class="normal"><a href="#__codelineno-0-1035">1035</a></span>
+<span class="normal"><a href="#__codelineno-0-1036">1036</a></span>
+<span class="normal"><a href="#__codelineno-0-1037">1037</a></span>
+<span class="normal"><a href="#__codelineno-0-1038">1038</a></span>
+<span class="normal"><a href="#__codelineno-0-1039">1039</a></span>
+<span class="normal"><a href="#__codelineno-0-1040">1040</a></span>
+<span class="normal"><a href="#__codelineno-0-1041">1041</a></span>
+<span class="normal"><a href="#__codelineno-0-1042">1042</a></span>
+<span class="normal"><a href="#__codelineno-0-1043">1043</a></span>
 <span class="normal"><a href="#__codelineno-0-1044">1044</a></span>
 <span class="normal"><a href="#__codelineno-0-1045">1045</a></span>
 <span class="normal"><a href="#__codelineno-0-1046">1046</a></span>
@@ -2537,72 +2554,55 @@ when the path does not exist or holds no recipes.</p>
 <span class="normal"><a href="#__codelineno-0-1071">1071</a></span>
 <span class="normal"><a href="#__codelineno-0-1072">1072</a></span>
 <span class="normal"><a href="#__codelineno-0-1073">1073</a></span>
-<span class="normal"><a href="#__codelineno-0-1074">1074</a></span>
-<span class="normal"><a href="#__codelineno-0-1075">1075</a></span>
-<span class="normal"><a href="#__codelineno-0-1076">1076</a></span>
-<span class="normal"><a href="#__codelineno-0-1077">1077</a></span>
-<span class="normal"><a href="#__codelineno-0-1078">1078</a></span>
-<span class="normal"><a href="#__codelineno-0-1079">1079</a></span>
-<span class="normal"><a href="#__codelineno-0-1080">1080</a></span>
-<span class="normal"><a href="#__codelineno-0-1081">1081</a></span>
-<span class="normal"><a href="#__codelineno-0-1082">1082</a></span>
-<span class="normal"><a href="#__codelineno-0-1083">1083</a></span>
-<span class="normal"><a href="#__codelineno-0-1084">1084</a></span>
-<span class="normal"><a href="#__codelineno-0-1085">1085</a></span>
-<span class="normal"><a href="#__codelineno-0-1086">1086</a></span>
-<span class="normal"><a href="#__codelineno-0-1087">1087</a></span>
-<span class="normal"><a href="#__codelineno-0-1088">1088</a></span>
-<span class="normal"><a href="#__codelineno-0-1089">1089</a></span>
-<span class="normal"><a href="#__codelineno-0-1090">1090</a></span>
-<span class="normal"><a href="#__codelineno-0-1091">1091</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-1043"><a id="__codelineno-0-1043" name="__codelineno-0-1043"></a><span class="k">def</span><span class="w"> </span><span class="nf">validate_recipes</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">ValidationResult</span><span class="p">]:</span>
-</span><span id="__span-0-1044"><a id="__codelineno-0-1044" name="__codelineno-0-1044"></a><span class="w">    </span><span class="sd">"""Validates a recipe file or every recipe under a directory.</span>
-</span><span id="__span-0-1045"><a id="__codelineno-0-1045" name="__codelineno-0-1045"></a>
-</span><span id="__span-0-1046"><a id="__codelineno-0-1046" name="__codelineno-0-1046"></a><span class="sd">    Each file is validated with</span>
-</span><span id="__span-0-1047"><a id="__codelineno-0-1047" name="__codelineno-0-1047"></a><span class="sd">    [validate_recipe][napt.validation.validate_recipe]. For a directory,</span>
-</span><span id="__span-0-1048"><a id="__codelineno-0-1048" name="__codelineno-0-1048"></a><span class="sd">    two files that resolve to the same id are also reported (a parent</span>
-</span><span id="__span-0-1049"><a id="__codelineno-0-1049" name="__codelineno-0-1049"></a><span class="sd">    recipe scanned beside the child that inherits its id is the usual</span>
-</span><span id="__span-0-1050"><a id="__codelineno-0-1050" name="__codelineno-0-1050"></a><span class="sd">    cause), since ``napt promote`` refuses such a directory.</span>
-</span><span id="__span-0-1051"><a id="__codelineno-0-1051" name="__codelineno-0-1051"></a>
-</span><span id="__span-0-1052"><a id="__codelineno-0-1052" name="__codelineno-0-1052"></a><span class="sd">    Args:</span>
-</span><span id="__span-0-1053"><a id="__codelineno-0-1053" name="__codelineno-0-1053"></a><span class="sd">        path: A recipe YAML file, or a directory scanned recursively.</span>
+<span class="normal"><a href="#__codelineno-0-1074">1074</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-1026"><a id="__codelineno-0-1026" name="__codelineno-0-1026"></a><span class="k">def</span><span class="w"> </span><span class="nf">validate_recipes</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">ValidationResult</span><span class="p">]:</span>
+</span><span id="__span-0-1027"><a id="__codelineno-0-1027" name="__codelineno-0-1027"></a><span class="w">    </span><span class="sd">"""Validates a recipe file or every recipe under a directory.</span>
+</span><span id="__span-0-1028"><a id="__codelineno-0-1028" name="__codelineno-0-1028"></a>
+</span><span id="__span-0-1029"><a id="__codelineno-0-1029" name="__codelineno-0-1029"></a><span class="sd">    Each file is validated with</span>
+</span><span id="__span-0-1030"><a id="__codelineno-0-1030" name="__codelineno-0-1030"></a><span class="sd">    [validate_recipe][napt.validation.validate_recipe]. For a directory,</span>
+</span><span id="__span-0-1031"><a id="__codelineno-0-1031" name="__codelineno-0-1031"></a><span class="sd">    two files that resolve to the same id are also reported (a parent</span>
+</span><span id="__span-0-1032"><a id="__codelineno-0-1032" name="__codelineno-0-1032"></a><span class="sd">    recipe scanned beside the child that inherits its id is the usual</span>
+</span><span id="__span-0-1033"><a id="__codelineno-0-1033" name="__codelineno-0-1033"></a><span class="sd">    cause), since ``napt promote`` refuses such a directory.</span>
+</span><span id="__span-0-1034"><a id="__codelineno-0-1034" name="__codelineno-0-1034"></a>
+</span><span id="__span-0-1035"><a id="__codelineno-0-1035" name="__codelineno-0-1035"></a><span class="sd">    Args:</span>
+</span><span id="__span-0-1036"><a id="__codelineno-0-1036" name="__codelineno-0-1036"></a><span class="sd">        path: A recipe YAML file, or a directory scanned recursively.</span>
+</span><span id="__span-0-1037"><a id="__codelineno-0-1037" name="__codelineno-0-1037"></a>
+</span><span id="__span-0-1038"><a id="__codelineno-0-1038" name="__codelineno-0-1038"></a><span class="sd">    Returns:</span>
+</span><span id="__span-0-1039"><a id="__codelineno-0-1039" name="__codelineno-0-1039"></a><span class="sd">        One result per recipe file, in path order; a single invalid result</span>
+</span><span id="__span-0-1040"><a id="__codelineno-0-1040" name="__codelineno-0-1040"></a><span class="sd">            when the path does not exist or holds no recipes.</span>
+</span><span id="__span-0-1041"><a id="__codelineno-0-1041" name="__codelineno-0-1041"></a><span class="sd">    """</span>
+</span><span id="__span-0-1042"><a id="__codelineno-0-1042" name="__codelineno-0-1042"></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="__span-0-1043"><a id="__codelineno-0-1043" name="__codelineno-0-1043"></a>        <span class="n">paths</span> <span class="o">=</span> <span class="n">collect_recipe_paths</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+</span><span id="__span-0-1044"><a id="__codelineno-0-1044" name="__codelineno-0-1044"></a>    <span class="k">except</span> <span class="n">ConfigError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+</span><span id="__span-0-1045"><a id="__codelineno-0-1045" name="__codelineno-0-1045"></a>        <span class="k">return</span> <span class="p">[</span>
+</span><span id="__span-0-1046"><a id="__codelineno-0-1046" name="__codelineno-0-1046"></a>            <span class="n">ValidationResult</span><span class="p">(</span>
+</span><span id="__span-0-1047"><a id="__codelineno-0-1047" name="__codelineno-0-1047"></a>                <span class="n">status</span><span class="o">=</span><span class="s2">"invalid"</span><span class="p">,</span>
+</span><span id="__span-0-1048"><a id="__codelineno-0-1048" name="__codelineno-0-1048"></a>                <span class="n">errors</span><span class="o">=</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">)],</span>
+</span><span id="__span-0-1049"><a id="__codelineno-0-1049" name="__codelineno-0-1049"></a>                <span class="n">warnings</span><span class="o">=</span><span class="p">[],</span>
+</span><span id="__span-0-1050"><a id="__codelineno-0-1050" name="__codelineno-0-1050"></a>                <span class="n">app_count</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__span-0-1051"><a id="__codelineno-0-1051" name="__codelineno-0-1051"></a>                <span class="n">recipe_path</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span>
+</span><span id="__span-0-1052"><a id="__codelineno-0-1052" name="__codelineno-0-1052"></a>            <span class="p">)</span>
+</span><span id="__span-0-1053"><a id="__codelineno-0-1053" name="__codelineno-0-1053"></a>        <span class="p">]</span>
 </span><span id="__span-0-1054"><a id="__codelineno-0-1054" name="__codelineno-0-1054"></a>
-</span><span id="__span-0-1055"><a id="__codelineno-0-1055" name="__codelineno-0-1055"></a><span class="sd">    Returns:</span>
-</span><span id="__span-0-1056"><a id="__codelineno-0-1056" name="__codelineno-0-1056"></a><span class="sd">        One result per recipe file, in path order; a single invalid result</span>
-</span><span id="__span-0-1057"><a id="__codelineno-0-1057" name="__codelineno-0-1057"></a><span class="sd">            when the path does not exist or holds no recipes.</span>
-</span><span id="__span-0-1058"><a id="__codelineno-0-1058" name="__codelineno-0-1058"></a><span class="sd">    """</span>
-</span><span id="__span-0-1059"><a id="__codelineno-0-1059" name="__codelineno-0-1059"></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="__span-0-1060"><a id="__codelineno-0-1060" name="__codelineno-0-1060"></a>        <span class="n">paths</span> <span class="o">=</span> <span class="n">collect_recipe_paths</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-</span><span id="__span-0-1061"><a id="__codelineno-0-1061" name="__codelineno-0-1061"></a>    <span class="k">except</span> <span class="n">ConfigError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
-</span><span id="__span-0-1062"><a id="__codelineno-0-1062" name="__codelineno-0-1062"></a>        <span class="k">return</span> <span class="p">[</span>
-</span><span id="__span-0-1063"><a id="__codelineno-0-1063" name="__codelineno-0-1063"></a>            <span class="n">ValidationResult</span><span class="p">(</span>
-</span><span id="__span-0-1064"><a id="__codelineno-0-1064" name="__codelineno-0-1064"></a>                <span class="n">status</span><span class="o">=</span><span class="s2">"invalid"</span><span class="p">,</span>
-</span><span id="__span-0-1065"><a id="__codelineno-0-1065" name="__codelineno-0-1065"></a>                <span class="n">errors</span><span class="o">=</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">)],</span>
-</span><span id="__span-0-1066"><a id="__codelineno-0-1066" name="__codelineno-0-1066"></a>                <span class="n">warnings</span><span class="o">=</span><span class="p">[],</span>
-</span><span id="__span-0-1067"><a id="__codelineno-0-1067" name="__codelineno-0-1067"></a>                <span class="n">app_count</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-</span><span id="__span-0-1068"><a id="__codelineno-0-1068" name="__codelineno-0-1068"></a>                <span class="n">recipe_path</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span>
-</span><span id="__span-0-1069"><a id="__codelineno-0-1069" name="__codelineno-0-1069"></a>            <span class="p">)</span>
-</span><span id="__span-0-1070"><a id="__codelineno-0-1070" name="__codelineno-0-1070"></a>        <span class="p">]</span>
-</span><span id="__span-0-1071"><a id="__codelineno-0-1071" name="__codelineno-0-1071"></a>
-</span><span id="__span-0-1072"><a id="__codelineno-0-1072" name="__codelineno-0-1072"></a>    <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ValidationResult</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="__span-0-1073"><a id="__codelineno-0-1073" name="__codelineno-0-1073"></a>    <span class="n">sources</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="__span-0-1074"><a id="__codelineno-0-1074" name="__codelineno-0-1074"></a>    <span class="k">for</span> <span class="n">recipe_path</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">:</span>
-</span><span id="__span-0-1075"><a id="__codelineno-0-1075" name="__codelineno-0-1075"></a>        <span class="n">result</span> <span class="o">=</span> <span class="n">validate_recipe</span><span class="p">(</span><span class="n">recipe_path</span><span class="p">)</span>
-</span><span id="__span-0-1076"><a id="__codelineno-0-1076" name="__codelineno-0-1076"></a>        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s2">"valid"</span> <span class="ow">and</span> <span class="n">result</span><span class="o">.</span><span class="n">app_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-0-1077"><a id="__codelineno-0-1077" name="__codelineno-0-1077"></a>            <span class="n">first</span> <span class="o">=</span> <span class="n">sources</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">app_id</span><span class="p">)</span>
-</span><span id="__span-0-1078"><a id="__codelineno-0-1078" name="__codelineno-0-1078"></a>            <span class="k">if</span> <span class="n">first</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-0-1079"><a id="__codelineno-0-1079" name="__codelineno-0-1079"></a>                <span class="n">sources</span><span class="p">[</span><span class="n">result</span><span class="o">.</span><span class="n">app_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">recipe_path</span>
-</span><span id="__span-0-1080"><a id="__codelineno-0-1080" name="__codelineno-0-1080"></a>            <span class="k">else</span><span class="p">:</span>
-</span><span id="__span-0-1081"><a id="__codelineno-0-1081" name="__codelineno-0-1081"></a>                <span class="n">result</span> <span class="o">=</span> <span class="n">replace</span><span class="p">(</span>
-</span><span id="__span-0-1082"><a id="__codelineno-0-1082" name="__codelineno-0-1082"></a>                    <span class="n">result</span><span class="p">,</span>
-</span><span id="__span-0-1083"><a id="__codelineno-0-1083" name="__codelineno-0-1083"></a>                    <span class="n">status</span><span class="o">=</span><span class="s2">"invalid"</span><span class="p">,</span>
-</span><span id="__span-0-1084"><a id="__codelineno-0-1084" name="__codelineno-0-1084"></a>                    <span class="n">app_count</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-</span><span id="__span-0-1085"><a id="__codelineno-0-1085" name="__codelineno-0-1085"></a>                    <span class="n">errors</span><span class="o">=</span><span class="p">[</span>
-</span><span id="__span-0-1086"><a id="__codelineno-0-1086" name="__codelineno-0-1086"></a>                        <span class="o">*</span><span class="n">result</span><span class="o">.</span><span class="n">errors</span><span class="p">,</span>
-</span><span id="__span-0-1087"><a id="__codelineno-0-1087" name="__codelineno-0-1087"></a>                        <span class="n">duplicate_recipe_id_message</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">app_id</span><span class="p">,</span> <span class="n">first</span><span class="p">,</span> <span class="n">recipe_path</span><span class="p">),</span>
-</span><span id="__span-0-1088"><a id="__codelineno-0-1088" name="__codelineno-0-1088"></a>                    <span class="p">],</span>
-</span><span id="__span-0-1089"><a id="__codelineno-0-1089" name="__codelineno-0-1089"></a>                <span class="p">)</span>
-</span><span id="__span-0-1090"><a id="__codelineno-0-1090" name="__codelineno-0-1090"></a>        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
-</span><span id="__span-0-1091"><a id="__codelineno-0-1091" name="__codelineno-0-1091"></a>    <span class="k">return</span> <span class="n">results</span>
+</span><span id="__span-0-1055"><a id="__codelineno-0-1055" name="__codelineno-0-1055"></a>    <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ValidationResult</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="__span-0-1056"><a id="__codelineno-0-1056" name="__codelineno-0-1056"></a>    <span class="n">sources</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="__span-0-1057"><a id="__codelineno-0-1057" name="__codelineno-0-1057"></a>    <span class="k">for</span> <span class="n">recipe_path</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">:</span>
+</span><span id="__span-0-1058"><a id="__codelineno-0-1058" name="__codelineno-0-1058"></a>        <span class="n">result</span> <span class="o">=</span> <span class="n">validate_recipe</span><span class="p">(</span><span class="n">recipe_path</span><span class="p">)</span>
+</span><span id="__span-0-1059"><a id="__codelineno-0-1059" name="__codelineno-0-1059"></a>        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s2">"valid"</span> <span class="ow">and</span> <span class="n">result</span><span class="o">.</span><span class="n">app_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-1060"><a id="__codelineno-0-1060" name="__codelineno-0-1060"></a>            <span class="n">first</span> <span class="o">=</span> <span class="n">sources</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">app_id</span><span class="p">)</span>
+</span><span id="__span-0-1061"><a id="__codelineno-0-1061" name="__codelineno-0-1061"></a>            <span class="k">if</span> <span class="n">first</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-1062"><a id="__codelineno-0-1062" name="__codelineno-0-1062"></a>                <span class="n">sources</span><span class="p">[</span><span class="n">result</span><span class="o">.</span><span class="n">app_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">recipe_path</span>
+</span><span id="__span-0-1063"><a id="__codelineno-0-1063" name="__codelineno-0-1063"></a>            <span class="k">else</span><span class="p">:</span>
+</span><span id="__span-0-1064"><a id="__codelineno-0-1064" name="__codelineno-0-1064"></a>                <span class="n">result</span> <span class="o">=</span> <span class="n">replace</span><span class="p">(</span>
+</span><span id="__span-0-1065"><a id="__codelineno-0-1065" name="__codelineno-0-1065"></a>                    <span class="n">result</span><span class="p">,</span>
+</span><span id="__span-0-1066"><a id="__codelineno-0-1066" name="__codelineno-0-1066"></a>                    <span class="n">status</span><span class="o">=</span><span class="s2">"invalid"</span><span class="p">,</span>
+</span><span id="__span-0-1067"><a id="__codelineno-0-1067" name="__codelineno-0-1067"></a>                    <span class="n">app_count</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__span-0-1068"><a id="__codelineno-0-1068" name="__codelineno-0-1068"></a>                    <span class="n">errors</span><span class="o">=</span><span class="p">[</span>
+</span><span id="__span-0-1069"><a id="__codelineno-0-1069" name="__codelineno-0-1069"></a>                        <span class="o">*</span><span class="n">result</span><span class="o">.</span><span class="n">errors</span><span class="p">,</span>
+</span><span id="__span-0-1070"><a id="__codelineno-0-1070" name="__codelineno-0-1070"></a>                        <span class="n">duplicate_recipe_id_message</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">app_id</span><span class="p">,</span> <span class="n">first</span><span class="p">,</span> <span class="n">recipe_path</span><span class="p">),</span>
+</span><span id="__span-0-1071"><a id="__codelineno-0-1071" name="__codelineno-0-1071"></a>                    <span class="p">],</span>
+</span><span id="__span-0-1072"><a id="__codelineno-0-1072" name="__codelineno-0-1072"></a>                <span class="p">)</span>
+</span><span id="__span-0-1073"><a id="__codelineno-0-1073" name="__codelineno-0-1073"></a>        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</span><span id="__span-0-1074"><a id="__codelineno-0-1074" name="__codelineno-0-1074"></a>    <span class="k">return</span> <span class="n">results</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>
