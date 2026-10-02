@@ -693,9 +693,12 @@ napt init [DIRECTORY] [OPTIONS]
 
 Validates recipe syntax and configuration without making network calls.
 Checks the effective configuration (`defaults/org.yaml`, vendor defaults,
-parent, recipe): YAML syntax, required fields, strategy configuration, and
-that every `${VAR}` a recipe sends is declared under `secrets` and bound to
-the request host.
+parent, recipe): YAML syntax, required fields, strategy configuration, the
+type, allowed values, and range of every documented field, and that every
+`${VAR}` a recipe sends is declared under `secrets` and bound to the request
+host.
+A key that no section documents is a warning naming the closest known key,
+so a misspelled field is reported instead of silently taking its default.
 Given a directory, checks every recipe under it and reports two files that
 resolve to the same id.
 Build-time requirements such as the EXE `intune.detection` fields surface at

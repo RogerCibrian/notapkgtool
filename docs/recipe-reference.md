@@ -7,15 +7,16 @@ which share the schema.
 > For choosing a strategy, see
 > [Discovery strategies](user-guide.md#discovery-strategies).
 
-`napt validate` checks the recipe and its parent.
-Values from `defaults/` are checked when any other command loads the recipe.
-`napt validate` type-checks the `intune`, `logging`, and `deployment` sections,
-`psadt.app_vars`, the `psadt.override_*` flags, and each strategy's required
-fields and patterns, and warns on unknown keys in `intune`, `logging`, and
-`deployment`.
-Other keys are accepted as written: a wrong type in, for example,
-`prerelease`, `token`, `brand_pack`, or `install` surfaces only when a command
-uses the value.
+`napt validate` checks the effective configuration: the recipe, its parent,
+the vendor defaults, and `defaults/org.yaml` merged the way every other
+command loads them.
+Every field in this reference is checked for its type, its allowed values,
+and its range where one is stated, and each strategy's required fields and
+patterns are checked.
+A key this reference does not list is a warning naming the closest known key.
+Requirements that depend on the installer, such as the EXE `install` and
+`uninstall` commands and the EXE `intune.detection` fields, are checked by
+`napt build`.
 
 ## Top-level fields
 
@@ -205,16 +206,6 @@ unset variable stops discovery with an error.
 - Avoid GitHub API rate limits (60 requests/hour unauthenticated, 5000/hour
   authenticated)
 - Access private repositories
-
-#### prerelease
-
-**Type:** `boolean`
-**Required:** No
-**Default:** `false`
-
-Currently has no effect.
-NAPT reads GitHub's latest-release endpoint, which never returns a
-pre-release, so `true` never selects one and `false` never raises an error.
 
 ### api_json strategy
 
@@ -478,6 +469,8 @@ psadt:
 - Each mapping copies the first file matching `source` to `target`, appending
   the source file's extension.
   Mappings whose glob matches nothing are skipped.
+- `target` is a relative path inside the build, written with forward slashes;
+  a leading separator, a drive, or `..` is a validation error.
 
 ### app_vars
 
@@ -820,10 +813,13 @@ Controls how Intune handles device restarts after install:
 **Type:** `integer`
 **Required:** No
 **Default:** `60`
+**Allowed values:** `1` to `1440`
 
 Maximum time in minutes Intune waits for the installer to complete before
 marking the install as failed.
 Increase for apps with long installation times (e.g., large Office deployments).
+The upper limit is Intune's own (one day); see
+[Add and assign Win32 apps](https://learn.microsoft.com/en-us/intune/app-management/deployment/add-win32).
 
 ### enforce_signature_check
 
@@ -1082,6 +1078,7 @@ logging:
 **Type:** `integer`
 **Required:** No
 **Default:** `3`
+**Allowed values:** `1` or more
 
 Maximum log file size in megabytes before rotation.
 Scripts use a 2-file rotation scheme (`.log` and `.log.old`).
@@ -1204,6 +1201,7 @@ ring, before it has baked through the rings.
 **Type:** `integer`
 **Required:** No
 **Default:** `1`
+**Allowed values:** `0` or more
 
 How many superseded versions stay in Intune for rollback before deletion.
 `0` deletes a version as soon as it holds no rings.

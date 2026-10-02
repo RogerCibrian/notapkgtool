@@ -345,8 +345,11 @@ def _resolve_known_paths(
         recipe_dir: Directory containing the recipe file.
         defaults_root: Root directory containing defaults/, if found.
     """
-    try:
-        brand_pack = cfg["psadt"]["brand_pack"]
+    # A section or field of the wrong shape is left for validation to
+    # report; there is nothing to resolve in it.
+    psadt = cfg.get("psadt")
+    brand_pack = psadt.get("brand_pack") if isinstance(psadt, dict) else None
+    if isinstance(brand_pack, dict):
         raw_path = brand_pack.get("path")
         if isinstance(raw_path, str) and raw_path:
             p = Path(raw_path)
@@ -357,10 +360,6 @@ def _resolve_known_paths(
                     brand_pack["path"] = str((defaults_root / p).resolve())
                 else:
                     brand_pack["path"] = str((recipe_dir / p).resolve())
-    except (KeyError, TypeError):
-        # Field missing, or a section left empty in the recipe (which
-        # validation reports); nothing to resolve.
-        pass
 
     intune = cfg.get("intune")
     if isinstance(intune, dict):
@@ -605,7 +604,8 @@ def merge_effective_config(
 
     logger.verbose("CONFIG", f"Deep merging {layers_merged} layer(s)")
     # Show final config structure
-    top_level_keys = list(merged.keys())
+    # A key that is not a string is reported by validation, not here.
+    top_level_keys = [str(key) for key in merged]
     logger.verbose(
         "CONFIG",
         (
