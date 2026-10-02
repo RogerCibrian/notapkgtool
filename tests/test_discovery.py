@@ -1008,16 +1008,32 @@ class TestApiGithubStrategyErrors:
                 strategy.discover(app_config)
 
     def test_rate_limited_raises(self):
-        """Tests that a 403 API response raises NetworkError mentioning rate limit."""
+        """Tests that a 403 with the limit exhausted names the rate limit."""
         strategy = ApiGithubStrategy()
         app_config = {"discovery": {"repo": "owner/repo", "asset_pattern": ".*"}}
         with requests_mock.Mocker() as m:
             m.get(
                 "https://api.github.com/repos/owner/repo/releases/latest",
                 status_code=403,
+                headers={"X-RateLimit-Remaining": "0"},
             )
             with pytest.raises(NetworkError, match="rate limit"):
                 strategy.discover(app_config)
+
+    def test_forbidden_for_another_reason_is_not_called_a_rate_limit(self):
+        """Tests that a 403 with requests remaining is reported as a refusal."""
+        strategy = ApiGithubStrategy()
+        app_config = {"discovery": {"repo": "owner/repo", "asset_pattern": ".*"}}
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://api.github.com/repos/owner/repo/releases/latest",
+                status_code=403,
+                reason="Forbidden",
+                headers={"X-RateLimit-Remaining": "42"},
+            )
+            with pytest.raises(NetworkError, match="403") as info:
+                strategy.discover(app_config)
+        assert "rate limit" not in str(info.value)
 
     def test_no_assets_raises(self):
         """Tests that a release with no assets raises NetworkError."""
@@ -1611,7 +1627,7 @@ class TestApiGithubToken:
             ApiGithubStrategy().discover(
                 self._config("${GITHUB_TOKEN}", self._DECLARED)
             )
-            assert m.last_request.headers["Authorization"] == "token ghp_x"
+            assert m.last_request.headers["Authorization"] == "Bearer ghp_x"
 
     def test_undeclared_token_variable_is_refused(self, monkeypatch):
         """Tests that the token, like a header, cannot name a variable
@@ -1661,7 +1677,7 @@ class TestApiGithubToken:
         with requests_mock.Mocker() as m:
             m.get(self._API, json=self._RELEASE)
             ApiGithubStrategy().discover(self._config("plain-token"))
-            assert m.last_request.headers["Authorization"] == "token plain-token"
+            assert m.last_request.headers["Authorization"] == "Bearer plain-token"
 
         with requests_mock.Mocker() as m:
             m.get(

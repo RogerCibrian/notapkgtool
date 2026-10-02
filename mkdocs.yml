@@ -83,6 +83,7 @@ nav:
     - Overview: api/index.md
     - cli: api/cli.md
     - exceptions: api/exceptions.md
+    - github: api/github.md
     - logging: api/logging.md
     - paths: api/paths.md
     - powershell: api/powershell.md

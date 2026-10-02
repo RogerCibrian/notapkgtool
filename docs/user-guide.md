@@ -75,6 +75,8 @@ recipes whose pattern (or `api_json` value) keeps a prefix.
    by hand.
 4. **Get PSADT release** - Downloads PSADT Template_v4 from GitHub into
    `cache/psadt/{version}/` if not already cached.
+   The GitHub API calls send `GITHUB_TOKEN` from the environment when it is
+   set, since unauthenticated calls share a limit of 60 per hour per address.
 5. **Create build directory** - Creates `builds/{app_id}/{version}/`.
 6. **Copy PSADT template** - Copies the cached template into `packagefiles/`
    unchanged (see [Directory structure](#directory-structure)).

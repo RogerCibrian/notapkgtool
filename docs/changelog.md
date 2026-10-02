@@ -88,6 +88,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     An unknown key anywhere, including the top level
     and the `discovery` section, is a warning that names the closest known
     key, and the same typo always gets the same hint
+- **One GitHub client for discovery and the tool downloads** - The
+    `api_github` strategy, the PSADT download, and the IntuneWinAppUtil
+    download share one request path, so a rate limit, a missing release,
+    or a bad response reads the same from `napt discover`, `napt build`,
+    and `napt package`, and a rate limit is reported only when GitHub says
+    the limit is the cause. Every lookup sends one authorization scheme.
+    A release tag is read by one rule for both tools: a leading `v` is
+    accepted and any number of version parts, but never a suffix.
+    `psadt.release` and `intunewin.release` accept a leading `v` alike
+- **PSADT release without a Template_v4 archive is refused before
+    download**. The fallback that downloaded any PSADT zip is gone, since
+    the layout check refused the result anyway
+- **The PSADT cache check matches the download check** - A cache entry
+    holding only the module manifest is downloaded again instead of being
+    built from
 
 ### Removed
 
@@ -97,6 +112,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `napt build` sends `GITHUB_TOKEN` on the PSADT release lookups, as its
+    documentation promised; the calls used to count against the shared
+    unauthenticated limit
+- Resolving `psadt.release: latest` makes one API call instead of two
+    when the release is not cached
+- A `napt package` run killed while writing IntuneWinAppUtil.exe no longer
+    leaves a partial executable that every later run accepts; the file is
+    written beside the cache and moved in only after its size and hash
+    are verified
+- A PSADT release tagged with a `v` prefix resolves and downloads; the
+    lookup used to strip the prefix and then miss the tag
 - Fixed a PSADT download interrupted part-way leaving a partial toolkit in
     the cache that every later build accepted, and the toolkit zip left in
     the cache folder shipping inside every later package. The toolkit is

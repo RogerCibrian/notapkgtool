@@ -47,18 +47,14 @@ from __future__ import annotations
 import re
 from typing import Any
 
-import requests
-
 from napt.discovery.base import RemoteVersion, bounded, first_capture
 from napt.download.download import make_session
 from napt.exceptions import ConfigError, NetworkError
-from napt.secrets import bound_hosts, check_secret_use, expand_secrets, guarded_get
+from napt.github import API_BASE, API_HOST, asset_url, latest_release, release_tag
+from napt.secrets import bound_hosts, check_secret_use, expand_secrets
 
 # Strategy-specific defaults for optional recipe fields.
 _DEFAULT_VERSION_PATTERN = r"v?([0-9.]+)"
-
-# The only host the token is ever sent to.
-_GITHUB_API_HOST = "api.github.com"
 
 
 class ApiGithubStrategy:
@@ -86,9 +82,8 @@ class ApiGithubStrategy:
                 token secret org.yaml does not declare, binds to another
                 host, or that is not set, or when patterns do not match the
                 release.
-            NetworkError: On API failure, missing assets, rejected
-                pre-releases, or a tag or asset name too long to match a
-                pattern on.
+            NetworkError: On API failure, missing assets, or a tag or
+                asset name too long to match a pattern on.
 
         """
         from napt.logging import get_global_logger
@@ -116,7 +111,7 @@ class ApiGithubStrategy:
         version_pattern = source.get("version_pattern", _DEFAULT_VERSION_PATTERN)
         raw_token = source.get("token")
 
-        api_url = f"https://{_GITHUB_API_HOST}/repos/{repo}/releases/latest"
+        api_url = f"{API_BASE}/repos/{repo}/releases/latest"
 
         # Expand ${VAR} in the token; an undeclared or unset variable stops
         # discovery rather than sending the request unauthenticated. A
@@ -130,7 +125,8 @@ class ApiGithubStrategy:
             )
             hosts = bound_hosts(app_config, [str(raw_token)])
             if hosts is None:
-                hosts = {_GITHUB_API_HOST}
+                hosts = {API_HOST}
+            logger.verbose("DISCOVERY", "Using authenticated API request")
 
         logger.verbose("DISCOVERY", "Strategy: api_github (version-first)")
         logger.verbose("DISCOVERY", f"Repository: {repo}")
@@ -138,55 +134,11 @@ class ApiGithubStrategy:
         if asset_pattern:
             logger.verbose("DISCOVERY", f"Asset pattern: {asset_pattern}")
 
-        # Fetch latest release from GitHub API
-        headers = {
-            "Accept": "application/vnd.github+json",
-            "X-GitHub-Api-Version": "2022-11-28",
-        }
-
-        # Add authentication if token provided
-        if token:
-            headers["Authorization"] = f"token {token}"
-            logger.verbose("DISCOVERY", "Using authenticated API request")
-
-        logger.verbose("DISCOVERY", f"Fetching release from: {api_url}")
-
-        try:
-            with make_session() as session:
-                response = guarded_get(
-                    session, api_url, headers, hosts=hosts, timeout=30
-                )
-        except requests.exceptions.RequestException as err:
-            raise NetworkError(f"Failed to fetch GitHub release: {err}") from err
-
-        if response.status_code == 404:
-            raise NetworkError(f"Repository {repo!r} not found or has no releases")
-        elif response.status_code == 403:
-            raise NetworkError(
-                f"GitHub API rate limit exceeded. Consider using a token. "
-                f"Status: {response.status_code}"
-            )
-        elif not response.ok:
-            raise NetworkError(
-                f"GitHub API request failed: {response.status_code} "
-                f"{response.reason}"
-            )
-
-        try:
-            release_data = response.json()
-        except ValueError as err:
-            raise NetworkError(
-                f"Invalid JSON response from the GitHub API. Response: "
-                f"{response.text[:200]}"
-            ) from err
-        if not isinstance(release_data, dict):
-            raise NetworkError(f"Unexpected GitHub API response: {response.text[:200]}")
+        with make_session() as session:
+            release_data = latest_release(session, repo, token=token, hosts=hosts)
 
         # Extract version from tag name
-        tag_name = release_data.get("tag_name", "")
-        if not tag_name:
-            raise NetworkError("Release has no tag_name field")
-        tag_name = bounded(str(tag_name), "The release tag")
+        tag_name = bounded(release_tag(release_data), "The release tag")
 
         logger.verbose("DISCOVERY", f"Release tag: {tag_name}")
 
@@ -244,11 +196,7 @@ class ApiGithubStrategy:
                 f"Available assets: {', '.join(available)}"
             )
 
-        # Get download URL
-        download_url = matched_asset.get("browser_download_url")
-        if not download_url:
-            raise NetworkError(f"Asset {matched_asset.get('name')} has no download URL")
-
+        download_url = asset_url(matched_asset)
         logger.verbose("DISCOVERY", f"Download URL: {download_url}")
 
         return RemoteVersion(
@@ -325,7 +273,7 @@ class ApiGithubStrategy:
                     check_secret_use(
                         app_config,
                         token,
-                        f"https://{_GITHUB_API_HOST}/",
+                        f"https://{API_HOST}/",
                         "discovery.token",
                     )
                 )

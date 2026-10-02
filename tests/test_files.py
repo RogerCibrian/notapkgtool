@@ -6,7 +6,32 @@ from unittest.mock import patch
 
 import pytest
 
-from napt.files import write_text_atomic
+from napt.files import write_bytes_atomic, write_text_atomic
+
+
+class TestWriteBytesAtomic:
+    """Tests for the atomic bytes writer."""
+
+    def test_writes_bytes_and_leaves_no_temp_file(self, tmp_path):
+        """Tests that the target holds the bytes and the folder holds only it."""
+        target = tmp_path / "tool.exe"
+
+        write_bytes_atomic(target, b"MZ\x00")
+
+        assert target.read_bytes() == b"MZ\x00"
+        assert [p.name for p in tmp_path.iterdir()] == ["tool.exe"]
+
+    def test_failed_write_leaves_no_file(self, tmp_path):
+        """Tests that a failure before the rename leaves no target at all."""
+        target = tmp_path / "tool.exe"
+
+        with (
+            patch("napt.files.os.replace", side_effect=OSError(28, "No space")),
+            pytest.raises(OSError, match="No space"),
+        ):
+            write_bytes_atomic(target, b"MZ")
+
+        assert list(tmp_path.iterdir()) == []
 
 
 class TestWriteTextAtomic:
