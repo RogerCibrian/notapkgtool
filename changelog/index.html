@@ -1648,6 +1648,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#removed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#fixed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2336,6 +2347,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#removed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#fixed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2986,6 +3008,23 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
     The publish and apply workflows also gain <code>workflow_dispatch</code>, since
     re-running a failed job checks out the old commit</li>
 <li><strong>Reference workflows scan <code>.yml</code> recipes too</strong>, matching <code>napt promote</code></li>
+<li><strong><code>napt validate</code> checks every section against its schema</strong> - Field
+    types, allowed values, and integer bounds are checked in every section,
+    including <code>psadt</code>, <code>directories</code>, and <code>intunewin</code>, which had no checks.
+    <code>intune.max_run_time_minutes</code> must be 1 to 1440 (Intune's limit) and
+    <code>logging.log_rotation_mb</code> at least 1; a YAML boolean no longer passes
+    as an integer; <code>psadt.brand_pack</code> and each of its mappings must have
+    the documented shape, and a mapping target must stay inside the build.
+    A key that is not a string is an error instead of a traceback.
+    An unknown key anywhere, including the top level
+    and the <code>discovery</code> section, is a warning that names the closest known
+    key, and the same typo always gets the same hint</li>
+</ul>
+<h3 id="removed">Removed</h3>
+<ul>
+<li><strong>BREAKING: <code>discovery.prerelease</code></strong> - The field never had an effect:
+    the latest-release endpoint never returns a pre-release. A recipe that
+    still sets it gets an unknown-key warning</li>
 </ul>
 <h3 id="fixed">Fixed</h3>
 <ul>

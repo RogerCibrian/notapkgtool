@@ -3497,9 +3497,12 @@ overwrite.</p>
 <h3 id="napt-validate">napt validate</h3>
 <p>Validates recipe syntax and configuration without making network calls.
 Checks the effective configuration (<code>defaults/org.yaml</code>, vendor defaults,
-parent, recipe): YAML syntax, required fields, strategy configuration, and
-that every <code>${VAR}</code> a recipe sends is declared under <code>secrets</code> and bound to
-the request host.
+parent, recipe): YAML syntax, required fields, strategy configuration, the
+type, allowed values, and range of every documented field, and that every
+<code>${VAR}</code> a recipe sends is declared under <code>secrets</code> and bound to the request
+host.
+A key that no section documents is a warning naming the closest known key,
+so a misspelled field is reported instead of silently taking its default.
 Given a directory, checks every recipe under it and reports two files that
 resolve to the same id.
 Build-time requirements such as the EXE <code>intune.detection</code> fields surface at

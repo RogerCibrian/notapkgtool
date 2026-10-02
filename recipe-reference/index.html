@@ -728,17 +728,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#prerelease" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        prerelease
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -2771,17 +2760,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#prerelease" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        prerelease
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -3601,15 +3579,16 @@ which share the schema.</p>
 For choosing a strategy, see
 <a href="../user-guide/#discovery-strategies">Discovery strategies</a>.</p>
 </blockquote>
-<p><code>napt validate</code> checks the recipe and its parent.
-Values from <code>defaults/</code> are checked when any other command loads the recipe.
-<code>napt validate</code> type-checks the <code>intune</code>, <code>logging</code>, and <code>deployment</code> sections,
-<code>psadt.app_vars</code>, the <code>psadt.override_*</code> flags, and each strategy's required
-fields and patterns, and warns on unknown keys in <code>intune</code>, <code>logging</code>, and
-<code>deployment</code>.
-Other keys are accepted as written: a wrong type in, for example,
-<code>prerelease</code>, <code>token</code>, <code>brand_pack</code>, or <code>install</code> surfaces only when a command
-uses the value.</p>
+<p><code>napt validate</code> checks the effective configuration: the recipe, its parent,
+the vendor defaults, and <code>defaults/org.yaml</code> merged the way every other
+command loads them.
+Every field in this reference is checked for its type, its allowed values,
+and its range where one is stated, and each strategy's required fields and
+patterns are checked.
+A key this reference does not list is a warning naming the closest known key.
+Requirements that depend on the installer, such as the EXE <code>install</code> and
+<code>uninstall</code> commands and the EXE <code>intune.detection</code> fields, are checked by
+<code>napt build</code>.</p>
 <h2 id="top-level-fields">Top-level fields</h2>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span><span class="w">          </span><span class="c1"># Required: recipe format version</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"Application</span><span class="nv"> </span><span class="s">Name"</span><span class="w">     </span><span class="c1"># Required: display name</span>
@@ -3758,13 +3737,6 @@ unset variable stops discovery with an error.</p>
   authenticated)</li>
 <li>Access private repositories</li>
 </ul>
-<h4 id="prerelease">prerelease</h4>
-<p><strong>Type:</strong> <code>boolean</code>
-<strong>Required:</strong> No
-<strong>Default:</strong> <code>false</code></p>
-<p>Currently has no effect.
-NAPT reads GitHub's latest-release endpoint, which never returns a
-pre-release, so <code>true</code> never selects one and <code>false</code> never raises an error.</p>
 <h3 id="api_json-strategy">api_json strategy</h3>
 <p><strong>Configuration:</strong></p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">discovery</span><span class="p">:</span>
@@ -3955,6 +3927,8 @@ Set in <code>defaults/org.yaml</code> rather than per-recipe.</p>
 <li>Each mapping copies the first file matching <code>source</code> to <code>target</code>, appending
   the source file's extension.
   Mappings whose glob matches nothing are skipped.</li>
+<li><code>target</code> is a relative path inside the build, written with forward slashes;
+  a leading separator, a drive, or <code>..</code> is a validation error.</li>
 </ul>
 <h3 id="app_vars">app_vars</h3>
 <p><strong>Type:</strong> <code>object</code> (key-value pairs)
@@ -4315,10 +4289,13 @@ it, set <code>RequireAdmin: true</code> explicitly in that recipe's <code>psadt.
 <h3 id="max_run_time_minutes">max_run_time_minutes</h3>
 <p><strong>Type:</strong> <code>integer</code>
 <strong>Required:</strong> No
-<strong>Default:</strong> <code>60</code></p>
+<strong>Default:</strong> <code>60</code>
+<strong>Allowed values:</strong> <code>1</code> to <code>1440</code></p>
 <p>Maximum time in minutes Intune waits for the installer to complete before
 marking the install as failed.
-Increase for apps with long installation times (e.g., large Office deployments).</p>
+Increase for apps with long installation times (e.g., large Office deployments).
+The upper limit is Intune's own (one day); see
+<a href="https://learn.microsoft.com/en-us/intune/app-management/deployment/add-win32">Add and assign Win32 apps</a>.</p>
 <h3 id="enforce_signature_check">enforce_signature_check</h3>
 <p><strong>Type:</strong> <code>boolean</code>
 <strong>Required:</strong> No
@@ -4550,7 +4527,8 @@ Usually set in <code>defaults/org.yaml</code>.</p>
 <h3 id="log_rotation_mb">log_rotation_mb</h3>
 <p><strong>Type:</strong> <code>integer</code>
 <strong>Required:</strong> No
-<strong>Default:</strong> <code>3</code></p>
+<strong>Default:</strong> <code>3</code>
+<strong>Allowed values:</strong> <code>1</code> or more</p>
 <p>Maximum log file size in megabytes before rotation.
 Scripts use a 2-file rotation scheme (<code>.log</code> and <code>.log.old</code>).
 Log format and locations are described in
@@ -4676,7 +4654,8 @@ ring, before it has baked through the rings.</p>
 <h3 id="retain_versions">retain_versions</h3>
 <p><strong>Type:</strong> <code>integer</code>
 <strong>Required:</strong> No
-<strong>Default:</strong> <code>1</code></p>
+<strong>Default:</strong> <code>1</code>
+<strong>Allowed values:</strong> <code>0</code> or more</p>
 <p>How many superseded versions stay in Intune for rollback before deletion.
 <code>0</code> deletes a version as soon as it holds no rings.
 Enforced by <code>napt promote apply</code>; only NAPT-stamped apps are ever deleted.</p>
