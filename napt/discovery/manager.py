@@ -53,7 +53,6 @@ from napt.discovery.base import StrategyResult
 from napt.discovery.registry import get_strategy
 from napt.discovery.resolve import resolve_installer
 from napt.discovery.url_download import run_url_download
-from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
 from napt.results import DiscoverResult
 from napt.state.deployment import (
@@ -97,10 +96,10 @@ def discover_recipe(
         file path, and SHA-256 hash.
 
     Raises:
-        ConfigError: On missing or invalid configuration, including
-            an unknown ``discovery.strategy`` value.
-        NetworkError: On download or version-extraction failures from
-            either flow.
+        ConfigError: On invalid configuration, or when the remote data
+            does not match the recipe's patterns.
+        NetworkError: On request or download failures from either flow.
+        PackagingError: If the installer's own version cannot be read.
         StateError: On a corrupted deployment state file.
 
     """
@@ -117,10 +116,7 @@ def discover_recipe(
     app_name = config["name"]
     app_id = config["id"]
 
-    discovery = config.get("discovery", {})
-    strategy_name = discovery.get("strategy")
-    if not strategy_name:
-        raise ConfigError(f"No 'discovery.strategy' defined for app: {app_name}")
+    strategy_name = config["discovery"]["strategy"]
 
     logger.step(2, 4, "Discovering version...")
     if strategy_name == "url_download":

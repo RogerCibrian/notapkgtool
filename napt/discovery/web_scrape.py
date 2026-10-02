@@ -50,15 +50,21 @@ Note:
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, ClassVar
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
-import requests
 
 from napt.discovery.base import RemoteVersion, bounded, first_capture
-from napt.download.download import make_session
+from napt.discovery.fields import (
+    check_format,
+    check_regex,
+    fetch,
+    optional_str,
+    require_str,
+)
 from napt.exceptions import ConfigError, NetworkError
+from napt.logging import get_global_logger
 
 # Strategy-specific defaults for optional recipe fields.
 _DEFAULT_VERSION_FORMAT = "{0}"
@@ -71,6 +77,16 @@ _MAX_PAGE_BYTES = 5 * 1024 * 1024
 class WebScrapeStrategy:
     """Discovery strategy for scraping vendor download pages."""
 
+    FIELDS: ClassVar[frozenset[str]] = frozenset(
+        {
+            "page_url",
+            "link_selector",
+            "link_pattern",
+            "version_pattern",
+            "version_format",
+        }
+    )
+
     def discover(self, app_config: dict[str, Any]) -> RemoteVersion:
         r"""Discovers version and download URL by scraping a vendor page.
 
@@ -80,8 +96,8 @@ class WebScrapeStrategy:
         ``version_pattern``.
 
         Args:
-            app_config: Merged recipe configuration dict containing
-                ``discovery.page_url``, exactly one of
+            app_config: Merged and validated recipe configuration dict
+                containing ``discovery.page_url``, one of
                 ``discovery.link_selector`` or ``discovery.link_pattern``,
                 and ``discovery.version_pattern``.
 
@@ -90,39 +106,19 @@ class WebScrapeStrategy:
             ``"web_scrape"`` as the source identifier.
 
         Raises:
-            ConfigError: On missing required configuration or when
-                a selector / pattern matches nothing.
+            ConfigError: When a selector or pattern matches nothing, or
+                ``version_format`` cannot take the captured groups.
             NetworkError: On page fetch failure, a page larger than NAPT
                 parses, or a matched link too long to match a pattern on.
 
         """
-        from napt.logging import get_global_logger
-
         logger = get_global_logger()
-        # Validate configuration
-        source = app_config.get("discovery", {})
-        page_url = source.get("page_url")
-        if not page_url:
-            raise ConfigError(
-                "web_scrape strategy requires 'discovery.page_url' in config"
-            )
-
+        source = app_config["discovery"]
+        page_url: str = source["page_url"]
         link_selector = source.get("link_selector")
         link_pattern = source.get("link_pattern")
-
-        if not link_selector and not link_pattern:
-            raise ConfigError(
-                "web_scrape strategy requires either 'discovery.link_selector' or "
-                "'discovery.link_pattern' in config"
-            )
-
-        version_pattern = source.get("version_pattern")
-        if not version_pattern:
-            raise ConfigError(
-                "web_scrape strategy requires 'discovery.version_pattern' in config"
-            )
-
-        version_format = source.get("version_format", _DEFAULT_VERSION_FORMAT)
+        version_pattern: str = source["version_pattern"]
+        version_format: str = source.get("version_format", _DEFAULT_VERSION_FORMAT)
 
         logger.verbose("DISCOVERY", "Strategy: web_scrape (version-first)")
         logger.verbose("DISCOVERY", f"Page URL: {page_url}")
@@ -132,18 +128,8 @@ class WebScrapeStrategy:
             logger.verbose("DISCOVERY", f"Link pattern (regex): {link_pattern}")
         logger.verbose("DISCOVERY", f"Version pattern: {version_pattern}")
 
-        # Download the HTML page
         logger.verbose("DISCOVERY", f"Fetching page: {page_url}")
-        try:
-            with make_session() as session:
-                response = session.get(page_url, timeout=30)
-        except requests.exceptions.RequestException as err:
-            raise NetworkError(f"Failed to fetch page: {err}") from err
-
-        if not response.ok:
-            raise NetworkError(
-                f"Failed to fetch page: {response.status_code} {response.reason}"
-            )
+        response = fetch(page_url, what="page")
 
         if len(response.content) > _MAX_PAGE_BYTES:
             raise NetworkError(
@@ -153,97 +139,56 @@ class WebScrapeStrategy:
         html_content = response.text
         logger.verbose("DISCOVERY", f"Page fetched ({len(response.content)} bytes)")
 
-        # Find download link using CSS selector or regex
-        download_url = None
-
         if link_selector:
-            # Use CSS selector with BeautifulSoup4
             soup = BeautifulSoup(html_content, "html.parser")
             element = soup.select_one(link_selector)
-
             if not element:
                 raise ConfigError(
                     f"CSS selector {link_selector!r} did not match any elements on page"
                 )
-
-            # Get href attribute
             href = element.get("href")
             if not isinstance(href, str) or not href:
                 raise ConfigError(
                     f"Element matched by {link_selector!r} has no href attribute"
                 )
-
             logger.verbose("DISCOVERY", f"Found link via CSS: {href}")
-
-            # Build absolute URL
-            download_url = urljoin(page_url, href)
-
-        elif link_pattern:
-            # Use regex fallback
-            try:
-                pattern = re.compile(link_pattern)
-                href = first_capture(pattern, html_content)
-                if href is None:
-                    raise ConfigError(
-                        f"Regex pattern {link_pattern!r} did not match anything on page"
-                    )
-
-                logger.verbose("DISCOVERY", f"Found link via regex: {href}")
-
-                # Build absolute URL
-                download_url = urljoin(page_url, href)
-
-            except re.error as err:
-                raise ConfigError(
-                    f"Invalid link_pattern regex: {link_pattern!r}"
-                ) from err
-
         else:
-            raise ConfigError(
-                "web_scrape strategy requires either 'discovery.link_selector' or "
-                "'discovery.link_pattern' in config"
-            )
+            href = first_capture(re.compile(link_pattern), html_content)
+            if href is None:
+                raise ConfigError(
+                    f"Regex pattern {link_pattern!r} did not match anything on page"
+                )
+            logger.verbose("DISCOVERY", f"Found link via regex: {href}")
 
-        download_url = bounded(download_url, "The matched download link")
+        download_url = bounded(urljoin(page_url, href), "The matched download link")
         logger.verbose("DISCOVERY", f"Download URL: {download_url}")
 
-        # Extract version from the download URL
-        try:
-            version_regex = re.compile(version_pattern)
-            match = version_regex.search(download_url)
-
-            if not match:
-                raise ConfigError(
-                    f"Version pattern {version_pattern!r} did not match "
-                    f"URL {download_url!r}"
-                )
-
-            # Get captured groups. One that took no part in the match would
-            # format as the text "None", so it counts as no match.
-            groups = match.groups()
-            if any(group is None for group in groups):
-                raise ConfigError(
-                    f"Version pattern {version_pattern!r} did not match "
-                    f"URL {download_url!r}: a capture group matched nothing"
-                )
-
-            if not groups:
-                # No capture groups, use full match
-                version_str = match.group(0)
-            else:
-                # Format using captured groups
-                try:
-                    version_str = version_format.format(*groups)
-                except (IndexError, KeyError) as err:
-                    raise ConfigError(
-                        f"version_format {version_format!r} failed with "
-                        f"groups {groups}: {err}"
-                    ) from err
-
-        except re.error as err:
+        match = re.compile(version_pattern).search(download_url)
+        if not match:
             raise ConfigError(
-                f"Invalid version_pattern regex: {version_pattern!r}"
-            ) from err
+                f"Version pattern {version_pattern!r} did not match "
+                f"URL {download_url!r}"
+            )
+
+        # A group that took no part in the match would format as the text
+        # "None", so it counts as no match.
+        groups = match.groups()
+        if any(group is None for group in groups):
+            raise ConfigError(
+                f"Version pattern {version_pattern!r} did not match "
+                f"URL {download_url!r}: a capture group matched nothing"
+            )
+
+        if not groups:
+            version_str = match.group(0)
+        else:
+            try:
+                version_str = version_format.format(*groups)
+            except (IndexError, KeyError, ValueError) as err:
+                raise ConfigError(
+                    f"version_format {version_format!r} failed with "
+                    f"groups {groups}: {err}"
+                ) from err
 
         logger.verbose("DISCOVERY", f"Extracted version: {version_str}")
 
@@ -265,74 +210,35 @@ class WebScrapeStrategy:
             List of error messages (empty if valid).
 
         """
-        errors = []
+        errors: list[str] = []
         source = app_config.get("discovery", {})
 
-        # Check page_url
-        if "page_url" not in source:
-            errors.append("Missing required field: discovery.page_url")
-        elif not isinstance(source["page_url"], str):
-            errors.append("discovery.page_url must be a string")
-        elif not source["page_url"].strip():
-            errors.append("discovery.page_url cannot be empty")
+        require_str(source, "page_url", errors)
 
-        # Check that at least one link finding method is provided
-        link_selector = source.get("link_selector")
-        link_pattern = source.get("link_pattern")
-
-        if not link_selector and not link_pattern:
+        if "link_selector" not in source and "link_pattern" not in source:
             errors.append(
-                "Missing required field: must provide either "
-                "discovery.link_selector or discovery.link_pattern"
+                "discovery: Missing required field: link_selector or link_pattern"
             )
+        elif "link_selector" in source and "link_pattern" in source:
+            errors.append("discovery: Set link_selector or link_pattern, not both")
 
-        # Validate link_selector if provided
-        if link_selector:
-            if not isinstance(link_selector, str):
-                errors.append("discovery.link_selector must be a string")
-            elif not link_selector.strip():
-                errors.append("discovery.link_selector cannot be empty")
-            else:
-                # Try to validate CSS selector syntax
-                try:
-                    # Test if selector is parseable
-                    soup = BeautifulSoup("<html></html>", "html.parser")
-                    soup.select_one(link_selector)  # Will raise if invalid
-                except Exception as err:
-                    errors.append(f"Invalid CSS selector: {err}")
-
-        # Validate link_pattern if provided
-        if link_pattern:
-            if not isinstance(link_pattern, str):
-                errors.append("discovery.link_pattern must be a string")
-            elif not link_pattern.strip():
-                errors.append("discovery.link_pattern cannot be empty")
-            else:
-                # Validate regex compiles
-                try:
-                    re.compile(link_pattern)
-                except re.error as err:
-                    errors.append(f"Invalid link_pattern regex: {err}")
-
-        # Check version_pattern
-        if "version_pattern" not in source:
-            errors.append("Missing required field: discovery.version_pattern")
-        elif not isinstance(source["version_pattern"], str):
-            errors.append("discovery.version_pattern must be a string")
-        elif not source["version_pattern"].strip():
-            errors.append("discovery.version_pattern cannot be empty")
-        else:
-            # Validate regex compiles
+        link_selector = optional_str(source, "link_selector", errors)
+        if link_selector is not None:
             try:
-                re.compile(source["version_pattern"])
-            except re.error as err:
-                errors.append(f"Invalid version_pattern regex: {err}")
+                BeautifulSoup("<html></html>", "html.parser").select_one(link_selector)
+            except Exception as err:
+                errors.append(f"discovery.link_selector: Invalid CSS selector: {err}")
 
-        # Validate version_format if provided
-        if "version_format" in source:
-            if not isinstance(source["version_format"], str):
-                errors.append("discovery.version_format must be a string")
-            elif not source["version_format"].strip():
-                errors.append("discovery.version_format cannot be empty")
+        link_pattern = optional_str(source, "link_pattern", errors)
+        if link_pattern is not None:
+            check_regex(link_pattern, "link_pattern", errors)
+
+        version_pattern = require_str(source, "version_pattern", errors)
+        if version_pattern is not None:
+            check_regex(version_pattern, "version_pattern", errors)
+
+        version_format = optional_str(source, "version_format", errors)
+        if version_format is not None:
+            check_format(version_format, "version_format", errors)
 
         return errors

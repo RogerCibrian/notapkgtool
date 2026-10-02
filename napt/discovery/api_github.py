@@ -45,12 +45,27 @@ Note:
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, ClassVar
 
-from napt.discovery.base import RemoteVersion, bounded, first_capture
+from napt.discovery.base import RemoteVersion, bounded
+from napt.discovery.fields import (
+    check_regex,
+    extract_version,
+    optional_str,
+    require_str,
+)
 from napt.download.download import make_session
 from napt.exceptions import ConfigError, NetworkError
-from napt.github import API_BASE, API_HOST, asset_url, latest_release, release_tag
+from napt.github import (
+    API_BASE,
+    API_HOST,
+    asset_names,
+    asset_url,
+    find_asset,
+    latest_release,
+    release_tag,
+)
+from napt.logging import get_global_logger
 from napt.secrets import bound_hosts, check_secret_use, expand_secrets
 
 # Strategy-specific defaults for optional recipe fields.
@@ -59,6 +74,10 @@ _DEFAULT_VERSION_PATTERN = r"v?([0-9.]+)"
 
 class ApiGithubStrategy:
     """Discovery strategy for GitHub releases."""
+
+    FIELDS: ClassVar[frozenset[str]] = frozenset(
+        {"repo", "asset_pattern", "version_pattern", "token"}
+    )
 
     def discover(self, app_config: dict[str, Any]) -> RemoteVersion:
         r"""Discovers the latest GitHub release version and asset download URL.
@@ -69,8 +88,8 @@ class ApiGithubStrategy:
         asset matching ``asset_pattern``.
 
         Args:
-            app_config: Merged recipe configuration dict containing
-                ``discovery.repo`` and ``discovery.asset_pattern``,
+            app_config: Merged and validated recipe configuration dict
+                containing ``discovery.repo`` and ``discovery.asset_pattern``,
                 plus optional ``version_pattern`` and ``token`` fields.
 
         Returns:
@@ -78,37 +97,18 @@ class ApiGithubStrategy:
             ``"api_github"`` as the source identifier.
 
         Raises:
-            ConfigError: On missing or malformed required configuration, a
-                token secret org.yaml does not declare, binds to another
-                host, or that is not set, or when patterns do not match the
-                release.
+            ConfigError: On a token secret org.yaml does not declare, binds
+                to another host, or that is not set, or when patterns do
+                not match the release.
             NetworkError: On API failure, missing assets, or a tag or
                 asset name too long to match a pattern on.
 
         """
-        from napt.logging import get_global_logger
-
         logger = get_global_logger()
-        # Validate configuration
-        source = app_config.get("discovery", {})
-        repo = source.get("repo")
-        if not repo:
-            raise ConfigError("api_github strategy requires 'discovery.repo' in config")
-
-        # Validate repo format
-        if "/" not in repo or repo.count("/") != 1:
-            raise ConfigError(
-                f"Invalid repo format: {repo!r}. Expected 'owner/repository'"
-            )
-
-        # Optional configuration
-        asset_pattern = source.get("asset_pattern")
-        if not asset_pattern:
-            raise ConfigError(
-                "api_github strategy requires 'discovery.asset_pattern' in config"
-            )
-
-        version_pattern = source.get("version_pattern", _DEFAULT_VERSION_PATTERN)
+        source = app_config["discovery"]
+        repo: str = source["repo"]
+        asset_pattern: str = source["asset_pattern"]
+        version_pattern: str = source.get("version_pattern", _DEFAULT_VERSION_PATTERN)
         raw_token = source.get("token")
 
         api_url = f"{API_BASE}/repos/{repo}/releases/latest"
@@ -131,70 +131,35 @@ class ApiGithubStrategy:
         logger.verbose("DISCOVERY", "Strategy: api_github (version-first)")
         logger.verbose("DISCOVERY", f"Repository: {repo}")
         logger.verbose("DISCOVERY", f"Version pattern: {version_pattern}")
-        if asset_pattern:
-            logger.verbose("DISCOVERY", f"Asset pattern: {asset_pattern}")
+        logger.verbose("DISCOVERY", f"Asset pattern: {asset_pattern}")
 
         with make_session() as session:
             release_data = latest_release(session, repo, token=token, hosts=hosts)
 
-        # Extract version from tag name
         tag_name = bounded(release_tag(release_data), "The release tag")
-
         logger.verbose("DISCOVERY", f"Release tag: {tag_name}")
-
-        try:
-            pattern = re.compile(version_pattern)
-            version_str = first_capture(pattern, tag_name)
-            if version_str is None:
-                raise ConfigError(
-                    f"Version pattern {version_pattern!r} did not match "
-                    f"tag {tag_name!r}"
-                )
-
-        except re.error as err:
-            raise ConfigError(
-                f"Invalid version_pattern regex: {version_pattern!r}"
-            ) from err
-        except (ValueError, IndexError) as err:
-            raise ConfigError(
-                f"Failed to extract version from tag {tag_name!r} "
-                f"using pattern {version_pattern!r}: {err}"
-            ) from err
-
+        version_str = extract_version(version_pattern, tag_name, f"tag {tag_name!r}")
         logger.verbose("DISCOVERY", f"Extracted version: {version_str}")
 
-        # Find matching asset
-        assets = release_data.get("assets", [])
+        assets = release_data.get("assets") or []
         if not assets:
             raise NetworkError(
                 f"Release {tag_name} has no assets. "
                 f"Check if assets were uploaded to the release."
             )
-
         logger.verbose("DISCOVERY", f"Release has {len(assets)} asset(s)")
 
-        # Match asset by pattern
-        matched_asset = None
-        try:
-            pattern = re.compile(asset_pattern)
-        except re.error as err:
-            raise ConfigError(
-                f"Invalid asset_pattern regex: {asset_pattern!r}"
-            ) from err
-
-        for asset in assets:
-            asset_name = bounded(str(asset.get("name", "")), "An asset name")
-            if pattern.search(asset_name):
-                matched_asset = asset
-                logger.verbose("DISCOVERY", f"Matched asset: {asset_name}")
-                break
-
-        if not matched_asset:
-            available = [a.get("name", "(unnamed)") for a in assets]
+        pattern = re.compile(asset_pattern)
+        matched_asset = find_asset(
+            release_data,
+            lambda name: pattern.search(bounded(name, "An asset name")) is not None,
+        )
+        if matched_asset is None:
             raise ConfigError(
                 f"No assets matched pattern {asset_pattern!r}. "
-                f"Available assets: {', '.join(available)}"
+                f"Available assets: {', '.join(asset_names(release_data))}"
             )
+        logger.verbose("DISCOVERY", f"Matched asset: {matched_asset.get('name')}")
 
         download_url = asset_url(matched_asset)
         logger.verbose("DISCOVERY", f"Download URL: {download_url}")
@@ -217,52 +182,22 @@ class ApiGithubStrategy:
             List of error messages (empty if valid).
 
         """
-        errors = []
+        errors: list[str] = []
         source = app_config.get("discovery", {})
 
-        # Check required fields
-        if "repo" not in source:
-            errors.append("Missing required field: discovery.repo")
-        elif not isinstance(source["repo"], str):
-            errors.append("discovery.repo must be a string")
-        elif not source["repo"].strip():
-            errors.append("discovery.repo cannot be empty")
-        else:
-            # Validate repo format
-            repo = source["repo"]
-            if repo.count("/") != 1:
-                errors.append(
-                    "discovery.repo must be in format 'owner/repo' (e.g., 'git/git')"
-                )
+        repo = require_str(source, "repo", errors)
+        if repo is not None and repo.count("/") != 1:
+            errors.append(
+                "discovery.repo: Must be owner/repository (for example git/git)"
+            )
 
-        if "asset_pattern" not in source:
-            errors.append("Missing required field: discovery.asset_pattern")
-        elif not isinstance(source["asset_pattern"], str):
-            errors.append("discovery.asset_pattern must be a string")
-        elif not source["asset_pattern"].strip():
-            errors.append("discovery.asset_pattern cannot be empty")
-        else:
-            # Validate regex pattern syntax
-            pattern = source["asset_pattern"]
-            import re
+        asset_pattern = require_str(source, "asset_pattern", errors)
+        if asset_pattern is not None:
+            check_regex(asset_pattern, "asset_pattern", errors)
 
-            try:
-                re.compile(pattern)
-            except re.error as err:
-                errors.append(f"Invalid asset_pattern regex: {err}")
-
-        # Optional fields validation
-        if "version_pattern" in source:
-            if not isinstance(source["version_pattern"], str):
-                errors.append("discovery.version_pattern must be a string")
-            else:
-                pattern = source["version_pattern"]
-                import re
-
-                try:
-                    re.compile(pattern)
-                except re.error as err:
-                    errors.append(f"Invalid version_pattern regex: {err}")
+        version_pattern = optional_str(source, "version_pattern", errors)
+        if version_pattern is not None:
+            check_regex(version_pattern, "version_pattern", errors)
 
         token = source.get("token")
         if token is not None:

@@ -4,6 +4,8 @@
 
 ::: napt.discovery.base
 
+::: napt.discovery.fields
+
 ::: napt.discovery.registry
 
 ::: napt.discovery.resolve

@@ -275,7 +275,7 @@ id: "napt-app"
 discovery:
   strategy: api_json
   api_url: "https://api.vendor.com/latest"
-  version_path: "version"          # JSONPath to version field (e.g., "version" or "data.version")
+  version_path: "version"          # Dotted path to the version (e.g., "version" or "data.version")
   download_url_path: "download_url"
   version_pattern: "v?([0-9.]+)"   # Optional: narrow the version value with a regex
   headers:                         # Optional HTTP headers (e.g., for authentication)
@@ -310,8 +310,9 @@ napt discover recipes/Vendor/app.yaml --verbose
 **What to customize:**
 
 - `api_url`: JSON API endpoint URL
-- `version_path`: JSONPath to version field (e.g., "version" or "data.version")
-- `download_url_path`: JSONPath to download URL field
+- `version_path`: dotted path to the version (e.g., "version", "data.version",
+  or "builds[0].version")
+- `download_url_path`: dotted path to the download URL
 - `headers`: Optional authentication headers
 
 ## Create a recipe for an MSIX installer
