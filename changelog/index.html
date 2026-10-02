@@ -704,6 +704,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../api/github/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    github
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/logging/" class="md-nav__link">
         
   
@@ -939,10 +967,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_13" >
         
           
-          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_13" id="__nav_4_13_label" tabindex="0">
             
   
   
@@ -960,8 +988,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_12">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_13">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1193,10 +1221,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_14" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_15" >
         
           
-          <label class="md-nav__link" for="__nav_4_14" id="__nav_4_14_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_15" id="__nav_4_15_label" tabindex="0">
             
   
   
@@ -1214,8 +1242,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_14_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_14">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_15">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3019,6 +3047,21 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
     An unknown key anywhere, including the top level
     and the <code>discovery</code> section, is a warning that names the closest known
     key, and the same typo always gets the same hint</li>
+<li><strong>One GitHub client for discovery and the tool downloads</strong> - The
+    <code>api_github</code> strategy, the PSADT download, and the IntuneWinAppUtil
+    download share one request path, so a rate limit, a missing release,
+    or a bad response reads the same from <code>napt discover</code>, <code>napt build</code>,
+    and <code>napt package</code>, and a rate limit is reported only when GitHub says
+    the limit is the cause. Every lookup sends one authorization scheme.
+    A release tag is read by one rule for both tools: a leading <code>v</code> is
+    accepted and any number of version parts, but never a suffix.
+    <code>psadt.release</code> and <code>intunewin.release</code> accept a leading <code>v</code> alike</li>
+<li><strong>PSADT release without a Template_v4 archive is refused before
+    download</strong>. The fallback that downloaded any PSADT zip is gone, since
+    the layout check refused the result anyway</li>
+<li><strong>The PSADT cache check matches the download check</strong> - A cache entry
+    holding only the module manifest is downloaded again instead of being
+    built from</li>
 </ul>
 <h3 id="removed">Removed</h3>
 <ul>
@@ -3028,6 +3071,17 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="fixed">Fixed</h3>
 <ul>
+<li><code>napt build</code> sends <code>GITHUB_TOKEN</code> on the PSADT release lookups, as its
+    documentation promised; the calls used to count against the shared
+    unauthenticated limit</li>
+<li>Resolving <code>psadt.release: latest</code> makes one API call instead of two
+    when the release is not cached</li>
+<li>A <code>napt package</code> run killed while writing IntuneWinAppUtil.exe no longer
+    leaves a partial executable that every later run accepts; the file is
+    written beside the cache and moved in only after its size and hash
+    are verified</li>
+<li>A PSADT release tagged with a <code>v</code> prefix resolves and downloads; the
+    lookup used to strip the prefix and then miss the tag</li>
 <li>Fixed a PSADT download interrupted part-way leaving a partial toolkit in
     the cache that every later build accepted, and the toolkit zip left in
     the cache folder shipping inside every later package. The toolkit is

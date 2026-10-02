@@ -1676,6 +1676,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../api/github/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    github
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/logging/" class="md-nav__link">
         
   
@@ -1911,10 +1939,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_13" >
         
           
-          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_13" id="__nav_4_13_label" tabindex="0">
             
   
   
@@ -1932,8 +1960,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_12">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_13">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2165,10 +2193,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_14" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_15" >
         
           
-          <label class="md-nav__link" for="__nav_4_14" id="__nav_4_14_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_15" id="__nav_4_15_label" tabindex="0">
             
   
   
@@ -2186,8 +2214,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_14_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_14">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_15">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3693,7 +3721,6 @@ For an MSI or MSIX, the installer's own version is recorded instead.</p>
 </span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">asset_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">".*\\.exe$"</span><span class="w">        </span><span class="c1"># Required: regex for the installer filename</span>
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">version_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">"v?([0-9.]+)"</span><span class="w">    </span><span class="c1"># Optional: regex for the version in the tag</span>
 </span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">"${GITHUB_TOKEN}"</span><span class="w">          </span><span class="c1"># Optional: GitHub personal access token</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="nt">prerelease</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">                 </span><span class="c1"># Optional: currently has no effect</span>
 </span></code></pre></div>
 <h4 id="repo">repo</h4>
 <p><strong>Type:</strong> <code>string</code>
@@ -3892,7 +3919,8 @@ Uses Python format string syntax with <code>{0}</code>, <code>{1}</code>, etc. f
 <p>PSADT release version to use. Can be:</p>
 <ul>
 <li><code>"latest"</code> - Use the latest PSADT release from GitHub</li>
-<li>Specific version: <code>"4.1.7"</code> - Use a specific PSADT version</li>
+<li>Specific version: <code>"4.1.7"</code> - Use a specific PSADT version.
+  A leading <code>v</code> (<code>"v4.1.7"</code>) is accepted and names the same version.</li>
 </ul>
 <p><strong>Note:</strong> Typically set in organization defaults (<code>defaults/org.yaml</code>) rather
 than per-recipe.</p>
@@ -4513,7 +4541,8 @@ Usually set in <code>defaults/org.yaml</code>.</p>
 <ul>
 <li><code>"latest"</code> - Use the latest release from Microsoft's GitHub repository</li>
 <li>Specific version: <code>"1.8.6"</code> - Pin to a known-good release for reproducible
-  packaging</li>
+  packaging.
+  A leading <code>v</code> (<code>"v1.8.6"</code>) is accepted and names the same version.</li>
 </ul>
 <p>Each release is cached independently under <code>cache/tools/{version}/</code>, so
 changing the pin never overwrites a previously downloaded tool.</p>

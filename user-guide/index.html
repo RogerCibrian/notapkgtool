@@ -1294,6 +1294,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../api/github/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    github
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/logging/" class="md-nav__link">
         
   
@@ -1529,10 +1557,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_12" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_13" >
         
           
-          <label class="md-nav__link" for="__nav_4_12" id="__nav_4_12_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_13" id="__nav_4_13_label" tabindex="0">
             
   
   
@@ -1550,8 +1578,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_12">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_13">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1783,10 +1811,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_14" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_15" >
         
           
-          <label class="md-nav__link" for="__nav_4_14" id="__nav_4_14_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_15" id="__nav_4_15_label" tabindex="0">
             
   
   
@@ -1804,8 +1832,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_14_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_14">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_15_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_15">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2879,7 +2907,9 @@ recipes whose pattern (or <code>api_json</code> value) keeps a prefix.</p>
    continue if it differs from the folder, since that means a file was moved
    by hand.</li>
 <li><strong>Get PSADT release</strong> - Downloads PSADT Template_v4 from GitHub into
-   <code>cache/psadt/{version}/</code> if not already cached.</li>
+   <code>cache/psadt/{version}/</code> if not already cached.
+   The GitHub API calls send <code>GITHUB_TOKEN</code> from the environment when it is
+   set, since unauthenticated calls share a limit of 60 per hour per address.</li>
 <li><strong>Create build directory</strong> - Creates <code>builds/{app_id}/{version}/</code>.</li>
 <li><strong>Copy PSADT template</strong> - Copies the cached template into <code>packagefiles/</code>
    unchanged (see <a href="#directory-structure">Directory structure</a>).</li>
