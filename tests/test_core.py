@@ -46,7 +46,6 @@ class TestDiscoverRecipe:
                 file_path=tmp_test_dir / "test.msi",
                 sha256="abc123" * 8,
                 download_url="https://example.com/test.msi",
-                cached=False,
             )
             result = discover_recipe(
                 recipe_path,

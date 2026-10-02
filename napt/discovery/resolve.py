@@ -134,8 +134,7 @@ def resolve_installer(
             file.
 
     Returns:
-        Resolved version, its source, file path, and SHA-256 hash. The
-        ``cached`` field is True when the previous download was reused.
+        Resolved version, its source, file path, and SHA-256 hash.
 
     Raises:
         ConfigError: If the file's version cannot be used as a folder
@@ -180,9 +179,8 @@ def resolve_installer(
         if previous is None or previous.url != url:
             return _download_and_file(url, app_dir, source, None)
         return _refresh(previous, url, app_dir, source, None)
-    except (NetworkError, ConfigError, PackagingError):
-        raise
-    except Exception as err:
+    except OSError as err:
+        # The staging folder or the file itself could not be written.
         raise NetworkError(f"Failed to download {url}: {err}") from err
 
 
@@ -266,7 +264,6 @@ def _reuse(previous: _PreviousDownload, url: str, source: str) -> StrategyResult
         file_path=previous.file_path,
         sha256=previous.sha256,
         download_url=url,
-        cached=True,
     )
 
 
@@ -357,7 +354,6 @@ def _download_and_file(
         file_path=final_path,
         sha256=dl.sha256,
         download_url=url,
-        cached=False,
     )
     _write_sidecar(app_dir, url, discovered_version, dl.headers, result)
     return result

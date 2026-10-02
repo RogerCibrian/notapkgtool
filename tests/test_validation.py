@@ -292,96 +292,6 @@ discovery:
         assert result.status == "invalid"
         assert any("url" in err for err in result.errors)
 
-    def test_api_github_missing_repo(self, tmp_path):
-        """Test that api_github validates missing repo."""
-        recipe = tmp_path / "recipe.yaml"
-        recipe.write_text("""
-apiVersion: napt/v1
-name: "Test"
-id: "test"
-discovery:
-  strategy: api_github
-  asset_pattern: ".*\\\\.exe$"
-""")
-
-        result = validate_recipe(recipe)
-
-        assert result.status == "invalid"
-        assert any("repo" in err for err in result.errors)
-
-    def test_api_github_invalid_repo_format(self, tmp_path):
-        """Test that api_github validates repo format."""
-        recipe = tmp_path / "recipe.yaml"
-        recipe.write_text("""
-apiVersion: napt/v1
-name: "Test"
-id: "test"
-discovery:
-  strategy: api_github
-  repo: "invalid-repo-format"
-  asset_pattern: ".*\\\\.exe$"
-""")
-
-        result = validate_recipe(recipe)
-
-        assert result.status == "invalid"
-        assert any("owner/repo" in err or "format" in err for err in result.errors)
-
-    def test_web_scrape_missing_fields(self, tmp_path):
-        """Test that web_scrape validates missing required fields."""
-        recipe = tmp_path / "recipe.yaml"
-        recipe.write_text("""
-apiVersion: napt/v1
-name: "Test"
-id: "test"
-discovery:
-  strategy: web_scrape
-  page_url: "https://example.com/download.html"
-""")
-
-        result = validate_recipe(recipe)
-
-        assert result.status == "invalid"
-        assert any(
-            "link_selector" in err or "link_pattern" in err for err in result.errors
-        )
-
-    def test_web_scrape_invalid_pattern(self, tmp_path):
-        """Test that web_scrape validates regex syntax."""
-        recipe = tmp_path / "recipe.yaml"
-        recipe.write_text("""
-apiVersion: napt/v1
-name: "Test"
-id: "test"
-discovery:
-  strategy: web_scrape
-  page_url: "https://example.com/download.html"
-  link_selector: 'a[href$=".msi"]'
-  version_pattern: "[unclosed bracket"
-""")
-
-        result = validate_recipe(recipe)
-
-        assert result.status == "invalid"
-        assert any("regex" in err.lower() or "pattern" in err for err in result.errors)
-
-    def test_api_json_missing_fields(self, tmp_path):
-        """Test that api_json validates missing required fields."""
-        recipe = tmp_path / "recipe.yaml"
-        recipe.write_text("""
-apiVersion: napt/v1
-name: "Test"
-id: "test"
-discovery:
-  strategy: api_json
-  api_url: "https://api.example.com/latest"
-""")
-
-        result = validate_recipe(recipe)
-
-        assert result.status == "invalid"
-        assert len(result.errors) >= 2
-
     def test_verbose_mode(self, tmp_path, capsys):
         """Test that verbose mode prints progress."""
         from napt.logging import get_logger, set_global_logger
@@ -1757,7 +1667,7 @@ discovery:
         result = validate_recipe(recipe)
 
         assert result.status == "invalid"
-        assert "Missing required field: discovery.repo" in result.errors
+        assert "discovery: Missing required field: repo" in result.errors
         assert (
             "discovery: Unknown field 'repos'. Did you mean 'repo'?" in result.warnings
         )

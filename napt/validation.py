@@ -64,6 +64,10 @@ from napt.config.loader import (
     merge_effective_config,
 )
 from napt.discovery.registry import get_strategy
+from napt.discovery.url_download import (
+    FIELDS as URL_DOWNLOAD_FIELDS,
+    validate_url_download_config,
+)
 from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
 from napt.paths import is_safe_path_component
@@ -109,26 +113,6 @@ _TOP_LEVEL_FIELDS: _Schema = {
     "directories": _Field(dict),
     "intunewin": _Field(dict),
     "secrets": _Field(dict),
-}
-
-# The fields each discovery strategy reads, besides ``strategy`` itself.
-# Each strategy's validate_config checks presence, types, and syntax; this
-# table only drives the unknown-key warning.
-_DISCOVERY_FIELDS: dict[str, frozenset[str]] = {
-    "api_github": frozenset({"repo", "asset_pattern", "version_pattern", "token"}),
-    "api_json": frozenset(
-        {"api_url", "version_path", "download_url_path", "version_pattern", "headers"}
-    ),
-    "url_download": frozenset({"url"}),
-    "web_scrape": frozenset(
-        {
-            "page_url",
-            "link_selector",
-            "link_pattern",
-            "version_pattern",
-            "version_format",
-        }
-    ),
 }
 
 _PSADT_FIELDS: _Schema = {
@@ -824,7 +808,8 @@ def _validate_discovery_section(
     """Validates the discovery: section through its strategy.
 
     The strategy's own validator checks the fields it requires; this
-    resolves the strategy and warns on keys it does not read.
+    resolves the strategy and warns on keys outside the fields it
+    declares.
 
     Args:
         discovery: The discovery section.
@@ -846,9 +831,8 @@ def _validate_discovery_section(
     logger.verbose("VALIDATION", f"'{app_name}' uses strategy: {strategy_name}")
 
     if strategy_name == "url_download":
-        from napt.discovery.url_download import validate_url_download_config
-
         errors.extend(validate_url_download_config(config))
+        known = URL_DOWNLOAD_FIELDS
     else:
         try:
             strategy = get_strategy(strategy_name)
@@ -856,10 +840,9 @@ def _validate_discovery_section(
             errors.append(f"discovery.strategy: {err}")
             return
         errors.extend(strategy.validate_config(config))
+        known = strategy.FIELDS
 
-    known = _DISCOVERY_FIELDS.get(strategy_name)
-    if known is not None:
-        _check_keys(discovery, known | {"strategy"}, "discovery", errors, warnings)
+    _check_keys(discovery, known | {"strategy"}, "discovery", errors, warnings)
 
 
 def _validate_parent_field(

@@ -50,7 +50,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import re
-from typing import Any, Protocol
+from typing import Any, ClassVar, Protocol
 
 from napt.exceptions import ConfigError, NetworkError
 from napt.paths import is_safe_path_component
@@ -147,8 +147,6 @@ class StrategyResult:
         sha256: SHA-256 hex digest of the resolved file.
         download_url: URL the file came from, recorded with the pending
             release.
-        cached: True when a file from an earlier run was reused; False
-            when it was downloaded.
     """
 
     version: str
@@ -156,7 +154,6 @@ class StrategyResult:
     file_path: Path
     sha256: str
     download_url: str
-    cached: bool
 
 
 class DiscoveryStrategy(Protocol):
@@ -166,23 +163,34 @@ class DiscoveryStrategy(Protocol):
     the latest version plus its download URL. Strategies do not download
     files or write to disk. Those concerns belong to the orchestrator.
 
-    Implementations need only a ``discover`` and a ``validate_config``
-    method with the signatures below.
+    Implementations need ``FIELDS``, a ``discover`` and a
+    ``validate_config`` method with the signatures below. The config
+    loader runs ``validate_config`` on the merged configuration and stops
+    on any error before ``discover`` is called, so ``discover`` reads its
+    fields directly.
+
+    Attributes:
+        FIELDS: Every ``discovery`` field the strategy reads, besides
+            ``strategy``. Validation warns on any other key.
     """
+
+    FIELDS: ClassVar[frozenset[str]]
 
     def discover(self, app_config: dict[str, Any]) -> RemoteVersion:
         """Discovers the latest version and its download URL.
 
         Args:
-            app_config: Merged recipe configuration dict.
+            app_config: Merged and validated recipe configuration dict.
 
         Returns:
             Latest version, the URL it can be downloaded from, and the
             strategy's own name as the source identifier.
 
         Raises:
-            ConfigError: On missing or invalid required configuration.
-            NetworkError: On HTTP failures or version-extraction errors.
+            ConfigError: When the remote data does not match the recipe's
+                patterns or paths.
+            NetworkError: On request failures, or remote values too long to
+                match a pattern on.
 
         """
         ...

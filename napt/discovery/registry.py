@@ -21,7 +21,8 @@ implementations.
 
 Adding a strategy:
     1. Implement [DiscoveryStrategy][napt.discovery.base.DiscoveryStrategy]
-        in a new module under ``napt/discovery/``.
+        in a new module under ``napt/discovery/``, with ``FIELDS`` naming
+        every recipe field it reads.
     2. Import the class here and add it to the table.
 
 Note:

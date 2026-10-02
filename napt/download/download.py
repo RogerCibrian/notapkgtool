@@ -48,7 +48,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from napt.exceptions import ConfigError, NetworkError, NotModifiedError
+from napt.exceptions import NetworkError, NotModifiedError
 from napt.logging import get_global_logger
 from napt.paths import safe_filename
 from napt.results import DownloadResult
@@ -59,6 +59,9 @@ DEFAULT_CHUNK = 1024 * 1024
 
 # Suffix of an unfinished download; it is dropped when the download completes.
 DOWNLOAD_PART_SUFFIX = ".part"
+
+# Seconds allowed for each request, including the wait for the first byte.
+_DOWNLOAD_TIMEOUT = 60
 
 
 def _filename_from_cd(content_disposition: str) -> str | None:
@@ -206,9 +209,6 @@ def download_file(
     url: str,
     destination_folder: Path,
     *,
-    expected_sha256: str | None = None,
-    validate_content_type: bool = False,
-    timeout: int = 60,
     etag: str | None = None,
     last_modified: str | None = None,
 ) -> DownloadResult:
@@ -216,18 +216,11 @@ def download_file(
 
     Follows redirects and retries transient failures. Writes to a .part file
     then renames to the final filename on success. Sends conditional headers
-    if etag or last_modified is provided. Validates checksum if
-    expected_sha256 is set.
+    if etag or last_modified is provided.
 
     Args:
         url: Source URL.
         destination_folder: Folder to save into (created if missing).
-        expected_sha256: Optional known SHA-256 (hex). If provided and the
-            computed hash does not match, the .part file is deleted and
-            NetworkError is raised.
-        validate_content_type: If True, raises ConfigError when the server
-            responds with Content-Type: text/html.
-        timeout: Per-request timeout in seconds.
         etag: Previous ETag for If-None-Match conditional GET.
         last_modified: Previous Last-Modified for If-Modified-Since
             conditional GET.
@@ -239,10 +232,8 @@ def download_file(
     Raises:
         NotModifiedError: On HTTP 304, when the server confirms the content
             has not changed since the last request.
-        NetworkError: For non-2xx responses (after retries), checksum mismatch,
-            or incomplete download (Content-Length mismatch).
-        ConfigError: If validate_content_type is True and the server responds
-            with text/html.
+        NetworkError: On transport failure, a non-2xx response (after
+            retries), or an incomplete download (Content-Length mismatch).
 
     """
     logger = get_global_logger()
@@ -264,9 +255,16 @@ def download_file(
     started_at = time.time()
     with make_session() as session:
         # Stream response so we can hash while writing.
-        resp = session.get(
-            url, stream=True, allow_redirects=True, timeout=timeout, headers=headers
-        )
+        try:
+            resp = session.get(
+                url,
+                stream=True,
+                allow_redirects=True,
+                timeout=_DOWNLOAD_TIMEOUT,
+                headers=headers,
+            )
+        except requests.RequestException as err:
+            raise NetworkError(f"download failed for {url}: {err}") from err
 
         # Log redirects.
         if len(resp.history) > 0:
@@ -309,13 +307,6 @@ def download_file(
         cd_header = resp.headers.get("Content-Disposition", "not provided")
         logger.verbose("HTTP", f"Content-Disposition: {cd_header}")
 
-        # Optional content-type sanity check.
-        if validate_content_type:
-            ctype = resp.headers.get("Content-Type", "")
-            if "text/html" in ctype.lower():
-                resp.close()
-                raise ConfigError(f"expected binary, got content-type={ctype}")
-
         total_size = int(resp.headers.get("Content-Length", "0") or 0)
 
         tmp = target.with_suffix(target.suffix + DOWNLOAD_PART_SUFFIX)
@@ -325,21 +316,25 @@ def download_file(
         downloaded = 0
         last_percent = -1
 
-        with tmp.open("wb") as f:
-            for chunk in resp.iter_content(chunk_size=DEFAULT_CHUNK):
-                if not chunk:
-                    continue
-                f.write(chunk)
-                sha.update(chunk)
-                downloaded += len(chunk)
+        try:
+            with tmp.open("wb") as f:
+                for chunk in resp.iter_content(chunk_size=DEFAULT_CHUNK):
+                    if not chunk:
+                        continue
+                    f.write(chunk)
+                    sha.update(chunk)
+                    downloaded += len(chunk)
 
-                if total_size:
-                    pct = int(downloaded * 100 / total_size)
-                    if pct != last_percent:
-                        logger.progress("HTTP", f"{pct}%")
-                        last_percent = pct
-
-        resp.close()
+                    if total_size:
+                        pct = int(downloaded * 100 / total_size)
+                        if pct != last_percent:
+                            logger.progress("HTTP", f"{pct}%")
+                            last_percent = pct
+        except requests.RequestException as err:
+            tmp.unlink(missing_ok=True)
+            raise NetworkError(f"download failed for {url}: {err}") from err
+        finally:
+            resp.close()
 
         digest = sha.hexdigest()
         logger.verbose("FILE", f"SHA-256: {digest} (computed during download)")
@@ -350,18 +345,6 @@ def download_file(
             raise NetworkError(
                 f"Incomplete download for {url}: "
                 f"expected {total_size} bytes, received {downloaded}"
-            )
-
-        # Validate checksum before atomic rename to keep partial files out of
-        # the destination on mismatch.
-        if expected_sha256 and digest.lower() != expected_sha256.lower():
-            logger.verbose(
-                "FILE", f"Checksum mismatch! Expected: {expected_sha256}, Got: {digest}"
-            )
-            tmp.unlink(missing_ok=True)
-            raise NetworkError(
-                f"sha256 mismatch for {filename}: got {digest}, "
-                f"expected {expected_sha256}"
             )
 
         # Atomically commit the file.

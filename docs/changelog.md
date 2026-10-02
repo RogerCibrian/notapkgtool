@@ -104,8 +104,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     holding only the module manifest is downloaded again instead of being
     built from
 
+- **BREAKING: `api_json` paths are dotted paths** - `version_path` and
+    `download_url_path` are keys separated by dots, with `[n]` for a list
+    entry (`data.version`, `builds[0].url`). JSONPath operators such as
+    wildcards and filters are no longer accepted; every documented example
+    already used the dotted form. The value at `version_path` must be a
+    string or number and the value at `download_url_path` a non-empty
+    string, so a null in the response is reported by path instead of
+    becoming the URL `None`
+- **BREAKING: `web_scrape` refuses `link_selector` and `link_pattern`
+    together** - The selector used to win silently; a recipe that sets
+    both now fails validation
+- **Strategy validation is stricter** - A `version_format` that is
+    malformed or names a field, and an empty `version_pattern` in any
+    strategy, are validation errors; each strategy reports a missing or
+    mistyped field in the same form the other sections use
+    (`discovery: Missing required field: repo`, `discovery.repo: Must be a
+    string`)
+
 ### Removed
 
+- **The `jsonpath-ng` dependency** - Replaced by the dotted-path reader
 - **BREAKING: `discovery.prerelease`** - The field never had an effect:
     the latest-release endpoint never returns a pre-release. A recipe that
     still sets it gets an unknown-key warning
@@ -123,6 +142,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     are verified
 - A PSADT release tagged with a `v` prefix resolves and downloads; the
     lookup used to strip the prefix and then miss the tag
+- A `web_scrape` recipe whose `version_format` could not take the captured
+    groups ended `napt discover` with a traceback; it is now reported as a
+    configuration error, and caught at `napt validate` first
+- A download that failed in transit (a dropped connection mid-file) is
+    reported as a network error from the downloader itself
 - Fixed a PSADT download interrupted part-way leaving a partial toolkit in
     the cache that every later build accepted, and the toolkit zip left in
     the cache folder shipping inside every later package. The toolkit is

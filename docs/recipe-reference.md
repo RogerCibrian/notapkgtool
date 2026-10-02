@@ -214,8 +214,8 @@ unset variable stops discovery with an error.
 discovery:
   strategy: api_json
   api_url: "https://api.vendor.com/latest"   # Required: JSON API endpoint URL
-  version_path: "version"                    # Required: JSONPath to version field
-  download_url_path: "download_url"          # Required: JSONPath to download URL field
+  version_path: "version"                    # Required: dotted path to the version
+  download_url_path: "download_url"          # Required: dotted path to the download URL
   version_pattern: "v?([0-9.]+)"             # Optional: regex to narrow the version value
   headers:                                   # Optional: HTTP headers for authentication
     Authorization: "Bearer ${API_TOKEN}"     # API_TOKEN declared under secrets in org.yaml
@@ -230,25 +230,27 @@ JSON API endpoint URL that returns version and download URL information.
 
 #### version_path
 
-**Type:** `string` (JSONPath)
+**Type:** `string` (dotted path)
 **Required:** Yes
 
-JSONPath expression to extract the version field from the API response.
-Supports nested paths.
+Path to the version in the API response: keys separated by dots, with
+`[n]` to pick an entry of a list.
+The value must be a string or a number.
 
 **Examples:**
 - `"version"` - Direct field: `{"version": "1.2.3"}`
 - `"data.version"` - Nested field: `{"data": {"version": "1.2.3"}}`
-- `"release.latest.version"` - Deeply nested:
-  `{"release": {"latest": {"version": "1.2.3"}}}`
+- `"builds[0].version"` - First entry of a list:
+  `{"builds": [{"version": "1.2.3"}, ...]}`
 
 #### download_url_path
 
-**Type:** `string` (JSONPath)
+**Type:** `string` (dotted path)
 **Required:** Yes
 
-JSONPath expression to extract the download URL field from the API response.
-Supports nested paths (same format as `version_path`).
+Path to the download URL in the API response (same format as
+`version_path`).
+The value must be a non-empty string.
 
 #### version_pattern
 
@@ -339,7 +341,7 @@ URL of the vendor download page that contains links to installer files.
 
 CSS selector to find the download link on the page.
 Prefer it over `link_pattern` when the page's markup allows.
-If both are set, `link_selector` is used and `link_pattern` is ignored.
+Setting both is a validation error.
 
 **Examples:**
 - `'a[href$=".msi"]'` - Matches links ending in `.msi`
@@ -394,6 +396,7 @@ version.
 
 Format string to combine multiple capture groups from `version_pattern`.
 Uses Python format string syntax with `{0}`, `{1}`, etc. for capture groups.
+A format string that is malformed or names a field is a validation error.
 
 **Examples:**
 - `"{0}.{1}"` - Combines two groups: `"25"` + `"01"` → `"25.01"`

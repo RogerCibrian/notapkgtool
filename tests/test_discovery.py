@@ -84,7 +84,6 @@ class TestUrlDownloadFlow:
         assert result.file_path.exists()
         assert not [p for p in app_dir.iterdir() if p.name.startswith(".incoming")]
         assert len(result.sha256) == 64
-        assert result.cached is False
         assert result.download_url == "https://example.com/installer.msi"
 
     def test_new_version_under_same_filename_keeps_the_old_installer(
@@ -141,11 +140,6 @@ class TestUrlDownloadFlow:
 
         assert not (tmp_test_dir / "evil").exists()
         assert list((tmp_test_dir / "test-app").iterdir()) == []
-
-    def test_missing_url_raises(self, tmp_test_dir):
-        """Tests that a missing discovery.url raises ConfigError."""
-        with pytest.raises(ConfigError, match="requires 'discovery.url'"):
-            run_url_download({"discovery": {}}, tmp_test_dir)
 
     def test_download_failure_raises(self, tmp_test_dir):
         """Tests that a non-2xx download response raises NetworkError."""
@@ -313,9 +307,8 @@ class TestUrlDownloadSidecar:
             second = _run_with_msi_version(self.APP_CONFIG, tmp_test_dir, "1.0.0")
             conditional = m.request_history[1].headers.get("If-None-Match")
 
-        assert first.cached is False
         assert conditional == 'W/"abc123"'
-        assert second.cached is True
+        assert m.call_count == 2
         assert second.file_path == first.file_path
         assert second.version == "1.0.0"
         assert second.sha256 == first.sha256
@@ -356,7 +349,6 @@ class TestUrlDownloadSidecar:
         assert result.file_path == expected
         assert result.version == "2.1.0"
         assert result.sha256 == _CACHED_SHA256
-        assert result.cached is True
 
     def test_changed_file_gets_its_own_version_folder(self, tmp_test_dir):
         """Tests that a vendor rollback is filed under the version it carries."""
@@ -373,7 +365,6 @@ class TestUrlDownloadSidecar:
             result = _run_with_msi_version(self.APP_CONFIG, tmp_test_dir, "1.9.0")
 
         assert result.version == "1.9.0"
-        assert result.cached is False
         assert result.file_path == app_dir / "1.9.0" / "installer.msi"
         assert result.file_path.read_bytes() == older_msi
         assert (app_dir / "2.0.0" / "installer.msi").read_bytes() == b"fake cached msi"
@@ -403,7 +394,6 @@ class TestUrlDownloadSidecar:
 
         assert "If-None-Match" not in sent
         assert "If-Modified-Since" not in sent
-        assert result.cached is False
         assert result.file_path.read_bytes() == b"msi"
 
     @pytest.mark.parametrize("content", ["not json", "[]", '{"url": 1}'])
@@ -417,7 +407,7 @@ class TestUrlDownloadSidecar:
             m.get(_SIDECAR_URL, content=b"msi", headers={"Content-Length": "3"})
             result = _run_with_msi_version(self.APP_CONFIG, tmp_test_dir, "1.0.0")
 
-        assert result.cached is False
+        assert m.called
         assert result.version == "1.0.0"
 
     def test_unwritable_sidecar_warns_and_keeps_the_download(
@@ -431,7 +421,6 @@ class TestUrlDownloadSidecar:
             m.get(_SIDECAR_URL, content=b"msi", headers={"Content-Length": "3"})
             result = _run_with_msi_version(self.APP_CONFIG, tmp_test_dir, "1.0.0")
 
-        assert result.cached is False
         assert result.file_path.read_bytes() == b"msi"
         assert "Could not write" in capsys.readouterr().out
 
@@ -683,46 +672,12 @@ class TestVersionFirstStrategies:
 
 
 # =============================================================================
-# WebScrapeStrategy — error cases and validate_config
+# WebScrapeStrategy: error cases and validate_config
 # =============================================================================
 
 
 class TestWebScrapeStrategyErrors:
     """Tests error handling in WebScrapeStrategy.discover()."""
-
-    def test_missing_page_url_raises(self):
-        """Tests that missing page_url raises ConfigError."""
-        strategy = WebScrapeStrategy()
-        with pytest.raises(ConfigError, match="requires 'discovery.page_url'"):
-            strategy.discover(
-                {"discovery": {"link_selector": "a", "version_pattern": "."}}
-            )
-
-    def test_missing_link_finding_method_raises(self):
-        """Tests that omitting link_selector and link_pattern raises ConfigError."""
-        strategy = WebScrapeStrategy()
-        with pytest.raises(ConfigError, match="link_selector.*link_pattern"):
-            strategy.discover(
-                {
-                    "discovery": {
-                        "page_url": "https://example.com",
-                        "version_pattern": r"(\d+)",
-                    }
-                }
-            )
-
-    def test_missing_version_pattern_raises(self):
-        """Tests that missing version_pattern raises ConfigError."""
-        strategy = WebScrapeStrategy()
-        with pytest.raises(ConfigError, match="requires 'discovery.version_pattern'"):
-            strategy.discover(
-                {
-                    "discovery": {
-                        "page_url": "https://example.com",
-                        "link_selector": "a",
-                    }
-                }
-            )
 
     def test_page_fetch_failure_raises(self):
         """Tests that a non-2xx page response raises NetworkError."""
@@ -845,6 +800,175 @@ class TestWebScrapeStrategyErrors:
         assert version_info.source == "web_scrape"
 
 
+class TestStrategyValidationRules:
+    """Tests for the rules the strategy validators share."""
+
+    @staticmethod
+    def _web_scrape(**fields):
+        discovery = {
+            "page_url": "https://example.com",
+            "link_selector": "a",
+            "version_pattern": r"v([0-9.]+)",
+        }
+        discovery.update(fields)
+        return WebScrapeStrategy().validate_config({"discovery": discovery})
+
+    @pytest.mark.parametrize("fmt", ["{0", "{name}", "{0}.{"])
+    def test_malformed_version_format_is_reported(self, fmt):
+        """Tests that a format string that cannot take capture groups fails."""
+        errors = self._web_scrape(version_format=fmt)
+
+        assert any(
+            e.startswith("discovery.version_format: Invalid format string")
+            for e in errors
+        )
+
+    def test_both_link_fields_is_an_error(self):
+        """Tests that a recipe setting link_selector and link_pattern fails."""
+        errors = self._web_scrape(link_pattern="href")
+
+        assert "discovery: Set link_selector or link_pattern, not both" in errors
+
+    def test_neither_link_field_is_reported_once(self):
+        """Tests that a recipe with no link field gets one missing-field error."""
+        errors = WebScrapeStrategy().validate_config(
+            {"discovery": {"page_url": "https://x", "version_pattern": "v"}}
+        )
+
+        assert errors == [
+            "discovery: Missing required field: link_selector or link_pattern"
+        ]
+
+    @pytest.mark.parametrize(
+        "strategy",
+        [ApiGithubStrategy(), ApiJsonStrategy(), WebScrapeStrategy()],
+        ids=["api_github", "api_json", "web_scrape"],
+    )
+    def test_empty_version_pattern_is_rejected_everywhere(self, strategy):
+        """Tests that an empty version_pattern fails the same way per strategy."""
+        discovery = {
+            "repo": "o/r",
+            "asset_pattern": ".",
+            "api_url": "https://x",
+            "version_path": "v",
+            "download_url_path": "u",
+            "page_url": "https://x",
+            "link_selector": "a",
+            "version_pattern": "",
+        }
+        errors = strategy.validate_config({"discovery": discovery})
+
+        assert "discovery.version_pattern: Must be a non-empty string" in errors
+
+    def test_missing_field_uses_the_shared_message_form(self):
+        """Tests that a missing required field reads like validation.py's."""
+        errors = ApiGithubStrategy().validate_config({"discovery": {}})
+
+        assert "discovery: Missing required field: repo" in errors
+        assert "discovery: Missing required field: asset_pattern" in errors
+
+    def test_wrong_type_uses_the_shared_message_form(self):
+        """Tests that a wrong type reads like validation.py's."""
+        errors = ApiGithubStrategy().validate_config(
+            {"discovery": {"repo": 5, "asset_pattern": "."}}
+        )
+
+        assert "discovery.repo: Must be a string" in errors
+
+    def test_version_format_failure_at_discover_is_a_config_error(self):
+        """Tests that a format failure reaching discover is not a traceback."""
+        app_config = {
+            "discovery": {
+                "page_url": "https://example.com/dl.html",
+                "link_selector": "a",
+                "version_pattern": r"v(\d+)",
+                "version_format": "{0",
+            }
+        }
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://example.com/dl.html",
+                text='<a href="/app-v3.msi">Download</a>',
+            )
+            with pytest.raises(ConfigError, match="version_format"):
+                WebScrapeStrategy().discover(app_config)
+
+
+class TestApiJsonPaths:
+    """Tests for the dotted paths api_json reads values with."""
+
+    _DISCOVERY = {
+        "api_url": "https://api.example.com/latest",
+        "version_path": "version",
+        "download_url_path": "url",
+    }
+
+    def _validate(self, **fields):
+        return ApiJsonStrategy().validate_config(
+            {"discovery": {**self._DISCOVERY, **fields}}
+        )
+
+    @pytest.mark.parametrize(
+        "path", ["version", "data.version", "builds[0].url", "win32-x64.url"]
+    )
+    def test_dotted_paths_are_accepted(self, path):
+        """Tests that keys, nesting, and list indexes validate."""
+        assert self._validate(version_path=path) == []
+
+    @pytest.mark.parametrize(
+        "path", ["$.version", "builds[*].url", "a..b", "builds[?(@.os)]", ".a", "a."]
+    )
+    def test_other_syntax_is_rejected(self, path):
+        """Tests that JSONPath operators and malformed paths are reported."""
+        errors = self._validate(version_path=path)
+
+        assert any(
+            e.startswith("discovery.version_path: Must be a dotted path")
+            for e in errors
+        )
+
+    def _discover(self, body, **fields):
+        with requests_mock.Mocker() as m:
+            m.get("https://api.example.com/latest", json=body)
+            return ApiJsonStrategy().discover(
+                {"discovery": {**self._DISCOVERY, **fields}}
+            )
+
+    def test_list_index_reads_an_entry(self):
+        """Tests that builds[0].url reads the first list entry's url."""
+        body = {
+            "version": "1.0",
+            "builds": [{"url": "https://x/win.msi"}, {"url": "https://x/mac.pkg"}],
+        }
+
+        info = self._discover(body, download_url_path="builds[0].url")
+
+        assert info.download_url == "https://x/win.msi"
+
+    @pytest.mark.parametrize(
+        ("path", "body"),
+        [
+            ("builds[2].url", {"version": "1", "builds": [{"url": "u"}]}),
+            ("builds.url", {"version": "1", "builds": [{"url": "u"}]}),
+            ("version.x", {"version": "1", "url": "u"}),
+        ],
+    )
+    def test_path_that_does_not_fit_the_response_is_reported(self, path, body):
+        """Tests that an index past the end or a key on a non-object is reported."""
+        with pytest.raises(ConfigError, match="did not match"):
+            self._discover(body, download_url_path=path)
+
+    def test_null_download_url_is_reported_by_path(self):
+        """Tests that a null at download_url_path does not become the URL None."""
+        with pytest.raises(ConfigError, match="download_url_path"):
+            self._discover({"version": "1.0", "url": None})
+
+    def test_version_that_is_not_a_scalar_is_reported(self):
+        """Tests that an object at version_path is reported, not stringified."""
+        with pytest.raises(ConfigError, match="version_path"):
+            self._discover({"version": {"major": 1}, "url": "https://x/a.msi"})
+
+
 class TestWebScrapeValidateConfig:
     """Tests for WebScrapeStrategy.validate_config()."""
 
@@ -927,24 +1051,6 @@ class TestWebScrapeValidateConfig:
 
 class TestApiGithubStrategyErrors:
     """Tests error handling in ApiGithubStrategy.discover()."""
-
-    def test_missing_repo_raises(self):
-        """Tests that missing repo raises ConfigError."""
-        strategy = ApiGithubStrategy()
-        with pytest.raises(ConfigError, match="requires 'discovery.repo'"):
-            strategy.discover({"discovery": {"asset_pattern": ".*"}})
-
-    def test_invalid_repo_format_raises(self):
-        """Tests that repo without slash raises ConfigError."""
-        strategy = ApiGithubStrategy()
-        with pytest.raises(ConfigError, match="Invalid repo format"):
-            strategy.discover({"discovery": {"repo": "noslash", "asset_pattern": ".*"}})
-
-    def test_missing_asset_pattern_raises(self):
-        """Tests that missing asset_pattern raises ConfigError."""
-        strategy = ApiGithubStrategy()
-        with pytest.raises(ConfigError, match="requires 'discovery.asset_pattern'"):
-            strategy.discover({"discovery": {"repo": "owner/repo"}})
 
     def test_repo_not_found_raises(self):
         """Tests that a 404 API response raises NetworkError."""
@@ -1125,45 +1231,6 @@ class TestApiGithubValidateConfig:
 class TestApiJsonStrategyErrors:
     """Tests error handling in ApiJsonStrategy.discover()."""
 
-    def test_missing_api_url_raises(self):
-        """Tests that missing api_url raises ConfigError."""
-        strategy = ApiJsonStrategy()
-        with pytest.raises(ConfigError, match="requires 'discovery.api_url'"):
-            strategy.discover(
-                {
-                    "discovery": {
-                        "version_path": "version",
-                        "download_url_path": "url",
-                    }
-                }
-            )
-
-    def test_missing_version_path_raises(self):
-        """Tests that missing version_path raises ConfigError."""
-        strategy = ApiJsonStrategy()
-        with pytest.raises(ConfigError, match="requires 'discovery.version_path'"):
-            strategy.discover(
-                {
-                    "discovery": {
-                        "api_url": "https://api.example.com",
-                        "download_url_path": "url",
-                    }
-                }
-            )
-
-    def test_missing_download_url_path_raises(self):
-        """Tests that missing download_url_path raises ConfigError."""
-        strategy = ApiJsonStrategy()
-        with pytest.raises(ConfigError, match="requires 'discovery.download_url_path'"):
-            strategy.discover(
-                {
-                    "discovery": {
-                        "api_url": "https://api.example.com",
-                        "version_path": "version",
-                    }
-                }
-            )
-
     def test_http_error_raises(self):
         """Tests that a non-2xx API response raises NetworkError."""
         strategy = ApiJsonStrategy()
@@ -1176,7 +1243,7 @@ class TestApiJsonStrategyErrors:
         }
         with requests_mock.Mocker() as m:
             m.get("https://api.example.com/latest", status_code=500)
-            with pytest.raises(NetworkError, match="API request failed"):
+            with pytest.raises(NetworkError, match="Failed to fetch API: 500"):
                 strategy.discover(app_config)
 
     def test_invalid_json_response_raises(self):
@@ -1243,7 +1310,7 @@ class TestApiJsonStrategyErrors:
         assert version_info.version == "1.0.0"
 
     def test_nested_json_path(self):
-        """Tests that nested JSONPath expressions extract values correctly."""
+        """Tests that nested dotted paths extract values correctly."""
         strategy = ApiJsonStrategy()
         app_config = {
             "discovery": {
@@ -1310,11 +1377,6 @@ class TestApiJsonVersionPattern:
         with pytest.raises(ConfigError, match="did not match the API's version"):
             self._discover("latest", r"[0-9]+\.[0-9]+")
 
-    def test_invalid_pattern_raises(self):
-        """Tests that an invalid regex is a configuration error at discovery."""
-        with pytest.raises(ConfigError, match="Invalid version_pattern regex"):
-            self._discover("2.0", r"([0-9")
-
 
 class TestApiJsonValidateConfig:
     """Tests for ApiJsonStrategy.validate_config()."""
@@ -1331,7 +1393,7 @@ class TestApiJsonValidateConfig:
                 }
             }
         )
-        assert errors == ["discovery.version_pattern must be a string"]
+        assert errors == ["discovery.version_pattern: Must be a string"]
 
     def test_invalid_version_pattern_regex_reported(self):
         """Tests that an invalid version_pattern regex is reported."""
@@ -1346,7 +1408,7 @@ class TestApiJsonValidateConfig:
             }
         )
         assert len(errors) == 1
-        assert errors[0].startswith("Invalid version_pattern regex")
+        assert errors[0].startswith("discovery.version_pattern: Invalid regex")
 
     def test_valid_version_pattern_accepted(self):
         """Tests that a valid version_pattern adds no errors."""
