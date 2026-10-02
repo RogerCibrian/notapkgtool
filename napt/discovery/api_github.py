@@ -33,13 +33,12 @@ The [recipe reference](../recipe-reference.md#api_github-strategy) defines
 each field.
 
 Note:
-    The request always goes to the latest-release endpoint, which never
-    returns a pre-release, so ``prerelease`` currently has no effect. If no
-    asset matches, discovery raises an error rather than walking back
-    through history. ``${VAR}`` in ``token`` is replaced with that
-    environment variable, provided ``defaults/org.yaml`` declares it under
-    ``secrets`` and binds it to ``api.github.com`` (see [napt.secrets][]);
-    an undeclared or unset variable stops discovery.
+    The request goes to the latest-release endpoint, which never returns a
+    pre-release or a draft. If no asset matches, discovery raises an error
+    rather than walking back through history. ``${VAR}`` in ``token`` is
+    replaced with that environment variable, provided ``defaults/org.yaml``
+    declares it under ``secrets`` and binds it to ``api.github.com`` (see
+    [napt.secrets][]); an undeclared or unset variable stops discovery.
 
 """
 
@@ -57,7 +56,6 @@ from napt.secrets import bound_hosts, check_secret_use, expand_secrets, guarded_
 
 # Strategy-specific defaults for optional recipe fields.
 _DEFAULT_VERSION_PATTERN = r"v?([0-9.]+)"
-_DEFAULT_PRERELEASE = False
 
 # The only host the token is ever sent to.
 _GITHUB_API_HOST = "api.github.com"
@@ -77,8 +75,7 @@ class ApiGithubStrategy:
         Args:
             app_config: Merged recipe configuration dict containing
                 ``discovery.repo`` and ``discovery.asset_pattern``,
-                plus optional ``version_pattern``, ``prerelease``, and
-                ``token`` fields.
+                plus optional ``version_pattern`` and ``token`` fields.
 
         Returns:
             Latest version, the matched asset's download URL, and
@@ -117,7 +114,6 @@ class ApiGithubStrategy:
             )
 
         version_pattern = source.get("version_pattern", _DEFAULT_VERSION_PATTERN)
-        prerelease = source.get("prerelease", _DEFAULT_PRERELEASE)
         raw_token = source.get("token")
 
         api_url = f"https://{_GITHUB_API_HOST}/repos/{repo}/releases/latest"
@@ -141,8 +137,6 @@ class ApiGithubStrategy:
         logger.verbose("DISCOVERY", f"Version pattern: {version_pattern}")
         if asset_pattern:
             logger.verbose("DISCOVERY", f"Asset pattern: {asset_pattern}")
-        if prerelease:
-            logger.verbose("DISCOVERY", "Including pre-releases")
 
         # Fetch latest release from GitHub API
         headers = {
@@ -187,13 +181,6 @@ class ApiGithubStrategy:
             ) from err
         if not isinstance(release_data, dict):
             raise NetworkError(f"Unexpected GitHub API response: {response.text[:200]}")
-
-        # Check if this is a prerelease and we don't want those
-        if release_data.get("prerelease", False) and not prerelease:
-            raise NetworkError(
-                f"Latest release is a pre-release and prerelease=false. "
-                f"Tag: {release_data.get('tag_name')}"
-            )
 
         # Extract version from tag name
         tag_name = release_data.get("tag_name", "")

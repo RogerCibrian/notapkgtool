@@ -921,7 +921,7 @@ class TestWebScrapeValidateConfig:
 
 
 # =============================================================================
-# ApiGithubStrategy — error cases and validate_config
+# ApiGithubStrategy: error cases and validate_config
 # =============================================================================
 
 
@@ -1017,34 +1017,6 @@ class TestApiGithubStrategyErrors:
                 status_code=403,
             )
             with pytest.raises(NetworkError, match="rate limit"):
-                strategy.discover(app_config)
-
-    def test_prerelease_rejected_when_flag_false(self):
-        """Tests that a prerelease latest release is rejected when prerelease=False."""
-        strategy = ApiGithubStrategy()
-        app_config = {
-            "discovery": {
-                "repo": "owner/repo",
-                "asset_pattern": r".*\.msi$",
-                "prerelease": False,
-            }
-        }
-        release_data = {
-            "tag_name": "v2.0.0-beta",
-            "prerelease": True,
-            "assets": [
-                {
-                    "name": "installer.msi",
-                    "browser_download_url": "https://example.com/installer.msi",
-                }
-            ],
-        }
-        with requests_mock.Mocker() as m:
-            m.get(
-                "https://api.github.com/repos/owner/repo/releases/latest",
-                json=release_data,
-            )
-            with pytest.raises(NetworkError, match="pre-release"):
                 strategy.discover(app_config)
 
     def test_no_assets_raises(self):

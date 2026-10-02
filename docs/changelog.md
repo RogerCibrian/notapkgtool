@@ -77,6 +77,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     The publish and apply workflows also gain `workflow_dispatch`, since
     re-running a failed job checks out the old commit
 - **Reference workflows scan `.yml` recipes too**, matching `napt promote`
+- **`napt validate` checks every section against its schema** - Field
+    types, allowed values, and integer bounds are checked in every section,
+    including `psadt`, `directories`, and `intunewin`, which had no checks.
+    `intune.max_run_time_minutes` must be 1 to 1440 (Intune's limit) and
+    `logging.log_rotation_mb` at least 1; a YAML boolean no longer passes
+    as an integer; `psadt.brand_pack` and each of its mappings must have
+    the documented shape, and a mapping target must stay inside the build.
+    A key that is not a string is an error instead of a traceback.
+    An unknown key anywhere, including the top level
+    and the `discovery` section, is a warning that names the closest known
+    key, and the same typo always gets the same hint
+
+### Removed
+
+- **BREAKING: `discovery.prerelease`** - The field never had an effect:
+    the latest-release endpoint never returns a pre-release. A recipe that
+    still sets it gets an unknown-key warning
 
 ### Fixed
 

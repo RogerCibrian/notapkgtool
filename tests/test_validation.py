@@ -1414,3 +1414,437 @@ class TestValidateRecipes:
         assert len(results) == 1
         assert results[0].status == "invalid"
         assert any("No recipe files" in err for err in results[0].errors)
+
+
+_BASE = """
+apiVersion: napt/v1
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+"""
+
+
+def _validate(tmp_path, body: str):
+    """Validates a recipe made of the minimal header plus ``body``."""
+    recipe = tmp_path / "recipe.yaml"
+    recipe.write_text(_BASE + body)
+    return validate_recipe(recipe)
+
+
+class TestIntegerFields:
+    """Tests that integer fields reject booleans and out-of-range values."""
+
+    @pytest.mark.parametrize(
+        ("body", "field"),
+        [
+            (
+                "intune:\n  max_run_time_minutes: true\n",
+                "intune.max_run_time_minutes",
+            ),
+            ("logging:\n  log_rotation_mb: false\n", "logging.log_rotation_mb"),
+            (
+                "deployment:\n  retain_versions: true\n",
+                "deployment.retain_versions",
+            ),
+        ],
+    )
+    def test_bool_is_not_an_integer(self, tmp_path, body, field):
+        """Tests that a YAML boolean does not pass as an integer."""
+        result = _validate(tmp_path, body)
+
+        assert result.status == "invalid"
+        assert any(
+            err.startswith(f"{field}: Must be int, got bool") for err in result.errors
+        )
+
+    @pytest.mark.parametrize(
+        ("body", "message"),
+        [
+            (
+                "intune:\n  max_run_time_minutes: 0\n",
+                "intune.max_run_time_minutes: Must be between 1 and 1440",
+            ),
+            (
+                "intune:\n  max_run_time_minutes: 1441\n",
+                "intune.max_run_time_minutes: Must be between 1 and 1440",
+            ),
+            (
+                "logging:\n  log_rotation_mb: 0\n",
+                "logging.log_rotation_mb: Must be >= 1",
+            ),
+            (
+                "deployment:\n  retain_versions: -1\n",
+                "deployment.retain_versions: Must be >= 0",
+            ),
+        ],
+    )
+    def test_out_of_range_integer_is_an_error(self, tmp_path, body, message):
+        """Tests that an integer outside its documented range is reported."""
+        result = _validate(tmp_path, body)
+
+        assert result.status == "invalid"
+        assert any(err.startswith(message) for err in result.errors)
+
+    @pytest.mark.parametrize(
+        "body",
+        [
+            "intune:\n  max_run_time_minutes: 1\n",
+            "intune:\n  max_run_time_minutes: 1440\n",
+            "logging:\n  log_rotation_mb: 1\n",
+            "deployment:\n  retain_versions: 0\n",
+        ],
+    )
+    def test_boundary_values_are_valid(self, tmp_path, body):
+        """Tests that the documented limits themselves pass."""
+        result = _validate(tmp_path, body)
+
+        assert result.status == "valid"
+        assert result.errors == []
+
+    def test_ring_promote_after_days_lower_bound(self, tmp_path):
+        """Tests that a negative promote_after_days is reported by its path."""
+        result = _validate(
+            tmp_path,
+            "deployment:\n  rings:\n    - name: pilot\n      groups: [g]\n"
+            "      promote_after_days: -1\n",
+        )
+
+        assert result.status == "invalid"
+        assert any(
+            err.startswith("deployment.rings[0].promote_after_days: Must be >= 0")
+            for err in result.errors
+        )
+
+
+class TestPsadtSchema:
+    """Tests for the psadt: section schema (types, brand pack, unknown keys)."""
+
+    def test_float_release_is_an_error(self, tmp_path):
+        """Tests that an unquoted release such as 4.1 (a YAML float) is rejected."""
+        result = _validate(tmp_path, "psadt:\n  release: 4.1\n")
+
+        assert result.status == "invalid"
+        assert any(
+            err.startswith("psadt.release: Must be str, got float")
+            for err in result.errors
+        )
+
+    def test_unknown_field_warns_with_hint(self, tmp_path):
+        """Tests that a misspelled psadt key is reported with the closest known key."""
+        result = _validate(tmp_path, "psadt:\n  cachedir: cache/psadt\n")
+
+        assert result.status == "valid"
+        assert (
+            "psadt: Unknown field 'cachedir'. Did you mean 'cache_dir'?"
+            in result.warnings
+        )
+
+    @pytest.mark.parametrize(
+        ("body", "message"),
+        [
+            ("psadt:\n  brand_pack: x\n", "psadt.brand_pack: Must be a dictionary"),
+            ("psadt:\n  brand_pack:\n", "psadt.brand_pack: Must be a dictionary"),
+            (
+                "psadt:\n  brand_pack:\n    path: brand\n    mappings: x\n",
+                "psadt.brand_pack.mappings: Must be list, got str",
+            ),
+            (
+                'psadt:\n  brand_pack:\n    path: brand\n    mappings: ["AppIcon.*"]\n',
+                "psadt.brand_pack.mappings[0]: Must be a dictionary",
+            ),
+            (
+                "psadt:\n  brand_pack:\n    path: brand\n    mappings:\n"
+                '      - source: "AppIcon.*"\n',
+                "psadt.brand_pack.mappings[0]: Missing required field: target",
+            ),
+            (
+                "psadt:\n  brand_pack:\n    path: brand\n    mappings:\n"
+                '      - source: ""\n        target: Assets/AppIcon\n',
+                "psadt.brand_pack.mappings[0]: Missing required field: source",
+            ),
+            (
+                "psadt:\n  brand_pack:\n    path: 5\n    mappings: []\n",
+                "psadt.brand_pack.path: Must be str, got int",
+            ),
+        ],
+    )
+    def test_brand_pack_shape_is_checked(self, tmp_path, body, message):
+        """Tests that a malformed brand pack is a validation error, not a crash."""
+        result = _validate(tmp_path, body)
+
+        assert result.status == "invalid"
+        assert any(err.startswith(message) for err in result.errors)
+
+    def test_brand_pack_mapping_unknown_field_warns(self, tmp_path):
+        """Tests that an unknown key in a mapping is reported by its indexed path."""
+        result = _validate(
+            tmp_path,
+            "psadt:\n  brand_pack:\n    path: brand\n    mappings:\n"
+            '      - source: "AppIcon.*"\n        target: Assets/AppIcon\n'
+            "        dest: x\n",
+        )
+
+        assert result.status == "valid"
+        assert any(
+            w.startswith("psadt.brand_pack.mappings[0]: Unknown field 'dest'")
+            for w in result.warnings
+        )
+
+    @pytest.mark.parametrize(
+        "target",
+        [
+            "../../Invoke-AppDeployToolkit.ps1",
+            "C:/Windows/x",
+            "/etc/x",
+            "Assets\\AppIcon",
+            "Assets/",
+        ],
+    )
+    def test_brand_pack_target_must_stay_inside_the_build(self, tmp_path, target):
+        """Tests that a mapping target cannot name a path outside the build folder."""
+        result = _validate(
+            tmp_path,
+            "psadt:\n  brand_pack:\n    path: brand\n    mappings:\n"
+            f"      - source: 'AppIcon.*'\n        target: '{target}'\n",
+        )
+
+        assert result.status == "invalid"
+        assert any(
+            err.startswith(
+                "psadt.brand_pack.mappings[0].target: Must be a relative path"
+            )
+            for err in result.errors
+        )
+
+    def test_valid_brand_pack_passes(self, tmp_path):
+        """Tests that a well-formed brand pack produces no errors or warnings."""
+        result = _validate(
+            tmp_path,
+            "psadt:\n  brand_pack:\n    path: brand\n    mappings:\n"
+            '      - source: "AppIcon.*"\n        target: Assets/AppIcon\n',
+        )
+
+        assert result.status == "valid"
+        assert result.errors == []
+        assert result.warnings == []
+
+    def test_install_must_be_a_string(self, tmp_path):
+        """Tests that a non-string install block is rejected."""
+        result = _validate(tmp_path, "psadt:\n  install: [a, b]\n")
+
+        assert result.status == "invalid"
+        assert any(
+            err.startswith("psadt.install: Must be str, got list")
+            for err in result.errors
+        )
+
+
+class TestToolSections:
+    """Tests for the directories: and intunewin: sections."""
+
+    def test_directories_unknown_key_warns_with_hint(self, tmp_path):
+        """Tests that a misspelled directory key names the key it is closest to."""
+        result = _validate(tmp_path, "directories:\n  packages: out\n")
+
+        assert result.status == "valid"
+        assert (
+            "directories: Unknown field 'packages'. Did you mean 'package'?"
+            in result.warnings
+        )
+
+    def test_removed_cache_directory_key_warns(self, tmp_path):
+        """Tests that the removed directories.cache key is reported as unknown."""
+        result = _validate(tmp_path, "directories:\n  cache: cache\n")
+
+        assert result.status == "valid"
+        assert any(
+            w.startswith("directories: Unknown field 'cache'") for w in result.warnings
+        )
+
+    @pytest.mark.parametrize(
+        ("body", "message"),
+        [
+            (
+                "directories:\n  discover: 5\n",
+                "directories.discover: Must be str, got int",
+            ),
+            ("directories:\n", "directories: Must be a dictionary"),
+            ("directories: x\n", "directories: Must be a dictionary"),
+            (
+                "intunewin:\n  release: 1.8\n",
+                "intunewin.release: Must be str, got float",
+            ),
+            ("intunewin:\n", "intunewin: Must be a dictionary"),
+        ],
+    )
+    def test_tool_section_types(self, tmp_path, body, message):
+        """Tests that the tool sections are type-checked like the others."""
+        result = _validate(tmp_path, body)
+
+        assert result.status == "invalid"
+        assert any(err.startswith(message) for err in result.errors)
+
+    def test_intunewin_unknown_key_warns(self, tmp_path):
+        """Tests that an unknown intunewin key is reported."""
+        result = _validate(tmp_path, "intunewin:\n  version: latest\n")
+
+        assert result.status == "valid"
+        assert any(
+            w.startswith("intunewin: Unknown field 'version'") for w in result.warnings
+        )
+
+
+class TestTopLevelKeys:
+    """Tests for unknown keys at the top of a recipe."""
+
+    def test_unknown_top_level_key_warns_with_hint(self, tmp_path):
+        """Tests that a miscased section name is reported with the right one."""
+        result = _validate(tmp_path, "inTune:\n  is_featured: true\n")
+
+        assert result.status == "valid"
+        assert "Unknown field 'inTune'. Did you mean 'intune'?" in result.warnings
+
+    def test_unknown_top_level_key_without_a_match(self, tmp_path):
+        """Tests that a key unlike any section is still reported."""
+        result = _validate(tmp_path, "notes: hello\n")
+
+        assert result.status == "valid"
+        assert "Unknown field 'notes'" in result.warnings
+
+    def test_provenance_is_not_reported(self, tmp_path):
+        """Tests that the loader's own provenance entry is never an unknown key."""
+        result = _validate(tmp_path, "")
+
+        assert result.warnings == []
+
+    @pytest.mark.parametrize(
+        ("body", "message"),
+        [
+            ("1: x\n", "Key 1 must be a string"),
+            ("intune:\n  ~: x\n", "intune: Key None must be a string"),
+            (
+                "discovery:\n  strategy: url_download\n  url: https://x\n  2: y\n",
+                "discovery: Key 2 must be a string",
+            ),
+        ],
+    )
+    def test_non_string_key_is_an_error(self, tmp_path, body, message):
+        """Tests that a YAML key that is not a string is reported, not crashed on."""
+        result = _validate(tmp_path, body)
+
+        assert result.status == "invalid"
+        assert message in result.errors
+
+
+class TestDiscoveryKeys:
+    """Tests for unknown keys under discovery, per strategy."""
+
+    def test_api_github_unknown_key_warns_with_hint(self, tmp_path):
+        """Tests that a misspelled strategy field is reported with the missing one."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text("""
+apiVersion: napt/v1
+name: "Git"
+id: "git"
+discovery:
+  strategy: api_github
+  repos: "git/git"
+  asset_pattern: ".*\\\\.exe$"
+""")
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert "Missing required field: discovery.repo" in result.errors
+        assert (
+            "discovery: Unknown field 'repos'. Did you mean 'repo'?" in result.warnings
+        )
+
+    def test_prerelease_is_no_longer_a_field(self, tmp_path):
+        """Tests that the removed prerelease field is reported as unknown."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text("""
+apiVersion: napt/v1
+name: "Git"
+id: "git"
+discovery:
+  strategy: api_github
+  repo: "git/git"
+  asset_pattern: ".*\\\\.exe$"
+  prerelease: false
+""")
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "valid"
+        assert any(
+            w.startswith("discovery: Unknown field 'prerelease'")
+            for w in result.warnings
+        )
+
+    @pytest.mark.parametrize(
+        ("strategy_body", "unknown"),
+        [
+            (
+                "strategy: url_download\n  url: https://x/a.msi\n  version_patern: x\n",
+                "version_patern",
+            ),
+            (
+                "strategy: api_json\n  api_url: https://x\n  version_path: v\n"
+                "  download_url_path: d\n  header: {}\n",
+                "header",
+            ),
+            (
+                "strategy: web_scrape\n  page_url: https://x\n  link_pattern: a\n"
+                "  version_pattern: b\n  versionformat: c\n",
+                "versionformat",
+            ),
+        ],
+    )
+    def test_every_strategy_reports_unknown_keys(
+        self, tmp_path, strategy_body, unknown
+    ):
+        """Tests that each strategy's field list drives the unknown-key check."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(
+            "apiVersion: napt/v1\nname: A\nid: a\ndiscovery:\n  " + strategy_body
+        )
+
+        result = validate_recipe(recipe)
+
+        assert any(
+            f"discovery: Unknown field '{unknown}'" in w for w in result.warnings
+        )
+
+    def test_unknown_strategy_skips_the_key_check(self, tmp_path):
+        """Tests that an unregistered strategy reports only the strategy error."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(
+            "apiVersion: napt/v1\nname: A\nid: a\ndiscovery:\n"
+            "  strategy: ftp\n  host: x\n"
+        )
+
+        result = validate_recipe(recipe)
+
+        assert result.status == "invalid"
+        assert result.warnings == []
+
+
+class TestTypoHints:
+    """Tests that the closest-key hint is deterministic and not over-eager."""
+
+    def test_hint_is_the_closest_field(self, tmp_path):
+        """Tests that a key near two fields gets the closer one, not either."""
+        result = _validate(tmp_path, "intune:\n  command: x\n")
+
+        assert [w for w in result.warnings if "command" in w] == [
+            "intune: Unknown field 'command'. Did you mean 'install_command'?"
+        ]
+
+    def test_short_key_gets_no_far_fetched_hint(self, tmp_path):
+        """Tests that a key sharing a few letters with a field is not matched."""
+        result = _validate(tmp_path, "intune:\n  name: x\n")
+
+        assert "intune: Unknown field 'name'" in result.warnings

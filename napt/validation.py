@@ -33,16 +33,16 @@ Validation Checks:
   ``.override.yaml`` suffix (a mismatch either way is a warning)
 - discovery.strategy exists and is registered
 - Strategy-specific configuration is valid
-- A section present but left empty (psadt, psadt.app_vars, intune,
-  intune.detection, logging, deployment) is an error
+- Every section (top level, discovery, psadt, psadt.brand_pack, intune,
+  intune.detection, logging, directories, intunewin, deployment, secrets)
+  is checked against its schema: field types, allowed values, integer
+  bounds, and a warning for each unknown key naming the closest known one
+- A section present but left empty is an error
 - intune.minimum_supported_windows_release matches the Windows10_21H2 or
   Windows11_23H2 form
-- intune.detection fields are valid (types, values, unknown field warnings)
 - psadt.app_vars only contains user-settable keys
-- psadt.override_msi_commands and psadt.override_msix_commands are booleans
-- logging section fields are valid
-- deployment section fields are valid (ring names and groups,
-  promote_after_days, install, retain_versions)
+- psadt.brand_pack.mappings entries each name a source and a target
+- deployment ring names and groups are present and unique
 - secrets section entries are shaped as ``NAME: {hosts: [...]}``, come
   from defaults/org.yaml alone, and every ``${NAME}`` a recipe sends is
   declared and bound to the request host (see [napt.secrets][])
@@ -51,10 +51,12 @@ Validation Checks:
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import replace
+from difflib import get_close_matches
 from pathlib import Path
 import re
-from typing import Any
+from typing import Any, NamedTuple
 
 from napt.config.loader import (
     collect_recipe_paths,
@@ -67,75 +69,162 @@ from napt.logging import get_global_logger
 from napt.paths import is_safe_path_component
 from napt.results import ValidationResult
 
-# Schema for the intune.detection subsection
-_INTUNE_DETECTION_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
-    "display_name": (str, None, "display name for registry lookup"),
-    "architecture": (str, ["x86", "x64", "arm64", "any"], "architecture"),
-    "exact_match": (bool, None, "exact version match flag"),
-    "override_msi_display_name": (
-        bool,
-        None,
-        "installer display name override flag",
+
+class _Field(NamedTuple):
+    """The rules for one key of a configuration section.
+
+    Attributes:
+        type: The Python type the value must have. A ``dict`` field that is
+            present but empty (YAML null) is reported as an empty section.
+        allowed: The permitted values, or None when any value of the type
+            is accepted.
+        minimum: The lowest permitted value of an ``int`` field.
+        maximum: The highest permitted value of an ``int`` field; set only
+            together with ``minimum``.
+    """
+
+    type: type
+    allowed: list[str] | None = None
+    minimum: int | None = None
+    maximum: int | None = None
+
+
+_Schema = dict[str, _Field]
+
+# Keys the config loader adds to a merged configuration; never recipe fields.
+_INTERNAL_KEYS = frozenset({"_provenance"})
+
+# The top level of a recipe or defaults file. Presence of the required
+# fields is checked separately; this table drives types and unknown keys.
+_TOP_LEVEL_FIELDS: _Schema = {
+    "apiVersion": _Field(str),
+    "name": _Field(str),
+    "id": _Field(str),
+    "parent": _Field(str),
+    "discovery": _Field(dict),
+    "psadt": _Field(dict),
+    "intune": _Field(dict),
+    "logging": _Field(dict),
+    "deployment": _Field(dict),
+    "directories": _Field(dict),
+    "intunewin": _Field(dict),
+    "secrets": _Field(dict),
+}
+
+# The fields each discovery strategy reads, besides ``strategy`` itself.
+# Each strategy's validate_config checks presence, types, and syntax; this
+# table only drives the unknown-key warning.
+_DISCOVERY_FIELDS: dict[str, frozenset[str]] = {
+    "api_github": frozenset({"repo", "asset_pattern", "version_pattern", "token"}),
+    "api_json": frozenset(
+        {"api_url", "version_path", "download_url_path", "version_pattern", "headers"}
+    ),
+    "url_download": frozenset({"url"}),
+    "web_scrape": frozenset(
+        {
+            "page_url",
+            "link_selector",
+            "link_pattern",
+            "version_pattern",
+            "version_format",
+        }
     ),
 }
 
-# Schema for the intune: section
-_INTUNE_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
-    "build_types": (str, ["both", "app_only", "update_only"], "build type"),
-    "update_name_prefix": (str, None, "prefix for update entry display name"),
-    "minimum_supported_windows_release": (str, None, "minimum Windows release"),
-    "install_command": (str, None, "Intune install command line"),
-    "uninstall_command": (str, None, "Intune uninstall command line"),
-    "is_featured": (bool, None, "feature app in Company Portal"),
-    "allow_available_uninstall": (bool, None, "allow uninstall from Company Portal"),
-    "run_as_account": (str, ["system", "user"], "install and script execution account"),
-    "device_restart_behavior": (
-        str,
-        ["allow", "suppress", "force", "basedOnReturnCode"],
-        "device restart behavior after install",
+_PSADT_FIELDS: _Schema = {
+    "release": _Field(str),
+    "cache_dir": _Field(str),
+    "brand_pack": _Field(dict),
+    "app_vars": _Field(dict),
+    "override_msi_commands": _Field(bool),
+    "override_msix_commands": _Field(bool),
+    "install": _Field(str),
+    "uninstall": _Field(str),
+}
+
+_BRAND_PACK_FIELDS: _Schema = {
+    "path": _Field(str),
+    "mappings": _Field(list),
+}
+
+# One psadt.brand_pack.mappings entry.
+_BRAND_MAPPING_FIELDS: _Schema = {
+    "source": _Field(str),
+    "target": _Field(str),
+}
+
+_INTUNE_DETECTION_FIELDS: _Schema = {
+    "display_name": _Field(str),
+    "architecture": _Field(str, ["x86", "x64", "arm64", "any"]),
+    "exact_match": _Field(bool),
+    "override_msi_display_name": _Field(bool),
+}
+
+# The run time limit is Intune's: "Max timeout value is 1440 minutes" in
+# https://learn.microsoft.com/en-us/intune/app-management/deployment/add-win32
+_INTUNE_FIELDS: _Schema = {
+    "build_types": _Field(str, ["both", "app_only", "update_only"]),
+    "update_name_prefix": _Field(str),
+    "minimum_supported_windows_release": _Field(str),
+    "install_command": _Field(str),
+    "uninstall_command": _Field(str),
+    "is_featured": _Field(bool),
+    "allow_available_uninstall": _Field(bool),
+    "run_as_account": _Field(str, ["system", "user"]),
+    "device_restart_behavior": _Field(
+        str, ["allow", "suppress", "force", "basedOnReturnCode"]
     ),
-    "max_run_time_minutes": (int, None, "maximum installer runtime in minutes"),
-    "enforce_signature_check": (bool, None, "require script signature check"),
-    "run_as_32_bit": (bool, None, "run installer and scripts in 32-bit context"),
-    "description": (str, None, "app description for Intune portal"),
-    "publisher": (str, None, "publisher name override"),
-    "privacy_url": (str, None, "privacy information URL"),
-    "info_url": (str, None, "information URL"),
-    "logo_path": (str, None, "path to app icon file"),
-    "developer": (str, None, "app developer or maintainer"),
-    "owner": (str, None, "business owner of the app"),
-    "detection": (dict, None, "detection configuration"),
+    "max_run_time_minutes": _Field(int, minimum=1, maximum=1440),
+    "enforce_signature_check": _Field(bool),
+    "run_as_32_bit": _Field(bool),
+    "description": _Field(str),
+    "publisher": _Field(str),
+    "privacy_url": _Field(str),
+    "info_url": _Field(str),
+    "logo_path": _Field(str),
+    "developer": _Field(str),
+    "owner": _Field(str),
+    "detection": _Field(dict),
 }
 
-# Schema for the logging: section
-_LOGGING_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
-    "log_rotation_mb": (int, None, "log rotation size in MB"),
+_LOGGING_FIELDS: _Schema = {
+    "log_rotation_mb": _Field(int, minimum=1),
 }
 
-# Schema for the deployment: section
-_DEPLOYMENT_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
-    "rings": (list, None, "deployment rings for update promotion"),
-    "install": (dict, None, "install entry assignment"),
-    "retain_versions": (int, None, "superseded versions kept for rollback"),
-    "require_pending": (bool, None, "require a recorded pending release"),
+_DIRECTORIES_FIELDS: _Schema = {
+    "discover": _Field(str),
+    "build": _Field(str),
+    "package": _Field(str),
+    "icons": _Field(str),
+    "state": _Field(str),
 }
 
-# Schema for the deployment.install subsection
-_DEPLOYMENT_INSTALL_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
-    "intent": (str, ["available", "required"], "assignment intent"),
-    "groups": (list, None, "Entra ID groups for the install entry"),
+_INTUNEWIN_FIELDS: _Schema = {
+    "release": _Field(str),
 }
 
-# Schema for one deployment.rings entry
-_DEPLOYMENT_RING_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
-    "name": (str, None, "ring name"),
-    "groups": (list, None, "Entra ID groups assigned by this ring"),
-    "promote_after_days": (int, None, "days before eligible for the next ring"),
+_DEPLOYMENT_FIELDS: _Schema = {
+    "rings": _Field(list),
+    "install": _Field(dict),
+    "retain_versions": _Field(int, minimum=0),
+    "require_pending": _Field(bool),
 }
 
-# Schema for one secrets entry
-_SECRET_ENTRY_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
-    "hosts": (list, None, "hosts the secret may be sent to"),
+_DEPLOYMENT_INSTALL_FIELDS: _Schema = {
+    "intent": _Field(str, ["available", "required"]),
+    "groups": _Field(list),
+}
+
+# One deployment.rings entry.
+_DEPLOYMENT_RING_FIELDS: _Schema = {
+    "name": _Field(str),
+    "groups": _Field(list),
+    "promote_after_days": _Field(int, minimum=0),
+}
+
+# One secrets entry.
+_SECRET_ENTRY_FIELDS: _Schema = {
+    "hosts": _Field(list),
 }
 
 # An environment variable name, as the secrets section keys them.
@@ -176,33 +265,88 @@ _PSADT_APP_VAR_KEYS: frozenset[str] = frozenset(
 )
 
 
-def _find_similar_field(unknown: str, known_fields: set[str]) -> str | None:
-    """Find a similar field name for typo suggestions.
+# A section key that is present but has nothing under it. YAML reads it as
+# null, which every consumer would then index as a dict.
+_EMPTY_SECTION = (
+    "{}: Must be a dictionary. The key is present but empty; remove it or "
+    "add fields under it"
+)
 
-    Uses simple heuristics: lowercase comparison, common typo patterns.
+# The similarity (0 to 1) an unknown key needs to a known one before the
+# known one is suggested. 0.6 accepts a dropped underscore or a one-letter
+# slip in a short key and rejects keys that merely share a word.
+_HINT_CUTOFF = 0.6
+
+
+def _normalize_key(key: str) -> str:
+    """Lowercases a key and drops the separators a typo most often loses."""
+    return key.lower().replace("_", "").replace("-", "")
+
+
+def _find_similar_field(unknown: str, known_fields: Iterable[str]) -> str | None:
+    """Finds the known field an unknown key was most likely meant to be.
+
+    The comparison ignores case and separators, so ``displayname`` finds
+    ``display_name``, and takes the closest match by edit similarity above
+    ``_HINT_CUTOFF``. Known fields are compared in sorted order, so the
+    same unknown key always gets the same hint.
 
     Args:
         unknown: The unknown field name.
-        known_fields: Set of known valid field names.
+        known_fields: The valid field names of the section.
 
     Returns:
-        Similar field name if found, None otherwise.
+        The closest known field, or None when none is close enough.
 
     """
-    unknown_lower = unknown.lower().replace("_", "").replace("-", "")
+    by_normalized = {_normalize_key(k): k for k in sorted(known_fields)}
+    matches = get_close_matches(
+        _normalize_key(unknown), list(by_normalized), n=1, cutoff=_HINT_CUTOFF
+    )
+    return by_normalized[matches[0]] if matches else None
 
-    for known in known_fields:
-        known_lower = known.lower().replace("_", "").replace("-", "")
-        # Exact match after normalization (e.g., "displayname" -> "display_name")
-        if unknown_lower == known_lower:
-            return known
-        # Check if one is substring of other (e.g., "display" in "display_name")
-        if len(unknown_lower) > 3 and (
-            unknown_lower in known_lower or known_lower in unknown_lower
-        ):
-            return known
 
-    return None
+def _field_path(section_path: str, field_name: str) -> str:
+    """Joins a section path and a field name; the top level has no prefix."""
+    return f"{section_path}.{field_name}" if section_path else field_name
+
+
+def _check_keys(
+    section: dict,
+    known_fields: Iterable[str],
+    section_path: str,
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    """Reports the keys of a section that are not strings or not in its schema.
+
+    A key that is not a string (YAML reads ``1:`` as an integer and ``~:``
+    as null) is an error. A string key the schema does not know is a
+    warning naming the closest known key.
+
+    Args:
+        section: The configuration section.
+        known_fields: The valid field names of the section.
+        section_path: Full path to the section for messages; empty for the
+            top level.
+        errors: List to append errors to.
+        warnings: List to append warnings to.
+
+    """
+    prefix = f"{section_path}: " if section_path else ""
+    known = set(known_fields)
+    names: set[str] = set()
+    for key in section:
+        if isinstance(key, str):
+            names.add(key)
+        else:
+            errors.append(f"{prefix}Key {key!r} must be a string")
+    for unknown in sorted(names - known):
+        message = f"Unknown field '{unknown}'"
+        similar = _find_similar_field(unknown, known)
+        if similar:
+            message += f". Did you mean '{similar}'?"
+        warnings.append(prefix + message)
 
 
 def _validate_field_type(
@@ -211,7 +355,11 @@ def _validate_field_type(
     field_path: str,
     errors: list[str],
 ) -> bool:
-    """Validate that a field has the expected type.
+    """Validates that a field has the expected type.
+
+    A ``dict`` field that is present but empty is reported as an empty
+    section. A YAML boolean is not accepted for an ``int`` field, although
+    Python's ``bool`` is a subclass of ``int``.
 
     Args:
         value: The value to check.
@@ -223,7 +371,17 @@ def _validate_field_type(
         True if type is valid, False otherwise.
 
     """
-    if not isinstance(value, expected_type):
+    if expected_type is dict:
+        if value is None:
+            errors.append(_EMPTY_SECTION.format(field_path))
+            return False
+        if not isinstance(value, dict):
+            errors.append(f"{field_path}: Must be a dictionary")
+            return False
+        return True
+    if not isinstance(value, expected_type) or (
+        expected_type is int and isinstance(value, bool)
+    ):
         type_name = expected_type.__name__
         actual_type = type(value).__name__
         errors.append(f"{field_path}: Must be {type_name}, got {actual_type}")
@@ -237,7 +395,7 @@ def _validate_field_value(
     field_path: str,
     errors: list[str],
 ) -> bool:
-    """Validate that a field value is in the allowed set.
+    """Validates that a field value is in the allowed set.
 
     Args:
         value: The value to check.
@@ -256,84 +414,91 @@ def _validate_field_value(
     return True
 
 
+def _validate_field_range(
+    value: int,
+    field: _Field,
+    field_path: str,
+    errors: list[str],
+) -> bool:
+    """Validates that an integer field is within its schema's bounds.
+
+    Args:
+        value: The value to check.
+        field: The field's schema entry.
+        field_path: Full path to field for error messages.
+        errors: List to append errors to.
+
+    Returns:
+        True if the value is in range, False otherwise.
+
+    """
+    low, high = field.minimum, field.maximum
+    if low is not None and high is not None:
+        if not low <= value <= high:
+            errors.append(
+                f"{field_path}: Must be between {low} and {high}, got {value}"
+            )
+            return False
+    elif low is not None and value < low:
+        errors.append(f"{field_path}: Must be >= {low}, got {value}")
+        return False
+    return True
+
+
 def _validate_section(
     section: dict,
-    schema: dict[str, tuple[type, list[str] | None, str]],
+    schema: _Schema,
     section_path: str,
     errors: list[str],
     warnings: list[str],
 ) -> None:
-    """Validate a configuration section against its schema.
+    """Validates a configuration section against its schema.
 
-    Checks types, allowed values, and warns on unknown fields.
+    Checks types, allowed values, and integer bounds, and warns on unknown
+    fields. Presence of required fields is the caller's concern.
 
     Args:
         section: The configuration section to validate.
         schema: Schema definition for this section.
-        section_path: Full path to section for error messages.
+        section_path: Full path to section for error messages; empty for
+            the top level.
         errors: List to append errors to.
         warnings: List to append warnings to.
 
     """
-    known_fields = set(schema.keys())
-    actual_fields = set(section.keys())
+    _check_keys(section, schema, section_path, errors, warnings)
 
-    # Check for unknown fields
-    unknown_fields = actual_fields - known_fields
-    for unknown in unknown_fields:
-        similar = _find_similar_field(unknown, known_fields)
-        if similar:
-            warnings.append(
-                f"{section_path}: Unknown field '{unknown}'. Did you mean '{similar}'?"
-            )
-        else:
-            warnings.append(f"{section_path}: Unknown field '{unknown}'")
-
-    # Validate known fields
-    for field_name, (expected_type, allowed_values, _desc) in schema.items():
+    for field_name, field in schema.items():
         if field_name not in section:
             continue
 
         value = section[field_name]
-        field_path = f"{section_path}.{field_name}"
+        field_path = _field_path(section_path, field_name)
 
-        # Type check
-        if not _validate_field_type(value, expected_type, field_path, errors):
+        if not _validate_field_type(value, field.type, field_path, errors):
             continue
-
-        # Value check (only for non-dict types with allowed values)
-        if allowed_values is not None and expected_type is not dict:
-            _validate_field_value(value, allowed_values, field_path, errors)
-
-
-# A section key that is present but has nothing under it. YAML reads it as
-# null, which every consumer would then index as a dict.
-_EMPTY_SECTION = (
-    "{}: Must be a dictionary. The key is present but empty; remove it or "
-    "add fields under it"
-)
+        if field.allowed is not None:
+            _validate_field_value(value, field.allowed, field_path, errors)
+        elif field.type is int:
+            _validate_field_range(value, field, field_path, errors)
 
 
 def _validate_psadt_app_vars(
-    app_vars: object,
+    app_vars: dict,
     app_vars_path: str,
     errors: list[str],
 ) -> None:
-    """Validate that all keys in a psadt.app_vars dict are in the allowed set.
+    """Validates that all keys in a psadt.app_vars dict are in the allowed set.
 
     NAPT-managed keys (AppArch, DeployAppScriptVersion, etc.) are excluded
     from the allowed set because NAPT sets them automatically.
 
     Args:
-        app_vars: The app_vars value from the recipe (may not be a dict).
+        app_vars: The app_vars value from the recipe.
         app_vars_path: Full path to the field for error messages.
         errors: List to append errors to.
 
     """
-    if not isinstance(app_vars, dict):
-        errors.append(f"{app_vars_path}: Must be a dictionary")
-        return
-
     allowed_sorted = ", ".join(sorted(_PSADT_APP_VAR_KEYS))
     for key in app_vars:
         if key not in _PSADT_APP_VAR_KEYS:
@@ -344,131 +509,142 @@ def _validate_psadt_app_vars(
             )
 
 
-def _validate_psadt_section(
-    recipe: dict,
-    errors: list[str],
-) -> None:
-    """Validate the top-level psadt: section.
-
-    Checks that app_vars only contains known, user-settable keys and that
-    the override_msi_commands/override_msix_commands flags are booleans.
-
-    Args:
-        recipe: The full recipe dictionary.
-        errors: List to append errors to.
-
-    """
-    if "psadt" in recipe and recipe["psadt"] is None:
-        errors.append(_EMPTY_SECTION.format("psadt"))
-        return
-    psadt = recipe.get("psadt")
-    if psadt is None:
-        return
-
-    if not isinstance(psadt, dict):
-        errors.append("psadt: Must be a dictionary")
-        return
-
-    if "app_vars" in psadt and psadt["app_vars"] is None:
-        errors.append(_EMPTY_SECTION.format("psadt.app_vars"))
-    app_vars = psadt.get("app_vars")
-    if app_vars is not None:
-        _validate_psadt_app_vars(app_vars, "psadt.app_vars", errors)
-
-    override_msi = psadt.get("override_msi_commands")
-    if override_msi is not None and not isinstance(override_msi, bool):
-        errors.append("psadt.override_msi_commands: Must be a boolean (true/false)")
-
-    override_msix = psadt.get("override_msix_commands")
-    if override_msix is not None and not isinstance(override_msix, bool):
-        errors.append("psadt.override_msix_commands: Must be a boolean (true/false)")
-
-
-def _validate_intune_section(
-    recipe: dict,
+def _validate_brand_pack(
+    brand_pack: dict,
     errors: list[str],
     warnings: list[str],
 ) -> None:
-    """Validate the top-level intune: section.
+    """Validates psadt.brand_pack and each of its mappings.
+
+    A mapping's target is joined onto the build folder, so it must be a
+    relative path of safe components: no leading separator, drive, or
+    ``..``, and forward slashes only.
+
+    Args:
+        brand_pack: The brand_pack value from the configuration.
+        errors: List to append errors to.
+        warnings: List to append warnings to.
+
+    """
+    _validate_section(
+        brand_pack, _BRAND_PACK_FIELDS, "psadt.brand_pack", errors, warnings
+    )
+    mappings = brand_pack.get("mappings")
+    if not isinstance(mappings, list):
+        return
+    for index, mapping in enumerate(mappings):
+        path = f"psadt.brand_pack.mappings[{index}]"
+        if not isinstance(mapping, dict):
+            errors.append(f"{path}: Must be a dictionary")
+            continue
+        _validate_section(mapping, _BRAND_MAPPING_FIELDS, path, errors, warnings)
+        for key in ("source", "target"):
+            if key not in mapping or mapping[key] == "":
+                errors.append(f"{path}: Missing required field: {key}")
+        target = mapping.get("target")
+        if (
+            isinstance(target, str)
+            and target
+            and not all(is_safe_path_component(p) for p in target.split("/"))
+        ):
+            errors.append(
+                f"{path}.target: Must be a relative path inside the build, "
+                f"with forward slashes and no '..' (for example Assets/AppIcon)"
+            )
+
+
+def _validate_psadt_section(
+    config: dict,
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    """Validates the top-level psadt: section.
+
+    Checks field types, the brand pack shape, and that app_vars only
+    contains known, user-settable keys. The section's own presence and
+    type are checked by the top-level schema.
+
+    Args:
+        config: The full configuration dictionary.
+        errors: List to append errors to.
+        warnings: List to append warnings to.
+
+    """
+    psadt = config.get("psadt")
+    if not isinstance(psadt, dict):
+        return
+
+    _validate_section(psadt, _PSADT_FIELDS, "psadt", errors, warnings)
+
+    app_vars = psadt.get("app_vars")
+    if isinstance(app_vars, dict):
+        _validate_psadt_app_vars(app_vars, "psadt.app_vars", errors)
+
+    brand_pack = psadt.get("brand_pack")
+    if isinstance(brand_pack, dict):
+        _validate_brand_pack(brand_pack, errors, warnings)
+
+
+def _validate_intune_section(
+    config: dict,
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    """Validates the top-level intune: section.
 
     Validates field types, allowed values, and warns on unknown fields. Also
     validates the intune.detection subsection if present.
 
     Args:
-        recipe: The full recipe dictionary.
+        config: The full configuration dictionary.
         errors: List to append errors to.
         warnings: List to append warnings to.
 
     """
-    if "intune" in recipe and recipe["intune"] is None:
-        errors.append(_EMPTY_SECTION.format("intune"))
-        return
-    intune = recipe.get("intune")
-    if intune is None:
-        return
-
+    intune = config.get("intune")
     if not isinstance(intune, dict):
-        errors.append("intune: Must be a dictionary")
         return
 
     _validate_section(intune, _INTUNE_FIELDS, "intune", errors, warnings)
 
     # Validate minimum_supported_windows_release format (e.g. "Windows10_21H2")
     release = intune.get("minimum_supported_windows_release")
-    if release is not None and isinstance(release, str):
-        import re
+    if isinstance(release, str) and not re.fullmatch(
+        r"Windows(?:10|11)_(?:\d{4}|\d{2}H[12])", release
+    ):
+        errors.append(
+            "intune.minimum_supported_windows_release: Invalid format "
+            f"{release!r}. "
+            "Expected format: 'Windows10_21H2' or 'Windows11_23H2'"
+        )
 
-        if not re.fullmatch(r"Windows(?:10|11)_(?:\d{4}|\d{2}H[12])", release):
-            errors.append(
-                "intune.minimum_supported_windows_release: Invalid format "
-                f"{release!r}. "
-                "Expected format: 'Windows10_21H2' or 'Windows11_23H2'"
-            )
-
-    # Validate detection subsection
-    if "detection" in intune and intune["detection"] is None:
-        errors.append(_EMPTY_SECTION.format("intune.detection"))
     detection = intune.get("detection")
-    if detection is not None:
-        if not isinstance(detection, dict):
-            errors.append("intune.detection: Must be a dictionary")
-        else:
-            _validate_section(
-                detection,
-                _INTUNE_DETECTION_FIELDS,
-                "intune.detection",
-                errors,
-                warnings,
-            )
+    if isinstance(detection, dict):
+        _validate_section(
+            detection, _INTUNE_DETECTION_FIELDS, "intune.detection", errors, warnings
+        )
 
 
-def _validate_logging_section(
-    recipe: dict,
+def _validate_table_section(
+    config: dict,
+    section_name: str,
+    schema: _Schema,
     errors: list[str],
     warnings: list[str],
 ) -> None:
-    """Validate the top-level logging: section.
-
-    Validates the log_rotation_mb field.
+    """Validates a top-level section that is fully described by a schema.
 
     Args:
-        recipe: The full recipe dictionary.
+        config: The full configuration dictionary.
+        section_name: The top-level key of the section.
+        schema: Schema definition for this section.
         errors: List to append errors to.
         warnings: List to append warnings to.
 
     """
-    if "logging" in recipe and recipe["logging"] is None:
-        errors.append(_EMPTY_SECTION.format("logging"))
-        return
-    logging_config = recipe.get("logging")
-    if logging_config is None:
-        return
-
-    if not isinstance(logging_config, dict):
-        errors.append("logging: Must be a dictionary")
-        return
-
-    _validate_section(logging_config, _LOGGING_FIELDS, "logging", errors, warnings)
+    section = config.get(section_name)
+    if isinstance(section, dict):
+        _validate_section(section, schema, section_name, errors, warnings)
 
 
 def _validate_group_list(
@@ -494,30 +670,23 @@ def _validate_group_list(
 
 
 def _validate_deployment_section(
-    recipe: dict,
+    config: dict,
     errors: list[str],
     warnings: list[str],
 ) -> None:
-    """Validate the top-level deployment: section.
+    """Validates the top-level deployment: section.
 
     Validates ring entries, the install subsection, retention, and the
     require_pending flag.
 
     Args:
-        recipe: The full recipe dictionary.
+        config: The full configuration dictionary.
         errors: List to append errors to.
         warnings: List to append warnings to.
 
     """
-    if "deployment" in recipe and recipe["deployment"] is None:
-        errors.append(_EMPTY_SECTION.format("deployment"))
-        return
-    deployment = recipe.get("deployment")
-    if deployment is None:
-        return
-
+    deployment = config.get("deployment")
     if not isinstance(deployment, dict):
-        errors.append("deployment: Must be a dictionary")
         return
 
     _validate_section(deployment, _DEPLOYMENT_FIELDS, "deployment", errors, warnings)
@@ -548,30 +717,14 @@ def _validate_deployment_section(
                 errors.append(f"{ring_path}: Missing required field: groups")
             elif isinstance(groups, list):
                 _validate_group_list(groups, f"{ring_path}.groups", errors)
-            days = ring.get("promote_after_days")
-            if isinstance(days, int) and days < 0:
-                errors.append(f"{ring_path}.promote_after_days: Must be >= 0")
 
     install = deployment.get("install")
-    if install is not None:
-        if not isinstance(install, dict):
-            errors.append("deployment.install: Must be a dictionary")
-        else:
-            _validate_section(
-                install,
-                _DEPLOYMENT_INSTALL_FIELDS,
-                "deployment.install",
-                errors,
-                warnings,
-            )
-            if isinstance(install.get("groups"), list):
-                _validate_group_list(
-                    install["groups"], "deployment.install.groups", errors
-                )
-
-    retain = deployment.get("retain_versions")
-    if isinstance(retain, int) and retain < 0:
-        errors.append("deployment.retain_versions: Must be >= 0")
+    if isinstance(install, dict):
+        _validate_section(
+            install, _DEPLOYMENT_INSTALL_FIELDS, "deployment.install", errors, warnings
+        )
+        if isinstance(install.get("groups"), list):
+            _validate_group_list(install["groups"], "deployment.install.groups", errors)
 
 
 def _foreign_layers(provenance: object) -> list[str]:
@@ -634,14 +787,8 @@ def _validate_secrets_section(
                 f"only in defaults/org.yaml"
             )
 
-    if "secrets" in config and config["secrets"] is None:
-        errors.append(_EMPTY_SECTION.format("secrets"))
-        return
     secrets = config.get("secrets")
-    if secrets is None:
-        return
     if not isinstance(secrets, dict):
-        errors.append("secrets: Must be a dictionary")
         return
 
     for name, entry in secrets.items():
@@ -667,31 +814,74 @@ def _validate_secrets_section(
                     )
 
 
-def _validate_parent_field(
+def _validate_discovery_section(
+    discovery: dict,
     config: dict[str, Any],
-    recipe_path: str,
+    app_name: str,
     errors: list[str],
     warnings: list[str],
 ) -> None:
-    """Validates the optional top-level parent field and its file-name convention.
+    """Validates the discovery: section through its strategy.
+
+    The strategy's own validator checks the fields it requires; this
+    resolves the strategy and warns on keys it does not read.
+
+    Args:
+        discovery: The discovery section.
+        config: The full configuration dictionary the strategy validates.
+        app_name: The recipe's name, for the log.
+        errors: List to append errors to.
+        warnings: List to append warnings to.
+
+    """
+    logger = get_global_logger()
+
+    if "strategy" not in discovery:
+        errors.append("discovery: Missing required field: strategy")
+        return
+    strategy_name = discovery["strategy"]
+    if not isinstance(strategy_name, str):
+        errors.append("discovery.strategy: Must be a string")
+        return
+    logger.verbose("VALIDATION", f"'{app_name}' uses strategy: {strategy_name}")
+
+    if strategy_name == "url_download":
+        from napt.discovery.url_download import validate_url_download_config
+
+        errors.extend(validate_url_download_config(config))
+    else:
+        try:
+            strategy = get_strategy(strategy_name)
+        except ConfigError as err:
+            errors.append(f"discovery.strategy: {err}")
+            return
+        errors.extend(strategy.validate_config(config))
+
+    known = _DISCOVERY_FIELDS.get(strategy_name)
+    if known is not None:
+        _check_keys(discovery, known | {"strategy"}, "discovery", errors, warnings)
+
+
+def _validate_parent_field(
+    config: dict[str, Any],
+    recipe_path: str,
+    warnings: list[str],
+) -> None:
+    """Warns when the parent field and the file-name convention disagree.
 
     A recipe that declares ``parent`` is expected to be named
     ``<app>.override.yaml`` so the relationship is visible in every listing;
     the suffix without a parent, or a parent without the suffix, is a
-    warning so a hand-written child recipe can opt out.
+    warning so a hand-written child recipe can opt out. The value itself
+    is checked by the config loader, which resolves it before any
+    validation runs.
 
     Args:
         config: The full recipe dictionary.
         recipe_path: Path string of the recipe file, or empty when unknown.
-        errors: List to append errors to.
         warnings: List to append warnings to.
     """
     has_parent = "parent" in config
-    if has_parent:
-        parent = config["parent"]
-        if not isinstance(parent, str) or not parent.strip():
-            errors.append("Field 'parent' must be a non-empty string")
-
     if not recipe_path:
         return
     has_suffix = recipe_path.endswith(".override.yaml")
@@ -729,34 +919,27 @@ def validate_config(
     errors: list[str] = []
     warnings: list[str] = []
 
-    # Check apiVersion
-    if "apiVersion" not in config:
-        errors.append("Missing required field: apiVersion")
-    else:
-        api_version = config["apiVersion"]
-        if not isinstance(api_version, str):
-            errors.append("apiVersion must be a string")
-        elif api_version != "napt/v1":
-            warnings.append(
-                f"apiVersion '{api_version}' may not be supported (expected: napt/v1)"
-            )
-        if not errors:
-            logger.verbose("VALIDATION", f"apiVersion: {api_version}")
+    # Types of every top-level field, empty sections, and unknown keys.
+    top_level = {k: v for k, v in config.items() if k not in _INTERNAL_KEYS}
+    _validate_section(top_level, _TOP_LEVEL_FIELDS, "", errors, warnings)
 
-    # Check required top-level fields: name and id
-    for field in ["name", "id"]:
+    for field in ("apiVersion", "name", "id", "discovery"):
         if field not in config:
             errors.append(f"Missing required field: {field}")
 
-    if "name" in config and not isinstance(config["name"], str):
-        errors.append("Field 'name' must be a string")
+    api_version = config.get("apiVersion")
+    if isinstance(api_version, str):
+        if api_version != "napt/v1":
+            warnings.append(
+                f"apiVersion '{api_version}' may not be supported (expected: napt/v1)"
+            )
+        logger.verbose("VALIDATION", f"apiVersion: {api_version}")
 
-    if "id" in config:
-        if not isinstance(config["id"], str):
-            errors.append("Field 'id' must be a string")
-        elif not config["id"]:
+    app_id = config.get("id")
+    if isinstance(app_id, str):
+        if not app_id:
             errors.append("Field 'id' cannot be empty")
-        elif not is_safe_path_component(config["id"]):
+        elif not is_safe_path_component(app_id):
             # The id names the app's download, build, package, and state
             # folders, so it must be usable as a folder name as-is.
             errors.append(
@@ -764,55 +947,22 @@ def validate_config(
                 "and '+', and must start with a letter or digit"
             )
 
-    _validate_parent_field(config, recipe_path, errors, warnings)
+    _validate_parent_field(config, recipe_path, warnings)
 
     app_name = config.get("name", "unnamed")
     logger.verbose("VALIDATION", f"Validating: {app_name}")
 
-    # Validate discovery section
     discovery = config.get("discovery")
-    if discovery is None:
-        errors.append("Missing required field: discovery")
-    elif not isinstance(discovery, dict):
-        errors.append("Field 'discovery' must be a dictionary")
-    else:
-        if "strategy" not in discovery:
-            errors.append("discovery: Missing required field: strategy")
-        else:
-            strategy_name = discovery["strategy"]
-            if not isinstance(strategy_name, str):
-                errors.append("discovery.strategy: Must be a string")
-            else:
-                logger.verbose(
-                    "VALIDATION",
-                    f"'{app_name}' uses strategy: {strategy_name}",
-                )
+    if isinstance(discovery, dict):
+        _validate_discovery_section(discovery, config, app_name, errors, warnings)
 
-                # Validate strategy-specific configuration
-                if strategy_name == "url_download":
-                    from napt.discovery.url_download import (
-                        validate_url_download_config,
-                    )
-
-                    try:
-                        errors.extend(validate_url_download_config(config))
-                    except Exception as err:
-                        errors.append(f"Strategy validation failed: {err}")
-                else:
-                    try:
-                        strategy = get_strategy(strategy_name)
-                    except ConfigError as err:
-                        errors.append(f"discovery.strategy: {err}")
-                    else:
-                        try:
-                            errors.extend(strategy.validate_config(config))
-                        except Exception as err:
-                            errors.append(f"Strategy validation failed: {err}")
-
-    # Validate optional sections
-    _validate_psadt_section(config, errors)
+    _validate_psadt_section(config, errors, warnings)
     _validate_intune_section(config, errors, warnings)
-    _validate_logging_section(config, errors, warnings)
+    _validate_table_section(config, "logging", _LOGGING_FIELDS, errors, warnings)
+    _validate_table_section(
+        config, "directories", _DIRECTORIES_FIELDS, errors, warnings
+    )
+    _validate_table_section(config, "intunewin", _INTUNEWIN_FIELDS, errors, warnings)
     _validate_deployment_section(config, errors, warnings)
     _validate_secrets_section(config, errors, warnings)
 
