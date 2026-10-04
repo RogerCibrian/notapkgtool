@@ -18,7 +18,7 @@ This module owns the top-level [discover_recipe][napt.discovery.manager.discover
 entry point used by ``napt discover``. It loads the merged configuration,
 picks a flow based on the recipe's ``discovery.strategy`` value, records
 the release as a pending publication candidate in deployment state, and
-returns the public [DiscoverResult][napt.results.DiscoverResult].
+returns the public [DiscoverResult][napt.discovery.manager.DiscoverResult].
 
 Two Flows:
     Two flows feed into the same orchestration:
@@ -45,6 +45,7 @@ that this module unwraps into the pending release and the public result.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 from napt.config.loader import load_effective_config
@@ -53,7 +54,6 @@ from napt.discovery.registry import get_strategy
 from napt.discovery.resolve import resolve_installer
 from napt.discovery.url_download import run_url_download
 from napt.logging import Logger, get_global_logger
-from napt.results import DiscoverResult
 from napt.state.deployment import (
     deployment_state_path,
     load_deployment_state,
@@ -61,6 +61,29 @@ from napt.state.deployment import (
     save_deployment_state,
 )
 from napt.versioning.ordering import is_downgrade
+
+
+@dataclass(frozen=True)
+class DiscoverResult:
+    """Result from discovering a version and downloading an installer.
+
+    Attributes:
+        app_name: Application display name.
+        app_id: Unique application identifier.
+        strategy: Discovery strategy used (e.g., "web_scrape", "api_github").
+        version: Extracted version string.
+        version_source: How version was determined (e.g., "regex_in_url", "msi").
+        file_path: Path to the downloaded installer file.
+        sha256: SHA-256 hash of the downloaded file.
+    """
+
+    app_name: str
+    app_id: str
+    strategy: str
+    version: str
+    version_source: str
+    file_path: Path
+    sha256: str
 
 
 def discover_recipe(

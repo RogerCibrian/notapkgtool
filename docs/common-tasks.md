@@ -593,12 +593,12 @@ Uploading package for recipe: /path/to/recipes/Google/chrome.yaml
 ======================================================================
 UPLOAD RESULTS
 ======================================================================
-App ID:          napt-chrome
-App Name:        Google Chrome
-Version:         <version>
+App ID:                 napt-chrome
+App Name:               Google Chrome
+Version:                <version>
 Intune Win32 App ID:    <app id>
 Intune Win32 Update ID: <update id>
-Package:         /path/to/packages/napt-chrome/<version>/Invoke-AppDeployToolkit.intunewin
+Package:                /path/to/packages/napt-chrome/<version>/Invoke-AppDeployToolkit.intunewin
 ======================================================================
 
 [SUCCESS] Package uploaded to Intune successfully!

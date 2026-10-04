@@ -39,6 +39,7 @@ Design Principles:
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 from napt.build.commands import apply_install_commands
@@ -62,7 +63,25 @@ from napt.config.loader import load_effective_config
 from napt.logging import get_global_logger
 from napt.powershell import PS_SCRIPT_ENCODING
 from napt.psadt.release import get_psadt_release
-from napt.results import BuildResult
+
+
+@dataclass(frozen=True)
+class BuildResult:
+    """Result from building a PSADT package.
+
+    Attributes:
+        app_id: Unique application identifier.
+        app_name: Application display name.
+        version: Application version.
+        build_dir: Path to the build directory (packagefiles subdirectory).
+        psadt_version: PSADT version used for the build.
+    """
+
+    app_id: str
+    app_name: str
+    version: str
+    build_dir: Path
+    psadt_version: str
 
 
 def build_package(

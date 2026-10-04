@@ -236,9 +236,9 @@ def cmd_promote_apply(args: argparse.Namespace) -> int:
         plan_file=args.plan_file,
     )
 
-    applied = summary["applied"]
-    skipped = summary["skipped"]
-    failed = summary["failed"]
+    applied = summary.applied
+    skipped = summary.skipped
+    failed = summary.failed
 
     print("=" * 70)
     print("PROMOTION APPLY")
@@ -253,10 +253,10 @@ def cmd_promote_apply(args: argparse.Namespace) -> int:
         print(f"  [FAIL] {entry['app_id']}: {entry['error']}")
     print("=" * 70)
 
-    if summary.get("recovered"):
-        _print_recovered(summary["recovered"])
-    if summary.get("drift"):
-        _print_drift(summary["drift"])
+    if summary.recovered:
+        _print_recovered(summary.recovered)
+    if summary.drift:
+        _print_drift(summary.drift)
 
     print()
     if failed:

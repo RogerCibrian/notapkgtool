@@ -135,7 +135,7 @@ class StrategyResult:
     Returned by [resolve_installer][napt.discovery.resolve.resolve_installer]
     for every flow. Captures everything the orchestrator needs to record
     the pending release and build a public
-    [DiscoverResult][napt.results.DiscoverResult].
+    [DiscoverResult][napt.discovery.manager.DiscoverResult].
 
     Attributes:
         version: Version string for the resolved file.

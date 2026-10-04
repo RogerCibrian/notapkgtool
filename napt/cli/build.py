@@ -23,7 +23,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from napt.cli.common import add_output_flags, add_state_dir
+from napt.cli.common import add_output_flags, add_state_dir, print_results
 
 
 def cmd_build(args: argparse.Namespace) -> int:
@@ -72,19 +72,17 @@ def cmd_build(args: argparse.Namespace) -> int:
         state_dir=args.state_dir,
     )
 
-    # Display results
-    print("=" * 70)
-    print("BUILD RESULTS")
-    print("=" * 70)
-    print(f"App Name:        {result.app_name}")
-    print(f"App ID:          {result.app_id}")
-    print(f"Version:         {result.version}")
-    print(f"PSADT Version:   {result.psadt_version}")
-    print(f"Build Directory: {result.build_dir}")
-    print("=" * 70)
-    print()
-    print("[SUCCESS] PSADT package built successfully!")
-
+    print_results(
+        "BUILD RESULTS",
+        [
+            ("App Name", result.app_name),
+            ("App ID", result.app_id),
+            ("Version", result.version),
+            ("PSADT Version", result.psadt_version),
+            ("Build Directory", result.build_dir),
+        ],
+        "PSADT package built successfully!",
+    )
     return 0
 
 

@@ -23,7 +23,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from napt.cli.common import add_output_flags, add_state_dir
+from napt.cli.common import add_output_flags, add_state_dir, print_results
 
 
 def cmd_upload(args: argparse.Namespace) -> int:
@@ -66,22 +66,18 @@ def cmd_upload(args: argparse.Namespace) -> int:
         packages_dir=args.packages_dir,
     )
 
-    # Display results
-    print("=" * 70)
-    print("UPLOAD RESULTS")
-    print("=" * 70)
-    print(f"App ID:          {result.app_id}")
-    print(f"App Name:        {result.app_name}")
-    print(f"Version:         {result.version}")
-    if result.intune_app_id:
-        print(f"Intune Win32 App ID:    {result.intune_app_id}")
-    if result.intune_update_app_id:
-        print(f"Intune Win32 Update ID: {result.intune_update_app_id}")
-    print(f"Package:         {result.package_path}")
-    print("=" * 70)
-    print()
-    print("[SUCCESS] Package uploaded to Intune successfully!")
-
+    print_results(
+        "UPLOAD RESULTS",
+        [
+            ("App ID", result.app_id),
+            ("App Name", result.app_name),
+            ("Version", result.version),
+            ("Intune Win32 App ID", result.intune_app_id),
+            ("Intune Win32 Update ID", result.intune_update_app_id),
+            ("Package", result.package_path),
+        ],
+        "Package uploaded to Intune successfully!",
+    )
     return 0
 
 

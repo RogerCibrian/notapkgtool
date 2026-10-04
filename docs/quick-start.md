@@ -158,13 +158,13 @@ Discovering version for recipe: /path/to/recipes/Google/chrome.yaml
 ======================================================================
 DISCOVERY RESULTS
 ======================================================================
-App Name:        Google Chrome
-App ID:          napt-chrome
-Strategy:        url_download
-Version:         <version>
-Version Source:  msi
-File Path:       downloads/napt-chrome/<version>/googlechromestandaloneenterprise64.msi
-SHA-256:         <sha256>
+App Name:       Google Chrome
+App ID:         napt-chrome
+Strategy:       url_download
+Version:        <version>
+Version Source: msi
+File Path:      downloads/napt-chrome/<version>/googlechromestandaloneenterprise64.msi
+SHA-256:        <sha256>
 ======================================================================
 
 [SUCCESS] Version discovered successfully!

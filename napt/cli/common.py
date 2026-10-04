@@ -12,20 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""What every napt command shares: output flags, logger setup, error wrapper.
+"""What every napt command shares: flags, logger setup, errors, results.
 
 A command module's `register` adds the shared flags with
 [add_output_flags][napt.cli.common.add_output_flags] and
 [add_state_dir][napt.cli.common.add_state_dir]; `napt/cli/main.py` calls
 [setup_logging][napt.cli.common.setup_logging] once and runs the selected
 handler through [run_handler][napt.cli.common.run_handler], so a handler
-raises NAPT errors instead of catching them.
+raises NAPT errors instead of catching them. A handler prints its result
+through [print_results][napt.cli.common.print_results], supplying the title,
+the rows, and the success line.
 """
 
 from __future__ import annotations
 
 import argparse
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 import traceback
 
@@ -87,6 +89,32 @@ def setup_logging(args: argparse.Namespace) -> Logger:
     logger = get_logger(verbose=args.verbose, debug=args.debug)
     set_global_logger(logger)
     return logger
+
+
+def print_results(title: str, rows: Iterable[tuple[str, object]], success: str) -> None:
+    """Prints a command's results block.
+
+    The block is a banner, the title, one aligned ``Label: value`` line per
+    row, a closing banner, a blank line, and the success line. Labels pad to
+    the longest label in the block. A row whose value is None is left out,
+    so an optional field needs no branch in the handler.
+
+    Args:
+        title: Heading for the block (e.g., "BUILD RESULTS").
+        rows: Label and value pairs in display order.
+        success: What was accomplished, printed after ``[SUCCESS]``.
+    """
+    shown = [(label, value) for label, value in rows if value is not None]
+    width = max((len(label) for label, _ in shown), default=0) + 1
+    banner = "=" * 70
+    print(banner)
+    print(title)
+    print(banner)
+    for label, value in shown:
+        print(f"{label + ':':<{width}} {value}")
+    print(banner)
+    print()
+    print(f"[SUCCESS] {success}")
 
 
 def run_handler(

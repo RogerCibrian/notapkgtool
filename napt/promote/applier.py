@@ -50,6 +50,7 @@ non-group targets survive every apply.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 import json
 from pathlib import Path
@@ -124,11 +125,11 @@ def _check_action(action: Any, index: int, plan_path: Path) -> None:
     required = dict(_ACTION_FIELDS)
     key, kind = _ACTION_TYPE_FIELDS[action_type]
     required[key] = kind
-    for field, expected in required.items():
-        if not isinstance(action.get(field), expected):
+    for name, expected in required.items():
+        if not isinstance(action.get(name), expected):
             raise _corrupted(
                 plan_path,
-                f"action {index} is missing '{field}' or it is not "
+                f"action {index} is missing '{name}' or it is not "
                 f"{'a list' if expected is list else 'a string'}",
             )
     if not all(isinstance(group, str) for group in action["groups"]):
@@ -580,12 +581,34 @@ def _apply_assign(run: _ApplyRun, action: dict[str, Any]) -> None:
     run.applied.append(action)
 
 
+@dataclass(frozen=True)
+class ApplyResult:
+    """Result from applying promotion plans against Intune.
+
+    Attributes:
+        applied: The actions that were executed, as planned.
+        skipped: Entries of ``action`` and ``reason`` for actions that were
+            stale or already applied.
+        failed: Entries of ``app_id`` and ``error`` for apps whose plan
+            could not be applied; their plan files are kept for retry.
+        drift: Assignment drift findings, reported and never corrected.
+        recovered: Publications whose lost state writeback was recovered
+            before applying.
+    """
+
+    applied: list[dict[str, Any]] = field(default_factory=list)
+    skipped: list[dict[str, Any]] = field(default_factory=list)
+    failed: list[dict[str, Any]] = field(default_factory=list)
+    drift: list[dict[str, Any]] = field(default_factory=list)
+    recovered: list[dict[str, Any]] = field(default_factory=list)
+
+
 def apply_plan(
     recipes: Path,
     state_dir: Path,
     plan_file: Path | None = None,
     now: datetime | None = None,
-) -> dict[str, Any]:
+) -> ApplyResult:
     """Executes promotion plans against Intune.
 
     Consumes the given recipes' plan files from ``<state_dir>/plans/``,
@@ -622,9 +645,8 @@ def apply_plan(
             current UTC time.
 
     Returns:
-        A summary dict with "applied" and "skipped" action lists,
-            "failed" per-app failure records (app_id and error),
-            "drift" findings, and "recovered" reconciliation findings.
+        The applied and skipped actions, the per-app failures, the drift
+            findings, and the recovered publications.
 
     Raises:
         AuthError: If authentication fails, or Graph rejects the token
@@ -760,10 +782,10 @@ def apply_plan(
         report_unknown_apps=recipes.is_dir(),
     )
 
-    return {
-        "applied": run.applied,
-        "skipped": run.skipped,
-        "failed": failed,
-        "drift": drift,
-        "recovered": recovered,
-    }
+    return ApplyResult(
+        applied=run.applied,
+        skipped=run.skipped,
+        failed=failed,
+        drift=drift,
+        recovered=recovered,
+    )
