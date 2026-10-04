@@ -41,6 +41,7 @@ Filing:
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import hashlib
 import json
 from pathlib import Path
@@ -64,7 +65,6 @@ from napt.github import (
 )
 from napt.logging import get_global_logger
 from napt.psadt.release import missing_template_entries
-from napt.results import PackageResult
 
 INTUNEWIN_REPO = "microsoft/Microsoft-Win32-Content-Prep-Tool"
 # The tool's releases carry no assets; the executable lives in the
@@ -314,6 +314,23 @@ def _copy_named_script(build_dir: Path, name: str, destination: Path) -> None:
         )
     shutil.copy2(source, destination / name)
     get_global_logger().verbose("PACKAGE", f"Copied: {name}")
+
+
+@dataclass(frozen=True)
+class PackageResult:
+    """Result from creating a .intunewin package.
+
+    Attributes:
+        build_dir: Path to the build directory.
+        package_path: Path to the created .intunewin file.
+        app_id: Unique application identifier.
+        version: Application version.
+    """
+
+    build_dir: Path
+    package_path: Path
+    app_id: str
+    version: str
 
 
 def create_intunewin(

@@ -12,7 +12,6 @@ napt/
 ├── logging.py               # Logging configuration
 ├── paths.py                 # Safe filenames and folder names from external input
 ├── powershell.py            # PowerShell string quoting for generated scripts
-├── results.py               # Result dataclasses returned by napt commands
 ├── secrets.py               # Secrets a recipe may send, bound to hosts by org.yaml
 ├── validation.py            # Recipe validation logic
 ├── version.py               # NAPT's own version, read from package metadata
@@ -134,5 +133,6 @@ Recipe YAML
 - **Exceptions:** All NAPT domain errors use custom exceptions inheriting from
   `NAPTError` (ConfigError, NetworkError, PackagingError, StateError,
   AuthError)
-- **Return types:** Frozen dataclasses from `results.py`, one per napt
-  command's underlying operation
+- **Return types:** Each operation a command runs returns a frozen
+  dataclass defined beside it (`BuildResult` next to `build_package`, and
+  so on), holding only the fields the command prints

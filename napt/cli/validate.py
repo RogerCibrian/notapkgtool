@@ -30,7 +30,7 @@ from napt.cli.common import add_output_flags
 from napt.exceptions import NAPTError
 
 if TYPE_CHECKING:
-    from napt.results import ValidationResult
+    from napt.validation import ValidationResult
 
 
 def _print_provenance(

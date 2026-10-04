@@ -39,6 +39,7 @@ Note:
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import hashlib
 from pathlib import Path
 import time
@@ -51,7 +52,6 @@ from urllib3.util.retry import Retry
 from napt.exceptions import NetworkError, NotModifiedError
 from napt.logging import get_global_logger
 from napt.paths import safe_filename
-from napt.results import DownloadResult
 from napt.version import get_version
 
 # Stream size per chunk (1 MiB). Tune up/down if needed.
@@ -203,6 +203,21 @@ def make_session() -> requests.Session:
     s.mount("http://", HTTPAdapter(max_retries=retries))
     s.mount("https://", HTTPAdapter(max_retries=retries))
     return s
+
+
+@dataclass(frozen=True)
+class DownloadResult:
+    """Result of a file download operation.
+
+    Attributes:
+        file_path: Path to the downloaded file.
+        sha256: SHA-256 hex digest of the downloaded file.
+        headers: HTTP response headers from the download.
+    """
+
+    file_path: Path
+    sha256: str
+    headers: dict
 
 
 def download_file(

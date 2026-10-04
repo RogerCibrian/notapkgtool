@@ -9,7 +9,7 @@ import pytest
 
 from napt.cli.validate import _display_path, cmd_validate
 from napt.exceptions import ConfigError
-from napt.results import ValidationResult
+from napt.validation import ValidationResult
 from tests.cli.conftest import _args, _mock_result
 
 

@@ -1,4 +1,0 @@
-# Results
-
-::: napt.results
-

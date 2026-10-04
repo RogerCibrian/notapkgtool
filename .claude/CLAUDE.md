@@ -185,11 +185,18 @@ All `napt/**/*.py` files require before docstring:
 
 ---
 
-## results.py Scope
+## Result Types
 
-`napt/results.py` is for **the result types napt commands return** — one dataclass per command's underlying operation (`napt discover` → `DiscoverResult`, `napt build` → `BuildResult`, `napt package` → `PackageResult`, `napt upload` → `UploadResult`, `napt validate` → `ValidationResult`), plus `DownloadResult` from the shared download step.
+A result is what an operation hands back to the command that prints it, and it lives **beside the operation that returns it**: `BuildResult` next to `build_package` in `napt/build/manager.py`, `UploadResult` next to `upload_package`, `ValidationResult` in `napt/validation.py`, `ApplyResult` next to `apply_plan`. There is no central results module.
 
-Domain types and internal types stay co-located with their logic.
+Rules for a result:
+
+- A frozen dataclass.
+- Only fields a consumer (the command handler or a test) reads. A field nothing reads is deleted.
+- Derived values are properties (`ValidationResult.is_valid`), never stored alongside the data they come from.
+- No status field. A result exists only when the operation succeeded; a failure is an exception.
+
+Domain types and internal types also stay co-located with their logic. The CLI prints every result through `print_results` in `napt/cli/common.py`; the handler supplies the title, the rows, and the success line.
 
 ---
 

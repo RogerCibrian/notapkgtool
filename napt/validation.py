@@ -52,7 +52,7 @@ Validation Checks:
 from __future__ import annotations
 
 from collections.abc import Iterable
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from difflib import get_close_matches
 from pathlib import Path
 import re
@@ -71,7 +71,6 @@ from napt.discovery.url_download import (
 from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
 from napt.paths import is_safe_path_component
-from napt.results import ValidationResult
 
 
 class _Field(NamedTuple):
@@ -874,6 +873,31 @@ def _validate_parent_field(
         )
     elif has_suffix and not has_parent:
         warnings.append("File is named <app>.override.yaml but declares no parent")
+
+
+@dataclass(frozen=True)
+class ValidationResult:
+    """Result from validating a recipe.
+
+    Attributes:
+        errors: List of error messages (empty if valid).
+        warnings: List of warning messages.
+        recipe_path: String path to the validated recipe file.
+        parent_path: String path to the parent recipe merged beneath it, or
+            None when the recipe declares no parent.
+        app_id: The recipe's id, or None when it has no usable one.
+    """
+
+    errors: list[str]
+    warnings: list[str]
+    recipe_path: str
+    parent_path: str | None = None
+    app_id: str | None = None
+
+    @property
+    def is_valid(self) -> bool:
+        """Whether the recipe passed: no errors were found."""
+        return not self.errors
 
 
 def validate_config(

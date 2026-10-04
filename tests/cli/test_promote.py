@@ -8,6 +8,7 @@ from unittest.mock import patch
 from napt.cli.common import run_handler
 from napt.cli.promote import cmd_promote_apply, cmd_promote_plan
 from napt.exceptions import AuthError, ConfigError, StateError
+from napt.promote.applier import ApplyResult
 from tests.cli.conftest import _args
 
 
@@ -97,8 +98,8 @@ class TestCmdPromoteApply:
 
     def test_applied_actions_print_and_return_zero(self, tmp_path, capsys):
         """Tests that applied and skipped actions are summarized."""
-        summary = {
-            "applied": [
+        summary = ApplyResult(
+            applied=[
                 {
                     "app_id": "test-app",
                     "summary": (
@@ -112,7 +113,7 @@ class TestCmdPromoteApply:
                     "sha256": "a" * 64,
                 }
             ],
-            "skipped": [
+            skipped=[
                 {
                     "action": {
                         "app_id": "other-app",
@@ -129,8 +130,7 @@ class TestCmdPromoteApply:
                     "reason": "already applied",
                 }
             ],
-            "failed": [],
-        }
+        )
         with patch("napt.promote.applier.apply_plan", return_value=summary):
             code = cmd_promote_apply(_apply_args(tmp_path))
         assert code == 0
@@ -142,24 +142,16 @@ class TestCmdPromoteApply:
 
     def test_nothing_to_apply_returns_zero(self, tmp_path, capsys):
         """Tests that an empty summary reports cleanly."""
-        summary = {"applied": [], "skipped": [], "failed": []}
-        with patch("napt.promote.applier.apply_plan", return_value=summary):
+        with patch("napt.promote.applier.apply_plan", return_value=ApplyResult()):
             code = cmd_promote_apply(_apply_args(tmp_path))
         assert code == 0
         assert "Nothing to apply" in capsys.readouterr().out
 
     def test_failed_apps_print_and_return_one(self, tmp_path, capsys):
         """Tests that per-app failures are printed and fail the run."""
-        summary = {
-            "applied": [],
-            "skipped": [],
-            "failed": [
-                {
-                    "app_id": "test-app",
-                    "error": "unresolvable groups: ghost-group",
-                }
-            ],
-        }
+        summary = ApplyResult(
+            failed=[{"app_id": "test-app", "error": "unresolvable groups: ghost-group"}]
+        )
         with patch("napt.promote.applier.apply_plan", return_value=summary):
             code = cmd_promote_apply(_apply_args(tmp_path))
         assert code == 1
@@ -212,18 +204,15 @@ class TestDriftOutput:
 
     def test_apply_prints_drift_from_summary(self, tmp_path, capsys):
         """Tests that apply prints drift findings from the summary."""
-        summary = {
-            "applied": [],
-            "skipped": [],
-            "failed": [],
-            "drift": [
+        summary = ApplyResult(
+            drift=[
                 {
                     "app_id": "test-app",
                     "kind": "orphaned_release",
                     "detail": "stray app",
                 }
-            ],
-        }
+            ]
+        )
         with patch("napt.promote.applier.apply_plan", return_value=summary):
             code = cmd_promote_apply(_apply_args(tmp_path))
         assert code == 0
@@ -389,19 +378,15 @@ class TestReconcileOutput:
 
     def test_apply_prints_recovered_from_summary(self, tmp_path, capsys):
         """Tests that apply prints reconciliation findings from the summary."""
-        summary = {
-            "applied": [],
-            "skipped": [],
-            "failed": [],
-            "drift": [],
-            "recovered": [
+        summary = ApplyResult(
+            recovered=[
                 {
                     "app_id": "test-app",
                     "kind": "recovered",
                     "detail": "recorded publication of 2.0.0",
                 }
-            ],
-        }
+            ]
+        )
         with patch("napt.promote.applier.apply_plan", return_value=summary):
             code = cmd_promote_apply(_apply_args(tmp_path))
         assert code == 0

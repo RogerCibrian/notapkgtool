@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import base64
 from collections.abc import Callable
+from dataclasses import dataclass
 import functools
 from pathlib import Path
 import tempfile
@@ -54,7 +55,6 @@ from napt.graph.intune import (
     upload_to_azure_blob,
 )
 from napt.logging import Logger, get_global_logger
-from napt.results import UploadResult
 from napt.state.deployment import (
     deployment_state_path,
     load_deployment_state,
@@ -692,6 +692,29 @@ def _upload_single_app(
         )
 
     return intune_app_id
+
+
+@dataclass(frozen=True)
+class UploadResult:
+    """Result from uploading a .intunewin package to Microsoft Intune.
+
+    Attributes:
+        app_id: Unique application identifier (from recipe).
+        app_name: Application display name.
+        version: Application version uploaded.
+        intune_app_id: Graph API object ID of the install app entry.
+            None when build_types is "update_only".
+        intune_update_app_id: Graph API object ID of the update app entry.
+            None when build_types is "app_only".
+        package_path: Path to the uploaded .intunewin file.
+    """
+
+    app_id: str
+    app_name: str
+    version: str
+    package_path: Path
+    intune_app_id: str | None = None
+    intune_update_app_id: str | None = None
 
 
 def upload_package(

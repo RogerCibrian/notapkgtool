@@ -14,7 +14,7 @@ import yaml
 
 from napt.exceptions import NetworkError, StateError
 from napt.graph.intune import VIRTUAL_TARGETS
-from napt.promote.applier import apply_plan, load_plan_file
+from napt.promote.applier import ApplyResult, apply_plan, load_plan_file
 from napt.promote.planner import plan_path_for
 from napt.state.deployment import (
     create_default_deployment_state,
@@ -296,8 +296,8 @@ class TestApplyPromoteActions:
 
         summary, mocks = _run_apply(tmp_path, existing_apps=_tenant())
 
-        assert len(summary["applied"]) == 1
-        assert summary["skipped"] == []
+        assert len(summary.applied) == 1
+        assert summary.skipped == []
         # Assigned the ring group (required) to the new update app
         call = mocks["assign_app"].call_args
         assert call.args[1] == "update-new"
@@ -376,7 +376,7 @@ class TestApplyPromoteActions:
             assignments={"update-old": [old_assignment]},
         )
 
-        assert len(summary["applied"]) == 1
+        assert len(summary.applied) == 1
         # Second assign call strips the pilot group from the old app
         targets = [c.args[1] for c in mocks["assign_app"].call_args_list]
         assert targets == ["update-new", "update-old"]
@@ -409,7 +409,7 @@ class TestApplyPromoteActions:
 
         summary, mocks = _run_apply(tmp_path, existing_apps=tenant)
 
-        assert len(summary["applied"]) == 1
+        assert len(summary.applied) == 1
         deleted = [c.args[1] for c in mocks["delete_mobile_app"].call_args_list]
         assert deleted == ["install-ancient", "update-ancient"]
 
@@ -447,7 +447,7 @@ class TestApplyPromoteActions:
 
         summary, mocks = _run_apply(tmp_path, existing_apps=tenant)
 
-        assert len(summary["applied"]) == 1
+        assert len(summary.applied) == 1
         deleted = [c.args[1] for c in mocks["delete_mobile_app"].call_args_list]
         assert deleted == ["install-mid", "update-mid"]
         state = load_deployment_state(state_path)
@@ -477,9 +477,9 @@ class TestApplyPromoteActions:
 
         summary, mocks = _run_apply(tmp_path, existing_apps=tenant, real_drift=True)
 
-        assert len(summary["applied"]) == 1
+        assert len(summary.applied) == 1
         assert mocks["delete_mobile_app"].call_count == 2
-        assert [f["kind"] for f in summary["drift"]] == []
+        assert [f["kind"] for f in summary.drift] == []
 
     def test_stale_action_skipped(self, tmp_path):
         """Tests that an action for a superseded release is skipped."""
@@ -489,9 +489,9 @@ class TestApplyPromoteActions:
 
         summary, mocks = _run_apply(tmp_path, existing_apps=_tenant())
 
-        assert summary["applied"] == []
-        assert len(summary["skipped"]) == 1
-        assert "stale" in summary["skipped"][0]["reason"]
+        assert summary.applied == []
+        assert len(summary.skipped) == 1
+        assert "stale" in summary.skipped[0]["reason"]
         mocks["assign_app"].assert_not_called()
 
     def test_already_applied_skipped(self, tmp_path):
@@ -512,8 +512,8 @@ class TestApplyPromoteActions:
 
         summary, mocks = _run_apply(tmp_path, existing_apps=_tenant())
 
-        assert summary["applied"] == []
-        assert summary["skipped"][0]["reason"] == "already applied"
+        assert summary.applied == []
+        assert summary.skipped[0]["reason"] == "already applied"
         mocks["assign_app"].assert_not_called()
 
     def test_missing_update_app_skipped(self, tmp_path):
@@ -524,8 +524,8 @@ class TestApplyPromoteActions:
 
         summary, mocks = _run_apply(tmp_path, existing_apps=[])
 
-        assert summary["applied"] == []
-        assert "no stamped update entry" in summary["skipped"][0]["reason"]
+        assert summary.applied == []
+        assert "no stamped update entry" in summary.skipped[0]["reason"]
         mocks["assign_app"].assert_not_called()
 
     def test_failure_keeps_plan_file(self, tmp_path):
@@ -541,8 +541,8 @@ class TestApplyPromoteActions:
         )
 
         assert plan_path.exists()
-        assert [f["app_id"] for f in summary["failed"]] == ["test-app"]
-        assert "Graph down" in summary["failed"][0]["error"]
+        assert [f["app_id"] for f in summary.failed] == ["test-app"]
+        assert "Graph down" in summary.failed[0]["error"]
 
 
 class TestApplyAssignActions:
@@ -566,7 +566,7 @@ class TestApplyAssignActions:
 
         summary, mocks = _run_apply(tmp_path, existing_apps=_tenant())
 
-        assert len(summary["applied"]) == 1
+        assert len(summary.applied) == 1
         call = mocks["assign_app"].call_args
         assert call.args[1] == "install-new"
         # "All Users" is Intune's built-in virtual target, not a group
@@ -603,7 +603,7 @@ class TestApplyAssignActions:
             assignments={"install-old": [old_assignment]},
         )
 
-        assert len(summary["applied"]) == 1
+        assert len(summary.applied) == 1
         targets = [c.args[1] for c in mocks["assign_app"].call_args_list]
         assert targets == ["install-new", "install-old"]
         assert mocks["assign_app"].call_args_list[1].args[2] == []
@@ -620,8 +620,8 @@ class TestApplyOrchestration:
 
         summary, mocks = _run_apply(tmp_path, existing_apps=_tenant())
 
-        assert summary["applied"] == []
-        assert summary["failed"] == []
+        assert summary.applied == []
+        assert summary.failed == []
         mocks["assign_app"].assert_not_called()
         assert load_deployment_state(state_path)["rings"] == {}
 
@@ -645,7 +645,7 @@ class TestApplyOrchestration:
 
         summary, mocks = _run_apply(tmp_path, existing_apps=tenant, plan_file=plan_a)
 
-        assert [a["app_id"] for a in summary["applied"]] == ["app-a"]
+        assert [a["app_id"] for a in summary.applied] == ["app-a"]
         assert [c.args[1] for c in mocks["assign_app"].call_args_list] == ["update-a"]
         assert not plan_a.exists()
         assert plan_b.exists()
@@ -666,9 +666,9 @@ class TestApplyOrchestration:
 
         summary, mocks = _run_apply(tmp_path, existing_apps=tenant)
 
-        assert [a["app_id"] for a in summary["applied"]] == ["app-good"]
-        assert [f["app_id"] for f in summary["failed"]] == ["app-bad"]
-        assert "Corrupted plan file" in summary["failed"][0]["error"]
+        assert [a["app_id"] for a in summary.applied] == ["app-good"]
+        assert [f["app_id"] for f in summary.failed] == ["app-bad"]
+        assert "Corrupted plan file" in summary.failed[0]["error"]
         assert bad_plan.exists()
         assert not good_plan.exists()
         assert [c.args[1] for c in mocks["assign_app"].call_args_list] == [
@@ -691,7 +691,7 @@ class TestApplyOrchestration:
             tmp_path, existing_apps=tenant, recipes=recipe_a, real_drift=True
         )
 
-        assert [f["kind"] for f in summary["drift"] if f["kind"] == "unknown_app"] == []
+        assert [f["kind"] for f in summary.drift if f["kind"] == "unknown_app"] == []
 
     def test_missing_plan_file_raises(self, tmp_path):
         """Tests that --plan-file naming a file that does not exist is a
@@ -710,13 +710,7 @@ class TestApplyOrchestration:
 
         summary, mocks = _run_apply(tmp_path, existing_apps=[])
 
-        assert summary == {
-            "applied": [],
-            "skipped": [],
-            "failed": [],
-            "drift": [],
-            "recovered": [],
-        }
+        assert summary == ApplyResult()
         mocks["assign_app"].assert_not_called()
 
     def test_recovers_lost_writeback_without_promoting(self, tmp_path):
@@ -738,8 +732,8 @@ class TestApplyOrchestration:
 
         summary, mocks = _run_apply(tmp_path, existing_apps=_tenant())
 
-        assert [f["kind"] for f in summary["recovered"]] == ["recovered"]
-        assert summary["applied"] == []
+        assert [f["kind"] for f in summary.recovered] == ["recovered"]
+        assert summary.applied == []
         mocks["assign_app"].assert_not_called()
         state = load_deployment_state(state_path)
         assert state["pending"] is None
@@ -781,9 +775,9 @@ class TestApplyOrchestration:
             resolve_side_effect=_resolve,
         )
 
-        assert summary["applied"] == []
-        assert [f["app_id"] for f in summary["failed"]] == ["test-app"]
-        assert "missing-group" in summary["failed"][0]["error"]
+        assert summary.applied == []
+        assert [f["app_id"] for f in summary.failed] == ["test-app"]
+        assert "missing-group" in summary.failed[0]["error"]
         mocks["assign_app"].assert_not_called()
         state = load_deployment_state(state_path)
         assert state["rings"] == {}  # the resolvable action did not apply
@@ -826,8 +820,8 @@ class TestApplyOrchestration:
             resolve_side_effect=_resolve,
         )
 
-        assert [a["type"] for a in summary["applied"]] == ["promote"]
-        assert [s["reason"] for s in summary["skipped"]] == [
+        assert [a["type"] for a in summary.applied] == ["promote"]
+        assert [s["reason"] for s in summary.skipped] == [
             "stale action - the published release has changed"
         ]
 
@@ -864,8 +858,8 @@ class TestApplyOrchestration:
             resolve_side_effect=_resolve,
         )
 
-        assert [a["app_id"] for a in summary["applied"]] == ["app-good"]
-        assert [f["app_id"] for f in summary["failed"]] == ["app-bad"]
+        assert [a["app_id"] for a in summary.applied] == ["app-good"]
+        assert [f["app_id"] for f in summary.failed] == ["app-bad"]
         assert bad_plan.exists()
         assert not good_plan.exists()
         state = load_deployment_state(good_state)
@@ -898,8 +892,8 @@ class TestApplyOrchestration:
             assign_side_effect=_assign,
         )
 
-        assert [a["app_id"] for a in summary["applied"]] == ["app-good"]
-        assert [f["app_id"] for f in summary["failed"]] == ["app-bad"]
+        assert [a["app_id"] for a in summary.applied] == ["app-good"]
+        assert [f["app_id"] for f in summary.failed] == ["app-bad"]
         assert bad_plan.exists()
         assert not good_plan.exists()
 
@@ -914,8 +908,8 @@ class TestApplyOrchestration:
 
         summary, mocks = _run_apply(tmp_path, existing_apps=_tenant())
 
-        assert summary["applied"] == []
-        assert summary["skipped"] == []
+        assert summary.applied == []
+        assert summary.skipped == []
         assert ghost_plan.exists()
         mocks["assign_app"].assert_not_called()
 
@@ -939,8 +933,8 @@ class TestApplyOrchestration:
 
         summary, mocks = _run_apply(tmp_path, existing_apps=tenant, recipes=recipe_a)
 
-        assert [a["app_id"] for a in summary["applied"]] == ["app-a"]
-        assert summary["skipped"] == []
+        assert [a["app_id"] for a in summary.applied] == ["app-a"]
+        assert summary.skipped == []
         assert not plan_a.exists()
         assert plan_b.exists()
         assert [c.args[1] for c in mocks["assign_app"].call_args_list] == ["update-a"]
@@ -1010,9 +1004,9 @@ class TestApplyOrchestration:
             resolve_side_effect=_resolve,
         )
 
-        assert [a["app_id"] for a in summary["applied"]] == ["app-good"]
-        assert [f["app_id"] for f in summary["failed"]] == ["app-bad"]
-        assert "503" in summary["failed"][0]["error"]
+        assert [a["app_id"] for a in summary.applied] == ["app-good"]
+        assert [f["app_id"] for f in summary.failed] == ["app-bad"]
+        assert "503" in summary.failed[0]["error"]
         assert bad_plan.exists()
         assert not good_plan.exists()
         assert [c.args[1] for c in mocks["assign_app"].call_args_list] == [
@@ -1065,9 +1059,9 @@ class TestApplyOrchestration:
             tmp_path, existing_apps=tenant, save_side_effect=_save
         )
 
-        assert [a["app_id"] for a in summary["applied"]] == ["app-good"]
-        assert [f["app_id"] for f in summary["failed"]] == ["app-bad"]
-        error = summary["failed"][0]["error"]
+        assert [a["app_id"] for a in summary.applied] == ["app-good"]
+        assert [f["app_id"] for f in summary.failed] == ["app-bad"]
+        error = summary.failed[0]["error"]
         assert "app-bad.json" in error
         assert "Intune" in error
         assert bad_plan.exists()
@@ -1231,4 +1225,4 @@ class TestApplyDrift:
             tmp_path, existing_apps=_tenant(), drift_findings=[finding]
         )
 
-        assert summary["drift"] == [finding]
+        assert summary.drift == [finding]
