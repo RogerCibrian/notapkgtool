@@ -3953,8 +3953,8 @@ Set in <code>defaults/org.yaml</code> rather than per-recipe.</p>
 <ul>
 <li><code>path</code> is resolved relative to the <code>defaults/</code> directory (next to
   <code>org.yaml</code>), or the recipe's directory when there is no <code>defaults/org.yaml</code>.
-  A path that does not exist is skipped with a verbose log line rather than
-  an error.</li>
+  A path that does not exist fails the build, so a typo cannot ship a
+  package with PSADT's default assets.</li>
 <li>Each mapping copies the first file matching <code>source</code> to <code>target</code>, appending
   the source file's extension.
   Mappings whose glob matches nothing are skipped.</li>

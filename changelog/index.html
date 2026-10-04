@@ -2992,19 +2992,34 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
     <code>discover</code>, <code>build</code>, <code>package</code>, <code>init</code>, and <code>status</code> no longer load the
     Azure authentication libraries at startup; only <code>upload</code>, <code>promote</code>, and
     <code>auth</code> do</li>
-<li>
-<p><strong>Ctrl-C ends a command cleanly</strong> - Exit code 130 and an <code>Interrupted.</code>
-    line instead of a traceback</p>
-</li>
-<li>
-<p><strong>BREAKING: <code>napt package</code> keeps other versions' packages</strong> - The
+<li><strong>Ctrl-C ends a command cleanly</strong> - Exit code 130 and an <code>Interrupted.</code>
+    line instead of a traceback</li>
+<li><strong>BREAKING: A missing brand pack folder fails the build</strong> - A configured
+    <code>psadt.brand_pack.path</code> that does not exist used to be skipped with a
+    verbose-only note, so a typo shipped a package with PSADT's default
+    assets. <code>napt build</code> now stops and names the path</li>
+<li><strong><code>napt build</code> checks the recipe before touching the build folder</strong> - An
+    EXE recipe missing <code>display_name</code>, <code>architecture</code>, or its install
+    commands used to fail after that version's build folder had been
+    cleared and PSADT copied in; every such check now runs before anything
+    is written</li>
+<li><strong>One metadata read per MSI build</strong> - The MSI was opened twice (once for
+    its version, once for its architecture), and the detection settings
+    were resolved once per generated script, so each "will be ignored"
+    warning printed twice. Both now happen once</li>
+<li><strong>Installer problems are reported as build errors</strong> - An MSI for an
+    unsupported platform, an MSIX for an unsupported architecture, or an
+    MSI with no ProductName are faults in the installer, and are now
+    reported as such rather than as configuration errors. A machine with no
+    way to read an MSI (no PowerShell on Windows, no msitools elsewhere)
+    gets the same kind of error instead of a traceback</li>
+<li><strong>BREAKING: <code>napt package</code> keeps other versions' packages</strong> - The
     previous version's package folder used to be deleted before the new
     one was made (and before the packaging tool was even fetched), so a
     failed run left the app with no package. NAPT now never deletes
     another version's files: <code>package</code> replaces only the folder of the
     version it is packaging. <code>--clean-source</code> is removed for the same
-    reason; delete build folders yourself when you want them gone</p>
-</li>
+    reason; delete build folders yourself when you want them gone</li>
 <li><strong>BREAKING: <code>napt package</code> and <code>napt upload</code> resolve the release from
     deployment state</strong> - Both used to take the most recently modified
     folder. They now package and upload the build and package of the
@@ -3123,6 +3138,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="fixed">Fixed</h3>
 <ul>
+<li>A PSADT template without the install or uninstall marker made <code>napt
+    build</code> drop the recipe's commands silently; it now fails naming the
+    missing marker</li>
 <li><code>napt build</code> sends <code>GITHUB_TOKEN</code> on the PSADT release lookups, as its
     documentation promised; the calls used to count against the shared
     unauthenticated limit</li>

@@ -2902,10 +2902,16 @@ recipes whose pattern (or <code>api_json</code> value) keeps a prefix.</p>
    single installer found in a version folder (<code>downloads/{app_id}/{version}/</code>)
    is used; more than one stops the build, and a file placed directly in
    <code>downloads/{app_id}/</code> is not found.</li>
-<li><strong>Confirm version</strong> - The version is the name of the download folder.
-   For an MSI or MSIX, build reads the installer's own version and refuses to
-   continue if it differs from the folder, since that means a file was moved
-   by hand.</li>
+<li><strong>Inspect installer</strong> - The version is the name of the download folder.
+   For an MSI or MSIX, build reads the installer's metadata once and refuses
+   to continue if its version differs from the folder, since that means a
+   file was moved by hand; the metadata also supplies the detection name and
+   architecture.
+   For an EXE, the recipe must supply <code>intune.detection.display_name</code>,
+   <code>intune.detection.architecture</code>, and both <code>psadt.install</code> and
+   <code>psadt.uninstall</code>.
+   Every one of these checks runs before anything is written, so a failing
+   recipe leaves an existing build of that version untouched.</li>
 <li><strong>Get PSADT release</strong> - Downloads PSADT Template_v4 from GitHub into
    <code>cache/psadt/{version}/</code> if not already cached.
    The GitHub API calls send <code>GITHUB_TOKEN</code> from the environment when it is
@@ -2937,7 +2943,8 @@ recipes whose pattern (or <code>api_json</code> value) keeps a prefix.</p>
 <li><strong>Apply branding</strong> - Replaces PSADT default assets with custom branding
    (if configured):<ul>
 <li>Reads <code>psadt.brand_pack</code> (usually set in <code>org.yaml</code>; a relative path
-  resolves against <code>defaults/</code>).</li>
+  resolves against <code>defaults/</code>).
+  A configured path that does not exist fails the build.</li>
 <li>Replaces files in <code>Assets/</code> (AppIcon.png, Banner.Classic.png, and so
   on).</li>
 <li>Uses pattern matching to find source files in the brand pack directory.</li>
