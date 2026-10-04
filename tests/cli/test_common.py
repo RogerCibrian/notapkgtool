@@ -10,6 +10,7 @@ import pytest
 from napt.cli.common import (
     add_output_flags,
     add_state_dir,
+    print_results,
     run_handler,
     setup_logging,
 )
@@ -113,6 +114,53 @@ class TestSetupLogging:
         out = capsys.readouterr().out
         assert "shown" in out
         assert "also shown" in out
+
+
+class TestPrintResults:
+    """Tests for the one results block every command prints."""
+
+    def test_prints_banner_title_rows_and_success_line(self, capsys):
+        """Tests that the block has the shape every command used to hand-write."""
+        print_results(
+            "BUILD RESULTS",
+            [("App Name", "7-Zip"), ("Version", "26.02")],
+            "PSADT package built successfully!",
+        )
+
+        assert capsys.readouterr().out == (
+            "=" * 70 + "\n"
+            "BUILD RESULTS\n" + "=" * 70 + "\n"
+            "App Name: 7-Zip\n"
+            "Version:  26.02\n" + "=" * 70 + "\n"
+            "\n"
+            "[SUCCESS] PSADT package built successfully!\n"
+        )
+
+    def test_labels_pad_to_the_longest_in_the_block(self, capsys):
+        """Tests that values line up in one column however long the labels are."""
+        print_results(
+            "UPLOAD RESULTS",
+            [("App ID", "napt-chrome"), ("Intune Win32 Update ID", "guid")],
+            "done",
+        )
+
+        lines = capsys.readouterr().out.splitlines()
+        assert lines[3] == "App ID:                 napt-chrome"
+        assert lines[4] == "Intune Win32 Update ID: guid"
+
+    def test_rows_without_a_value_are_skipped(self, capsys):
+        """Tests that an optional field with nothing to show prints no row."""
+        print_results("UPLOAD RESULTS", [("A", "x"), ("B", None), ("C", 0)], "done")
+
+        out = capsys.readouterr().out
+        assert "B:" not in out
+        assert "C: 0" in out
+
+    def test_values_are_printed_with_str(self, capsys):
+        """Tests that paths and other objects print the way print would show them."""
+        print_results("X", [("Path", Path("builds") / "app")], "done")
+
+        assert f"Path: {Path('builds') / 'app'}" in capsys.readouterr().out
 
 
 class TestFlags:

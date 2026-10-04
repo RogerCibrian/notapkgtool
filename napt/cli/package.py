@@ -26,7 +26,7 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-from napt.cli.common import add_output_flags, add_state_dir
+from napt.cli.common import add_output_flags, add_state_dir, print_results
 from napt.exceptions import ConfigError
 
 
@@ -186,18 +186,16 @@ def cmd_package(args: argparse.Namespace) -> int:
         expected_sha256=expected_sha256,
     )
 
-    # Display results
-    print("=" * 70)
-    print("PACKAGE RESULTS")
-    print("=" * 70)
-    print(f"App ID:          {result.app_id}")
-    print(f"Version:         {result.version}")
-    print(f"Package Path:    {result.package_path}")
-    print(f"Build Directory: {result.build_dir}")
-    print("=" * 70)
-    print()
-    print("[SUCCESS] .intunewin package created successfully!")
-
+    print_results(
+        "PACKAGE RESULTS",
+        [
+            ("App ID", result.app_id),
+            ("Version", result.version),
+            ("Package Path", result.package_path),
+            ("Build Directory", result.build_dir),
+        ],
+        ".intunewin package created successfully!",
+    )
     return 0
 
 

@@ -23,7 +23,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from napt.cli.common import add_output_flags, add_state_dir
+from napt.cli.common import add_output_flags, add_state_dir, print_results
 
 
 def cmd_discover(args: argparse.Namespace) -> int:
@@ -70,21 +70,19 @@ def cmd_discover(args: argparse.Namespace) -> int:
         stateless=args.stateless,
     )
 
-    # Display results
-    print("=" * 70)
-    print("DISCOVERY RESULTS")
-    print("=" * 70)
-    print(f"App Name:        {result.app_name}")
-    print(f"App ID:          {result.app_id}")
-    print(f"Strategy:        {result.strategy}")
-    print(f"Version:         {result.version}")
-    print(f"Version Source:  {result.version_source}")
-    print(f"File Path:       {result.file_path}")
-    print(f"SHA-256:         {result.sha256}")
-    print("=" * 70)
-    print()
-    print("[SUCCESS] Version discovered successfully!")
-
+    print_results(
+        "DISCOVERY RESULTS",
+        [
+            ("App Name", result.app_name),
+            ("App ID", result.app_id),
+            ("Strategy", result.strategy),
+            ("Version", result.version),
+            ("Version Source", result.version_source),
+            ("File Path", result.file_path),
+            ("SHA-256", result.sha256),
+        ],
+        "Version discovered successfully!",
+    )
     return 0
 
 
