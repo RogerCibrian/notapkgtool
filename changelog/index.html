@@ -2994,6 +2994,16 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
     <code>auth</code> do</li>
 <li><strong>Ctrl-C ends a command cleanly</strong> - Exit code 130 and an <code>Interrupted.</code>
     line instead of a traceback</li>
+<li><strong>Warnings are tagged</strong> - A warning in the log prints as
+    <code>[PREFIX] WARNING: message</code>; it used to look exactly like an info line</li>
+<li><strong>Result output drops lines that never changed</strong> - <code>napt validate</code> no
+    longer prints <code>App Count</code> (always 1 for a valid recipe), and <code>discover</code>,
+    <code>build</code>, <code>package</code>, and <code>upload</code> no longer print <code>Status: success</code> (a
+    failure is an error, not a result)</li>
+<li><strong>Log lines use one prefix per stage or domain</strong> - Validation logs under
+    <code>CONFIG</code> instead of <code>VALIDATION</code>; reusing a cached PSADT release,
+    replacing an earlier build, and backing up org.yaml on <code>init --force</code>
+    are reported at the same level as their counterparts</li>
 <li><strong>BREAKING: A missing brand pack folder fails the build</strong> - A configured
     <code>psadt.brand_pack.path</code> that does not exist used to be skipped with a
     verbose-only note, so a typo shipped a package with PSADT's default
