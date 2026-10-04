@@ -387,7 +387,7 @@ class TestResolveLargeIcon:
 
     def test_oversized_logo_path_warns_and_skips(self, tmp_path, monkeypatch, capsys):
         """Tests that a logo_path file over the size limit is skipped."""
-        from napt.build.icons import MAX_ICON_BYTES
+        from napt.graph.intune import MAX_ICON_BYTES
 
         monkeypatch.chdir(tmp_path)
         logo = tmp_path / "logo.png"
@@ -405,7 +405,7 @@ class TestResolveLargeIcon:
         self, tmp_path, monkeypatch, capsys
     ):
         """Tests that an oversized curated icon warns instead of uploading."""
-        from napt.build.icons import MAX_ICON_BYTES
+        from napt.graph.intune import MAX_ICON_BYTES
 
         monkeypatch.chdir(tmp_path)
         icon_path = tmp_path / "icons" / "test-app.png"
@@ -530,6 +530,7 @@ def _run_upload(
         "create_cv": MagicMock(side_effect=patches["create_content_version"]),
         "update_app": MagicMock(),
         "delete_app": MagicMock(),
+        "extract": MagicMock(return_value=tmp_path / "payload"),
     }
     create_app_mock = mocks["create_app"]
     create_cv_mock = mocks["create_cv"]
@@ -562,10 +563,7 @@ def _run_upload(
             )
         )
         stack.enter_context(
-            patch(
-                "napt.upload.manager.extract_encrypted_payload",
-                return_value=tmp_path / "payload",
-            )
+            patch("napt.upload.manager.extract_encrypted_payload", mocks["extract"])
         )
         stack.enter_context(
             patch("napt.upload.manager.create_win32_app", create_app_mock)
@@ -621,6 +619,39 @@ def test_upload_stamps_provenance_notes(
     update_notes = create_app_mock.call_args_list[1].args[1]["notes"]
     assert install_notes == f"napt/v1 id=test-app entry=install sha256={'c' * 64}"
     assert update_notes == f"napt/v1 id=test-app entry=update sha256={'c' * 64}"
+
+
+def test_upload_both_extracts_the_payload_once(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that one package is decrypted once for both app entries."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path)
+
+    _, mocks = _run_upload(tmp_path, fake_metadata, build_types="both")
+
+    assert mocks["create_app"].call_count == 2
+    assert mocks["extract"].call_count == 1
+
+
+def test_upload_reads_deployment_state_once(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that the recorded release comes from the state already loaded."""
+    import napt.state.deployment as deployment
+    import napt.upload.manager as manager
+
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path, installer_sha256="c" * 64)
+    _seed_pending(tmp_path, sha256="c" * 64, version="1.0.0")
+    real_load = deployment.load_deployment_state
+    loads = MagicMock(side_effect=real_load)
+    monkeypatch.setattr(deployment, "load_deployment_state", loads)
+    monkeypatch.setattr(manager, "load_deployment_state", loads)
+
+    _run_upload(tmp_path, fake_metadata)
+
+    assert loads.call_count == 1
 
 
 def test_upload_hash_mismatch_aborts_before_graph(

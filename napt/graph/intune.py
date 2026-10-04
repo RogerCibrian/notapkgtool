@@ -44,15 +44,23 @@ import time
 from typing import TYPE_CHECKING
 from urllib.parse import quote
 
-import requests
-
 from napt.exceptions import ConfigError, NetworkError
-from napt.graph.client import GRAPH_BASE, auth_headers, graph_request, json_headers
+from napt.graph.client import (
+    GRAPH_BASE,
+    RetryPolicy,
+    auth_headers,
+    graph_request,
+    json_headers,
+    send,
+)
 
 if TYPE_CHECKING:
     from napt.upload.intunewin import IntunewinMetadata
 
 WIN32_LOB_APP_TYPE = "#microsoft.graph.win32LobApp"
+
+# Intune rejects a largeIcon over 750KB; NAPT stops a little short of it.
+MAX_ICON_BYTES = 700_000
 
 # Azure Block Blob: minimum recommended chunk size is 4 MiB; 6 MiB is a
 # common choice that stays well below the 4000-block limit for large files.
@@ -218,10 +226,33 @@ def get_app_assignments(access_token: str, app_id: str) -> list[dict]:
 
     """
     url = f"{GRAPH_BASE}/deviceAppManagement/mobileApps/{app_id}/assignments"
-    body = graph_request(
-        "GET", url, "get_app_assignments", headers=auth_headers(access_token)
-    )
-    return body.get("value", [])
+    return _collect(access_token, url, "get_app_assignments")
+
+
+def _collect(access_token: str, url: str, context: str) -> list[dict]:
+    """Reads every page of a Graph collection.
+
+    Args:
+        access_token: Bearer token for Graph API.
+        url: The collection URL, with any query options.
+        context: Short description of the operation for error messages.
+
+    Returns:
+        The entries of every page, in order.
+
+    Raises:
+        AuthError: On 401 or 403.
+        NetworkError: On 5xx or connection error.
+    """
+    items: list[dict] = []
+    next_url: str | None = url
+    while next_url:
+        body = graph_request(
+            "GET", next_url, context, headers=auth_headers(access_token)
+        )
+        items.extend(body.get("value", []))
+        next_url = body.get("@odata.nextLink")
+    return items
 
 
 # Intune's built-in virtual assignment targets, reserved by these exact
@@ -293,17 +324,8 @@ def list_mobile_apps(access_token: str) -> list[dict]:
         NetworkError: On 5xx or connection error.
 
     """
-    url: str | None = (
-        f"{GRAPH_BASE}/deviceAppManagement/mobileApps?$select=id,displayName,notes"
-    )
-    apps: list[dict] = []
-    while url:
-        body = graph_request(
-            "GET", url, "list_mobile_apps", headers=auth_headers(access_token)
-        )
-        apps.extend(body.get("value", []))
-        url = body.get("@odata.nextLink")
-    return apps
+    url = f"{GRAPH_BASE}/deviceAppManagement/mobileApps?$select=id,displayName,notes"
+    return _collect(access_token, url, "list_mobile_apps")
 
 
 def delete_mobile_app(access_token: str, app_id: str) -> None:
@@ -496,10 +518,6 @@ def create_content_version_file(
     return file_id, data["azureStorageUri"]
 
 
-_BLOB_RETRY_STATUS = (403, 408, 429, 500, 502, 503, 504)
-_BLOB_RETRY_ATTEMPTS = 5
-_BLOB_RETRY_INITIAL_DELAY = 2.0
-
 # The signature in a SAS query string. Anyone holding it can write the
 # blob until the SAS expires, so it never goes into a log or error.
 _SAS_SIGNATURE = re.compile(r"(?i)(sig=)[^&\s'\"]+")
@@ -517,6 +535,16 @@ def _redact_sas(text: str) -> str:
     return _SAS_SIGNATURE.sub(r"\1<redacted>", text)
 
 
+# A freshly provisioned SAS URI can be rejected with HTTP 403 ("SAS
+# identifier cannot be found") for a few seconds until the signature
+# propagates to the storage front end, so 403 is retryable here, unlike
+# Graph API calls, where it means missing permissions. Failure text is
+# redacted, since a transport error quotes the URL, SAS signature included.
+_BLOB_POLICY = RetryPolicy(
+    statuses=(403, 408, 429, 500, 502, 503, 504), redact=_redact_sas
+)
+
+
 def _blob_put_with_retry(
     url: str,
     data: bytes,
@@ -525,14 +553,6 @@ def _blob_put_with_retry(
     timeout: int = 300,
 ) -> None:
     """PUTs a payload to Azure Blob Storage, retrying transient failures.
-
-    A freshly provisioned SAS URI can be rejected with HTTP 403 ("SAS
-    identifier cannot be found") for a few seconds until the signature
-    propagates to the storage front end, so 403 is retryable here,
-    unlike Graph API calls, where it means missing permissions. Retries
-    use exponential backoff starting at 2 seconds. Error and log text is
-    redacted, since a transport error quotes the URL, SAS signature
-    included.
 
     Args:
         url: Blob endpoint including the SAS query string.
@@ -546,36 +566,18 @@ def _blob_put_with_retry(
             are exhausted.
 
     """
-    from napt.logging import get_global_logger
-
-    logger = get_global_logger()
-    delay = _BLOB_RETRY_INITIAL_DELAY
-    for attempt in range(1, _BLOB_RETRY_ATTEMPTS + 1):
-        err: Exception | None = None
-        try:
-            resp = requests.put(url, data=data, headers=headers, timeout=timeout)
-        except requests.RequestException as exc:
-            err = exc
-            detail = _redact_sas(str(exc))
-        else:
-            if resp.ok:
-                return
-            detail = _redact_sas(f"HTTP {resp.status_code}\n{resp.text}")
-            if resp.status_code not in _BLOB_RETRY_STATUS:
-                raise NetworkError(f"{context}: {detail}")
-
-        if attempt == _BLOB_RETRY_ATTEMPTS:
-            raise NetworkError(
-                f"{context} after {_BLOB_RETRY_ATTEMPTS} attempts: {detail}"
-            ) from err
-
-        logger.warning(
-            "HTTP",
-            f"{context} ({detail.splitlines()[0]}); "
-            f"retrying in {delay:.0f}s (attempt {attempt}/{_BLOB_RETRY_ATTEMPTS})",
-        )
-        time.sleep(delay)
-        delay *= 2
+    resp = send(
+        "PUT",
+        url,
+        context=context,
+        headers=headers,
+        policy=_BLOB_POLICY,
+        data=data,
+        timeout=timeout,
+    )
+    if not resp.ok:
+        detail = _redact_sas(f"HTTP {resp.status_code}\n{resp.text}")
+        raise NetworkError(f"{context}: {detail}", status_code=resp.status_code)
 
 
 def upload_to_azure_blob(
@@ -625,19 +627,15 @@ def upload_to_azure_blob(
             _blob_put_with_retry(
                 put_url,
                 chunk,
-                headers={
-                    "x-ms-blob-type": "BlockBlob",
-                    "Content-Length": str(len(chunk)),
-                },
+                headers={"x-ms-blob-type": "BlockBlob"},
                 context=f"Azure Blob block upload failed (block {block_index})",
             )
 
             bytes_uploaded += len(chunk)
-            if total_bytes:
-                pct = int(bytes_uploaded * 100 / total_bytes)
-                if pct != last_percent:
-                    logger.progress("UPLOAD", f"{pct}%")
-                    last_percent = pct
+            pct = int(bytes_uploaded * 100 / total_bytes)
+            if pct != last_percent:
+                logger.progress("UPLOAD", f"{pct}%")
+                last_percent = pct
 
             block_index += 1
 

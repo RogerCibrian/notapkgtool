@@ -122,6 +122,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     (`discovery: Missing required field: repo`, `discovery.repo: Must be a
     string`)
 
+- **One Graph session and one retry policy** - Every Graph call, every
+    Azure Storage block upload, and the tenant lookup at `napt auth login`
+    go through one pooled connection, so an upload of many blocks reuses
+    its connection instead of opening one per block, and every call uses
+    the beta endpoint. Block uploads honor
+    `Retry-After` the way Graph calls already did. A 401, 403, or 400
+    names the call that failed and what Graph answered, without guessing
+    at an Intune role or at app metadata as the cause
+
 ### Removed
 
 - **The `jsonpath-ng` dependency** - Replaced by the dotted-path reader
@@ -147,6 +156,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     configuration error, and caught at `napt validate` first
 - A download that failed in transit (a dropped connection mid-file) is
     reported as a network error from the downloader itself
+- `napt upload` with `build_types: both` decrypted and extracted the
+    package once per app entry; it now extracts it once, and not at all
+    when both entries are adopted
+- An app with more than one page of assignments had the later pages
+    dropped when its assignments were read; every page is read now
+- The wait for a new app registration to replicate recognized a 404 by
+    searching the error text; it now checks the status itself
 - Fixed a PSADT download interrupted part-way leaving a partial toolkit in
     the cache that every later build accepted, and the toolkit zip left in
     the cache folder shipping inside every later package. The toolkit is

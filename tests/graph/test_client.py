@@ -259,6 +259,66 @@ def test_graph_request_deadline_stops_retries() -> None:
     sleep_mock.assert_not_called()
 
 
+def test_deadline_surfaces_a_connection_failure_unslept() -> None:
+    """Tests that a transport failure with no budget left is raised at once."""
+    with req_mock.Mocker() as m:
+        m.get(_APP_URL, exc=requests.exceptions.ConnectionError("no route"))
+        with patch(_SLEEP) as sleep_mock:
+            with pytest.raises(NetworkError, match="no route"):
+                graph_request(
+                    "GET",
+                    _APP_URL,
+                    "deadline test",
+                    headers=auth_headers(TOKEN),
+                    deadline=time.monotonic() + 1.0,
+                )
+
+    assert len(m.request_history) == 1
+    sleep_mock.assert_not_called()
+
+
+def test_network_error_carries_the_status() -> None:
+    """Tests that a failed status is readable from the error, not its text."""
+    with req_mock.Mocker() as m:
+        m.get(_APP_URL, status_code=404, text="not found")
+        with pytest.raises(NetworkError) as excinfo:
+            _get()
+
+    assert excinfo.value.status_code == 404
+
+
+def test_forbidden_message_does_not_guess_the_role() -> None:
+    """Tests that a 403 names the call and the refusal, not an Intune role."""
+    with req_mock.Mocker() as m:
+        m.get(_APP_URL, status_code=403, reason="Forbidden", text="denied")
+        with pytest.raises(AuthError) as excinfo:
+            _get()
+
+    message = str(excinfo.value)
+    assert "get app: HTTP 403" in message
+    assert "not allowed" in message
+    assert "app manager" not in message
+
+
+def test_bad_request_message_does_not_guess_a_cause() -> None:
+    """Tests that a 400 reports Graph's refusal without blaming app metadata."""
+    with req_mock.Mocker() as m:
+        m.get(_APP_URL, status_code=400, text="bad filter")
+        with pytest.raises(ConfigError) as excinfo:
+            _get()
+
+    message = str(excinfo.value)
+    assert "rejected the request" in message
+    assert "metadata" not in message
+
+
+def test_session_is_shared() -> None:
+    """Tests that every Graph caller gets the same pooled session."""
+    from napt.graph.client import session
+
+    assert session() is session()
+
+
 @pytest.mark.parametrize(
     ("status", "error"), [(403, AuthError), (400, ConfigError), (503, NetworkError)]
 )

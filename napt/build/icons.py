@@ -57,14 +57,14 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 from napt.exceptions import PackagingError
+from napt.graph.intune import MAX_ICON_BYTES
 from napt.powershell import ps_single_quote
 
 # Frame selection policy: PNG-encoded frames only, at least MIN_ICON_PX wide,
-# at most MAX_ICON_BYTES on disk (Intune rejects icons over 750KB), preferring
-# the frame closest to PREFERRED_ICON_PX from above.
+# at most MAX_ICON_BYTES on disk (Intune's limit), preferring the frame
+# closest to PREFERRED_ICON_PX from above.
 MIN_ICON_PX = 128
 PREFERRED_ICON_PX = 256
-MAX_ICON_BYTES = 700_000
 
 _PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 _ICO_MAGIC = b"\x00\x00\x01\x00"
