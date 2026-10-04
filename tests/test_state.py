@@ -23,6 +23,7 @@ from napt.state.deployment import (
     save_deployment_state,
     summarize_deployment_states,
     working_release,
+    working_release_of,
 )
 
 
@@ -566,3 +567,12 @@ class TestWorkingRelease:
         self._save(tmp_path)
 
         assert working_release(tmp_path, "app") is None
+
+    def test_working_release_of_a_loaded_state(self):
+        """Tests that a caller holding the state gets the same answer."""
+        state = create_default_deployment_state()
+        assert working_release_of(state) is None
+        state["published"] = self.PUBLISHED
+        assert working_release_of(state) == self.PUBLISHED
+        state["pending"] = self.PENDING
+        assert working_release_of(state) == self.PENDING

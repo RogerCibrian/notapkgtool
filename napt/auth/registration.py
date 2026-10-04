@@ -62,10 +62,8 @@ from napt.auth.credentials import (
     remember_tenant,
 )
 from napt.exceptions import AuthError, ConfigError, NetworkError
-from napt.graph.client import graph_request, json_headers
+from napt.graph.client import GRAPH_BASE, auth_headers, graph_request, json_headers
 from napt.version import get_version
-
-_GRAPH_V1 = "https://graph.microsoft.com/v1.0"
 
 # Microsoft Graph Command Line Tools: first-party public client with the
 # loopback redirect registered, used only to obtain the bootstrap token.
@@ -276,13 +274,13 @@ def _bootstrap_token(tenant_id: str) -> str:
 
 
 def _get(token: str, path: str, context: str) -> dict:
-    return graph_request("GET", f"{_GRAPH_V1}{path}", context, json_headers(token))
+    return graph_request("GET", f"{GRAPH_BASE}{path}", context, auth_headers(token))
 
 
 def _post(token: str, path: str, body: dict, context: str) -> dict:
     return graph_request(
         "POST",
-        f"{_GRAPH_V1}{path}",
+        f"{GRAPH_BASE}{path}",
         context,
         json_headers(token),
         json=body,
@@ -291,19 +289,19 @@ def _post(token: str, path: str, body: dict, context: str) -> dict:
 
 
 def _patch(token: str, path: str, body: dict, context: str) -> None:
-    graph_request("PATCH", f"{_GRAPH_V1}{path}", context, json_headers(token), body)
+    graph_request("PATCH", f"{GRAPH_BASE}{path}", context, json_headers(token), body)
 
 
 def _post_after_replication(token: str, path: str, body: dict, context: str) -> dict:
     """POSTs, retrying a 404 that means the target has not replicated yet."""
-    for attempt in range(1, _REPLICATION_ATTEMPTS + 1):
+    for _ in range(1, _REPLICATION_ATTEMPTS):
         try:
             return _post(token, path, body, context)
         except NetworkError as err:
-            if "HTTP 404" not in str(err) or attempt == _REPLICATION_ATTEMPTS:
+            if err.status_code != 404:
                 raise
             time.sleep(_REPLICATION_WAIT)
-    raise NetworkError(f"{context}: retry attempts exhausted")  # pragma: no cover
+    return _post(token, path, body, context)
 
 
 def _graph_permission_ids(token: str) -> tuple[dict[str, str], dict[str, str], str]:

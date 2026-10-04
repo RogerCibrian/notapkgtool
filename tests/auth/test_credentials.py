@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 from azure.core.exceptions import ClientAuthenticationError
 from azure.identity import CredentialUnavailableError
 import pytest
+import requests_mock
 
 from napt.auth import credentials
 from napt.auth.credentials import (
@@ -441,14 +442,9 @@ def test_login_canceled_in_broker_explains_hidden_error(user_dir) -> None:
     assert "correlation_id abc-123" in msg
 
 
-def _org_response(
-    domains: list[dict] | None, name: str | None = "Contoso"
-) -> MagicMock:
-    resp = MagicMock()
-    resp.json.return_value = {
-        "value": [{"displayName": name, "verifiedDomains": domains or []}]
-    }
-    return resp
+def _org_response(domains: list[dict] | None, name: str | None = "Contoso") -> dict:
+    """Builds the body Graph returns for the organization query."""
+    return {"value": [{"displayName": name, "verifiedDomains": domains or []}]}
 
 
 def test_login_stores_tenant_domain_and_name(user_dir) -> None:
@@ -464,8 +460,9 @@ def test_login_stores_tenant_domain_and_name(user_dir) -> None:
     with (
         patch("napt.auth.credentials._build_public_client", return_value=app),
         patch("napt.auth.credentials._broker_available", return_value=False),
-        patch("napt.auth.credentials.requests.get", return_value=org) as get,
+        requests_mock.Mocker() as m,
     ):
+        m.get("https://graph.microsoft.com/beta/organization", json=org)
         login(client_id="cid", tenant_id="tid")
 
     saved = _active_config()
@@ -473,23 +470,48 @@ def test_login_stores_tenant_domain_and_name(user_dir) -> None:
     assert saved.domain == "contoso.com"
     assert saved.display_name == "Contoso"
     assert saved.label == "Contoso (contoso.com)"
-    assert get.call_args.kwargs["headers"]["Authorization"] == f"Bearer {token}"
+    assert m.last_request.headers["Authorization"] == f"Bearer {token}"
+
+
+def test_tenant_lookup_goes_through_the_graph_client(user_dir) -> None:
+    """Tests that the organization call carries the client's request id."""
+    token = _jwt({"preferred_username": "a@contoso.com", "tid": "tid"})
+    app = _fake_app(interactive={"access_token": token})
+    with (
+        patch("napt.auth.credentials._build_public_client", return_value=app),
+        patch("napt.auth.credentials._broker_available", return_value=False),
+        requests_mock.Mocker() as m,
+    ):
+        m.get(
+            "https://graph.microsoft.com/beta/organization",
+            json={
+                "value": [
+                    {
+                        "displayName": "Contoso",
+                        "verifiedDomains": [{"name": "contoso.com", "isDefault": True}],
+                    }
+                ]
+            },
+        )
+        login(client_id="cid", tenant_id="tid")
+
+    assert m.last_request.headers["Authorization"] == f"Bearer {token}"
+    assert m.last_request.headers["client-request-id"]
+    saved = _active_config()
+    assert saved is not None
+    assert saved.label == "Contoso (contoso.com)"
 
 
 def test_login_without_user_read_leaves_label_empty(user_dir) -> None:
     """Tests that a Graph 403 on /organization never blocks or mislabels login."""
-    import requests as _requests
-
     token = _jwt({"preferred_username": "a@msp.com"})
     app = _fake_app(interactive={"access_token": token})
     with (
         patch("napt.auth.credentials._build_public_client", return_value=app),
         patch("napt.auth.credentials._broker_available", return_value=False),
-        patch(
-            "napt.auth.credentials.requests.get",
-            side_effect=_requests.HTTPError("403 Forbidden"),
-        ),
+        requests_mock.Mocker() as m,
     ):
+        m.get("https://graph.microsoft.com/beta/organization", status_code=403)
         status = login(client_id="cid", tenant_id="tid")
 
     assert status.account == "a@msp.com"

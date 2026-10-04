@@ -66,6 +66,7 @@ import logging
 import os
 from pathlib import Path
 import sys
+import time
 from typing import Any
 
 from azure.core.exceptions import ClientAuthenticationError
@@ -76,9 +77,9 @@ from azure.identity import (
 )
 import msal
 import msal_extensions
-import requests
 
-from napt.exceptions import AuthError, ConfigError
+from napt.exceptions import AuthError, ConfigError, NAPTError
+from napt.graph.client import GRAPH_BASE, auth_headers, graph_request
 
 GRAPH_SCOPES = ["https://graph.microsoft.com/.default"]
 
@@ -92,8 +93,9 @@ logging.getLogger("azure.identity").setLevel(logging.ERROR)
 REQUIRED_PERMISSIONS = ("DeviceManagementApps.ReadWrite.All", "Group.Read.All")
 
 AUTHORITY_BASE = "https://login.microsoftonline.com"
-_GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 _AUTH_CONFIG_FILENAME = "auth.json"
+# Seconds the best-effort tenant name lookup may spend, retries included.
+_TENANT_LOOKUP_BUDGET = 15.0
 _TOKEN_CACHE_FILENAME = "token_cache.bin"
 
 # Seconds `napt auth login` waits for the browser round-trip before giving up.
@@ -624,16 +626,18 @@ def _lookup_tenant(token: str) -> tuple[str | None, str | None]:
 
     logger = get_global_logger()
     try:
-        response = requests.get(
-            f"{_GRAPH_BASE}/organization?$select=displayName,verifiedDomains",
-            headers={"Authorization": f"Bearer {token}"},
-            timeout=15,
+        body = graph_request(
+            "GET",
+            f"{GRAPH_BASE}/organization?$select=displayName,verifiedDomains",
+            "tenant lookup",
+            auth_headers(token),
+            deadline=time.monotonic() + _TENANT_LOOKUP_BUDGET,
         )
-        response.raise_for_status()
-        orgs = response.json().get("value") or []
-    except (requests.RequestException, ValueError) as err:
+    except (NAPTError, ValueError) as err:
+        # ValueError: a 200 whose body is not JSON.
         logger.verbose("AUTH", f"Tenant name lookup skipped: {err}")
         return None, None
+    orgs = body.get("value") or []
     if not orgs:
         return None, None
     org = orgs[0]

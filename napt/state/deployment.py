@@ -139,6 +139,21 @@ def working_release(state_dir: Path, recipe_id: str) -> dict[str, Any] | None:
     state = load_deployment_state(
         deployment_state_path(state_dir / "deployment", recipe_id)
     )
+    return working_release_of(state)
+
+
+def working_release_of(state: dict[str, Any]) -> dict[str, Any] | None:
+    """Reads the release the pipeline commands act on from a loaded state.
+
+    The same rule as [working_release][napt.state.deployment.working_release],
+    for a caller that already holds the state.
+
+    Args:
+        state: A loaded deployment state.
+
+    Returns:
+        The pending release, else the published one, else None.
+    """
     return state.get("pending") or state.get("published")
 
 

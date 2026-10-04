@@ -73,6 +73,10 @@ class NetworkError(NAPTError):
     - Network-related version extraction errors (API response parsing
         failures)
 
+    Attributes:
+        status_code: The HTTP status of the failed response, when the error
+            came from one; None for a transport failure or any other cause.
+
     Example:
         Catching network errors:
             ```python
@@ -85,7 +89,15 @@ class NetworkError(NAPTError):
             ```
     """
 
-    pass
+    def __init__(self, message: str, *, status_code: int | None = None) -> None:
+        """Creates the error with its message and, when known, the HTTP status.
+
+        Args:
+            message: What failed, for the user.
+            status_code: The HTTP status of the failed response, if any.
+        """
+        super().__init__(message)
+        self.status_code = status_code
 
 
 class PackagingError(NAPTError):
