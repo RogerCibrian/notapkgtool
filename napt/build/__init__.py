@@ -20,8 +20,13 @@ application.
 
 Modules:
     manager: Package building orchestration (build_package).
-    packager: .intunewin package creation (create_intunewin).
+    installer: Finding the installer to build and reading it once.
+    layout: The versioned build folder, PSADT copy, installer copy, branding.
+    commands: Install/uninstall commands for MSI and MSIX installers.
     template: Invoke-AppDeployToolkit.ps1 generation.
+    scripts: Detection and requirements scripts written beside a build.
+    manifest: The build manifest written by build and read by package and upload.
+    packager: .intunewin package creation (create_intunewin).
     icons: Icon extraction from installers.
     registry_scripts: Detection/requirements script generation (registry).
     msix_scripts: Detection/requirements script generation (MSIX).

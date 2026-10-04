@@ -23,12 +23,17 @@ napt/
 │   └── spec.py                 # Permissions and redirect URIs the registration needs
 │
 ├── build/                   # PSADT package building
-│   ├── _ps_templates.py        # Loads the .ps1 templates for generated scripts
+│   ├── _ps_templates.py        # Loads and writes the .ps1 templates for generated scripts
+│   ├── commands.py             # Install and uninstall commands for MSI and MSIX
 │   ├── icons.py                # App icon extraction from installers
+│   ├── installer.py            # Finding the installer to build and reading it once
+│   ├── layout.py               # Build folder, PSADT and installer copies, branding
 │   ├── manager.py              # Package building orchestration
+│   ├── manifest.py             # The build manifest written by build, read by package and upload
 │   ├── msix_scripts.py         # MSIX detection and requirements scripts
 │   ├── packager.py             # .intunewin package creation
 │   ├── registry_scripts.py     # Registry detection and requirements scripts
+│   ├── scripts.py              # Detection and requirements scripts written beside a build
 │   ├── template.py             # PSADT template generation
 │   └── templates/              # PowerShell templates for the generated scripts
 │

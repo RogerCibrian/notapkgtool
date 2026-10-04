@@ -467,8 +467,8 @@ psadt:
 
 - `path` is resolved relative to the `defaults/` directory (next to
   `org.yaml`), or the recipe's directory when there is no `defaults/org.yaml`.
-  A path that does not exist is skipped with a verbose log line rather than
-  an error.
+  A path that does not exist fails the build, so a typo cannot ship a
+  package with PSADT's default assets.
 - Each mapping copies the first file matching `source` to `target`, appending
   the source file's extension.
   Mappings whose glob matches nothing are skipped.

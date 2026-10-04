@@ -46,7 +46,7 @@ import sys
 import tempfile
 from typing import Literal
 
-from napt.exceptions import ConfigError, PackagingError
+from napt.exceptions import PackagingError
 from napt.powershell import ps_single_quote
 
 # MSI Template platform mapping
@@ -99,9 +99,9 @@ def extract_msi_metadata(file_path: str | Path) -> MSIMetadata:
         MSI metadata including product name, version, and architecture.
 
     Raises:
-        PackagingError: If the MSI file does not exist or extraction fails.
-        ConfigError: If the MSI platform is not supported by Intune.
-        NotImplementedError: If no extraction backend is available on this system.
+        PackagingError: If the MSI file does not exist, no backend can read
+            it on this host, extraction fails, or the MSI platform is not
+            supported by Intune.
 
     Example:
         Extract MSI metadata:
@@ -115,9 +115,9 @@ def extract_msi_metadata(file_path: str | Path) -> MSIMetadata:
             ```
 
     Note:
-        ProductName may be empty string if not found in MSI. The build phase
-        validates ProductName and raises ConfigError if empty, because it is
-        required for detection script generation.
+        ProductName may be an empty string when the MSI has none. The build
+        refuses such an MSI unless the recipe overrides both the display
+        name and the uninstall command, since detection matches on it.
 
     """
     from napt.logging import get_global_logger
@@ -190,17 +190,12 @@ $utf8 = New-Object System.Text.UTF8Encoding $false
                 timeout=10,
                 env={**os.environ, "NAPT_MSI_OUT": str(out_path)},
             )
+            # The script exits 1 before writing when ProductVersion or the
+            # Template is missing, so three lines are always present here.
             output_lines = out_path.read_text(encoding="utf-8-sig").splitlines()
             product_name = output_lines[0] if len(output_lines) > 0 else ""
             product_version = output_lines[1] if len(output_lines) > 1 else ""
             template = output_lines[2] if len(output_lines) > 2 else ""
-
-            if not product_version:
-                raise PackagingError("ProductVersion not found in MSI Property table.")
-            if not template:
-                raise PackagingError(
-                    "Template not found in MSI Summary Information stream."
-                )
 
             architecture = _architecture_from_template(template)
             logger.verbose(
@@ -221,6 +216,10 @@ $utf8 = New-Object System.Text.UTF8Encoding $false
             ) from err
         except subprocess.TimeoutExpired:
             raise PackagingError("PowerShell MSI query timed out") from None
+        except OSError as err:
+            raise PackagingError(
+                f"Cannot read the MSI through PowerShell: {err}"
+            ) from err
         finally:
             out_path.unlink(missing_ok=True)
 
@@ -277,10 +276,9 @@ $utf8 = New-Object System.Text.UTF8Encoding $false
         except subprocess.CalledProcessError as err:
             raise PackagingError(f"msiinfo failed: {err}") from err
 
-    raise NotImplementedError(
-        "MSI metadata extraction is not available on this host. "
-        "On Windows, ensure PowerShell is available. "
-        "On Linux/macOS, install 'msitools'."
+    raise PackagingError(
+        "MSI metadata extraction needs msitools on this host. Install the "
+        "'msitools' package (msiinfo) and run the build again."
     )
 
 
@@ -298,8 +296,8 @@ def _architecture_from_template(template: str) -> Architecture:
         Architecture value: "x86", "x64", or "arm64".
 
     Raises:
-        ConfigError: If the platform is not supported by Intune (Itanium, ARM32)
-            or is unrecognized.
+        PackagingError: If the platform is not supported by Intune (Itanium,
+            ARM32) or is unrecognized.
 
     """
     # Split on semicolon and take only the first token (platform)
@@ -312,7 +310,7 @@ def _architecture_from_template(template: str) -> Architecture:
 
     # Check for unsupported platforms first
     if platform in _UNSUPPORTED_PLATFORMS:
-        raise ConfigError(
+        raise PackagingError(
             f"MSI platform '{platform}' is not supported. "
             f"{_UNSUPPORTED_PLATFORMS[platform]}."
         )
@@ -320,7 +318,7 @@ def _architecture_from_template(template: str) -> Architecture:
     # Map to NAPT architecture
     arch = _TEMPLATE_TO_ARCH.get(platform)
     if arch is None:
-        raise ConfigError(
+        raise PackagingError(
             f"Unknown MSI platform '{platform}' in Template property. "
             f"Expected one of: Intel, x64, AMD64, Arm64."
         )

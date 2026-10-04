@@ -27,7 +27,6 @@ Design Principles:
 
 from __future__ import annotations
 
-from datetime import date
 from pathlib import Path
 import re
 from typing import Any
@@ -63,7 +62,7 @@ def _format_powershell_value(value: Any) -> str:
         # Format as PowerShell array
         items = [_format_powershell_value(item) for item in value]
         return f"@({', '.join(items)})"
-    elif value is None or value == "":
+    elif value is None:
         return "''"
     else:
         # Fallback: convert to string and quote
@@ -152,33 +151,24 @@ def _build_adtsession_vars(
 
     Note:
         psadt.app_vars is the already-deep-merged result from code defaults,
-        org.yaml, vendor.yaml, and the recipe. No manual merge needed here.
-        String values get {{discovered_version}} and {{installer_filename}}
-        substituted.
-        Auto-generates AppScriptDate if not set.
+        org.yaml, vendor.yaml, and the recipe, with AppScriptDate filled in
+        by the config loader. String values get {{discovered_version}} and
+        {{installer_filename}} substituted.
         AppArch is set automatically from architecture (skipped for "any").
         DeployAppScriptVersion is always set to psadt_version.
     """
-    # psadt.app_vars is already fully merged by the config loader
-    merged_vars = dict(config.get("psadt", {}).get("app_vars", {}))
+    merged_vars = dict(config["psadt"]["app_vars"])
 
     for key, value in merged_vars.items():
         if isinstance(value, str):
             merged_vars[key] = _substitute_variables(value, version, installer_filename)
             _warn_unrecognized_tokens(merged_vars[key], f"psadt.app_vars.{key}")
 
-    # Add auto-generated fields
-    merged_vars.setdefault("AppScriptDate", date.today().strftime("%Y-%m-%d"))
     merged_vars["DeployAppScriptVersion"] = psadt_version
 
     # Auto-populate AppArch from installer architecture ("any" means unset)
-    if architecture and architecture != "any":
+    if architecture != "any":
         merged_vars["AppArch"] = architecture
-
-    # Add vendor if available
-    vendor = config.get("vendor", "")
-    if vendor:
-        merged_vars.setdefault("AppVendor", vendor)
 
     return merged_vars
 
@@ -197,7 +187,7 @@ def _replace_session_block(template: str, vars_dict: dict[str, Any]) -> str:
         Script with replaced $adtSession block.
 
     Raises:
-        RuntimeError: If $adtSession block cannot be found in template.
+        PackagingError: If $adtSession block cannot be found in template.
     """
     # Find the $adtSession = @{ ... } block
     # Pattern matches from $adtSession = @{ to the closing }
@@ -225,10 +215,41 @@ def _replace_session_block(template: str, vars_dict: dict[str, Any]) -> str:
     return result
 
 
+_INSTALL_MARKER = "    ## <Perform Installation tasks here>"
+_UNINSTALL_MARKER = "    ## <Perform Uninstallation tasks here>"
+
+
+def _insert_after_marker(script: str, marker: str, code: str) -> str:
+    """Inserts recipe code below a PSADT marker line, indented to match.
+
+    Args:
+        script: The generated script.
+        marker: The marker line the code goes under.
+        code: PowerShell code from the recipe.
+
+    Returns:
+        The script with the code in place.
+
+    Raises:
+        PackagingError: If the template has no such marker, since the code
+            would otherwise be dropped and the package would do nothing.
+    """
+    if marker not in script:
+        raise PackagingError(
+            f"PSADT template has no '{marker.strip()}' marker, so the recipe's "
+            "code has nowhere to go. Template may be from an unsupported PSADT "
+            "version."
+        )
+    indented = "\n".join(
+        "    " + line if line.strip() else line for line in code.strip().split("\n")
+    )
+    return script.replace(marker, f"{marker}\n{indented}")
+
+
 def _insert_recipe_code(
     script: str, install_code: str | None, uninstall_code: str | None
 ) -> str:
-    """Insert recipe install/uninstall code at marker positions.
+    """Inserts recipe install/uninstall code at the PSADT marker positions.
 
     Args:
         script: Generated script with placeholders.
@@ -238,35 +259,18 @@ def _insert_recipe_code(
     Returns:
         Script with recipe code inserted.
 
+    Raises:
+        PackagingError: If code is given for a marker the template lacks.
+
     Note:
-        Replaces these PSADT markers:
+        Inserts below these PSADT markers:
         - "## <Perform Installation tasks here>"
         - "## <Perform Uninstallation tasks here>"
     """
     if install_code:
-        # Ensure proper indentation (4 spaces to match PSADT style)
-        indented_install = "\n".join(
-            "    " + line if line.strip() else line
-            for line in install_code.strip().split("\n")
-        )
-
-        script = script.replace(
-            "    ## <Perform Installation tasks here>",
-            f"    ## <Perform Installation tasks here>\n{indented_install}",
-        )
-
+        script = _insert_after_marker(script, _INSTALL_MARKER, install_code)
     if uninstall_code:
-        # Ensure proper indentation
-        indented_uninstall = "\n".join(
-            "    " + line if line.strip() else line
-            for line in uninstall_code.strip().split("\n")
-        )
-
-        script = script.replace(
-            "    ## <Perform Uninstallation tasks here>",
-            f"    ## <Perform Uninstallation tasks here>\n{indented_uninstall}",
-        )
-
+        script = _insert_after_marker(script, _UNINSTALL_MARKER, uninstall_code)
     return script
 
 
@@ -301,7 +305,8 @@ def generate_invoke_script(
         Generated PowerShell script text.
 
     Raises:
-        PackagingError: If template doesn't exist or template parsing fails.
+        PackagingError: If the template does not exist, lacks the
+            $adtSession block, or lacks a marker the recipe's code needs.
 
     Example:
         Generate deployment script from template:
@@ -345,7 +350,7 @@ def generate_invoke_script(
     logger.verbose("BUILD", "[OK] Replaced $adtSession hashtable")
 
     # Insert recipe code
-    psadt_config = config.get("psadt", {})
+    psadt_config = config["psadt"]
     install_code = psadt_config.get("install")
     uninstall_code = psadt_config.get("uninstall")
 

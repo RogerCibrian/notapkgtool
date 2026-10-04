@@ -55,7 +55,7 @@ class TestBuildStructureValidation:
 
     def test_verify_valid_real_build(self, real_psadt_template: Path, tmp_path: Path):
         """Test validation passes for real PSADT build."""
-        from napt.build.manager import _copy_psadt_template
+        from napt.build.layout import copy_psadt_template as _copy_psadt_template
 
         build_dir = tmp_path / "build"
         build_dir.mkdir()
@@ -70,7 +70,7 @@ class TestBuildStructureValidation:
         self, real_psadt_template: Path, tmp_path: Path
     ):
         """Test validation fails when Invoke-AppDeployToolkit.exe missing."""
-        from napt.build.manager import _copy_psadt_template
+        from napt.build.layout import copy_psadt_template as _copy_psadt_template
 
         build_dir = tmp_path / "build"
         build_dir.mkdir()
@@ -91,7 +91,7 @@ class TestBuildStructureValidation:
         """Test validation fails when PSAppDeployToolkit directory missing."""
         import shutil
 
-        from napt.build.manager import _copy_psadt_template
+        from napt.build.layout import copy_psadt_template as _copy_psadt_template
 
         build_dir = tmp_path / "build"
         build_dir.mkdir()

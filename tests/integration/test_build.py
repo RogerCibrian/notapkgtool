@@ -17,10 +17,10 @@ from pathlib import Path
 
 import pytest
 
-from napt.build.manager import (
-    _apply_branding,
-    _copy_installer,
-    _copy_psadt_template,
+from napt.build.layout import (
+    apply_branding as _apply_branding,
+    copy_installer as _copy_installer,
+    copy_psadt_template as _copy_psadt_template,
 )
 
 

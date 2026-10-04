@@ -13,7 +13,6 @@ from pathlib import Path
 
 import pytest
 
-from napt.build.manager import sanitize_filename
 from napt.build.registry_scripts import (
     DetectionConfig,
     generate_detection_script,
@@ -36,7 +35,6 @@ class TestDetectionConfig:
         assert config.version == "1.0.0"
         assert config.log_rotation_mb == 3
         assert config.exact_match is False
-        assert config.app_id == ""
         assert config.is_msi_installer is False
         assert config.expected_architecture == "any"
         assert config.use_wildcard is False
@@ -48,7 +46,6 @@ class TestDetectionConfig:
             version="2.5.0",
             log_rotation_mb=10,
             exact_match=True,
-            app_id="custom-app",
             is_msi_installer=True,
         )
 
@@ -56,7 +53,6 @@ class TestDetectionConfig:
         assert config.version == "2.5.0"
         assert config.log_rotation_mb == 10
         assert config.exact_match is True
-        assert config.app_id == "custom-app"
         assert config.is_msi_installer is True
 
     def test_default_is_msi_installer(self):
@@ -77,30 +73,6 @@ class TestDetectionConfig:
         )
 
         assert config.is_msi_installer is True
-
-
-class TestSanitizeFilename:
-    """Tests for sanitize_filename function."""
-
-    def test_basic_sanitization(self):
-        """Test basic sanitization of app names."""
-        assert sanitize_filename("Google Chrome") == "Google-Chrome"
-        assert sanitize_filename("My App v2.0") == "My-App-v2.0"
-
-    def test_removes_invalid_chars(self):
-        """Test removal of invalid Windows filename characters."""
-        assert sanitize_filename("Test<>App") == "TestApp"
-        assert sanitize_filename('App:Name|"Test"') == "AppNameTest"
-
-    def test_fallback_to_app_id(self):
-        """Test fallback to app_id when name becomes empty."""
-        assert sanitize_filename("  ", "my-app") == "my-app"
-        assert sanitize_filename("", "test") == "test"
-
-    def test_fallback_to_default(self):
-        """Test fallback to 'app' when name and app_id are empty."""
-        assert sanitize_filename("") == "app"
-        assert sanitize_filename("   ") == "app"
 
 
 class TestGenerateDetectionScript:

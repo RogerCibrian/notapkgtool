@@ -35,7 +35,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `auth` do
 - **Ctrl-C ends a command cleanly** - Exit code 130 and an `Interrupted.`
     line instead of a traceback
-
+- **BREAKING: A missing brand pack folder fails the build** - A configured
+    `psadt.brand_pack.path` that does not exist used to be skipped with a
+    verbose-only note, so a typo shipped a package with PSADT's default
+    assets. `napt build` now stops and names the path
+- **`napt build` checks the recipe before touching the build folder** - An
+    EXE recipe missing `display_name`, `architecture`, or its install
+    commands used to fail after that version's build folder had been
+    cleared and PSADT copied in; every such check now runs before anything
+    is written
+- **One metadata read per MSI build** - The MSI was opened twice (once for
+    its version, once for its architecture), and the detection settings
+    were resolved once per generated script, so each "will be ignored"
+    warning printed twice. Both now happen once
+- **Installer problems are reported as build errors** - An MSI for an
+    unsupported platform, an MSIX for an unsupported architecture, or an
+    MSI with no ProductName are faults in the installer, and are now
+    reported as such rather than as configuration errors. A machine with no
+    way to read an MSI (no PowerShell on Windows, no msitools elsewhere)
+    gets the same kind of error instead of a traceback
 - **BREAKING: `napt package` keeps other versions' packages** - The
     previous version's package folder used to be deleted before the new
     one was made (and before the packaging tool was even fetched), so a
@@ -155,6 +173,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A PSADT template without the install or uninstall marker made `napt
+    build` drop the recipe's commands silently; it now fails naming the
+    missing marker
 - `napt build` sends `GITHUB_TOKEN` on the PSADT release lookups, as its
     documentation promised; the calls used to count against the shared
     unauthenticated limit
