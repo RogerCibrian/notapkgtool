@@ -10,12 +10,17 @@ Tests configuration loading and merging including:
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import pytest
 
 from napt.config.defaults import DEFAULT_CONFIG, ORG_YAML_TEMPLATE
-from napt.config.loader import collect_recipe_paths, load_effective_config
+from napt.config.loader import (
+    collect_recipe_paths,
+    load_effective_config,
+    resolve_state_dir,
+)
 from napt.exceptions import ConfigError
 
 
@@ -926,3 +931,33 @@ class TestCollectRecipePaths:
         """Tests that a directory without recipes is a ConfigError."""
         with pytest.raises(ConfigError, match="No recipe files"):
             collect_recipe_paths(tmp_test_dir)
+
+
+class TestResolveStateDir:
+    """Tests for the state directory a command reads from configuration."""
+
+    @staticmethod
+    def _recipe(tmp_test_dir, extra: str = "") -> Path:
+        recipes = tmp_test_dir / "recipes"
+        recipes.mkdir()
+        recipe = recipes / "app.yaml"
+        recipe.write_text(
+            "apiVersion: napt/v1\nname: App\nid: app\n"
+            "discovery:\n  strategy: url_download\n"
+            "  url: https://example.com/app.msi\n" + extra,
+            encoding="utf-8",
+        )
+        return recipe
+
+    def test_resolves_configured_state_dir(self, tmp_test_dir):
+        """Tests that directories.state is read from the first recipe."""
+        recipe = self._recipe(tmp_test_dir, "directories:\n  state: customstate\n")
+
+        assert resolve_state_dir(recipe) == Path("customstate")
+        assert resolve_state_dir(recipe.parent) == Path("customstate")
+
+    def test_default_state_dir(self, tmp_test_dir):
+        """Tests that the built-in default resolves to state."""
+        recipe = self._recipe(tmp_test_dir)
+
+        assert resolve_state_dir(recipe) == Path("state")

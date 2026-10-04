@@ -24,13 +24,13 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from napt.config.loader import load_effective_config
+from napt.cli.common import add_output_flags
 from napt.exceptions import NAPTError
-from napt.logging import get_logger, set_global_logger
-from napt.results import ValidationResult
-from napt.validation import validate_recipe, validate_recipes
+
+if TYPE_CHECKING:
+    from napt.results import ValidationResult
 
 
 def _print_provenance(
@@ -67,6 +67,8 @@ def _print_provenance_block(recipe_path: Path) -> None:
     Args:
         recipe_path: The recipe whose configuration to describe.
     """
+    from napt.config.loader import load_effective_config
+
     try:
         config = load_effective_config(recipe_path)
         provenance = config.get("_provenance")
@@ -166,11 +168,9 @@ def cmd_validate(args: argparse.Namespace) -> int:
         Prints validation results, errors, and warnings to stdout.
 
     """
-    # Configure global logger
-    logger = get_logger(verbose=args.verbose, debug=args.debug)
-    set_global_logger(logger)
+    from napt.validation import validate_recipe, validate_recipes
 
-    recipe_path = Path(args.recipe).resolve()
+    recipe_path = args.recipe.resolve()
 
     if recipe_path.is_dir():
         print(f"Validating recipes under: {recipe_path}")
@@ -198,7 +198,8 @@ def cmd_validate(args: argparse.Namespace) -> int:
     result = validate_recipe(recipe_path)
     _print_single(result)
 
-    # Show provenance in debug mode (useful for both valid and invalid recipes)
+    # Show provenance in debug mode. An invalid recipe cannot be merged, so
+    # the block then says the provenance is unavailable.
     if args.debug:
         _print_provenance_block(recipe_path)
 
@@ -235,18 +236,8 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     )
     parser_validate.add_argument(
         "recipe",
+        type=Path,
         help="Path to a recipe YAML file, or a directory of recipes",
     )
-    parser_validate.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Show validation progress and details",
-    )
-    parser_validate.add_argument(
-        "-d",
-        "--debug",
-        action="store_true",
-        help="Show detailed debugging output (implies --verbose)",
-    )
+    add_output_flags(parser_validate)
     parser_validate.set_defaults(func=cmd_validate)

@@ -14,8 +14,8 @@
 
 """The `napt upload` command.
 
-Uploads the packaged .intunewin file for a recipe to Microsoft Intune via
-the Graph API.
+Uploads the .intunewin package of the release recorded in deployment
+state for a recipe to Microsoft Intune via the Graph API.
 """
 
 from __future__ import annotations
@@ -23,31 +23,24 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from napt.exceptions import (
-    AuthError,
-    ConfigError,
-    NAPTError,
-    NetworkError,
-    PackagingError,
-)
-from napt.logging import get_logger, set_global_logger
-from napt.upload.manager import upload_package
+from napt.cli.common import add_output_flags, add_state_dir
 
 
 def cmd_upload(args: argparse.Namespace) -> int:
     """Handler for 'napt upload' command.
 
-    Uploads the .intunewin package for a recipe to Microsoft Intune via the
-    Graph API. Infers the package path from the recipe's app ID. Authentication
+    Uploads the .intunewin package of the release deployment state records
+    (pending, else published) for a recipe to Microsoft Intune via the
+    Graph API; with no recorded release, the only package. Authentication
     uses service principal / OIDC environment variables when set, otherwise
     the session saved by 'napt auth login'.
 
     Args:
-        args: Parsed command-line arguments containing recipe path and
-            debug flags.
+        args: Parsed command-line arguments containing recipe path,
+            directory overrides, and debug flags.
 
     Returns:
-        Exit code (0 for success, 1 for failure).
+        Exit code (0 for success).
 
     Note:
         Run 'napt package' before this command to create the .intunewin file.
@@ -55,51 +48,23 @@ def cmd_upload(args: argparse.Namespace) -> int:
         creating duplicates; --force re-sends metadata and content to them.
         Developers: run 'napt auth login' once. CI/CD: set AZURE_CLIENT_ID,
         AZURE_TENANT_ID and AZURE_CLIENT_SECRET, or use OIDC federation.
+        Failures raise NAPT errors for
+        [run_handler][napt.cli.common.run_handler] to report.
 
     """
-    # Configure global logger
-    logger = get_logger(verbose=args.verbose, debug=args.debug)
-    set_global_logger(logger)
+    from napt.upload.manager import upload_package
 
-    recipe_path = Path(args.recipe).resolve()
-
-    if not recipe_path.exists():
-        print(f"Error: Recipe file not found: {recipe_path}")
-        return 1
+    recipe_path = args.recipe.resolve()
 
     print(f"Uploading package for recipe: {recipe_path}")
     print()
 
-    try:
-        result = upload_package(recipe_path, force=args.force)
-    except ConfigError as err:
-        print(f"Error: {err}")
-        if args.verbose or args.debug:
-            import traceback
-
-            traceback.print_exc()
-        return 1
-    except AuthError as err:
-        print(f"Authentication error: {err}")
-        if args.verbose or args.debug:
-            import traceback
-
-            traceback.print_exc()
-        return 1
-    except (NetworkError, PackagingError) as err:
-        print(f"Error: {err}")
-        if args.verbose or args.debug:
-            import traceback
-
-            traceback.print_exc()
-        return 1
-    except NAPTError as err:
-        print(f"Error: {err}")
-        if args.verbose or args.debug:
-            import traceback
-
-            traceback.print_exc()
-        return 1
+    result = upload_package(
+        recipe_path,
+        force=args.force,
+        state_dir=args.state_dir,
+        packages_dir=args.packages_dir,
+    )
 
     # Display results
     print("=" * 70)
@@ -131,8 +96,10 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         "upload",
         help="Upload .intunewin package to Microsoft Intune",
         description=(
-            "Upload the most recent .intunewin package for a recipe to "
-            "Microsoft Intune via the Graph API.\n\n"
+            "Upload the .intunewin package of the release recorded in "
+            "deployment state (pending, else published) for a recipe to "
+            "Microsoft Intune via the Graph API; with no recorded release, "
+            "the only package.\n\n"
             "Authentication:\n"
             "  CI/CD:       AZURE_CLIENT_ID + AZURE_TENANT_ID + AZURE_CLIENT_SECRET,\n"
             "               or OIDC federation (azure/login)\n"
@@ -146,6 +113,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     )
     parser_upload.add_argument(
         "recipe",
+        type=Path,
         help="Path to the recipe YAML file",
     )
     parser_upload.add_argument(
@@ -158,15 +126,15 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         ),
     )
     parser_upload.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Show progress and high-level status updates",
+        "--packages-dir",
+        type=Path,
+        default=None,
+        help="Directory containing the packages (default: from config or ./packages)",
     )
-    parser_upload.add_argument(
-        "-d",
-        "--debug",
-        action="store_true",
-        help="Show detailed debugging output (implies --verbose)",
+    add_state_dir(
+        parser_upload,
+        "State root whose deployment/ folder records the release "
+        "(default: from config or ./state)",
     )
+    add_output_flags(parser_upload)
     parser_upload.set_defaults(func=cmd_upload)

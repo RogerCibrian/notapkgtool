@@ -27,8 +27,8 @@ class TestCmdValidate:
             warnings=[],
             recipe_path=str(recipe),
         )
-        with patch("napt.cli.validate.validate_recipe", return_value=mock_result):
-            assert cmd_validate(_args(recipe=str(recipe))) == 0
+        with patch("napt.validation.validate_recipe", return_value=mock_result):
+            assert cmd_validate(_args(recipe=recipe)) == 0
         out = capsys.readouterr().out
         assert "[SUCCESS]" in out
         assert "App Count:   1" in out
@@ -44,8 +44,8 @@ class TestCmdValidate:
             warnings=[],
             recipe_path=str(recipe),
         )
-        with patch("napt.cli.validate.validate_recipe", return_value=mock_result):
-            assert cmd_validate(_args(recipe=str(recipe))) == 1
+        with patch("napt.validation.validate_recipe", return_value=mock_result):
+            assert cmd_validate(_args(recipe=recipe)) == 1
         out = capsys.readouterr().out
         assert "[FAILED]" in out
         assert "Missing required field: id" in out
@@ -62,8 +62,8 @@ class TestCmdValidate:
             warnings=["Unknown field 'foo'"],
             recipe_path=str(recipe),
         )
-        with patch("napt.cli.validate.validate_recipe", return_value=mock_result):
-            assert cmd_validate(_args(recipe=str(recipe))) == 0
+        with patch("napt.validation.validate_recipe", return_value=mock_result):
+            assert cmd_validate(_args(recipe=recipe)) == 0
         out = capsys.readouterr().out
         assert "[WARNING]" in out
         assert "Unknown field 'foo'" in out
@@ -79,8 +79,8 @@ class TestCmdValidate:
             warnings=[],
             recipe_path=str(recipe),
         )
-        with patch("napt.cli.validate.validate_recipe", return_value=mock_result):
-            cmd_validate(_args(recipe=str(recipe)))
+        with patch("napt.validation.validate_recipe", return_value=mock_result):
+            cmd_validate(_args(recipe=recipe))
         out = capsys.readouterr().out
         assert "Error one" in out
         assert "Error two" in out
@@ -99,8 +99,8 @@ class TestCmdValidate:
             recipe_path=str(recipe),
             parent_path=str(tmp_path / "base.yaml"),
         )
-        with patch("napt.cli.validate.validate_recipe", return_value=result):
-            assert cmd_validate(_args(recipe=str(recipe))) == 0
+        with patch("napt.validation.validate_recipe", return_value=result):
+            assert cmd_validate(_args(recipe=recipe)) == 0
         out = capsys.readouterr().out
         assert f"Parent:      {tmp_path / 'base.yaml'}" in out
 
@@ -115,8 +115,8 @@ class TestCmdValidate:
             app_count=1,
             recipe_path=str(recipe),
         )
-        with patch("napt.cli.validate.validate_recipe", return_value=result):
-            cmd_validate(_args(recipe=str(recipe)))
+        with patch("napt.validation.validate_recipe", return_value=result):
+            cmd_validate(_args(recipe=recipe))
         out = capsys.readouterr().out
         assert "Parent:" not in out
 
@@ -138,10 +138,10 @@ class TestDebugProvenance:
         recipe = self._valid_recipe(tmp_path)
 
         with patch(
-            "napt.cli.validate.load_effective_config",
+            "napt.config.loader.load_effective_config",
             side_effect=ConfigError("merge failed"),
         ):
-            code = cmd_validate(_args(recipe=str(recipe), debug=True))
+            code = cmd_validate(_args(recipe=recipe, debug=True))
 
         assert code == 0
         assert "Provenance unavailable: merge failed" in capsys.readouterr().out
@@ -151,11 +151,11 @@ class TestDebugProvenance:
         recipe = self._valid_recipe(tmp_path)
 
         with patch(
-            "napt.cli.validate.load_effective_config",
+            "napt.config.loader.load_effective_config",
             side_effect=TypeError("bug"),
         ):
             with pytest.raises(TypeError):
-                cmd_validate(_args(recipe=str(recipe), debug=True))
+                cmd_validate(_args(recipe=recipe, debug=True))
 
 
 class TestDirectoryMode:
@@ -184,7 +184,7 @@ class TestDirectoryMode:
             "discovery:\n  strategy: url_download\n  url: https://x/b.msi\n",
         )
 
-        assert cmd_validate(_args(recipe=str(recipes))) == 0
+        assert cmd_validate(_args(recipe=recipes)) == 0
 
         out = capsys.readouterr().out
         assert "[OK]" in out
@@ -204,7 +204,7 @@ class TestDirectoryMode:
         )
         self._write(recipes, "two.yaml", "apiVersion: napt/v1\nname: Two\nid: two\n")
 
-        assert cmd_validate(_args(recipe=str(recipes))) == 1
+        assert cmd_validate(_args(recipe=recipes)) == 1
 
         out = capsys.readouterr().out
         assert "[OK]" in out
@@ -225,7 +225,7 @@ class TestDirectoryMode:
             recipes, "base.override.yaml", "apiVersion: napt/v1\nparent: base.yaml\n"
         )
 
-        assert cmd_validate(_args(recipe=str(recipes))) == 1
+        assert cmd_validate(_args(recipe=recipes)) == 1
 
         out = capsys.readouterr().out
         assert "Recipe id 'one' is declared by both" in out
@@ -241,7 +241,7 @@ class TestDirectoryMode:
             "intune:\n  colour: blue\n",
         )
 
-        assert cmd_validate(_args(recipe=str(recipes))) == 0
+        assert cmd_validate(_args(recipe=recipes)) == 0
 
         out = capsys.readouterr().out
         assert "[OK]" in out
@@ -263,7 +263,7 @@ class TestDirectoryMode:
             "discovery:\n  strategy: url_download\n  url: https://x/b.msi\n",
         )
 
-        assert cmd_validate(_args(recipe=str(recipes), debug=True)) == 0
+        assert cmd_validate(_args(recipe=recipes, debug=True)) == 0
 
         out = capsys.readouterr().out
         assert out.count("CONFIGURATION PROVENANCE") == 2

@@ -21,11 +21,10 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Any
 
-from napt.config.defaults import ORG_YAML_TEMPLATE
+from napt.cli.common import add_output_flags
 from napt.exceptions import ConfigError
-from napt.logging import get_logger, set_global_logger
+from napt.logging import get_global_logger
 
 
 def cmd_init(args: argparse.Namespace) -> int:
@@ -41,27 +40,21 @@ def cmd_init(args: argparse.Namespace) -> int:
             directory path, force flag, and debug flags.
 
     Returns:
-        Exit code (0 for success, 1 for failure).
+        Exit code (0 for success).
 
     Note:
         By default, existing files are skipped (not overwritten).
         Use --force to backup existing files and create fresh ones.
+        Failures raise NAPT errors for
+        [run_handler][napt.cli.common.run_handler] to report.
 
     """
-    # Configure global logger
-    logger = get_logger(verbose=args.verbose, debug=args.debug)
-    set_global_logger(logger)
-
-    target_dir = Path(args.directory).resolve()
+    target_dir = args.directory.resolve()
 
     print(f"Initializing NAPT project in: {target_dir}")
     print()
 
-    try:
-        created, skipped, backed_up = _create_layout(target_dir, args.force, logger)
-    except ConfigError as err:
-        print(f"Error: {err}")
-        return 1
+    created, skipped, backed_up = _create_layout(target_dir, args.force)
 
     # Display results
     print()
@@ -101,14 +94,13 @@ def cmd_init(args: argparse.Namespace) -> int:
 
 
 def _create_layout(
-    target_dir: Path, force: bool, logger: Any
+    target_dir: Path, force: bool
 ) -> tuple[list[str], list[str], list[str]]:
     """Creates the project folders and the org.yaml template.
 
     Args:
         target_dir: The project root.
         force: Whether to back up an existing org.yaml and write a fresh one.
-        logger: The command's logger.
 
     Returns:
         A tuple (created, skipped, backed_up), where
@@ -120,7 +112,7 @@ def _create_layout(
         ConfigError: If a folder or file cannot be created there.
     """
     try:
-        return _create_layout_files(target_dir, force, logger)
+        return _create_layout_files(target_dir, force)
     except OSError as err:
         raise ConfigError(
             f"Cannot initialize a project in {target_dir}: {err}"
@@ -128,14 +120,13 @@ def _create_layout(
 
 
 def _create_layout_files(
-    target_dir: Path, force: bool, logger: Any
+    target_dir: Path, force: bool
 ) -> tuple[list[str], list[str], list[str]]:
     """Does the file system work of [_create_layout][napt.cli.init._create_layout].
 
     Args:
         target_dir: The project root.
         force: Whether to back up an existing org.yaml and write a fresh one.
-        logger: The command's logger.
 
     Returns:
         The same tuple as
@@ -144,6 +135,10 @@ def _create_layout_files(
     Raises:
         OSError: If a folder or file cannot be created.
     """
+    from napt.config.defaults import ORG_YAML_TEMPLATE
+
+    logger = get_global_logger()
+
     # Track what we create/skip
     created: list[str] = []
     skipped: list[str] = []
@@ -242,7 +237,8 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     parser_init.add_argument(
         "directory",
         nargs="?",
-        default=".",
+        type=Path,
+        default=Path("."),
         help="Directory to initialize (default: current directory)",
     )
     parser_init.add_argument(
@@ -250,16 +246,5 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         action="store_true",
         help="Backup and overwrite existing configuration files",
     )
-    parser_init.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Show detailed initialization steps",
-    )
-    parser_init.add_argument(
-        "-d",
-        "--debug",
-        action="store_true",
-        help="Show detailed debugging output (implies --verbose)",
-    )
+    add_output_flags(parser_init)
     parser_init.set_defaults(func=cmd_init)

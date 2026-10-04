@@ -18,8 +18,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`napt validate` checks a directory** - Every recipe under it is
     validated, and two files that resolve to the same id are reported, the
     same check `napt promote` makes
+- **`napt upload` takes `--state-dir` and `--packages-dir`** - The same
+    overrides `napt package` takes, so an upload can follow a package run
+    that used them instead of reading the configured directories
 
 ### Changed
+
+- **`napt status` reads `directories.state` from configuration** - Like
+    every other command, instead of a fixed `state` directory, so it
+    summarizes the state the pipeline wrote to. It takes an optional recipe
+    file or directory (default `recipes/`) to read the setting from;
+    `--state-dir` still overrides it
+- **Commands that never talk to a tenant start faster** - `validate`,
+    `discover`, `build`, `package`, `init`, and `status` no longer load the
+    Azure authentication libraries at startup; only `upload`, `promote`, and
+    `auth` do
+- **Ctrl-C ends a command cleanly** - Exit code 130 and an `Interrupted.`
+    line instead of a traceback
 
 - **BREAKING: `napt package` keeps other versions' packages** - The
     previous version's package folder used to be deleted before the new

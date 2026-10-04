@@ -23,9 +23,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from napt.discovery.manager import discover_recipe
-from napt.exceptions import ConfigError, NAPTError, NetworkError, PackagingError
-from napt.logging import get_logger, set_global_logger
+from napt.cli.common import add_output_flags, add_state_dir
 
 
 def cmd_discover(args: argparse.Namespace) -> int:
@@ -45,53 +43,32 @@ def cmd_discover(args: argparse.Namespace) -> int:
             and flags.
 
     Returns:
-        Exit code (0 for success, 1 for failure).
+        Exit code (0 for success).
 
     Note:
         Downloads installer file to output_dir (or reuses an earlier
         download). Updates the app's deployment state file with the
-        pending release. Prints progress and results to stdout. Prints
-        errors with optional traceback if verbose/debug.
+        pending release. Prints progress and results to stdout. Failures
+        raise NAPT errors for [run_handler][napt.cli.common.run_handler]
+        to report.
 
     """
-    # Configure global logger
-    logger = get_logger(verbose=args.verbose, debug=args.debug)
-    set_global_logger(logger)
+    from napt.discovery.manager import discover_recipe
 
-    recipe_path = Path(args.recipe).resolve()
-    output_dir = Path(args.output_dir).resolve() if args.output_dir else None
-
-    if not recipe_path.exists():
-        print(f"Error: Recipe file not found: {recipe_path}")
-        return 1
+    recipe_path = args.recipe.resolve()
+    output_dir = args.output_dir.resolve() if args.output_dir else None
 
     print(f"Discovering version for recipe: {recipe_path}")
     if output_dir:
         print(f"Output directory: {output_dir}")
     print()
 
-    try:
-        result = discover_recipe(
-            recipe_path,
-            output_dir,
-            state_dir=args.state_dir,
-            stateless=args.stateless,
-        )
-    except (ConfigError, NetworkError, PackagingError) as err:
-        print(f"Error: {err}")
-        if args.verbose or args.debug:
-            import traceback
-
-            traceback.print_exc()
-        return 1
-    except NAPTError as err:
-        # Catch any other NAPT errors we might have missed
-        print(f"Error: {err}")
-        if args.verbose or args.debug:
-            import traceback
-
-            traceback.print_exc()
-        return 1
+    result = discover_recipe(
+        recipe_path,
+        output_dir,
+        state_dir=args.state_dir,
+        stateless=args.stateless,
+    )
 
     # Display results
     print("=" * 70)
@@ -134,37 +111,24 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     )
     parser_discover.add_argument(
         "recipe",
+        type=Path,
         help="Path to the recipe YAML file",
     )
     parser_discover.add_argument(
         "--output-dir",
+        type=Path,
         default=None,
         help="Directory to save downloaded files (default: from config or ./downloads)",
     )
-    parser_discover.add_argument(
-        "--state-dir",
-        type=Path,
-        default=None,
-        help=(
-            "State root; deployment state is written to <dir>/deployment/ "
-            "(default: directories.state, ./state)"
-        ),
+    add_state_dir(
+        parser_discover,
+        "State root; deployment state is written to <dir>/deployment/ "
+        "(default: directories.state, ./state)",
     )
     parser_discover.add_argument(
         "--stateless",
         action="store_true",
         help="Do not read or write deployment state (no pending release is recorded)",
     )
-    parser_discover.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Show progress and high-level status updates",
-    )
-    parser_discover.add_argument(
-        "-d",
-        "--debug",
-        action="store_true",
-        help="Show detailed debugging output (implies --verbose)",
-    )
+    add_output_flags(parser_discover)
     parser_discover.set_defaults(func=cmd_discover)

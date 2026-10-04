@@ -194,9 +194,13 @@ Domain types and internal types stay co-located with their logic.
 
 ## CLI Structure
 
-**Strict one module per top-level command.** `napt/cli/<command>.py` owns everything about `napt <command>`: its `cmd_*` handler(s), its parser definition in a `register(subparsers)` hook, and any helpers only that command uses. `napt/cli/main.py` only assembles the top-level parser, calls each module's `register`, and dispatches — no command logic there.
+**Strict one module per top-level command.** `napt/cli/<command>.py` owns everything about `napt <command>`: its `cmd_*` handler(s), its parser definition in a `register(subparsers)` hook, and any helpers only that command uses. `napt/cli/main.py` only assembles the top-level parser, calls each module's `register`, and dispatches; no command logic there.
 
-**Adding a command:** create `napt/cli/<command>.py` with `cmd_<command>` and `register`, call `register` from `main()` in `napt/cli/main.py`, and add `tests/cli/test_<command>.py`. A command with subcommands (`auth`, `promote`) still gets exactly one module. Never combine two commands in one module.
+**Shared scaffolding lives in `napt/cli/common.py`:** `add_output_flags` (`-v`/`-d`), `add_state_dir`, `setup_logging`, and `run_handler`, the one place NAPT errors are caught and printed. A handler raises; it never catches `NAPTError` to print it, and never defines its own `-v`/`-d` flags.
+
+**Handlers import their subsystem inside the function.** A command module's top-level imports are argparse, `napt.cli.common`, `napt.exceptions`, and `napt.logging`; the subsystem it drives (`napt.build.manager`, `napt.upload.manager`, `napt.auth.credentials`) is imported inside `cmd_*`, so `napt --help` and the commands that never touch a tenant do not load the Azure or HTTP libraries. `tests/cli/test_imports.py` enforces this. Tests patch the subsystem at its defining module (`napt.build.manager.build_package`), not on the CLI module.
+
+**Adding a command:** create `napt/cli/<command>.py` with `cmd_<command>` and `register`, call `register` from `build_parser()` in `napt/cli/main.py`, add it to `tests/cli/test_main.py`, and add `tests/cli/test_<command>.py`. A command with subcommands (`auth`, `promote`) still gets exactly one module. Never combine two commands in one module.
 
 ---
 

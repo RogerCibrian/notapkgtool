@@ -826,9 +826,11 @@ writeback commits) see
 Shows deployment state across all apps: published version, pending
 release, and which version holds each ring.
 `--format json` for scripting.
+The state directory comes from the recipes' `directories.state` setting,
+the same one the pipeline wrote to; `--state-dir` overrides it.
 
 ```bash
-napt status [OPTIONS]
+napt status [RECIPE_OR_DIR] [OPTIONS]
 ```
 
 A pending release whose version is lower than the published one is marked
@@ -1270,16 +1272,17 @@ to its own:
 | `napt discover` | `--state-dir` | Per-app deployment state (`<dir>/deployment/`) | `directories.state` | `state` |
 | `napt build` | `--state-dir` | Where to read the release to build (`<dir>/deployment/`) | `directories.state` | `state` |
 | `napt package` | `--state-dir` | Where to read the release to package (`<dir>/deployment/`) | `directories.state` | `state` |
+| `napt upload` | `--state-dir` | Where to read the release to upload (`<dir>/deployment/`) | `directories.state` | `state` |
 | `napt promote` | `--state-dir` | Deployment state and plan files | `directories.state` | `state` |
-| `napt status` | `--state-dir` | Deployment state to summarize (no config lookup) | - | `state` |
+| `napt status` | `--state-dir` | Deployment state to summarize | `directories.state` | `state` |
 | `napt build` | `--downloads-dir` | Where to find the installer | `directories.discover` | `downloads` |
 | `napt build` | `--output-dir` | Where to save builds | `directories.build` | `builds` |
 | `napt package` | `--builds-dir` | Where to find the build | `directories.build` | `builds` |
 | `napt package` | `--output-dir` | Where to save packages | `directories.package` | `packages` |
-| `napt upload` | (none) | Reads the package, state, and icons from config | `directories.package`, `directories.state`, `directories.icons` | `packages`, `state`, `icons` |
+| `napt upload` | `--packages-dir` | Where to find the package | `directories.package` | `packages` |
 
-Upload has no directory flags, so when you upload, set directory overrides in
-config rather than per run.
+`napt status` has no recipe of its own, so it reads `directories.state` from
+the first recipe under `recipes/` (or the file or directory you pass it).
 
 Input and output share a config key across adjacent commands:
 `discover --output-dir` and `build --downloads-dir` both read from
@@ -1298,7 +1301,7 @@ directories:
   build: "artifacts/builds"        # used by both build and package
   package: "artifacts/packages"
   icons: "artifacts/icons"         # written by build, read by upload
-  state: "deployment-state"        # napt status then needs --state-dir deployment-state
+  state: "deployment-state"        # read by every command that touches state
 ```
 
 ```bash

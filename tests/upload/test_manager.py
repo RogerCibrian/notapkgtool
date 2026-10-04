@@ -500,6 +500,8 @@ def _run_upload(
     full_app: dict[str, Any] | None = None,
     force: bool = False,
     config_overrides: dict[str, Any] | None = None,
+    state_dir: Path | None = None,
+    packages_dir: Path | None = None,
 ) -> tuple[Any, dict[str, MagicMock]]:
     """Run upload_package with all Graph calls mocked.
 
@@ -512,6 +514,8 @@ def _run_upload(
             app matches).
         force: Passed through to upload_package.
         config_overrides: Extra config merged over the fake defaults.
+        state_dir: Passed through to upload_package.
+        packages_dir: Passed through to upload_package.
 
     Returns:
         A tuple of (UploadResult, mocks) where mocks holds the
@@ -586,7 +590,12 @@ def _run_upload(
         stack.enter_context(patch("napt.upload.manager.upload_to_azure_blob"))
         stack.enter_context(patch("napt.upload.manager.commit_content_version_file"))
         stack.enter_context(patch("napt.upload.manager.commit_content_version"))
-        result = upload_package(recipe_path, force=force)
+        result = upload_package(
+            recipe_path,
+            force=force,
+            state_dir=state_dir,
+            packages_dir=packages_dir,
+        )
 
     return result, mocks
 
@@ -652,6 +661,29 @@ def test_upload_reads_deployment_state_once(
     _run_upload(tmp_path, fake_metadata)
 
     assert loads.call_count == 1
+
+
+def test_upload_directory_overrides_replace_config(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that state_dir and packages_dir are read instead of the
+    configured directories, so upload can follow a package run that used
+    the same overrides."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path / "elsewhere", installer_sha256="c" * 64)
+    _seed_pending(tmp_path / "other", sha256="c" * 64, version="1.0.0")
+
+    result, _ = _run_upload(
+        tmp_path,
+        fake_metadata,
+        state_dir=tmp_path / "other" / "state",
+        packages_dir=tmp_path / "elsewhere" / "packages",
+    )
+
+    assert result.version == "1.0.0"
+    assert result.package_path.is_relative_to(tmp_path / "elsewhere")
+    assert not (tmp_path / "packages").exists()
+    assert not (tmp_path / "state").exists()
 
 
 def test_upload_hash_mismatch_aborts_before_graph(

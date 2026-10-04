@@ -4,24 +4,30 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
+from napt.cli.common import run_handler
 from napt.cli.discover import cmd_discover
 from napt.exceptions import ConfigError, NetworkError
 from tests.cli.conftest import _args, _mock_result
+
+
+def _discover_args(recipe, **overrides):
+    defaults = {
+        "recipe": recipe,
+        "output_dir": None,
+        "state_dir": None,
+        "stateless": False,
+    }
+    defaults.update(overrides)
+    return _args(**defaults)
 
 
 class TestCmdDiscover:
     """Tests for cmd_discover handler."""
 
     def test_missing_recipe_returns_one(self, tmp_path, capsys):
-        """Tests that a missing recipe file exits with code 1."""
-        code = cmd_discover(
-            _args(
-                recipe=str(tmp_path / "nonexistent.yaml"),
-                output_dir=None,
-                state_dir=None,
-                stateless=False,
-            )
-        )
+        """Tests that a missing recipe file is reported by the loader, exit 1."""
+        code = run_handler(cmd_discover, _discover_args(tmp_path / "nonexistent.yaml"))
+
         assert code == 1
         assert "not found" in capsys.readouterr().out
 
@@ -39,15 +45,8 @@ class TestCmdDiscover:
             sha256="a" * 64,
             status="success",
         )
-        with patch("napt.cli.discover.discover_recipe", return_value=mock_result):
-            code = cmd_discover(
-                _args(
-                    recipe=str(recipe),
-                    output_dir=None,
-                    state_dir=None,
-                    stateless=False,
-                )
-            )
+        with patch("napt.discovery.manager.discover_recipe", return_value=mock_result):
+            code = cmd_discover(_discover_args(recipe))
         assert code == 0
         out = capsys.readouterr().out
         assert "[SUCCESS]" in out
@@ -55,20 +54,14 @@ class TestCmdDiscover:
         assert "napt-chrome" in out
 
     def test_config_error_prints_message_returns_one(self, tmp_path, capsys):
-        """Tests that ConfigError is caught, message printed, returns 1."""
+        """Tests that ConfigError reaches the shared wrapper and returns 1."""
         recipe = tmp_path / "recipe.yaml"
         recipe.touch()
         with patch(
-            "napt.cli.discover.discover_recipe", side_effect=ConfigError("bad config")
+            "napt.discovery.manager.discover_recipe",
+            side_effect=ConfigError("bad config"),
         ):
-            code = cmd_discover(
-                _args(
-                    recipe=str(recipe),
-                    output_dir=None,
-                    state_dir=None,
-                    stateless=False,
-                )
-            )
+            code = run_handler(cmd_discover, _discover_args(recipe))
         assert code == 1
         assert "bad config" in capsys.readouterr().out
 
@@ -77,19 +70,10 @@ class TestCmdDiscover:
         recipe = tmp_path / "recipe.yaml"
         recipe.touch()
         with patch(
-            "napt.cli.discover.discover_recipe", side_effect=NetworkError("timeout")
+            "napt.discovery.manager.discover_recipe",
+            side_effect=NetworkError("timeout"),
         ):
-            assert (
-                cmd_discover(
-                    _args(
-                        recipe=str(recipe),
-                        output_dir=None,
-                        state_dir=None,
-                        stateless=False,
-                    )
-                )
-                == 1
-            )
+            assert run_handler(cmd_discover, _discover_args(recipe)) == 1
 
     def test_stateless_flag_passed_through(self, tmp_path):
         """Tests that --stateless is passed to discover_recipe."""
@@ -106,16 +90,9 @@ class TestCmdDiscover:
             status="success",
         )
         with patch(
-            "napt.cli.discover.discover_recipe", return_value=mock_result
+            "napt.discovery.manager.discover_recipe", return_value=mock_result
         ) as mock:
-            cmd_discover(
-                _args(
-                    recipe=str(recipe),
-                    output_dir=None,
-                    state_dir=None,
-                    stateless=True,
-                )
-            )
+            cmd_discover(_discover_args(recipe, stateless=True))
         _, kwargs = mock.call_args
         assert kwargs["stateless"] is True
         assert kwargs["state_dir"] is None
@@ -136,15 +113,8 @@ class TestCmdDiscover:
             status="success",
         )
         with patch(
-            "napt.cli.discover.discover_recipe", return_value=mock_result
+            "napt.discovery.manager.discover_recipe", return_value=mock_result
         ) as mock:
-            cmd_discover(
-                _args(
-                    recipe=str(recipe),
-                    output_dir=str(custom_output),
-                    state_dir=None,
-                    stateless=False,
-                )
-            )
+            cmd_discover(_discover_args(recipe, output_dir=custom_output))
         call_args = mock.call_args[0]
         assert call_args[1] == custom_output.resolve()
