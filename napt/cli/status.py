@@ -21,11 +21,10 @@ pending release, and ring positions.
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
-from napt.exceptions import ConfigError, StateError
-from napt.logging import get_logger, set_global_logger
-from napt.state.deployment import summarize_deployment_states
+from napt.cli.common import add_output_flags, add_state_dir
 
 
 def cmd_status(args: argparse.Namespace) -> int:
@@ -33,33 +32,34 @@ def cmd_status(args: argparse.Namespace) -> int:
 
     Aggregates all per-app deployment state files into one view: the
     published version, pending release, and which version holds each ring.
+    Without --state-dir, the directory comes from the recipes'
+    ``directories.state`` setting, the same one the pipeline wrote to.
 
     Args:
-        args: Parsed command-line arguments containing the state
-            directory, output format, and flags.
+        args: Parsed command-line arguments containing the recipes path,
+            state directory, output format, and flags.
 
     Returns:
-        Exit code (0 for success, 1 for failure).
+        Exit code (0 for success).
+
+    Note:
+        Failures raise NAPT errors for
+        [run_handler][napt.cli.common.run_handler] to report.
 
     """
-    logger = get_logger(verbose=args.verbose, debug=args.debug)
-    set_global_logger(logger)
+    from napt.config.loader import resolve_state_dir
+    from napt.state.deployment import summarize_deployment_states
 
-    deployment_dir = Path(args.state_dir) / "deployment"
+    state_dir = (
+        args.state_dir
+        if args.state_dir is not None
+        else resolve_state_dir(args.recipes)
+    )
+    deployment_dir = state_dir / "deployment"
 
-    try:
-        rows = summarize_deployment_states(deployment_dir)
-    except (ConfigError, StateError) as err:
-        print(f"Error: {err}")
-        if args.verbose or args.debug:
-            import traceback
-
-            traceback.print_exc()
-        return 1
+    rows = summarize_deployment_states(deployment_dir)
 
     if args.format == "json":
-        import json
-
         print(json.dumps(rows, indent=2, sort_keys=True))
         return 0
 
@@ -110,10 +110,19 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser_status.add_argument(
-        "--state-dir",
+        "recipes",
+        nargs="?",
         type=Path,
-        default=Path("state"),
-        help="State directory holding deployment/ (default: state)",
+        default=Path("recipes"),
+        help=(
+            "Recipe file or directory whose configuration names the state "
+            "directory (default: recipes/)"
+        ),
+    )
+    add_state_dir(
+        parser_status,
+        "State directory holding deployment/ "
+        "(default: directories.state from config)",
     )
     parser_status.add_argument(
         "--format",
@@ -121,16 +130,5 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         default="text",
         help="Output format (default: text)",
     )
-    parser_status.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Show progress and high-level status updates",
-    )
-    parser_status.add_argument(
-        "-d",
-        "--debug",
-        action="store_true",
-        help="Show detailed debugging output (implies --verbose)",
-    )
+    add_output_flags(parser_status)
     parser_status.set_defaults(func=cmd_status)

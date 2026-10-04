@@ -36,13 +36,15 @@ from napt.cli import (
     upload,
     validate,
 )
+from napt.cli.common import run_handler, setup_logging
 from napt.version import get_version
 
 
-def main() -> None:
-    """Main entry point for the napt CLI.
+def build_parser() -> argparse.ArgumentParser:
+    """Assembles the top-level parser with every command registered.
 
-    This function is registered as the 'napt' console script in pyproject.toml.
+    Returns:
+        The parser; parsing sets ``func`` to the selected handler.
     """
     parser = argparse.ArgumentParser(
         prog="napt",
@@ -71,10 +73,17 @@ def main() -> None:
     auth.register(subparsers)
     promote.register(subparsers)
     status.register(subparsers)
+    return parser
 
-    # Parse and dispatch
-    args = parser.parse_args()
 
-    # Call the appropriate command handler
-    exit_code = args.func(args)
-    sys.exit(exit_code)
+def main(argv: list[str] | None = None) -> None:
+    """Main entry point for the napt CLI.
+
+    This function is registered as the 'napt' console script in pyproject.toml.
+
+    Args:
+        argv: Arguments to parse instead of the process's own.
+    """
+    args = build_parser().parse_args(argv)
+    setup_logging(args)
+    sys.exit(run_handler(args.func, args))

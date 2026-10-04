@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from napt.cli.common import run_handler
 from napt.cli.init import cmd_init
 from tests.cli.conftest import _args
 
@@ -11,7 +12,7 @@ class TestCmdInit:
 
     def test_fresh_directory_creates_full_structure(self, tmp_path, capsys):
         """Tests that init creates recipes/, defaults/vendors/, defaults/org.yaml."""
-        code = cmd_init(_args(directory=str(tmp_path), force=False))
+        code = cmd_init(_args(directory=tmp_path, force=False))
         assert code == 0
         assert (tmp_path / "recipes").is_dir()
         assert (tmp_path / "defaults" / "vendors").is_dir()
@@ -27,7 +28,7 @@ class TestCmdInit:
         org_yaml.parent.mkdir(parents=True)
         org_yaml.write_text("original content")
 
-        cmd_init(_args(directory=str(tmp_path), force=False))
+        cmd_init(_args(directory=tmp_path, force=False))
 
         assert org_yaml.read_text() == "original content"
         out = capsys.readouterr().out
@@ -40,7 +41,7 @@ class TestCmdInit:
         org_yaml.parent.mkdir(parents=True)
         org_yaml.write_text("original content")
 
-        cmd_init(_args(directory=str(tmp_path), force=True))
+        cmd_init(_args(directory=tmp_path, force=True))
 
         backup = tmp_path / "defaults" / "org.yaml.backup"
         assert backup.exists()
@@ -56,10 +57,10 @@ class TestCmdInit:
         org_yaml = tmp_path / "defaults" / "org.yaml"
         org_yaml.parent.mkdir(parents=True)
         org_yaml.write_text("first")
-        cmd_init(_args(directory=str(tmp_path), force=True))
+        cmd_init(_args(directory=tmp_path, force=True))
         org_yaml.write_text("second")
 
-        code = cmd_init(_args(directory=str(tmp_path), force=True))
+        code = cmd_init(_args(directory=tmp_path, force=True))
 
         assert code == 0
         assert (tmp_path / "defaults" / "org.yaml.backup").read_text() == "second"
@@ -67,19 +68,21 @@ class TestCmdInit:
 
     def test_unusable_directory_is_reported(self, tmp_path, capsys):
         """Tests that a target that cannot hold the project is an error line,
-        not a traceback."""
+        with the traceback available under -v like every other command."""
         target = tmp_path / "a-file"
         target.write_text("x")
 
-        code = cmd_init(_args(directory=str(target), force=False))
+        code = run_handler(cmd_init, _args(directory=target, force=False, verbose=True))
 
         assert code == 1
-        assert "Error:" in capsys.readouterr().out
+        captured = capsys.readouterr()
+        assert "Error:" in captured.out
+        assert "Traceback" in captured.err
 
     def test_org_yaml_contains_template_content(self, tmp_path):
         """Tests that the created org.yaml matches ORG_YAML_TEMPLATE exactly."""
         from napt.config.defaults import ORG_YAML_TEMPLATE
 
-        cmd_init(_args(directory=str(tmp_path), force=False))
+        cmd_init(_args(directory=tmp_path, force=False))
         content = (tmp_path / "defaults" / "org.yaml").read_text(encoding="utf-8")
         assert content == ORG_YAML_TEMPLATE

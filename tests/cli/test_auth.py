@@ -11,7 +11,8 @@ from napt.cli.auth import (
     cmd_auth_setup,
     cmd_auth_status,
 )
-from napt.exceptions import AuthError, ConfigError
+from napt.cli.common import run_handler
+from napt.exceptions import AuthError, ConfigError, StateError
 from tests.cli.conftest import _args
 
 
@@ -27,7 +28,7 @@ class TestCmdAuth:
             client_id="cid",
             permissions=["DeviceManagementApps.ReadWrite.All", "Group.Read.All"],
         )
-        with patch("napt.cli.auth.auth_login", return_value=status) as login:
+        with patch("napt.auth.credentials.login", return_value=status) as login:
             code = cmd_auth_login(
                 _args(client_id="cid", tenant_id="tid", no_broker=True)
             )
@@ -46,7 +47,7 @@ class TestCmdAuth:
             permissions=["Group.Read.All"],
             missing=["DeviceManagementApps.ReadWrite.All"],
         )
-        with patch("napt.cli.auth.auth_login", return_value=status):
+        with patch("napt.auth.credentials.login", return_value=status):
             code = cmd_auth_login(
                 _args(client_id=None, tenant_id=None, no_broker=False)
             )
@@ -57,30 +58,42 @@ class TestCmdAuth:
     def test_login_auth_error_returns_one(self, capsys):
         """Tests that AuthError from login is reported and returns 1."""
         with patch(
-            "napt.cli.auth.auth_login", side_effect=AuthError("no redirect uri")
+            "napt.auth.credentials.login", side_effect=AuthError("no redirect uri")
         ):
-            code = cmd_auth_login(
-                _args(client_id=None, tenant_id=None, no_broker=False)
+            code = run_handler(
+                cmd_auth_login, _args(client_id=None, tenant_id=None, no_broker=False)
             )
         assert code == 1
         assert "Authentication error: no redirect uri" in capsys.readouterr().out
 
+    def test_login_reports_every_napt_error(self, capsys):
+        """Tests that a NAPT error of another kind is an error line, not a
+        traceback."""
+        with patch(
+            "napt.auth.credentials.login", side_effect=StateError("corrupt store")
+        ):
+            code = run_handler(
+                cmd_auth_login, _args(client_id=None, tenant_id=None, no_broker=False)
+            )
+        assert code == 1
+        assert "Error: corrupt store" in capsys.readouterr().out
+
     def test_logout_reports_removed_session(self, capsys):
         """Tests that logout confirms which tenants were signed out."""
-        with patch("napt.cli.auth.auth_logout", return_value=["tid-a"]) as lo:
+        with patch("napt.auth.credentials.logout", return_value=["tid-a"]) as lo:
             assert cmd_auth_logout(_args(all=False)) == 0
         assert lo.call_args.kwargs["all_tenants"] is False
         assert "[OK] Signed out of 1 tenant(s): tid-a" in capsys.readouterr().out
 
     def test_logout_all_passes_flag(self, capsys):
         """Tests that --all is forwarded to the auth module."""
-        with patch("napt.cli.auth.auth_logout", return_value=["a", "b"]) as lo:
+        with patch("napt.auth.credentials.logout", return_value=["a", "b"]) as lo:
             assert cmd_auth_logout(_args(all=True)) == 0
         assert lo.call_args.kwargs["all_tenants"] is True
 
     def test_logout_reports_nothing_to_do(self, capsys):
         """Tests that logout says so when no session was cached."""
-        with patch("napt.cli.auth.auth_logout", return_value=[]):
+        with patch("napt.auth.credentials.logout", return_value=[]):
             assert cmd_auth_logout(_args(all=False)) == 0
         assert "No interactive session" in capsys.readouterr().out
 
@@ -105,7 +118,7 @@ class TestCmdAuth:
             account="b@x",
             permissions=["DeviceManagementApps.ReadWrite.All", "Group.Read.All"],
         )
-        with patch("napt.cli.auth.auth_status", return_value=status):
+        with patch("napt.auth.credentials.get_status", return_value=status):
             assert cmd_auth_status(_args()) == 0
         out = capsys.readouterr().out
         assert "Known tenants:" in out
@@ -122,7 +135,7 @@ class TestCmdAuth:
 
     def test_status_not_authenticated_returns_one(self, capsys):
         """Tests that status exits 1 and points at login when unauthenticated."""
-        with patch("napt.cli.auth.auth_status", return_value=None):
+        with patch("napt.auth.credentials.get_status", return_value=None):
             assert cmd_auth_status(_args()) == 1
         out = capsys.readouterr().out
         assert "Not authenticated" in out
@@ -135,7 +148,7 @@ class TestCmdAuth:
             account="cid",
             permissions=["DeviceManagementApps.ReadWrite.All", "Group.Read.All"],
         )
-        with patch("napt.cli.auth.auth_status", return_value=status):
+        with patch("napt.auth.credentials.get_status", return_value=status):
             assert cmd_auth_status(_args()) == 0
         assert "service principal" in capsys.readouterr().out
 
@@ -147,14 +160,16 @@ class TestCmdAuth:
             permissions=[],
             missing=["DeviceManagementApps.ReadWrite.All", "Group.Read.All"],
         )
-        with patch("napt.cli.auth.auth_status", return_value=status):
+        with patch("napt.auth.credentials.get_status", return_value=status):
             assert cmd_auth_status(_args()) == 1
         assert "[WARNING] Missing required permissions" in capsys.readouterr().out
 
     def test_status_auth_error_returns_one(self, capsys):
         """Tests that an expired session surfaces as an authentication error."""
-        with patch("napt.cli.auth.auth_status", side_effect=AuthError("expired")):
-            assert cmd_auth_status(_args()) == 1
+        with patch(
+            "napt.auth.credentials.get_status", side_effect=AuthError("expired")
+        ):
+            assert run_handler(cmd_auth_status, _args()) == 1
         assert "Authentication error: expired" in capsys.readouterr().out
 
     @staticmethod
@@ -181,7 +196,7 @@ class TestCmdAuth:
             tenant_id="tid", client_id="cid", display_name="NAPT", needs_adopt=True
         )
         with patch(
-            "napt.cli.auth.setup_app_registration", return_value=result
+            "napt.auth.registration.setup_app_registration", return_value=result
         ) as setup:
             assert cmd_auth_setup(self._setup_args()) == 1
         assert setup.call_args.args[0].adopt is False
@@ -196,7 +211,8 @@ class TestCmdAuth:
 
     def test_setup_reports_adoption(self, capsys):
         """Tests that --adopt is forwarded and an adopted registration is announced."""
-        from napt.auth.registration import SPEC_VERSION, SetupResult
+        from napt.auth.registration import SetupResult
+        from napt.auth.spec import SPEC_VERSION
 
         result = SetupResult(
             tenant_id="tid",
@@ -206,7 +222,7 @@ class TestCmdAuth:
             changes=["Stamped internal notes: napt/v1 spec=1 version=x"],
         )
         with patch(
-            "napt.cli.auth.setup_app_registration", return_value=result
+            "napt.auth.registration.setup_app_registration", return_value=result
         ) as setup:
             assert cmd_auth_setup(self._setup_args(adopt=True)) == 0
         assert setup.call_args.args[0].adopt is True
@@ -228,7 +244,7 @@ class TestCmdAuth:
             changes=["Created app registration 'NAPT'", "Created service principal"],
         )
         with patch(
-            "napt.cli.auth.setup_app_registration", return_value=result
+            "napt.auth.registration.setup_app_registration", return_value=result
         ) as setup:
             assert (
                 cmd_auth_setup(
@@ -249,19 +265,27 @@ class TestCmdAuth:
         assert "OIDC login mint the token" in out
 
     def test_setup_rejects_half_specified_federated_credential(self, capsys):
-        """Tests that --federated-issuer without --federated-subject fails early."""
-        with patch("napt.cli.auth.setup_app_registration") as setup:
-            code = cmd_auth_setup(self._setup_args(federated_issuer="https://issuer"))
+        """Tests that --federated-issuer without --federated-subject fails early,
+        with the traceback available under -v like every other error."""
+        with patch("napt.auth.registration.setup_app_registration") as setup:
+            code = run_handler(
+                cmd_auth_setup,
+                self._setup_args(federated_issuer="https://issuer", verbose=True),
+            )
         assert code == 1
         setup.assert_not_called()
-        assert "both an issuer and a subject" in capsys.readouterr().out
+        captured = capsys.readouterr()
+        assert "both an issuer and a subject" in captured.out
+        assert "Traceback" in captured.err
 
     def test_setup_reports_nothing_to_change(self, capsys):
         """Tests that a complete registration is reported as already done."""
         from napt.auth.registration import SetupResult
 
         result = SetupResult(tenant_id="tid", client_id="cid", display_name="NAPT")
-        with patch("napt.cli.auth.setup_app_registration", return_value=result):
+        with patch(
+            "napt.auth.registration.setup_app_registration", return_value=result
+        ):
             assert cmd_auth_setup(self._setup_args()) == 0
         out = capsys.readouterr().out
         assert "is at spec 1; nothing to change" in out
@@ -269,7 +293,7 @@ class TestCmdAuth:
 
     def test_setup_print_only_never_calls_graph(self, capsys):
         """Tests that --print-only prints the checklist without signing in."""
-        with patch("napt.cli.auth.setup_app_registration") as setup:
+        with patch("napt.auth.registration.setup_app_registration") as setup:
             code = cmd_auth_setup(
                 self._setup_args(
                     print_only=True,
@@ -290,8 +314,8 @@ class TestCmdAuth:
     def test_setup_error_returns_one(self, capsys):
         """Tests that setup failures are reported and return 1."""
         with patch(
-            "napt.cli.auth.setup_app_registration",
+            "napt.auth.registration.setup_app_registration",
             side_effect=ConfigError("ambiguous"),
         ):
-            assert cmd_auth_setup(self._setup_args()) == 1
+            assert run_handler(cmd_auth_setup, self._setup_args()) == 1
         assert "Error: ambiguous" in capsys.readouterr().out

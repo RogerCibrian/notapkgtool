@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
+from napt.cli.common import run_handler
 from napt.cli.package import _resolve_build, cmd_package
 from napt.exceptions import ConfigError, PackagingError
 from napt.state.deployment import (
@@ -18,6 +19,7 @@ from napt.state.deployment import (
 from tests.cli.conftest import _args, _mock_result
 
 _MOCK_CONFIG = {
+    "id": "test-app",
     "directories": {"package": "packages"},
     "intunewin": {"release": "latest"},
 }
@@ -25,7 +27,7 @@ _MOCK_CONFIG = {
 
 def _package_args(recipe, **overrides):
     defaults = {
-        "recipe": str(recipe),
+        "recipe": recipe,
         "version": None,
         "builds_dir": None,
         "output_dir": None,
@@ -39,21 +41,31 @@ class TestCmdPackage:
     """Tests for cmd_package handler."""
 
     def test_missing_recipe_returns_one(self, tmp_path, capsys):
-        """Tests that a missing recipe file exits with code 1."""
-        code = cmd_package(_package_args(tmp_path / "nonexistent.yaml"))
+        """Tests that a missing recipe file is reported by the loader, exit 1."""
+        code = run_handler(cmd_package, _package_args(tmp_path / "nonexistent.yaml"))
+
         assert code == 1
+        assert "not found" in capsys.readouterr().out
 
     def test_resolve_config_error_returns_one(self, tmp_path, capsys):
-        """Tests that ConfigError from _resolve_build returns 1."""
+        """Tests that ConfigError from _resolve_build returns 1 with the
+        traceback available under -v like every other failure."""
         recipe = tmp_path / "recipe.yaml"
         recipe.touch()
-        with patch(
-            "napt.cli.package._resolve_build",
-            side_effect=ConfigError("no builds found"),
+        with (
+            patch(
+                "napt.config.loader.load_effective_config", return_value=_MOCK_CONFIG
+            ),
+            patch(
+                "napt.cli.package._resolve_build",
+                side_effect=ConfigError("no builds found"),
+            ),
         ):
-            code = cmd_package(_package_args(recipe))
+            code = run_handler(cmd_package, _package_args(recipe, verbose=True))
         assert code == 1
-        assert "no builds found" in capsys.readouterr().out
+        captured = capsys.readouterr()
+        assert "no builds found" in captured.out
+        assert "Traceback" in captured.err
 
     def test_success_returns_zero(self, tmp_path, capsys):
         """Tests that successful packaging returns 0."""
@@ -69,12 +81,32 @@ class TestCmdPackage:
         )
         with (
             patch("napt.cli.package._resolve_build", return_value=(build_dir, None)),
-            patch("napt.cli.package.load_effective_config", return_value=_MOCK_CONFIG),
-            patch("napt.cli.package.create_intunewin", return_value=mock_result),
+            patch(
+                "napt.config.loader.load_effective_config", return_value=_MOCK_CONFIG
+            ),
+            patch("napt.build.packager.create_intunewin", return_value=mock_result),
         ):
             code = cmd_package(_package_args(recipe))
         assert code == 0
         assert "[SUCCESS]" in capsys.readouterr().out
+
+    def test_config_is_loaded_once(self, tmp_path):
+        """Tests that the recipe is merged once and handed to the build lookup."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.touch()
+        build_dir = tmp_path / "build"
+        with (
+            patch(
+                "napt.cli.package._resolve_build", return_value=(build_dir, None)
+            ) as resolve,
+            patch(
+                "napt.config.loader.load_effective_config", return_value=_MOCK_CONFIG
+            ) as load,
+            patch("napt.build.packager.create_intunewin", return_value=_mock_result()),
+        ):
+            cmd_package(_package_args(recipe))
+        assert load.call_count == 1
+        assert resolve.call_args.args[0] is _MOCK_CONFIG
 
     def test_expected_hash_is_forwarded(self, tmp_path):
         """Tests that the hash of the recorded release reaches create_intunewin."""
@@ -92,9 +124,11 @@ class TestCmdPackage:
             patch(
                 "napt.cli.package._resolve_build", return_value=(build_dir, "c" * 64)
             ),
-            patch("napt.cli.package.load_effective_config", return_value=_MOCK_CONFIG),
             patch(
-                "napt.cli.package.create_intunewin", return_value=mock_result
+                "napt.config.loader.load_effective_config", return_value=_MOCK_CONFIG
+            ),
+            patch(
+                "napt.build.packager.create_intunewin", return_value=mock_result
             ) as mock_create,
         ):
             cmd_package(_package_args(recipe))
@@ -107,13 +141,15 @@ class TestCmdPackage:
         build_dir = tmp_path / "build"
         with (
             patch("napt.cli.package._resolve_build", return_value=(build_dir, None)),
-            patch("napt.cli.package.load_effective_config", return_value=_MOCK_CONFIG),
             patch(
-                "napt.cli.package.create_intunewin",
+                "napt.config.loader.load_effective_config", return_value=_MOCK_CONFIG
+            ),
+            patch(
+                "napt.build.packager.create_intunewin",
                 side_effect=PackagingError("pack fail"),
             ),
         ):
-            code = cmd_package(_package_args(recipe))
+            code = run_handler(cmd_package, _package_args(recipe))
         assert code == 1
         assert "pack fail" in capsys.readouterr().out
 
@@ -132,12 +168,14 @@ class TestCmdPackage:
         )
         with (
             patch("napt.cli.package._resolve_build", return_value=(build_dir, None)),
-            patch("napt.cli.package.load_effective_config", return_value=_MOCK_CONFIG),
             patch(
-                "napt.cli.package.create_intunewin", return_value=mock_result
+                "napt.config.loader.load_effective_config", return_value=_MOCK_CONFIG
+            ),
+            patch(
+                "napt.build.packager.create_intunewin", return_value=mock_result
             ) as mock_create,
         ):
-            cmd_package(_package_args(recipe, output_dir=str(custom_out)))
+            cmd_package(_package_args(recipe, output_dir=custom_out))
         _, kwargs = mock_create.call_args
         assert kwargs["output_dir"] == custom_out
 
@@ -163,26 +201,24 @@ class TestResolveBuild:
 
     @pytest.fixture
     def config(self, tmp_path):
-        mock_config = {
+        return {
             "id": "test-app",
             "directories": {
                 "build": str(tmp_path / "builds"),
                 "state": str(tmp_path / "state"),
             },
         }
-        with patch("napt.cli.package.load_effective_config", return_value=mock_config):
-            yield mock_config
 
     def test_no_app_build_dir_raises(self, tmp_path, config):
         """Tests that missing app build directory raises ConfigError."""
         with pytest.raises(ConfigError, match="No builds found"):
-            _resolve_build(tmp_path / "recipe.yaml")
+            _resolve_build(config)
 
     def test_specific_version_found(self, tmp_path, config):
         """Tests that a specific version directory is returned when it exists."""
         version_dir = _build(tmp_path / "builds", "1.2.3")
 
-        build_dir, expected = _resolve_build(tmp_path / "recipe.yaml", version="1.2.3")
+        build_dir, expected = _resolve_build(config, version="1.2.3")
 
         assert build_dir == version_dir
         assert expected is None
@@ -193,7 +229,7 @@ class TestResolveBuild:
         version_dir = _build(tmp_path / "builds", "1.2.3")
         _record(tmp_path / "state", pending={"version": "1.2.3", "sha256": "c" * 64})
 
-        build_dir, expected = _resolve_build(tmp_path / "recipe.yaml", version="1.2.3")
+        build_dir, expected = _resolve_build(config, version="1.2.3")
 
         assert build_dir == version_dir
         assert expected == "c" * 64
@@ -203,14 +239,14 @@ class TestResolveBuild:
         (tmp_path / "builds" / "test-app").mkdir(parents=True)
 
         with pytest.raises(ConfigError, match="not found"):
-            _resolve_build(tmp_path / "recipe.yaml", version="9.9.9")
+            _resolve_build(config, version="9.9.9")
 
     def test_specific_version_without_packagefiles_raises(self, tmp_path, config):
         """Tests that a version dir without packagefiles/ raises ConfigError."""
         (tmp_path / "builds" / "test-app" / "1.2.3").mkdir(parents=True)
 
         with pytest.raises(ConfigError, match="not found"):
-            _resolve_build(tmp_path / "recipe.yaml", version="1.2.3")
+            _resolve_build(config, version="1.2.3")
 
     def test_pending_release_selected_over_newer_folder(self, tmp_path, config):
         """Tests that the recorded pending release wins, not the folder that
@@ -221,7 +257,7 @@ class TestResolveBuild:
         os.utime(new_dir, (time.time(), time.time()))
         _record(tmp_path / "state", pending={"version": "1.0.0", "sha256": "a" * 64})
 
-        build_dir, expected = _resolve_build(tmp_path / "recipe.yaml")
+        build_dir, expected = _resolve_build(config)
 
         assert build_dir == old_dir
         assert expected == "a" * 64
@@ -232,7 +268,7 @@ class TestResolveBuild:
         _build(tmp_path / "builds", "2.0.0")
         _record(tmp_path / "state", published={"version": "2.0.0", "sha256": "b" * 64})
 
-        build_dir, expected = _resolve_build(tmp_path / "recipe.yaml")
+        build_dir, expected = _resolve_build(config)
 
         assert build_dir.name == "2.0.0"
         assert expected == "b" * 64
@@ -243,14 +279,14 @@ class TestResolveBuild:
         _record(tmp_path / "state", pending={"version": "2.0.0", "sha256": "b" * 64})
 
         with pytest.raises(ConfigError, match="2.0.0") as info:
-            _resolve_build(tmp_path / "recipe.yaml")
+            _resolve_build(config)
         assert "napt build" in str(info.value)
 
     def test_single_build_without_state_is_used(self, tmp_path, config):
         """Tests that with no recorded release the only build is unambiguous."""
         version_dir = _build(tmp_path / "builds", "1.0.0")
 
-        build_dir, expected = _resolve_build(tmp_path / "recipe.yaml")
+        build_dir, expected = _resolve_build(config)
 
         assert build_dir == version_dir
         assert expected is None
@@ -262,7 +298,7 @@ class TestResolveBuild:
         _build(tmp_path / "builds", "2.0.0")
 
         with pytest.raises(ConfigError, match="--version") as info:
-            _resolve_build(tmp_path / "recipe.yaml")
+            _resolve_build(config)
         assert "1.0.0" in str(info.value)
         assert "2.0.0" in str(info.value)
 
@@ -271,16 +307,14 @@ class TestResolveBuild:
         (tmp_path / "builds" / "test-app" / "1.0.0").mkdir(parents=True)
 
         with pytest.raises(ConfigError, match="No completed builds"):
-            _resolve_build(tmp_path / "recipe.yaml")
+            _resolve_build(config)
 
     def test_custom_builds_dir_overrides_config(self, tmp_path, config):
         """Tests that an explicit builds_dir overrides the config directory."""
         custom_builds = tmp_path / "custom_builds"
         version_dir = _build(custom_builds, "3.0.0")
 
-        build_dir, _ = _resolve_build(
-            tmp_path / "recipe.yaml", builds_dir=custom_builds
-        )
+        build_dir, _ = _resolve_build(config, builds_dir=custom_builds)
 
         assert build_dir == version_dir
 
@@ -290,8 +324,6 @@ class TestResolveBuild:
         _build(tmp_path / "builds", "2.0.0")
         _record(tmp_path / "other", pending={"version": "1.0.0", "sha256": "a" * 64})
 
-        build_dir, _ = _resolve_build(
-            tmp_path / "recipe.yaml", state_dir=tmp_path / "other"
-        )
+        build_dir, _ = _resolve_build(config, state_dir=tmp_path / "other")
 
         assert build_dir == old_dir

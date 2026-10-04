@@ -61,6 +61,14 @@ from napt.auth.credentials import (
     msal_error,
     remember_tenant,
 )
+from napt.auth.spec import (
+    APPLICATION_PERMISSIONS,
+    BROKER_REDIRECT_TEMPLATE,
+    DELEGATED_PERMISSIONS,
+    FEDERATED_AUDIENCE_DEFAULT,
+    LOCALHOST_REDIRECT,
+    SPEC_VERSION,
+)
 from napt.exceptions import AuthError, ConfigError, NetworkError
 from napt.graph.client import GRAPH_BASE, auth_headers, graph_request, json_headers
 from napt.version import get_version
@@ -78,29 +86,9 @@ _BOOTSTRAP_SCOPES = [
     "https://graph.microsoft.com/DelegatedPermissionGrant.ReadWrite.All",
 ]
 
-LOCALHOST_REDIRECT = "http://localhost"
-BROKER_REDIRECT_TEMPLATE = "ms-appx-web://Microsoft.AAD.BrokerPlugin/{client_id}"
-
-# Application permissions (app roles) for CI/CD and the delegated scopes for
-# interactive sign-in. User.Read is what the portal adds to every new
-# registration; it lets `napt auth login` look up the tenant's name.
-APPLICATION_PERMISSIONS = ("DeviceManagementApps.ReadWrite.All", "Group.Read.All")
-DELEGATED_PERMISSIONS = (
-    "DeviceManagementApps.ReadWrite.All",
-    "Group.Read.All",
-    "User.Read",
-)
-
-# Audience Entra expects on federated tokens from any external issuer.
-FEDERATED_AUDIENCE_DEFAULT = "api://AzureADTokenExchange"
-
 # Provenance stamp written to the application's internal notes (the
 # "Internal notes" box under Branding & properties), mirroring the
-# ``napt/v1`` stamp on Intune apps. SPEC_VERSION describes what NAPT expects
-# of a registration -- bump it whenever APPLICATION_PERMISSIONS,
-# DELEGATED_PERMISSIONS, or the redirect URIs change, so a re-run of
-# `napt auth setup` reports the registration as out of date.
-SPEC_VERSION = 1
+# ``napt/v1`` stamp on Intune apps.
 _STAMP_PREFIX = "napt/v1"
 _STAMP_RE = re.compile(
     r"^napt/v1 spec=(?P<spec>\d+) version=(?P<version>\S+) provisioned=(?P<date>\S+)$"

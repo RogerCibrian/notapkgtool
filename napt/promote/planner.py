@@ -326,29 +326,6 @@ def load_recipe_configs(recipes: Path) -> dict[str, dict[str, Any]]:
     return configs
 
 
-def resolve_state_dir(recipes: Path) -> Path:
-    """Resolves the configured state directory for a plan run.
-
-    ``directories.state`` is org policy (consistent across a project),
-    so the first recipe's effective configuration determines it for a
-    fleet-wide run.
-
-    Args:
-        recipes: A recipe YAML file, or a directory scanned recursively.
-
-    Returns:
-        The configured state directory.
-
-    Raises:
-        ConfigError: If the recipes path is invalid or the first recipe
-            cannot be loaded.
-
-    """
-    first = collect_recipe_paths(recipes)[0]
-    config = load_effective_config(first)
-    return Path(config["directories"]["state"])
-
-
 def plan_promotions(
     recipes: Path,
     state_dir: Path | None = None,

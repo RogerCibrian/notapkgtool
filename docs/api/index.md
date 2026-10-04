@@ -19,7 +19,8 @@ napt/
 │
 ├── auth/                    # Microsoft Entra ID authentication
 │   ├── credentials.py          # Token resolution and the napt auth login session
-│   └── registration.py         # App registration provisioning (napt auth setup)
+│   ├── registration.py         # App registration provisioning (napt auth setup)
+│   └── spec.py                 # Permissions and redirect URIs the registration needs
 │
 ├── build/                   # PSADT package building
 │   ├── _ps_templates.py        # Loads the .ps1 templates for generated scripts
@@ -34,6 +35,7 @@ napt/
 ├── cli/                     # Command-line interface (one module per command)
 │   ├── __main__.py             # Runs the CLI as python -m napt.cli
 │   ├── main.py                 # Parser assembly and dispatch
+│   ├── common.py               # Shared flags, logger setup, and the error wrapper
 │   ├── auth.py                 # napt auth login/logout/status/setup
 │   ├── build.py                # napt build
 │   ├── discover.py             # napt discover

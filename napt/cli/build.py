@@ -23,9 +23,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from napt.build.manager import build_package
-from napt.exceptions import ConfigError, NAPTError, NetworkError, PackagingError
-from napt.logging import get_logger, set_global_logger
+from napt.cli.common import add_output_flags, add_state_dir
 
 
 def cmd_build(args: argparse.Namespace) -> int:
@@ -45,25 +43,20 @@ def cmd_build(args: argparse.Namespace) -> int:
             recipe path, downloads directory, output directory, and flags.
 
     Returns:
-        Exit code (0 for success, 1 for failure).
+        Exit code (0 for success).
 
     Note:
         Creates build directory structure. Downloads PSADT release if not cached.
         Generates Invoke-AppDeployToolkit.ps1. Copies files to build directory.
-        Prints progress and results to stdout.
+        Prints progress and results to stdout. Failures raise NAPT errors
+        for [run_handler][napt.cli.common.run_handler] to report.
 
     """
-    # Configure global logger
-    logger = get_logger(verbose=args.verbose, debug=args.debug)
-    set_global_logger(logger)
+    from napt.build.manager import build_package
 
-    recipe_path = Path(args.recipe).resolve()
-    downloads_dir = Path(args.downloads_dir).resolve() if args.downloads_dir else None
-    output_dir = Path(args.output_dir) if args.output_dir else None
-
-    if not recipe_path.exists():
-        print(f"Error: Recipe file not found: {recipe_path}")
-        return 1
+    recipe_path = args.recipe.resolve()
+    downloads_dir = args.downloads_dir.resolve() if args.downloads_dir else None
+    output_dir = args.output_dir
 
     print(f"Building PSADT package for recipe: {recipe_path}")
     if downloads_dir:
@@ -72,28 +65,12 @@ def cmd_build(args: argparse.Namespace) -> int:
         print(f"Output directory: {output_dir}")
     print()
 
-    try:
-        result = build_package(
-            recipe_path,
-            downloads_dir=downloads_dir,
-            output_dir=output_dir,
-            state_dir=args.state_dir,
-        )
-    except (ConfigError, NetworkError, PackagingError) as err:
-        print(f"Error: {err}")
-        if args.verbose or args.debug:
-            import traceback
-
-            traceback.print_exc()
-        return 1
-    except NAPTError as err:
-        # Catch any other NAPT errors we might have missed
-        print(f"Error: {err}")
-        if args.verbose or args.debug:
-            import traceback
-
-            traceback.print_exc()
-        return 1
+    result = build_package(
+        recipe_path,
+        downloads_dir=downloads_dir,
+        output_dir=output_dir,
+        state_dir=args.state_dir,
+    )
 
     # Display results
     print("=" * 70)
@@ -134,10 +111,12 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     )
     parser_build.add_argument(
         "recipe",
+        type=Path,
         help="Path to the recipe YAML file",
     )
     parser_build.add_argument(
         "--downloads-dir",
+        type=Path,
         default=None,
         help=(
             "Directory containing the downloaded installer "
@@ -146,28 +125,14 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     )
     parser_build.add_argument(
         "--output-dir",
+        type=Path,
         default=None,
         help="Base directory for build output (default: from config or ./builds)",
     )
-    parser_build.add_argument(
-        "--state-dir",
-        type=Path,
-        default=None,
-        help=(
-            "State root; the release to build is read from <dir>/deployment/ "
-            "(default: directories.state, ./state)"
-        ),
+    add_state_dir(
+        parser_build,
+        "State root; the release to build is read from <dir>/deployment/ "
+        "(default: directories.state, ./state)",
     )
-    parser_build.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Show progress and high-level status updates",
-    )
-    parser_build.add_argument(
-        "-d",
-        "--debug",
-        action="store_true",
-        help="Show detailed debugging output (implies --verbose)",
-    )
+    add_output_flags(parser_build)
     parser_build.set_defaults(func=cmd_build)

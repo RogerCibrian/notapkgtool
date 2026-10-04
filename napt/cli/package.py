@@ -24,12 +24,10 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from typing import Any
 
-from napt.build.packager import create_intunewin
-from napt.config.loader import load_effective_config
-from napt.exceptions import ConfigError, NAPTError, NetworkError, PackagingError
-from napt.logging import get_logger, set_global_logger
-from napt.state.deployment import working_release
+from napt.cli.common import add_output_flags, add_state_dir
+from napt.exceptions import ConfigError
 
 
 def _completed_builds(app_build_dir: Path) -> list[Path]:
@@ -42,7 +40,7 @@ def _completed_builds(app_build_dir: Path) -> list[Path]:
 
 
 def _resolve_build(
-    recipe_path: Path,
+    config: dict[str, Any],
     version: str | None = None,
     builds_dir: Path | None = None,
     state_dir: Path | None = None,
@@ -56,7 +54,7 @@ def _resolve_build(
     package whichever was touched last.
 
     Args:
-        recipe_path: Path to the recipe YAML file.
+        config: The recipe's effective configuration.
         version: Specific version to package. When it is the recorded
             release's version, the build is still verified against that
             release's hash.
@@ -70,13 +68,14 @@ def _resolve_build(
             chosen version is another one).
 
     Raises:
-        ConfigError: If the recipe cannot be loaded, no builds exist for
-            the app, the recorded or requested version has no completed
-            build, or several builds exist and none is recorded.
+        ConfigError: If no builds exist for the app, the recorded or
+            requested version has no completed build, or several builds
+            exist and none is recorded.
         StateError: If the deployment state file is corrupted.
 
     """
-    config = load_effective_config(recipe_path)
+    from napt.state.deployment import working_release
+
     app_id = config["id"]
     build_output_dir = (
         builds_dir if builds_dir is not None else Path(config["directories"]["build"])
@@ -148,42 +147,31 @@ def cmd_package(args: argparse.Namespace) -> int:
             directories, and debug flags.
 
     Returns:
-        Exit code (0 for success, 1 for failure).
+        Exit code (0 for success).
 
     Note:
         Run 'napt build' before 'napt package'. Downloads IntuneWinAppUtil.exe
-        if not cached.
+        if not cached. Failures raise NAPT errors for
+        [run_handler][napt.cli.common.run_handler] to report.
 
     """
-    # Configure global logger
-    logger = get_logger(verbose=args.verbose, debug=args.debug)
-    set_global_logger(logger)
+    from napt.build.packager import create_intunewin
+    from napt.config.loader import load_effective_config
 
-    recipe_path = Path(args.recipe).resolve()
-    builds_dir = Path(args.builds_dir).resolve() if args.builds_dir else None
-    state_dir = Path(args.state_dir).resolve() if args.state_dir else None
-
-    if not recipe_path.exists():
-        print(f"Error: Recipe file not found: {recipe_path}")
-        return 1
-
-    try:
-        build_dir, expected_sha256 = _resolve_build(
-            recipe_path,
-            version=args.version,
-            builds_dir=builds_dir,
-            state_dir=state_dir,
-        )
-    except NAPTError as err:
-        print(f"Error: {err}")
-        return 1
+    recipe_path = args.recipe.resolve()
+    builds_dir = args.builds_dir.resolve() if args.builds_dir else None
+    state_dir = args.state_dir.resolve() if args.state_dir else None
 
     config = load_effective_config(recipe_path)
+    build_dir, expected_sha256 = _resolve_build(
+        config,
+        version=args.version,
+        builds_dir=builds_dir,
+        state_dir=state_dir,
+    )
 
     output_dir = (
-        Path(args.output_dir)
-        if args.output_dir
-        else Path(config["directories"]["package"])
+        args.output_dir if args.output_dir else Path(config["directories"]["package"])
     )
     tool_release = config["intunewin"]["release"]
 
@@ -191,28 +179,12 @@ def cmd_package(args: argparse.Namespace) -> int:
     print(f"Output directory: {output_dir}")
     print()
 
-    try:
-        result = create_intunewin(
-            build_dir,
-            output_dir=output_dir,
-            tool_release=tool_release,
-            expected_sha256=expected_sha256,
-        )
-    except (ConfigError, NetworkError, PackagingError) as err:
-        print(f"Error: {err}")
-        if args.verbose or args.debug:
-            import traceback
-
-            traceback.print_exc()
-        return 1
-    except NAPTError as err:
-        # Catch any other NAPT errors we might have missed
-        print(f"Error: {err}")
-        if args.verbose or args.debug:
-            import traceback
-
-            traceback.print_exc()
-        return 1
+    result = create_intunewin(
+        build_dir,
+        output_dir=output_dir,
+        tool_release=tool_release,
+        expected_sha256=expected_sha256,
+    )
 
     # Display results
     print("=" * 70)
@@ -256,6 +228,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     )
     parser_package.add_argument(
         "recipe",
+        type=Path,
         help="Path to the recipe YAML file",
     )
     parser_package.add_argument(
@@ -266,6 +239,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     )
     parser_package.add_argument(
         "--builds-dir",
+        type=Path,
         default=None,
         help=(
             "Directory containing the PSADT build " "(default: from config or ./builds)"
@@ -273,30 +247,17 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     )
     parser_package.add_argument(
         "--output-dir",
+        type=Path,
         default=None,
         help=(
             "Parent directory for package output "
             "(default: from config or ./packages)"
         ),
     )
-    parser_package.add_argument(
-        "--state-dir",
-        default=None,
-        help=(
-            "State root whose deployment/ folder records the release "
-            "(default: from config or ./state)"
-        ),
+    add_state_dir(
+        parser_package,
+        "State root whose deployment/ folder records the release "
+        "(default: from config or ./state)",
     )
-    parser_package.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Show progress and high-level status updates",
-    )
-    parser_package.add_argument(
-        "-d",
-        "--debug",
-        action="store_true",
-        help="Show detailed debugging output (implies --verbose)",
-    )
+    add_output_flags(parser_package)
     parser_package.set_defaults(func=cmd_package)

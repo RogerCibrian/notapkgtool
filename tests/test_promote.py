@@ -16,7 +16,6 @@ from napt.promote.planner import (
     load_recipe_configs,
     plan_path_for,
     plan_promotions,
-    resolve_state_dir,
     write_plan_files,
 )
 from napt.state.deployment import (
@@ -434,25 +433,6 @@ class TestLoadRecipeConfigs:
 
         with pytest.raises(ConfigError, match="test-app"):
             plan_promotions(tmp_path / "recipes", now=NOW)
-
-
-class TestResolveStateDir:
-    """Tests for state directory resolution from configuration."""
-
-    def test_resolves_configured_state_dir(self, tmp_path):
-        """Tests that directories.state is read from the first recipe."""
-        recipe = _write_recipe(tmp_path)
-        data = yaml.safe_load(recipe.read_text(encoding="utf-8"))
-        data["directories"] = {"state": "customstate"}
-        recipe.write_text(yaml.dump(data), encoding="utf-8")
-
-        assert resolve_state_dir(recipe) == Path("customstate")
-
-    def test_default_state_dir(self, tmp_path):
-        """Tests that the built-in default resolves to state."""
-        recipe = _write_recipe(tmp_path)
-
-        assert resolve_state_dir(recipe) == Path("state")
 
 
 def _action(app_id: str = "a") -> dict[str, Any]:

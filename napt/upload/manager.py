@@ -723,7 +723,13 @@ def _upload_single_app(
     return intune_app_id
 
 
-def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
+def upload_package(
+    recipe_path: Path,
+    force: bool = False,
+    *,
+    state_dir: Path | None = None,
+    packages_dir: Path | None = None,
+) -> UploadResult:
     """Upload a packaged app to Microsoft Intune via the Graph API.
 
     Loads the recipe config, locates the package of the release deployment
@@ -772,6 +778,10 @@ def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
         force: When True, matched stamped apps are re-uploaded (metadata
             and content) instead of adopted as-is. Never creates
             duplicates.
+        state_dir: State root whose deployment/ folder records the
+            release. If None, reads from config directories.state.
+        packages_dir: Directory holding the packages. If None, reads from
+            config directories.package.
 
     Returns:
         Upload result including the Intune app ID(s), app name, version, and
@@ -822,11 +832,13 @@ def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
     # Step 1: Locate the package of the recorded release and verify it
     total_steps = 9 if build_types == "both" else 6
     logger.step(1, total_steps, "Locating .intunewin package...")
-    state_dir = Path(config["directories"]["state"])
+    if state_dir is None:
+        state_dir = Path(config["directories"]["state"])
+    if packages_dir is None:
+        packages_dir = Path(config["directories"]["package"])
     state_path = deployment_state_path(state_dir / "deployment", app_id)
     state = load_deployment_state(state_path)
     release = working_release_of(state)
-    packages_dir = Path(config["directories"]["package"])
     package_dir = _locate_package_dir(packages_dir, app_id, release)
     version = package_dir.name
     manifest = _read_build_manifest(package_dir)

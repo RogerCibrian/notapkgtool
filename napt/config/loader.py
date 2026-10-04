@@ -255,6 +255,29 @@ def collect_recipe_paths(recipes: Path) -> list[Path]:
     raise ConfigError(f"Recipe path not found: {recipes}")
 
 
+def resolve_state_dir(recipes: Path) -> Path:
+    """Resolves the configured state directory for a run over recipes.
+
+    ``directories.state`` is org policy (consistent across a project),
+    so the first recipe's effective configuration determines it for a
+    fleet-wide run.
+
+    Args:
+        recipes: A recipe YAML file, or a directory scanned recursively.
+
+    Returns:
+        The configured state directory.
+
+    Raises:
+        ConfigError: If the recipes path is invalid or the first recipe
+            cannot be loaded.
+
+    """
+    first = collect_recipe_paths(recipes)[0]
+    config = load_effective_config(first)
+    return Path(config["directories"]["state"])
+
+
 def duplicate_recipe_id_message(app_id: str, first: Path, second: Path) -> str:
     """Words the error for two recipe files that resolve to one id.
 
