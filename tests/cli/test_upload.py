@@ -41,7 +41,6 @@ class TestCmdUpload:
             version="1.2.3",
             intune_app_id="guid-abc-123",
             package_path=tmp_path / "test.intunewin",
-            status="success",
         )
         with patch("napt.upload.manager.upload_package", return_value=mock_result):
             code = cmd_upload(_upload_args(recipe))

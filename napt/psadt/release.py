@@ -324,7 +324,7 @@ def get_psadt_release(release_spec: str, cache_dir: Path) -> Path:
 
         if is_psadt_cached(version, cache_dir):
             version_dir = cache_dir / version
-            logger.verbose("PSADT", f"Using cached PSADT: {version_dir}")
+            logger.info("PSADT", f"Using cached PSADT: {version_dir}")
             return version_dir
 
         logger.info("PSADT", f"Downloading PSADT {version}...")

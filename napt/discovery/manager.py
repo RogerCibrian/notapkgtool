@@ -46,14 +46,13 @@ that this module unwraps into the pending release and the public result.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 from napt.config.loader import load_effective_config
 from napt.discovery.base import StrategyResult
 from napt.discovery.registry import get_strategy
 from napt.discovery.resolve import resolve_installer
 from napt.discovery.url_download import run_url_download
-from napt.logging import get_global_logger
+from napt.logging import Logger, get_global_logger
 from napt.results import DiscoverResult
 from napt.state.deployment import (
     deployment_state_path,
@@ -146,7 +145,6 @@ def discover_recipe(
         version_source=result.version_source,
         file_path=result.file_path,
         sha256=result.sha256,
-        status="success",
     )
 
 
@@ -155,7 +153,7 @@ def _record_pending_release(
     app_id: str,
     name: str,
     result: StrategyResult,
-    logger: Any,
+    logger: Logger,
 ) -> None:
     """Records the discovered release as the app's pending candidate."""
     state_path = deployment_state_path(state_dir, app_id)

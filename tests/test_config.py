@@ -481,10 +481,14 @@ class TestLogoPathResolution:
 
 
 class TestValidationInLoader:
-    """Tests that load_effective_config enforces validation."""
+    """Tests that load_effective_config enforces validation.
 
-    def test_missing_name_raises_config_error(self, tmp_test_dir):
-        """Tests that a recipe missing 'name' raises ConfigError."""
+    The validation rules themselves are tested in test_validation.py; these
+    cover the loader path: an error raises, a warning does not.
+    """
+
+    def test_validation_error_raises_config_error(self, tmp_test_dir):
+        """Tests that a recipe failing validation cannot be loaded."""
         recipe_path = tmp_test_dir / "recipe.yaml"
         recipe_path.write_text(
             "apiVersion: napt/v1\nid: test\n"
@@ -493,37 +497,6 @@ class TestValidationInLoader:
         )
 
         with pytest.raises(ConfigError, match="name"):
-            load_effective_config(recipe_path)
-
-    def test_missing_id_raises_config_error(self, tmp_test_dir):
-        """Tests that a recipe missing 'id' raises ConfigError."""
-        recipe_path = tmp_test_dir / "recipe.yaml"
-        recipe_path.write_text(
-            "apiVersion: napt/v1\nname: Test\n"
-            "discovery:\n  strategy: url_download\n"
-            "  url: https://example.com/app.msi\n"
-        )
-
-        with pytest.raises(ConfigError, match="id"):
-            load_effective_config(recipe_path)
-
-    def test_missing_discovery_raises_config_error(self, tmp_test_dir):
-        """Tests that a recipe missing 'discovery' raises ConfigError."""
-        recipe_path = tmp_test_dir / "recipe.yaml"
-        recipe_path.write_text("apiVersion: napt/v1\nname: Test\nid: test\n")
-
-        with pytest.raises(ConfigError, match="discovery"):
-            load_effective_config(recipe_path)
-
-    def test_invalid_strategy_raises_config_error(self, tmp_test_dir):
-        """Tests that an unknown strategy raises ConfigError."""
-        recipe_path = tmp_test_dir / "recipe.yaml"
-        recipe_path.write_text(
-            "apiVersion: napt/v1\nname: Test\nid: test\n"
-            "discovery:\n  strategy: nonexistent\n"
-        )
-
-        with pytest.raises(ConfigError):
             load_effective_config(recipe_path)
 
     def test_valid_recipe_returns_config_with_required_fields(
@@ -561,60 +534,6 @@ class TestValidationInLoader:
         config = load_effective_config(recipe_path)
 
         assert config["name"] == "Test"
-
-    def test_validate_config_and_validate_recipe_agree(self, tmp_test_dir):
-        """Tests that validate_config and validate_recipe report the same errors."""
-        from napt.validation import validate_recipe
-
-        recipe_path = tmp_test_dir / "recipe.yaml"
-        recipe_path.write_text(
-            "apiVersion: napt/v1\nid: test\n"
-            "discovery:\n  strategy: url_download\n"
-            "  url: https://example.com/app.msi\n"
-        )
-
-        recipe_result = validate_recipe(recipe_path)
-
-        assert recipe_result.status == "invalid"
-        assert any("name" in err for err in recipe_result.errors)
-
-    def test_all_required_fields_validated(self):
-        """Tests that every required field produces a validation error when missing."""
-        from napt.validation import validate_config
-
-        # A complete valid config to selectively remove fields from
-        valid_config: dict[str, Any] = {
-            "apiVersion": "napt/v1",
-            "name": "Test App",
-            "id": "test-app",
-            "discovery": {
-                "strategy": "url_download",
-                "url": "https://example.com/app.msi",
-            },
-        }
-
-        # Top-level required fields
-        for field in ["apiVersion", "name", "id", "discovery"]:
-            incomplete = dict(valid_config)
-            del incomplete[field]
-            result = validate_config(incomplete)
-            assert (
-                result.status == "invalid"
-            ), f"Removing '{field}' should produce a validation error"
-            assert any(
-                field in err for err in result.errors
-            ), f"Error message should mention '{field}'"
-
-        # Nested required: discovery.strategy
-        no_strategy = dict(valid_config)
-        no_strategy["discovery"] = {"url": "https://example.com/app.msi"}
-        result = validate_config(no_strategy)
-        assert (
-            result.status == "invalid"
-        ), "Removing 'discovery.strategy' should produce a validation error"
-        assert any(
-            "strategy" in err for err in result.errors
-        ), "Error message should mention 'strategy'"
 
 
 _PARENT_RECIPE = """apiVersion: napt/v1

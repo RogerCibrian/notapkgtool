@@ -71,6 +71,7 @@ from napt.auth.spec import (
 )
 from napt.exceptions import AuthError, ConfigError, NetworkError
 from napt.graph.client import GRAPH_BASE, auth_headers, graph_request, json_headers
+from napt.logging import get_global_logger
 from napt.version import get_version
 
 # Microsoft Graph Command Line Tools: first-party public client with the
@@ -400,8 +401,6 @@ def _ensure_application(
     Returns:
         The application object with at least ``id`` and ``appId``.
     """
-    from napt.logging import get_global_logger
-
     logger = get_global_logger()
     wanted_access = _required_resource_access(roles, scopes)
     app = _find_application(token, spec)
@@ -671,8 +670,6 @@ def setup_app_registration(spec: SetupSpec) -> SetupResult:
             ```
 
     """
-    from napt.logging import get_global_logger
-
     logger = get_global_logger()
     token = _bootstrap_token(spec.tenant_id)
 

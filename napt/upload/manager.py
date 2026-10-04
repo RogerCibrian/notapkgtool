@@ -53,7 +53,7 @@ from napt.graph.intune import (
     update_win32_app,
     upload_to_azure_blob,
 )
-from napt.logging import get_global_logger
+from napt.logging import Logger, get_global_logger
 from napt.results import UploadResult
 from napt.state.deployment import (
     deployment_state_path,
@@ -217,7 +217,7 @@ def _verify_package_file(package_dir: Path, manifest: dict[str, Any]) -> Path:
     return package_path
 
 
-def _load_icon_bytes(path: Path, logger: Any) -> bytes | None:
+def _load_icon_bytes(path: Path, logger: Logger) -> bytes | None:
     """Reads an icon file, warning instead of raising on failure.
 
     Args:
@@ -971,5 +971,4 @@ def upload_package(
         intune_app_id=intune_app_id,
         intune_update_app_id=intune_update_app_id,
         package_path=package_path,
-        status="success",
     )

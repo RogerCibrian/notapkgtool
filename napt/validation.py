@@ -828,7 +828,7 @@ def _validate_discovery_section(
     if not isinstance(strategy_name, str):
         errors.append("discovery.strategy: Must be a string")
         return
-    logger.verbose("VALIDATION", f"'{app_name}' uses strategy: {strategy_name}")
+    logger.verbose("CONFIG", f"'{app_name}' uses strategy: {strategy_name}")
 
     if strategy_name == "url_download":
         errors.extend(validate_url_download_config(config))
@@ -916,7 +916,7 @@ def validate_config(
             warnings.append(
                 f"apiVersion '{api_version}' may not be supported (expected: napt/v1)"
             )
-        logger.verbose("VALIDATION", f"apiVersion: {api_version}")
+        logger.verbose("CONFIG", f"apiVersion: {api_version}")
 
     app_id = config.get("id")
     if isinstance(app_id, str):
@@ -933,7 +933,7 @@ def validate_config(
     _validate_parent_field(config, recipe_path, warnings)
 
     app_name = config.get("name", "unnamed")
-    logger.verbose("VALIDATION", f"Validating: {app_name}")
+    logger.verbose("CONFIG", f"Validating: {app_name}")
 
     discovery = config.get("discovery")
     if isinstance(discovery, dict):
@@ -949,21 +949,15 @@ def validate_config(
     _validate_deployment_section(config, errors, warnings)
     _validate_secrets_section(config, errors, warnings)
 
-    # Determine final status
-    status = "valid" if len(errors) == 0 else "invalid"
-    app_count = 1 if status == "valid" else 0
-
-    if status == "valid":
-        logger.verbose("VALIDATION", "Recipe is valid!")
+    if errors:
+        logger.verbose("CONFIG", f"Recipe has {len(errors)} error(s)")
     else:
-        logger.verbose("VALIDATION", f"Recipe has {len(errors)} error(s)")
+        logger.verbose("CONFIG", "Recipe is valid!")
 
     app_id = config.get("id")
     return ValidationResult(
-        status=status,
         errors=errors,
         warnings=warnings,
-        app_count=app_count,
         recipe_path=recipe_path,
         app_id=app_id if isinstance(app_id, str) and app_id else None,
     )
@@ -982,8 +976,8 @@ def validate_recipe(recipe_path: Path) -> ValidationResult:
         recipe_path: Path to the recipe YAML file to validate.
 
     Returns:
-        Validation status, errors, warnings, app count, app id, and the
-            parent path when the recipe declares one.
+        The errors, warnings, app id, and the parent path when the recipe
+            declares one.
 
     Example:
         Validate a recipe and check results:
@@ -991,7 +985,7 @@ def validate_recipe(recipe_path: Path) -> ValidationResult:
             from pathlib import Path
 
             result = validate_recipe(Path("recipes/app.yaml"))
-            if result.status == "valid":
+            if result.is_valid:
                 print("Recipe is valid!")
             else:
                 for error in result.errors:
@@ -1001,21 +995,17 @@ def validate_recipe(recipe_path: Path) -> ValidationResult:
     """
     logger = get_global_logger()
     recipe_path_str = str(recipe_path)
-    logger.verbose("VALIDATION", f"Validating recipe: {recipe_path}")
+    logger.verbose("CONFIG", f"Validating recipe: {recipe_path}")
 
     try:
         merged, parent_path = merge_effective_config(recipe_path)
     except ConfigError as err:
         return ValidationResult(
-            status="invalid",
-            errors=[str(err)],
-            warnings=[],
-            app_count=0,
-            recipe_path=recipe_path_str,
+            errors=[str(err)], warnings=[], recipe_path=recipe_path_str
         )
-    logger.verbose("VALIDATION", "YAML syntax is valid")
+    logger.verbose("CONFIG", "YAML syntax is valid")
     if parent_path is not None:
-        logger.verbose("VALIDATION", f"Parent recipe: {parent_path}")
+        logger.verbose("CONFIG", f"Parent recipe: {parent_path}")
 
     result = validate_config(merged, recipe_path=recipe_path_str)
     if parent_path is None:
@@ -1042,29 +1032,19 @@ def validate_recipes(path: Path) -> list[ValidationResult]:
     try:
         paths = collect_recipe_paths(path)
     except ConfigError as err:
-        return [
-            ValidationResult(
-                status="invalid",
-                errors=[str(err)],
-                warnings=[],
-                app_count=0,
-                recipe_path=str(path),
-            )
-        ]
+        return [ValidationResult(errors=[str(err)], warnings=[], recipe_path=str(path))]
 
     results: list[ValidationResult] = []
     sources: dict[str, Path] = {}
     for recipe_path in paths:
         result = validate_recipe(recipe_path)
-        if result.status == "valid" and result.app_id is not None:
+        if result.is_valid and result.app_id is not None:
             first = sources.get(result.app_id)
             if first is None:
                 sources[result.app_id] = recipe_path
             else:
                 result = replace(
                     result,
-                    status="invalid",
-                    app_count=0,
                     errors=[
                         *result.errors,
                         duplicate_recipe_id_message(result.app_id, first, recipe_path),

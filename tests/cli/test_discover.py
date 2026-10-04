@@ -43,7 +43,6 @@ class TestCmdDiscover:
             version_source="regex_in_tag",
             file_path=tmp_path / "chrome.msi",
             sha256="a" * 64,
-            status="success",
         )
         with patch("napt.discovery.manager.discover_recipe", return_value=mock_result):
             code = cmd_discover(_discover_args(recipe))
@@ -87,7 +86,6 @@ class TestCmdDiscover:
             version_source="msi",
             file_path=tmp_path / "f.msi",
             sha256="a" * 64,
-            status="success",
         )
         with patch(
             "napt.discovery.manager.discover_recipe", return_value=mock_result
@@ -110,7 +108,6 @@ class TestCmdDiscover:
             version_source="msi",
             file_path=tmp_path / "f.msi",
             sha256="a" * 64,
-            status="success",
         )
         with patch(
             "napt.discovery.manager.discover_recipe", return_value=mock_result

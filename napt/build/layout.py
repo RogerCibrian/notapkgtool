@@ -82,8 +82,7 @@ def create_build_directory(base_dir: Path, app_id: str, version: str) -> Path:
 
     try:
         if version_dir.exists():
-            logger.verbose("BUILD", f"Build directory exists: {version_dir}")
-            logger.verbose("BUILD", "Removing existing build...")
+            logger.info("BUILD", f"Replacing the earlier build of {version}")
             shutil.rmtree(version_dir)
         packagefiles_dir.mkdir(parents=True, exist_ok=True)
     except OSError as err:

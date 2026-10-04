@@ -93,18 +93,14 @@ class TestBuildPackage:
         assert result.build_dir == version_dir / "packagefiles"
         assert result.version == "26.02"
         assert result.psadt_version == "4.1.7"
-        assert result.build_types == "both"
         invoke = (
             version_dir / "packagefiles" / "Invoke-AppDeployToolkit.ps1"
         ).read_text(encoding="utf-8-sig")
         assert "Start-ADTProcess" in invoke
         assert "AppArch = 'x64'" in invoke
         assert (version_dir / "packagefiles" / "Files" / "7z2602-x64.exe").is_file()
-        assert result.detection_script_path == version_dir / "7-Zip_26.02-Detection.ps1"
-        assert (
-            result.requirements_script_path
-            == version_dir / "7-Zip_26.02-Requirements.ps1"
-        )
+        assert (version_dir / "7-Zip_26.02-Detection.ps1").is_file()
+        assert (version_dir / "7-Zip_26.02-Requirements.ps1").is_file()
         manifest = json.loads(
             (version_dir / "build-manifest.json").read_text(encoding="utf-8")
         )
@@ -127,7 +123,7 @@ class TestBuildPackage:
 
         result, _ = _build(config, psadt, tmp_path)
 
-        assert result.requirements_script_path is None
+        assert not list(result.build_dir.parent.glob("*-Requirements.ps1"))
         manifest = json.loads(
             (result.build_dir.parent / "build-manifest.json").read_text(
                 encoding="utf-8"
@@ -183,7 +179,7 @@ class TestBuildPackage:
         assert (
             "Start-ADTMsiProcess -Action Install -FilePath '7z2602-x64.msi'" in invoke
         )
-        assert result.detection_script_path.name == "7-Zip_26.02.00.0-Detection.ps1"
+        assert (result.build_dir.parent / "7-Zip_26.02.00.0-Detection.ps1").is_file()
 
     def test_ignored_recipe_fields_warn_once_per_build(
         self, make_config, psadt, tmp_path, capsys

@@ -21,8 +21,7 @@ class TestCmdValidate:
         recipe = tmp_path / "recipe.yaml"
         recipe.touch()
         mock_result = _mock_result(
-            status="valid",
-            app_count=1,
+            is_valid=True,
             errors=[],
             warnings=[],
             recipe_path=str(recipe),
@@ -31,15 +30,15 @@ class TestCmdValidate:
             assert cmd_validate(_args(recipe=recipe)) == 0
         out = capsys.readouterr().out
         assert "[SUCCESS]" in out
-        assert "App Count:   1" in out
+        assert "Status:      VALID" in out
+        assert "App Count" not in out
 
     def test_invalid_recipe_returns_one(self, tmp_path, capsys):
         """Tests that an invalid recipe prints errors and returns 1."""
         recipe = tmp_path / "recipe.yaml"
         recipe.touch()
         mock_result = _mock_result(
-            status="invalid",
-            app_count=0,
+            is_valid=False,
             errors=["Missing required field: id"],
             warnings=[],
             recipe_path=str(recipe),
@@ -56,8 +55,7 @@ class TestCmdValidate:
         recipe = tmp_path / "recipe.yaml"
         recipe.touch()
         mock_result = _mock_result(
-            status="valid",
-            app_count=1,
+            is_valid=True,
             errors=[],
             warnings=["Unknown field 'foo'"],
             recipe_path=str(recipe),
@@ -73,8 +71,7 @@ class TestCmdValidate:
         recipe = tmp_path / "recipe.yaml"
         recipe.touch()
         mock_result = _mock_result(
-            status="invalid",
-            app_count=0,
+            is_valid=False,
             errors=["Error one", "Error two", "Error three"],
             warnings=[],
             recipe_path=str(recipe),
@@ -92,10 +89,8 @@ class TestCmdValidate:
         recipe = tmp_path / "app.override.yaml"
         recipe.touch()
         result = ValidationResult(
-            status="valid",
             errors=[],
             warnings=[],
-            app_count=1,
             recipe_path=str(recipe),
             parent_path=str(tmp_path / "base.yaml"),
         )
@@ -109,10 +104,8 @@ class TestCmdValidate:
         recipe = tmp_path / "recipe.yaml"
         recipe.touch()
         result = ValidationResult(
-            status="valid",
             errors=[],
             warnings=[],
-            app_count=1,
             recipe_path=str(recipe),
         )
         with patch("napt.validation.validate_recipe", return_value=result):
@@ -277,10 +270,8 @@ class TestDisplayPath:
     def test_recipe_under_the_root_is_shown_relative(self, tmp_path):
         """Tests that a recipe inside the scanned directory is shortened."""
         result = ValidationResult(
-            status="valid",
             errors=[],
             warnings=[],
-            app_count=1,
             recipe_path=str(tmp_path / "recipes" / "a" / "one.yaml"),
         )
 
@@ -292,10 +283,8 @@ class TestDisplayPath:
         """Tests that a path not under the root is printed unchanged."""
         elsewhere = str(tmp_path / "other" / "one.yaml")
         result = ValidationResult(
-            status="invalid",
             errors=["x"],
             warnings=[],
-            app_count=0,
             recipe_path=elsewhere,
         )
 

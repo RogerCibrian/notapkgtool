@@ -1,11 +1,4 @@
-"""
-Tests for napt.core module.
-
-Tests core orchestration including:
-- Recipe validation workflow
-- discover_recipe function
-- Error handling
-"""
+"""Tests for napt.discovery.manager: the discover_recipe orchestration."""
 
 from __future__ import annotations
 
@@ -58,7 +51,6 @@ class TestDiscoverRecipe:
         assert result.strategy == "url_download"
         assert result.version == "1.2.3"
         assert result.version_source == "msi"
-        assert result.status == "success"
 
     def test_discover_recipe_missing_strategy_in_empty_recipe_raises(
         self, tmp_test_dir, create_yaml_file

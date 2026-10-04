@@ -38,13 +38,13 @@ class ConfigError(NAPTError):
     This exception is raised when there are problems with:
 
     - YAML parse errors (syntax errors, invalid structure)
-    - Missing required configuration fields (e.g., no apps defined, missing
-        'discovery.strategy' field)
+    - Missing required configuration fields (e.g., no 'name', no
+        'discovery.strategy')
     - Invalid strategy configuration (unknown strategy name, invalid strategy
         parameters)
     - Missing recipe files (file not found)
-    - Recipe validation failures (invalid recipe structure, missing required
-        app fields)
+    - Recipe validation failures (wrong field types, values out of range)
+    - A configured path that does not exist (e.g., the brand pack folder)
 
     Example:
         Catching configuration errors:
@@ -135,11 +135,13 @@ class StateError(NAPTError):
     """Raised for persisted-state integrity errors.
 
     This exception is raised when NAPT's own persisted state (the
-    deployment state files under ``state/``) is unreadable or invalid:
+    deployment state and plan files under ``state/``) is unreadable or
+    invalid:
 
-    - Corrupted deployment state files (invalid JSON)
+    - Corrupted deployment state or plan files (invalid JSON, wrong shape)
     - Invalid deployment state fields (e.g., an unparseable ring
-        ``entered_at`` timestamp)
+        ``entered_at`` timestamp, or a recorded version that cannot be used
+        as a folder name)
 
     Deployment state is authoritative and never auto-replaced; the error
     message says how to recover.

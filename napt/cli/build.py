@@ -81,7 +81,6 @@ def cmd_build(args: argparse.Namespace) -> int:
     print(f"Version:         {result.version}")
     print(f"PSADT Version:   {result.psadt_version}")
     print(f"Build Directory: {result.build_dir}")
-    print(f"Status:          {result.status}")
     print("=" * 70)
     print()
     print("[SUCCESS] PSADT package built successfully!")

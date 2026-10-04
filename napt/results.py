@@ -23,8 +23,9 @@ the discovery stage builds on. Command handlers consume these results
 to render console output and choose exit codes; tests assert against
 them.
 
-All dataclasses are frozen (immutable) to prevent accidental mutation of
-return values.
+A result exists only when the operation succeeded; a failure is an
+exception. All dataclasses are frozen (immutable) to prevent accidental
+mutation of return values.
 
 Note:
     Only results that napt commands surface belong in this module. Domain types
@@ -65,7 +66,6 @@ class DiscoverResult:
         version_source: How version was determined (e.g., "regex_in_url", "msi").
         file_path: Path to the downloaded installer file.
         sha256: SHA-256 hash of the downloaded file.
-        status: Always "success" for successful discovery.
     """
 
     app_name: str
@@ -75,7 +75,6 @@ class DiscoverResult:
     version_source: str
     file_path: Path
     sha256: str
-    status: str
 
 
 @dataclass(frozen=True)
@@ -88,12 +87,6 @@ class BuildResult:
         version: Application version.
         build_dir: Path to the build directory (packagefiles subdirectory).
         psadt_version: PSADT version used for the build.
-        status: Build status (typically "success").
-        build_types: The build types setting used ("both", "app_only", or
-            "update_only").
-        detection_script_path: Path to the generated detection script.
-        requirements_script_path: Path to the generated requirements script, if
-            created. None if build_types is "app_only".
     """
 
     app_id: str
@@ -101,10 +94,6 @@ class BuildResult:
     version: str
     build_dir: Path
     psadt_version: str
-    status: str
-    build_types: str
-    detection_script_path: Path | None = None
-    requirements_script_path: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -116,14 +105,12 @@ class PackageResult:
         package_path: Path to the created .intunewin file.
         app_id: Unique application identifier.
         version: Application version.
-        status: Packaging status (typically "success").
     """
 
     build_dir: Path
     package_path: Path
     app_id: str
     version: str
-    status: str
 
 
 @dataclass(frozen=True)
@@ -139,14 +126,12 @@ class UploadResult:
         intune_update_app_id: Graph API object ID of the update app entry.
             None when build_types is "app_only".
         package_path: Path to the uploaded .intunewin file.
-        status: Always "success" for successful uploads.
     """
 
     app_id: str
     app_name: str
     version: str
     package_path: Path
-    status: str
     intune_app_id: str | None = None
     intune_update_app_id: str | None = None
 
@@ -156,20 +141,21 @@ class ValidationResult:
     """Result from validating a recipe.
 
     Attributes:
-        status: Validation status ("valid" or "invalid").
         errors: List of error messages (empty if valid).
         warnings: List of warning messages.
-        app_count: Number of apps in the recipe.
         recipe_path: String path to the validated recipe file.
         parent_path: String path to the parent recipe merged beneath it, or
             None when the recipe declares no parent.
         app_id: The recipe's id, or None when it has no usable one.
     """
 
-    status: str
     errors: list[str]
     warnings: list[str]
-    app_count: int
     recipe_path: str
     parent_path: str | None = None
     app_id: str | None = None
+
+    @property
+    def is_valid(self) -> bool:
+        """Whether the recipe passed: no errors were found."""
+        return not self.errors

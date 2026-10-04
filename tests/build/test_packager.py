@@ -515,7 +515,6 @@ class TestCreateIntunewin:
 
         assert result.app_id == "test-app"
         assert result.version == "1.0.0"
-        assert result.status == "success"
         assert result.package_path == (
             packages_dir / "test-app" / "1.0.0" / "Invoke-AppDeployToolkit.intunewin"
         )
@@ -686,7 +685,7 @@ class TestCreateIntunewin:
             expected_sha256=_INSTALLER_SHA256,
         )
 
-        assert result.status == "success"
+        assert result.package_path.is_file()
 
     def test_create_intunewin_invalid_structure_raises(self, tmp_path):
         """Tests error when packagefiles directory has invalid PSADT structure."""

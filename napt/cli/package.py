@@ -194,7 +194,6 @@ def cmd_package(args: argparse.Namespace) -> int:
     print(f"Version:         {result.version}")
     print(f"Package Path:    {result.package_path}")
     print(f"Build Directory: {result.build_dir}")
-    print(f"Status:          {result.status}")
     print("=" * 70)
     print()
     print("[SUCCESS] .intunewin package created successfully!")

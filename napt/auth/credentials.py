@@ -80,6 +80,7 @@ import msal_extensions
 
 from napt.exceptions import AuthError, ConfigError, NAPTError
 from napt.graph.client import GRAPH_BASE, auth_headers, graph_request
+from napt.logging import get_global_logger
 
 GRAPH_SCOPES = ["https://graph.microsoft.com/.default"]
 
@@ -622,8 +623,6 @@ def _lookup_tenant(token: str) -> tuple[str | None, str | None]:
     Returns:
         ``(domain, display_name)`` with either element ``None`` when unknown.
     """
-    from napt.logging import get_global_logger
-
     logger = get_global_logger()
     try:
         body = graph_request(
@@ -689,8 +688,6 @@ def login(
         AuthError: If no app registration is configured or the sign-in fails.
         ConfigError: If the saved auth config is malformed.
     """
-    from napt.logging import get_global_logger
-
     logger = get_global_logger()
 
     config = resolve_auth_config(tenant_id, client_id)

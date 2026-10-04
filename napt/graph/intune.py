@@ -53,6 +53,7 @@ from napt.graph.client import (
     json_headers,
     send,
 )
+from napt.logging import get_global_logger
 
 if TYPE_CHECKING:
     from napt.upload.intunewin import IntunewinMetadata
@@ -602,8 +603,6 @@ def upload_to_azure_blob(
             after retries.
 
     """
-    from napt.logging import get_global_logger
-
     logger = get_global_logger()
 
     block_ids: list[str] = []
