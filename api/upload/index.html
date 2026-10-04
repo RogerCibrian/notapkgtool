@@ -2274,12 +2274,7 @@ deployment.require_pending is enabled.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>napt/upload/manager.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-721">721</a></span>
-<span class="normal"><a href="#__codelineno-0-722">722</a></span>
-<span class="normal"><a href="#__codelineno-0-723">723</a></span>
-<span class="normal"><a href="#__codelineno-0-724">724</a></span>
-<span class="normal"><a href="#__codelineno-0-725">725</a></span>
-<span class="normal"><a href="#__codelineno-0-726">726</a></span>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-726">726</a></span>
 <span class="normal"><a href="#__codelineno-0-727">727</a></span>
 <span class="normal"><a href="#__codelineno-0-728">728</a></span>
 <span class="normal"><a href="#__codelineno-0-729">729</a></span>
@@ -2526,259 +2521,292 @@ deployment.require_pending is enabled.</p>
 <span class="normal"><a href="#__codelineno-0-970">970</a></span>
 <span class="normal"><a href="#__codelineno-0-971">971</a></span>
 <span class="normal"><a href="#__codelineno-0-972">972</a></span>
-<span class="normal"><a href="#__codelineno-0-973">973</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-721"><a id="__codelineno-0-721" name="__codelineno-0-721"></a><span class="k">def</span><span class="w"> </span><span class="nf">upload_package</span><span class="p">(</span><span class="n">recipe_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">UploadResult</span><span class="p">:</span>
-</span><span id="__span-0-722"><a id="__codelineno-0-722" name="__codelineno-0-722"></a><span class="w">    </span><span class="sd">"""Upload a packaged app to Microsoft Intune via the Graph API.</span>
-</span><span id="__span-0-723"><a id="__codelineno-0-723" name="__codelineno-0-723"></a>
-</span><span id="__span-0-724"><a id="__codelineno-0-724" name="__codelineno-0-724"></a><span class="sd">    Loads the recipe config, locates the package of the release deployment</span>
-</span><span id="__span-0-725"><a id="__codelineno-0-725" name="__codelineno-0-725"></a><span class="sd">    state records, verifies it, authenticates using the available Azure</span>
-</span><span id="__span-0-726"><a id="__codelineno-0-726" name="__codelineno-0-726"></a><span class="sd">    credential, parses encryption metadata from the package, and executes</span>
-</span><span id="__span-0-727"><a id="__codelineno-0-727" name="__codelineno-0-727"></a><span class="sd">    the full Graph API upload flow.</span>
+<span class="normal"><a href="#__codelineno-0-973">973</a></span>
+<span class="normal"><a href="#__codelineno-0-974">974</a></span>
+<span class="normal"><a href="#__codelineno-0-975">975</a></span>
+<span class="normal"><a href="#__codelineno-0-976">976</a></span>
+<span class="normal"><a href="#__codelineno-0-977">977</a></span>
+<span class="normal"><a href="#__codelineno-0-978">978</a></span>
+<span class="normal"><a href="#__codelineno-0-979">979</a></span>
+<span class="normal"><a href="#__codelineno-0-980">980</a></span>
+<span class="normal"><a href="#__codelineno-0-981">981</a></span>
+<span class="normal"><a href="#__codelineno-0-982">982</a></span>
+<span class="normal"><a href="#__codelineno-0-983">983</a></span>
+<span class="normal"><a href="#__codelineno-0-984">984</a></span>
+<span class="normal"><a href="#__codelineno-0-985">985</a></span>
+<span class="normal"><a href="#__codelineno-0-986">986</a></span>
+<span class="normal"><a href="#__codelineno-0-987">987</a></span>
+<span class="normal"><a href="#__codelineno-0-988">988</a></span>
+<span class="normal"><a href="#__codelineno-0-989">989</a></span>
+<span class="normal"><a href="#__codelineno-0-990">990</a></span>
+<span class="normal"><a href="#__codelineno-0-991">991</a></span>
+<span class="normal"><a href="#__codelineno-0-992">992</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-726"><a id="__codelineno-0-726" name="__codelineno-0-726"></a><span class="k">def</span><span class="w"> </span><span class="nf">upload_package</span><span class="p">(</span><span class="n">recipe_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">UploadResult</span><span class="p">:</span>
+</span><span id="__span-0-727"><a id="__codelineno-0-727" name="__codelineno-0-727"></a><span class="w">    </span><span class="sd">"""Upload a packaged app to Microsoft Intune via the Graph API.</span>
 </span><span id="__span-0-728"><a id="__codelineno-0-728" name="__codelineno-0-728"></a>
-</span><span id="__span-0-729"><a id="__codelineno-0-729" name="__codelineno-0-729"></a><span class="sd">    When intune.build_types is "both" (the default), two Intune app entries are</span>
-</span><span id="__span-0-730"><a id="__codelineno-0-730" name="__codelineno-0-730"></a><span class="sd">    created: an install entry (detection script only) and an update entry</span>
-</span><span id="__span-0-731"><a id="__codelineno-0-731" name="__codelineno-0-731"></a><span class="sd">    (detection + requirements scripts). Each entry is created, uploaded, and</span>
-</span><span id="__span-0-732"><a id="__codelineno-0-732" name="__codelineno-0-732"></a><span class="sd">    committed in sequence before moving to the next. The recipe's</span>
-</span><span id="__span-0-733"><a id="__codelineno-0-733" name="__codelineno-0-733"></a><span class="sd">    build_types must be the one the package was built with.</span>
-</span><span id="__span-0-734"><a id="__codelineno-0-734" name="__codelineno-0-734"></a>
-</span><span id="__span-0-735"><a id="__codelineno-0-735" name="__codelineno-0-735"></a><span class="sd">    The package directory is packages/{app.id}/{version}/ for the recorded</span>
-</span><span id="__span-0-736"><a id="__codelineno-0-736" name="__codelineno-0-736"></a><span class="sd">    release (pending, else published), or the only package when none is</span>
-</span><span id="__span-0-737"><a id="__codelineno-0-737" name="__codelineno-0-737"></a><span class="sd">    recorded. Run 'napt package' before calling this function.</span>
-</span><span id="__span-0-738"><a id="__codelineno-0-738" name="__codelineno-0-738"></a>
-</span><span id="__span-0-739"><a id="__codelineno-0-739" name="__codelineno-0-739"></a><span class="sd">    Authentication needs no configuration file:</span>
-</span><span id="__span-0-740"><a id="__codelineno-0-740" name="__codelineno-0-740"></a>
-</span><span id="__span-0-741"><a id="__codelineno-0-741" name="__codelineno-0-741"></a><span class="sd">    - Developers: run 'napt auth login' once</span>
-</span><span id="__span-0-742"><a id="__codelineno-0-742" name="__codelineno-0-742"></a><span class="sd">    - CI/CD: set AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_CLIENT_SECRET, or use</span>
-</span><span id="__span-0-743"><a id="__codelineno-0-743" name="__codelineno-0-743"></a><span class="sd">        OIDC federation</span>
-</span><span id="__span-0-744"><a id="__codelineno-0-744" name="__codelineno-0-744"></a>
-</span><span id="__span-0-745"><a id="__codelineno-0-745" name="__codelineno-0-745"></a><span class="sd">    Before any Graph call, the .intunewin is re-hashed against what 'napt</span>
-</span><span id="__span-0-746"><a id="__codelineno-0-746" name="__codelineno-0-746"></a><span class="sd">    package' recorded, and the package's installer hash (from the build</span>
-</span><span id="__span-0-747"><a id="__codelineno-0-747" name="__codelineno-0-747"></a><span class="sd">    manifest) is verified against the pending release recorded in the app's</span>
-</span><span id="__span-0-748"><a id="__codelineno-0-748" name="__codelineno-0-748"></a><span class="sd">    deployment state, so what was recorded at discovery is byte-for-byte</span>
-</span><span id="__span-0-749"><a id="__codelineno-0-749" name="__codelineno-0-749"></a><span class="sd">    what ships. A hash mismatch aborts the upload. A package matching the</span>
-</span><span id="__span-0-750"><a id="__codelineno-0-750" name="__codelineno-0-750"></a><span class="sd">    published release (a re-run after writeback, or a --force refresh)</span>
-</span><span id="__span-0-751"><a id="__codelineno-0-751" name="__codelineno-0-751"></a><span class="sd">    passes too. When it matches neither, the upload proceeds with a</span>
-</span><span id="__span-0-752"><a id="__codelineno-0-752" name="__codelineno-0-752"></a><span class="sd">    warning, or fails when deployment.require_pending is enabled. On</span>
-</span><span id="__span-0-753"><a id="__codelineno-0-753" name="__codelineno-0-753"></a><span class="sd">    success, the deployment state records the published version, hash, and</span>
-</span><span id="__span-0-754"><a id="__codelineno-0-754" name="__codelineno-0-754"></a><span class="sd">    Intune app IDs, and a matching pending slot is cleared.</span>
-</span><span id="__span-0-755"><a id="__codelineno-0-755" name="__codelineno-0-755"></a>
-</span><span id="__span-0-756"><a id="__codelineno-0-756" name="__codelineno-0-756"></a><span class="sd">    Re-running an upload is safe: existing NAPT-stamped apps matching this</span>
-</span><span id="__span-0-757"><a id="__codelineno-0-757" name="__codelineno-0-757"></a><span class="sd">    publish instance (recipe id, entry type, installer hash) are adopted</span>
-</span><span id="__span-0-758"><a id="__codelineno-0-758" name="__codelineno-0-758"></a><span class="sd">    instead of duplicated; one whose content was never committed is deleted</span>
-</span><span id="__span-0-759"><a id="__codelineno-0-759" name="__codelineno-0-759"></a><span class="sd">    and recreated, so it gets a new app ID. Adoption keeps the app as it is;</span>
-</span><span id="__span-0-760"><a id="__codelineno-0-760" name="__codelineno-0-760"></a><span class="sd">    it does not re-send metadata or content. Pass force=True to update</span>
-</span><span id="__span-0-761"><a id="__codelineno-0-761" name="__codelineno-0-761"></a><span class="sd">    matched apps' metadata and upload a</span>
-</span><span id="__span-0-762"><a id="__codelineno-0-762" name="__codelineno-0-762"></a><span class="sd">    fresh content version (e.g., after changing PSADT commands or detection</span>
-</span><span id="__span-0-763"><a id="__codelineno-0-763" name="__codelineno-0-763"></a><span class="sd">    settings without a new installer release).</span>
-</span><span id="__span-0-764"><a id="__codelineno-0-764" name="__codelineno-0-764"></a>
-</span><span id="__span-0-765"><a id="__codelineno-0-765" name="__codelineno-0-765"></a><span class="sd">    Args:</span>
-</span><span id="__span-0-766"><a id="__codelineno-0-766" name="__codelineno-0-766"></a><span class="sd">        recipe_path: Path to the recipe YAML file.</span>
-</span><span id="__span-0-767"><a id="__codelineno-0-767" name="__codelineno-0-767"></a><span class="sd">        force: When True, matched stamped apps are re-uploaded (metadata</span>
-</span><span id="__span-0-768"><a id="__codelineno-0-768" name="__codelineno-0-768"></a><span class="sd">            and content) instead of adopted as-is. Never creates</span>
-</span><span id="__span-0-769"><a id="__codelineno-0-769" name="__codelineno-0-769"></a><span class="sd">            duplicates.</span>
-</span><span id="__span-0-770"><a id="__codelineno-0-770" name="__codelineno-0-770"></a>
-</span><span id="__span-0-771"><a id="__codelineno-0-771" name="__codelineno-0-771"></a><span class="sd">    Returns:</span>
-</span><span id="__span-0-772"><a id="__codelineno-0-772" name="__codelineno-0-772"></a><span class="sd">        Upload result including the Intune app ID(s), app name, version, and</span>
-</span><span id="__span-0-773"><a id="__codelineno-0-773" name="__codelineno-0-773"></a><span class="sd">            package path. intune_app_id is None when build_types is "update_only";</span>
-</span><span id="__span-0-774"><a id="__codelineno-0-774" name="__codelineno-0-774"></a><span class="sd">            intune_update_app_id is None when build_types is "app_only".</span>
+</span><span id="__span-0-729"><a id="__codelineno-0-729" name="__codelineno-0-729"></a><span class="sd">    Loads the recipe config, locates the package of the release deployment</span>
+</span><span id="__span-0-730"><a id="__codelineno-0-730" name="__codelineno-0-730"></a><span class="sd">    state records, verifies it, authenticates using the available Azure</span>
+</span><span id="__span-0-731"><a id="__codelineno-0-731" name="__codelineno-0-731"></a><span class="sd">    credential, parses encryption metadata from the package, and executes</span>
+</span><span id="__span-0-732"><a id="__codelineno-0-732" name="__codelineno-0-732"></a><span class="sd">    the full Graph API upload flow.</span>
+</span><span id="__span-0-733"><a id="__codelineno-0-733" name="__codelineno-0-733"></a>
+</span><span id="__span-0-734"><a id="__codelineno-0-734" name="__codelineno-0-734"></a><span class="sd">    When intune.build_types is "both" (the default), two Intune app entries are</span>
+</span><span id="__span-0-735"><a id="__codelineno-0-735" name="__codelineno-0-735"></a><span class="sd">    created: an install entry (detection script only) and an update entry</span>
+</span><span id="__span-0-736"><a id="__codelineno-0-736" name="__codelineno-0-736"></a><span class="sd">    (detection + requirements scripts). Each entry is created, uploaded, and</span>
+</span><span id="__span-0-737"><a id="__codelineno-0-737" name="__codelineno-0-737"></a><span class="sd">    committed in sequence before moving to the next. The recipe's</span>
+</span><span id="__span-0-738"><a id="__codelineno-0-738" name="__codelineno-0-738"></a><span class="sd">    build_types must be the one the package was built with.</span>
+</span><span id="__span-0-739"><a id="__codelineno-0-739" name="__codelineno-0-739"></a>
+</span><span id="__span-0-740"><a id="__codelineno-0-740" name="__codelineno-0-740"></a><span class="sd">    The package directory is packages/{app.id}/{version}/ for the recorded</span>
+</span><span id="__span-0-741"><a id="__codelineno-0-741" name="__codelineno-0-741"></a><span class="sd">    release (pending, else published), or the only package when none is</span>
+</span><span id="__span-0-742"><a id="__codelineno-0-742" name="__codelineno-0-742"></a><span class="sd">    recorded. Run 'napt package' before calling this function.</span>
+</span><span id="__span-0-743"><a id="__codelineno-0-743" name="__codelineno-0-743"></a>
+</span><span id="__span-0-744"><a id="__codelineno-0-744" name="__codelineno-0-744"></a><span class="sd">    Authentication needs no configuration file:</span>
+</span><span id="__span-0-745"><a id="__codelineno-0-745" name="__codelineno-0-745"></a>
+</span><span id="__span-0-746"><a id="__codelineno-0-746" name="__codelineno-0-746"></a><span class="sd">    - Developers: run 'napt auth login' once</span>
+</span><span id="__span-0-747"><a id="__codelineno-0-747" name="__codelineno-0-747"></a><span class="sd">    - CI/CD: set AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_CLIENT_SECRET, or use</span>
+</span><span id="__span-0-748"><a id="__codelineno-0-748" name="__codelineno-0-748"></a><span class="sd">        OIDC federation</span>
+</span><span id="__span-0-749"><a id="__codelineno-0-749" name="__codelineno-0-749"></a>
+</span><span id="__span-0-750"><a id="__codelineno-0-750" name="__codelineno-0-750"></a><span class="sd">    Before any Graph call, the .intunewin is re-hashed against what 'napt</span>
+</span><span id="__span-0-751"><a id="__codelineno-0-751" name="__codelineno-0-751"></a><span class="sd">    package' recorded, and the package's installer hash (from the build</span>
+</span><span id="__span-0-752"><a id="__codelineno-0-752" name="__codelineno-0-752"></a><span class="sd">    manifest) is verified against the pending release recorded in the app's</span>
+</span><span id="__span-0-753"><a id="__codelineno-0-753" name="__codelineno-0-753"></a><span class="sd">    deployment state, so what was recorded at discovery is byte-for-byte</span>
+</span><span id="__span-0-754"><a id="__codelineno-0-754" name="__codelineno-0-754"></a><span class="sd">    what ships. A hash mismatch aborts the upload. A package matching the</span>
+</span><span id="__span-0-755"><a id="__codelineno-0-755" name="__codelineno-0-755"></a><span class="sd">    published release (a re-run after writeback, or a --force refresh)</span>
+</span><span id="__span-0-756"><a id="__codelineno-0-756" name="__codelineno-0-756"></a><span class="sd">    passes too. When it matches neither, the upload proceeds with a</span>
+</span><span id="__span-0-757"><a id="__codelineno-0-757" name="__codelineno-0-757"></a><span class="sd">    warning, or fails when deployment.require_pending is enabled. On</span>
+</span><span id="__span-0-758"><a id="__codelineno-0-758" name="__codelineno-0-758"></a><span class="sd">    success, the deployment state records the published version, hash, and</span>
+</span><span id="__span-0-759"><a id="__codelineno-0-759" name="__codelineno-0-759"></a><span class="sd">    Intune app IDs, and a matching pending slot is cleared.</span>
+</span><span id="__span-0-760"><a id="__codelineno-0-760" name="__codelineno-0-760"></a>
+</span><span id="__span-0-761"><a id="__codelineno-0-761" name="__codelineno-0-761"></a><span class="sd">    Re-running an upload is safe: existing NAPT-stamped apps matching this</span>
+</span><span id="__span-0-762"><a id="__codelineno-0-762" name="__codelineno-0-762"></a><span class="sd">    publish instance (recipe id, entry type, installer hash) are adopted</span>
+</span><span id="__span-0-763"><a id="__codelineno-0-763" name="__codelineno-0-763"></a><span class="sd">    instead of duplicated; one whose content was never committed is deleted</span>
+</span><span id="__span-0-764"><a id="__codelineno-0-764" name="__codelineno-0-764"></a><span class="sd">    and recreated, so it gets a new app ID. Adoption keeps the app as it is;</span>
+</span><span id="__span-0-765"><a id="__codelineno-0-765" name="__codelineno-0-765"></a><span class="sd">    it does not re-send metadata or content. Pass force=True to update</span>
+</span><span id="__span-0-766"><a id="__codelineno-0-766" name="__codelineno-0-766"></a><span class="sd">    matched apps' metadata and upload a</span>
+</span><span id="__span-0-767"><a id="__codelineno-0-767" name="__codelineno-0-767"></a><span class="sd">    fresh content version (e.g., after changing PSADT commands or detection</span>
+</span><span id="__span-0-768"><a id="__codelineno-0-768" name="__codelineno-0-768"></a><span class="sd">    settings without a new installer release).</span>
+</span><span id="__span-0-769"><a id="__codelineno-0-769" name="__codelineno-0-769"></a>
+</span><span id="__span-0-770"><a id="__codelineno-0-770" name="__codelineno-0-770"></a><span class="sd">    Args:</span>
+</span><span id="__span-0-771"><a id="__codelineno-0-771" name="__codelineno-0-771"></a><span class="sd">        recipe_path: Path to the recipe YAML file.</span>
+</span><span id="__span-0-772"><a id="__codelineno-0-772" name="__codelineno-0-772"></a><span class="sd">        force: When True, matched stamped apps are re-uploaded (metadata</span>
+</span><span id="__span-0-773"><a id="__codelineno-0-773" name="__codelineno-0-773"></a><span class="sd">            and content) instead of adopted as-is. Never creates</span>
+</span><span id="__span-0-774"><a id="__codelineno-0-774" name="__codelineno-0-774"></a><span class="sd">            duplicates.</span>
 </span><span id="__span-0-775"><a id="__codelineno-0-775" name="__codelineno-0-775"></a>
-</span><span id="__span-0-776"><a id="__codelineno-0-776" name="__codelineno-0-776"></a><span class="sd">    Raises:</span>
-</span><span id="__span-0-777"><a id="__codelineno-0-777" name="__codelineno-0-777"></a><span class="sd">        ConfigError: If the package of the recorded release is not found,</span>
-</span><span id="__span-0-778"><a id="__codelineno-0-778" name="__codelineno-0-778"></a><span class="sd">            several packages exist with none recorded, the manifest is</span>
-</span><span id="__span-0-779"><a id="__codelineno-0-779" name="__codelineno-0-779"></a><span class="sd">            unusable, the recipe's build_types differs from the package's,</span>
-</span><span id="__span-0-780"><a id="__codelineno-0-780" name="__codelineno-0-780"></a><span class="sd">            or a script the manifest names is missing. Run 'napt package'</span>
-</span><span id="__span-0-781"><a id="__codelineno-0-781" name="__codelineno-0-781"></a><span class="sd">            to create or recreate the package.</span>
-</span><span id="__span-0-782"><a id="__codelineno-0-782" name="__codelineno-0-782"></a><span class="sd">        AuthError: If all Azure credential methods fail.</span>
-</span><span id="__span-0-783"><a id="__codelineno-0-783" name="__codelineno-0-783"></a><span class="sd">        NetworkError: If Graph API or Azure Blob Storage calls fail.</span>
-</span><span id="__span-0-784"><a id="__codelineno-0-784" name="__codelineno-0-784"></a><span class="sd">        PackagingError: If the .intunewin file is malformed or no longer</span>
-</span><span id="__span-0-785"><a id="__codelineno-0-785" name="__codelineno-0-785"></a><span class="sd">            matches the hash 'napt package' recorded, the package's</span>
-</span><span id="__span-0-786"><a id="__codelineno-0-786" name="__codelineno-0-786"></a><span class="sd">            installer hash does not match the pending release in deployment</span>
-</span><span id="__span-0-787"><a id="__codelineno-0-787" name="__codelineno-0-787"></a><span class="sd">            state, or it matches neither pending nor published while</span>
-</span><span id="__span-0-788"><a id="__codelineno-0-788" name="__codelineno-0-788"></a><span class="sd">            deployment.require_pending is enabled.</span>
-</span><span id="__span-0-789"><a id="__codelineno-0-789" name="__codelineno-0-789"></a><span class="sd">        StateError: On a corrupted deployment state file.</span>
-</span><span id="__span-0-790"><a id="__codelineno-0-790" name="__codelineno-0-790"></a>
-</span><span id="__span-0-791"><a id="__codelineno-0-791" name="__codelineno-0-791"></a><span class="sd">    Example:</span>
-</span><span id="__span-0-792"><a id="__codelineno-0-792" name="__codelineno-0-792"></a><span class="sd">        Upload and print the resulting Intune app IDs:</span>
-</span><span id="__span-0-793"><a id="__codelineno-0-793" name="__codelineno-0-793"></a><span class="sd">            ```python</span>
-</span><span id="__span-0-794"><a id="__codelineno-0-794" name="__codelineno-0-794"></a><span class="sd">            from pathlib import Path</span>
-</span><span id="__span-0-795"><a id="__codelineno-0-795" name="__codelineno-0-795"></a><span class="sd">            from napt.upload.manager import upload_package</span>
-</span><span id="__span-0-796"><a id="__codelineno-0-796" name="__codelineno-0-796"></a>
-</span><span id="__span-0-797"><a id="__codelineno-0-797" name="__codelineno-0-797"></a><span class="sd">            result = upload_package(Path("recipes/Google/chrome.yaml"))</span>
-</span><span id="__span-0-798"><a id="__codelineno-0-798" name="__codelineno-0-798"></a><span class="sd">            print(f"Install app ID: {result.intune_app_id}")</span>
-</span><span id="__span-0-799"><a id="__codelineno-0-799" name="__codelineno-0-799"></a><span class="sd">            if result.intune_update_app_id:</span>
-</span><span id="__span-0-800"><a id="__codelineno-0-800" name="__codelineno-0-800"></a><span class="sd">                print(f"Update app ID: {result.intune_update_app_id}")</span>
-</span><span id="__span-0-801"><a id="__codelineno-0-801" name="__codelineno-0-801"></a><span class="sd">            ```</span>
-</span><span id="__span-0-802"><a id="__codelineno-0-802" name="__codelineno-0-802"></a>
-</span><span id="__span-0-803"><a id="__codelineno-0-803" name="__codelineno-0-803"></a><span class="sd">    """</span>
-</span><span id="__span-0-804"><a id="__codelineno-0-804" name="__codelineno-0-804"></a>    <span class="n">logger</span> <span class="o">=</span> <span class="n">get_global_logger</span><span class="p">()</span>
-</span><span id="__span-0-805"><a id="__codelineno-0-805" name="__codelineno-0-805"></a>
-</span><span id="__span-0-806"><a id="__codelineno-0-806" name="__codelineno-0-806"></a>    <span class="n">config</span> <span class="o">=</span> <span class="n">load_effective_config</span><span class="p">(</span><span class="n">recipe_path</span><span class="p">)</span>
-</span><span id="__span-0-807"><a id="__codelineno-0-807" name="__codelineno-0-807"></a>    <span class="n">app_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span>
-</span><span id="__span-0-808"><a id="__codelineno-0-808" name="__codelineno-0-808"></a>    <span class="n">app_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span>
-</span><span id="__span-0-809"><a id="__codelineno-0-809" name="__codelineno-0-809"></a>    <span class="n">build_types</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">"intune"</span><span class="p">][</span><span class="s2">"build_types"</span><span class="p">]</span>
+</span><span id="__span-0-776"><a id="__codelineno-0-776" name="__codelineno-0-776"></a><span class="sd">    Returns:</span>
+</span><span id="__span-0-777"><a id="__codelineno-0-777" name="__codelineno-0-777"></a><span class="sd">        Upload result including the Intune app ID(s), app name, version, and</span>
+</span><span id="__span-0-778"><a id="__codelineno-0-778" name="__codelineno-0-778"></a><span class="sd">            package path. intune_app_id is None when build_types is "update_only";</span>
+</span><span id="__span-0-779"><a id="__codelineno-0-779" name="__codelineno-0-779"></a><span class="sd">            intune_update_app_id is None when build_types is "app_only".</span>
+</span><span id="__span-0-780"><a id="__codelineno-0-780" name="__codelineno-0-780"></a>
+</span><span id="__span-0-781"><a id="__codelineno-0-781" name="__codelineno-0-781"></a><span class="sd">    Raises:</span>
+</span><span id="__span-0-782"><a id="__codelineno-0-782" name="__codelineno-0-782"></a><span class="sd">        ConfigError: If the package of the recorded release is not found,</span>
+</span><span id="__span-0-783"><a id="__codelineno-0-783" name="__codelineno-0-783"></a><span class="sd">            several packages exist with none recorded, the manifest is</span>
+</span><span id="__span-0-784"><a id="__codelineno-0-784" name="__codelineno-0-784"></a><span class="sd">            unusable, the recipe's build_types differs from the package's,</span>
+</span><span id="__span-0-785"><a id="__codelineno-0-785" name="__codelineno-0-785"></a><span class="sd">            or a script the manifest names is missing. Run 'napt package'</span>
+</span><span id="__span-0-786"><a id="__codelineno-0-786" name="__codelineno-0-786"></a><span class="sd">            to create or recreate the package.</span>
+</span><span id="__span-0-787"><a id="__codelineno-0-787" name="__codelineno-0-787"></a><span class="sd">        AuthError: If all Azure credential methods fail.</span>
+</span><span id="__span-0-788"><a id="__codelineno-0-788" name="__codelineno-0-788"></a><span class="sd">        NetworkError: If Graph API or Azure Blob Storage calls fail.</span>
+</span><span id="__span-0-789"><a id="__codelineno-0-789" name="__codelineno-0-789"></a><span class="sd">        PackagingError: If the .intunewin file is malformed or no longer</span>
+</span><span id="__span-0-790"><a id="__codelineno-0-790" name="__codelineno-0-790"></a><span class="sd">            matches the hash 'napt package' recorded, the package's</span>
+</span><span id="__span-0-791"><a id="__codelineno-0-791" name="__codelineno-0-791"></a><span class="sd">            installer hash does not match the pending release in deployment</span>
+</span><span id="__span-0-792"><a id="__codelineno-0-792" name="__codelineno-0-792"></a><span class="sd">            state, or it matches neither pending nor published while</span>
+</span><span id="__span-0-793"><a id="__codelineno-0-793" name="__codelineno-0-793"></a><span class="sd">            deployment.require_pending is enabled.</span>
+</span><span id="__span-0-794"><a id="__codelineno-0-794" name="__codelineno-0-794"></a><span class="sd">        StateError: On a corrupted deployment state file.</span>
+</span><span id="__span-0-795"><a id="__codelineno-0-795" name="__codelineno-0-795"></a>
+</span><span id="__span-0-796"><a id="__codelineno-0-796" name="__codelineno-0-796"></a><span class="sd">    Example:</span>
+</span><span id="__span-0-797"><a id="__codelineno-0-797" name="__codelineno-0-797"></a><span class="sd">        Upload and print the resulting Intune app IDs:</span>
+</span><span id="__span-0-798"><a id="__codelineno-0-798" name="__codelineno-0-798"></a><span class="sd">            ```python</span>
+</span><span id="__span-0-799"><a id="__codelineno-0-799" name="__codelineno-0-799"></a><span class="sd">            from pathlib import Path</span>
+</span><span id="__span-0-800"><a id="__codelineno-0-800" name="__codelineno-0-800"></a><span class="sd">            from napt.upload.manager import upload_package</span>
+</span><span id="__span-0-801"><a id="__codelineno-0-801" name="__codelineno-0-801"></a>
+</span><span id="__span-0-802"><a id="__codelineno-0-802" name="__codelineno-0-802"></a><span class="sd">            result = upload_package(Path("recipes/Google/chrome.yaml"))</span>
+</span><span id="__span-0-803"><a id="__codelineno-0-803" name="__codelineno-0-803"></a><span class="sd">            print(f"Install app ID: {result.intune_app_id}")</span>
+</span><span id="__span-0-804"><a id="__codelineno-0-804" name="__codelineno-0-804"></a><span class="sd">            if result.intune_update_app_id:</span>
+</span><span id="__span-0-805"><a id="__codelineno-0-805" name="__codelineno-0-805"></a><span class="sd">                print(f"Update app ID: {result.intune_update_app_id}")</span>
+</span><span id="__span-0-806"><a id="__codelineno-0-806" name="__codelineno-0-806"></a><span class="sd">            ```</span>
+</span><span id="__span-0-807"><a id="__codelineno-0-807" name="__codelineno-0-807"></a>
+</span><span id="__span-0-808"><a id="__codelineno-0-808" name="__codelineno-0-808"></a><span class="sd">    """</span>
+</span><span id="__span-0-809"><a id="__codelineno-0-809" name="__codelineno-0-809"></a>    <span class="n">logger</span> <span class="o">=</span> <span class="n">get_global_logger</span><span class="p">()</span>
 </span><span id="__span-0-810"><a id="__codelineno-0-810" name="__codelineno-0-810"></a>
-</span><span id="__span-0-811"><a id="__codelineno-0-811" name="__codelineno-0-811"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"UPLOAD"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Starting upload for '</span><span class="si">{</span><span class="n">app_name</span><span class="si">}</span><span class="s2">' (</span><span class="si">{</span><span class="n">app_id</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
-</span><span id="__span-0-812"><a id="__codelineno-0-812" name="__codelineno-0-812"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"UPLOAD"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"build_types: </span><span class="si">{</span><span class="n">build_types</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="__span-0-813"><a id="__codelineno-0-813" name="__codelineno-0-813"></a>
-</span><span id="__span-0-814"><a id="__codelineno-0-814" name="__codelineno-0-814"></a>    <span class="c1"># Resolve the app icon once; it is shared by the install and update entries</span>
-</span><span id="__span-0-815"><a id="__codelineno-0-815" name="__codelineno-0-815"></a>    <span class="n">large_icon</span> <span class="o">=</span> <span class="n">_resolve_large_icon</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
-</span><span id="__span-0-816"><a id="__codelineno-0-816" name="__codelineno-0-816"></a>
-</span><span id="__span-0-817"><a id="__codelineno-0-817" name="__codelineno-0-817"></a>    <span class="c1"># Step 1: Locate the package of the recorded release and verify it</span>
-</span><span id="__span-0-818"><a id="__codelineno-0-818" name="__codelineno-0-818"></a>    <span class="n">total_steps</span> <span class="o">=</span> <span class="mi">9</span> <span class="k">if</span> <span class="n">build_types</span> <span class="o">==</span> <span class="s2">"both"</span> <span class="k">else</span> <span class="mi">6</span>
-</span><span id="__span-0-819"><a id="__codelineno-0-819" name="__codelineno-0-819"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">total_steps</span><span class="p">,</span> <span class="s2">"Locating .intunewin package..."</span><span class="p">)</span>
-</span><span id="__span-0-820"><a id="__codelineno-0-820" name="__codelineno-0-820"></a>    <span class="n">state_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s2">"directories"</span><span class="p">][</span><span class="s2">"state"</span><span class="p">])</span>
-</span><span id="__span-0-821"><a id="__codelineno-0-821" name="__codelineno-0-821"></a>    <span class="n">state_path</span> <span class="o">=</span> <span class="n">deployment_state_path</span><span class="p">(</span><span class="n">state_dir</span> <span class="o">/</span> <span class="s2">"deployment"</span><span class="p">,</span> <span class="n">app_id</span><span class="p">)</span>
-</span><span id="__span-0-822"><a id="__codelineno-0-822" name="__codelineno-0-822"></a>    <span class="n">state</span> <span class="o">=</span> <span class="n">load_deployment_state</span><span class="p">(</span><span class="n">state_path</span><span class="p">)</span>
-</span><span id="__span-0-823"><a id="__codelineno-0-823" name="__codelineno-0-823"></a>    <span class="n">release</span> <span class="o">=</span> <span class="n">working_release</span><span class="p">(</span><span class="n">state_dir</span><span class="p">,</span> <span class="n">app_id</span><span class="p">)</span>
-</span><span id="__span-0-824"><a id="__codelineno-0-824" name="__codelineno-0-824"></a>    <span class="n">packages_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s2">"directories"</span><span class="p">][</span><span class="s2">"package"</span><span class="p">])</span>
-</span><span id="__span-0-825"><a id="__codelineno-0-825" name="__codelineno-0-825"></a>    <span class="n">package_dir</span> <span class="o">=</span> <span class="n">_locate_package_dir</span><span class="p">(</span><span class="n">packages_dir</span><span class="p">,</span> <span class="n">app_id</span><span class="p">,</span> <span class="n">release</span><span class="p">)</span>
-</span><span id="__span-0-826"><a id="__codelineno-0-826" name="__codelineno-0-826"></a>    <span class="n">version</span> <span class="o">=</span> <span class="n">package_dir</span><span class="o">.</span><span class="n">name</span>
-</span><span id="__span-0-827"><a id="__codelineno-0-827" name="__codelineno-0-827"></a>    <span class="n">manifest</span> <span class="o">=</span> <span class="n">_read_build_manifest</span><span class="p">(</span><span class="n">package_dir</span><span class="p">)</span>
-</span><span id="__span-0-828"><a id="__codelineno-0-828" name="__codelineno-0-828"></a>    <span class="n">package_path</span> <span class="o">=</span> <span class="n">_verify_package_file</span><span class="p">(</span><span class="n">package_dir</span><span class="p">,</span> <span class="n">manifest</span><span class="p">)</span>
-</span><span id="__span-0-829"><a id="__codelineno-0-829" name="__codelineno-0-829"></a>    <span class="n">installer_sha256</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">"installer_sha256"</span><span class="p">]</span>
-</span><span id="__span-0-830"><a id="__codelineno-0-830" name="__codelineno-0-830"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"UPLOAD"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Package: </span><span class="si">{</span><span class="n">package_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="__span-0-831"><a id="__codelineno-0-831" name="__codelineno-0-831"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"UPLOAD"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Version: </span><span class="si">{</span><span class="n">version</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="__span-0-832"><a id="__codelineno-0-832" name="__codelineno-0-832"></a>
-</span><span id="__span-0-833"><a id="__codelineno-0-833" name="__codelineno-0-833"></a>    <span class="c1"># The package was built for one build_types; the metadata below comes</span>
-</span><span id="__span-0-834"><a id="__codelineno-0-834" name="__codelineno-0-834"></a>    <span class="c1"># from the recipe. They must agree, or one entry would be committed</span>
-</span><span id="__span-0-835"><a id="__codelineno-0-835" name="__codelineno-0-835"></a>    <span class="c1"># before the other fails on a script the package does not hold.</span>
-</span><span id="__span-0-836"><a id="__codelineno-0-836" name="__codelineno-0-836"></a>    <span class="n">built_types</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">"win32_build_types"</span><span class="p">]</span>
-</span><span id="__span-0-837"><a id="__codelineno-0-837" name="__codelineno-0-837"></a>    <span class="k">if</span> <span class="n">built_types</span> <span class="o">!=</span> <span class="n">build_types</span><span class="p">:</span>
-</span><span id="__span-0-838"><a id="__codelineno-0-838" name="__codelineno-0-838"></a>        <span class="k">raise</span> <span class="n">ConfigError</span><span class="p">(</span>
-</span><span id="__span-0-839"><a id="__codelineno-0-839" name="__codelineno-0-839"></a>            <span class="sa">f</span><span class="s2">"The package of '</span><span class="si">{</span><span class="n">app_id</span><span class="si">}</span><span class="s2">' was built with build_types "</span>
-</span><span id="__span-0-840"><a id="__codelineno-0-840" name="__codelineno-0-840"></a>            <span class="sa">f</span><span class="s2">"'</span><span class="si">{</span><span class="n">built_types</span><span class="si">}</span><span class="s2">', but the recipe now says '</span><span class="si">{</span><span class="n">build_types</span><span class="si">}</span><span class="s2">'. Run "</span>
-</span><span id="__span-0-841"><a id="__codelineno-0-841" name="__codelineno-0-841"></a>            <span class="s2">"'napt build' and 'napt package' so the package matches the recipe."</span>
-</span><span id="__span-0-842"><a id="__codelineno-0-842" name="__codelineno-0-842"></a>        <span class="p">)</span>
-</span><span id="__span-0-843"><a id="__codelineno-0-843" name="__codelineno-0-843"></a>
-</span><span id="__span-0-844"><a id="__codelineno-0-844" name="__codelineno-0-844"></a>    <span class="c1"># Verify provenance against deployment state before any Graph call:</span>
-</span><span id="__span-0-845"><a id="__codelineno-0-845" name="__codelineno-0-845"></a>    <span class="c1"># what was recorded at discovery must be byte-for-byte what ships. A</span>
-</span><span id="__span-0-846"><a id="__codelineno-0-846" name="__codelineno-0-846"></a>    <span class="c1"># package matching the published release is a re-run after writeback</span>
-</span><span id="__span-0-847"><a id="__codelineno-0-847" name="__codelineno-0-847"></a>    <span class="c1"># or a --force refresh, and passes too.</span>
-</span><span id="__span-0-848"><a id="__codelineno-0-848" name="__codelineno-0-848"></a>    <span class="n">pending</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"pending"</span><span class="p">)</span>
-</span><span id="__span-0-849"><a id="__codelineno-0-849" name="__codelineno-0-849"></a>    <span class="n">published</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"published"</span><span class="p">)</span>
-</span><span id="__span-0-850"><a id="__codelineno-0-850" name="__codelineno-0-850"></a>    <span class="k">if</span> <span class="n">pending</span><span class="p">:</span>
-</span><span id="__span-0-851"><a id="__codelineno-0-851" name="__codelineno-0-851"></a>        <span class="k">if</span> <span class="n">pending</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"sha256"</span><span class="p">)</span> <span class="o">!=</span> <span class="n">installer_sha256</span><span class="p">:</span>
-</span><span id="__span-0-852"><a id="__codelineno-0-852" name="__codelineno-0-852"></a>            <span class="k">raise</span> <span class="n">PackagingError</span><span class="p">(</span>
-</span><span id="__span-0-853"><a id="__codelineno-0-853" name="__codelineno-0-853"></a>                <span class="sa">f</span><span class="s2">"Installer hash mismatch for '</span><span class="si">{</span><span class="n">app_id</span><span class="si">}</span><span class="s2">': the package was "</span>
-</span><span id="__span-0-854"><a id="__codelineno-0-854" name="__codelineno-0-854"></a>                <span class="sa">f</span><span class="s2">"built from a different binary than the pending release "</span>
-</span><span id="__span-0-855"><a id="__codelineno-0-855" name="__codelineno-0-855"></a>                <span class="sa">f</span><span class="s2">"recorded in </span><span class="si">{</span><span class="n">state_path</span><span class="si">}</span><span class="s2">.</span><span class="se">\n</span><span class="s2">"</span>
-</span><span id="__span-0-856"><a id="__codelineno-0-856" name="__codelineno-0-856"></a>                <span class="sa">f</span><span class="s2">"  pending:  </span><span class="si">{</span><span class="n">pending</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'version'</span><span class="p">)</span><span class="si">}</span><span class="s2"> "</span>
-</span><span id="__span-0-857"><a id="__codelineno-0-857" name="__codelineno-0-857"></a>                <span class="sa">f</span><span class="s2">"(sha256 </span><span class="si">{</span><span class="n">pending</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'sha256'</span><span class="p">)</span><span class="si">}</span><span class="s2">)</span><span class="se">\n</span><span class="s2">"</span>
-</span><span id="__span-0-858"><a id="__codelineno-0-858" name="__codelineno-0-858"></a>                <span class="sa">f</span><span class="s2">"  package:  </span><span class="si">{</span><span class="n">version</span><span class="si">}</span><span class="s2"> (sha256 </span><span class="si">{</span><span class="n">installer_sha256</span><span class="si">}</span><span class="s2">)</span><span class="se">\n</span><span class="s2">"</span>
-</span><span id="__span-0-859"><a id="__codelineno-0-859" name="__codelineno-0-859"></a>                <span class="s2">"Re-run 'napt discover', 'napt build', and 'napt package' "</span>
-</span><span id="__span-0-860"><a id="__codelineno-0-860" name="__codelineno-0-860"></a>                <span class="s2">"so the package matches the recorded release."</span>
-</span><span id="__span-0-861"><a id="__codelineno-0-861" name="__codelineno-0-861"></a>            <span class="p">)</span>
-</span><span id="__span-0-862"><a id="__codelineno-0-862" name="__codelineno-0-862"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-</span><span id="__span-0-863"><a id="__codelineno-0-863" name="__codelineno-0-863"></a>            <span class="s2">"UPLOAD"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Package matches pending release (sha256 </span><span class="si">{</span><span class="n">installer_sha256</span><span class="si">}</span><span class="s2">)"</span>
-</span><span id="__span-0-864"><a id="__codelineno-0-864" name="__codelineno-0-864"></a>        <span class="p">)</span>
-</span><span id="__span-0-865"><a id="__codelineno-0-865" name="__codelineno-0-865"></a>    <span class="k">elif</span> <span class="n">published</span> <span class="ow">and</span> <span class="n">published</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"sha256"</span><span class="p">)</span> <span class="o">==</span> <span class="n">installer_sha256</span><span class="p">:</span>
-</span><span id="__span-0-866"><a id="__codelineno-0-866" name="__codelineno-0-866"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-</span><span id="__span-0-867"><a id="__codelineno-0-867" name="__codelineno-0-867"></a>            <span class="s2">"UPLOAD"</span><span class="p">,</span>
-</span><span id="__span-0-868"><a id="__codelineno-0-868" name="__codelineno-0-868"></a>            <span class="sa">f</span><span class="s2">"Package matches the published release (sha256 </span><span class="si">{</span><span class="n">installer_sha256</span><span class="si">}</span><span class="s2">)"</span><span class="p">,</span>
+</span><span id="__span-0-811"><a id="__codelineno-0-811" name="__codelineno-0-811"></a>    <span class="n">config</span> <span class="o">=</span> <span class="n">load_effective_config</span><span class="p">(</span><span class="n">recipe_path</span><span class="p">)</span>
+</span><span id="__span-0-812"><a id="__codelineno-0-812" name="__codelineno-0-812"></a>    <span class="n">app_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">"id"</span><span class="p">]</span>
+</span><span id="__span-0-813"><a id="__codelineno-0-813" name="__codelineno-0-813"></a>    <span class="n">app_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span>
+</span><span id="__span-0-814"><a id="__codelineno-0-814" name="__codelineno-0-814"></a>    <span class="n">build_types</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">"intune"</span><span class="p">][</span><span class="s2">"build_types"</span><span class="p">]</span>
+</span><span id="__span-0-815"><a id="__codelineno-0-815" name="__codelineno-0-815"></a>
+</span><span id="__span-0-816"><a id="__codelineno-0-816" name="__codelineno-0-816"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"UPLOAD"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Starting upload for '</span><span class="si">{</span><span class="n">app_name</span><span class="si">}</span><span class="s2">' (</span><span class="si">{</span><span class="n">app_id</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+</span><span id="__span-0-817"><a id="__codelineno-0-817" name="__codelineno-0-817"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"UPLOAD"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"build_types: </span><span class="si">{</span><span class="n">build_types</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="__span-0-818"><a id="__codelineno-0-818" name="__codelineno-0-818"></a>
+</span><span id="__span-0-819"><a id="__codelineno-0-819" name="__codelineno-0-819"></a>    <span class="c1"># Resolve the app icon once; it is shared by the install and update entries</span>
+</span><span id="__span-0-820"><a id="__codelineno-0-820" name="__codelineno-0-820"></a>    <span class="n">large_icon</span> <span class="o">=</span> <span class="n">_resolve_large_icon</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+</span><span id="__span-0-821"><a id="__codelineno-0-821" name="__codelineno-0-821"></a>
+</span><span id="__span-0-822"><a id="__codelineno-0-822" name="__codelineno-0-822"></a>    <span class="c1"># Step 1: Locate the package of the recorded release and verify it</span>
+</span><span id="__span-0-823"><a id="__codelineno-0-823" name="__codelineno-0-823"></a>    <span class="n">total_steps</span> <span class="o">=</span> <span class="mi">9</span> <span class="k">if</span> <span class="n">build_types</span> <span class="o">==</span> <span class="s2">"both"</span> <span class="k">else</span> <span class="mi">6</span>
+</span><span id="__span-0-824"><a id="__codelineno-0-824" name="__codelineno-0-824"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">total_steps</span><span class="p">,</span> <span class="s2">"Locating .intunewin package..."</span><span class="p">)</span>
+</span><span id="__span-0-825"><a id="__codelineno-0-825" name="__codelineno-0-825"></a>    <span class="n">state_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s2">"directories"</span><span class="p">][</span><span class="s2">"state"</span><span class="p">])</span>
+</span><span id="__span-0-826"><a id="__codelineno-0-826" name="__codelineno-0-826"></a>    <span class="n">state_path</span> <span class="o">=</span> <span class="n">deployment_state_path</span><span class="p">(</span><span class="n">state_dir</span> <span class="o">/</span> <span class="s2">"deployment"</span><span class="p">,</span> <span class="n">app_id</span><span class="p">)</span>
+</span><span id="__span-0-827"><a id="__codelineno-0-827" name="__codelineno-0-827"></a>    <span class="n">state</span> <span class="o">=</span> <span class="n">load_deployment_state</span><span class="p">(</span><span class="n">state_path</span><span class="p">)</span>
+</span><span id="__span-0-828"><a id="__codelineno-0-828" name="__codelineno-0-828"></a>    <span class="n">release</span> <span class="o">=</span> <span class="n">working_release_of</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+</span><span id="__span-0-829"><a id="__codelineno-0-829" name="__codelineno-0-829"></a>    <span class="n">packages_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s2">"directories"</span><span class="p">][</span><span class="s2">"package"</span><span class="p">])</span>
+</span><span id="__span-0-830"><a id="__codelineno-0-830" name="__codelineno-0-830"></a>    <span class="n">package_dir</span> <span class="o">=</span> <span class="n">_locate_package_dir</span><span class="p">(</span><span class="n">packages_dir</span><span class="p">,</span> <span class="n">app_id</span><span class="p">,</span> <span class="n">release</span><span class="p">)</span>
+</span><span id="__span-0-831"><a id="__codelineno-0-831" name="__codelineno-0-831"></a>    <span class="n">version</span> <span class="o">=</span> <span class="n">package_dir</span><span class="o">.</span><span class="n">name</span>
+</span><span id="__span-0-832"><a id="__codelineno-0-832" name="__codelineno-0-832"></a>    <span class="n">manifest</span> <span class="o">=</span> <span class="n">_read_build_manifest</span><span class="p">(</span><span class="n">package_dir</span><span class="p">)</span>
+</span><span id="__span-0-833"><a id="__codelineno-0-833" name="__codelineno-0-833"></a>    <span class="n">package_path</span> <span class="o">=</span> <span class="n">_verify_package_file</span><span class="p">(</span><span class="n">package_dir</span><span class="p">,</span> <span class="n">manifest</span><span class="p">)</span>
+</span><span id="__span-0-834"><a id="__codelineno-0-834" name="__codelineno-0-834"></a>    <span class="n">installer_sha256</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">"installer_sha256"</span><span class="p">]</span>
+</span><span id="__span-0-835"><a id="__codelineno-0-835" name="__codelineno-0-835"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"UPLOAD"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Package: </span><span class="si">{</span><span class="n">package_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="__span-0-836"><a id="__codelineno-0-836" name="__codelineno-0-836"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"UPLOAD"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Version: </span><span class="si">{</span><span class="n">version</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="__span-0-837"><a id="__codelineno-0-837" name="__codelineno-0-837"></a>
+</span><span id="__span-0-838"><a id="__codelineno-0-838" name="__codelineno-0-838"></a>    <span class="c1"># The package was built for one build_types; the metadata below comes</span>
+</span><span id="__span-0-839"><a id="__codelineno-0-839" name="__codelineno-0-839"></a>    <span class="c1"># from the recipe. They must agree, or one entry would be committed</span>
+</span><span id="__span-0-840"><a id="__codelineno-0-840" name="__codelineno-0-840"></a>    <span class="c1"># before the other fails on a script the package does not hold.</span>
+</span><span id="__span-0-841"><a id="__codelineno-0-841" name="__codelineno-0-841"></a>    <span class="n">built_types</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">"win32_build_types"</span><span class="p">]</span>
+</span><span id="__span-0-842"><a id="__codelineno-0-842" name="__codelineno-0-842"></a>    <span class="k">if</span> <span class="n">built_types</span> <span class="o">!=</span> <span class="n">build_types</span><span class="p">:</span>
+</span><span id="__span-0-843"><a id="__codelineno-0-843" name="__codelineno-0-843"></a>        <span class="k">raise</span> <span class="n">ConfigError</span><span class="p">(</span>
+</span><span id="__span-0-844"><a id="__codelineno-0-844" name="__codelineno-0-844"></a>            <span class="sa">f</span><span class="s2">"The package of '</span><span class="si">{</span><span class="n">app_id</span><span class="si">}</span><span class="s2">' was built with build_types "</span>
+</span><span id="__span-0-845"><a id="__codelineno-0-845" name="__codelineno-0-845"></a>            <span class="sa">f</span><span class="s2">"'</span><span class="si">{</span><span class="n">built_types</span><span class="si">}</span><span class="s2">', but the recipe now says '</span><span class="si">{</span><span class="n">build_types</span><span class="si">}</span><span class="s2">'. Run "</span>
+</span><span id="__span-0-846"><a id="__codelineno-0-846" name="__codelineno-0-846"></a>            <span class="s2">"'napt build' and 'napt package' so the package matches the recipe."</span>
+</span><span id="__span-0-847"><a id="__codelineno-0-847" name="__codelineno-0-847"></a>        <span class="p">)</span>
+</span><span id="__span-0-848"><a id="__codelineno-0-848" name="__codelineno-0-848"></a>
+</span><span id="__span-0-849"><a id="__codelineno-0-849" name="__codelineno-0-849"></a>    <span class="c1"># Verify provenance against deployment state before any Graph call:</span>
+</span><span id="__span-0-850"><a id="__codelineno-0-850" name="__codelineno-0-850"></a>    <span class="c1"># what was recorded at discovery must be byte-for-byte what ships. A</span>
+</span><span id="__span-0-851"><a id="__codelineno-0-851" name="__codelineno-0-851"></a>    <span class="c1"># package matching the published release is a re-run after writeback</span>
+</span><span id="__span-0-852"><a id="__codelineno-0-852" name="__codelineno-0-852"></a>    <span class="c1"># or a --force refresh, and passes too.</span>
+</span><span id="__span-0-853"><a id="__codelineno-0-853" name="__codelineno-0-853"></a>    <span class="n">pending</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"pending"</span><span class="p">)</span>
+</span><span id="__span-0-854"><a id="__codelineno-0-854" name="__codelineno-0-854"></a>    <span class="n">published</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"published"</span><span class="p">)</span>
+</span><span id="__span-0-855"><a id="__codelineno-0-855" name="__codelineno-0-855"></a>    <span class="k">if</span> <span class="n">pending</span><span class="p">:</span>
+</span><span id="__span-0-856"><a id="__codelineno-0-856" name="__codelineno-0-856"></a>        <span class="k">if</span> <span class="n">pending</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"sha256"</span><span class="p">)</span> <span class="o">!=</span> <span class="n">installer_sha256</span><span class="p">:</span>
+</span><span id="__span-0-857"><a id="__codelineno-0-857" name="__codelineno-0-857"></a>            <span class="k">raise</span> <span class="n">PackagingError</span><span class="p">(</span>
+</span><span id="__span-0-858"><a id="__codelineno-0-858" name="__codelineno-0-858"></a>                <span class="sa">f</span><span class="s2">"Installer hash mismatch for '</span><span class="si">{</span><span class="n">app_id</span><span class="si">}</span><span class="s2">': the package was "</span>
+</span><span id="__span-0-859"><a id="__codelineno-0-859" name="__codelineno-0-859"></a>                <span class="sa">f</span><span class="s2">"built from a different binary than the pending release "</span>
+</span><span id="__span-0-860"><a id="__codelineno-0-860" name="__codelineno-0-860"></a>                <span class="sa">f</span><span class="s2">"recorded in </span><span class="si">{</span><span class="n">state_path</span><span class="si">}</span><span class="s2">.</span><span class="se">\n</span><span class="s2">"</span>
+</span><span id="__span-0-861"><a id="__codelineno-0-861" name="__codelineno-0-861"></a>                <span class="sa">f</span><span class="s2">"  pending:  </span><span class="si">{</span><span class="n">pending</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'version'</span><span class="p">)</span><span class="si">}</span><span class="s2"> "</span>
+</span><span id="__span-0-862"><a id="__codelineno-0-862" name="__codelineno-0-862"></a>                <span class="sa">f</span><span class="s2">"(sha256 </span><span class="si">{</span><span class="n">pending</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'sha256'</span><span class="p">)</span><span class="si">}</span><span class="s2">)</span><span class="se">\n</span><span class="s2">"</span>
+</span><span id="__span-0-863"><a id="__codelineno-0-863" name="__codelineno-0-863"></a>                <span class="sa">f</span><span class="s2">"  package:  </span><span class="si">{</span><span class="n">version</span><span class="si">}</span><span class="s2"> (sha256 </span><span class="si">{</span><span class="n">installer_sha256</span><span class="si">}</span><span class="s2">)</span><span class="se">\n</span><span class="s2">"</span>
+</span><span id="__span-0-864"><a id="__codelineno-0-864" name="__codelineno-0-864"></a>                <span class="s2">"Re-run 'napt discover', 'napt build', and 'napt package' "</span>
+</span><span id="__span-0-865"><a id="__codelineno-0-865" name="__codelineno-0-865"></a>                <span class="s2">"so the package matches the recorded release."</span>
+</span><span id="__span-0-866"><a id="__codelineno-0-866" name="__codelineno-0-866"></a>            <span class="p">)</span>
+</span><span id="__span-0-867"><a id="__codelineno-0-867" name="__codelineno-0-867"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+</span><span id="__span-0-868"><a id="__codelineno-0-868" name="__codelineno-0-868"></a>            <span class="s2">"UPLOAD"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Package matches pending release (sha256 </span><span class="si">{</span><span class="n">installer_sha256</span><span class="si">}</span><span class="s2">)"</span>
 </span><span id="__span-0-869"><a id="__codelineno-0-869" name="__codelineno-0-869"></a>        <span class="p">)</span>
-</span><span id="__span-0-870"><a id="__codelineno-0-870" name="__codelineno-0-870"></a>    <span class="k">elif</span> <span class="n">config</span><span class="p">[</span><span class="s2">"deployment"</span><span class="p">][</span><span class="s2">"require_pending"</span><span class="p">]:</span>
-</span><span id="__span-0-871"><a id="__codelineno-0-871" name="__codelineno-0-871"></a>        <span class="k">raise</span> <span class="n">PackagingError</span><span class="p">(</span>
-</span><span id="__span-0-872"><a id="__codelineno-0-872" name="__codelineno-0-872"></a>            <span class="sa">f</span><span class="s2">"No pending release recorded for '</span><span class="si">{</span><span class="n">app_id</span><span class="si">}</span><span class="s2">' and "</span>
-</span><span id="__span-0-873"><a id="__codelineno-0-873" name="__codelineno-0-873"></a>            <span class="s2">"deployment.require_pending is enabled, and the package does not "</span>
-</span><span id="__span-0-874"><a id="__codelineno-0-874" name="__codelineno-0-874"></a>            <span class="s2">"match the published release.</span><span class="se">\n</span><span class="s2">"</span>
-</span><span id="__span-0-875"><a id="__codelineno-0-875" name="__codelineno-0-875"></a>            <span class="s2">"Run 'napt discover' to record the release, or add a pending "</span>
-</span><span id="__span-0-876"><a id="__codelineno-0-876" name="__codelineno-0-876"></a>            <span class="sa">f</span><span class="s2">"entry (version, sha256, url) to </span><span class="si">{</span><span class="n">state_path</span><span class="si">}</span><span class="s2">."</span>
-</span><span id="__span-0-877"><a id="__codelineno-0-877" name="__codelineno-0-877"></a>        <span class="p">)</span>
-</span><span id="__span-0-878"><a id="__codelineno-0-878" name="__codelineno-0-878"></a>    <span class="k">else</span><span class="p">:</span>
-</span><span id="__span-0-879"><a id="__codelineno-0-879" name="__codelineno-0-879"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-</span><span id="__span-0-880"><a id="__codelineno-0-880" name="__codelineno-0-880"></a>            <span class="s2">"UPLOAD"</span><span class="p">,</span>
-</span><span id="__span-0-881"><a id="__codelineno-0-881" name="__codelineno-0-881"></a>            <span class="sa">f</span><span class="s2">"No pending release recorded for '</span><span class="si">{</span><span class="n">app_id</span><span class="si">}</span><span class="s2">'; uploading "</span>
-</span><span id="__span-0-882"><a id="__codelineno-0-882" name="__codelineno-0-882"></a>            <span class="s2">"without provenance verification."</span><span class="p">,</span>
-</span><span id="__span-0-883"><a id="__codelineno-0-883" name="__codelineno-0-883"></a>        <span class="p">)</span>
-</span><span id="__span-0-884"><a id="__codelineno-0-884" name="__codelineno-0-884"></a>
-</span><span id="__span-0-885"><a id="__codelineno-0-885" name="__codelineno-0-885"></a>    <span class="c1"># Step 2: Authenticate</span>
-</span><span id="__span-0-886"><a id="__codelineno-0-886" name="__codelineno-0-886"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">total_steps</span><span class="p">,</span> <span class="s2">"Authenticating with Azure..."</span><span class="p">)</span>
-</span><span id="__span-0-887"><a id="__codelineno-0-887" name="__codelineno-0-887"></a>    <span class="n">access_token</span> <span class="o">=</span> <span class="n">get_access_token</span><span class="p">()</span>
-</span><span id="__span-0-888"><a id="__codelineno-0-888" name="__codelineno-0-888"></a>
-</span><span id="__span-0-889"><a id="__codelineno-0-889" name="__codelineno-0-889"></a>    <span class="c1"># Step 3: Parse .intunewin metadata</span>
-</span><span id="__span-0-890"><a id="__codelineno-0-890" name="__codelineno-0-890"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">total_steps</span><span class="p">,</span> <span class="s2">"Parsing package metadata..."</span><span class="p">)</span>
-</span><span id="__span-0-891"><a id="__codelineno-0-891" name="__codelineno-0-891"></a>    <span class="n">intunewin_metadata</span> <span class="o">=</span> <span class="n">parse_intunewin</span><span class="p">(</span><span class="n">package_path</span><span class="p">)</span>
-</span><span id="__span-0-892"><a id="__codelineno-0-892" name="__codelineno-0-892"></a>
-</span><span id="__span-0-893"><a id="__codelineno-0-893" name="__codelineno-0-893"></a>    <span class="c1"># Reconcile-before-act: list existing apps once so stamped apps from a</span>
-</span><span id="__span-0-894"><a id="__codelineno-0-894" name="__codelineno-0-894"></a>    <span class="c1"># previous (possibly crashed) run are adopted instead of duplicated.</span>
-</span><span id="__span-0-895"><a id="__codelineno-0-895" name="__codelineno-0-895"></a>    <span class="n">existing_apps</span> <span class="o">=</span> <span class="n">list_mobile_apps</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
-</span><span id="__span-0-896"><a id="__codelineno-0-896" name="__codelineno-0-896"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"UPLOAD"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Tenant has </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">existing_apps</span><span class="p">)</span><span class="si">}</span><span class="s2"> mobile apps"</span><span class="p">)</span>
+</span><span id="__span-0-870"><a id="__codelineno-0-870" name="__codelineno-0-870"></a>    <span class="k">elif</span> <span class="n">published</span> <span class="ow">and</span> <span class="n">published</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"sha256"</span><span class="p">)</span> <span class="o">==</span> <span class="n">installer_sha256</span><span class="p">:</span>
+</span><span id="__span-0-871"><a id="__codelineno-0-871" name="__codelineno-0-871"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+</span><span id="__span-0-872"><a id="__codelineno-0-872" name="__codelineno-0-872"></a>            <span class="s2">"UPLOAD"</span><span class="p">,</span>
+</span><span id="__span-0-873"><a id="__codelineno-0-873" name="__codelineno-0-873"></a>            <span class="sa">f</span><span class="s2">"Package matches the published release (sha256 </span><span class="si">{</span><span class="n">installer_sha256</span><span class="si">}</span><span class="s2">)"</span><span class="p">,</span>
+</span><span id="__span-0-874"><a id="__codelineno-0-874" name="__codelineno-0-874"></a>        <span class="p">)</span>
+</span><span id="__span-0-875"><a id="__codelineno-0-875" name="__codelineno-0-875"></a>    <span class="k">elif</span> <span class="n">config</span><span class="p">[</span><span class="s2">"deployment"</span><span class="p">][</span><span class="s2">"require_pending"</span><span class="p">]:</span>
+</span><span id="__span-0-876"><a id="__codelineno-0-876" name="__codelineno-0-876"></a>        <span class="k">raise</span> <span class="n">PackagingError</span><span class="p">(</span>
+</span><span id="__span-0-877"><a id="__codelineno-0-877" name="__codelineno-0-877"></a>            <span class="sa">f</span><span class="s2">"No pending release recorded for '</span><span class="si">{</span><span class="n">app_id</span><span class="si">}</span><span class="s2">' and "</span>
+</span><span id="__span-0-878"><a id="__codelineno-0-878" name="__codelineno-0-878"></a>            <span class="s2">"deployment.require_pending is enabled, and the package does not "</span>
+</span><span id="__span-0-879"><a id="__codelineno-0-879" name="__codelineno-0-879"></a>            <span class="s2">"match the published release.</span><span class="se">\n</span><span class="s2">"</span>
+</span><span id="__span-0-880"><a id="__codelineno-0-880" name="__codelineno-0-880"></a>            <span class="s2">"Run 'napt discover' to record the release, or add a pending "</span>
+</span><span id="__span-0-881"><a id="__codelineno-0-881" name="__codelineno-0-881"></a>            <span class="sa">f</span><span class="s2">"entry (version, sha256, url) to </span><span class="si">{</span><span class="n">state_path</span><span class="si">}</span><span class="s2">."</span>
+</span><span id="__span-0-882"><a id="__codelineno-0-882" name="__codelineno-0-882"></a>        <span class="p">)</span>
+</span><span id="__span-0-883"><a id="__codelineno-0-883" name="__codelineno-0-883"></a>    <span class="k">else</span><span class="p">:</span>
+</span><span id="__span-0-884"><a id="__codelineno-0-884" name="__codelineno-0-884"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+</span><span id="__span-0-885"><a id="__codelineno-0-885" name="__codelineno-0-885"></a>            <span class="s2">"UPLOAD"</span><span class="p">,</span>
+</span><span id="__span-0-886"><a id="__codelineno-0-886" name="__codelineno-0-886"></a>            <span class="sa">f</span><span class="s2">"No pending release recorded for '</span><span class="si">{</span><span class="n">app_id</span><span class="si">}</span><span class="s2">'; uploading "</span>
+</span><span id="__span-0-887"><a id="__codelineno-0-887" name="__codelineno-0-887"></a>            <span class="s2">"without provenance verification."</span><span class="p">,</span>
+</span><span id="__span-0-888"><a id="__codelineno-0-888" name="__codelineno-0-888"></a>        <span class="p">)</span>
+</span><span id="__span-0-889"><a id="__codelineno-0-889" name="__codelineno-0-889"></a>
+</span><span id="__span-0-890"><a id="__codelineno-0-890" name="__codelineno-0-890"></a>    <span class="c1"># Step 2: Authenticate</span>
+</span><span id="__span-0-891"><a id="__codelineno-0-891" name="__codelineno-0-891"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">total_steps</span><span class="p">,</span> <span class="s2">"Authenticating with Azure..."</span><span class="p">)</span>
+</span><span id="__span-0-892"><a id="__codelineno-0-892" name="__codelineno-0-892"></a>    <span class="n">access_token</span> <span class="o">=</span> <span class="n">get_access_token</span><span class="p">()</span>
+</span><span id="__span-0-893"><a id="__codelineno-0-893" name="__codelineno-0-893"></a>
+</span><span id="__span-0-894"><a id="__codelineno-0-894" name="__codelineno-0-894"></a>    <span class="c1"># Step 3: Parse .intunewin metadata</span>
+</span><span id="__span-0-895"><a id="__codelineno-0-895" name="__codelineno-0-895"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">total_steps</span><span class="p">,</span> <span class="s2">"Parsing package metadata..."</span><span class="p">)</span>
+</span><span id="__span-0-896"><a id="__codelineno-0-896" name="__codelineno-0-896"></a>    <span class="n">intunewin_metadata</span> <span class="o">=</span> <span class="n">parse_intunewin</span><span class="p">(</span><span class="n">package_path</span><span class="p">)</span>
 </span><span id="__span-0-897"><a id="__codelineno-0-897" name="__codelineno-0-897"></a>
-</span><span id="__span-0-898"><a id="__codelineno-0-898" name="__codelineno-0-898"></a>    <span class="n">intune_app_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="__span-0-899"><a id="__codelineno-0-899" name="__codelineno-0-899"></a>    <span class="n">intune_update_app_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="__span-0-900"><a id="__codelineno-0-900" name="__codelineno-0-900"></a>
-</span><span id="__span-0-901"><a id="__codelineno-0-901" name="__codelineno-0-901"></a>    <span class="k">if</span> <span class="n">build_types</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"app_only"</span><span class="p">,</span> <span class="s2">"both"</span><span class="p">):</span>
-</span><span id="__span-0-902"><a id="__codelineno-0-902" name="__codelineno-0-902"></a>        <span class="c1"># Install entry: steps 4-6</span>
-</span><span id="__span-0-903"><a id="__codelineno-0-903" name="__codelineno-0-903"></a>        <span class="n">install_metadata</span> <span class="o">=</span> <span class="n">_build_app_metadata</span><span class="p">(</span>
-</span><span id="__span-0-904"><a id="__codelineno-0-904" name="__codelineno-0-904"></a>            <span class="n">config</span><span class="p">,</span> <span class="n">recipe_path</span><span class="p">,</span> <span class="n">version</span><span class="p">,</span> <span class="n">package_path</span><span class="p">,</span> <span class="s2">"app_only"</span><span class="p">,</span> <span class="n">manifest</span><span class="p">,</span> <span class="n">large_icon</span>
-</span><span id="__span-0-905"><a id="__codelineno-0-905" name="__codelineno-0-905"></a>        <span class="p">)</span>
-</span><span id="__span-0-906"><a id="__codelineno-0-906" name="__codelineno-0-906"></a>        <span class="n">intune_app_id</span> <span class="o">=</span> <span class="n">_upload_single_app</span><span class="p">(</span>
-</span><span id="__span-0-907"><a id="__codelineno-0-907" name="__codelineno-0-907"></a>            <span class="n">access_token</span><span class="p">,</span>
-</span><span id="__span-0-908"><a id="__codelineno-0-908" name="__codelineno-0-908"></a>            <span class="n">install_metadata</span><span class="p">,</span>
-</span><span id="__span-0-909"><a id="__codelineno-0-909" name="__codelineno-0-909"></a>            <span class="n">package_path</span><span class="p">,</span>
-</span><span id="__span-0-910"><a id="__codelineno-0-910" name="__codelineno-0-910"></a>            <span class="n">intunewin_metadata</span><span class="p">,</span>
-</span><span id="__span-0-911"><a id="__codelineno-0-911" name="__codelineno-0-911"></a>            <span class="n">existing_apps</span><span class="p">,</span>
-</span><span id="__span-0-912"><a id="__codelineno-0-912" name="__codelineno-0-912"></a>            <span class="n">recipe_id</span><span class="o">=</span><span class="n">app_id</span><span class="p">,</span>
-</span><span id="__span-0-913"><a id="__codelineno-0-913" name="__codelineno-0-913"></a>            <span class="n">entry</span><span class="o">=</span><span class="n">ENTRY_INSTALL</span><span class="p">,</span>
-</span><span id="__span-0-914"><a id="__codelineno-0-914" name="__codelineno-0-914"></a>            <span class="n">installer_sha256</span><span class="o">=</span><span class="n">installer_sha256</span><span class="p">,</span>
-</span><span id="__span-0-915"><a id="__codelineno-0-915" name="__codelineno-0-915"></a>            <span class="n">step_create</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
-</span><span id="__span-0-916"><a id="__codelineno-0-916" name="__codelineno-0-916"></a>            <span class="n">step_upload</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
-</span><span id="__span-0-917"><a id="__codelineno-0-917" name="__codelineno-0-917"></a>            <span class="n">step_commit</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span>
-</span><span id="__span-0-918"><a id="__codelineno-0-918" name="__codelineno-0-918"></a>            <span class="n">total_steps</span><span class="o">=</span><span class="n">total_steps</span><span class="p">,</span>
-</span><span id="__span-0-919"><a id="__codelineno-0-919" name="__codelineno-0-919"></a>            <span class="n">force</span><span class="o">=</span><span class="n">force</span><span class="p">,</span>
-</span><span id="__span-0-920"><a id="__codelineno-0-920" name="__codelineno-0-920"></a>        <span class="p">)</span>
-</span><span id="__span-0-921"><a id="__codelineno-0-921" name="__codelineno-0-921"></a>
-</span><span id="__span-0-922"><a id="__codelineno-0-922" name="__codelineno-0-922"></a>    <span class="k">if</span> <span class="n">build_types</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"update_only"</span><span class="p">,</span> <span class="s2">"both"</span><span class="p">):</span>
-</span><span id="__span-0-923"><a id="__codelineno-0-923" name="__codelineno-0-923"></a>        <span class="c1"># Update entry: steps 4-6 (single) or 7-9 (both)</span>
-</span><span id="__span-0-924"><a id="__codelineno-0-924" name="__codelineno-0-924"></a>        <span class="n">step_offset</span> <span class="o">=</span> <span class="mi">6</span> <span class="k">if</span> <span class="n">build_types</span> <span class="o">==</span> <span class="s2">"both"</span> <span class="k">else</span> <span class="mi">3</span>
-</span><span id="__span-0-925"><a id="__codelineno-0-925" name="__codelineno-0-925"></a>        <span class="n">update_metadata</span> <span class="o">=</span> <span class="n">_build_app_metadata</span><span class="p">(</span>
-</span><span id="__span-0-926"><a id="__codelineno-0-926" name="__codelineno-0-926"></a>            <span class="n">config</span><span class="p">,</span>
-</span><span id="__span-0-927"><a id="__codelineno-0-927" name="__codelineno-0-927"></a>            <span class="n">recipe_path</span><span class="p">,</span>
-</span><span id="__span-0-928"><a id="__codelineno-0-928" name="__codelineno-0-928"></a>            <span class="n">version</span><span class="p">,</span>
-</span><span id="__span-0-929"><a id="__codelineno-0-929" name="__codelineno-0-929"></a>            <span class="n">package_path</span><span class="p">,</span>
-</span><span id="__span-0-930"><a id="__codelineno-0-930" name="__codelineno-0-930"></a>            <span class="s2">"update_only"</span><span class="p">,</span>
-</span><span id="__span-0-931"><a id="__codelineno-0-931" name="__codelineno-0-931"></a>            <span class="n">manifest</span><span class="p">,</span>
-</span><span id="__span-0-932"><a id="__codelineno-0-932" name="__codelineno-0-932"></a>            <span class="n">large_icon</span><span class="p">,</span>
-</span><span id="__span-0-933"><a id="__codelineno-0-933" name="__codelineno-0-933"></a>        <span class="p">)</span>
-</span><span id="__span-0-934"><a id="__codelineno-0-934" name="__codelineno-0-934"></a>        <span class="n">intune_update_app_id</span> <span class="o">=</span> <span class="n">_upload_single_app</span><span class="p">(</span>
-</span><span id="__span-0-935"><a id="__codelineno-0-935" name="__codelineno-0-935"></a>            <span class="n">access_token</span><span class="p">,</span>
-</span><span id="__span-0-936"><a id="__codelineno-0-936" name="__codelineno-0-936"></a>            <span class="n">update_metadata</span><span class="p">,</span>
-</span><span id="__span-0-937"><a id="__codelineno-0-937" name="__codelineno-0-937"></a>            <span class="n">package_path</span><span class="p">,</span>
-</span><span id="__span-0-938"><a id="__codelineno-0-938" name="__codelineno-0-938"></a>            <span class="n">intunewin_metadata</span><span class="p">,</span>
-</span><span id="__span-0-939"><a id="__codelineno-0-939" name="__codelineno-0-939"></a>            <span class="n">existing_apps</span><span class="p">,</span>
-</span><span id="__span-0-940"><a id="__codelineno-0-940" name="__codelineno-0-940"></a>            <span class="n">recipe_id</span><span class="o">=</span><span class="n">app_id</span><span class="p">,</span>
-</span><span id="__span-0-941"><a id="__codelineno-0-941" name="__codelineno-0-941"></a>            <span class="n">entry</span><span class="o">=</span><span class="n">ENTRY_UPDATE</span><span class="p">,</span>
-</span><span id="__span-0-942"><a id="__codelineno-0-942" name="__codelineno-0-942"></a>            <span class="n">installer_sha256</span><span class="o">=</span><span class="n">installer_sha256</span><span class="p">,</span>
-</span><span id="__span-0-943"><a id="__codelineno-0-943" name="__codelineno-0-943"></a>            <span class="n">step_create</span><span class="o">=</span><span class="n">step_offset</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
-</span><span id="__span-0-944"><a id="__codelineno-0-944" name="__codelineno-0-944"></a>            <span class="n">step_upload</span><span class="o">=</span><span class="n">step_offset</span> <span class="o">+</span> <span class="mi">2</span><span class="p">,</span>
-</span><span id="__span-0-945"><a id="__codelineno-0-945" name="__codelineno-0-945"></a>            <span class="n">step_commit</span><span class="o">=</span><span class="n">step_offset</span> <span class="o">+</span> <span class="mi">3</span><span class="p">,</span>
-</span><span id="__span-0-946"><a id="__codelineno-0-946" name="__codelineno-0-946"></a>            <span class="n">total_steps</span><span class="o">=</span><span class="n">total_steps</span><span class="p">,</span>
-</span><span id="__span-0-947"><a id="__codelineno-0-947" name="__codelineno-0-947"></a>            <span class="n">force</span><span class="o">=</span><span class="n">force</span><span class="p">,</span>
-</span><span id="__span-0-948"><a id="__codelineno-0-948" name="__codelineno-0-948"></a>        <span class="p">)</span>
-</span><span id="__span-0-949"><a id="__codelineno-0-949" name="__codelineno-0-949"></a>
-</span><span id="__span-0-950"><a id="__codelineno-0-950" name="__codelineno-0-950"></a>    <span class="c1"># Record the publication in deployment state: published version,</span>
-</span><span id="__span-0-951"><a id="__codelineno-0-951" name="__codelineno-0-951"></a>    <span class="c1"># hash, and Intune app IDs; a matching pending slot is cleared.</span>
-</span><span id="__span-0-952"><a id="__codelineno-0-952" name="__codelineno-0-952"></a>    <span class="n">record_published</span><span class="p">(</span>
-</span><span id="__span-0-953"><a id="__codelineno-0-953" name="__codelineno-0-953"></a>        <span class="n">state</span><span class="p">,</span>
-</span><span id="__span-0-954"><a id="__codelineno-0-954" name="__codelineno-0-954"></a>        <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">,</span>
-</span><span id="__span-0-955"><a id="__codelineno-0-955" name="__codelineno-0-955"></a>        <span class="n">sha256</span><span class="o">=</span><span class="n">installer_sha256</span><span class="p">,</span>
-</span><span id="__span-0-956"><a id="__codelineno-0-956" name="__codelineno-0-956"></a>        <span class="n">intune_app_id</span><span class="o">=</span><span class="n">intune_app_id</span><span class="p">,</span>
-</span><span id="__span-0-957"><a id="__codelineno-0-957" name="__codelineno-0-957"></a>        <span class="n">intune_update_app_id</span><span class="o">=</span><span class="n">intune_update_app_id</span><span class="p">,</span>
-</span><span id="__span-0-958"><a id="__codelineno-0-958" name="__codelineno-0-958"></a>    <span class="p">)</span>
-</span><span id="__span-0-959"><a id="__codelineno-0-959" name="__codelineno-0-959"></a>    <span class="n">state</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span>
-</span><span id="__span-0-960"><a id="__codelineno-0-960" name="__codelineno-0-960"></a>    <span class="n">save_deployment_state</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">state_path</span><span class="p">)</span>
-</span><span id="__span-0-961"><a id="__codelineno-0-961" name="__codelineno-0-961"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"STATE"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Recorded published release </span><span class="si">{</span><span class="n">version</span><span class="si">}</span><span class="s2"> in </span><span class="si">{</span><span class="n">state_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="__span-0-962"><a id="__codelineno-0-962" name="__codelineno-0-962"></a>
-</span><span id="__span-0-963"><a id="__codelineno-0-963" name="__codelineno-0-963"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"UPLOAD"</span><span class="p">,</span> <span class="s2">"Upload complete"</span><span class="p">)</span>
-</span><span id="__span-0-964"><a id="__codelineno-0-964" name="__codelineno-0-964"></a>
-</span><span id="__span-0-965"><a id="__codelineno-0-965" name="__codelineno-0-965"></a>    <span class="k">return</span> <span class="n">UploadResult</span><span class="p">(</span>
-</span><span id="__span-0-966"><a id="__codelineno-0-966" name="__codelineno-0-966"></a>        <span class="n">app_id</span><span class="o">=</span><span class="n">app_id</span><span class="p">,</span>
-</span><span id="__span-0-967"><a id="__codelineno-0-967" name="__codelineno-0-967"></a>        <span class="n">app_name</span><span class="o">=</span><span class="n">app_name</span><span class="p">,</span>
-</span><span id="__span-0-968"><a id="__codelineno-0-968" name="__codelineno-0-968"></a>        <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">,</span>
-</span><span id="__span-0-969"><a id="__codelineno-0-969" name="__codelineno-0-969"></a>        <span class="n">intune_app_id</span><span class="o">=</span><span class="n">intune_app_id</span><span class="p">,</span>
-</span><span id="__span-0-970"><a id="__codelineno-0-970" name="__codelineno-0-970"></a>        <span class="n">intune_update_app_id</span><span class="o">=</span><span class="n">intune_update_app_id</span><span class="p">,</span>
-</span><span id="__span-0-971"><a id="__codelineno-0-971" name="__codelineno-0-971"></a>        <span class="n">package_path</span><span class="o">=</span><span class="n">package_path</span><span class="p">,</span>
-</span><span id="__span-0-972"><a id="__codelineno-0-972" name="__codelineno-0-972"></a>        <span class="n">status</span><span class="o">=</span><span class="s2">"success"</span><span class="p">,</span>
-</span><span id="__span-0-973"><a id="__codelineno-0-973" name="__codelineno-0-973"></a>    <span class="p">)</span>
+</span><span id="__span-0-898"><a id="__codelineno-0-898" name="__codelineno-0-898"></a>    <span class="c1"># Reconcile-before-act: list existing apps once so stamped apps from a</span>
+</span><span id="__span-0-899"><a id="__codelineno-0-899" name="__codelineno-0-899"></a>    <span class="c1"># previous (possibly crashed) run are adopted instead of duplicated.</span>
+</span><span id="__span-0-900"><a id="__codelineno-0-900" name="__codelineno-0-900"></a>    <span class="n">existing_apps</span> <span class="o">=</span> <span class="n">list_mobile_apps</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
+</span><span id="__span-0-901"><a id="__codelineno-0-901" name="__codelineno-0-901"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"UPLOAD"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Tenant has </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">existing_apps</span><span class="p">)</span><span class="si">}</span><span class="s2"> mobile apps"</span><span class="p">)</span>
+</span><span id="__span-0-902"><a id="__codelineno-0-902" name="__codelineno-0-902"></a>
+</span><span id="__span-0-903"><a id="__codelineno-0-903" name="__codelineno-0-903"></a>    <span class="n">intune_app_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="__span-0-904"><a id="__codelineno-0-904" name="__codelineno-0-904"></a>    <span class="n">intune_update_app_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="__span-0-905"><a id="__codelineno-0-905" name="__codelineno-0-905"></a>
+</span><span id="__span-0-906"><a id="__codelineno-0-906" name="__codelineno-0-906"></a>    <span class="c1"># The install and update entries upload the same bytes, so the package</span>
+</span><span id="__span-0-907"><a id="__codelineno-0-907" name="__codelineno-0-907"></a>    <span class="c1"># is decrypted once, and only if an entry needs uploading at all.</span>
+</span><span id="__span-0-908"><a id="__codelineno-0-908" name="__codelineno-0-908"></a>    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp_dir</span><span class="p">:</span>
+</span><span id="__span-0-909"><a id="__codelineno-0-909" name="__codelineno-0-909"></a>
+</span><span id="__span-0-910"><a id="__codelineno-0-910" name="__codelineno-0-910"></a>        <span class="nd">@functools</span><span class="o">.</span><span class="n">cache</span>
+</span><span id="__span-0-911"><a id="__codelineno-0-911" name="__codelineno-0-911"></a>        <span class="k">def</span><span class="w"> </span><span class="nf">payload</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+</span><span id="__span-0-912"><a id="__codelineno-0-912" name="__codelineno-0-912"></a>            <span class="k">return</span> <span class="n">extract_encrypted_payload</span><span class="p">(</span><span class="n">package_path</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="n">tmp_dir</span><span class="p">))</span>
+</span><span id="__span-0-913"><a id="__codelineno-0-913" name="__codelineno-0-913"></a>
+</span><span id="__span-0-914"><a id="__codelineno-0-914" name="__codelineno-0-914"></a>        <span class="k">if</span> <span class="n">build_types</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"app_only"</span><span class="p">,</span> <span class="s2">"both"</span><span class="p">):</span>
+</span><span id="__span-0-915"><a id="__codelineno-0-915" name="__codelineno-0-915"></a>            <span class="c1"># Install entry: steps 4-6</span>
+</span><span id="__span-0-916"><a id="__codelineno-0-916" name="__codelineno-0-916"></a>            <span class="n">install_metadata</span> <span class="o">=</span> <span class="n">_build_app_metadata</span><span class="p">(</span>
+</span><span id="__span-0-917"><a id="__codelineno-0-917" name="__codelineno-0-917"></a>                <span class="n">config</span><span class="p">,</span>
+</span><span id="__span-0-918"><a id="__codelineno-0-918" name="__codelineno-0-918"></a>                <span class="n">recipe_path</span><span class="p">,</span>
+</span><span id="__span-0-919"><a id="__codelineno-0-919" name="__codelineno-0-919"></a>                <span class="n">version</span><span class="p">,</span>
+</span><span id="__span-0-920"><a id="__codelineno-0-920" name="__codelineno-0-920"></a>                <span class="n">package_path</span><span class="p">,</span>
+</span><span id="__span-0-921"><a id="__codelineno-0-921" name="__codelineno-0-921"></a>                <span class="n">ENTRY_INSTALL</span><span class="p">,</span>
+</span><span id="__span-0-922"><a id="__codelineno-0-922" name="__codelineno-0-922"></a>                <span class="n">manifest</span><span class="p">,</span>
+</span><span id="__span-0-923"><a id="__codelineno-0-923" name="__codelineno-0-923"></a>                <span class="n">large_icon</span><span class="p">,</span>
+</span><span id="__span-0-924"><a id="__codelineno-0-924" name="__codelineno-0-924"></a>            <span class="p">)</span>
+</span><span id="__span-0-925"><a id="__codelineno-0-925" name="__codelineno-0-925"></a>            <span class="n">intune_app_id</span> <span class="o">=</span> <span class="n">_upload_single_app</span><span class="p">(</span>
+</span><span id="__span-0-926"><a id="__codelineno-0-926" name="__codelineno-0-926"></a>                <span class="n">access_token</span><span class="p">,</span>
+</span><span id="__span-0-927"><a id="__codelineno-0-927" name="__codelineno-0-927"></a>                <span class="n">install_metadata</span><span class="p">,</span>
+</span><span id="__span-0-928"><a id="__codelineno-0-928" name="__codelineno-0-928"></a>                <span class="n">payload</span><span class="p">,</span>
+</span><span id="__span-0-929"><a id="__codelineno-0-929" name="__codelineno-0-929"></a>                <span class="n">intunewin_metadata</span><span class="p">,</span>
+</span><span id="__span-0-930"><a id="__codelineno-0-930" name="__codelineno-0-930"></a>                <span class="n">existing_apps</span><span class="p">,</span>
+</span><span id="__span-0-931"><a id="__codelineno-0-931" name="__codelineno-0-931"></a>                <span class="n">recipe_id</span><span class="o">=</span><span class="n">app_id</span><span class="p">,</span>
+</span><span id="__span-0-932"><a id="__codelineno-0-932" name="__codelineno-0-932"></a>                <span class="n">entry</span><span class="o">=</span><span class="n">ENTRY_INSTALL</span><span class="p">,</span>
+</span><span id="__span-0-933"><a id="__codelineno-0-933" name="__codelineno-0-933"></a>                <span class="n">installer_sha256</span><span class="o">=</span><span class="n">installer_sha256</span><span class="p">,</span>
+</span><span id="__span-0-934"><a id="__codelineno-0-934" name="__codelineno-0-934"></a>                <span class="n">step_create</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+</span><span id="__span-0-935"><a id="__codelineno-0-935" name="__codelineno-0-935"></a>                <span class="n">step_upload</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+</span><span id="__span-0-936"><a id="__codelineno-0-936" name="__codelineno-0-936"></a>                <span class="n">step_commit</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span>
+</span><span id="__span-0-937"><a id="__codelineno-0-937" name="__codelineno-0-937"></a>                <span class="n">total_steps</span><span class="o">=</span><span class="n">total_steps</span><span class="p">,</span>
+</span><span id="__span-0-938"><a id="__codelineno-0-938" name="__codelineno-0-938"></a>                <span class="n">force</span><span class="o">=</span><span class="n">force</span><span class="p">,</span>
+</span><span id="__span-0-939"><a id="__codelineno-0-939" name="__codelineno-0-939"></a>            <span class="p">)</span>
+</span><span id="__span-0-940"><a id="__codelineno-0-940" name="__codelineno-0-940"></a>
+</span><span id="__span-0-941"><a id="__codelineno-0-941" name="__codelineno-0-941"></a>        <span class="k">if</span> <span class="n">build_types</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"update_only"</span><span class="p">,</span> <span class="s2">"both"</span><span class="p">):</span>
+</span><span id="__span-0-942"><a id="__codelineno-0-942" name="__codelineno-0-942"></a>            <span class="c1"># Update entry: steps 4-6 (single) or 7-9 (both)</span>
+</span><span id="__span-0-943"><a id="__codelineno-0-943" name="__codelineno-0-943"></a>            <span class="n">step_offset</span> <span class="o">=</span> <span class="mi">6</span> <span class="k">if</span> <span class="n">build_types</span> <span class="o">==</span> <span class="s2">"both"</span> <span class="k">else</span> <span class="mi">3</span>
+</span><span id="__span-0-944"><a id="__codelineno-0-944" name="__codelineno-0-944"></a>            <span class="n">update_metadata</span> <span class="o">=</span> <span class="n">_build_app_metadata</span><span class="p">(</span>
+</span><span id="__span-0-945"><a id="__codelineno-0-945" name="__codelineno-0-945"></a>                <span class="n">config</span><span class="p">,</span>
+</span><span id="__span-0-946"><a id="__codelineno-0-946" name="__codelineno-0-946"></a>                <span class="n">recipe_path</span><span class="p">,</span>
+</span><span id="__span-0-947"><a id="__codelineno-0-947" name="__codelineno-0-947"></a>                <span class="n">version</span><span class="p">,</span>
+</span><span id="__span-0-948"><a id="__codelineno-0-948" name="__codelineno-0-948"></a>                <span class="n">package_path</span><span class="p">,</span>
+</span><span id="__span-0-949"><a id="__codelineno-0-949" name="__codelineno-0-949"></a>                <span class="n">ENTRY_UPDATE</span><span class="p">,</span>
+</span><span id="__span-0-950"><a id="__codelineno-0-950" name="__codelineno-0-950"></a>                <span class="n">manifest</span><span class="p">,</span>
+</span><span id="__span-0-951"><a id="__codelineno-0-951" name="__codelineno-0-951"></a>                <span class="n">large_icon</span><span class="p">,</span>
+</span><span id="__span-0-952"><a id="__codelineno-0-952" name="__codelineno-0-952"></a>            <span class="p">)</span>
+</span><span id="__span-0-953"><a id="__codelineno-0-953" name="__codelineno-0-953"></a>            <span class="n">intune_update_app_id</span> <span class="o">=</span> <span class="n">_upload_single_app</span><span class="p">(</span>
+</span><span id="__span-0-954"><a id="__codelineno-0-954" name="__codelineno-0-954"></a>                <span class="n">access_token</span><span class="p">,</span>
+</span><span id="__span-0-955"><a id="__codelineno-0-955" name="__codelineno-0-955"></a>                <span class="n">update_metadata</span><span class="p">,</span>
+</span><span id="__span-0-956"><a id="__codelineno-0-956" name="__codelineno-0-956"></a>                <span class="n">payload</span><span class="p">,</span>
+</span><span id="__span-0-957"><a id="__codelineno-0-957" name="__codelineno-0-957"></a>                <span class="n">intunewin_metadata</span><span class="p">,</span>
+</span><span id="__span-0-958"><a id="__codelineno-0-958" name="__codelineno-0-958"></a>                <span class="n">existing_apps</span><span class="p">,</span>
+</span><span id="__span-0-959"><a id="__codelineno-0-959" name="__codelineno-0-959"></a>                <span class="n">recipe_id</span><span class="o">=</span><span class="n">app_id</span><span class="p">,</span>
+</span><span id="__span-0-960"><a id="__codelineno-0-960" name="__codelineno-0-960"></a>                <span class="n">entry</span><span class="o">=</span><span class="n">ENTRY_UPDATE</span><span class="p">,</span>
+</span><span id="__span-0-961"><a id="__codelineno-0-961" name="__codelineno-0-961"></a>                <span class="n">installer_sha256</span><span class="o">=</span><span class="n">installer_sha256</span><span class="p">,</span>
+</span><span id="__span-0-962"><a id="__codelineno-0-962" name="__codelineno-0-962"></a>                <span class="n">step_create</span><span class="o">=</span><span class="n">step_offset</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-0-963"><a id="__codelineno-0-963" name="__codelineno-0-963"></a>                <span class="n">step_upload</span><span class="o">=</span><span class="n">step_offset</span> <span class="o">+</span> <span class="mi">2</span><span class="p">,</span>
+</span><span id="__span-0-964"><a id="__codelineno-0-964" name="__codelineno-0-964"></a>                <span class="n">step_commit</span><span class="o">=</span><span class="n">step_offset</span> <span class="o">+</span> <span class="mi">3</span><span class="p">,</span>
+</span><span id="__span-0-965"><a id="__codelineno-0-965" name="__codelineno-0-965"></a>                <span class="n">total_steps</span><span class="o">=</span><span class="n">total_steps</span><span class="p">,</span>
+</span><span id="__span-0-966"><a id="__codelineno-0-966" name="__codelineno-0-966"></a>                <span class="n">force</span><span class="o">=</span><span class="n">force</span><span class="p">,</span>
+</span><span id="__span-0-967"><a id="__codelineno-0-967" name="__codelineno-0-967"></a>            <span class="p">)</span>
+</span><span id="__span-0-968"><a id="__codelineno-0-968" name="__codelineno-0-968"></a>
+</span><span id="__span-0-969"><a id="__codelineno-0-969" name="__codelineno-0-969"></a>    <span class="c1"># Record the publication in deployment state: published version,</span>
+</span><span id="__span-0-970"><a id="__codelineno-0-970" name="__codelineno-0-970"></a>    <span class="c1"># hash, and Intune app IDs; a matching pending slot is cleared.</span>
+</span><span id="__span-0-971"><a id="__codelineno-0-971" name="__codelineno-0-971"></a>    <span class="n">record_published</span><span class="p">(</span>
+</span><span id="__span-0-972"><a id="__codelineno-0-972" name="__codelineno-0-972"></a>        <span class="n">state</span><span class="p">,</span>
+</span><span id="__span-0-973"><a id="__codelineno-0-973" name="__codelineno-0-973"></a>        <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">,</span>
+</span><span id="__span-0-974"><a id="__codelineno-0-974" name="__codelineno-0-974"></a>        <span class="n">sha256</span><span class="o">=</span><span class="n">installer_sha256</span><span class="p">,</span>
+</span><span id="__span-0-975"><a id="__codelineno-0-975" name="__codelineno-0-975"></a>        <span class="n">intune_app_id</span><span class="o">=</span><span class="n">intune_app_id</span><span class="p">,</span>
+</span><span id="__span-0-976"><a id="__codelineno-0-976" name="__codelineno-0-976"></a>        <span class="n">intune_update_app_id</span><span class="o">=</span><span class="n">intune_update_app_id</span><span class="p">,</span>
+</span><span id="__span-0-977"><a id="__codelineno-0-977" name="__codelineno-0-977"></a>    <span class="p">)</span>
+</span><span id="__span-0-978"><a id="__codelineno-0-978" name="__codelineno-0-978"></a>    <span class="n">state</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span>
+</span><span id="__span-0-979"><a id="__codelineno-0-979" name="__codelineno-0-979"></a>    <span class="n">save_deployment_state</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">state_path</span><span class="p">)</span>
+</span><span id="__span-0-980"><a id="__codelineno-0-980" name="__codelineno-0-980"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"STATE"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"Recorded published release </span><span class="si">{</span><span class="n">version</span><span class="si">}</span><span class="s2"> in </span><span class="si">{</span><span class="n">state_path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="__span-0-981"><a id="__codelineno-0-981" name="__codelineno-0-981"></a>
+</span><span id="__span-0-982"><a id="__codelineno-0-982" name="__codelineno-0-982"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">verbose</span><span class="p">(</span><span class="s2">"UPLOAD"</span><span class="p">,</span> <span class="s2">"Upload complete"</span><span class="p">)</span>
+</span><span id="__span-0-983"><a id="__codelineno-0-983" name="__codelineno-0-983"></a>
+</span><span id="__span-0-984"><a id="__codelineno-0-984" name="__codelineno-0-984"></a>    <span class="k">return</span> <span class="n">UploadResult</span><span class="p">(</span>
+</span><span id="__span-0-985"><a id="__codelineno-0-985" name="__codelineno-0-985"></a>        <span class="n">app_id</span><span class="o">=</span><span class="n">app_id</span><span class="p">,</span>
+</span><span id="__span-0-986"><a id="__codelineno-0-986" name="__codelineno-0-986"></a>        <span class="n">app_name</span><span class="o">=</span><span class="n">app_name</span><span class="p">,</span>
+</span><span id="__span-0-987"><a id="__codelineno-0-987" name="__codelineno-0-987"></a>        <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">,</span>
+</span><span id="__span-0-988"><a id="__codelineno-0-988" name="__codelineno-0-988"></a>        <span class="n">intune_app_id</span><span class="o">=</span><span class="n">intune_app_id</span><span class="p">,</span>
+</span><span id="__span-0-989"><a id="__codelineno-0-989" name="__codelineno-0-989"></a>        <span class="n">intune_update_app_id</span><span class="o">=</span><span class="n">intune_update_app_id</span><span class="p">,</span>
+</span><span id="__span-0-990"><a id="__codelineno-0-990" name="__codelineno-0-990"></a>        <span class="n">package_path</span><span class="o">=</span><span class="n">package_path</span><span class="p">,</span>
+</span><span id="__span-0-991"><a id="__codelineno-0-991" name="__codelineno-0-991"></a>        <span class="n">status</span><span class="o">=</span><span class="s2">"success"</span><span class="p">,</span>
+</span><span id="__span-0-992"><a id="__codelineno-0-992" name="__codelineno-0-992"></a>    <span class="p">)</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>

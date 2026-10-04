@@ -3077,12 +3077,24 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong>BREAKING: <code>web_scrape</code> refuses <code>link_selector</code> and <code>link_pattern</code>
     together</strong> - The selector used to win silently; a recipe that sets
     both now fails validation</li>
-<li><strong>Strategy validation is stricter</strong> - A <code>version_format</code> that is
+<li>
+<p><strong>Strategy validation is stricter</strong> - A <code>version_format</code> that is
     malformed or names a field, and an empty <code>version_pattern</code> in any
     strategy, are validation errors; each strategy reports a missing or
     mistyped field in the same form the other sections use
     (<code>discovery: Missing required field: repo</code>, <code>discovery.repo: Must be a
-    string</code>)</li>
+    string</code>)</p>
+</li>
+<li>
+<p><strong>One Graph session and one retry policy</strong> - Every Graph call, every
+    Azure Storage block upload, and the tenant lookup at <code>napt auth login</code>
+    go through one pooled connection, so an upload of many blocks reuses
+    its connection instead of opening one per block, and every call uses
+    the beta endpoint. Block uploads honor
+    <code>Retry-After</code> the way Graph calls already did. A 401, 403, or 400
+    names the call that failed and what Graph answered, without guessing
+    at an Intune role or at app metadata as the cause</p>
+</li>
 </ul>
 <h3 id="removed">Removed</h3>
 <ul>
@@ -3109,6 +3121,13 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
     configuration error, and caught at <code>napt validate</code> first</li>
 <li>A download that failed in transit (a dropped connection mid-file) is
     reported as a network error from the downloader itself</li>
+<li><code>napt upload</code> with <code>build_types: both</code> decrypted and extracted the
+    package once per app entry; it now extracts it once, and not at all
+    when both entries are adopted</li>
+<li>An app with more than one page of assignments had the later pages
+    dropped when its assignments were read; every page is read now</li>
+<li>The wait for a new app registration to replicate recognized a 404 by
+    searching the error text; it now checks the status itself</li>
 <li>Fixed a PSADT download interrupted part-way leaving a partial toolkit in
     the cache that every later build accepted, and the toolkit zip left in
     the cache folder shipping inside every later package. The toolkit is
