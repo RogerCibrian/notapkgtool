@@ -1098,7 +1098,7 @@ def test_upload_build_types_mismatch_aborts_before_graph(
     assert "napt build" in str(info.value)
 
 
-def test_upload_corrupt_manifest_is_a_config_error(
+def test_upload_corrupt_manifest_is_a_packaging_error(
     tmp_path: Path, monkeypatch, fake_metadata
 ) -> None:
     """Tests that a manifest that is not JSON is reported, not a traceback."""
@@ -1106,11 +1106,12 @@ def test_upload_corrupt_manifest_is_a_config_error(
     pkg_dir = make_package_dir(tmp_path, installer_sha256="a" * 64)
     (pkg_dir / "build-manifest.json").write_text("{not json", encoding="utf-8")
 
-    with pytest.raises(ConfigError, match="build-manifest.json"):
+    with pytest.raises(PackagingError, match="build-manifest.json") as info:
         _run_upload(tmp_path, fake_metadata)
+    assert "napt package" in str(info.value)
 
 
-def test_upload_manifest_that_is_not_an_object_is_a_config_error(
+def test_upload_manifest_that_is_not_an_object_is_a_packaging_error(
     tmp_path: Path, monkeypatch, fake_metadata
 ) -> None:
     """Tests that a manifest holding a JSON array is reported."""
@@ -1118,14 +1119,14 @@ def test_upload_manifest_that_is_not_an_object_is_a_config_error(
     pkg_dir = make_package_dir(tmp_path, installer_sha256="a" * 64)
     (pkg_dir / "build-manifest.json").write_text("[]", encoding="utf-8")
 
-    with pytest.raises(ConfigError, match="not a JSON object"):
+    with pytest.raises(PackagingError, match="not a JSON object"):
         _run_upload(tmp_path, fake_metadata)
 
 
 @pytest.mark.parametrize(
     "key", ["win32_build_types", "detection_script_path", "intunewin_sha256"]
 )
-def test_upload_manifest_missing_a_required_key_is_a_config_error(
+def test_upload_manifest_missing_a_required_key_is_a_packaging_error(
     tmp_path: Path, monkeypatch, fake_metadata, key
 ) -> None:
     """Tests that a manifest without a field upload relies on is reported."""
@@ -1136,7 +1137,7 @@ def test_upload_manifest_missing_a_required_key_is_a_config_error(
     del data[key]
     manifest_path.write_text(json.dumps(data), encoding="utf-8")
 
-    with pytest.raises(ConfigError, match=f"has no {key}"):
+    with pytest.raises(PackagingError, match=f"has no {key}"):
         _run_upload(tmp_path, fake_metadata)
 
 

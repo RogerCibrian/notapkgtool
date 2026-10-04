@@ -38,7 +38,8 @@ Note:
     Icon extraction is best-effort by design. The public entry point
     [extract_icon_png][napt.build.icons.extract_icon_png] never raises; a
     failure is reported through the returned result so the build can warn
-    and continue.
+    and continue. [ensure_app_icon][napt.build.icons.ensure_app_icon] is the
+    build step that keeps one icon per app in the icons directory.
 
 """
 
@@ -53,6 +54,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+from typing import Any
 import xml.etree.ElementTree as ET
 import zipfile
 
@@ -498,8 +500,8 @@ def _extract_from_msi(msi_path: Path) -> IconExtraction:
     """Extracts an icon from an MSI, trying the Icon table then the contents.
 
     Tier A reads the MSI Icon table (preferring the ARPPRODUCTICON row).
-    If that yields no qualifying frame — including when the Icon table
-    backend itself fails — tier B performs an administrative extract of
+    If that yields no qualifying frame, including when the Icon table
+    backend itself fails, tier B performs an administrative extract of
     the MSI and scans the contained executables.
 
     Args:
@@ -515,7 +517,7 @@ def _extract_from_msi(msi_path: Path) -> IconExtraction:
     blobs: dict[str, bytes] = {}
     try:
         arp_icon, blobs = _msi_icon_blobs(msi_path)
-    except (PackagingError, NotImplementedError) as err:
+    except PackagingError as err:
         logger.debug("BUILD", f"Icon table read failed: {err!r}")
         tier_a_detail = f"Icon table read failed ({err})"
     largest = 0
@@ -550,19 +552,17 @@ def _msi_icon_blobs(msi_path: Path) -> tuple[str, dict[str, bytes]]:
             the MSI has no Icon table).
 
     Raises:
-        PackagingError: If the backend subprocess fails.
-        NotImplementedError: If no extraction backend is available on this
-            system.
+        PackagingError: If the backend subprocess fails, or no backend is
+            available on this host.
     """
     if sys.platform.startswith("win"):
         with tempfile.TemporaryDirectory(prefix="napt-icon-") as tmp:
             return _msi_icon_blobs_windows(msi_path, Path(tmp))
     if shutil.which("msiinfo"):
         return _msi_icon_blobs_msiinfo(msi_path)
-    raise NotImplementedError(
-        "MSI icon extraction is not available on this host. "
-        "On Windows, ensure PowerShell is available. "
-        "On Linux/macOS, install 'msitools'."
+    raise PackagingError(
+        "MSI icon extraction needs msitools on this host; install the "
+        "'msitools' package."
     )
 
 
@@ -983,3 +983,80 @@ def _msix_asset_variants(
         if width:
             triples.append((data, width, entry_name))
     return triples
+
+
+def ensure_app_icon(config: dict[str, Any], installer_file: Path, app_id: str) -> None:
+    """Extracts the app icon from the installer into the icons directory.
+
+    Best-effort side task that never raises: a failed extraction warns and
+    the build continues. Skipped when intune.logo_path is set (the explicit
+    icon wins at upload) or when the icon file already exists (users may
+    drop curated replacements into the icons directory; NAPT never
+    overwrites them).
+
+    A failed extraction is recorded in a ``{app_id}.no-icon`` marker so
+    expensive MSI extraction is not repeated every build. The marker
+    invalidates itself when the installer file changes and is removed on a
+    successful extraction.
+
+    Args:
+        config: Merged effective configuration.
+        installer_file: Path to the downloaded installer.
+        app_id: Recipe id; the icon is written to
+            ``{directories.icons}/{app_id}.png``.
+    """
+    logger = _get_logger()
+
+    if config["intune"].get("logo_path"):
+        logger.info("BUILD", "Skipping icon extraction: intune.logo_path is set")
+        return
+
+    icons_dir = Path(config["directories"]["icons"])
+    icon_path = icons_dir / f"{app_id}.png"
+    if icon_path.exists():
+        logger.info("BUILD", f"Skipping icon extraction: {icon_path} already exists")
+        return
+
+    marker_path = icons_dir / f"{app_id}.no-icon"
+    stat = installer_file.stat()
+    fingerprint = f"{installer_file.name}|{stat.st_size}|{stat.st_mtime_ns}"
+    if marker_path.exists():
+        try:
+            marker_matches = (
+                marker_path.read_text(encoding="utf-8").strip() == fingerprint
+            )
+        except OSError:
+            marker_matches = False
+        if marker_matches:
+            logger.info(
+                "BUILD",
+                "Skipping icon extraction: no icon was found in this "
+                "installer previously",
+            )
+            return
+
+    result = extract_icon_png(installer_file)
+    if result.png is None:
+        try:
+            icons_dir.mkdir(parents=True, exist_ok=True)
+            marker_path.write_text(fingerprint, encoding="utf-8")
+        except OSError:
+            pass
+        logger.warning(
+            "BUILD",
+            f"No app icon extracted from {installer_file.name}: {result.detail}. "
+            f"The Intune app entry will be created without a logo. Place a PNG "
+            f"at {icon_path} or set intune.logo_path to provide an icon "
+            f"manually.",
+        )
+        return
+
+    try:
+        icon_path.parent.mkdir(parents=True, exist_ok=True)
+        icon_path.write_bytes(result.png)
+        marker_path.unlink(missing_ok=True)
+    except OSError as err:
+        logger.warning("BUILD", f"Could not write app icon to {icon_path}: {err}")
+        return
+    logger.info("BUILD", f"Extracted app icon ({result.width}px): {icon_path}")
+    logger.verbose("BUILD", f"Icon source: {result.detail}")

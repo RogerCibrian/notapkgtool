@@ -14,13 +14,42 @@ from unittest import mock
 
 import pytest
 
-from napt.exceptions import ConfigError, PackagingError
+from napt.exceptions import PackagingError
 from napt.powershell import ps_single_quote
 from napt.versioning.msi import _architecture_from_template, extract_msi_metadata
 
 # Typographic single quote, which PowerShell accepts as a string delimiter.
 # Written as an escape because it is nearly indistinguishable from ' on screen.
 RSQUO = "\u2019"  # right single quotation mark
+
+
+class TestMissingBackend:
+    """Tests for hosts that cannot read an MSI at all."""
+
+    def test_powershell_missing_is_a_packaging_error(self, tmp_path, monkeypatch):
+        """Tests that a Windows host without powershell on PATH is reported,
+        not a FileNotFoundError traceback."""
+        monkeypatch.setattr("napt.versioning.msi.sys.platform", "win32")
+        msi_path = tmp_path / "app.msi"
+        msi_path.write_bytes(b"")
+
+        with mock.patch(
+            "napt.versioning.msi.subprocess.run",
+            side_effect=FileNotFoundError(2, "No such file", "powershell"),
+        ):
+            with pytest.raises(PackagingError, match="PowerShell"):
+                extract_msi_metadata(msi_path)
+
+    def test_no_backend_is_a_packaging_error(self, tmp_path, monkeypatch):
+        """Tests that a non-Windows host without msitools is reported as a
+        build error naming the package to install."""
+        monkeypatch.setattr("napt.versioning.msi.sys.platform", "linux")
+        monkeypatch.setattr("napt.versioning.msi.shutil.which", lambda name: None)
+        msi_path = tmp_path / "app.msi"
+        msi_path.write_bytes(b"")
+
+        with pytest.raises(PackagingError, match="msitools"):
+            extract_msi_metadata(msi_path)
 
 
 class TestArchitectureFromTemplate:
@@ -57,19 +86,19 @@ class TestArchitectureFromTemplate:
         assert _architecture_from_template("x64;1033,2046") == "x64"
         assert _architecture_from_template("x64;1041,1033") == "x64"
 
-    def test_intel64_raises_config_error(self):
-        """Tests that Intel64 (Itanium) raises ConfigError."""
-        with pytest.raises(ConfigError, match="Itanium"):
+    def test_intel64_is_a_packaging_error(self):
+        """Tests that Intel64 (Itanium) is refused as an installer problem."""
+        with pytest.raises(PackagingError, match="Itanium"):
             _architecture_from_template("Intel64;1033")
 
-    def test_arm32_raises_config_error(self):
-        """Tests that Arm (Windows RT 32-bit) raises ConfigError."""
-        with pytest.raises(ConfigError, match="Windows RT"):
+    def test_arm32_is_a_packaging_error(self):
+        """Tests that Arm (Windows RT 32-bit) is refused as an installer problem."""
+        with pytest.raises(PackagingError, match="Windows RT"):
             _architecture_from_template("Arm;1033")
 
-    def test_unknown_platform_raises_config_error(self):
-        """Tests that an unknown platform raises ConfigError."""
-        with pytest.raises(ConfigError, match="Unknown"):
+    def test_unknown_platform_is_a_packaging_error(self):
+        """Tests that an unknown platform is refused as an installer problem."""
+        with pytest.raises(PackagingError, match="Unknown"):
             _architecture_from_template("mips;1033")
 
     def test_template_without_semicolon(self):

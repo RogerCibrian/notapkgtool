@@ -29,7 +29,6 @@ Extracted Fields:
     - Identity.Version: Four-part version string (e.g., "4.49.81.0")
     - Identity.ProcessorArchitecture: Mapped to NAPT architecture values
     - Properties.DisplayName: Human-readable application name
-    - Properties.PublisherDisplayName: Publisher display string
 
 Note:
     This is pure file introspection; no network calls are made. Works
@@ -45,7 +44,7 @@ from typing import Literal
 import xml.etree.ElementTree as ET
 import zipfile
 
-from napt.exceptions import ConfigError, PackagingError
+from napt.exceptions import PackagingError
 
 # MSIX ProcessorArchitecture mapping
 # See: https://learn.microsoft.com/en-us/uwp/schemas/appxpackage/uapmanifestschema/element-identity
@@ -56,7 +55,7 @@ _ARCH_TO_NAPT: dict[str, str] = {
     "neutral": "any",
 }
 
-# Unsupported architectures that raise ConfigError
+# Architectures Intune does not deploy to; each maps to the reason given
 _UNSUPPORTED_ARCHS: dict[str, str] = {
     "arm": "Windows RT 32-bit ARM is not supported by Intune",
 }
@@ -81,35 +80,32 @@ class MSIXMetadata:
             "arm64", or "any" (for architecture-neutral packages).
         identity_name: Package identity name from Identity Name attribute.
             Used for ``Get-AppxPackage -Name`` queries in detection scripts.
-        publisher: PublisherDisplayName from Properties element.
     """
 
     display_name: str
     version: str
     architecture: Architecture
     identity_name: str
-    publisher: str
 
 
 def extract_msix_metadata(file_path: str | Path) -> MSIXMetadata:
     """Extracts metadata from an MSIX file's AppxManifest.xml.
 
     Reads the MSIX archive (ZIP format) and parses AppxManifest.xml to
-    extract identity, version, architecture, display name, and publisher
-    information.
+    extract identity, version, architecture, and display name.
 
     Args:
         file_path: Path to the MSIX file.
 
     Returns:
-        MSIX metadata including display name, version, architecture,
-        identity name, and publisher.
+        MSIX metadata including display name, version, architecture, and
+        identity name.
 
     Raises:
         PackagingError: If the MSIX file does not exist, is not a valid
             ZIP archive, does not contain AppxManifest.xml, holds one that
-            is not well-formed XML, or is missing required fields.
-        ConfigError: If the MSIX architecture is not supported by Intune.
+            is not well-formed XML, is missing required fields, or names an
+            architecture Intune does not support.
 
     Example:
         Extract MSIX metadata:
@@ -123,9 +119,8 @@ def extract_msix_metadata(file_path: str | Path) -> MSIXMetadata:
             ```
 
     Note:
-        DisplayName may reference ms-resource strings in some packages.
-        These are returned as-is; the build phase should validate that
-        the display name is usable for detection.
+        DisplayName may reference an ms-resource string in some packages.
+        It is returned as is, and the detection script then matches on it.
 
     """
     from napt.logging import get_global_logger
@@ -187,10 +182,7 @@ def extract_msix_metadata(file_path: str | Path) -> MSIXMetadata:
         )
 
     display_name_node = properties.find(f"{{{_MANIFEST_NS}}}DisplayName")
-    publisher_node = properties.find(f"{{{_MANIFEST_NS}}}PublisherDisplayName")
-
     display_name = display_name_node.text if display_name_node is not None else ""
-    publisher = (publisher_node.text or "") if publisher_node is not None else ""
 
     if not display_name:
         raise PackagingError(f"Properties DisplayName not found in {msix_path.name}.")
@@ -206,7 +198,6 @@ def extract_msix_metadata(file_path: str | Path) -> MSIXMetadata:
         version=version,
         architecture=architecture,
         identity_name=identity_name,
-        publisher=publisher,
     )
 
 
@@ -220,7 +211,7 @@ def _architecture_from_manifest(proc_arch: str) -> Architecture:
         Architecture value: "x86", "x64", "arm64", or "any".
 
     Raises:
-        ConfigError: If the architecture is not supported by Intune or
+        PackagingError: If the architecture is not supported by Intune or
             is unrecognized.
 
     """
@@ -228,7 +219,7 @@ def _architecture_from_manifest(proc_arch: str) -> Architecture:
 
     # Check for unsupported architectures first
     if arch_lower in _UNSUPPORTED_ARCHS:
-        raise ConfigError(
+        raise PackagingError(
             f"MSIX architecture '{proc_arch}' is not supported. "
             f"{_UNSUPPORTED_ARCHS[arch_lower]}."
         )
@@ -236,7 +227,7 @@ def _architecture_from_manifest(proc_arch: str) -> Architecture:
     # Map to NAPT architecture
     arch = _ARCH_TO_NAPT.get(arch_lower)
     if arch is None:
-        raise ConfigError(
+        raise PackagingError(
             f"Unknown MSIX architecture '{proc_arch}' in Identity element. "
             f"Expected one of: x86, x64, arm64, neutral."
         )

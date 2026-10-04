@@ -14,7 +14,7 @@ import zipfile
 
 import pytest
 
-from napt.exceptions import ConfigError, PackagingError
+from napt.exceptions import PackagingError
 from napt.versioning.msix import (
     MSIXMetadata,
     _architecture_from_manifest,
@@ -56,14 +56,12 @@ class TestMSIXMetadataDataclass:
             version="4.49.81.0",
             architecture="x64",
             identity_name="com.tinyspeck.slackdesktop",
-            publisher="Slack Technologies Inc.",
         )
 
         assert metadata.display_name == "Slack"
         assert metadata.version == "4.49.81.0"
         assert metadata.architecture == "x64"
         assert metadata.identity_name == "com.tinyspeck.slackdesktop"
-        assert metadata.publisher == "Slack Technologies Inc."
 
     def test_frozen(self):
         """Tests that the dataclass is immutable."""
@@ -72,7 +70,6 @@ class TestMSIXMetadataDataclass:
             version="4.49.81.0",
             architecture="x64",
             identity_name="com.tinyspeck.slackdesktop",
-            publisher="Slack Technologies Inc.",
         )
 
         with pytest.raises(AttributeError):
@@ -105,13 +102,13 @@ class TestArchitectureFromManifest:
         assert _architecture_from_manifest("Neutral") == "any"
 
     def test_unsupported_arm(self):
-        """Tests that 32-bit ARM raises ConfigError."""
-        with pytest.raises(ConfigError, match="not supported"):
+        """Tests that 32-bit ARM is refused as an installer problem."""
+        with pytest.raises(PackagingError, match="not supported"):
             _architecture_from_manifest("arm")
 
     def test_unknown_architecture(self):
-        """Tests that unknown architecture raises ConfigError."""
-        with pytest.raises(ConfigError, match="Unknown MSIX architecture"):
+        """Tests that an unknown architecture is refused as an installer problem."""
+        with pytest.raises(PackagingError, match="Unknown MSIX architecture"):
             _architecture_from_manifest("itanium")
 
 
@@ -127,7 +124,6 @@ class TestExtractMsixMetadata:
         assert metadata.version == "4.49.81.0"
         assert metadata.architecture == "x64"
         assert metadata.identity_name == "com.tinyspeck.slackdesktop"
-        assert metadata.publisher == "Slack Technologies Inc."
 
     def test_neutral_architecture(self, tmp_path):
         """Tests that neutral architecture maps to any."""
@@ -210,22 +206,6 @@ class TestExtractMsixMetadata:
 
         with pytest.raises(PackagingError, match="DisplayName not found"):
             extract_msix_metadata(msix_path)
-
-    def test_empty_publisher_allowed(self, tmp_path):
-        """Tests that empty publisher is allowed."""
-        manifest = """\
-<?xml version="1.0" encoding="utf-8"?>
-<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10">
-  <Identity Name="com.example.app" ProcessorArchitecture="x64" Version="1.0.0.0" />
-  <Properties>
-    <DisplayName>App</DisplayName>
-  </Properties>
-</Package>
-"""
-        msix_path = _create_msix(tmp_path / "app.msix", manifest)
-        metadata = extract_msix_metadata(msix_path)
-
-        assert metadata.publisher == ""
 
     def test_malformed_manifest_xml(self, tmp_path):
         """Tests that a manifest that is not well-formed XML is reported."""

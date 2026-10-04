@@ -31,12 +31,12 @@ from __future__ import annotations
 import base64
 from collections.abc import Callable
 import functools
-import json
 from pathlib import Path
 import tempfile
 from typing import Any
 
 from napt.auth.credentials import get_access_token
+from napt.build.manifest import read_build_manifest
 from napt.config.loader import load_effective_config
 from napt.download.download import sha256_file
 from napt.exceptions import ConfigError, PackagingError
@@ -317,6 +317,9 @@ def _resolve_large_icon(config: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
+_MANIFEST_REMEDY = "Run 'napt build' and 'napt package' to recreate the package."
+
+
 def _read_build_manifest(package_dir: Path) -> dict[str, Any]:
     """Reads and validates the build manifest from a package directory.
 
@@ -328,61 +331,29 @@ def _read_build_manifest(package_dir: Path) -> dict[str, Any]:
         The parsed build manifest.
 
     Raises:
-        ConfigError: If the manifest is missing, not JSON, or lacks a field
-            upload relies on (architecture, installer hash, build types,
-            script and package names). Run 'napt build' and 'napt package'
-            to recreate the package.
+        PackagingError: If the manifest is missing, not JSON, or lacks a
+            field upload relies on (architecture, installer hash, build
+            types, script and package names).
 
     """
-    manifest_path = package_dir / "build-manifest.json"
-    if not manifest_path.exists():
-        raise ConfigError(
-            f"Build manifest not found in {package_dir}. "
-            "Run 'napt package' to recreate the package."
+    manifest = read_build_manifest(
+        package_dir,
+        (
+            "win32_build_types",
+            "detection_script_path",
+            "intunewin_filename",
+            "intunewin_sha256",
+            "architecture",
+            "installer_sha256",
+        ),
+        _MANIFEST_REMEDY,
+    )
+    if manifest["architecture"] not in _ARCH_MAP:
+        raise PackagingError(
+            f"Unrecognized architecture '{manifest['architecture']}' in the "
+            f"build manifest in {package_dir}. Expected one of: "
+            f"{', '.join(_ARCH_MAP)}. {_MANIFEST_REMEDY}"
         )
-    try:
-        manifest: dict[str, Any] = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as err:
-        raise ConfigError(
-            f"Cannot read build-manifest.json in {package_dir}: {err}. "
-            "Run 'napt package' to recreate the package."
-        ) from err
-    if not isinstance(manifest, dict):
-        raise ConfigError(
-            f"build-manifest.json in {package_dir} is not a JSON object. "
-            "Run 'napt package' to recreate the package."
-        )
-    for key in (
-        "win32_build_types",
-        "detection_script_path",
-        "intunewin_filename",
-        "intunewin_sha256",
-    ):
-        if not isinstance(manifest.get(key), str) or not manifest[key]:
-            raise ConfigError(
-                f"build-manifest.json in {package_dir} has no {key}. "
-                "Run 'napt build' and 'napt package' to recreate the package."
-            )
-
-    arch_raw: str = manifest.get("architecture") or ""
-    if not arch_raw:
-        raise ConfigError(
-            f"Architecture not found in build manifest {manifest_path}. "
-            "Run 'napt build' and 'napt package' to recreate the package."
-        )
-    if arch_raw not in _ARCH_MAP:
-        raise ConfigError(
-            f"Unrecognized architecture '{arch_raw}' in build manifest. "
-            f"Expected one of: {', '.join(_ARCH_MAP)}. "
-            "Run 'napt build' and 'napt package' to recreate the package."
-        )
-
-    if not manifest.get("installer_sha256"):
-        raise ConfigError(
-            f"installer_sha256 not found in build manifest {manifest_path}. "
-            "Run 'napt build' and 'napt package' to recreate the package."
-        )
-
     return manifest
 
 

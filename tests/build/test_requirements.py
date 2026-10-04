@@ -33,7 +33,6 @@ class TestRequirementsConfig:
         assert config.app_name == "Test App"
         assert config.version == "1.0.0"
         assert config.log_rotation_mb == 3
-        assert config.app_id == ""
         assert config.expected_architecture == "any"
         assert config.use_wildcard is False
 
@@ -43,13 +42,11 @@ class TestRequirementsConfig:
             app_name="Custom App",
             version="2.5.0",
             log_rotation_mb=10,
-            app_id="custom-app",
         )
 
         assert config.app_name == "Custom App"
         assert config.version == "2.5.0"
         assert config.log_rotation_mb == 10
-        assert config.app_id == "custom-app"
 
     def test_default_is_msi_installer(self):
         """Test default value of is_msi_installer is False."""

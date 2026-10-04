@@ -48,6 +48,7 @@ import shutil
 import subprocess
 from typing import Any
 
+from napt.build.manifest import MANIFEST_NAME, read_build_manifest
 from napt.download.download import make_session, sha256_file
 from napt.exceptions import ConfigError, NetworkError, PackagingError
 from napt.files import write_bytes_atomic, write_text_atomic
@@ -276,46 +277,6 @@ def _execute_packaging(
     return intunewin_path
 
 
-def _read_build_manifest(build_dir: Path) -> dict[str, Any]:
-    """Reads the manifest 'napt build' wrote beside the build.
-
-    Args:
-        build_dir: Build version directory (holds ``packagefiles/``).
-
-    Returns:
-        The parsed manifest.
-
-    Raises:
-        ConfigError: If the manifest is missing, not JSON, or lacks the
-            installer hash or the detection script name.
-    """
-    manifest_path = build_dir / "build-manifest.json"
-    if not manifest_path.is_file():
-        raise ConfigError(
-            f"Build manifest not found: {manifest_path}. Run 'napt build' to "
-            "create the build again."
-        )
-    try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as err:
-        raise ConfigError(
-            f"Cannot read build-manifest.json in {build_dir}: {err}. Run "
-            "'napt build' to create the build again."
-        ) from err
-    if not isinstance(manifest, dict):
-        raise ConfigError(
-            f"build-manifest.json in {build_dir} is not a JSON object. Run "
-            "'napt build' to create the build again."
-        )
-    for key in ("installer_sha256", "detection_script_path"):
-        if not isinstance(manifest.get(key), str) or not manifest[key]:
-            raise ConfigError(
-                f"build-manifest.json in {build_dir} has no {key}. Run "
-                "'napt build' to create the build again."
-            )
-    return manifest
-
-
 def _verify_installer(packagefiles_dir: Path, installer_sha256: str) -> None:
     """Checks that the installer inside the build is the one the manifest names.
 
@@ -438,7 +399,11 @@ def create_intunewin(
     # its manifest and the recorded release, before anything is written.
     logger.step(1, 5, "Verifying build...")
     _verify_build_structure(packagefiles_dir)
-    manifest = _read_build_manifest(build_dir)
+    manifest = read_build_manifest(
+        build_dir,
+        ("installer_sha256", "detection_script_path"),
+        "Run 'napt build' to create the build again.",
+    )
     installer_sha256: str = manifest["installer_sha256"]
     if expected_sha256 is not None and installer_sha256 != expected_sha256:
         raise PackagingError(
@@ -484,10 +449,10 @@ def create_intunewin(
     manifest["intunewin_filename"] = package_path.name
     manifest["intunewin_sha256"] = sha256_file(package_path)
     write_text_atomic(
-        version_output_dir / "build-manifest.json",
+        version_output_dir / MANIFEST_NAME,
         json.dumps(manifest, indent=2) + "\n",
     )
-    logger.verbose("PACKAGE", "Wrote: build-manifest.json")
+    logger.verbose("PACKAGE", f"Wrote: {MANIFEST_NAME}")
 
     logger.step(5, 5, "Package complete")
     logger.verbose("PACKAGE", f"[OK] Package created: {package_path}")

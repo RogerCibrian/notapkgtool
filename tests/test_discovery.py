@@ -209,7 +209,6 @@ class TestUrlDownloadFlow:
                     version="4.41.105.0",
                     architecture="x64",
                     display_name="App",
-                    publisher="CN=Vendor",
                 )
                 result = run_url_download(app_config, tmp_test_dir)
 

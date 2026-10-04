@@ -623,7 +623,7 @@ class TestCreateIntunewin:
         """Tests that a build without its manifest cannot be packaged."""
         build_dir = _make_build_dir(tmp_path, manifest=False)
 
-        with pytest.raises(ConfigError, match="build-manifest.json") as info:
+        with pytest.raises(PackagingError, match="build-manifest.json") as info:
             create_intunewin(build_dir, output_dir=tmp_path / "packages")
         assert "napt build" in str(info.value)
 
@@ -632,7 +632,7 @@ class TestCreateIntunewin:
         build_dir = _make_build_dir(tmp_path)
         (build_dir / "build-manifest.json").write_text("{oops", encoding="utf-8")
 
-        with pytest.raises(ConfigError, match="build-manifest.json"):
+        with pytest.raises(PackagingError, match="build-manifest.json"):
             create_intunewin(build_dir, output_dir=tmp_path / "packages")
 
     def test_manifest_that_is_not_an_object_is_an_error(self, tmp_path):
@@ -640,7 +640,7 @@ class TestCreateIntunewin:
         build_dir = _make_build_dir(tmp_path)
         (build_dir / "build-manifest.json").write_text("[]", encoding="utf-8")
 
-        with pytest.raises(ConfigError, match="not a JSON object"):
+        with pytest.raises(PackagingError, match="not a JSON object"):
             create_intunewin(build_dir, output_dir=tmp_path / "packages")
 
     @pytest.mark.parametrize("key", ["installer_sha256", "detection_script_path"])
@@ -652,7 +652,7 @@ class TestCreateIntunewin:
         del data[key]
         manifest_path.write_text(json.dumps(data), encoding="utf-8")
 
-        with pytest.raises(ConfigError, match=f"has no {key}"):
+        with pytest.raises(PackagingError, match=f"has no {key}"):
             create_intunewin(build_dir, output_dir=tmp_path / "packages")
 
     def test_installer_that_does_not_match_the_manifest_is_refused(self, tmp_path):

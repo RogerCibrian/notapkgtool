@@ -69,10 +69,16 @@ recipes whose pattern (or `api_json` value) keeps a prefix.
    single installer found in a version folder (`downloads/{app_id}/{version}/`)
    is used; more than one stops the build, and a file placed directly in
    `downloads/{app_id}/` is not found.
-3. **Confirm version** - The version is the name of the download folder.
-   For an MSI or MSIX, build reads the installer's own version and refuses to
-   continue if it differs from the folder, since that means a file was moved
-   by hand.
+3. **Inspect installer** - The version is the name of the download folder.
+   For an MSI or MSIX, build reads the installer's metadata once and refuses
+   to continue if its version differs from the folder, since that means a
+   file was moved by hand; the metadata also supplies the detection name and
+   architecture.
+   For an EXE, the recipe must supply `intune.detection.display_name`,
+   `intune.detection.architecture`, and both `psadt.install` and
+   `psadt.uninstall`.
+   Every one of these checks runs before anything is written, so a failing
+   recipe leaves an existing build of that version untouched.
 4. **Get PSADT release** - Downloads PSADT Template_v4 from GitHub into
    `cache/psadt/{version}/` if not already cached.
    The GitHub API calls send `GITHUB_TOKEN` from the environment when it is
@@ -101,6 +107,7 @@ recipes whose pattern (or `api_json` value) keeps a prefix.
    (if configured):
     - Reads `psadt.brand_pack` (usually set in `org.yaml`; a relative path
       resolves against `defaults/`).
+      A configured path that does not exist fails the build.
     - Replaces files in `Assets/` (AppIcon.png, Banner.Classic.png, and so
       on).
     - Uses pattern matching to find source files in the brand pack directory.

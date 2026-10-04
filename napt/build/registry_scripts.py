@@ -60,7 +60,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from napt.exceptions import PackagingError
+from napt.build._ps_templates import (
+    _load_ps_template,
+    substitute_ps_template,
+    write_ps_script,
+)
+from napt.powershell import ps_escape_double_quoted, strip_control_characters
 
 # Type alias for architecture values
 ArchitectureMode = Literal["x86", "x64", "arm64", "any"]
@@ -76,12 +81,10 @@ class DetectionConfig:
         log_rotation_mb: Maximum log file size in MB before rotation.
         exact_match: If True, version must match exactly. If False, minimum
             version comparison (remote >= expected).
-        app_id: Application ID (used for fallback if app_name sanitization
-            results in empty string).
-        is_msi_installer: If True, only match MSI-based registry entries.
-            If False, only match non-MSI entries. This prevents false matches
-            when both MSI and EXE versions of software exist with the same
-            DisplayName.
+        is_msi_installer: If True, only match registry entries written by
+            Windows Installer (WindowsInstaller=1), so an EXE edition of the
+            same software is not mistaken for the MSI. If False, match any
+            entry, since an EXE may install through an embedded MSI.
         expected_architecture: Architecture filter for registry view selection.
             - "x86": Check only 32-bit registry view
             - "x64": Check only 64-bit registry view
@@ -96,7 +99,6 @@ class DetectionConfig:
     version: str
     log_rotation_mb: int = 3
     exact_match: bool = False
-    app_id: str = ""
     is_msi_installer: bool = False
     expected_architecture: ArchitectureMode = "any"
     use_wildcard: bool = False
@@ -110,12 +112,10 @@ class RequirementsConfig:
         app_name: Application name to search for in registry DisplayName.
         version: Target version string (requirement met if installed < this).
         log_rotation_mb: Maximum log file size in MB before rotation.
-        app_id: Application ID (used for fallback if app_name sanitization
-            results in empty string).
-        is_msi_installer: If True, only match MSI-based registry entries.
-            If False, only match non-MSI entries. This prevents false matches
-            when both MSI and EXE versions of software exist with the same
-            DisplayName.
+        is_msi_installer: If True, only match registry entries written by
+            Windows Installer (WindowsInstaller=1), so an EXE edition of the
+            same software is not mistaken for the MSI. If False, match any
+            entry, since an EXE may install through an embedded MSI.
         expected_architecture: Architecture filter for registry view selection.
             - "x86": Check only 32-bit registry view
             - "x64": Check only 64-bit registry view
@@ -129,10 +129,26 @@ class RequirementsConfig:
     app_name: str
     version: str
     log_rotation_mb: int = 3
-    app_id: str = ""
     is_msi_installer: bool = False
     expected_architecture: ArchitectureMode = "any"
     use_wildcard: bool = False
+
+
+def _match_operator(script: str, use_wildcard: bool) -> str:
+    """Switches the DisplayName comparison to -eq unless wildcards are wanted.
+
+    Args:
+        script: The rendered script, which the template writes with -like.
+        use_wildcard: Whether the app name carries * or ? wildcards.
+
+    Returns:
+        The script with the operator the name calls for.
+    """
+    if use_wildcard:
+        return script
+    return script.replace(
+        "$DisplayNameValue -like $AppName", "$DisplayNameValue -eq $AppName"
+    )
 
 
 def generate_detection_script(config: DetectionConfig, output_path: Path) -> Path:
@@ -174,23 +190,8 @@ def generate_detection_script(config: DetectionConfig, output_path: Path) -> Pat
             ```
 
     """
-    from napt.build._ps_templates import (
-        _load_ps_template,
-        substitute_ps_template,
-    )
-    from napt.logging import get_global_logger
-    from napt.powershell import (
-        PS_SCRIPT_ENCODING,
-        ps_escape_double_quoted,
-        strip_control_characters,
-    )
-
-    logger = get_global_logger()
-
-    logger.verbose("DETECTION", f"Generating detection script: {output_path.name}")
-
     template = _load_ps_template("registry_detection_script.ps1")
-    script_content = substitute_ps_template(
+    script = substitute_ps_template(
         template,
         {
             "$NaptAppName": ps_escape_double_quoted(
@@ -206,27 +207,8 @@ def generate_detection_script(config: DetectionConfig, output_path: Path) -> Pat
             "$NaptFallbackScriptName": "detection.ps1",
         },
     )
-
-    # Template defaults to -like; replace with -eq for exact matching
-    if not config.use_wildcard:
-        script_content = script_content.replace(
-            "$DisplayNameValue -like $AppName",
-            "$DisplayNameValue -eq $AppName",
-        )
-
-    # Ensure output directory exists
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    try:
-        script_bytes = script_content.encode(PS_SCRIPT_ENCODING)
-        output_path.write_bytes(script_bytes)
-        logger.verbose("DETECTION", f"Detection script written to: {output_path}")
-    except OSError as err:
-        raise PackagingError(
-            f"Cannot write detection script {output_path}: {err}"
-        ) from err
-
-    return output_path
+    script = _match_operator(script, config.use_wildcard)
+    return write_ps_script(script, output_path, prefix="DETECTION", kind="detection")
 
 
 def generate_requirements_script(config: RequirementsConfig, output_path: Path) -> Path:
@@ -267,25 +249,8 @@ def generate_requirements_script(config: RequirementsConfig, output_path: Path) 
             ```
 
     """
-    from napt.build._ps_templates import (
-        _load_ps_template,
-        substitute_ps_template,
-    )
-    from napt.logging import get_global_logger
-    from napt.powershell import (
-        PS_SCRIPT_ENCODING,
-        ps_escape_double_quoted,
-        strip_control_characters,
-    )
-
-    logger = get_global_logger()
-
-    logger.verbose(
-        "REQUIREMENTS", f"Generating requirements script: {output_path.name}"
-    )
-
     template = _load_ps_template("registry_requirements_script.ps1")
-    script_content = substitute_ps_template(
+    script = substitute_ps_template(
         template,
         {
             "$NaptAppName": ps_escape_double_quoted(
@@ -300,24 +265,7 @@ def generate_requirements_script(config: RequirementsConfig, output_path: Path) 
             "$NaptFallbackScriptName": "requirements.ps1",
         },
     )
-
-    # Template defaults to -like; replace with -eq for exact matching
-    if not config.use_wildcard:
-        script_content = script_content.replace(
-            "$DisplayNameValue -like $AppName",
-            "$DisplayNameValue -eq $AppName",
-        )
-
-    # Ensure output directory exists
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    try:
-        script_bytes = script_content.encode(PS_SCRIPT_ENCODING)
-        output_path.write_bytes(script_bytes)
-        logger.verbose("REQUIREMENTS", f"Requirements script written to: {output_path}")
-    except OSError as err:
-        raise PackagingError(
-            f"Cannot write requirements script {output_path}: {err}"
-        ) from err
-
-    return output_path
+    script = _match_operator(script, config.use_wildcard)
+    return write_ps_script(
+        script, output_path, prefix="REQUIREMENTS", kind="requirements"
+    )
