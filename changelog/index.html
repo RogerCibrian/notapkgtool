@@ -2977,16 +2977,34 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong><code>napt validate</code> checks a directory</strong> - Every recipe under it is
     validated, and two files that resolve to the same id are reported, the
     same check <code>napt promote</code> makes</li>
+<li><strong><code>napt upload</code> takes <code>--state-dir</code> and <code>--packages-dir</code></strong> - The same
+    overrides <code>napt package</code> takes, so an upload can follow a package run
+    that used them instead of reading the configured directories</li>
 </ul>
 <h3 id="changed">Changed</h3>
 <ul>
-<li><strong>BREAKING: <code>napt package</code> keeps other versions' packages</strong> - The
+<li><strong><code>napt status</code> reads <code>directories.state</code> from configuration</strong> - Like
+    every other command, instead of a fixed <code>state</code> directory, so it
+    summarizes the state the pipeline wrote to. It takes an optional recipe
+    file or directory (default <code>recipes/</code>) to read the setting from;
+    <code>--state-dir</code> still overrides it</li>
+<li><strong>Commands that never talk to a tenant start faster</strong> - <code>validate</code>,
+    <code>discover</code>, <code>build</code>, <code>package</code>, <code>init</code>, and <code>status</code> no longer load the
+    Azure authentication libraries at startup; only <code>upload</code>, <code>promote</code>, and
+    <code>auth</code> do</li>
+<li>
+<p><strong>Ctrl-C ends a command cleanly</strong> - Exit code 130 and an <code>Interrupted.</code>
+    line instead of a traceback</p>
+</li>
+<li>
+<p><strong>BREAKING: <code>napt package</code> keeps other versions' packages</strong> - The
     previous version's package folder used to be deleted before the new
     one was made (and before the packaging tool was even fetched), so a
     failed run left the app with no package. NAPT now never deletes
     another version's files: <code>package</code> replaces only the folder of the
     version it is packaging. <code>--clean-source</code> is removed for the same
-    reason; delete build folders yourself when you want them gone</li>
+    reason; delete build folders yourself when you want them gone</p>
+</li>
 <li><strong>BREAKING: <code>napt package</code> and <code>napt upload</code> resolve the release from
     deployment state</strong> - Both used to take the most recently modified
     folder. They now package and upload the build and package of the

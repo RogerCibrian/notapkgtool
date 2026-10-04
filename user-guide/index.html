@@ -3632,8 +3632,10 @@ writeback commits) see
 <h3 id="napt-status">napt status</h3>
 <p>Shows deployment state across all apps: published version, pending
 release, and which version holds each ring.
-<code>--format json</code> for scripting.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>napt<span class="w"> </span>status<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+<code>--format json</code> for scripting.
+The state directory comes from the recipes' <code>directories.state</code> setting,
+the same one the pipeline wrote to; <code>--state-dir</code> overrides it.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>napt<span class="w"> </span>status<span class="w"> </span><span class="o">[</span>RECIPE_OR_DIR<span class="o">]</span><span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </span></code></pre></div>
 <p>A pending release whose version is lower than the published one is marked
 <code>[DOWNGRADE]</code> in the table and <code>"pending_is_downgrade": true</code> in the JSON.
@@ -4097,6 +4099,13 @@ to its own:</p>
 <td><code>state</code></td>
 </tr>
 <tr>
+<td><code>napt upload</code></td>
+<td><code>--state-dir</code></td>
+<td>Where to read the release to upload (<code>&lt;dir&gt;/deployment/</code>)</td>
+<td><code>directories.state</code></td>
+<td><code>state</code></td>
+</tr>
+<tr>
 <td><code>napt promote</code></td>
 <td><code>--state-dir</code></td>
 <td>Deployment state and plan files</td>
@@ -4106,8 +4115,8 @@ to its own:</p>
 <tr>
 <td><code>napt status</code></td>
 <td><code>--state-dir</code></td>
-<td>Deployment state to summarize (no config lookup)</td>
-<td>-</td>
+<td>Deployment state to summarize</td>
+<td><code>directories.state</code></td>
 <td><code>state</code></td>
 </tr>
 <tr>
@@ -4140,15 +4149,15 @@ to its own:</p>
 </tr>
 <tr>
 <td><code>napt upload</code></td>
-<td>(none)</td>
-<td>Reads the package, state, and icons from config</td>
-<td><code>directories.package</code>, <code>directories.state</code>, <code>directories.icons</code></td>
-<td><code>packages</code>, <code>state</code>, <code>icons</code></td>
+<td><code>--packages-dir</code></td>
+<td>Where to find the package</td>
+<td><code>directories.package</code></td>
+<td><code>packages</code></td>
 </tr>
 </tbody>
 </table>
-<p>Upload has no directory flags, so when you upload, set directory overrides in
-config rather than per run.</p>
+<p><code>napt status</code> has no recipe of its own, so it reads <code>directories.state</code> from
+the first recipe under <code>recipes/</code> (or the file or directory you pass it).</p>
 <p>Input and output share a config key across adjacent commands:
 <code>discover --output-dir</code> and <code>build --downloads-dir</code> both read from
 <code>directories.discover</code>, so the output of one is automatically
@@ -4162,7 +4171,7 @@ See <a href="#app-icons">App icons</a>.</p>
 </span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="w">  </span><span class="nt">build</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/builds"</span><span class="w">        </span><span class="c1"># used by both build and package</span>
 </span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="w">  </span><span class="nt">package</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/packages"</span>
 </span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="w">  </span><span class="nt">icons</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/icons"</span><span class="w">         </span><span class="c1"># written by build, read by upload</span>
-</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a><span class="w">  </span><span class="nt">state</span><span class="p">:</span><span class="w"> </span><span class="s">"deployment-state"</span><span class="w">        </span><span class="c1"># napt status then needs --state-dir deployment-state</span>
+</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a><span class="w">  </span><span class="nt">state</span><span class="p">:</span><span class="w"> </span><span class="s">"deployment-state"</span><span class="w">        </span><span class="c1"># read by every command that touches state</span>
 </span></code></pre></div>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># Uses config default (or built-in if not configured)</span>
 </span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
