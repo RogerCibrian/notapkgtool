@@ -137,7 +137,6 @@ VALIDATION RESULTS
 ======================================================================
 Recipe:      /path/to/recipes/Google/chrome.yaml
 Status:      VALID
-App Count:   1
 
 ======================================================================
 
@@ -166,7 +165,6 @@ Version:         <version>
 Version Source:  msi
 File Path:       downloads/napt-chrome/<version>/googlechromestandaloneenterprise64.msi
 SHA-256:         <sha256>
-Status:          success
 ======================================================================
 
 [SUCCESS] Version discovered successfully!
@@ -190,7 +188,7 @@ Building PSADT package for recipe: /path/to/recipes/Google/chrome.yaml
 
 [1/8] Loading configuration...
 [2/8] Finding installer...
-[3/8] Determining version...
+[3/8] Inspecting installer...
 [BUILD] Building Google Chrome v<version>
 [BUILD] Extracted app icon (256px): icons/napt-chrome.png
 [4/8] Getting PSADT release...
@@ -210,7 +208,6 @@ App ID:          napt-chrome
 Version:         <version>
 PSADT Version:   <psadt version>
 Build Directory: builds/napt-chrome/<version>/packagefiles
-Status:          success
 ======================================================================
 
 [SUCCESS] PSADT package built successfully!
@@ -242,7 +239,6 @@ App ID:          napt-chrome
 Version:         <version>
 Package Path:    packages/napt-chrome/<version>/Invoke-AppDeployToolkit.intunewin
 Build Directory: builds/napt-chrome/<version>
-Status:          success
 ======================================================================
 
 [SUCCESS] .intunewin package created successfully!

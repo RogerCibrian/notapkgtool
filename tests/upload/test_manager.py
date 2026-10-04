@@ -109,7 +109,6 @@ def test_upload_package_both_creates_two_apps(
     assert result.app_id == "test-app"
     assert result.app_name == "Test App"
     assert result.version == "1.0.0"
-    assert result.status == "success"
 
 
 def test_upload_package_app_only_creates_one_app(
@@ -149,7 +148,6 @@ def test_upload_package_app_only_creates_one_app(
 
     assert result.intune_app_id == "intune-app-123"
     assert result.intune_update_app_id is None
-    assert result.status == "success"
 
 
 def test_upload_package_update_only_creates_one_app(
@@ -189,7 +187,6 @@ def test_upload_package_update_only_creates_one_app(
 
     assert result.intune_app_id is None
     assert result.intune_update_app_id == "intune-update-456"
-    assert result.status == "success"
 
 
 def test_upload_package_propagates_network_error(
@@ -265,7 +262,6 @@ def test_upload_package_honors_directories_package(
     ):
         result = upload_package(recipe_path)
 
-    assert result.status == "success"
     assert (
         Path(result.package_path)
         .resolve()
@@ -955,8 +951,6 @@ def test_upload_require_pending_passes_with_matching_pending(
         config_overrides={"deployment": {"require_pending": True}},
     )
 
-    assert result.status == "success"
-
 
 def _seed_published(tmp_path: Path, sha256: str, version: str = "1.0.0") -> Path:
     """Writes a deployment state file with a published release and no pending."""
@@ -987,8 +981,6 @@ def test_upload_require_pending_accepts_the_published_release(
         force=True,
         config_overrides={"deployment": {"require_pending": True}},
     )
-
-    assert result.status == "success"
 
 
 def test_upload_require_pending_blocks_a_package_matching_nothing(

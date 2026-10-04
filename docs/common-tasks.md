@@ -599,7 +599,6 @@ Version:         <version>
 Intune Win32 App ID:    <app id>
 Intune Win32 Update ID: <update id>
 Package:         /path/to/packages/napt-chrome/<version>/Invoke-AppDeployToolkit.intunewin
-Status:          success
 ======================================================================
 
 [SUCCESS] Package uploaded to Intune successfully!

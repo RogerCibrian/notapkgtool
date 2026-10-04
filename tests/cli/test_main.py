@@ -18,7 +18,7 @@ from napt.cli import (
     validate,
 )
 from napt.cli.main import build_parser, main
-from napt.logging import get_global_logger, set_global_logger
+from napt.logging import get_global_logger
 
 
 class TestBuildParser:
@@ -110,12 +110,6 @@ class TestBuildParser:
 
 class TestMain:
     """Tests for the console script's dispatch."""
-
-    @pytest.fixture(autouse=True)
-    def _restore_logger(self):
-        previous = get_global_logger()
-        yield
-        set_global_logger(previous)
 
     def test_exits_with_the_handlers_code(self, tmp_path, capsys):
         """Tests that a successful command exits 0 through main."""

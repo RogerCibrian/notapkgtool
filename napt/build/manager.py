@@ -100,8 +100,8 @@ def build_package(
             release to build. Default: ``directories.state`` from config.
 
     Returns:
-        Build result containing app metadata, build paths, PSADT version, and
-            generated script paths.
+        Build result naming the app, the version, the packagefiles
+            directory, and the PSADT version used.
 
     Raises:
         ConfigError: If the recipe cannot be loaded or lacks a field the
@@ -117,8 +117,8 @@ def build_package(
         Basic build:
             ```python
             result = build_package(Path("recipes/Google/chrome.yaml"))
-            print(result.build_dir)  # builds/napt-chrome/141.0.7390.123
-            print(result.build_types)  # "both"
+            print(result.build_dir)
+            # builds/napt-chrome/141.0.7390.123/packagefiles
             ```
 
         Custom output directory:
@@ -231,8 +231,4 @@ def build_package(
         version=installer.version,
         build_dir=build_dir,
         psadt_version=psadt_version,
-        status="success",
-        build_types=build_types,
-        detection_script_path=detection_script_path,
-        requirements_script_path=requirements_script_path,
     )

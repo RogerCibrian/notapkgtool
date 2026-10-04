@@ -77,7 +77,6 @@ class TestCmdPackage:
             version="1.2.3",
             package_path=tmp_path / "test.intunewin",
             build_dir=build_dir,
-            status="success",
         )
         with (
             patch("napt.cli.package._resolve_build", return_value=(build_dir, None)),
@@ -118,7 +117,6 @@ class TestCmdPackage:
             version="1.2.3",
             package_path=tmp_path / "test.intunewin",
             build_dir=build_dir,
-            status="success",
         )
         with (
             patch(
@@ -164,7 +162,6 @@ class TestCmdPackage:
             version="1.2.3",
             package_path=custom_out / "test.intunewin",
             build_dir=build_dir,
-            status="success",
         )
         with (
             patch("napt.cli.package._resolve_build", return_value=(build_dir, None)),

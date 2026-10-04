@@ -96,8 +96,7 @@ def _print_single(result: ValidationResult) -> None:
     print(f"Recipe:      {result.recipe_path}")
     if result.parent_path:
         print(f"Parent:      {result.parent_path}")
-    print(f"Status:      {result.status.upper()}")
-    print(f"App Count:   {result.app_count}")
+    print(f"Status:      {'VALID' if result.is_valid else 'INVALID'}")
     print()
 
     # Show warnings if any
@@ -142,7 +141,7 @@ def _print_directory(results: list[ValidationResult], root: Path) -> None:
         root: The directory given on the command line.
     """
     for result in results:
-        tag = "[OK]  " if result.status == "valid" else "[FAIL]"
+        tag = "[OK]  " if result.is_valid else "[FAIL]"
         print(f"{tag} {_display_path(result, root)}")
         for error in result.errors:
             print(f"       [X] {error}")
@@ -179,11 +178,11 @@ def cmd_validate(args: argparse.Namespace) -> int:
         _print_directory(results, recipe_path)
         if args.debug:
             for result in results:
-                if result.status == "valid":
+                if result.is_valid:
                     print()
                     print(f"Recipe: {_display_path(result, recipe_path)}")
                     _print_provenance_block(Path(result.recipe_path))
-        failed = sum(1 for result in results if result.status != "valid")
+        failed = sum(1 for result in results if not result.is_valid)
         print()
         print("=" * 70)
         if failed:
@@ -203,7 +202,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
     if args.debug:
         _print_provenance_block(recipe_path)
 
-    if result.status == "valid":
+    if result.is_valid:
         print()
         print("[SUCCESS] Recipe is valid!")
         return 0

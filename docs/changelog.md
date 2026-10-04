@@ -35,6 +35,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `auth` do
 - **Ctrl-C ends a command cleanly** - Exit code 130 and an `Interrupted.`
     line instead of a traceback
+- **Warnings are tagged** - A warning in the log prints as
+    `[PREFIX] WARNING: message`; it used to look exactly like an info line
+- **Result output drops lines that never changed** - `napt validate` no
+    longer prints `App Count` (always 1 for a valid recipe), and `discover`,
+    `build`, `package`, and `upload` no longer print `Status: success` (a
+    failure is an error, not a result)
+- **Log lines use one prefix per stage or domain** - Validation logs under
+    `CONFIG` instead of `VALIDATION`; reusing a cached PSADT release,
+    replacing an earlier build, and backing up org.yaml on `init --force`
+    are reported at the same level as their counterparts
 - **BREAKING: A missing brand pack folder fails the build** - A configured
     `psadt.brand_pack.path` that does not exist used to be skipped with a
     verbose-only note, so a typo shipped a package with PSADT's default

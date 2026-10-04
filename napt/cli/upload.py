@@ -78,7 +78,6 @@ def cmd_upload(args: argparse.Namespace) -> int:
     if result.intune_update_app_id:
         print(f"Intune Win32 Update ID: {result.intune_update_app_id}")
     print(f"Package:         {result.package_path}")
-    print(f"Status:          {result.status}")
     print("=" * 70)
     print()
     print("[SUCCESS] Package uploaded to Intune successfully!")

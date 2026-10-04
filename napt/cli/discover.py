@@ -81,7 +81,6 @@ def cmd_discover(args: argparse.Namespace) -> int:
     print(f"Version Source:  {result.version_source}")
     print(f"File Path:       {result.file_path}")
     print(f"SHA-256:         {result.sha256}")
-    print(f"Status:          {result.status}")
     print("=" * 70)
     print()
     print("[SUCCESS] Version discovered successfully!")

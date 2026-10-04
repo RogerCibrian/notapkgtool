@@ -62,6 +62,7 @@ from napt.github import (
     verify_size,
     version_from_tag,
 )
+from napt.logging import get_global_logger
 from napt.psadt.release import missing_template_entries
 from napt.results import PackageResult
 
@@ -119,8 +120,6 @@ def _get_intunewin_tool(cache_dir: Path, release: str) -> Path:
             repository reports.
         PackagingError: If the tool cannot be written to the cache.
     """
-    from napt.logging import get_global_logger
-
     logger = get_global_logger()
     token = env_token()
 
@@ -208,8 +207,6 @@ def _execute_packaging(
     Raises:
         PackagingError: If packaging fails.
     """
-    from napt.logging import get_global_logger
-
     logger = get_global_logger()
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -309,8 +306,6 @@ def _copy_named_script(build_dir: Path, name: str, destination: Path) -> None:
     Raises:
         PackagingError: If the named script is not in the build.
     """
-    from napt.logging import get_global_logger
-
     source = build_dir / name
     if not source.is_file():
         raise PackagingError(
@@ -379,8 +374,6 @@ def create_intunewin(
         "Invoke-AppDeployToolkit.exe". Output file is named by IntuneWinAppUtil.exe:
         packages/{app_id}/{version}/Invoke-AppDeployToolkit.intunewin
     """
-    from napt.logging import get_global_logger
-
     logger = get_global_logger()
 
     build_dir = build_dir.resolve()
@@ -462,5 +455,4 @@ def create_intunewin(
         package_path=package_path,
         app_id=app_id,
         version=version,
-        status="success",
     )

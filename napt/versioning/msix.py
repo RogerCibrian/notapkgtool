@@ -45,6 +45,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 from napt.exceptions import PackagingError
+from napt.logging import get_global_logger
 
 # MSIX ProcessorArchitecture mapping
 # See: https://learn.microsoft.com/en-us/uwp/schemas/appxpackage/uapmanifestschema/element-identity
@@ -123,8 +124,6 @@ def extract_msix_metadata(file_path: str | Path) -> MSIXMetadata:
         It is returned as is, and the detection script then matches on it.
 
     """
-    from napt.logging import get_global_logger
-
     logger = get_global_logger()
     msix_path = Path(file_path)
     if not msix_path.exists():

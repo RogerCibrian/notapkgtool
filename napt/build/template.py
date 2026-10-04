@@ -32,6 +32,7 @@ import re
 from typing import Any
 
 from napt.exceptions import PackagingError
+from napt.logging import get_global_logger
 from napt.powershell import PS_SCRIPT_ENCODING, ps_single_quote
 
 
@@ -113,8 +114,6 @@ def _warn_unrecognized_tokens(code: str, block_name: str) -> None:
         block_name: Recipe field name for the warning message (e.g.,
             "psadt.install").
     """
-    from napt.logging import get_global_logger
-
     tokens = sorted(set(_UNRECOGNIZED_TOKEN_RE.findall(code)))
     if tokens:
         logger = get_global_logger()
@@ -323,8 +322,6 @@ def generate_invoke_script(
             )
             ```
     """
-    from napt.logging import get_global_logger
-
     logger = get_global_logger()
     if not template_path.exists():
         raise PackagingError(f"PSADT template not found: {template_path}")

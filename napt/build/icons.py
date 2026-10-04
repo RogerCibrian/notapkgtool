@@ -60,6 +60,7 @@ import zipfile
 
 from napt.exceptions import PackagingError
 from napt.graph.intune import MAX_ICON_BYTES
+from napt.logging import get_global_logger
 from napt.powershell import ps_single_quote
 
 # Frame selection policy: PNG-encoded frames only, at least MIN_ICON_PX wide,
@@ -100,13 +101,6 @@ class IconExtraction:
     detail: str
 
 
-def _get_logger():
-    """Returns the global logger via lazy import."""
-    from napt.logging import get_global_logger
-
-    return get_global_logger()
-
-
 def extract_icon_png(installer_path: str | Path) -> IconExtraction:
     """Extracts the best available PNG icon from an installer file.
 
@@ -130,7 +124,7 @@ def extract_icon_png(installer_path: str | Path) -> IconExtraction:
             ```
 
     """
-    logger = _get_logger()
+    logger = get_global_logger()
     path = Path(installer_path)
     suffix = path.suffix.lower()
     logger.verbose("BUILD", f"Extracting icon from: {path.name}")
@@ -511,7 +505,7 @@ def _extract_from_msi(msi_path: Path) -> IconExtraction:
         Extraction outcome; on failure the detail combines both tiers'
             causes.
     """
-    logger = _get_logger()
+    logger = get_global_logger()
     tier_a_detail = "no Icon table in MSI"
     arp_icon = ""
     blobs: dict[str, bytes] = {}
@@ -587,7 +581,7 @@ def _msi_icon_blobs_windows(
     Raises:
         PackagingError: If the PowerShell subprocess fails or times out.
     """
-    logger = _get_logger()
+    logger = get_global_logger()
     logger.debug("BUILD", "Trying backend: PowerShell COM (Database.Export)...")
     quoted_msi = ps_single_quote(str(msi_path))
     quoted_dir = ps_single_quote(str(export_dir))
@@ -711,7 +705,7 @@ def _msi_icon_blobs_msiinfo(msi_path: Path) -> tuple[str, dict[str, bytes]]:
     Raises:
         PackagingError: If reading the Property table or a stream fails.
     """
-    logger = _get_logger()
+    logger = get_global_logger()
     logger.debug("BUILD", "Trying backend: msiinfo (msitools)...")
     msiinfo_bin = shutil.which("msiinfo")
     if not msiinfo_bin:
@@ -802,7 +796,7 @@ def _msi_cab_icons(msi_path: Path) -> IconExtraction:
     Returns:
         Extraction outcome; failures report the extraction or scan cause.
     """
-    logger = _get_logger()
+    logger = get_global_logger()
     with tempfile.TemporaryDirectory(prefix="napt-msiadmin-") as tmp:
         extract_dir = Path(tmp)
         try:
@@ -1005,7 +999,7 @@ def ensure_app_icon(config: dict[str, Any], installer_file: Path, app_id: str) -
         app_id: Recipe id; the icon is written to
             ``{directories.icons}/{app_id}.png``.
     """
-    logger = _get_logger()
+    logger = get_global_logger()
 
     if config["intune"].get("logo_path"):
         logger.info("BUILD", "Skipping icon extraction: intune.logo_path is set")

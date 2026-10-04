@@ -175,6 +175,7 @@ All `napt/**/*.py` files require before docstring:
 | `NetworkError` | HTTP failures, API errors, download issues |
 | `PackagingError` | PSADT errors, MSI extraction, build failures |
 | `StateError` | Corrupted or invalid persisted state (`state/`, `cache/`) |
+| `AuthError` | No usable credential, sign-in failure, Graph 401/403 |
 
 **User-facing errors (anything a napt command surfaces):** Use custom exceptions. **Private helpers / bugs:** Use built-in.
 
@@ -318,11 +319,16 @@ Examples:
 
 **Prefixes:** The prefix names the pipeline stage the message belongs to
 (`DISCOVERY`, `BUILD`, `PACKAGE`, `UPLOAD`, `PROMOTE`, `INIT`). Shared
-infrastructure modules log under their domain instead — `HTTP` for
-transport (requests, retries), `AUTH`, `FILE`, `CACHE`, `CONFIG`, `STATE`,
-`DETECTION` — so the same module reads consistently regardless of which
-stage called it. Don't invent a new prefix when a message fits an
-existing one.
+infrastructure modules log under their domain instead, so the same module
+reads consistently regardless of which stage called it: `HTTP` for
+transport (requests, retries), `AUTH`, `FILE`, `CACHE`, `CONFIG` (loading
+and validation), `STATE`, `DETECTION` and `REQUIREMENTS` (the two generated
+scripts), `PSADT` (the release cache), `MSI` and `MSIX` (installer
+metadata). Don't invent a new prefix when a message fits an existing one;
+`tests/test_logging.py` checks every call against this set.
+
+**Format:** every line is `[PREFIX] message`; a warning prints as
+`[PREFIX] WARNING: message` so it stands apart from the info lines around it.
 
 ---
 

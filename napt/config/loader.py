@@ -95,6 +95,7 @@ import yaml
 
 from napt.config.defaults import DEFAULT_CONFIG
 from napt.exceptions import ConfigError
+from napt.logging import get_global_logger
 
 
 def _load_yaml_file(p: Path) -> Any:
@@ -449,17 +450,12 @@ def _inject_dynamic_values(
             app_vars["RequireAdmin"] = run_as_account != "user"
     except Exception as err:
         # Be defensive but quiet; dynamic injection is best-effort
-        from napt.logging import get_global_logger
-
-        logger = get_global_logger()
-        logger.warning("CONFIG", f"Could not inject dynamic values: {err}")
+        get_global_logger().warning("CONFIG", f"Could not inject dynamic values: {err}")
 
 
 def _print_yaml_content(data: dict[str, Any], indent: int = 0) -> None:
     """Print YAML content in a readable format for debug mode."""
     import yaml
-
-    from napt.logging import get_global_logger
 
     logger = get_global_logger()
 
@@ -508,8 +504,6 @@ def merge_effective_config(
         ConfigError: On YAML parse errors, empty files, invalid structure, a
             missing recipe or parent file, or a parent chain.
     """
-    from napt.logging import get_global_logger
-
     logger = get_global_logger()
     recipe_path = recipe_path.resolve()
     recipe_dir = recipe_path.parent
@@ -677,7 +671,6 @@ def load_effective_config(
             missing recipe or parent file, a parent chain, or a
             configuration that fails validation.
     """
-    from napt.logging import get_global_logger
     from napt.validation import validate_config
 
     logger = get_global_logger()

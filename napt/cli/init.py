@@ -189,9 +189,7 @@ def _create_layout_files(
             backup_path = org_yaml_path.with_suffix(".yaml.backup")
             org_yaml_path.replace(backup_path)
             backed_up.append(f"defaults/org.yaml -> {backup_path.name}")
-            logger.verbose(
-                "INIT", f"Backed up: defaults/org.yaml -> {backup_path.name}"
-            )
+            logger.info("INIT", f"Backed up: defaults/org.yaml -> {backup_path.name}")
 
             # Write new file
             org_yaml_path.write_text(ORG_YAML_TEMPLATE, encoding="utf-8")

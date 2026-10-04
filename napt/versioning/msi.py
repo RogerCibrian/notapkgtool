@@ -47,6 +47,7 @@ import tempfile
 from typing import Literal
 
 from napt.exceptions import PackagingError
+from napt.logging import get_global_logger
 from napt.powershell import ps_single_quote
 
 # MSI Template platform mapping
@@ -120,8 +121,6 @@ def extract_msi_metadata(file_path: str | Path) -> MSIMetadata:
         name and the uninstall command, since detection matches on it.
 
     """
-    from napt.logging import get_global_logger
-
     logger = get_global_logger()
     msi_path = Path(file_path)
     if not msi_path.exists():

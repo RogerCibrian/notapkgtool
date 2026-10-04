@@ -41,7 +41,6 @@ class TestCmdBuild:
             version="1.2.3",
             psadt_version="4.1.7",
             build_dir=tmp_path / "build",
-            status="success",
         )
         with patch("napt.build.manager.build_package", return_value=mock_result):
             code = cmd_build(_build_args(recipe))

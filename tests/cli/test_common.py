@@ -14,7 +14,7 @@ from napt.cli.common import (
     setup_logging,
 )
 from napt.exceptions import AuthError, ConfigError, StateError
-from napt.logging import get_global_logger, set_global_logger
+from napt.logging import get_global_logger
 from tests.cli.conftest import _args
 
 
@@ -92,12 +92,6 @@ class TestRunHandler:
 
 class TestSetupLogging:
     """Tests for configuring the global logger from the parsed flags."""
-
-    @pytest.fixture(autouse=True)
-    def _restore_logger(self):
-        previous = get_global_logger()
-        yield
-        set_global_logger(previous)
 
     def test_sets_the_global_logger_from_the_flags(self, capsys):
         """Tests that -v makes verbose messages visible everywhere."""
