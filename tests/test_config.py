@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 
@@ -19,6 +20,7 @@ from napt.config.defaults import DEFAULT_CONFIG, ORG_YAML_TEMPLATE
 from napt.config.loader import (
     collect_recipe_paths,
     load_effective_config,
+    register_recipe_id,
     resolve_state_dir,
 )
 from napt.exceptions import ConfigError
@@ -59,10 +61,10 @@ class TestConfigLoading:
         assert config["psadt"]["release"] == "4.0.0"
 
     def test_missing_recipe_file_raises(self, tmp_test_dir):
-        """Test that missing recipe file raises FileNotFoundError."""
+        """Tests that a missing recipe is a ConfigError naming the role and path."""
         nonexistent = tmp_test_dir / "nonexistent.yaml"
 
-        with pytest.raises(ConfigError):
+        with pytest.raises(ConfigError, match=r"Recipe not found: .*nonexistent"):
             load_effective_config(nonexistent)
 
 
@@ -210,62 +212,71 @@ class TestDynamicInjection:
     """Tests for dynamic value injection."""
 
     def test_appscriptdate_injection(self, create_yaml_file, sample_recipe_data):
-        """Test that AppScriptDate is injected with today's date."""
+        """Tests that AppScriptDate is injected with today's date and labelled
+        as computed in the provenance."""
         from datetime import date
 
         recipe_path = create_yaml_file("recipe.yaml", sample_recipe_data)
         config = load_effective_config(recipe_path)
 
         today = date.today().strftime("%Y-%m-%d")
-        app_vars = config.get("psadt", {}).get("app_vars", {})
-        if "AppScriptDate" in app_vars:
-            assert app_vars["AppScriptDate"] == today
+        assert config["psadt"]["app_vars"]["AppScriptDate"] == today
+        assert config["_provenance"]["psadt"]["app_vars"]["AppScriptDate"] == "computed"
 
-    def test_require_admin_defaults_true_for_system_scope(self):
-        """Tests that RequireAdmin defaults to true for system scope."""
+    @staticmethod
+    def _inject(run_as_account: str, **app_vars):
+        """Runs the injector on a config whose given app_vars came from org.yaml."""
         from napt.config.loader import _inject_dynamic_values
 
-        cfg = {"psadt": {"app_vars": {}}, "intune": {"run_as_account": "system"}}
-        _inject_dynamic_values(cfg)
+        cfg = {
+            "psadt": {"app_vars": dict(app_vars)},
+            "intune": {"run_as_account": run_as_account},
+        }
+        provenance = {
+            "psadt": {"app_vars": {key: "org_yaml" for key in app_vars}},
+            "intune": {"run_as_account": "recipe"},
+        }
+        _inject_dynamic_values(cfg, provenance)
+        return cfg, provenance
+
+    def test_require_admin_is_computed_true_for_system_scope(self):
+        """Tests that RequireAdmin is true for a system install and says so."""
+        cfg, provenance = self._inject("system")
 
         assert cfg["psadt"]["app_vars"]["RequireAdmin"] is True
+        assert provenance["psadt"]["app_vars"]["RequireAdmin"] == "computed"
 
-    def test_require_admin_defaults_false_for_user_scope(self):
-        """Tests that RequireAdmin defaults to false for user scope."""
-        from napt.config.loader import _inject_dynamic_values
-
-        cfg = {"psadt": {"app_vars": {}}, "intune": {"run_as_account": "user"}}
-        _inject_dynamic_values(cfg)
+    def test_require_admin_is_computed_false_for_user_scope(self):
+        """Tests that RequireAdmin is false for a per-user install."""
+        cfg, _ = self._inject("user")
 
         assert cfg["psadt"]["app_vars"]["RequireAdmin"] is False
 
-    def test_require_admin_explicit_recipe_value_not_overridden(self):
-        """Tests that an explicit RequireAdmin from recipe is not overridden."""
-        from napt.config.loader import _inject_dynamic_values
+    def test_appscriptdate_set_in_a_layer_is_kept(self):
+        """Tests that a pinned AppScriptDate is neither replaced nor relabeled."""
+        cfg, provenance = self._inject("system", AppScriptDate="2026-01-01")
 
-        cfg = {
-            "psadt": {"app_vars": {"RequireAdmin": True}},
-            "intune": {"run_as_account": "user"},
-        }
-        provenance = {
-            "psadt": {"app_vars": {"RequireAdmin": "recipe"}},
-            "intune": {"run_as_account": "code_default"},
-        }
-        _inject_dynamic_values(cfg, provenance)
+        assert cfg["psadt"]["app_vars"]["AppScriptDate"] == "2026-01-01"
+        assert provenance["psadt"]["app_vars"]["AppScriptDate"] == "org_yaml"
+
+    def test_require_admin_set_in_a_layer_is_kept(self):
+        """Tests that a RequireAdmin written in org.yaml wins over the computed
+        value, which is why the repo's org.yaml must not set it."""
+        cfg, provenance = self._inject("user", RequireAdmin=True)
 
         assert cfg["psadt"]["app_vars"]["RequireAdmin"] is True
+        assert provenance["psadt"]["app_vars"]["RequireAdmin"] == "org_yaml"
 
-    def test_require_admin_defaults_true_for_default_run_as_account(self):
-        """Tests that RequireAdmin defaults to true with default run_as_account."""
+    def test_wrong_shape_sections_are_left_for_validation(self):
+        """Tests that an app_vars that is not a mapping injects nothing and
+        raises nothing; validation reports the shape."""
         from napt.config.loader import _inject_dynamic_values
 
-        cfg = {
-            "psadt": {"app_vars": {}},
-            "intune": {"run_as_account": "system"},
-        }
-        _inject_dynamic_values(cfg)
+        cfg = {"psadt": {"app_vars": ["x"]}, "intune": {"run_as_account": "system"}}
 
-        assert cfg["psadt"]["app_vars"]["RequireAdmin"] is True
+        _inject_dynamic_values(cfg, {"psadt": {}, "intune": {}})
+
+        assert cfg["psadt"]["app_vars"] == ["x"]
 
 
 class TestErrorHandling:
@@ -292,8 +303,84 @@ class TestErrorHandling:
         recipe_path = tmp_test_dir / "list.yaml"
         recipe_path.write_text("- item1\n- item2\n")
 
-        with pytest.raises(ConfigError):
+        with pytest.raises(ConfigError, match="must be a mapping"):
             load_effective_config(recipe_path)
+
+    @staticmethod
+    def _project(tmp_test_dir, org_yaml: str, vendor_yaml: str | None = None):
+        """Writes a project with one recipe under recipes/Vendor/."""
+        (tmp_test_dir / "defaults" / "vendors").mkdir(parents=True)
+        (tmp_test_dir / "defaults" / "org.yaml").write_text(org_yaml, encoding="utf-8")
+        if vendor_yaml is not None:
+            (tmp_test_dir / "defaults" / "vendors" / "Vendor.yaml").write_text(
+                vendor_yaml, encoding="utf-8"
+            )
+        recipe = tmp_test_dir / "recipes" / "Vendor" / "app.yaml"
+        recipe.parent.mkdir(parents=True)
+        recipe.write_text(
+            "apiVersion: napt/v1\nname: App\nid: app\n"
+            "discovery:\n  strategy: url_download\n  url: https://x/a.msi\n",
+            encoding="utf-8",
+        )
+        return recipe
+
+    def test_non_mapping_org_yaml_is_an_error(self, tmp_test_dir):
+        """Tests that an org.yaml whose top level is a list is refused like a
+        recipe would be, instead of being skipped without a word."""
+        recipe = self._project(tmp_test_dir, "- psadt\n- intune\n")
+
+        with pytest.raises(ConfigError, match=r"must be a mapping.*org\.yaml"):
+            load_effective_config(recipe)
+
+    def test_non_mapping_vendor_file_is_an_error(self, tmp_test_dir):
+        """Tests that a vendor file whose top level is a scalar is refused."""
+        recipe = self._project(tmp_test_dir, "apiVersion: napt/v1\n", "just text\n")
+
+        with pytest.raises(ConfigError, match=r"must be a mapping.*Vendor\.yaml"):
+            load_effective_config(recipe)
+
+    def test_debug_dump_is_not_built_when_debug_is_off(self, tmp_test_dir):
+        """Tests that a load does not serialize every layer to YAML text that
+        the logger then discards."""
+        recipe = self._project(tmp_test_dir, "apiVersion: napt/v1\n")
+
+        with patch("napt.config.loader.yaml.dump") as dump:
+            load_effective_config(recipe)
+
+        dump.assert_not_called()
+
+    def test_debug_dump_shows_the_final_configuration(self, tmp_test_dir, capsys):
+        """Tests that the final dump is taken after injection, so it shows the
+        configuration the command actually uses."""
+        from napt.logging import get_logger, set_global_logger
+
+        recipe = self._project(tmp_test_dir, "apiVersion: napt/v1\n")
+        set_global_logger(get_logger(debug=True))
+
+        load_effective_config(recipe)
+
+        out = capsys.readouterr().out
+        final = out.index("--- Final Merged Configuration ---")
+        assert "AppScriptDate" in out[final:]
+        assert "RequireAdmin: true" in out[final:]
+
+
+def _template_sections() -> dict[str, str]:
+    """Splits ORG_YAML_TEMPLATE into its top-level sections.
+
+    A section starts at a line that is a top-level key, commented out or
+    not (``# psadt:`` or ``apiVersion:``), and runs to the next such line.
+    """
+    sections: dict[str, str] = {}
+    current: str | None = None
+    for line in ORG_YAML_TEMPLATE.splitlines():
+        stripped = line[2:] if line.startswith("# ") else line
+        if stripped and not stripped.startswith((" ", "#")) and stripped.endswith(":"):
+            current = stripped[:-1]
+            sections[current] = ""
+        elif current is not None:
+            sections[current] += line + "\n"
+    return sections
 
 
 class TestCodeDefaults:
@@ -369,8 +456,9 @@ discovery:
         shown to users via `napt init`. If a new section is added to
         DEFAULT_CONFIG but not to the template, this test will fail.
         """
+        sections = _template_sections()
         for section in DEFAULT_CONFIG.keys():
-            assert section in ORG_YAML_TEMPLATE, (
+            assert section in sections, (
                 f"Section '{section}' exists in DEFAULT_CONFIG but is not "
                 f"mentioned in ORG_YAML_TEMPLATE. Update the template in "
                 f"napt/config/defaults.py to include this section."
@@ -378,6 +466,7 @@ discovery:
 
         nested_checks = [
             ("psadt", "release"),
+            ("psadt", "cache_dir"),
             ("psadt", "brand_pack"),
             ("psadt", "app_vars"),
             ("directories", "build"),
@@ -390,10 +479,15 @@ discovery:
         ]
 
         for parent, key in nested_checks:
-            assert key in ORG_YAML_TEMPLATE, (
+            assert f"{key}:" in sections[parent], (
                 f"Key '{parent}.{key}' exists in DEFAULT_CONFIG but is not "
-                f"mentioned in ORG_YAML_TEMPLATE. Update the template."
+                f"mentioned in the '{parent}' section of ORG_YAML_TEMPLATE. "
+                "Update the template."
             )
+
+    def test_org_yaml_template_names_every_layer(self):
+        """Tests that the hierarchy comment lists the parent recipe layer."""
+        assert "Parent recipe" in ORG_YAML_TEMPLATE
 
 
 class TestLogoPathResolution:
@@ -850,6 +944,28 @@ class TestCollectRecipePaths:
         """Tests that a directory without recipes is a ConfigError."""
         with pytest.raises(ConfigError, match="No recipe files"):
             collect_recipe_paths(tmp_test_dir)
+
+
+class TestRegisterRecipeId:
+    """Tests for the one id-collision check validate and promote share."""
+
+    def test_first_declaration_is_recorded(self, tmp_test_dir):
+        """Tests that a new id is recorded and nothing is reported."""
+        sources: dict[str, Path] = {}
+
+        assert register_recipe_id(sources, "app", tmp_test_dir / "a.yaml") is None
+        assert sources == {"app": tmp_test_dir / "a.yaml"}
+
+    def test_second_declaration_names_both_files(self, tmp_test_dir):
+        """Tests that a repeated id returns the message naming both files."""
+        sources: dict[str, Path] = {}
+        register_recipe_id(sources, "app", tmp_test_dir / "a.yaml")
+
+        message = register_recipe_id(sources, "app", tmp_test_dir / "b.yaml")
+
+        assert message is not None
+        assert "a.yaml" in message and "b.yaml" in message
+        assert sources["app"] == tmp_test_dir / "a.yaml"
 
 
 class TestResolveStateDir:

@@ -60,8 +60,8 @@ from typing import Any, NamedTuple
 
 from napt.config.loader import (
     collect_recipe_paths,
-    duplicate_recipe_id_message,
     merge_effective_config,
+    register_recipe_id,
 )
 from napt.discovery.registry import get_strategy
 from napt.discovery.url_download import (
@@ -1063,16 +1063,8 @@ def validate_recipes(path: Path) -> list[ValidationResult]:
     for recipe_path in paths:
         result = validate_recipe(recipe_path)
         if result.is_valid and result.app_id is not None:
-            first = sources.get(result.app_id)
-            if first is None:
-                sources[result.app_id] = recipe_path
-            else:
-                result = replace(
-                    result,
-                    errors=[
-                        *result.errors,
-                        duplicate_recipe_id_message(result.app_id, first, recipe_path),
-                    ],
-                )
+            duplicate = register_recipe_id(sources, result.app_id, recipe_path)
+            if duplicate is not None:
+                result = replace(result, errors=[*result.errors, duplicate])
         results.append(result)
     return results

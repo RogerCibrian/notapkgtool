@@ -127,7 +127,7 @@ class TestMain:
 
         assert info.value.code == 1
         captured = capsys.readouterr()
-        assert "Error: file not found" in captured.out
+        assert "Error: Recipe not found" in captured.out
         assert "Traceback" not in captured.err
 
     def test_verbose_configures_the_global_logger(self, tmp_path, capsys):

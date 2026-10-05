@@ -51,6 +51,11 @@ class Logger:
         self._verbose = verbose or debug
         self._debug = debug
 
+    @property
+    def debug_enabled(self) -> bool:
+        """Whether debug lines print, so a caller can skip building a dump."""
+        return self._debug
+
     def step(self, step: int, total: int, message: str) -> None:
         """Prints a numbered pipeline stage; always visible.
 
