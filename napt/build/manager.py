@@ -186,9 +186,8 @@ def build_package(
     ensure_app_icon(config, installer.path, app_id)
 
     logger.step(4, 8, "Getting PSADT release...")
-    psadt_config = config["psadt"]
     psadt_cache_dir = get_psadt_release(
-        psadt_config["release"], Path(psadt_config["cache_dir"])
+        config["psadt"]["release"], Path(config["directories"]["cache"]) / "psadt"
     )
     psadt_version = psadt_cache_dir.name  # Directory name is the version
     logger.info("BUILD", f"Using PSADT {psadt_version}")

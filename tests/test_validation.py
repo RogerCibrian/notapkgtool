@@ -1438,12 +1438,20 @@ class TestPsadtSchema:
 
     def test_unknown_field_warns_with_hint(self, tmp_path):
         """Tests that a misspelled psadt key is reported with the closest known key."""
-        result = _validate(tmp_path, "psadt:\n  cachedir: cache/psadt\n")
+        result = _validate(tmp_path, "psadt:\n  relaese: latest\n")
 
         assert result.is_valid
         assert (
-            "psadt: Unknown field 'cachedir'. Did you mean 'cache_dir'?"
-            in result.warnings
+            "psadt: Unknown field 'relaese'. Did you mean 'release'?" in result.warnings
+        )
+
+    def test_removed_psadt_cache_dir_warns(self, tmp_path):
+        """Tests that the removed psadt.cache_dir key is reported as unknown."""
+        result = _validate(tmp_path, "psadt:\n  cache_dir: cache/psadt\n")
+
+        assert result.is_valid
+        assert any(
+            w.startswith("psadt: Unknown field 'cache_dir'") for w in result.warnings
         )
 
     @pytest.mark.parametrize(
@@ -1559,14 +1567,12 @@ class TestToolSections:
             in result.warnings
         )
 
-    def test_removed_cache_directory_key_warns(self, tmp_path):
-        """Tests that the removed directories.cache key is reported as unknown."""
-        result = _validate(tmp_path, "directories:\n  cache: cache\n")
+    def test_cache_directory_key_is_known(self, tmp_path):
+        """Tests that directories.cache is accepted without a warning."""
+        result = _validate(tmp_path, "directories:\n  cache: .napt-cache\n")
 
         assert result.is_valid
-        assert any(
-            w.startswith("directories: Unknown field 'cache'") for w in result.warnings
-        )
+        assert not any("directories" in w for w in result.warnings)
 
     @pytest.mark.parametrize(
         ("body", "message"),

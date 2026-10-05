@@ -50,12 +50,13 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "package": "packages",
         "icons": "icons",
         "state": "state",
+        # Downloaded tools: cache/psadt/<version>/ and cache/intunewin/<version>/
+        "cache": "cache",
     },
     # PSADT (PowerShell App Deployment Toolkit) settings.
     # Merged with recipe psadt: section via the config loader.
     "psadt": {
         "release": "latest",
-        "cache_dir": "cache/psadt",
         # Brand pack is not set by default - users must configure their own
         "brand_pack": {
             "path": "",
@@ -148,9 +149,6 @@ apiVersion: napt/v1
 #   # PSADT release: "latest" or specific version (e.g., "4.1.7")
 #   release: "latest"
 #
-#   # Where PSADT releases are cached
-#   cache_dir: "cache/psadt"
-#
 #   # Custom branding (logo/banner)
 #   brand_pack:
 #     path: brand-packs/my-company
@@ -160,9 +158,17 @@ apiVersion: napt/v1
 #       - source: "Banner.Classic.*"
 #         target: "Assets/Banner.Classic"
 #
-#   # Default app variables injected into deployment scripts
+#   # App variables written into every Invoke-AppDeployToolkit.ps1. Any
+#   # PSADT variable can be added; these are the ones NAPT sets by default.
+#   # RequireAdmin is computed from intune.run_as_account unless set here.
 #   app_vars:
-#     AppScriptAuthor: "IT Team"
+#     AppLang: "EN"
+#     AppRevision: "01"
+#     AppSuccessExitCodes: [0]
+#     AppRebootExitCodes: [1641, 3010]
+#     AppProcessesToClose: []
+#     AppScriptVersion: "1.0.0"
+#     AppScriptAuthor: "napt"
 
 # intune:
 #   # Which app entries to create in Intune
@@ -216,6 +222,8 @@ apiVersion: napt/v1
 #   icons: "icons"
 #   # Authoritative deployment state
 #   state: "state"
+#   # Downloaded tools, kept per version: <cache>/psadt/ and <cache>/intunewin/
+#   cache: "cache"
 
 # intunewin:
 #   # IntuneWinAppUtil.exe release: "latest" or specific version (e.g., "1.8.6")

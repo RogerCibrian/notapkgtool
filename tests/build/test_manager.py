@@ -53,6 +53,7 @@ def _config(make_config, tmp_path, **overrides):
             "build": str(tmp_path / "builds"),
             "state": str(tmp_path / "state"),
             "icons": str(tmp_path / "icons"),
+            "cache": str(tmp_path / "cache"),
         },
         # The icon step is covered in test_icons; skip it here.
         "intune": {"logo_path": str(tmp_path / "logo.png")},
@@ -107,6 +108,25 @@ class TestBuildPackage:
         assert manifest["detection_script_path"] == "7-Zip_26.02-Detection.ps1"
         assert manifest["architecture"] == "x64"
         assert manifest["installer_sha256"]
+
+    def test_psadt_is_cached_under_the_cache_root(self, make_config, psadt, tmp_path):
+        """Tests that the PSADT release is fetched into the psadt folder of
+        directories.cache."""
+        _save_installer(tmp_path, "26.02", "7z2602-x64.exe")
+        config = _config(
+            make_config,
+            tmp_path,
+            psadt={
+                "release": "4.1.7",
+                "install": "Start-ADTProcess",
+                "uninstall": "Remove-It",
+            },
+            intune={"detection": {"display_name": "7-Zip", "architecture": "x64"}},
+        )
+
+        _, psadt_mock = _build(config, psadt, tmp_path)
+
+        psadt_mock.assert_called_once_with("4.1.7", tmp_path / "cache" / "psadt")
 
     def test_app_only_skips_the_requirements_script(self, make_config, psadt, tmp_path):
         """Tests that build_types app_only writes detection alone."""

@@ -511,7 +511,9 @@ class TestCreateIntunewin:
         build_dir = _make_build_dir(tmp_path)
         packages_dir = tmp_path / "packages"
 
-        result = create_intunewin(build_dir, output_dir=packages_dir)
+        result = create_intunewin(
+            build_dir, tmp_path / "cache", output_dir=packages_dir
+        )
 
         assert result.app_id == "test-app"
         assert result.version == "1.0.0"
@@ -524,7 +526,9 @@ class TestCreateIntunewin:
         """Tests that IntuneWinAppUtil runs on packagefiles/, not the version dir."""
         build_dir = _make_build_dir(tmp_path)
 
-        create_intunewin(build_dir, output_dir=tmp_path / "packages")
+        create_intunewin(
+            build_dir, tmp_path / "cache", output_dir=tmp_path / "packages"
+        )
 
         source_dir = self.execute.call_args[0][1]
         assert source_dir == build_dir.resolve() / "packagefiles"
@@ -535,7 +539,9 @@ class TestCreateIntunewin:
         build_dir = _make_build_dir(tmp_path, requirements=True)
         (build_dir / "Stale-Detection.ps1").write_text("stale")
 
-        create_intunewin(build_dir, output_dir=tmp_path / "packages")
+        create_intunewin(
+            build_dir, tmp_path / "cache", output_dir=tmp_path / "packages"
+        )
 
         package_dir = tmp_path / "packages" / "test-app" / "1.0.0"
         assert (package_dir / "test-app-Detection.ps1").exists()
@@ -549,14 +555,18 @@ class TestCreateIntunewin:
         (build_dir / "test-app-Detection.ps1").unlink()
 
         with pytest.raises(PackagingError, match="test-app-Detection.ps1"):
-            create_intunewin(build_dir, output_dir=tmp_path / "packages")
+            create_intunewin(
+                build_dir, tmp_path / "cache", output_dir=tmp_path / "packages"
+            )
 
     def test_package_manifest_records_the_intunewin(self, tmp_path):
         """Tests that the package folder's manifest names the .intunewin and
         carries its hash, for upload to verify."""
         build_dir = _make_build_dir(tmp_path)
 
-        result = create_intunewin(build_dir, output_dir=tmp_path / "packages")
+        result = create_intunewin(
+            build_dir, tmp_path / "cache", output_dir=tmp_path / "packages"
+        )
 
         manifest = json.loads(
             (result.package_path.parent / "build-manifest.json").read_text(
@@ -578,7 +588,7 @@ class TestCreateIntunewin:
         old_version_dir.mkdir(parents=True)
         (old_version_dir / "Invoke-AppDeployToolkit.intunewin").write_bytes(b"old")
 
-        create_intunewin(build_dir, output_dir=packages_dir)
+        create_intunewin(build_dir, tmp_path / "cache", output_dir=packages_dir)
 
         assert (old_version_dir / "Invoke-AppDeployToolkit.intunewin").read_bytes() == (
             b"old"
@@ -595,7 +605,7 @@ class TestCreateIntunewin:
         (existing_dir / "Old-Name-Detection.ps1").write_text("stale")
         (existing_dir / "Invoke-AppDeployToolkit.intunewin").write_bytes(b"old")
 
-        create_intunewin(build_dir, output_dir=packages_dir)
+        create_intunewin(build_dir, tmp_path / "cache", output_dir=packages_dir)
 
         assert sorted(p.name for p in existing_dir.iterdir()) == [
             "Invoke-AppDeployToolkit.intunewin",
@@ -614,7 +624,7 @@ class TestCreateIntunewin:
         self.get_tool.side_effect = NetworkError("rate limited")
 
         with pytest.raises(NetworkError):
-            create_intunewin(build_dir, output_dir=packages_dir)
+            create_intunewin(build_dir, tmp_path / "cache", output_dir=packages_dir)
 
         assert (old_version_dir / "Invoke-AppDeployToolkit.intunewin").exists()
 
@@ -623,7 +633,9 @@ class TestCreateIntunewin:
         build_dir = _make_build_dir(tmp_path, manifest=False)
 
         with pytest.raises(PackagingError, match="build-manifest.json") as info:
-            create_intunewin(build_dir, output_dir=tmp_path / "packages")
+            create_intunewin(
+                build_dir, tmp_path / "cache", output_dir=tmp_path / "packages"
+            )
         assert "napt build" in str(info.value)
 
     def test_corrupt_manifest_is_an_error(self, tmp_path):
@@ -632,7 +644,9 @@ class TestCreateIntunewin:
         (build_dir / "build-manifest.json").write_text("{oops", encoding="utf-8")
 
         with pytest.raises(PackagingError, match="build-manifest.json"):
-            create_intunewin(build_dir, output_dir=tmp_path / "packages")
+            create_intunewin(
+                build_dir, tmp_path / "cache", output_dir=tmp_path / "packages"
+            )
 
     def test_manifest_that_is_not_an_object_is_an_error(self, tmp_path):
         """Tests that a manifest holding a JSON array is reported."""
@@ -640,7 +654,9 @@ class TestCreateIntunewin:
         (build_dir / "build-manifest.json").write_text("[]", encoding="utf-8")
 
         with pytest.raises(PackagingError, match="not a JSON object"):
-            create_intunewin(build_dir, output_dir=tmp_path / "packages")
+            create_intunewin(
+                build_dir, tmp_path / "cache", output_dir=tmp_path / "packages"
+            )
 
     @pytest.mark.parametrize("key", ["installer_sha256", "detection_script_path"])
     def test_manifest_missing_a_required_key_is_an_error(self, tmp_path, key):
@@ -652,7 +668,9 @@ class TestCreateIntunewin:
         manifest_path.write_text(json.dumps(data), encoding="utf-8")
 
         with pytest.raises(PackagingError, match=f"has no {key}"):
-            create_intunewin(build_dir, output_dir=tmp_path / "packages")
+            create_intunewin(
+                build_dir, tmp_path / "cache", output_dir=tmp_path / "packages"
+            )
 
     def test_installer_that_does_not_match_the_manifest_is_refused(self, tmp_path):
         """Tests that the installer inside the build is re-hashed against the
@@ -661,7 +679,9 @@ class TestCreateIntunewin:
         (build_dir / "packagefiles" / "Files" / "setup.msi").write_bytes(b"swapped")
 
         with pytest.raises(PackagingError, match="does not match") as info:
-            create_intunewin(build_dir, output_dir=tmp_path / "packages")
+            create_intunewin(
+                build_dir, tmp_path / "cache", output_dir=tmp_path / "packages"
+            )
         assert "napt build" in str(info.value)
 
     def test_build_from_another_binary_than_recorded_is_refused(self, tmp_path):
@@ -671,7 +691,10 @@ class TestCreateIntunewin:
 
         with pytest.raises(PackagingError, match="recorded release"):
             create_intunewin(
-                build_dir, output_dir=tmp_path / "packages", expected_sha256="b" * 64
+                build_dir,
+                tmp_path / "cache",
+                output_dir=tmp_path / "packages",
+                expected_sha256="b" * 64,
             )
         self.execute.assert_not_called()
 
@@ -681,6 +704,7 @@ class TestCreateIntunewin:
 
         result = create_intunewin(
             build_dir,
+            tmp_path / "cache",
             output_dir=tmp_path / "packages",
             expected_sha256=_INSTALLER_SHA256,
         )
@@ -693,22 +717,34 @@ class TestCreateIntunewin:
         (build_dir / "packagefiles").mkdir(parents=True)
 
         with pytest.raises(ConfigError, match="Invalid PSADT build directory"):
-            create_intunewin(build_dir)
+            create_intunewin(build_dir, tmp_path / "cache")
 
     def test_create_intunewin_missing_directory_raises(self, tmp_path):
         """Tests error when build directory does not exist."""
         build_dir = tmp_path / "nonexistent" / "test-app" / "1.0.0"
 
         with pytest.raises(PackagingError):
-            create_intunewin(build_dir)
+            create_intunewin(build_dir, tmp_path / "cache")
 
     def test_tool_release_forwarded_to_get_tool(self, tmp_path):
         """Tests that tool_release is forwarded to _get_intunewin_tool."""
         build_dir = _make_build_dir(tmp_path)
 
         create_intunewin(
-            build_dir, output_dir=tmp_path / "packages", tool_release="1.8.6"
+            build_dir,
+            tmp_path / "cache",
+            output_dir=tmp_path / "packages",
+            tool_release="1.8.6",
         )
 
         _, call_release = self.get_tool.call_args[0]
         assert call_release == "1.8.6"
+
+    def test_tool_is_cached_under_the_cache_root(self, tmp_path):
+        """Tests that the tool lives in the intunewin folder of the cache root."""
+        build_dir = _make_build_dir(tmp_path)
+
+        create_intunewin(build_dir, tmp_path / "cache", output_dir=tmp_path / "pkg")
+
+        call_cache, _ = self.get_tool.call_args[0]
+        assert call_cache == tmp_path / "cache" / "intunewin"

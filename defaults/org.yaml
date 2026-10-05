@@ -1,71 +1,17 @@
-# Top-level API version
+# Organization defaults for this repository's sample recipes.
+# Only the settings that differ from NAPT's built-in defaults are set here;
+# run `napt init` elsewhere to see the full commented template.
 apiVersion: napt/v1
 
 psadt:
-  # PSADT release to use - "latest" or specific version (e.g., "4.1.7")
-  release: "latest"
-
-  # Cache directory for downloaded PSADT releases
-  cache_dir: "cache/psadt"
-
-  # Brand pack replaces default PSADT assets (logo/banner) with custom ones.
+  # Brand pack replaces the default PSADT assets (logo/banner) with ours.
   brand_pack:
-    # Relative path to folder containing your replacement assets.
     path: brand-packs/napt
-
-    # Mapping rules: local source → template target location.
     mappings:
-      - source: "AppIcon.*"        # Any file matching AppIcon.*
-        target: "Assets/AppIcon"   # Replaces the template's AppIcon
+      - source: "AppIcon.*"
+        target: "Assets/AppIcon"
       - source: "Banner.Classic.*"
         target: "Assets/Banner.Classic"
-
-  # Default app variables injected into Invoke-AppDeployToolkit.ps1
-  app_vars:
-    AppLang: "EN"                       # Language (EN = English)
-    AppRevision: "01"                   # Revision counter for same version
-    AppSuccessExitCodes: [0]            # Exit codes treated as success
-    AppRebootExitCodes: [1641, 3010]    # Codes that require reboot
-    AppProcessesToClose: []             # Processes to close before install
-    AppScriptVersion: "1.0.0"           # Script version metadata
-    AppScriptAuthor: "napt"             # Author name shown in script header
-    RequireAdmin: true                  # Require admin privileges
-
-intune:
-  # Which app entries to create in Intune
-  # - both: create both App and Update entries (default)
-  # - app_only: create only the App entry
-  # - update_only: create only the Update entry
-  build_types: "both"
-
-  # Prefix added to the app name for the Update entry in Intune
-  update_name_prefix: "[Update] "
-
-  # Minimum Windows 10/11 release required to install (enforced during assignment)
-  # Format: "Windows10_<release>" or "Windows11_<release>" (e.g. "Windows10_22H2", "Windows11_23H2")
-  minimum_supported_windows_release: "Windows10_21H2"
-
-  # Command lines used in the Intune app entry (rarely need changing)
-  install_command: "Invoke-AppDeployToolkit.exe -DeploymentType Install -DeployMode Silent"
-  uninstall_command: "Invoke-AppDeployToolkit.exe -DeploymentType Uninstall -DeployMode Silent"
-
-  # Detection defaults (apply to all recipes unless overridden in intune.detection)
-  detection:
-    # If true, version must match exactly.
-    # If false, installed >= required passes (allows users to have newer versions).
-    exact_match: false
-
-logging:
-  # On-device logging settings for detection and requirements scripts
-  log_rotation_mb: 3  # max log size in MB before rotation (2-file scheme)
-
-directories:
-  # Output directories for each pipeline stage
-  discover: "downloads"
-  build: "builds"
-  package: "packages"
-  # App icons extracted by build and uploaded by upload
-  icons: "icons"
 
 deployment:
   # Install entry: available to everyone in Company Portal.
@@ -83,5 +29,5 @@ deployment:
     - name: "broad"           # Ring 1
       groups: ["Broad Devices"]
       promote_after_days: 5
-    - name: "production"      # Ring 2 (terminal - never auto-advances)
+    - name: "production"      # Ring 2 (terminal, never auto-advances)
       groups: ["Production Devices"]

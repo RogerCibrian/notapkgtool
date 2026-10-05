@@ -81,7 +81,6 @@ class TestConfigMerging:
 apiVersion: napt/v1
 psadt:
   release: "latest"
-  cache_dir: "cache/psadt"
   app_vars:
     AppLang: "EN"
 """)
@@ -365,6 +364,30 @@ class TestErrorHandling:
         assert "RequireAdmin: true" in out[final:]
 
 
+def _default_config_leaves() -> list[tuple[str, str]]:
+    """Lists every (section, key) a value sits under in DEFAULT_CONFIG.
+
+    Keys nested deeper than the section (``psadt.app_vars.AppLang``) are
+    reported with their top-level section, since the template is checked
+    per section.
+    """
+
+    def walk(node: Any) -> list[str]:
+        keys: list[str] = []
+        for key, value in node.items():
+            keys.append(key)
+            if isinstance(value, dict) and value:
+                keys.extend(walk(value))
+        return keys
+
+    return [
+        (section, key)
+        for section, value in DEFAULT_CONFIG.items()
+        if isinstance(value, dict)
+        for key in walk(value)
+    ]
+
+
 def _template_sections() -> dict[str, str]:
     """Splits ORG_YAML_TEMPLATE into its top-level sections.
 
@@ -450,11 +473,12 @@ discovery:
         assert "log_rotation_mb" in DEFAULT_CONFIG["logging"]
 
     def test_org_yaml_template_covers_all_sections(self):
-        """Tests that ORG_YAML_TEMPLATE mentions all DEFAULT_CONFIG sections.
+        """Tests that ORG_YAML_TEMPLATE names every key in DEFAULT_CONFIG.
 
-        This test catches drift between the code defaults and the template
-        shown to users via `napt init`. If a new section is added to
-        DEFAULT_CONFIG but not to the template, this test will fail.
+        The template is what `napt init` shows users as the menu of
+        settings, so a default added to DEFAULT_CONFIG without a line in
+        the template fails here, whether it is a new section or a new key
+        inside an existing one.
         """
         sections = _template_sections()
         for section in DEFAULT_CONFIG.keys():
@@ -464,26 +488,20 @@ discovery:
                 f"napt/config/defaults.py to include this section."
             )
 
-        nested_checks = [
-            ("psadt", "release"),
-            ("psadt", "cache_dir"),
-            ("psadt", "brand_pack"),
-            ("psadt", "app_vars"),
-            ("directories", "build"),
-            ("directories", "icons"),
-            ("intune", "build_types"),
-            ("intune", "detection"),
-            ("logging", "log_rotation_mb"),
-            ("intunewin", "release"),
-            ("secrets", "hosts"),
-        ]
-
-        for parent, key in nested_checks:
+        for parent, key in _default_config_leaves():
             assert f"{key}:" in sections[parent], (
                 f"Key '{parent}.{key}' exists in DEFAULT_CONFIG but is not "
                 f"mentioned in the '{parent}' section of ORG_YAML_TEMPLATE. "
                 "Update the template."
             )
+
+    def test_org_yaml_template_drops_the_old_cache_key(self):
+        """Tests that the template shows directories.cache, not psadt.cache_dir."""
+        sections = _template_sections()
+        assert "cache_dir" not in ORG_YAML_TEMPLATE
+        assert "cache:" in sections["directories"]
+        assert "cache_dir" not in DEFAULT_CONFIG["psadt"]
+        assert DEFAULT_CONFIG["directories"]["cache"] == "cache"
 
     def test_org_yaml_template_names_every_layer(self):
         """Tests that the hierarchy comment lists the parent recipe layer."""

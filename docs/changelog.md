@@ -24,6 +24,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING: One cache root, `directories.cache`** - Replaces
+    `psadt.cache_dir`. `napt build` keeps PSADT releases under
+    `<cache>/psadt/<version>/` and `napt package` keeps `IntuneWinAppUtil.exe`
+    under `<cache>/intunewin/<version>/` (it was the fixed `cache/tools/`).
+    The default root is `cache`, so a project that never set `psadt.cache_dir`
+    only sees the tool download once more into the new folder; delete the old
+    `cache/tools/` by hand. A project that set `psadt.cache_dir` moves the
+    value to `directories.cache` (without the `/psadt` suffix); the old key
+    is reported as unknown by `napt validate`
+- **`napt init` shows every default** - The `defaults/org.yaml` template now
+    lists all seven `psadt.app_vars` NAPT sets, so the file shows every
+    setting an organization can override
 - **`napt status` reads `directories.state` from configuration** - Like
     every other command, instead of a fixed `state` directory, so it
     summarizes the state the pipeline wrote to. It takes an optional recipe
@@ -186,6 +198,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The sample vendor file shipped in this repository is now
+    `defaults/vendors/Google.yaml`. Vendor files are looked up by the
+    recipe folder's exact name, so the lowercase `google.yaml` applied only
+    on case-insensitive filesystems
 - A `defaults/org.yaml` or vendor defaults file whose top level was not a
     mapping (a list, or a stray scalar) was skipped without a word, so the
     recipe loaded with none of its settings; it is now the same error a

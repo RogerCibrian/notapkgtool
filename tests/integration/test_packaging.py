@@ -25,7 +25,7 @@ class TestIntuneWinToolDownload:
 
     def test_download_intunewin_tool_success(self, tmp_path: Path):
         """Test downloading IntuneWinAppUtil.exe from Microsoft."""
-        cache_dir = tmp_path / "cache" / "tools"
+        cache_dir = tmp_path / "cache" / "intunewin"
 
         tool_path = _get_intunewin_tool(cache_dir, "latest")
 
@@ -35,7 +35,7 @@ class TestIntuneWinToolDownload:
 
     def test_intunewin_tool_cached_on_second_call(self, tmp_path: Path):
         """Test that tool is reused from cache on second download."""
-        cache_dir = tmp_path / "cache" / "tools"
+        cache_dir = tmp_path / "cache" / "intunewin"
 
         # First download
         tool_path_1 = _get_intunewin_tool(cache_dir, "latest")

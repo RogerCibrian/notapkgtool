@@ -181,6 +181,7 @@ def cmd_package(args: argparse.Namespace) -> int:
 
     result = create_intunewin(
         build_dir,
+        cache_dir=Path(config["directories"]["cache"]),
         output_dir=output_dir,
         tool_release=tool_release,
         expected_sha256=expected_sha256,

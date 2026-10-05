@@ -33,7 +33,7 @@ class TestEndToEndWorkflow:
         # Create org defaults
         org_defaults = {
             "apiVersion": "napt/v1",
-            "psadt": {"release": "latest", "cache_dir": "cache/psadt"},
+            "psadt": {"release": "latest"},
         }
         org_path = defaults_dir / "org.yaml"
         import yaml
