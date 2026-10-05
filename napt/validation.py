@@ -116,7 +116,6 @@ _TOP_LEVEL_FIELDS: _Schema = {
 
 _PSADT_FIELDS: _Schema = {
     "release": _Field(str),
-    "cache_dir": _Field(str),
     "brand_pack": _Field(dict),
     "app_vars": _Field(dict),
     "override_msi_commands": _Field(bool),
@@ -180,6 +179,7 @@ _DIRECTORIES_FIELDS: _Schema = {
     "package": _Field(str),
     "icons": _Field(str),
     "state": _Field(str),
+    "cache": _Field(str),
 }
 
 _INTUNEWIN_FIELDS: _Schema = {

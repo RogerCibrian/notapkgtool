@@ -431,18 +431,11 @@ PSADT release version to use. Can be:
 - Specific version: `"4.1.7"` - Use a specific PSADT version.
   A leading `v` (`"v4.1.7"`) is accepted and names the same version.
 
+Downloaded releases are kept under the `psadt/` folder of
+[`directories.cache`](#directories-configuration), one per version.
+
 **Note:** Typically set in organization defaults (`defaults/org.yaml`) rather
 than per-recipe.
-
-### cache_dir
-
-**Type:** `string` (path)
-**Required:** No
-**Default:** `"cache/psadt"`
-
-Folder where `napt build` keeps downloaded PSADT releases.
-Relative to the working directory, not the recipe.
-Usually set in `defaults/org.yaml`.
 
 ### brand_pack
 
@@ -1063,7 +1056,8 @@ Which `IntuneWinAppUtil.exe` release to download and run. Can be:
   packaging.
   A leading `v` (`"v1.8.6"`) is accepted and names the same version.
 
-Each release is cached independently under `cache/tools/{version}/`, so
+Each release is kept under the `intunewin/` folder of
+[`directories.cache`](#directories-configuration), one per version, so
 changing the pin never overwrites a previously downloaded tool.
 
 ## Logging configuration
@@ -1105,6 +1099,7 @@ directories:
   package: "packages"
   icons: "icons"
   state: "state"
+  cache: "cache"
 ```
 
 | Key | Default | Holds |
@@ -1114,6 +1109,10 @@ directories:
 | `package` | `"packages"` | Packages written by `napt package`, read by `napt upload` |
 | `icons` | `"icons"` | Icons extracted by `napt build`, read by `napt upload` |
 | `state` | `"state"` | Deployment state and promotion plan files |
+| `cache` | `"cache"` | Downloaded tools, one folder per version: `psadt/<version>/` for `napt build` and `intunewin/<version>/` for `napt package` |
+
+The cache is disposable: deleting it only causes the next build or package
+run to download its tool again.
 
 ## Deployment configuration
 

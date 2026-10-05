@@ -18,7 +18,8 @@ This module handles creating .intunewin packages from built PSADT directories
 using Microsoft's IntuneWinAppUtil.exe tool.
 
 Design Principles:
-    - IntuneWinAppUtil.exe is cached globally (not per-build)
+    - IntuneWinAppUtil.exe is cached per release under the cache root
+      (directories.cache), not per build
     - Package output is named by IntuneWinAppUtil.exe: Invoke-AppDeployToolkit.intunewin
     - Tool is downloaded from Microsoft's official GitHub repository
 
@@ -335,11 +336,12 @@ class PackageResult:
 
 def create_intunewin(
     build_dir: Path,
+    cache_dir: Path,
     output_dir: Path | None = None,
     tool_release: str = "latest",
     expected_sha256: str | None = None,
 ) -> PackageResult:
-    """Create a .intunewin package from a PSADT build version directory.
+    """Creates a .intunewin package from a PSADT build version directory.
 
     Uses Microsoft's IntuneWinAppUtil.exe tool to package the PSADT build
     into a .intunewin file for Intune deployment.
@@ -355,6 +357,8 @@ def create_intunewin(
         build_dir: Path to the version directory produced by 'napt build'
             (e.g., builds/napt-chrome/144.0.7559.110/). Must contain a
             packagefiles/ subdirectory with a valid PSADT structure.
+        cache_dir: The cache root (directories.cache). IntuneWinAppUtil.exe
+            releases live under its intunewin/ folder, one per version.
         output_dir: Parent directory for package output.
             Default: packages/ (configurable via directories.package in
             org.yaml).
@@ -379,7 +383,7 @@ def create_intunewin(
         Basic packaging:
             ```python
             result = create_intunewin(
-                build_dir=Path("builds/napt-chrome/144.0.7559.110")
+                Path("builds/napt-chrome/144.0.7559.110"), Path("cache")
             )
             print(result.package_path)
             # packages/napt-chrome/144.0.7559.110/Invoke-AppDeployToolkit.intunewin
@@ -427,8 +431,7 @@ def create_intunewin(
 
     # Get IntuneWinAppUtil tool
     logger.step(2, 5, "Getting IntuneWinAppUtil tool...")
-    tool_cache = Path("cache/tools")
-    tool_path = _get_intunewin_tool(tool_cache, tool_release)
+    tool_path = _get_intunewin_tool(cache_dir / "intunewin", tool_release)
 
     # Versioned output directory: packages/{app_id}/{version}/. This run
     # replaces it wholesale; other versions' folders are never touched.

@@ -80,7 +80,8 @@ recipes whose pattern (or `api_json` value) keeps a prefix.
    Every one of these checks runs before anything is written, so a failing
    recipe leaves an existing build of that version untouched.
 4. **Get PSADT release** - Downloads PSADT Template_v4 from GitHub into
-   `cache/psadt/{version}/` if not already cached.
+   `cache/psadt/{version}/` (under `directories.cache`) if not already
+   cached.
    The GitHub API calls send `GITHUB_TOKEN` from the environment when it is
    set, since unauthenticated calls share a limit of 60 per hour per address.
 5. **Create build directory** - Creates `builds/{app_id}/{version}/`.
@@ -314,8 +315,8 @@ To replace or pin an icon, see
    Microsoft's GitHub repository if not already cached.
    The release is controlled by `intunewin.release` in `defaults/org.yaml`
    (default: `"latest"`).
-   The tool is cached under `cache/tools/{version}/`, so each pinned release
-   is stored independently.
+   The tool is cached under `cache/intunewin/{version}/` (under
+   `directories.cache`), so each pinned release is stored independently.
 4. **Create package** - Replaces `packages/{app_id}/{version}/` and runs
    `IntuneWinAppUtil.exe` into it:
     - Input: the build's `packagefiles/` subdirectory (PSADT structure)
@@ -636,7 +637,7 @@ After a complete workflow, the project holds:
 cache/
   ├── psadt/
   │   └── 4.1.7/                           # PSADT template, downloaded by napt build
-  └── tools/
+  └── intunewin/
       └── <version>/                       # IntuneWinAppUtil.exe, downloaded by napt package
 
 icons/
@@ -1296,9 +1297,10 @@ Input and output share a config key across adjacent commands:
 `directories.discover`, so the output of one is automatically
 the input of the next without extra configuration.
 
-One additional directory has no CLI flag: `directories.icons` (default
-`icons`) holds app icons written by `napt build` and read by `napt upload`.
-See [App icons](#app-icons).
+Two directories have no CLI flag: `directories.icons` (default `icons`)
+holds app icons written by `napt build` and read by `napt upload` (see
+[App icons](#app-icons)), and `directories.cache` (default `cache`) holds
+the downloaded PSADT releases and `IntuneWinAppUtil.exe` versions.
 
 To change the defaults org-wide, add to `defaults/org.yaml`:
 

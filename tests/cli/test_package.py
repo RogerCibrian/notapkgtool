@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 import time
 from unittest.mock import patch
 
@@ -20,7 +21,7 @@ from tests.cli.conftest import _args, _mock_result
 
 _MOCK_CONFIG = {
     "id": "test-app",
-    "directories": {"package": "packages"},
+    "directories": {"package": "packages", "cache": "the-cache"},
     "intunewin": {"release": "latest"},
 }
 
@@ -131,6 +132,23 @@ class TestCmdPackage:
         ):
             cmd_package(_package_args(recipe))
         assert mock_create.call_args.kwargs["expected_sha256"] == "c" * 64
+
+    def test_cache_root_comes_from_config(self, tmp_path):
+        """Tests that directories.cache is passed as the tool cache root."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.touch()
+        build_dir = tmp_path / "build"
+        with (
+            patch("napt.cli.package._resolve_build", return_value=(build_dir, None)),
+            patch(
+                "napt.config.loader.load_effective_config", return_value=_MOCK_CONFIG
+            ),
+            patch(
+                "napt.build.packager.create_intunewin", return_value=_mock_result()
+            ) as mock_create,
+        ):
+            cmd_package(_package_args(recipe))
+        assert mock_create.call_args.kwargs["cache_dir"] == Path("the-cache")
 
     def test_packaging_error_returns_one(self, tmp_path, capsys):
         """Tests that PackagingError from create_intunewin returns 1."""

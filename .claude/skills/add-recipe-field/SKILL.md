@@ -37,7 +37,7 @@ Tell the user which category you've assigned and why before writing any code.
 - [ ] Access with `config["section"]["key"]` (no fallback)
 - [ ] Document in `docs/recipe-reference.md`
 
-A test (`test_org_yaml_template_covers_all_sections`) validates that all sections in `DEFAULT_CONFIG` are mentioned in `ORG_YAML_TEMPLATE`.
+A test (`test_org_yaml_template_covers_all_sections`) walks every key in `DEFAULT_CONFIG`, nested ones included, and fails when the key's section of `ORG_YAML_TEMPLATE` does not name it. The template is the menu `napt init` hands users, so every default is shown there with its value, commented out.
 
 **Strategy-specific** (e.g., `timeout`, `prerelease`, `method`):
 - [ ] Add module constant `_DEFAULT_X` at top of the strategy module
