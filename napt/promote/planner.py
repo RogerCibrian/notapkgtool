@@ -58,8 +58,8 @@ from typing import Any
 
 from napt.config.loader import (
     collect_recipe_paths,
-    duplicate_recipe_id_message,
     load_effective_config,
+    register_recipe_id,
 )
 from napt.exceptions import ConfigError, StateError
 from napt.files import write_text_atomic
@@ -317,11 +317,9 @@ def load_recipe_configs(recipes: Path) -> dict[str, dict[str, Any]]:
     for path in collect_recipe_paths(recipes):
         config = load_effective_config(path)
         app_id: str = config["id"]
-        if app_id in sources:
-            raise ConfigError(
-                duplicate_recipe_id_message(app_id, sources[app_id], path)
-            )
-        sources[app_id] = path
+        duplicate = register_recipe_id(sources, app_id, path)
+        if duplicate is not None:
+            raise ConfigError(duplicate)
         configs[app_id] = config
     return configs
 

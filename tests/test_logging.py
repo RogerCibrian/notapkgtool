@@ -86,6 +86,12 @@ class TestLogger:
 
         assert capsys.readouterr().out == "[STATE] shown\n[HTTP] also shown\n"
 
+    def test_debug_enabled_lets_callers_skip_expensive_dumps(self):
+        """Tests that a module can ask before building a debug-only dump."""
+        assert Logger().debug_enabled is False
+        assert Logger(verbose=True).debug_enabled is False
+        assert Logger(debug=True).debug_enabled is True
+
 
 class TestGlobalLogger:
     """Tests for the logger every module reads."""

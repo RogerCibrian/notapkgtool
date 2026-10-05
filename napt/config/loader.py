@@ -63,15 +63,17 @@ Path Resolution:
       if no file is there.
 
 Dynamic Injection:
-    Some fields are injected at load time:
+    Some fields are injected at load time, with the provenance layer
+    ``computed``:
 
     - psadt.app_vars.AppScriptDate: Today's date (YYYY-MM-DD)
     - psadt.app_vars.RequireAdmin: true unless intune.run_as_account is user;
       a value set in any config layer wins
 
 Error Handling:
-    - ConfigError: Recipe file doesn't exist, YAML parse errors, empty files,
-        invalid structure, a missing parent, or a parent chain
+    - ConfigError: A missing recipe or parent file, a YAML parse error, a
+        file whose top level is not a mapping (in any layer), or a parent
+        chain
     - All errors are chained with "from err" for better debugging
 
 Note:
@@ -79,8 +81,7 @@ Note:
     - The loader walks upward from the recipe to find defaults/org.yaml
     - Organization and vendor defaults are optional; vendor defaults need
       defaults/org.yaml to be found
-    - Vendor is detected from directory name (recipes/Google/) or recipe content
-    - Dynamic fields are best-effort (warnings on failure, not errors)
+    - The vendor is the name of the recipe's directory (recipes/Google/)
 
 """
 
@@ -98,35 +99,42 @@ from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
 
 
-def _load_yaml_file(p: Path) -> Any:
-    """Loads a YAML file and returns the parsed Python object.
+def _load_yaml_mapping(path: Path, what: str) -> dict[str, Any]:
+    """Loads a YAML file that must hold a mapping at its top level.
+
+    Every configuration layer goes through here, so a missing file, a
+    parse error, or a file holding a list or a scalar is reported the same
+    way whichever layer it is.
 
     Args:
-        p: Path to the YAML file to load.
+        path: Path to the YAML file to load.
+        what: The file's role in the error message ("Recipe", "org.yaml").
 
     Returns:
-        The parsed Python object from the YAML file.
+        The parsed mapping.
 
     Raises:
-        ConfigError: When file does not exist, invalid YAML (parse error), or
-            empty files.
+        ConfigError: When the file does not exist, is not UTF-8, is not
+            valid YAML, or its top level is not a mapping.
     """
-    if not p.exists():
-        raise ConfigError(f"file not found: {p}")
+    if not path.exists():
+        raise ConfigError(f"{what} not found: {path}")
     try:
-        with p.open("r", encoding="utf-8") as f:
+        with path.open("r", encoding="utf-8") as f:
             data = yaml.safe_load(f)
     except yaml.YAMLError as err:
-        raise ConfigError(f"Error parsing YAML: {p}: {err}") from err
+        raise ConfigError(f"Error parsing YAML: {path}: {err}") from err
     except UnicodeDecodeError as err:
         raise ConfigError(
-            f"Cannot read {p}: the file is not UTF-8 (a file saved by "
+            f"Cannot read {path}: the file is not UTF-8 (a file saved by "
             f"PowerShell's Out-File is often UTF-16). {err}"
         ) from err
     except OSError as err:
-        raise ConfigError(f"Cannot read {p}: {err}") from err
+        raise ConfigError(f"Cannot read {path}: {err}") from err
     if data is None:
-        raise ConfigError(f"YAML file is empty: {p}")
+        raise ConfigError(f"YAML file is empty: {path}")
+    if not isinstance(data, dict):
+        raise ConfigError(f"top-level YAML must be a mapping (dict): {path}")
     return data
 
 
@@ -215,14 +223,7 @@ def load_parent(
         raise ConfigError(f"parent must be a non-empty string: {recipe_path}")
 
     parent_path = (recipe_path.resolve().parent / parent_ref).resolve()
-    if not parent_path.is_file():
-        raise ConfigError(
-            f"Parent recipe not found: {parent_path} (declared in {recipe_path})"
-        )
-
-    parent_obj = _load_yaml_file(parent_path)
-    if not isinstance(parent_obj, dict):
-        raise ConfigError(f"top-level YAML must be a mapping (dict): {parent_path}")
+    parent_obj = _load_yaml_mapping(parent_path, "Parent recipe")
     if "parent" in parent_obj:
         raise ConfigError(
             f"Parent chains are not supported: {parent_path} declares its own "
@@ -279,19 +280,28 @@ def resolve_state_dir(recipes: Path) -> Path:
     return Path(config["directories"]["state"])
 
 
-def duplicate_recipe_id_message(app_id: str, first: Path, second: Path) -> str:
-    """Words the error for two recipe files that resolve to one id.
+def register_recipe_id(sources: dict[str, Path], app_id: str, path: Path) -> str | None:
+    """Records which file declares a recipe id, reporting a second claimant.
+
+    ``napt validate`` and ``napt promote`` both scan a directory and must
+    agree on what a duplicate id is; this is the one place that decides.
 
     Args:
-        app_id: The shared id.
-        first: The file that declared it first.
-        second: The file that declared it again.
+        sources: The ids seen so far, mapped to the file that declared each.
+            A new id is recorded here.
+        app_id: The id the file declares.
+        path: The file declaring it.
 
     Returns:
-        The message, naming both files and the usual cause.
+        None when the id is new; otherwise the error message, naming both
+            files and the usual cause, with the first declaration kept.
     """
+    first = sources.get(app_id)
+    if first is None:
+        sources[app_id] = path
+        return None
     return (
-        f"Recipe id '{app_id}' is declared by both {first} and {second}. Give "
+        f"Recipe id '{app_id}' is declared by both {first} and {path}. Give "
         f"each recipe its own id, or move a parent recipe that shares its "
         f"child's id out of the directory being scanned."
     )
@@ -313,39 +323,19 @@ def _find_defaults_root(start_dir: Path) -> Path | None:
     return None
 
 
-def _detect_vendor(recipe_path: Path, recipe_obj: dict[str, Any]) -> str | None:
-    """Determines the vendor name for this recipe.
+def _detect_vendor(recipe_path: Path) -> str | None:
+    """Names the vendor whose defaults file applies to a recipe.
 
-    Uses the following priority order:
-
-    1. Folder name under recipes/ (e.g., recipes/Google/chrome.yaml -> Google)
-    2. recipe.psadt.app_vars.AppVendor (if present)
-    3. None if not found
+    The vendor is the recipe's directory (recipes/Google/chrome.yaml is
+    Google's), matched against defaults/vendors/<Vendor>.yaml.
 
     Args:
         recipe_path: Path to the recipe file.
-        recipe_obj: The parsed recipe dictionary.
 
     Returns:
-        The vendor name if detected, None otherwise.
+        The directory name, or None for a recipe at a filesystem root.
     """
-    # Try directory name one level up from the recipe file
-    parent_name = recipe_path.parent.name or None
-
-    # Try reading from the recipe content
-    vendor_from_recipe: str | None = None
-    try:
-        psadt = recipe_obj.get("psadt", {})
-        if isinstance(psadt, dict):
-            app_vars = psadt.get("app_vars", {})
-            v = app_vars.get("AppVendor")
-            if isinstance(v, str) and v.strip():
-                vendor_from_recipe = v
-    except Exception:
-        vendor_from_recipe = None
-
-    # Prefer folder naming if it exists; else fallback to recipe
-    return parent_name or vendor_from_recipe
+    return recipe_path.parent.name or None
 
 
 def _resolve_known_paths(
@@ -399,79 +389,61 @@ def _resolve_known_paths(
                 intune["logo_path"] = str(resolved)
 
 
-def _inject_dynamic_values(
-    cfg: dict[str, Any],
-    provenance: dict[str, Any] | None = None,
-) -> None:
-    """Injects dynamic fields that should be set at load/build time.
+def _inject_dynamic_values(cfg: dict[str, Any], provenance: dict[str, Any]) -> None:
+    """Injects the fields that are set at load time, labelled ``computed``.
 
-    Injects the following fields:
-
-    - ``psadt.app_vars.AppScriptDate``: Today's date (YYYY-MM-DD), unless
-      explicitly set by a config layer.
+    - ``psadt.app_vars.AppScriptDate``: Today's date (YYYY-MM-DD), unless a
+      config layer set it.
     - ``psadt.app_vars.RequireAdmin``: Computed from
-      ``intune.run_as_account`` (system -> True, user -> False), unless
-      explicitly set by org.yaml, vendor defaults, a parent, or the recipe.
+      ``intune.run_as_account`` (system -> True, user -> False), unless a
+      config layer set it; a layer's value always wins over the computed
+      one.
+
+    A section that is missing, empty, or the wrong shape is left alone;
+    validation reports it, and there is nothing to inject into.
 
     Args:
-        cfg: The configuration dictionary to inject values into.
-        provenance: Optional provenance dict tracking which layer set each
-            value. Used to detect whether ``RequireAdmin`` was explicitly
-            overridden by the user.
+        cfg: The merged configuration, mutated in place.
+        provenance: The layer that set each value, mirroring ``cfg``;
+            injected values are recorded here as ``computed``.
     """
-    # A section left empty in the recipe is null here. Validation reports
-    # it, so there is nothing to inject into and no warning to add.
     psadt = cfg.get("psadt")
-    if psadt is None or cfg.get("intune") is None:
+    intune = cfg.get("intune")
+    if not isinstance(psadt, dict) or not isinstance(intune, dict):
         return
-    if isinstance(psadt, dict) and "app_vars" in psadt and psadt["app_vars"] is None:
+    app_vars = psadt.get("app_vars")
+    if not isinstance(app_vars, dict) or "run_as_account" not in intune:
         return
-    try:
-        app_vars = cfg.setdefault("psadt", {}).setdefault("app_vars", {})
+    sources = provenance.setdefault("psadt", {}).setdefault("app_vars", {})
 
-        today_str = date.today().strftime("%Y-%m-%d")
-        app_vars.setdefault("AppScriptDate", today_str)
+    if "AppScriptDate" not in app_vars:
+        app_vars["AppScriptDate"] = date.today().strftime("%Y-%m-%d")
+        sources["AppScriptDate"] = "computed"
 
-        # RequireAdmin: compute from run_as_account unless explicitly set
-        # by a user-controlled layer (org_yaml, vendor_yaml, parent, recipe).
-        run_as_account = cfg["intune"]["run_as_account"]
-        require_admin_source = None
-        if provenance is not None:
-            require_admin_source = (
-                provenance.get("psadt", {}).get("app_vars", {}).get("RequireAdmin")
-            )
-
-        user_layers = {"org_yaml", "vendor_yaml", "parent", "recipe"}
-        if require_admin_source in user_layers:
-            # User explicitly set RequireAdmin; respect their value
-            pass
-        else:
-            # Compute from run_as_account
-            app_vars["RequireAdmin"] = run_as_account != "user"
-    except Exception as err:
-        # Be defensive but quiet; dynamic injection is best-effort
-        get_global_logger().warning("CONFIG", f"Could not inject dynamic values: {err}")
+    # A RequireAdmin written in any layer wins; only a value no layer set is
+    # computed from the install scope.
+    if sources.get("RequireAdmin") in (None, "code_default", "computed"):
+        app_vars["RequireAdmin"] = intune["run_as_account"] != "user"
+        sources["RequireAdmin"] = "computed"
 
 
 def _print_yaml_content(data: dict[str, Any], indent: int = 0) -> None:
-    """Print YAML content in a readable format for debug mode."""
-    import yaml
+    """Logs a configuration layer as YAML at debug level.
 
+    Serializing a layer costs more than the rest of a load, so nothing is
+    built unless debug lines would print.
+    """
     logger = get_global_logger()
+    if not logger.debug_enabled:
+        return
 
-    # Convert to YAML string and log with indentation
-    # The logger.debug() call will only print if debug mode is enabled
     yaml_str = yaml.dump(data, default_flow_style=False, sort_keys=False)
     for line in yaml_str.split("\n"):
         if line.strip():  # Skip empty lines
             logger.debug("CONFIG", " " * indent + line)
 
 
-def merge_effective_config(
-    recipe_path: Path,
-    *,
-    vendor: str | None = None,
-) -> tuple[dict[str, Any], Path | None]:
+def merge_effective_config(recipe_path: Path) -> tuple[dict[str, Any], Path | None]:
     """Merges the configuration layers for a recipe without validating them.
 
     Performs the following operations:
@@ -479,13 +451,12 @@ def merge_effective_config(
     1. Read recipe YAML and its parent recipe, if it declares one
     2. Find defaults root by scanning upwards for defaults/org.yaml
     3. Load org defaults from defaults/org.yaml
-    4. Determine vendor (param vendor > folder name > recipe contents)
-    5. Load vendor defaults if present
-    6. Merge: org -> vendor -> parent -> recipe (dicts deep-merge, lists
+    4. Load the vendor defaults named after the recipe's directory, if present
+    5. Merge: org -> vendor -> parent -> recipe (dicts deep-merge, lists
        replace); the ``secrets`` section is taken from org.yaml alone
-    7. Resolve known relative paths (see Path resolution in the module
+    6. Resolve known relative paths (see Path resolution in the module
        docstring)
-    8. Inject dynamic fields (AppScriptDate = today if absent)
+    7. Inject dynamic fields (AppScriptDate = today if absent)
 
     The merged dict carries the recipe's ``parent`` field and a
     ``_provenance`` entry naming the layer that set each value, so
@@ -493,16 +464,14 @@ def merge_effective_config(
 
     Args:
         recipe_path: Path to the recipe YAML file.
-        vendor: Optional vendor name. If not provided, vendor is detected
-            from the folder name or recipe contents.
 
     Returns:
         The merged configuration and the parent recipe's path (None when
             the recipe declares no parent).
 
     Raises:
-        ConfigError: On YAML parse errors, empty files, invalid structure, a
-            missing recipe or parent file, or a parent chain.
+        ConfigError: On a missing recipe or parent file, a YAML parse error,
+            a layer whose top level is not a mapping, or a parent chain.
     """
     logger = get_global_logger()
     recipe_path = recipe_path.resolve()
@@ -511,9 +480,7 @@ def merge_effective_config(
     logger.verbose("CONFIG", f"Loading recipe: {recipe_path}")
 
     # 1) Read recipe and its parent, if any
-    recipe_obj = _load_yaml_file(recipe_path)
-    if not isinstance(recipe_obj, dict):
-        raise ConfigError(f"top-level YAML must be a mapping (dict): {recipe_path}")
+    recipe_obj = _load_yaml_mapping(recipe_path, "Recipe")
 
     parent_path: Path | None = None
     parent_obj: dict[str, Any] | None = None
@@ -542,60 +509,50 @@ def merge_effective_config(
 
     _init_provenance(DEFAULT_CONFIG, provenance)
 
-    org_defaults_path: Path | None = None
-    vendor_name: str | None = vendor
     # The secrets section as org.yaml wrote it. Restored over the merge
     # below so no other layer can declare a secret or widen its hosts.
     org_secrets: Any = {}
 
     if defaults_root:
-        # 3) Load org defaults
+        # 3) Load org defaults; _find_defaults_root found this file.
         org_defaults_path = defaults_root / "org.yaml"
-        if org_defaults_path.exists():
-            logger.verbose(
-                "CONFIG",
-                f"Loading: {org_defaults_path.relative_to(defaults_root.parent)}",
-            )
-            org_defaults = _load_yaml_file(org_defaults_path)
-            if isinstance(org_defaults, dict):
-                logger.debug("CONFIG", "--- Content from org.yaml ---")
-                _print_yaml_content(org_defaults)
-                org_secrets = org_defaults.get("secrets", {})
-                merged = _deep_merge_dicts(
-                    merged,
-                    org_defaults,
-                    provenance=provenance,
-                    layer_name="org_yaml",
-                )
-                layers_merged += 1
+        logger.verbose(
+            "CONFIG",
+            f"Loading: {org_defaults_path.relative_to(defaults_root.parent)}",
+        )
+        org_defaults = _load_yaml_mapping(org_defaults_path, "org.yaml")
+        logger.debug("CONFIG", "--- Content from org.yaml ---")
+        _print_yaml_content(org_defaults)
+        org_secrets = org_defaults.get("secrets", {})
+        merged = _deep_merge_dicts(
+            merged,
+            org_defaults,
+            provenance=provenance,
+            layer_name="org_yaml",
+        )
+        layers_merged += 1
 
-        # 4) Determine vendor
-        if vendor_name is None:
-            vendor_name = _detect_vendor(recipe_path, recipe_obj)
-
+        # 4) Load vendor defaults if present
+        vendor_name = _detect_vendor(recipe_path)
         if vendor_name:
             logger.verbose("CONFIG", f"Detected vendor: {vendor_name}")
-
-        # 5) Load vendor defaults if present
-        if vendor_name:
             candidate = defaults_root / "vendors" / f"{vendor_name}.yaml"
             if candidate.exists():
                 logger.verbose(
                     "CONFIG", f"Loading: {candidate.relative_to(defaults_root.parent)}"
                 )
-                vendor_defaults = _load_yaml_file(candidate)
-                if isinstance(vendor_defaults, dict):
-                    logger.debug("CONFIG", f"--- Content from {vendor_name}.yaml ---")
-                    _print_yaml_content(vendor_defaults)
-                    merged = _deep_merge_dicts(
-                        merged,
-                        vendor_defaults,
-                        provenance=provenance,
-                        layer_name="vendor_yaml",
-                    )
-                    layers_merged += 1
+                vendor_defaults = _load_yaml_mapping(candidate, "Vendor defaults")
+                logger.debug("CONFIG", f"--- Content from {vendor_name}.yaml ---")
+                _print_yaml_content(vendor_defaults)
+                merged = _deep_merge_dicts(
+                    merged,
+                    vendor_defaults,
+                    provenance=provenance,
+                    layer_name="vendor_yaml",
+                )
+                layers_merged += 1
 
-    # 6) Merge the parent beneath the recipe, then the recipe on top
+    # 5) Merge the parent beneath the recipe, then the recipe on top
     if parent_path is not None and parent_obj is not None:
         logger.verbose("CONFIG", f"Loading parent: {parent_path}")
         logger.debug("CONFIG", f"--- Content from {parent_path.name} ---")
@@ -630,26 +587,22 @@ def merge_effective_config(
             f"{', '.join(top_level_keys)}"
         ),
     )
-    # Show the complete merged configuration in debug mode
-    logger.debug("CONFIG", "--- Final Merged Configuration ---")
-    _print_yaml_content(merged)
-
-    # 7) Resolve relative paths (branding paths relative to defaults_root)
+    # 6) Resolve relative paths (branding paths relative to defaults_root)
     _resolve_known_paths(merged, recipe_dir, defaults_root)
 
-    # 8) Inject dynamic values (e.g., AppScriptDate, RequireAdmin)
+    # 7) Inject dynamic values (e.g., AppScriptDate, RequireAdmin)
     _inject_dynamic_values(merged, provenance)
+
+    # The configuration the command runs with, in debug mode
+    logger.debug("CONFIG", "--- Final Merged Configuration ---")
+    _print_yaml_content(merged)
 
     # Store provenance for downstream consumers
     merged["_provenance"] = provenance
     return merged, parent_path
 
 
-def load_effective_config(
-    recipe_path: Path,
-    *,
-    vendor: str | None = None,
-) -> dict[str, Any]:
+def load_effective_config(recipe_path: Path) -> dict[str, Any]:
     """Loads, merges, and validates the effective configuration for a recipe.
 
     Merges the layers with
@@ -660,21 +613,19 @@ def load_effective_config(
 
     Args:
         recipe_path: Path to the recipe YAML file.
-        vendor: Optional vendor name. If not provided, vendor is detected
-            from the folder name or recipe contents.
 
     Returns:
         The merged configuration; code defaults are always included.
 
     Raises:
-        ConfigError: On YAML parse errors, empty files, invalid structure, a
-            missing recipe or parent file, a parent chain, or a
+        ConfigError: On a missing recipe or parent file, a YAML parse error,
+            a layer whose top level is not a mapping, a parent chain, or a
             configuration that fails validation.
     """
     from napt.validation import validate_config
 
     logger = get_global_logger()
-    merged, parent_path = merge_effective_config(recipe_path, vendor=vendor)
+    merged, parent_path = merge_effective_config(recipe_path)
 
     result = validate_config(merged, recipe_path=str(recipe_path.resolve()))
     if result.errors:

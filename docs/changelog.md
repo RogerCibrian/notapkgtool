@@ -41,6 +41,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     longer prints `App Count` (always 1 for a valid recipe), and `discover`,
     `build`, `package`, and `upload` no longer print `Status: success` (a
     failure is an error, not a result)
+- **Configuration loads do less work** - Every command used to serialize
+    each configuration layer to YAML text on every load so a debug logger
+    could discard it; the dumps are now built only under `-d`
 - **Log lines use one prefix per stage or domain** - Validation logs under
     `CONFIG` instead of `VALIDATION`; reusing a cached PSADT release,
     replacing an earlier build, and backing up org.yaml on `init --force`
@@ -183,6 +186,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A `defaults/org.yaml` or vendor defaults file whose top level was not a
+    mapping (a list, or a stray scalar) was skipped without a word, so the
+    recipe loaded with none of its settings; it is now the same error a
+    recipe gets
+- The `-d` dump headed "Final Merged Configuration" was taken before path
+    resolution and dynamic injection, so it was not the configuration the
+    command used; it now is, and `napt validate --debug` labels the
+    injected `AppScriptDate` and `RequireAdmin` values as `computed`
+    instead of reporting them as code defaults
+- A missing recipe, parent recipe, or recipe path is reported with one
+    wording naming the role and the path
 - A PSADT template without the install or uninstall marker made `napt
     build` drop the recipe's commands silently; it now fails naming the
     missing marker

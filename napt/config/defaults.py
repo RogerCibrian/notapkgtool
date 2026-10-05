@@ -70,7 +70,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "AppProcessesToClose": [],
             "AppScriptVersion": "1.0.0",
             "AppScriptAuthor": "napt",
-            "RequireAdmin": True,
+            # RequireAdmin is computed from intune.run_as_account at load
+            # time unless a config layer sets it.
         },
     },
     # Intune/Win32 settings.
@@ -138,13 +139,17 @@ ORG_YAML_TEMPLATE = """\
 #   1. NAPT built-in defaults (always present)
 #   2. This file (org.yaml) - your organization overrides
 #   3. Vendor defaults (defaults/vendors/<Vendor>.yaml)
-#   4. Recipe configuration (recipes/<Vendor>/<app>.yaml)
+#   4. Parent recipe (the file a recipe names in its parent field)
+#   5. Recipe configuration (recipes/<Vendor>/<app>.yaml)
 
 apiVersion: napt/v1
 
 # psadt:
 #   # PSADT release: "latest" or specific version (e.g., "4.1.7")
 #   release: "latest"
+#
+#   # Where PSADT releases are cached
+#   cache_dir: "cache/psadt"
 #
 #   # Custom branding (logo/banner)
 #   brand_pack:
