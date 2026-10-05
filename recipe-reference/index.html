@@ -934,17 +934,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#cache_dir" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        cache_dir
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#brand_pack" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2966,17 +2955,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#cache_dir" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        cache_dir
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#brand_pack" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3897,15 +3875,10 @@ A format string that is malformed or names a field is a validation error.</p>
 <li>Specific version: <code>"4.1.7"</code> - Use a specific PSADT version.
   A leading <code>v</code> (<code>"v4.1.7"</code>) is accepted and names the same version.</li>
 </ul>
+<p>Downloaded releases are kept under the <code>psadt/</code> folder of
+<a href="#directories-configuration"><code>directories.cache</code></a>, one per version.</p>
 <p><strong>Note:</strong> Typically set in organization defaults (<code>defaults/org.yaml</code>) rather
 than per-recipe.</p>
-<h3 id="cache_dir">cache_dir</h3>
-<p><strong>Type:</strong> <code>string</code> (path)
-<strong>Required:</strong> No
-<strong>Default:</strong> <code>"cache/psadt"</code></p>
-<p>Folder where <code>napt build</code> keeps downloaded PSADT releases.
-Relative to the working directory, not the recipe.
-Usually set in <code>defaults/org.yaml</code>.</p>
 <h3 id="brand_pack">brand_pack</h3>
 <p><strong>Type:</strong> <code>object</code>
 <strong>Required:</strong> No
@@ -4519,7 +4492,8 @@ Usually set in <code>defaults/org.yaml</code>.</p>
   packaging.
   A leading <code>v</code> (<code>"v1.8.6"</code>) is accepted and names the same version.</li>
 </ul>
-<p>Each release is cached independently under <code>cache/tools/{version}/</code>, so
+<p>Each release is kept under the <code>intunewin/</code> folder of
+<a href="#directories-configuration"><code>directories.cache</code></a>, one per version, so
 changing the pin never overwrites a previously downloaded tool.</p>
 <h2 id="logging-configuration">Logging configuration</h2>
 <p>The <code>logging</code> section controls on-device logging for detection and
@@ -4550,6 +4524,7 @@ has no directory flags and reads its locations from this section only.</p>
 </span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">  </span><span class="nt">package</span><span class="p">:</span><span class="w"> </span><span class="s">"packages"</span>
 </span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="w">  </span><span class="nt">icons</span><span class="p">:</span><span class="w"> </span><span class="s">"icons"</span>
 </span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="w">  </span><span class="nt">state</span><span class="p">:</span><span class="w"> </span><span class="s">"state"</span>
+</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a><span class="w">  </span><span class="nt">cache</span><span class="p">:</span><span class="w"> </span><span class="s">"cache"</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -4585,8 +4560,15 @@ has no directory flags and reads its locations from this section only.</p>
 <td><code>"state"</code></td>
 <td>Deployment state and promotion plan files</td>
 </tr>
+<tr>
+<td><code>cache</code></td>
+<td><code>"cache"</code></td>
+<td>Downloaded tools, one folder per version: <code>psadt/&lt;version&gt;/</code> for <code>napt build</code> and <code>intunewin/&lt;version&gt;/</code> for <code>napt package</code></td>
+</tr>
 </tbody>
 </table>
+<p>The cache is disposable: deleting it only causes the next build or package
+run to download its tool again.</p>
 <h2 id="deployment-configuration">Deployment configuration</h2>
 <p>The <code>deployment</code> section controls upload strictness and deployment promotion.
 These settings are org policy: configure them in <code>defaults/org.yaml</code> and

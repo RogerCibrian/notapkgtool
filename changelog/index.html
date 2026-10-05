@@ -2955,6 +2955,18 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="changed">Changed</h3>
 <ul>
+<li><strong>BREAKING: One cache root, <code>directories.cache</code></strong> - Replaces
+    <code>psadt.cache_dir</code>. <code>napt build</code> keeps PSADT releases under
+    <code>&lt;cache&gt;/psadt/&lt;version&gt;/</code> and <code>napt package</code> keeps <code>IntuneWinAppUtil.exe</code>
+    under <code>&lt;cache&gt;/intunewin/&lt;version&gt;/</code> (it was the fixed <code>cache/tools/</code>).
+    The default root is <code>cache</code>, so a project that never set <code>psadt.cache_dir</code>
+    only sees the tool download once more into the new folder; delete the old
+    <code>cache/tools/</code> by hand. A project that set <code>psadt.cache_dir</code> moves the
+    value to <code>directories.cache</code> (without the <code>/psadt</code> suffix); the old key
+    is reported as unknown by <code>napt validate</code></li>
+<li><strong><code>napt init</code> shows every default</strong> - The <code>defaults/org.yaml</code> template now
+    lists all seven <code>psadt.app_vars</code> NAPT sets, so the file shows every
+    setting an organization can override</li>
 <li><strong><code>napt status</code> reads <code>directories.state</code> from configuration</strong> - Like
     every other command, instead of a fixed <code>state</code> directory, so it
     summarizes the state the pipeline wrote to. It takes an optional recipe
@@ -3123,6 +3135,10 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="fixed">Fixed</h3>
 <ul>
+<li>The sample recipes in this repository live under <code>recipes/Google/</code>, so
+    the loader looks for <code>defaults/vendors/Google.yaml</code>. The shipped file
+    was <code>google.yaml</code>, which matched only where the filesystem ignores
+    case; it is renamed to match the folder</li>
 <li>A <code>defaults/org.yaml</code> or vendor defaults file whose top level was not a
     mapping (a list, or a stray scalar) was skipped without a word, so the
     recipe loaded with none of its settings; it is now the same error a

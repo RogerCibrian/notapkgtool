@@ -2885,7 +2885,8 @@ recipes whose pattern (or <code>api_json</code> value) keeps a prefix.</p>
    Every one of these checks runs before anything is written, so a failing
    recipe leaves an existing build of that version untouched.</li>
 <li><strong>Get PSADT release</strong> - Downloads PSADT Template_v4 from GitHub into
-   <code>cache/psadt/{version}/</code> if not already cached.
+   <code>cache/psadt/{version}/</code> (under <code>directories.cache</code>) if not already
+   cached.
    The GitHub API calls send <code>GITHUB_TOKEN</code> from the environment when it is
    set, since unauthenticated calls share a limit of 60 per hour per address.</li>
 <li><strong>Create build directory</strong> - Creates <code>builds/{app_id}/{version}/</code>.</li>
@@ -3150,8 +3151,8 @@ To replace or pin an icon, see
    Microsoft's GitHub repository if not already cached.
    The release is controlled by <code>intunewin.release</code> in <code>defaults/org.yaml</code>
    (default: <code>"latest"</code>).
-   The tool is cached under <code>cache/tools/{version}/</code>, so each pinned release
-   is stored independently.</li>
+   The tool is cached under <code>cache/intunewin/{version}/</code> (under
+   <code>directories.cache</code>), so each pinned release is stored independently.</li>
 <li><strong>Create package</strong> - Replaces <code>packages/{app_id}/{version}/</code> and runs
    <code>IntuneWinAppUtil.exe</code> into it:<ul>
 <li>Input: the build's <code>packagefiles/</code> subdirectory (PSADT structure)</li>
@@ -3446,7 +3447,7 @@ instead of <code>AZURE_CLIENT_SECRET</code>.</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>cache/
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>  ├── psadt/
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>  │   └── 4.1.7/                           # PSADT template, downloaded by napt build
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>  └── tools/
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>  └── intunewin/
 </span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>      └── &lt;version&gt;/                       # IntuneWinAppUtil.exe, downloaded by napt package
 </span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
 </span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>icons/
@@ -4141,9 +4142,10 @@ the first recipe under <code>recipes/</code> (or the file or directory you pass 
 <code>discover --output-dir</code> and <code>build --downloads-dir</code> both read from
 <code>directories.discover</code>, so the output of one is automatically
 the input of the next without extra configuration.</p>
-<p>One additional directory has no CLI flag: <code>directories.icons</code> (default
-<code>icons</code>) holds app icons written by <code>napt build</code> and read by <code>napt upload</code>.
-See <a href="#app-icons">App icons</a>.</p>
+<p>Two directories have no CLI flag: <code>directories.icons</code> (default <code>icons</code>)
+holds app icons written by <code>napt build</code> and read by <code>napt upload</code> (see
+<a href="#app-icons">App icons</a>), and <code>directories.cache</code> (default <code>cache</code>) holds
+the downloaded PSADT releases and <code>IntuneWinAppUtil.exe</code> versions.</p>
 <p>To change the defaults org-wide, add to <code>defaults/org.yaml</code>:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="nt">directories</span><span class="p">:</span>
 </span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">  </span><span class="nt">discover</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/downloads"</span><span class="w">  </span><span class="c1"># used by both discover and build</span>
