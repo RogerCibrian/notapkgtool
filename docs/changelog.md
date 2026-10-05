@@ -198,10 +198,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- The sample vendor file shipped in this repository is now
-    `defaults/vendors/Google.yaml`. Vendor files are looked up by the
-    recipe folder's exact name, so the lowercase `google.yaml` applied only
-    on case-insensitive filesystems
+- The sample recipes in this repository live under `recipes/Google/`, so
+    the loader looks for `defaults/vendors/Google.yaml`. The shipped file
+    was `google.yaml`, which matched only where the filesystem ignores
+    case; it is renamed to match the folder
 - A `defaults/org.yaml` or vendor defaults file whose top level was not a
     mapping (a list, or a stray scalar) was skipped without a word, so the
     recipe loaded with none of its settings; it is now the same error a
