@@ -2737,15 +2737,7 @@ when the path does not exist or holds no recipes.</p>
 <span class="normal"><a href="#__codelineno-0-1067">1067</a></span>
 <span class="normal"><a href="#__codelineno-0-1068">1068</a></span>
 <span class="normal"><a href="#__codelineno-0-1069">1069</a></span>
-<span class="normal"><a href="#__codelineno-0-1070">1070</a></span>
-<span class="normal"><a href="#__codelineno-0-1071">1071</a></span>
-<span class="normal"><a href="#__codelineno-0-1072">1072</a></span>
-<span class="normal"><a href="#__codelineno-0-1073">1073</a></span>
-<span class="normal"><a href="#__codelineno-0-1074">1074</a></span>
-<span class="normal"><a href="#__codelineno-0-1075">1075</a></span>
-<span class="normal"><a href="#__codelineno-0-1076">1076</a></span>
-<span class="normal"><a href="#__codelineno-0-1077">1077</a></span>
-<span class="normal"><a href="#__codelineno-0-1078">1078</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-1040"><a id="__codelineno-0-1040" name="__codelineno-0-1040"></a><span class="k">def</span><span class="w"> </span><span class="nf">validate_recipes</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">ValidationResult</span><span class="p">]:</span>
+<span class="normal"><a href="#__codelineno-0-1070">1070</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-1040"><a id="__codelineno-0-1040" name="__codelineno-0-1040"></a><span class="k">def</span><span class="w"> </span><span class="nf">validate_recipes</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">ValidationResult</span><span class="p">]:</span>
 </span><span id="__span-0-1041"><a id="__codelineno-0-1041" name="__codelineno-0-1041"></a><span class="w">    </span><span class="sd">"""Validates a recipe file or every recipe under a directory.</span>
 </span><span id="__span-0-1042"><a id="__codelineno-0-1042" name="__codelineno-0-1042"></a>
 </span><span id="__span-0-1043"><a id="__codelineno-0-1043" name="__codelineno-0-1043"></a><span class="sd">    Each file is validated with</span>
@@ -2771,19 +2763,11 @@ when the path does not exist or holds no recipes.</p>
 </span><span id="__span-0-1063"><a id="__codelineno-0-1063" name="__codelineno-0-1063"></a>    <span class="k">for</span> <span class="n">recipe_path</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">:</span>
 </span><span id="__span-0-1064"><a id="__codelineno-0-1064" name="__codelineno-0-1064"></a>        <span class="n">result</span> <span class="o">=</span> <span class="n">validate_recipe</span><span class="p">(</span><span class="n">recipe_path</span><span class="p">)</span>
 </span><span id="__span-0-1065"><a id="__codelineno-0-1065" name="__codelineno-0-1065"></a>        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">is_valid</span> <span class="ow">and</span> <span class="n">result</span><span class="o">.</span><span class="n">app_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-0-1066"><a id="__codelineno-0-1066" name="__codelineno-0-1066"></a>            <span class="n">first</span> <span class="o">=</span> <span class="n">sources</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">app_id</span><span class="p">)</span>
-</span><span id="__span-0-1067"><a id="__codelineno-0-1067" name="__codelineno-0-1067"></a>            <span class="k">if</span> <span class="n">first</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-0-1068"><a id="__codelineno-0-1068" name="__codelineno-0-1068"></a>                <span class="n">sources</span><span class="p">[</span><span class="n">result</span><span class="o">.</span><span class="n">app_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">recipe_path</span>
-</span><span id="__span-0-1069"><a id="__codelineno-0-1069" name="__codelineno-0-1069"></a>            <span class="k">else</span><span class="p">:</span>
-</span><span id="__span-0-1070"><a id="__codelineno-0-1070" name="__codelineno-0-1070"></a>                <span class="n">result</span> <span class="o">=</span> <span class="n">replace</span><span class="p">(</span>
-</span><span id="__span-0-1071"><a id="__codelineno-0-1071" name="__codelineno-0-1071"></a>                    <span class="n">result</span><span class="p">,</span>
-</span><span id="__span-0-1072"><a id="__codelineno-0-1072" name="__codelineno-0-1072"></a>                    <span class="n">errors</span><span class="o">=</span><span class="p">[</span>
-</span><span id="__span-0-1073"><a id="__codelineno-0-1073" name="__codelineno-0-1073"></a>                        <span class="o">*</span><span class="n">result</span><span class="o">.</span><span class="n">errors</span><span class="p">,</span>
-</span><span id="__span-0-1074"><a id="__codelineno-0-1074" name="__codelineno-0-1074"></a>                        <span class="n">duplicate_recipe_id_message</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">app_id</span><span class="p">,</span> <span class="n">first</span><span class="p">,</span> <span class="n">recipe_path</span><span class="p">),</span>
-</span><span id="__span-0-1075"><a id="__codelineno-0-1075" name="__codelineno-0-1075"></a>                    <span class="p">],</span>
-</span><span id="__span-0-1076"><a id="__codelineno-0-1076" name="__codelineno-0-1076"></a>                <span class="p">)</span>
-</span><span id="__span-0-1077"><a id="__codelineno-0-1077" name="__codelineno-0-1077"></a>        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
-</span><span id="__span-0-1078"><a id="__codelineno-0-1078" name="__codelineno-0-1078"></a>    <span class="k">return</span> <span class="n">results</span>
+</span><span id="__span-0-1066"><a id="__codelineno-0-1066" name="__codelineno-0-1066"></a>            <span class="n">duplicate</span> <span class="o">=</span> <span class="n">register_recipe_id</span><span class="p">(</span><span class="n">sources</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">app_id</span><span class="p">,</span> <span class="n">recipe_path</span><span class="p">)</span>
+</span><span id="__span-0-1067"><a id="__codelineno-0-1067" name="__codelineno-0-1067"></a>            <span class="k">if</span> <span class="n">duplicate</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-1068"><a id="__codelineno-0-1068" name="__codelineno-0-1068"></a>                <span class="n">result</span> <span class="o">=</span> <span class="n">replace</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="p">[</span><span class="o">*</span><span class="n">result</span><span class="o">.</span><span class="n">errors</span><span class="p">,</span> <span class="n">duplicate</span><span class="p">])</span>
+</span><span id="__span-0-1069"><a id="__codelineno-0-1069" name="__codelineno-0-1069"></a>        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</span><span id="__span-0-1070"><a id="__codelineno-0-1070" name="__codelineno-0-1070"></a>    <span class="k">return</span> <span class="n">results</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>

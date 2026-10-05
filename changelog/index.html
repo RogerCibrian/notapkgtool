@@ -2972,6 +2972,9 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
     longer prints <code>App Count</code> (always 1 for a valid recipe), and <code>discover</code>,
     <code>build</code>, <code>package</code>, and <code>upload</code> no longer print <code>Status: success</code> (a
     failure is an error, not a result)</li>
+<li><strong>Configuration loads do less work</strong> - Every command used to serialize
+    each configuration layer to YAML text on every load so a debug logger
+    could discard it; the dumps are now built only under <code>-d</code></li>
 <li><strong>Log lines use one prefix per stage or domain</strong> - Validation logs under
     <code>CONFIG</code> instead of <code>VALIDATION</code>; reusing a cached PSADT release,
     replacing an earlier build, and backing up org.yaml on <code>init --force</code>
@@ -3120,6 +3123,17 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="fixed">Fixed</h3>
 <ul>
+<li>A <code>defaults/org.yaml</code> or vendor defaults file whose top level was not a
+    mapping (a list, or a stray scalar) was skipped without a word, so the
+    recipe loaded with none of its settings; it is now the same error a
+    recipe gets</li>
+<li>The <code>-d</code> dump headed "Final Merged Configuration" was taken before path
+    resolution and dynamic injection, so it was not the configuration the
+    command used; it now is, and <code>napt validate --debug</code> labels the
+    injected <code>AppScriptDate</code> and <code>RequireAdmin</code> values as <code>computed</code>
+    instead of reporting them as code defaults</li>
+<li>A missing recipe, parent recipe, or recipe path is reported with one
+    wording naming the role and the path</li>
 <li>A PSADT template without the install or uninstall marker made <code>napt
     build</code> drop the recipe's commands silently; it now fails naming the
     missing marker</li>
