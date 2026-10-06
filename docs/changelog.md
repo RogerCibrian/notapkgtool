@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-05
+
 ### Added
 
 - **`secrets` section in `defaults/org.yaml`** - Declares the environment
@@ -1156,7 +1158,8 @@ Initial internal release.
 - **Robust Downloads** - Retry logic, atomic writes, SHA-256 verification, and conditional requests
 
 
-[Unreleased]: https://github.com/RogerCibrian/notapkgtool/compare/0.11.0...HEAD
+[Unreleased]: https://github.com/RogerCibrian/notapkgtool/compare/0.12.0...HEAD
+[0.12.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.11.0...0.12.0
 [0.11.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.10.0...0.11.0
 [0.10.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.9.0...0.10.0
 [0.9.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.8.0...0.9.0
