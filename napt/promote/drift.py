@@ -45,7 +45,6 @@ what NAPT assigned, and a lost writeback loses that memory.
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from napt.exceptions import ConfigError
@@ -53,11 +52,10 @@ from napt.graph.intune import (
     get_app_assignments,
     resolve_assignment_target,
 )
-from napt.state.deployment import deployment_state_path, load_deployment_state
 from napt.state.stamp import ENTRY_INSTALL, ENTRY_UPDATE, parse_stamp
 
 
-def _target_key(target: dict[str, Any] | None) -> tuple[str, str]:
+def target_key(target: dict[str, Any] | None) -> tuple[str, str]:
     """Returns a comparable identity for an assignment target."""
     target = target or {}
     return (target.get("@odata.type", ""), target.get("groupId", ""))
@@ -72,7 +70,7 @@ def _describe_target(target: dict[str, Any] | None, names: dict) -> str:
     if "allDevices" in odata_type:
         return "All Devices"
     group_id = target.get("groupId", "")
-    return names.get(_target_key(target), f"group {group_id or 'unknown'}")
+    return names.get(target_key(target), f"group {group_id or 'unknown'}")
 
 
 def _referenced_shas(state: dict[str, Any]) -> set[str]:
@@ -127,7 +125,7 @@ def _expected_assignments(
         slot = expected.setdefault((ENTRY_UPDATE, holder["sha256"]), {})
         for group in ring_cfg["groups"]:
             target = resolve_assignment_target(access_token, group, group_id_cache)
-            key = _target_key(target)
+            key = target_key(target)
             names[key] = group
             slot[key] = "required"
 
@@ -137,7 +135,7 @@ def _expected_assignments(
         slot = expected.setdefault((ENTRY_INSTALL, install_assigned["sha256"]), {})
         for group in install_cfg["groups"]:
             target = resolve_assignment_target(access_token, group, group_id_cache)
-            key = _target_key(target)
+            key = target_key(target)
             names[key] = group
             slot[key] = install_cfg["intent"]
 
@@ -180,7 +178,7 @@ def _configured_targets(
             target = resolve_assignment_target(access_token, group, group_id_cache)
         except ConfigError:
             continue
-        key = _target_key(target)
+        key = target_key(target)
         names[key] = group
         configured[ENTRY_INSTALL][key] = install_cfg["intent"]
 
@@ -190,7 +188,7 @@ def _configured_targets(
                 target = resolve_assignment_target(access_token, group, group_id_cache)
             except ConfigError:
                 continue
-            key = _target_key(target)
+            key = target_key(target)
             names[key] = group
             configured[ENTRY_UPDATE][key] = "required"
 
@@ -200,7 +198,7 @@ def _configured_targets(
 def detect_drift(
     access_token: str,
     configs: dict[str, dict[str, Any]],
-    deployment_dir: Path,
+    states: dict[str, dict[str, Any]],
     existing_apps: list[dict[str, Any]],
     group_id_cache: dict[str, str] | None = None,
     report_unknown_apps: bool = True,
@@ -210,7 +208,8 @@ def detect_drift(
     Args:
         access_token: Bearer token for Graph API.
         configs: Effective configurations keyed by recipe id.
-        deployment_dir: Directory holding per-app deployment state files.
+        states: Each app's deployment state keyed by recipe id, from
+            [load_deployment_states][napt.state.deployment.load_deployment_states].
         existing_apps: Mobile app dicts from list_mobile_apps.
         group_id_cache: Shared cache for group name resolution, so a
             caller that already resolved groups (apply, plan validation)
@@ -229,7 +228,6 @@ def detect_drift(
         AuthError: On 401 or 403.
         ConfigError: If a configured group cannot be resolved.
         NetworkError: On Graph API failures.
-        StateError: On a corrupted deployment state file.
 
     """
     findings: list[dict[str, Any]] = []
@@ -259,7 +257,7 @@ def detect_drift(
         stamped_by_recipe.setdefault(stamp["id"], []).append((stamp, app))
 
     for app_id, config in configs.items():
-        state = load_deployment_state(deployment_state_path(deployment_dir, app_id))
+        state = states[app_id]
         expected = _expected_assignments(
             access_token, config, state, group_id_cache, names
         )
@@ -303,7 +301,7 @@ def detect_drift(
 
             expected_targets = expected.get((entry, sha), {})
             actual = {
-                _target_key(a.get("target")): a
+                target_key(a.get("target")): a
                 for a in get_app_assignments(access_token, app["id"])
             }
 

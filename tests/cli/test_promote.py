@@ -147,6 +147,30 @@ class TestCmdPromoteApply:
         assert code == 0
         assert "Nothing to apply" in capsys.readouterr().out
 
+    def test_configs_are_loaded_once_and_handed_to_apply(self, tmp_path):
+        """Tests that apply receives the loaded configs, the state directory
+        from the first one, and whether the run covers the whole fleet."""
+        configs = {"a": {"id": "a", "directories": {"state": "custom"}}}
+        with (
+            patch(
+                "napt.promote.planner.load_recipe_configs", return_value=configs
+            ) as load,
+            patch(
+                "napt.config.loader.load_effective_config",
+                side_effect=AssertionError("loaded a recipe twice"),
+            ),
+            patch(
+                "napt.promote.applier.apply_plan", return_value=ApplyResult()
+            ) as apply,
+        ):
+            cmd_promote_apply(
+                _apply_args(tmp_path, state_dir=None, recipes=tmp_path / "a.yaml")
+            )
+        assert load.call_count == 1
+        assert apply.call_args.args[0] is configs
+        assert apply.call_args.kwargs["state_dir"] == Path("custom")
+        assert apply.call_args.kwargs["report_unknown_apps"] is False
+
     def test_failed_apps_print_and_return_one(self, tmp_path, capsys):
         """Tests that per-app failures are printed and fail the run."""
         summary = ApplyResult(
@@ -176,6 +200,31 @@ class TestCmdPromoteApply:
             code = run_handler(cmd_promote_apply, _apply_args(tmp_path))
         assert code == 1
         assert "bad plan" in capsys.readouterr().out
+
+
+class TestLoadOnce:
+    """Tests that plan loads each recipe and state file once."""
+
+    def test_plan_state_dir_comes_from_the_loaded_configs(self, tmp_path):
+        """Tests that the state directory is read from the configs the run
+        already holds instead of loading the first recipe again."""
+        configs = {"a": {"id": "a", "directories": {"state": "custom"}}}
+        with (
+            patch("napt.promote.planner.load_recipe_configs", return_value=configs),
+            patch(
+                "napt.config.loader.load_effective_config",
+                side_effect=AssertionError("loaded a recipe twice"),
+            ),
+            patch(
+                "napt.state.deployment.load_deployment_states", return_value={}
+            ) as load_states,
+            patch("napt.promote.planner.plan_promotions", return_value=[]) as plan,
+            patch("napt.promote.planner.write_plan_files", return_value=[]) as write,
+        ):
+            cmd_promote_plan(_plan_args(tmp_path, state_dir=None))
+        assert load_states.call_args.args[0] == Path("custom") / "deployment"
+        assert plan.call_args.args[0] is configs
+        assert write.call_args.args[1] == Path("custom")
 
 
 class TestDriftOutput:

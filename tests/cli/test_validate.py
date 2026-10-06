@@ -5,10 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
 from napt.cli.validate import _display_path, cmd_validate
-from napt.exceptions import ConfigError
 from napt.validation import ValidationResult
 from tests.cli.conftest import _args, _mock_result
 
@@ -126,29 +123,33 @@ class TestDebugProvenance:
         )
         return recipe
 
-    def test_load_failure_is_reported_not_hidden(self, tmp_path, capsys):
-        """Tests that a recipe that validates but cannot be merged says so."""
+    def test_provenance_comes_from_the_validated_merge(self, tmp_path, capsys):
+        """Tests that the block is printed from the configuration validation
+        produced, without merging the recipe a second time."""
         recipe = self._valid_recipe(tmp_path)
 
         with patch(
             "napt.config.loader.load_effective_config",
-            side_effect=ConfigError("merge failed"),
+            side_effect=AssertionError("merged twice"),
         ):
             code = cmd_validate(_args(recipe=recipe, debug=True))
 
         assert code == 0
-        assert "Provenance unavailable: merge failed" in capsys.readouterr().out
+        out = capsys.readouterr().out
+        assert "CONFIGURATION PROVENANCE" in out
+        assert "id: 'app' (recipe)" in out
 
-    def test_unexpected_error_is_not_swallowed(self, tmp_path):
-        """Tests that a bug in the loader surfaces instead of printing VALID."""
-        recipe = self._valid_recipe(tmp_path)
+    def test_invalid_recipe_says_provenance_unavailable(self, tmp_path, capsys):
+        """Tests that an invalid recipe gets no provenance block and says why."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text("apiVersion: napt/v1\nname: App\n")
 
-        with patch(
-            "napt.config.loader.load_effective_config",
-            side_effect=TypeError("bug"),
-        ):
-            with pytest.raises(TypeError):
-                cmd_validate(_args(recipe=recipe, debug=True))
+        code = cmd_validate(_args(recipe=recipe, debug=True))
+
+        assert code == 1
+        assert "Provenance unavailable: the recipe is invalid" in (
+            capsys.readouterr().out
+        )
 
 
 class TestDirectoryMode:

@@ -27,7 +27,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from napt.cli.common import add_output_flags
-from napt.exceptions import NAPTError
 
 if TYPE_CHECKING:
     from napt.validation import ValidationResult
@@ -61,27 +60,21 @@ def _print_provenance(
             print(f"  {full_key}: {value_repr} ({prov_value})")
 
 
-def _print_provenance_block(recipe_path: Path) -> None:
-    """Prints the provenance of a recipe's effective configuration.
+def _print_provenance_block(result: ValidationResult) -> None:
+    """Prints the provenance of a validated recipe's effective configuration.
 
     Args:
-        recipe_path: The recipe whose configuration to describe.
+        result: The validation result; its configuration carries the
+            provenance when the recipe is valid.
     """
-    from napt.config.loader import load_effective_config
-
-    try:
-        config = load_effective_config(recipe_path)
-        provenance = config.get("_provenance")
-        if provenance:
-            print()
-            print("CONFIGURATION PROVENANCE")
-            print("-" * 70)
-            _print_provenance(config, provenance)
-            print("-" * 70)
-    except NAPTError as err:
-        # An invalid recipe cannot be merged; say so rather than hide it.
-        print()
-        print(f"Provenance unavailable: {err}")
+    print()
+    if result.config is None:
+        print("Provenance unavailable: the recipe is invalid")
+        return
+    print("CONFIGURATION PROVENANCE")
+    print("-" * 70)
+    _print_provenance(result.config, result.config["_provenance"])
+    print("-" * 70)
 
 
 def _print_single(result: ValidationResult) -> None:
@@ -181,7 +174,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
                 if result.is_valid:
                     print()
                     print(f"Recipe: {_display_path(result, recipe_path)}")
-                    _print_provenance_block(Path(result.recipe_path))
+                    _print_provenance_block(result)
         failed = sum(1 for result in results if not result.is_valid)
         print()
         print("=" * 70)
@@ -197,10 +190,9 @@ def cmd_validate(args: argparse.Namespace) -> int:
     result = validate_recipe(recipe_path)
     _print_single(result)
 
-    # Show provenance in debug mode. An invalid recipe cannot be merged, so
-    # the block then says the provenance is unavailable.
+    # Show provenance in debug mode, from the same merge that was validated.
     if args.debug:
-        _print_provenance_block(recipe_path)
+        _print_provenance_block(result)
 
     if result.is_valid:
         print()

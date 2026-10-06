@@ -75,6 +75,21 @@ def _remember(*configs: AuthConfig, active: str | None = None) -> None:
     credentials._save_auth_store(store)
 
 
+def test_auth_store_is_written_atomically(user_dir):
+    """Tests that the store lands in one rename, like every other JSON file
+    NAPT persists, so a failed write leaves the previous store in place."""
+    store = AuthStore(
+        active="t1", tenants={"t1": AuthConfig(client_id="c", tenant_id="t1")}
+    )
+
+    with patch("napt.auth.credentials.write_text_atomic") as write:
+        path = credentials._save_auth_store(store)
+
+    write.assert_called_once()
+    assert write.call_args.args[0] == path
+    assert json.loads(write.call_args.args[1])["active"] == "t1"
+
+
 def _fake_app(
     accounts: list | None = None,
     silent: dict | None = None,

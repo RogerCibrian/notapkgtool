@@ -15,7 +15,7 @@ import yaml
 from napt.exceptions import NetworkError, StateError
 from napt.graph.intune import VIRTUAL_TARGETS
 from napt.promote.applier import ApplyResult, apply_plan, load_plan_file
-from napt.promote.planner import plan_path_for
+from napt.promote.planner import load_recipe_configs, plan_path_for
 from napt.state.deployment import (
     create_default_deployment_state,
     deployment_state_path,
@@ -238,11 +238,14 @@ def _run_apply(
                 return_value={"committedContentVersion": "1"},
             )
         )
+        if recipes is None:
+            recipes = tmp_path / "recipes"
         summary = apply_plan(
-            recipes if recipes is not None else tmp_path / "recipes",
+            load_recipe_configs(recipes),
             state_dir=tmp_path / "state",
             plan_file=plan_file,
             now=NOW,
+            report_unknown_apps=recipes.is_dir(),
         )
 
     return summary, mocks

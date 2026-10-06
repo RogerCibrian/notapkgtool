@@ -79,6 +79,7 @@ import msal
 import msal_extensions
 
 from napt.exceptions import AuthError, ConfigError, NAPTError
+from napt.files import write_text_atomic
 from napt.graph.client import GRAPH_BASE, auth_headers, graph_request
 from napt.logging import get_global_logger
 
@@ -326,7 +327,7 @@ def _save_auth_store(store: AuthStore) -> Path:
             for tenant_id, cfg in store.tenants.items()
         },
     }
-    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    write_text_atomic(path, json.dumps(payload, indent=2) + "\n")
     return path
 
 

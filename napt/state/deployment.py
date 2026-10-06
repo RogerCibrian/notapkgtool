@@ -48,6 +48,7 @@ publish PR diff shows its reviewer.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 import json
 from pathlib import Path
 from typing import Any
@@ -235,6 +236,36 @@ def load_deployment_state(state_path: Path) -> dict[str, Any]:
         )
     _check_shape(state, state_path)
     return state
+
+
+def load_deployment_states(
+    deployment_dir: Path, app_ids: Iterable[str]
+) -> dict[str, dict[str, Any]]:
+    """Loads the deployment state of every app in a run, once.
+
+    A promote run reads each app's state in several steps (reconciling
+    publications, planning, applying, checking drift). Loading the files
+    here and handing the same dicts to each step means one read per app,
+    and a step that records a change (reconciliation, apply) updates the
+    dict the later steps see.
+
+    Args:
+        deployment_dir: Directory holding per-app deployment state files.
+        app_ids: The recipe ids in the run, in the order to keep.
+
+    Returns:
+        Each app's deployment state keyed by app id; an app without a
+            state file gets the default empty state.
+
+    Raises:
+        StateError: If a state file is corrupted (see
+            [load_deployment_state][napt.state.deployment.load_deployment_state]).
+
+    """
+    return {
+        app_id: load_deployment_state(deployment_state_path(deployment_dir, app_id))
+        for app_id in app_ids
+    }
 
 
 def _is_release(value: Any) -> bool:

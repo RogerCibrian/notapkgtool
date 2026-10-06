@@ -33,6 +33,37 @@ discovery:
         assert len(result.errors) == 0
         assert len(result.warnings) == 0
 
+    def test_valid_result_carries_the_effective_config(self, tmp_path):
+        """Tests that a valid recipe's result holds the merged configuration
+        with its provenance, so a caller need not merge it again."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text("""
+apiVersion: napt/v1
+name: "Test App"
+id: "test-app"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+""")
+
+        result = validate_recipe(recipe)
+
+        assert result.config is not None
+        assert result.config["id"] == "test-app"
+        assert result.config["directories"]["state"] == "state"
+        assert result.config["_provenance"]["id"] == "recipe"
+        assert "parent" not in result.config
+
+    def test_invalid_result_has_no_config(self, tmp_path):
+        """Tests that a recipe with errors yields no configuration to use."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text("apiVersion: napt/v1\nname: App\n")
+
+        result = validate_recipe(recipe)
+
+        assert not result.is_valid
+        assert result.config is None
+
     def test_valid_recipe_api_github(self, tmp_path):
         """Test that a valid api_github recipe passes validation."""
         recipe = tmp_path / "recipe.yaml"

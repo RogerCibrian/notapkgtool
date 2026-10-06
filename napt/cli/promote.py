@@ -29,6 +29,25 @@ from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
 
 
+def _state_dir(args: argparse.Namespace, configs: dict[str, dict[str, Any]]) -> Path:
+    """Returns the state directory for a run over the loaded recipes.
+
+    ``--state-dir`` wins; otherwise the first recipe's ``directories.state``
+    applies, since the setting is org policy and one value serves the fleet.
+
+    Args:
+        args: Parsed arguments carrying ``state_dir``.
+        configs: The run's effective configurations keyed by recipe id.
+
+    Returns:
+        The directory to use for this run's state files.
+    """
+    if args.state_dir is not None:
+        return args.state_dir
+    first = next(iter(configs.values()))
+    return Path(first["directories"]["state"])
+
+
 def _describe_action(action: dict[str, Any]) -> str:
     """Formats one planned promotion action as a summary line.
 
@@ -96,7 +115,6 @@ def cmd_promote_plan(args: argparse.Namespace) -> int:
 
     """
     from napt.auth.credentials import get_access_token
-    from napt.config.loader import resolve_state_dir
     from napt.graph.intune import list_mobile_apps
     from napt.promote.drift import detect_drift
     from napt.promote.planner import (
@@ -107,6 +125,7 @@ def cmd_promote_plan(args: argparse.Namespace) -> int:
     )
     from napt.promote.preflight import unresolvable_groups
     from napt.promote.reconcile import reconcile_publications
+    from napt.state.deployment import load_deployment_states
 
     logger = get_global_logger()
     recipes = args.recipes
@@ -114,11 +133,12 @@ def cmd_promote_plan(args: argparse.Namespace) -> int:
     print(f"Planning promotions for: {recipes}")
     print()
 
-    state_dir = (
-        args.state_dir if args.state_dir is not None else resolve_state_dir(recipes)
-    )
-    deployment_dir = state_dir / "deployment"
+    # Each recipe and each state file is read once; every step below
+    # works from these two dicts.
     configs = load_recipe_configs(recipes)
+    state_dir = _state_dir(args, configs)
+    deployment_dir = state_dir / "deployment"
+    states = load_deployment_states(deployment_dir, configs)
     recovered: list[dict[str, Any]] = []
     drift: list[dict[str, Any]] = []
     existing_apps: list[dict[str, Any]] = []
@@ -133,10 +153,10 @@ def cmd_promote_plan(args: argparse.Namespace) -> int:
         existing_apps = list_mobile_apps(access_token)
         if args.reconcile:
             recovered = reconcile_publications(
-                access_token, configs, deployment_dir, existing_apps
+                access_token, configs, states, deployment_dir, existing_apps
             )
 
-    actions = plan_promotions(recipes, state_dir=deployment_dir)
+    actions = plan_promotions(configs, states)
 
     if access_token is None:
         if actions:
@@ -160,7 +180,7 @@ def cmd_promote_plan(args: argparse.Namespace) -> int:
             drift = detect_drift(
                 access_token,
                 configs,
-                deployment_dir,
+                states,
                 existing_apps,
                 group_id_cache=group_id_cache,
                 report_unknown_apps=recipes.is_dir(),
@@ -219,21 +239,20 @@ def cmd_promote_apply(args: argparse.Namespace) -> int:
         [run_handler][napt.cli.common.run_handler] to report.
 
     """
-    from napt.config.loader import resolve_state_dir
     from napt.promote.applier import apply_plan
+    from napt.promote.planner import load_recipe_configs
 
     recipes = args.recipes
 
     print(f"Applying promotions for: {recipes}")
     print()
 
-    state_dir = (
-        args.state_dir if args.state_dir is not None else resolve_state_dir(recipes)
-    )
+    configs = load_recipe_configs(recipes)
     summary = apply_plan(
-        recipes,
-        state_dir=state_dir,
+        configs,
+        state_dir=_state_dir(args, configs),
         plan_file=args.plan_file,
+        report_unknown_apps=recipes.is_dir(),
     )
 
     applied = summary.applied
