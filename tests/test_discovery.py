@@ -7,6 +7,7 @@ import json
 from unittest.mock import patch
 
 import pytest
+import requests
 import requests_mock
 
 from napt.discovery.api_github import ApiGithubStrategy
@@ -1777,6 +1778,26 @@ class TestApiGithubToken:
                 ApiGithubStrategy().discover(self._config(None))
 
 
+class _Firehose:
+    """A response body of a given size that counts how much was read."""
+
+    def __init__(self, total: int):
+        self.total = total
+        self.delivered = 0
+        self.closed = False
+
+    def read(self, size: int = -1) -> bytes:
+        remaining = self.total - self.delivered
+        if remaining <= 0:
+            return b""
+        chunk = remaining if size is None or size < 0 else min(size, remaining)
+        self.delivered += chunk
+        return b"x" * chunk
+
+    def close(self) -> None:
+        self.closed = True
+
+
 class TestWebScrapeLimits:
     """Tests that web_scrape bounds what recipe patterns run over."""
 
@@ -1799,6 +1820,57 @@ class TestWebScrapeLimits:
             )
             with pytest.raises(NetworkError, match="bytes"):
                 WebScrapeStrategy().discover(self._config())
+
+    def test_oversized_page_stops_downloading_at_the_cap(self):
+        """Tests that the body is read only up to the cap, so a recipe that
+        points page_url at a large installer does not download it whole."""
+        firehose = _Firehose(total=50 * 1024 * 1024)
+        with requests_mock.Mocker() as m:
+            m.get("https://example.com/download.html", body=firehose)
+            with pytest.raises(NetworkError, match="installer file"):
+                WebScrapeStrategy().discover(self._config())
+
+        assert firehose.delivered <= 6 * 1024 * 1024
+
+    def test_transport_failure_is_a_network_error(self):
+        """Tests that a connection failure during the streamed read is reported
+        as a NetworkError naming what was fetched."""
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://example.com/download.html",
+                exc=requests.ConnectionError("reset"),
+            )
+            with pytest.raises(NetworkError, match="Failed to fetch page"):
+                WebScrapeStrategy().discover(self._config())
+
+    def test_unknown_charset_falls_back_to_utf8(self):
+        """Tests that a page declaring a charset Python does not know is
+        still read, as UTF-8, instead of failing on the decode."""
+        html = '<a href="/app-1.0.msi">x</a>'
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://example.com/download.html",
+                content=html.encode(),
+                headers={"Content-Type": "text/html; charset=bogus-charset"},
+            )
+            result = WebScrapeStrategy().discover(self._config())
+
+        assert result.version == "1.0"
+
+    def test_declared_oversized_page_is_refused_before_reading(self):
+        """Tests that a Content-Length above the cap is refused without
+        reading any of the body."""
+        firehose = _Firehose(total=1024)
+        with requests_mock.Mocker() as m:
+            m.get(
+                "https://example.com/download.html",
+                body=firehose,
+                headers={"Content-Length": str(50 * 1024 * 1024)},
+            )
+            with pytest.raises(NetworkError, match="bytes"):
+                WebScrapeStrategy().discover(self._config())
+
+        assert firehose.delivered == 0
 
     def test_oversized_link_is_refused(self):
         """Tests that an absurdly long matched link is not handed to

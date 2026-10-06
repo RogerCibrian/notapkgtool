@@ -198,6 +198,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A `web_scrape` recipe whose `page_url` points at a large file (an
+    installer instead of the download page) is refused as soon as the page
+    size cap is passed, instead of after the whole file was downloaded; the
+    error now says what to check
+- An MSI whose Template summary property leaves the platform empty builds
+    as x86 on Windows, as the Windows Installer documentation specifies and
+    as a Linux build already did; it used to fail with "Template not found"
 - The saved sign-in configuration (`auth.json` under NAPT's user data
     folder) is written in one rename like every other file NAPT persists,
     so a crash mid-write no longer leaves a half-written file that fails

@@ -508,7 +508,7 @@ class TestMsiIconBlobsWindows:
                 cmd, 0, stdout=f"{mangled}\nNAPT_NO_ICON_TABLE\n", stderr=""
             )
 
-        with mock.patch("napt.build.icons.subprocess.run", side_effect=side_effect):
+        with mock.patch("napt.powershell.subprocess.run", side_effect=side_effect):
             arp, blobs = _msi_icon_blobs_windows(tmp_path / "x.msi", export_dir)
 
         assert arp == name
@@ -520,7 +520,7 @@ class TestMsiIconBlobsWindows:
         export_dir.mkdir()
 
         with mock.patch(
-            "napt.build.icons.subprocess.run",
+            "napt.powershell.subprocess.run",
             side_effect=OSError(2, "No such file or directory"),
         ):
             with pytest.raises(PackagingError, match="icon export failed"):
@@ -533,7 +533,7 @@ class TestMsiIconBlobsWindows:
         export_dir.mkdir()
 
         with mock.patch(
-            "napt.build.icons.subprocess.run",
+            "napt.powershell.subprocess.run",
             side_effect=self._run_side_effect(
                 export_dir, "", {}, marker="NAPT_NO_ICON_TABLE"
             ),
@@ -551,7 +551,7 @@ class TestMsiIconBlobsWindows:
         export_dir.mkdir()
         payload = _ico([(_png(256), 256)])
         with mock.patch(
-            "napt.build.icons.subprocess.run",
+            "napt.powershell.subprocess.run",
             side_effect=self._run_side_effect(
                 export_dir, "chrome.ico", {"chrome.ico": payload}
             ),
@@ -565,7 +565,7 @@ class TestMsiIconBlobsWindows:
         export_dir = tmp_path / "export"
         export_dir.mkdir()
         with mock.patch(
-            "napt.build.icons.subprocess.run",
+            "napt.powershell.subprocess.run",
             side_effect=self._run_side_effect(
                 export_dir, "", {}, marker="NAPT_NO_ICON_TABLE"
             ),
@@ -588,7 +588,7 @@ class TestMsiIconBlobsWindows:
                 cmd, 0, stdout="\nNAPT_ICON_EXPORTED\n", stderr=""
             )
 
-        with mock.patch("napt.build.icons.subprocess.run", side_effect=side_effect):
+        with mock.patch("napt.powershell.subprocess.run", side_effect=side_effect):
             _arp, blobs = _msi_icon_blobs_windows(tmp_path / "x.msi", export_dir)
         assert blobs == {"app.ico": b"payload"}
 
