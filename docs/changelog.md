@@ -198,6 +198,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A corrupt saved sign-in configuration (`auth.json` under NAPT's user data
+    folder) is now reported by `napt upload` and `napt auth status` with the
+    file's path and the remedy, as `napt auth login` and `logout` already
+    did; they used to read it as "Not authenticated" and point at
+    `napt auth login`, which could not fix it
 - A `web_scrape` recipe whose `page_url` points at a large file (an
     installer instead of the download page) is refused as soon as the page
     size cap is passed, instead of after the whole file was downloaded; the

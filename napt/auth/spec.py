@@ -25,15 +25,17 @@ from __future__ import annotations
 LOCALHOST_REDIRECT = "http://localhost"
 BROKER_REDIRECT_TEMPLATE = "ms-appx-web://Microsoft.AAD.BrokerPlugin/{client_id}"
 
+# Graph permissions NAPT needs to run, whether granted as application
+# permissions (service principal, Azure CLI session) or delegated permissions
+# (interactive). `napt auth status` checks a token against this set, and the
+# two lists below, which `napt auth setup` grants, are built from it.
+REQUIRED_PERMISSIONS = ("DeviceManagementApps.ReadWrite.All", "Group.Read.All")
+
 # Application permissions (app roles) for CI/CD and the delegated scopes for
 # interactive sign-in. User.Read is what the portal adds to every new
 # registration; it lets `napt auth login` look up the tenant's name.
-APPLICATION_PERMISSIONS = ("DeviceManagementApps.ReadWrite.All", "Group.Read.All")
-DELEGATED_PERMISSIONS = (
-    "DeviceManagementApps.ReadWrite.All",
-    "Group.Read.All",
-    "User.Read",
-)
+APPLICATION_PERMISSIONS = REQUIRED_PERMISSIONS
+DELEGATED_PERMISSIONS = (*REQUIRED_PERMISSIONS, "User.Read")
 
 # Audience Entra expects on federated tokens from any external issuer.
 FEDERATED_AUDIENCE_DEFAULT = "api://AzureADTokenExchange"

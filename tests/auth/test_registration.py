@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import FrozenInstanceError
 import importlib.metadata
 from unittest.mock import patch
 
@@ -174,7 +175,7 @@ def test_setup_creates_everything_in_a_fresh_tenant(user_dir, bootstrap) -> None
 
     result = _run(graph, SetupSpec(tenant_id="tid"))
 
-    assert result.created is True
+    assert result.changes[0].startswith("Created app registration")
     assert result.client_id == "new-cid"
     bootstrap.assert_called_once_with("tid")
 
@@ -259,7 +260,6 @@ def test_setup_is_a_no_op_on_a_complete_registration(user_dir, bootstrap) -> Non
 
     result = _run(graph, SetupSpec(tenant_id="tid"))
 
-    assert result.created is False
     assert result.changes == []
     assert graph.writes() == []
 
@@ -752,10 +752,20 @@ def test_setup_restamps_outdated_spec(user_dir, bootstrap) -> None:
 
     result = _run(graph, SetupSpec(tenant_id="tid"))
 
-    assert result.previous_spec == 0
     assert result.adopted is False
+    assert any(c.startswith("Stamped internal notes") for c in result.changes)
     patch = next(
         j for m, p, j in graph.writes() if (m, p) == ("PATCH", "/applications/obj")
     )
     assert patch is not None and list(patch) == ["notes"]
     assert f"spec={registration.SPEC_VERSION}" in patch["notes"]
+
+
+def test_setup_result_is_frozen(user_dir, bootstrap) -> None:
+    """Tests that the result is built once, after the run, and cannot change."""
+    graph = FakeGraph(_existing_tenant_responses(_complete_app()))
+
+    result = _run(graph, SetupSpec(tenant_id="tid"))
+
+    with pytest.raises(FrozenInstanceError):
+        result.client_id = "other"  # type: ignore[misc]

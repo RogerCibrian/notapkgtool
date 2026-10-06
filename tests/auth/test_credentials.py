@@ -423,6 +423,22 @@ def test_get_status_returns_none_when_unauthenticated(user_dir, chain_fails) -> 
     assert get_status() is None
 
 
+def test_get_status_reports_malformed_auth_config(user_dir, chain_fails) -> None:
+    """Tests that status reports a corrupt auth.json like login and logout do."""
+    (user_dir / "auth.json").write_text("{not json", encoding="utf-8")
+
+    with pytest.raises(ConfigError, match="napt auth login"):
+        get_status()
+
+
+def test_get_access_token_reports_malformed_auth_config(user_dir, chain_fails) -> None:
+    """Tests that upload's token lookup reports a corrupt auth.json too."""
+    (user_dir / "auth.json").write_text("{not json", encoding="utf-8")
+
+    with pytest.raises(ConfigError, match="napt auth login"):
+        get_access_token()
+
+
 def test_status_handles_opaque_token() -> None:
     """Tests that an undecodable token still yields a status object."""
     status = credentials._status_from_token("not-a-jwt", "service principal")
