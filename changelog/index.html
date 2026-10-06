@@ -3135,6 +3135,11 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="fixed">Fixed</h3>
 <ul>
+<li>A corrupt saved sign-in configuration (<code>auth.json</code> under NAPT's user data
+    folder) is now reported by <code>napt upload</code> and <code>napt auth status</code> with the
+    file's path and the remedy, as <code>napt auth login</code> and <code>logout</code> already
+    did; they used to read it as "Not authenticated" and point at
+    <code>napt auth login</code>, which could not fix it</li>
 <li>A <code>web_scrape</code> recipe whose <code>page_url</code> points at a large file (an
     installer instead of the download page) is refused as soon as the page
     size cap is passed, instead of after the whole file was downloaded; the
