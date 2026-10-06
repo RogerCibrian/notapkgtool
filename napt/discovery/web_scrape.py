@@ -59,18 +59,20 @@ from napt.discovery.base import RemoteVersion, bounded, first_capture
 from napt.discovery.fields import (
     check_format,
     check_regex,
-    fetch,
+    fetch_text,
     optional_str,
     require_str,
 )
-from napt.exceptions import ConfigError, NetworkError
+from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
 
 # Strategy-specific defaults for optional recipe fields.
 _DEFAULT_VERSION_FORMAT = "{0}"
 
-# Largest page NAPT parses. Download pages are tens of kilobytes; the cap
-# bounds what a recipe's link_pattern and the HTML parser run over.
+# Largest page NAPT reads. Download pages are tens of kilobytes to a couple
+# of megabytes; the cap bounds what a recipe's link_pattern and the HTML
+# parser run over, and stops a page_url that points at an installer from
+# being downloaded whole.
 _MAX_PAGE_BYTES = 5 * 1024 * 1024
 
 
@@ -129,15 +131,8 @@ class WebScrapeStrategy:
         logger.verbose("DISCOVERY", f"Version pattern: {version_pattern}")
 
         logger.verbose("DISCOVERY", f"Fetching page: {page_url}")
-        response = fetch(page_url, what="page")
-
-        if len(response.content) > _MAX_PAGE_BYTES:
-            raise NetworkError(
-                f"Page is {len(response.content)} bytes; NAPT parses download "
-                f"pages of at most {_MAX_PAGE_BYTES} bytes"
-            )
-        html_content = response.text
-        logger.verbose("DISCOVERY", f"Page fetched ({len(response.content)} bytes)")
+        html_content = fetch_text(page_url, what="page", max_bytes=_MAX_PAGE_BYTES)
+        logger.verbose("DISCOVERY", f"Page fetched ({len(html_content)} characters)")
 
         if link_selector:
             soup = BeautifulSoup(html_content, "html.parser")

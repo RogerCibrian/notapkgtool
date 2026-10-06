@@ -62,7 +62,7 @@ _UNSUPPORTED_ARCHS: dict[str, str] = {
 }
 
 # AppxManifest.xml namespace
-_MANIFEST_NS = "http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+MANIFEST_NS = "http://schemas.microsoft.com/appx/manifest/foundation/windows10"
 
 # Type alias for architecture values (includes "any" for neutral packages)
 Architecture = Literal["x86", "x64", "arm64", "any"]
@@ -152,7 +152,7 @@ def extract_msix_metadata(file_path: str | Path) -> MSIXMetadata:
         ) from err
 
     # Parse Identity element
-    identity = root.find(f"{{{_MANIFEST_NS}}}Identity")
+    identity = root.find(f"{{{MANIFEST_NS}}}Identity")
     if identity is None:
         raise PackagingError(
             f"Identity element not found in {msix_path.name} " f"AppxManifest.xml."
@@ -174,13 +174,13 @@ def extract_msix_metadata(file_path: str | Path) -> MSIXMetadata:
     architecture = _architecture_from_manifest(proc_arch)
 
     # Parse Properties element
-    properties = root.find(f"{{{_MANIFEST_NS}}}Properties")
+    properties = root.find(f"{{{MANIFEST_NS}}}Properties")
     if properties is None:
         raise PackagingError(
             f"Properties element not found in {msix_path.name} " f"AppxManifest.xml."
         )
 
-    display_name_node = properties.find(f"{{{_MANIFEST_NS}}}DisplayName")
+    display_name_node = properties.find(f"{{{MANIFEST_NS}}}DisplayName")
     display_name = display_name_node.text if display_name_node is not None else ""
 
     if not display_name:

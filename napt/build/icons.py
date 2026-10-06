@@ -47,7 +47,6 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass
-import os
 from pathlib import Path
 import shutil
 import struct
@@ -61,7 +60,8 @@ import zipfile
 from napt.exceptions import PackagingError
 from napt.graph.intune import MAX_ICON_BYTES
 from napt.logging import get_global_logger
-from napt.powershell import ps_single_quote
+from napt.powershell import ps_single_quote, run_powershell_lines
+from napt.versioning.msix import MANIFEST_NS
 
 # Frame selection policy: PNG-encoded frames only, at least MIN_ICON_PX wide,
 # at most MAX_ICON_BYTES on disk (Intune's limit), preferring the frame
@@ -72,8 +72,8 @@ PREFERRED_ICON_PX = 256
 _PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 _ICO_MAGIC = b"\x00\x00\x01\x00"
 
-# MSIX manifest XML namespaces
-_MANIFEST_NS = "http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+# MSIX manifest XML namespace for the uap-prefixed elements; the foundation
+# namespace is MANIFEST_NS from napt.versioning.msix.
 _UAP_NS = "http://schemas.microsoft.com/appx/manifest/uap/windows10"
 
 # PE resource type IDs
@@ -608,40 +608,17 @@ $utf8 = New-Object System.Text.UTF8Encoding $false
     $env:NAPT_ICON_OUT, [string[]]@($arpIcon, $marker), $utf8
 )
 """
-    # PowerShell writes captured stdout in the console's OEM code page,
-    # which Python would decode as the locale code page and mangle every
-    # non-ASCII character of the icon name, so the values go through a
-    # UTF-8 file instead. Its path travels in an environment variable.
-    with tempfile.NamedTemporaryFile(
-        prefix="napt-icon-", suffix=".txt", delete=False
-    ) as handle:
-        out_path = Path(handle.name)
-    try:
-        subprocess.run(
-            ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_script],
-            check=True,
-            capture_output=True,
-            text=True,
-            errors="replace",
+    # The icon name comes back through a UTF-8 file, never stdout (see
+    # run_powershell_lines). The script always writes two lines.
+    arp_icon, marker = (
+        line.strip()
+        for line in run_powershell_lines(
+            ps_script,
+            out_var="NAPT_ICON_OUT",
             timeout=30,
-            env={**os.environ, "NAPT_ICON_OUT": str(out_path)},
-        )
-        lines = out_path.read_text(encoding="utf-8-sig").splitlines()
-    except subprocess.CalledProcessError as err:
-        stderr_output = err.stderr if err.stderr else "No stderr captured"
-        raise PackagingError(
-            f"PowerShell MSI icon export failed (exit {err.returncode}). "
-            f"stderr: {stderr_output}"
-        ) from err
-    except subprocess.TimeoutExpired:
-        raise PackagingError("PowerShell MSI icon export timed out") from None
-    except OSError as err:
-        raise PackagingError(f"PowerShell MSI icon export failed: {err}") from err
-    finally:
-        out_path.unlink(missing_ok=True)
-
-    arp_icon = lines[0].strip() if lines else ""
-    marker = lines[1].strip() if len(lines) > 1 else ""
+            what="PowerShell MSI icon export",
+        )[:2]
+    )
     if marker == _NO_ICON_TABLE_MARKER:
         return arp_icon, {}
 
@@ -927,9 +904,9 @@ def _msix_logo_candidates(root: ET.Element) -> list[str]:
         Zip-relative logo paths, deduplicated, in priority order.
     """
     candidates: list[str] = []
-    applications = root.find(f"{{{_MANIFEST_NS}}}Applications")
+    applications = root.find(f"{{{MANIFEST_NS}}}Applications")
     if applications is not None:
-        for application in applications.findall(f"{{{_MANIFEST_NS}}}Application"):
+        for application in applications.findall(f"{{{MANIFEST_NS}}}Application"):
             visual = application.find(f"{{{_UAP_NS}}}VisualElements")
             if visual is None:
                 continue
@@ -938,9 +915,9 @@ def _msix_logo_candidates(root: ET.Element) -> list[str]:
                 if value and not value.startswith("ms-resource:"):
                     candidates.append(value.replace("\\", "/"))
             break
-    properties = root.find(f"{{{_MANIFEST_NS}}}Properties")
+    properties = root.find(f"{{{MANIFEST_NS}}}Properties")
     if properties is not None:
-        logo = properties.find(f"{{{_MANIFEST_NS}}}Logo")
+        logo = properties.find(f"{{{MANIFEST_NS}}}Logo")
         if logo is not None and logo.text and not logo.text.startswith("ms-resource:"):
             candidates.append(logo.text.strip().replace("\\", "/"))
     return list(dict.fromkeys(candidates))

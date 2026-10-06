@@ -153,11 +153,104 @@ def fetch(
     """
     try:
         with make_session() as session:
-            response = guarded_get(
-                session, url, headers or {}, hosts=hosts, timeout=_REQUEST_TIMEOUT
-            )
+            return _get(session, url, what, headers, hosts, stream=False)
     except requests.RequestException as err:
         raise NetworkError(f"Failed to fetch {what}: {err}") from err
+
+
+def fetch_text(
+    url: str,
+    *,
+    what: str,
+    max_bytes: int,
+    headers: dict[str, str] | None = None,
+    hosts: set[str] | None = None,
+) -> str:
+    """Fetches a text document for a strategy, refusing one over a size cap.
+
+    The body is read in pieces and the download stops as soon as it passes
+    ``max_bytes``, so a URL that points at a large file is refused without
+    downloading it. A Content-Length header over the cap is refused before
+    any of the body is read.
+
+    Args:
+        url: The URL to fetch.
+        what: What is being fetched, for messages (``"page"``).
+        max_bytes: The largest body to accept.
+        headers: Request headers, secrets already expanded.
+        hosts: The hosts a redirect may go to when the headers carry a
+            secret, from [bound_hosts][napt.secrets.bound_hosts]; None
+            follows redirects freely.
+
+    Returns:
+        The document, decoded with the charset the response declares
+            (UTF-8 when it declares none).
+
+    Raises:
+        NetworkError: On transport failure, a redirect off the bound hosts,
+            a status that is not success, or a body over ``max_bytes``.
+    """
+    too_large = NetworkError(
+        f"The {what} at {url} is larger than {max_bytes} bytes, more than NAPT "
+        f"reads for a download {what}. Check that the URL is the HTML {what} "
+        "itself and not an installer file."
+    )
+    try:
+        with make_session() as session:
+            response = _get(session, url, what, headers, hosts, stream=True)
+            declared = response.headers.get("Content-Length", "")
+            if declared.isdigit() and int(declared) > max_bytes:
+                raise too_large
+            body = bytearray()
+            for chunk in response.iter_content(chunk_size=64 * 1024):
+                body.extend(chunk)
+                if len(body) > max_bytes:
+                    raise too_large
+    except requests.RequestException as err:
+        raise NetworkError(f"Failed to fetch {what}: {err}") from err
+    try:
+        return body.decode(response.encoding or "utf-8", errors="replace")
+    except LookupError:
+        # The server named a charset Python does not know.
+        return body.decode("utf-8", errors="replace")
+
+
+def _get(
+    session: requests.Session,
+    url: str,
+    what: str,
+    headers: dict[str, str] | None,
+    hosts: set[str] | None,
+    *,
+    stream: bool,
+) -> requests.Response:
+    """Sends the GET for a fetch and checks the status.
+
+    Args:
+        session: The session to send with.
+        url: The URL to fetch.
+        what: What is being fetched, for messages.
+        headers: Request headers, secrets already expanded.
+        hosts: The hosts a redirect may go to, or None.
+        stream: Whether to leave the body unread for the caller.
+
+    Returns:
+        The successful response.
+
+    Raises:
+        NetworkError: On a redirect off the bound hosts or a status that is
+            not success.
+        requests.RequestException: On transport failure, for the caller to
+            wrap with its own context.
+    """
+    response = guarded_get(
+        session,
+        url,
+        headers or {},
+        hosts=hosts,
+        timeout=_REQUEST_TIMEOUT,
+        stream=stream,
+    )
     if not response.ok:
         raise NetworkError(
             f"Failed to fetch {what}: {response.status_code} {response.reason}"

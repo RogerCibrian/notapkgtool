@@ -34,7 +34,7 @@ class TestMissingBackend:
         msi_path.write_bytes(b"")
 
         with mock.patch(
-            "napt.versioning.msi.subprocess.run",
+            "napt.powershell.subprocess.run",
             side_effect=FileNotFoundError(2, "No such file", "powershell"),
         ):
             with pytest.raises(PackagingError, match="PowerShell"):
@@ -133,7 +133,7 @@ class TestExtractMsiMetadataScript:
         msi_path.write_bytes(b"")
 
         with mock.patch(
-            "napt.versioning.msi.subprocess.run",
+            "napt.powershell.subprocess.run",
             side_effect=self._fake_powershell(["Contoso App", "1.2.3", "x64;1033"]),
         ) as run:
             metadata = extract_msi_metadata(msi_path)
@@ -152,7 +152,7 @@ class TestExtractMsiMetadataScript:
         name = "Café Office™ üÉ"
 
         with mock.patch(
-            "napt.versioning.msi.subprocess.run",
+            "napt.powershell.subprocess.run",
             side_effect=self._fake_powershell([name, "2.0.0", "x64;1033"], encoding),
         ) as run:
             metadata = extract_msi_metadata(msi_path)
@@ -174,8 +174,54 @@ class TestExtractMsiMetadataScript:
             seen["out"] = Path(kwargs["env"]["NAPT_MSI_OUT"])
             raise subprocess.CalledProcessError(1, args, stderr="boom")
 
-        with mock.patch("napt.versioning.msi.subprocess.run", side_effect=failing_run):
+        with mock.patch("napt.powershell.subprocess.run", side_effect=failing_run):
             with pytest.raises(PackagingError, match="PowerShell MSI query"):
                 extract_msi_metadata(msi_path)
 
         assert not seen["out"].exists()
+
+    def test_empty_template_platform_is_x86_on_windows(self, tmp_path, monkeypatch):
+        """Tests that the PowerShell backend hands an empty Template to the
+        shared platform mapping instead of failing, so both backends agree."""
+        monkeypatch.setattr("napt.versioning.msi.sys.platform", "win32")
+        msi_path = tmp_path / "app.msi"
+        msi_path.write_bytes(b"")
+
+        with mock.patch(
+            "napt.powershell.subprocess.run",
+            side_effect=self._fake_powershell(["App", "1.0.0", ";1033"]),
+        ) as run:
+            metadata = extract_msi_metadata(msi_path)
+
+        assert metadata.architecture == "x86"
+        assert "Template (Summary Information Property 7) not found" not in (
+            run.call_args.args[0][-1]
+        )
+
+
+class TestExtractMsiMetadataMsiinfo:
+    """Tests for the msitools backend (mocked)."""
+
+    def test_missing_template_line_is_x86(self, tmp_path, monkeypatch):
+        """Tests that an MSI whose summary lacks a Template is read as x86,
+        the same answer the PowerShell backend gives."""
+        monkeypatch.setattr("napt.versioning.msi.sys.platform", "linux")
+        monkeypatch.setattr(
+            "napt.versioning.msi.shutil.which", lambda name: "/usr/bin/msiinfo"
+        )
+        msi_path = tmp_path / "app.msi"
+        msi_path.write_bytes(b"")
+
+        def run(args, **kwargs):
+            stdout = (
+                "ProductName\tApp\nProductVersion\t1.0.0\n"
+                if args[1] == "export"
+                else "Title: Installation Database\n"
+            )
+            return subprocess.CompletedProcess(args, 0, stdout=stdout, stderr="")
+
+        with mock.patch("napt.versioning.msi.subprocess.run", side_effect=run):
+            metadata = extract_msi_metadata(msi_path)
+
+        assert metadata.architecture == "x86"
+        assert metadata.product_version == "1.0.0"
