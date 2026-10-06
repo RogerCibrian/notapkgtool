@@ -240,7 +240,6 @@ class TestCmdAuth:
             tenant_id="tid",
             client_id="cid",
             display_name="NAPT",
-            created=True,
             changes=["Created app registration 'NAPT'", "Created service principal"],
         )
         with patch(
