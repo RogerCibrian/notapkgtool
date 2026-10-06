@@ -3135,6 +3135,10 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 </ul>
 <h3 id="fixed">Fixed</h3>
 <ul>
+<li>The saved sign-in configuration (<code>auth.json</code> under NAPT's user data
+    folder) is written in one rename like every other file NAPT persists,
+    so a crash mid-write no longer leaves a half-written file that fails
+    every later <code>napt auth</code> command with a corrupt-config error</li>
 <li>The sample recipes in this repository live under <code>recipes/Google/</code>, so
     the loader looks for <code>defaults/vendors/Google.yaml</code>. The shipped file
     was <code>google.yaml</code>, which matched only where the filesystem ignores
