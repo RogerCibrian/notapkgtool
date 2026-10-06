@@ -18,6 +18,7 @@ from napt.state.deployment import (
     create_default_deployment_state,
     deployment_state_path,
     load_deployment_state,
+    load_deployment_states,
     record_pending,
     record_published,
     save_deployment_state,
@@ -278,6 +279,30 @@ class TestDeploymentStateFiles:
         save_deployment_state(state, state_path)
 
         assert state_path.read_bytes() == first
+
+
+class TestLoadDeploymentStates:
+    """Tests for loading a run's state files once, keyed by app id."""
+
+    def test_loads_each_app_and_defaults_the_missing(self, tmp_path):
+        """Tests that present files are read and an absent one is the default
+        empty state, in the order the app ids were given."""
+        state = create_default_deployment_state()
+        state["pending"] = {"version": "1.0", "sha256": "a" * 64, "url": "u"}
+        save_deployment_state(state, deployment_state_path(tmp_path, "one"))
+
+        states = load_deployment_states(tmp_path, ["one", "two"])
+
+        assert list(states) == ["one", "two"]
+        assert states["one"]["pending"]["version"] == "1.0"
+        assert states["two"] == create_default_deployment_state()
+
+    def test_corrupted_file_raises(self, tmp_path):
+        """Tests that a corrupted state file fails the whole load."""
+        deployment_state_path(tmp_path, "one").write_text("{not json")
+
+        with pytest.raises(StateError, match="Corrupted"):
+            load_deployment_states(tmp_path, ["one"])
 
 
 class TestRecordPending:

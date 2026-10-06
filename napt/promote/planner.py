@@ -64,7 +64,6 @@ from napt.config.loader import (
 from napt.exceptions import ConfigError, StateError
 from napt.files import write_text_atomic
 from napt.logging import get_global_logger
-from napt.state.deployment import deployment_state_path, load_deployment_state
 
 # Deterministic ordering of action types within one app's actions.
 _ACTION_ORDER = {"assign": 0, "promote": 1}
@@ -325,21 +324,20 @@ def load_recipe_configs(recipes: Path) -> dict[str, dict[str, Any]]:
 
 
 def plan_promotions(
-    recipes: Path,
-    state_dir: Path | None = None,
+    configs: dict[str, dict[str, Any]],
+    states: dict[str, dict[str, Any]],
     now: datetime | None = None,
 ) -> list[dict[str, Any]]:
-    """Computes promotion actions for a recipe or a directory of recipes.
+    """Computes promotion actions for the apps in a run.
 
-    Loads each recipe's effective configuration, reads its deployment
-    state, and evaluates ring eligibility against the clock. Read-only:
-    neither Intune nor the state files are modified.
+    Evaluates each app's ring eligibility against its deployment state
+    and the clock. Read-only: neither Intune nor the states are modified.
 
     Args:
-        recipes: A recipe YAML file, or a directory scanned recursively.
-        state_dir: Directory holding per-app deployment state files.
-            When omitted, each recipe's ``directories.state`` setting is
-            used (``<state>/deployment``).
+        configs: Effective configurations keyed by recipe id, from
+            [load_recipe_configs][napt.promote.planner.load_recipe_configs].
+        states: Each app's deployment state keyed by recipe id, from
+            [load_deployment_states][napt.state.deployment.load_deployment_states].
         now: Evaluation clock. Defaults to the current UTC time; tests
             pass a fixed value for determinism.
 
@@ -347,9 +345,7 @@ def plan_promotions(
         Action dicts sorted by app id and action type.
 
     Raises:
-        ConfigError: On invalid recipes or an invalid recipes path.
-        StateError: On a corrupted deployment state file or an invalid
-            ring timestamp.
+        StateError: On an invalid ring timestamp.
 
     """
     logger = get_global_logger()
@@ -357,16 +353,8 @@ def plan_promotions(
         now = datetime.now(UTC)
 
     actions: list[dict[str, Any]] = []
-    for config in load_recipe_configs(recipes).values():
-        app_state_dir = (
-            state_dir
-            if state_dir is not None
-            else Path(config["directories"]["state"]) / "deployment"
-        )
-        state = load_deployment_state(
-            deployment_state_path(app_state_dir, config["id"])
-        )
-        app_actions = _plan_app_actions(config, state, now)
+    for config in configs.values():
+        app_actions = _plan_app_actions(config, states[config["id"]], now)
         if app_actions:
             logger.verbose(
                 "PROMOTE",

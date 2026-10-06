@@ -11,11 +11,20 @@ from napt.state.deployment import (
     create_default_deployment_state,
     deployment_state_path,
     load_deployment_state,
+    load_deployment_states,
     save_deployment_state,
 )
 
 TOKEN = "fake-token"
 SHA = "b" * 64
+
+
+def _reconcile(
+    configs: dict[str, Any], deployment_dir: Path, apps: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Loads the run's states once and reconciles, as the commands do."""
+    states = load_deployment_states(deployment_dir, configs)
+    return reconcile_publications(TOKEN, configs, states, deployment_dir, apps)
 
 
 def _configs(app_id: str = "test-app", build_types: str = "both") -> dict[str, Any]:
@@ -70,7 +79,7 @@ class TestReconcilePublications:
         ]
 
         with patch("napt.promote.reconcile.get_mobile_app", side_effect=_committed):
-            findings = reconcile_publications(TOKEN, _configs(), tmp_path, apps)
+            findings = _reconcile(_configs(), tmp_path, apps)
 
         assert [f["kind"] for f in findings] == ["recovered"]
         state = load_deployment_state(state_path)
@@ -89,9 +98,7 @@ class TestReconcilePublications:
         apps = [_stamped("test-app", "install", SHA, "install-1")]
 
         with patch("napt.promote.reconcile.get_mobile_app", side_effect=_committed):
-            findings = reconcile_publications(
-                TOKEN, _configs(build_types="app_only"), tmp_path, apps
-            )
+            findings = _reconcile(_configs(build_types="app_only"), tmp_path, apps)
 
         assert [f["kind"] for f in findings] == ["recovered"]
         state = load_deployment_state(state_path)
@@ -105,9 +112,7 @@ class TestReconcilePublications:
         apps = [_stamped("test-app", "update", SHA, "update-1")]
 
         with patch("napt.promote.reconcile.get_mobile_app", side_effect=_committed):
-            findings = reconcile_publications(
-                TOKEN, _configs(build_types="update_only"), tmp_path, apps
-            )
+            findings = _reconcile(_configs(build_types="update_only"), tmp_path, apps)
 
         assert [f["kind"] for f in findings] == ["recovered"]
         state = load_deployment_state(state_path)
@@ -121,7 +126,7 @@ class TestReconcilePublications:
         apps = [_stamped("test-app", "install", SHA, "install-1")]
 
         with patch("napt.promote.reconcile.get_mobile_app", side_effect=_committed):
-            findings = reconcile_publications(TOKEN, _configs(), tmp_path, apps)
+            findings = _reconcile(_configs(), tmp_path, apps)
 
         assert [f["kind"] for f in findings] == ["incomplete"]
         assert "no stamped update entry" in findings[0]["detail"]
@@ -144,7 +149,7 @@ class TestReconcilePublications:
             return {"committedContentVersion": "1"}
 
         with patch("napt.promote.reconcile.get_mobile_app", side_effect=by_id):
-            findings = reconcile_publications(TOKEN, _configs(), tmp_path, apps)
+            findings = _reconcile(_configs(), tmp_path, apps)
 
         assert [f["kind"] for f in findings] == ["incomplete"]
         assert "never committed" in findings[0]["detail"]
@@ -159,7 +164,7 @@ class TestReconcilePublications:
         apps = [_stamped("test-app", "install", "c" * 64, "other-release")]
 
         with patch("napt.promote.reconcile.get_mobile_app") as get_mock:
-            findings = reconcile_publications(TOKEN, _configs(), tmp_path, apps)
+            findings = _reconcile(_configs(), tmp_path, apps)
 
         assert findings == []
         get_mock.assert_not_called()
@@ -177,13 +182,30 @@ class TestReconcilePublications:
         apps = [_stamped("test-app", "install", "a" * 64, "install-1")]
 
         with patch("napt.promote.reconcile.get_mobile_app") as get_mock:
-            findings = reconcile_publications(TOKEN, _configs(), tmp_path, apps)
+            findings = _reconcile(_configs(), tmp_path, apps)
 
         assert findings == []
         get_mock.assert_not_called()
 
     def test_missing_state_file_is_silent(self, tmp_path):
         """Tests that an app with no state file produces no findings."""
-        findings = reconcile_publications(TOKEN, _configs(), tmp_path, [])
+        findings = _reconcile(_configs(), tmp_path, [])
 
         assert findings == []
+
+    def test_recovery_updates_the_shared_state(self, tmp_path):
+        """Tests that a recovered publication is written into the states the
+        caller passed, so the planner that runs next sees it without
+        re-reading the file."""
+        _write_pending(tmp_path)
+        apps = [
+            _stamped("test-app", "install", SHA, "install-1"),
+            _stamped("test-app", "update", SHA, "update-1"),
+        ]
+        states = load_deployment_states(tmp_path, ["test-app"])
+
+        with patch("napt.promote.reconcile.get_mobile_app", side_effect=_committed):
+            reconcile_publications(TOKEN, _configs(), states, tmp_path, apps)
+
+        assert states["test-app"]["pending"] is None
+        assert states["test-app"]["published"]["sha256"] == SHA

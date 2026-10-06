@@ -886,6 +886,8 @@ class ValidationResult:
         parent_path: String path to the parent recipe merged beneath it, or
             None when the recipe declares no parent.
         app_id: The recipe's id, or None when it has no usable one.
+        config: The effective configuration that was validated, provenance
+            included, when the recipe is valid; None when it has errors.
     """
 
     errors: list[str]
@@ -893,6 +895,7 @@ class ValidationResult:
     recipe_path: str
     parent_path: str | None = None
     app_id: str | None = None
+    config: dict[str, Any] | None = None
 
     @property
     def is_valid(self) -> bool:
@@ -1000,8 +1003,8 @@ def validate_recipe(recipe_path: Path) -> ValidationResult:
         recipe_path: Path to the recipe YAML file to validate.
 
     Returns:
-        The errors, warnings, app id, and the parent path when the recipe
-            declares one.
+        The errors, warnings, app id, the parent path when the recipe
+            declares one, and the effective configuration when it is valid.
 
     Example:
         Validate a recipe and check results:
@@ -1032,9 +1035,14 @@ def validate_recipe(recipe_path: Path) -> ValidationResult:
         logger.verbose("CONFIG", f"Parent recipe: {parent_path}")
 
     result = validate_config(merged, recipe_path=recipe_path_str)
-    if parent_path is None:
+    if parent_path is not None:
+        result = replace(result, parent_path=str(parent_path))
+    if result.errors:
         return result
-    return replace(result, parent_path=str(parent_path))
+    # The parent's contents are merged in; the pointer itself is not config.
+    merged.pop("parent", None)
+    merged["_provenance"].pop("parent", None)
+    return replace(result, config=merged)
 
 
 def validate_recipes(path: Path) -> list[ValidationResult]:

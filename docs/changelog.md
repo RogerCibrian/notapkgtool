@@ -198,6 +198,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The saved sign-in configuration (`auth.json` under NAPT's user data
+    folder) is written in one rename like every other file NAPT persists,
+    so a crash mid-write no longer leaves a half-written file that fails
+    every later `napt auth` command with a corrupt-config error
 - The sample recipes in this repository live under `recipes/Google/`, so
     the loader looks for `defaults/vendors/Google.yaml`. The shipped file
     was `google.yaml`, which matched only where the filesystem ignores
