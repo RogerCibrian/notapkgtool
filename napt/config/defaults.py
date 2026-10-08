@@ -20,8 +20,8 @@ defaults are always applied first, then overridden by organization defaults
 
 The configuration hierarchy is:
     1. Code defaults (this module) - always present
-    2. Organization defaults (defaults/org.yaml) - optional overrides
-    3. Vendor defaults (defaults/vendors/{Vendor}.yaml) - optional overrides
+    2. Organization defaults (defaults/org.yaml) - optional
+    3. Vendor defaults (defaults/vendors/{Vendor}.yaml) - optional
     4. Parent recipe (the file named by `parent`) - optional
     5. Recipe configuration - required, app-specific settings
 
@@ -138,7 +138,7 @@ ORG_YAML_TEMPLATE = """\
 #
 # Configuration hierarchy:
 #   1. NAPT built-in defaults (always present)
-#   2. This file (org.yaml) - your organization overrides
+#   2. This file (org.yaml) - your organization defaults
 #   3. Vendor defaults (defaults/vendors/<Vendor>.yaml)
 #   4. Parent recipe (the file a recipe names in its parent field)
 #   5. Recipe configuration (recipes/<Vendor>/<app>.yaml)

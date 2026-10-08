@@ -69,7 +69,7 @@ _INTUNE_FIELDS: _Schema = {
 }
 ```
 
-Presence of a required field, and any rule the table cannot express, goes in the section's `_validate_*` function. Strategy-specific fields go in the strategy's `validate_config()` and in the strategy's entry of `_DISCOVERY_FIELDS`.
+Presence of a required field, and any rule the table cannot express, goes in the section's `_validate_*` function. Strategy-specific fields go in the strategy's `validate_config()` and in the strategy's `FIELDS` set, which drives the unknown-key check for `discovery`.
 
 ## Step 3: Document in `docs/recipe-reference.md`
 
