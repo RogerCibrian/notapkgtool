@@ -89,6 +89,10 @@ napt/
 │   ├── manager.py              # Upload orchestration
 │   └── intunewin.py            # .intunewin package parser
 │
+├── upstream/                # Recipes vendored from other git repositories
+│   ├── lock.py                 # upstream.yaml lockfile, canonical hashing, repo directories
+│   └── vendored.py             # Foreign-parent detection, hash check, allowed keys
+│
 └── versioning/              # Version extraction and ordering
     ├── msi.py                  # MSI metadata extraction backends
     ├── msix.py                 # MSIX metadata extraction (AppxManifest)

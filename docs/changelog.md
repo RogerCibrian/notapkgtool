@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`upstream` is a reserved directory name for parent recipes** - A
+    `parent` under a directory named `upstream` (any case) is treated as a
+    recipe vendored from another repository: it must be listed in
+    `upstream.yaml` with a matching hash, only its app-owned keys are
+    merged (a visible line names any key that was ignored), and the
+    vendored file cannot be run directly. Keep local parents elsewhere,
+    such as `recipe-bases/`
+
 ## [0.12.0] - 2026-10-05
 
 ### Added

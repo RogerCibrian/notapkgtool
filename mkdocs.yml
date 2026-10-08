@@ -108,6 +108,7 @@ nav:
     - psadt: api/psadt.md
     - state: api/state.md
     - upload: api/upload.md
+    - upstream: api/upstream.md
     - versioning: api/versioning.md
   - About:
     - Changelog: changelog.md

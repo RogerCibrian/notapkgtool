@@ -95,6 +95,10 @@ A parent is an ordinary recipe and cannot declare a `parent` of its own.
 Keep the parent outside the recipe directory that commands scan (for
 example, `recipe-bases/` next to `recipes/`):
 NAPT would otherwise load it as a recipe of its own.
+Do not keep a local parent under a directory named `upstream`, in any
+case: that name is reserved for recipes vendored from other repositories,
+which must be listed in `upstream.yaml` and are loaded with only their
+app-owned keys.
 Set `name` and `id` in the child, since they identify the app in Intune and
 in NAPT's state, and two files with one `id` stop `napt promote`.
 
