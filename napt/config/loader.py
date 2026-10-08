@@ -39,6 +39,9 @@ Configuration Layers:
        - Another recipe merged beneath this one
        - Optional; a parent may not itself declare a parent
        - Wins over vendor defaults
+       - A parent under ``upstream/`` is foreign: it must match the hash
+         ``upstream.yaml`` records, and only app-owned keys are merged
+         (see [napt.upstream.vendored][])
 
     5. **Recipe configuration** (recipes/{Vendor}/{app}.yaml)
        - App-specific configuration
@@ -72,8 +75,9 @@ Dynamic Injection:
 
 Error Handling:
     - ConfigError: A missing recipe or parent file, a YAML parse error, a
-        file whose top level is not a mapping (in any layer), or a parent
-        chain
+        file whose top level is not a mapping (in any layer), a parent
+        chain, a foreign parent that is untracked or edited, or a vendored
+        copy run directly
     - All errors are chained with "from err" for better debugging
 
 Note:
@@ -88,6 +92,7 @@ Note:
 from __future__ import annotations
 
 import copy
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -97,6 +102,13 @@ import yaml
 from napt.config.defaults import DEFAULT_CONFIG
 from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
+from napt.upstream.vendored import (
+    filter_foreign_parent,
+    is_vendored_recipe,
+    tracked_location,
+    vendored_location,
+    verify_vendored,
+)
 
 
 def _read_yaml_bytes(path: Path, what: str) -> bytes:
@@ -227,28 +239,49 @@ def _deep_merge_dicts(
     return result
 
 
-def load_parent(
-    recipe_path: Path, recipe_obj: dict[str, Any]
-) -> tuple[Path, dict[str, Any]] | None:
+@dataclass(frozen=True)
+class LoadedParent:
+    """A parent recipe as the loader hands it to the merge.
+
+    Attributes:
+        path: The resolved parent file.
+        data: Its parsed contents, filtered to the allowed keys when the
+            parent is foreign.
+        dropped: The dotted names of the keys the filter removed; empty
+            for a local parent.
+    """
+
+    path: Path
+    data: dict[str, Any]
+    dropped: tuple[str, ...] = ()
+
+
+def load_parent(recipe_path: Path, recipe_obj: dict[str, Any]) -> LoadedParent | None:
     """Loads the parent recipe a recipe declares, if any.
 
     The ``parent`` field names another recipe file relative to the
     declaring recipe's directory. The parent is merged beneath the
     declaring recipe by
-    [merge_effective_config][napt.config.loader.merge_effective_config].
+    [merge_config_layers][napt.config.loader.merge_config_layers].
+
+    A parent under ``upstream/`` is foreign: its bytes must match the hash
+    recorded in ``upstream.yaml``, and only the keys in
+    [ALLOWED_PARENT_KEYS][napt.upstream.vendored.ALLOWED_PARENT_KEYS] are
+    kept. See [napt.upstream.vendored][] for what makes a parent foreign.
 
     Args:
         recipe_path: Path to the recipe that may declare ``parent``.
         recipe_obj: The parsed recipe dictionary.
 
     Returns:
-        The resolved parent path and its parsed contents, or None when the
-            recipe declares no parent.
+        The parent, or None when the recipe declares no parent.
 
     Raises:
         ConfigError: When ``parent`` is not a non-empty string, the parent
-            file is missing or not a mapping, or the parent itself declares
-            a parent (chains are not supported).
+            file is missing or not a mapping, the parent itself declares a
+            parent (chains are not supported), or a foreign parent is not
+            tracked in ``upstream.yaml`` or does not match its recorded
+            hash.
     """
     parent_ref = recipe_obj.get("parent")
     if parent_ref is None:
@@ -256,14 +289,26 @@ def load_parent(
     if not isinstance(parent_ref, str) or not parent_ref.strip():
         raise ConfigError(f"parent must be a non-empty string: {recipe_path}")
 
-    parent_path = (recipe_path.resolve().parent / parent_ref).resolve()
-    parent_obj = _load_yaml_mapping(parent_path, "Parent recipe")
+    recipe_dir = recipe_path.resolve().parent
+    parent_path = (recipe_dir / parent_ref).resolve()
+    # Foreign by the reference as written, or by where the file really is.
+    location = vendored_location(recipe_dir, parent_ref) or tracked_location(
+        parent_path
+    )
+
+    data = _read_yaml_bytes(parent_path, "Parent recipe")
+    if location is not None:
+        verify_vendored(parent_path, location, data)
+    parent_obj = _parse_yaml_mapping(data, parent_path)
     if "parent" in parent_obj:
         raise ConfigError(
             f"Parent chains are not supported: {parent_path} declares its own "
             f"parent (used as parent by {recipe_path})"
         )
-    return parent_path, parent_obj
+    if location is None:
+        return LoadedParent(path=parent_path, data=parent_obj)
+    kept, dropped = filter_foreign_parent(parent_obj)
+    return LoadedParent(path=parent_path, data=kept, dropped=dropped)
 
 
 def collect_recipe_paths(recipes: Path) -> list[Path]:
@@ -296,7 +341,9 @@ def resolve_state_dir(recipes: Path) -> Path:
 
     ``directories.state`` is org policy (consistent across a project),
     so the first recipe's effective configuration determines it for a
-    fleet-wide run.
+    fleet-wide run. The load is quiet: this reads one setting and reports
+    nothing about the recipe, so the command's own output (for example
+    ``napt status --format json``) is not preceded by recipe diagnostics.
 
     Args:
         recipes: A recipe YAML file, or a directory scanned recursively.
@@ -310,7 +357,7 @@ def resolve_state_dir(recipes: Path) -> Path:
 
     """
     first = collect_recipe_paths(recipes)[0]
-    config = load_effective_config(first)
+    config = load_effective_config(first, quiet=True)
     return Path(config["directories"]["state"])
 
 
@@ -477,14 +524,21 @@ def _print_yaml_content(data: dict[str, Any], indent: int = 0) -> None:
             logger.debug("CONFIG", " " * indent + line)
 
 
-def merge_effective_config(recipe_path: Path) -> tuple[dict[str, Any], Path | None]:
+def merge_effective_config(
+    recipe_path: Path, *, quiet: bool = False
+) -> tuple[dict[str, Any], Path | None]:
     """Merges the configuration layers for a recipe without validating them.
 
     Reads the recipe and the parent it declares, then merges them with
-    [merge_config_layers][napt.config.loader.merge_config_layers].
+    [merge_config_layers][napt.config.loader.merge_config_layers]. When
+    a foreign parent set keys the allow list dropped, one always-visible
+    line names them, because the effective configuration differs from
+    what the vendored file says.
 
     Args:
         recipe_path: Path to the recipe YAML file.
+        quiet: Skip the dropped-keys line, for a caller that reads one
+            setting and reports nothing about the recipe.
 
     Returns:
         The merged configuration and the parent recipe's path (None when
@@ -492,22 +546,35 @@ def merge_effective_config(recipe_path: Path) -> tuple[dict[str, Any], Path | No
 
     Raises:
         ConfigError: On a missing recipe or parent file, a YAML parse error,
-            a layer whose top level is not a mapping, or a parent chain.
+            a layer whose top level is not a mapping, a parent chain, a
+            recipe that is itself a vendored copy under ``upstream/``, or a
+            foreign parent that fails its hash check.
     """
     logger = get_global_logger()
+    if is_vendored_recipe(recipe_path):
+        raise ConfigError(
+            f"{recipe_path} is a vendored copy under upstream/. Run the "
+            f"override in recipes/ that names it as parent instead."
+        )
     recipe_path = recipe_path.resolve()
     logger.verbose("CONFIG", f"Loading recipe: {recipe_path}")
 
     recipe_obj = _load_yaml_mapping(recipe_path, "Recipe")
     parent = load_parent(recipe_path, recipe_obj)
+    if parent is not None and parent.dropped and not quiet:
+        logger.info(
+            "CONFIG",
+            "Ignoring from parent (not allowed from upstream recipes): "
+            + ", ".join(parent.dropped),
+        )
     merged = merge_config_layers(recipe_path, recipe_obj, parent)
-    return merged, parent[0] if parent is not None else None
+    return merged, parent.path if parent is not None else None
 
 
 def merge_config_layers(
     recipe_path: Path,
     recipe_obj: dict[str, Any],
-    parent: tuple[Path, dict[str, Any]] | None = None,
+    parent: LoadedParent | None = None,
 ) -> dict[str, Any]:
     """Merges the configuration layers for an already-parsed recipe.
 
@@ -534,9 +601,9 @@ def merge_config_layers(
             names the vendor and anchors relative paths and the search for
             defaults/org.yaml.
         recipe_obj: The parsed recipe.
-        parent: The parent's path and parsed contents, as
-            [load_parent][napt.config.loader.load_parent] returns them, or
-            None when the recipe declares no parent.
+        parent: The parent as [load_parent][napt.config.loader.load_parent]
+            returns it, already filtered when foreign, or None when the
+            recipe declares no parent.
 
     Returns:
         The merged configuration.
@@ -552,7 +619,7 @@ def merge_config_layers(
     parent_path: Path | None = None
     parent_obj: dict[str, Any] | None = None
     if parent is not None:
-        parent_path, parent_obj = parent
+        parent_path, parent_obj = parent.path, parent.data
 
     # 1) Find defaults root
     defaults_root = _find_defaults_root(recipe_dir)
@@ -668,7 +735,7 @@ def merge_config_layers(
     return merged
 
 
-def load_effective_config(recipe_path: Path) -> dict[str, Any]:
+def load_effective_config(recipe_path: Path, *, quiet: bool = False) -> dict[str, Any]:
     """Loads, merges, and validates the effective configuration for a recipe.
 
     Merges the layers with
@@ -679,26 +746,31 @@ def load_effective_config(recipe_path: Path) -> dict[str, Any]:
 
     Args:
         recipe_path: Path to the recipe YAML file.
+        quiet: Skip the validation warnings and the dropped-keys line, for
+            a caller that reads one setting and reports nothing about the
+            recipe.
 
     Returns:
         The merged configuration; code defaults are always included.
 
     Raises:
         ConfigError: On a missing recipe or parent file, a YAML parse error,
-            a layer whose top level is not a mapping, a parent chain, or a
-            configuration that fails validation.
+            a layer whose top level is not a mapping, a parent chain, a
+            foreign parent that fails its hash check, or a configuration
+            that fails validation.
     """
     from napt.validation import validate_config
 
     logger = get_global_logger()
-    merged, parent_path = merge_effective_config(recipe_path)
+    merged, parent_path = merge_effective_config(recipe_path, quiet=quiet)
 
     result = validate_config(merged, recipe_path=str(recipe_path.resolve()))
     if result.errors:
         where = f" (parent: {parent_path})" if parent_path is not None else ""
         raise ConfigError(f"Invalid configuration{where}: {'; '.join(result.errors)}")
-    for warning in result.warnings:
-        logger.warning("CONFIG", warning)
+    if not quiet:
+        for warning in result.warnings:
+            logger.warning("CONFIG", warning)
 
     # The parent's contents are merged in; the pointer itself is not config.
     merged.pop("parent", None)
