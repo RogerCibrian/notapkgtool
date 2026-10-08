@@ -2425,6 +2425,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../api/upstream/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    upstream
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/versioning/" class="md-nav__link">
         
   
@@ -3629,6 +3657,10 @@ A parent is an ordinary recipe and cannot declare a <code>parent</code> of its o
 <p>Keep the parent outside the recipe directory that commands scan (for
 example, <code>recipe-bases/</code> next to <code>recipes/</code>):
 NAPT would otherwise load it as a recipe of its own.
+Do not keep a local parent under a directory named <code>upstream</code>, in any
+case: that name is reserved for recipes vendored from other repositories,
+which must be listed in <code>upstream.yaml</code> and are loaded with only their
+app-owned keys.
 Set <code>name</code> and <code>id</code> in the child, since they identify the app in Intune and
 in NAPT's state, and two files with one <code>id</code> stop <code>napt promote</code>.</p>
 <p><strong>Example (in <code>recipes/Google/chrome.override.yaml</code>):</strong>
