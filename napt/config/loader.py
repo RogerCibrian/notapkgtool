@@ -99,6 +99,58 @@ from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
 
 
+def _read_yaml_bytes(path: Path, what: str) -> bytes:
+    """Reads a configuration file's bytes.
+
+    Args:
+        path: Path to the YAML file to read.
+        what: The file's role in the error message ("Recipe", "org.yaml").
+
+    Returns:
+        The file's content, untouched.
+
+    Raises:
+        ConfigError: When the file does not exist or cannot be read.
+    """
+    if not path.exists():
+        raise ConfigError(f"{what} not found: {path}")
+    try:
+        return path.read_bytes()
+    except OSError as err:
+        raise ConfigError(f"Cannot read {path}: {err}") from err
+
+
+def _parse_yaml_mapping(data: bytes, path: Path) -> dict[str, Any]:
+    """Parses configuration bytes that must hold a mapping at their top level.
+
+    Args:
+        data: The file's bytes, from
+            [_read_yaml_bytes][napt.config.loader._read_yaml_bytes].
+        path: Where the bytes came from, for error messages.
+
+    Returns:
+        The parsed mapping.
+
+    Raises:
+        ConfigError: When the bytes are not UTF-8, are not valid YAML, or
+            their top level is not a mapping.
+    """
+    try:
+        parsed = yaml.safe_load(data.decode("utf-8"))
+    except yaml.YAMLError as err:
+        raise ConfigError(f"Error parsing YAML: {path}: {err}") from err
+    except UnicodeDecodeError as err:
+        raise ConfigError(
+            f"Cannot read {path}: the file is not UTF-8 (a file saved by "
+            f"PowerShell's Out-File is often UTF-16). {err}"
+        ) from err
+    if parsed is None:
+        raise ConfigError(f"YAML file is empty: {path}")
+    if not isinstance(parsed, dict):
+        raise ConfigError(f"top-level YAML must be a mapping (dict): {path}")
+    return parsed
+
+
 def _load_yaml_mapping(path: Path, what: str) -> dict[str, Any]:
     """Loads a YAML file that must hold a mapping at its top level.
 
@@ -117,25 +169,7 @@ def _load_yaml_mapping(path: Path, what: str) -> dict[str, Any]:
         ConfigError: When the file does not exist, is not UTF-8, is not
             valid YAML, or its top level is not a mapping.
     """
-    if not path.exists():
-        raise ConfigError(f"{what} not found: {path}")
-    try:
-        with path.open("r", encoding="utf-8") as f:
-            data = yaml.safe_load(f)
-    except yaml.YAMLError as err:
-        raise ConfigError(f"Error parsing YAML: {path}: {err}") from err
-    except UnicodeDecodeError as err:
-        raise ConfigError(
-            f"Cannot read {path}: the file is not UTF-8 (a file saved by "
-            f"PowerShell's Out-File is often UTF-16). {err}"
-        ) from err
-    except OSError as err:
-        raise ConfigError(f"Cannot read {path}: {err}") from err
-    if data is None:
-        raise ConfigError(f"YAML file is empty: {path}")
-    if not isinstance(data, dict):
-        raise ConfigError(f"top-level YAML must be a mapping (dict): {path}")
-    return data
+    return _parse_yaml_mapping(_read_yaml_bytes(path, what), path)
 
 
 def _deep_merge_dicts(
@@ -446,21 +480,8 @@ def _print_yaml_content(data: dict[str, Any], indent: int = 0) -> None:
 def merge_effective_config(recipe_path: Path) -> tuple[dict[str, Any], Path | None]:
     """Merges the configuration layers for a recipe without validating them.
 
-    Performs the following operations:
-
-    1. Read recipe YAML and its parent recipe, if it declares one
-    2. Find defaults root by scanning upwards for defaults/org.yaml
-    3. Load org defaults from defaults/org.yaml
-    4. Load the vendor defaults named after the recipe's directory, if present
-    5. Merge: org -> vendor -> parent -> recipe (dicts deep-merge, lists
-       replace); the ``secrets`` section is taken from org.yaml alone
-    6. Resolve known relative paths (see Path resolution in the module
-       docstring)
-    7. Inject dynamic fields (AppScriptDate = today if absent)
-
-    The merged dict carries the recipe's ``parent`` field and a
-    ``_provenance`` entry naming the layer that set each value, so
-    validation can check both.
+    Reads the recipe and the parent it declares, then merges them with
+    [merge_config_layers][napt.config.loader.merge_config_layers].
 
     Args:
         recipe_path: Path to the recipe YAML file.
@@ -475,20 +496,65 @@ def merge_effective_config(recipe_path: Path) -> tuple[dict[str, Any], Path | No
     """
     logger = get_global_logger()
     recipe_path = recipe_path.resolve()
-    recipe_dir = recipe_path.parent
-
     logger.verbose("CONFIG", f"Loading recipe: {recipe_path}")
 
-    # 1) Read recipe and its parent, if any
     recipe_obj = _load_yaml_mapping(recipe_path, "Recipe")
+    parent = load_parent(recipe_path, recipe_obj)
+    merged = merge_config_layers(recipe_path, recipe_obj, parent)
+    return merged, parent[0] if parent is not None else None
+
+
+def merge_config_layers(
+    recipe_path: Path,
+    recipe_obj: dict[str, Any],
+    parent: tuple[Path, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Merges the configuration layers for an already-parsed recipe.
+
+    The recipe and its parent arrive as objects, so a recipe that is not on
+    disk yet can be merged exactly as it will be once written. Performs the
+    following operations:
+
+    1. Find defaults root by scanning upwards from the recipe's directory
+       for defaults/org.yaml
+    2. Load org defaults from defaults/org.yaml
+    3. Load the vendor defaults named after the recipe's directory, if present
+    4. Merge: org -> vendor -> parent -> recipe (dicts deep-merge, lists
+       replace); the ``secrets`` section is taken from org.yaml alone
+    5. Resolve known relative paths (see Path resolution in the module
+       docstring)
+    6. Inject dynamic fields (AppScriptDate = today if absent)
+
+    The merged dict carries the recipe's ``parent`` field and a
+    ``_provenance`` entry naming the layer that set each value, so
+    validation can check both.
+
+    Args:
+        recipe_path: Where the recipe lives or will live; its directory
+            names the vendor and anchors relative paths and the search for
+            defaults/org.yaml.
+        recipe_obj: The parsed recipe.
+        parent: The parent's path and parsed contents, as
+            [load_parent][napt.config.loader.load_parent] returns them, or
+            None when the recipe declares no parent.
+
+    Returns:
+        The merged configuration.
+
+    Raises:
+        ConfigError: On a missing or unreadable org.yaml or vendor file, or
+            one whose top level is not a mapping.
+    """
+    logger = get_global_logger()
+    recipe_path = recipe_path.resolve()
+    recipe_dir = recipe_path.parent
 
     parent_path: Path | None = None
     parent_obj: dict[str, Any] | None = None
-    loaded_parent = load_parent(recipe_path, recipe_obj)
-    if loaded_parent is not None:
-        parent_path, parent_obj = loaded_parent
+    if parent is not None:
+        parent_path, parent_obj = parent
 
-    # 2) Find defaults root
+    # 1) Find defaults root
     defaults_root = _find_defaults_root(recipe_dir)
     if defaults_root:
         logger.verbose("CONFIG", f"Found defaults root: {defaults_root}")
@@ -514,7 +580,7 @@ def merge_effective_config(recipe_path: Path) -> tuple[dict[str, Any], Path | No
     org_secrets: Any = {}
 
     if defaults_root:
-        # 3) Load org defaults; _find_defaults_root found this file.
+        # 2) Load org defaults; _find_defaults_root found this file.
         org_defaults_path = defaults_root / "org.yaml"
         logger.verbose(
             "CONFIG",
@@ -532,7 +598,7 @@ def merge_effective_config(recipe_path: Path) -> tuple[dict[str, Any], Path | No
         )
         layers_merged += 1
 
-        # 4) Load vendor defaults if present
+        # 3) Load vendor defaults if present
         vendor_name = _detect_vendor(recipe_path)
         if vendor_name:
             logger.verbose("CONFIG", f"Detected vendor: {vendor_name}")
@@ -552,7 +618,7 @@ def merge_effective_config(recipe_path: Path) -> tuple[dict[str, Any], Path | No
                 )
                 layers_merged += 1
 
-    # 5) Merge the parent beneath the recipe, then the recipe on top
+    # 4) Merge the parent beneath the recipe, then the recipe on top
     if parent_path is not None and parent_obj is not None:
         logger.verbose("CONFIG", f"Loading parent: {parent_path}")
         logger.debug("CONFIG", f"--- Content from {parent_path.name} ---")
@@ -587,10 +653,10 @@ def merge_effective_config(recipe_path: Path) -> tuple[dict[str, Any], Path | No
             f"{', '.join(top_level_keys)}"
         ),
     )
-    # 6) Resolve relative paths (branding paths relative to defaults_root)
+    # 5) Resolve relative paths (branding paths relative to defaults_root)
     _resolve_known_paths(merged, recipe_dir, defaults_root)
 
-    # 7) Inject dynamic values (e.g., AppScriptDate, RequireAdmin)
+    # 6) Inject dynamic values (e.g., AppScriptDate, RequireAdmin)
     _inject_dynamic_values(merged, provenance)
 
     # The configuration the command runs with, in debug mode
@@ -599,7 +665,7 @@ def merge_effective_config(recipe_path: Path) -> tuple[dict[str, Any], Path | No
 
     # Store provenance for downstream consumers
     merged["_provenance"] = provenance
-    return merged, parent_path
+    return merged
 
 
 def load_effective_config(recipe_path: Path) -> dict[str, Any]:

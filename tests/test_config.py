@@ -15,11 +15,15 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
+import yaml
 
 from napt.config.defaults import DEFAULT_CONFIG, ORG_YAML_TEMPLATE
 from napt.config.loader import (
     collect_recipe_paths,
     load_effective_config,
+    load_parent,
+    merge_config_layers,
+    merge_effective_config,
     register_recipe_id,
     resolve_state_dir,
 )
@@ -823,6 +827,80 @@ class TestParentRecipes:
         provenance = config["_provenance"]["discovery"]
         assert provenance["url"] == "recipe"
         assert provenance["strategy"] == "parent"
+
+    def test_utf16_parent_names_the_encoding(self, tmp_test_dir):
+        """Tests that a parent saved as UTF-16 is reported like a recipe."""
+        override = self._project(tmp_test_dir)
+        base = tmp_test_dir / "recipes" / "_base" / "base.yaml"
+        base.write_text(_PARENT_RECIPE, encoding="utf-16")
+
+        with pytest.raises(ConfigError, match="not UTF-8"):
+            load_effective_config(override)
+
+
+class TestMergeConfigLayers:
+    """Tests that merging parsed layers matches merging the same files from disk."""
+
+    @staticmethod
+    def _same_config(from_disk: dict, in_memory: dict) -> None:
+        """Compares two merged configs, ignoring the date injected at load time."""
+        for config in (from_disk, in_memory):
+            config["psadt"]["app_vars"].pop("AppScriptDate")
+        assert in_memory == from_disk
+
+    def test_matches_disk_merge_with_parent_org_and_vendor(self, tmp_test_dir):
+        """Tests that parsed recipe and parent objects merge as the files do."""
+        override = TestParentRecipes._project(
+            tmp_test_dir,
+            override_body="intune:\n  description: Child\n",
+            org_text="apiVersion: napt/v1\npsadt:\n  app_vars:\n    AppLang: DE\n",
+            vendor_text="psadt:\n  app_vars:\n    AppRevision: '02'\n",
+        )
+        from_disk, parent_path = merge_effective_config(override)
+        recipe_obj = yaml.safe_load(override.read_text())
+        parent = load_parent(override, recipe_obj)
+
+        in_memory = merge_config_layers(override, recipe_obj, parent)
+
+        assert parent is not None and parent[0] == parent_path
+        self._same_config(from_disk, in_memory)
+        assert in_memory["_provenance"]["psadt"]["app_vars"]["AppLang"] == "parent"
+        assert in_memory["psadt"]["app_vars"]["AppRevision"] == "02"
+
+    def test_matches_disk_merge_without_parent(self, tmp_test_dir):
+        """Tests that a plain recipe merges the same from an object."""
+        recipe = tmp_test_dir / "recipes" / "Google" / "app.yaml"
+        recipe.parent.mkdir(parents=True)
+        recipe.write_text(_PARENT_RECIPE)
+        from_disk, parent_path = merge_effective_config(recipe)
+
+        in_memory = merge_config_layers(recipe, yaml.safe_load(recipe.read_text()))
+
+        assert parent_path is None
+        self._same_config(from_disk, in_memory)
+
+    def test_does_not_read_the_recipe_from_disk(self, tmp_test_dir):
+        """Tests that the recipe object is used even when no file exists yet."""
+        recipe = tmp_test_dir / "recipes" / "Google" / "app.override.yaml"
+        recipe.parent.mkdir(parents=True)
+        base = tmp_test_dir / "recipe-bases" / "base.yaml"
+        base.parent.mkdir()
+        base.write_text(_PARENT_RECIPE)
+        recipe_obj = {
+            "apiVersion": "napt/v1",
+            "parent": "../../recipe-bases/base.yaml",
+            "name": "Unwritten",
+            "id": "unwritten",
+        }
+
+        merged = merge_config_layers(
+            recipe, recipe_obj, (base, yaml.safe_load(base.read_text()))
+        )
+
+        assert not recipe.exists()
+        assert merged["name"] == "Unwritten"
+        assert merged["discovery"]["url"] == "https://example.com/base.msi"
+        assert merged["_provenance"]["discovery"] == "parent"
 
 
 class TestUnreadableRecipeFiles:
