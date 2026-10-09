@@ -245,7 +245,7 @@ Scripts are saved as siblings to the `packagefiles/` directory and are not
 included in the `.intunewin` package:
 
 ```
-builds/napt-chrome/144.0.7559.110/
+builds/google-chrome/144.0.7559.110/
   ├── packagefiles/                                 # PSADT package (packaged into .intunewin)
   │   └── ...
   ├── Google-Chrome_144.0.7559.110-Detection.ps1    # Detection script
@@ -641,16 +641,16 @@ cache/
       └── <version>/                       # IntuneWinAppUtil.exe, downloaded by napt package
 
 icons/
-  └── napt-chrome.png                      # Extracted by napt build, read by napt upload
+  └── google-chrome.png                   # Extracted by napt build, read by napt upload
 
 downloads/
-  └── napt-chrome/
+  └── google-chrome/
       ├── .download.json                   # What the last discover run resolved
       └── 142.0.7444.163/
           └── googlechromestandaloneenterprise64.msi
 
 builds/
-  └── napt-chrome/
+  └── google-chrome/
       └── 142.0.7444.163/
           ├── packagefiles/                # PSADT package contents
           │   ├── PSAppDeployToolkit/      # PSADT module (from template)
@@ -668,7 +668,7 @@ builds/
           └── build-manifest.json              # Installer hash and metadata
 
 packages/
-  └── napt-chrome/
+  └── google-chrome/
       └── 142.0.7444.163/                              # One version kept at a time
           ├── Invoke-AppDeployToolkit.intunewin        # Encrypted package
           ├── Google-Chrome_142.0.7444.163-Detection.ps1    # Copied by napt package
@@ -677,9 +677,9 @@ packages/
 
 state/
   ├── deployment/
-  │   └── napt-chrome.json                 # Deployment state (authoritative)
+  │   └── google-chrome.json              # Deployment state (authoritative)
   └── plans/
-      └── napt-chrome.json                 # Promotion plan, written by napt promote plan
+      └── google-chrome.json              # Promotion plan, written by napt promote plan
 ```
 
 ## Commands reference
@@ -1137,7 +1137,7 @@ timestamps) so the file diff reads on its own in review:
 ```json
 {
   "schemaVersion": 1,
-  "app_id": "napt-chrome",
+  "app_id": "google-chrome",
   "name": "Google Chrome",
   "actions": [
     {
@@ -1257,7 +1257,7 @@ psadt:
 # recipes/Google/chrome.yaml
 apiVersion: napt/v1
 name: "Google Chrome"
-id: "napt-chrome"
+id: "google-chrome"
 discovery:
   strategy: url_download
   url: "https://dl.google.com/..."

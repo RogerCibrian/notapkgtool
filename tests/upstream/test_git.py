@@ -512,4 +512,4 @@ def test_fetches_a_recipe_from_this_repository_on_github():
 
     assert fetched.commit == refs.commit_for("main")
     assert entries[0].path == "recipes/Google/chrome.yaml"
-    assert b'id: "napt-chrome"' in data
+    assert b'name: "Google Chrome"' in data

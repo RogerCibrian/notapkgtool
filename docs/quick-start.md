@@ -108,7 +108,7 @@ Save this recipe as `recipes/Google/chrome.yaml`:
 ```yaml
 apiVersion: napt/v1
 name: "Google Chrome"
-id: "napt-chrome"
+id: "google-chrome"
 
 discovery:
   strategy: url_download
@@ -154,16 +154,16 @@ Discovering version for recipe: /path/to/recipes/Google/chrome.yaml
 [3/4] Fetching installer...
 [DOWNLOAD] Complete: googlechromestandaloneenterprise64.msi (<hash>...) in <seconds>s at <speed> MB/s
 [4/4] Updating state...
-[STATE] Recorded pending release <version> in state/deployment/napt-chrome.json
+[STATE] Recorded pending release <version> in state/deployment/google-chrome.json
 ======================================================================
 DISCOVERY RESULTS
 ======================================================================
 App Name:       Google Chrome
-App ID:         napt-chrome
+App ID:         google-chrome
 Strategy:       url_download
 Version:        <version>
 Version Source: msi
-File Path:      downloads/napt-chrome/<version>/googlechromestandaloneenterprise64.msi
+File Path:      downloads/google-chrome/<version>/googlechromestandaloneenterprise64.msi
 SHA-256:        <sha256>
 ======================================================================
 
@@ -190,7 +190,7 @@ Building PSADT package for recipe: /path/to/recipes/Google/chrome.yaml
 [2/8] Finding installer...
 [3/8] Inspecting installer...
 [BUILD] Building Google Chrome v<version>
-[BUILD] Extracted app icon (256px): icons/napt-chrome.png
+[BUILD] Extracted app icon (256px): icons/google-chrome.png
 [4/8] Getting PSADT release...
 [PSADT] Downloading PSADT <psadt version>...
 [BUILD] Using PSADT <psadt version>
@@ -204,10 +204,10 @@ Building PSADT package for recipe: /path/to/recipes/Google/chrome.yaml
 BUILD RESULTS
 ======================================================================
 App Name:        Google Chrome
-App ID:          napt-chrome
+App ID:          google-chrome
 Version:         <version>
 PSADT Version:   <psadt version>
-Build Directory: builds/napt-chrome/<version>/packagefiles
+Build Directory: builds/google-chrome/<version>/packagefiles
 ======================================================================
 
 [SUCCESS] PSADT package built successfully!
@@ -222,7 +222,7 @@ This step requires Windows.
 
 ```console
 $ napt package recipes/Google/chrome.yaml
-Creating .intunewin package from: builds/napt-chrome/<version>
+Creating .intunewin package from: builds/google-chrome/<version>
 Output directory: packages
 
 [1/5] Verifying build structure...
@@ -235,10 +235,10 @@ Output directory: packages
 ======================================================================
 PACKAGE RESULTS
 ======================================================================
-App ID:          napt-chrome
+App ID:          google-chrome
 Version:         <version>
-Package Path:    packages/napt-chrome/<version>/Invoke-AppDeployToolkit.intunewin
-Build Directory: builds/napt-chrome/<version>
+Package Path:    packages/google-chrome/<version>/Invoke-AppDeployToolkit.intunewin
+Build Directory: builds/google-chrome/<version>
 ======================================================================
 
 [SUCCESS] .intunewin package created successfully!
@@ -248,7 +248,7 @@ Build Directory: builds/napt-chrome/<version>
 Earlier versions' packages are left in place; NAPT never deletes another
 version's files.
 
-**Result:** Ready-to-upload .intunewin file in `packages/napt-chrome/<version>/`
+**Result:** Ready-to-upload .intunewin file in `packages/google-chrome/<version>/`
 
 ## What's next?
 

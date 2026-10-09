@@ -23,7 +23,7 @@ Requirements that depend on the installer, such as the EXE `install` and
 ```yaml
 apiVersion: napt/v1          # Required: recipe format version
 name: "Application Name"     # Required: display name
-id: "napt-app-id"            # Required: identifier and folder name
+id: "vendor-app"             # Required: identifier and folder name
 discovery:                   # Required: how to find and download the installer
   strategy: api_github
   repo: "owner/repository"
@@ -68,13 +68,25 @@ PSADT dialogs show `psadt.app_vars.AppName`, which is not filled from `name`.
 
 **Type:** `string`
 **Required:** Yes
-**Convention:** Lowercase, alphanumeric, hyphens (e.g., `napt-chrome`,
-`napt-git`)
+**Convention:** `<vendor>-<app>[-<variant>]` in lowercase letters, digits,
+and single hyphens (`google-chrome`, `microsoft-vscode`, `7zip-x64-msi`)
 
 Names the app's folders, so it must work as a folder name as-is: letters,
 digits, `.`, `-`, `_`, and `+`, starting with a letter or digit.
 `napt validate` rejects anything else, including path separators and `..`.
 Two recipe files with the same `id` stop `napt promote`.
+
+The `id` is the app's identity in NAPT's state and in the Intune notes
+stamp, so changing it later means a new app; pick it once.
+Follow the convention so ids from different recipe repositories rarely
+collide and read the same way everywhere: the vendor part matches the
+`recipes/<Vendor>/` folder, lowercased with spaces as hyphens, and a
+variant names the architecture or installer type.
+When the product is named after its vendor, omit the vendor part: `git`,
+`slack-msix`.
+An `id` outside this form still works; `napt validate` reports it as a
+warning.
+Do not encode where a recipe came from in its `id`.
 Used to generate:
 
 - Download directory: `downloads/{id}/{version}/`
@@ -1303,7 +1315,7 @@ For setting the variables locally and in CI/CD, see
 apiVersion: napt/v1
 
 name: "Example Application"
-id: "napt-example"
+id: "vendor-example"
 
 discovery:
   strategy: api_github

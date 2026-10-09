@@ -61,9 +61,9 @@ def sanitize_filename(name: str, app_id: str) -> str:
     Example:
         Basic sanitization:
             ```python
-            sanitize_filename("Google Chrome", "napt-chrome")  # "Google-Chrome"
-            sanitize_filename("Test<>App", "napt-test")        # "TestApp"
-            sanitize_filename("  ", "my-app")                   # "my-app"
+            sanitize_filename("Google Chrome", "google-chrome")  # "Google-Chrome"
+            sanitize_filename("Test<>App", "vendor-test")        # "TestApp"
+            sanitize_filename("  ", "vendor-app")                # "vendor-app"
             ```
 
     """

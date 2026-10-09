@@ -159,7 +159,7 @@ Use this when the application is hosted on GitHub with releases.
 apiVersion: napt/v1
 
 name: "Git for Windows"
-id: "napt-git"
+id: "git"
 
 discovery:
   strategy: api_github
@@ -214,7 +214,7 @@ available).
 apiVersion: napt/v1
 
 name: "7-Zip (x64) MSI"
-id: "napt-7zip-x64-msi"
+id: "7zip-x64-msi"
 
 discovery:
   strategy: web_scrape
@@ -270,7 +270,7 @@ Use this when the vendor provides a JSON API with version and download URL.
 apiVersion: napt/v1
 
 name: "Application Name"
-id: "napt-app"
+id: "vendor-app"
 
 discovery:
   strategy: api_json
@@ -328,7 +328,7 @@ Use this when the application distributes an `.msix` installer.
 apiVersion: napt/v1
 
 name: "Slack"
-id: "napt-slack"
+id: "slack-msix"
 
 discovery:
   strategy: api_json
@@ -374,7 +374,7 @@ strategy (`api_github`, `api_json`, or `web_scrape`).
 apiVersion: napt/v1
 
 name: "Google Chrome"
-id: "napt-chrome"
+id: "google-chrome"
 
 discovery:
   strategy: url_download
@@ -489,7 +489,7 @@ Run these checks on a new recipe, and again after editing one.
 3. **Verify downloaded file:**
    ```bash
    # Installers are filed as downloads/<id>/<version>/<file>
-   ls -lhR downloads/napt-app/
+   ls -lhR downloads/vendor-app/
    ```
 
 4. **Test build:**
@@ -500,7 +500,7 @@ Run these checks on a new recipe, and again after editing one.
 5. **Verify build structure:**
    ```bash
    # Check PSADT files are present
-   ls builds/napt-app/*/packagefiles/Invoke-AppDeployToolkit.ps1
+   ls builds/vendor-app/*/packagefiles/Invoke-AppDeployToolkit.ps1
    ```
 
 6. **Test packaging:**
@@ -511,7 +511,7 @@ Run these checks on a new recipe, and again after editing one.
 7. **Verify .intunewin file:**
    ```bash
    # Check versioned package directory was created
-   ls -lh packages/napt-app/
+   ls -lh packages/vendor-app/
    ```
 
 ## Deploy to Intune
@@ -593,12 +593,12 @@ Uploading package for recipe: /path/to/recipes/Google/chrome.yaml
 ======================================================================
 UPLOAD RESULTS
 ======================================================================
-App ID:                 napt-chrome
+App ID:                 google-chrome
 App Name:               Google Chrome
 Version:                <version>
 Intune Win32 App ID:    <app id>
 Intune Win32 Update ID: <update id>
-Package:                /path/to/packages/napt-chrome/<version>/Invoke-AppDeployToolkit.intunewin
+Package:                /path/to/packages/google-chrome/<version>/Invoke-AppDeployToolkit.intunewin
 ======================================================================
 
 [SUCCESS] Package uploaded to Intune successfully!
@@ -636,7 +636,7 @@ Override it per recipe in the `intune:` section:
 apiVersion: napt/v1
 
 name: "Google Chrome"
-id: "napt-chrome"
+id: "google-chrome"
 
 discovery:
   strategy: url_download
@@ -787,7 +787,7 @@ Use a 256x256 PNG or JPEG under 700KB for best results in Company Portal.
 
 ```bash
 # The file name must match the recipe id
-cp my-better-icon.png icons/napt-7zip-x64-msi.png
+cp my-better-icon.png icons/7zip-x64-msi.png
 ```
 
 NAPT never overwrites a file in `icons/`.
@@ -1481,7 +1481,7 @@ one file and name it as the `parent` of each app recipe.
    apiVersion: napt/v1
    parent: ../../recipe-bases/chromium-family.yaml
    name: "Google Chrome"
-   id: "napt-chrome"
+   id: "google-chrome"
    discovery:
      url: "https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi"
    ```
