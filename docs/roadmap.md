@@ -18,6 +18,7 @@ Entries here are ideas, not commitments. Priorities shift with user feedback, te
 
 | Feature | Status | Category | Complexity | Value |
 |---------|--------|----------|------------|-------|
+| Upstream Recipes | 🚧 In Progress | User-Facing | Very High | High |
 | Pre/Post Install/Uninstall Script Support | 💡 Idea | User-Facing | Low | Medium |
 | Enhanced CLI Help Menu | 💡 Idea | User-Facing | Low | Medium |
 | Intune App Categorization & Scope Tags | 💡 Idea | User-Facing | Medium | Medium |
@@ -33,14 +34,43 @@ Entries here are ideas, not commitments. Priorities shift with user feedback, te
 **Summary:**
 
 - ✅ **Completed** (since the last release): 0
+- 🚧 **In progress**: 1
 - 💡 **Ideas**: 11
-- **Total**: 11 features
+- **Total**: 12 features
 
 ---
 
 ## Active work
 
-_Nothing currently in progress._
+#### Upstream recipes
+
+**Status**: 🚧 In Progress
+**Complexity**: Very High (5-10 days)
+**Value**: High
+
+**Description**: Import recipes from any git repository with
+`napt upstream`, pin each one to the exact content it was imported at, and
+customize it in an override without editing the imported file.
+A pinned copy lands under `upstream/`, the override in `recipes/` names
+it as `parent`, and `upstream.yaml` records each recipe's commit and hashes.
+Only app-owned keys from an upstream recipe reach the merge, so
+`defaults/org.yaml` keeps owning tenant policy.
+Shipped so far: the parent layer, the trust check and allow list in the
+loader, the read-only git transport, the `id` convention, and
+`napt upstream add` and `remove`.
+Remaining: `napt upstream check` and `update`, which detect upstream
+changes and rewrite the pinned copies so CI can open a pull request whose
+diff is the recipe diff.
+
+**Benefits**:
+
+- Share recipes between projects without copying files by hand
+- Upstream changes arrive as reviewable diffs, never as silent updates
+- A tenant's policy can never be overridden by a recipe it did not write
+
+**Related**: The design is in `docs/plans/upstream-recipes.md`; the
+model is AutoPkg's override and trust-hash pattern with pinned copies in
+place of cloned repositories.
 
 ---
 

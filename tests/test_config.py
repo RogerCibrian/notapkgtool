@@ -839,9 +839,9 @@ class TestParentRecipes:
             load_effective_config(override)
 
 
-_VENDORED_PATH = "github.com/someorg/napt-recipes/recipes/Google/chrome.yaml"
+_PINNED_COPY = "github.com/someorg/napt-recipes/recipes/Google/chrome.yaml"
 
-_FOREIGN_PARENT = """apiVersion: napt/v1
+_PINNED_PARENT = """apiVersion: napt/v1
 name: Google Chrome
 id: chrome
 discovery:
@@ -861,24 +861,24 @@ deployment:
 """
 
 
-class TestForeignParents:
+class TestPinnedParents:
     """Tests for a parent under upstream/: the hash check and the allow list."""
 
     @staticmethod
     def _project(
         tmp_test_dir,
-        parent_text: str = _FOREIGN_PARENT,
+        parent_text: str = _PINNED_PARENT,
         *,
         tracked: bool = True,
         recorded_text: str | None = None,
         org_text: str = "apiVersion: napt/v1\n",
     ) -> Any:
-        """Writes a vendored parent, its lockfile entry, and an override."""
+        """Writes a pinned copy as the parent, its lockfile entry, and an override."""
         from napt.upstream.lock import canonical_sha256
 
-        vendored = tmp_test_dir / "upstream" / Path(_VENDORED_PATH)
-        vendored.parent.mkdir(parents=True)
-        vendored.write_text(parent_text)
+        pinned = tmp_test_dir / "upstream" / Path(_PINNED_COPY)
+        pinned.parent.mkdir(parents=True)
+        pinned.write_text(parent_text)
         if tracked:
             recorded = (recorded_text or parent_text).encode()
             (tmp_test_dir / "upstream.yaml").write_text(
@@ -886,10 +886,10 @@ class TestForeignParents:
                 "repos:\n"
                 "  - url: https://github.com/someorg/napt-recipes.git\n"
                 "    ref: main\n"
-                "    commit: 4f2a9c1e\n"
                 "    recipes:\n"
                 "      - path: recipes/Google/chrome.yaml\n"
                 "        override: recipes/Google/chrome.override.yaml\n"
+                "        commit: 4f2a9c1e\n"
                 "        blob: 9c1d2e3f\n"
                 f"        sha256: {canonical_sha256(recorded)}\n"
             )
@@ -900,12 +900,12 @@ class TestForeignParents:
         override.parent.mkdir(parents=True)
         override.write_text(
             "apiVersion: napt/v1\n"
-            f"parent: ../../upstream/{_VENDORED_PATH}\n"
+            f"parent: ../../upstream/{_PINNED_COPY}\n"
             "name: Google Chrome\nid: napt-chrome\n"
         )
         return override
 
-    def test_tenant_keys_from_a_foreign_parent_are_dropped(self, tmp_test_dir):
+    def test_tenant_keys_from_a_pinned_parent_are_dropped(self, tmp_test_dir):
         """Tests that org.yaml wins on keys the parent is not allowed to set."""
         override = self._project(
             tmp_test_dir,
@@ -941,7 +941,7 @@ class TestForeignParents:
 
     def test_nothing_dropped_prints_nothing(self, tmp_test_dir, capsys):
         """Tests that a parent setting only allowed keys is silent."""
-        parent = _FOREIGN_PARENT.replace('  release: "4.0.0"\n', "").replace(
+        parent = _PINNED_PARENT.replace('  release: "4.0.0"\n', "").replace(
             "  build_types: update_only\n", ""
         )
         parent = parent[: parent.index("deployment:")]
@@ -952,8 +952,8 @@ class TestForeignParents:
         assert "Ignoring" not in capsys.readouterr().out
 
     def test_non_mapping_section_cannot_erase_org_policy(self, tmp_test_dir):
-        """Tests that intune: [] in a foreign parent leaves org.yaml's intune intact."""
-        parent = _FOREIGN_PARENT.replace(
+        """Tests that intune: [] in a pinned parent leaves org.yaml's intune intact."""
+        parent = _PINNED_PARENT.replace(
             "intune:\n  build_types: update_only\n  description: From upstream\n",
             "intune: []\n",
         )
@@ -974,7 +974,7 @@ class TestForeignParents:
         """Tests that a base in recipe-bases/ keeps its tenant keys."""
         base = tmp_test_dir / "recipe-bases" / "base.yaml"
         base.parent.mkdir()
-        base.write_text(_FOREIGN_PARENT)
+        base.write_text(_PINNED_PARENT)
         override = tmp_test_dir / "recipes" / "Google" / "chrome.override.yaml"
         override.parent.mkdir(parents=True)
         override.write_text(
@@ -987,16 +987,16 @@ class TestForeignParents:
         assert config["deployment"]["rings"][0]["name"] == "theirs"
         assert config["psadt"]["release"] == "4.0.0"
 
-    def test_edited_vendored_file_is_refused(self, tmp_test_dir):
-        """Tests that a vendored file that drifted from its record fails to load."""
+    def test_edited_pinned_copy_is_refused(self, tmp_test_dir):
+        """Tests that a pinned copy that drifted from its record fails to load."""
         override = self._project(
-            tmp_test_dir, recorded_text=_FOREIGN_PARENT + "# edited later\n"
+            tmp_test_dir, recorded_text=_PINNED_PARENT + "# edited later\n"
         )
 
         with pytest.raises(ConfigError, match="differs from what .* recorded"):
             load_effective_config(override)
 
-    def test_untracked_vendored_file_is_refused(self, tmp_test_dir):
+    def test_untracked_file_under_upstream_is_refused(self, tmp_test_dir):
         """Tests that a hand-copied file under upstream/ fails to load."""
         override = self._project(tmp_test_dir, tracked=False)
 
@@ -1010,7 +1010,7 @@ class TestForeignParents:
         elsewhere.parent.mkdir()
         elsewhere.write_text(
             "apiVersion: napt/v1\n"
-            f"parent: ../upstream/{_VENDORED_PATH}\n"
+            f"parent: ../upstream/{_PINNED_COPY}\n"
             "name: Google Chrome\nid: napt-chrome\n"
         )
 
@@ -1020,7 +1020,7 @@ class TestForeignParents:
     def test_two_overrides_sharing_a_parent_are_both_checked(self, tmp_test_dir):
         """Tests that the check runs for every override, not the first only."""
         override = self._project(
-            tmp_test_dir, recorded_text=_FOREIGN_PARENT + "# edited later\n"
+            tmp_test_dir, recorded_text=_PINNED_PARENT + "# edited later\n"
         )
         second = override.with_name("chrome-beta.override.yaml")
         second.write_text(override.read_text().replace("napt-chrome", "beta"))
@@ -1030,12 +1030,12 @@ class TestForeignParents:
                 load_effective_config(path)
 
     def test_linked_parent_into_upstream_is_still_checked(self, tmp_test_dir):
-        """Tests that a link from recipe-bases/ cannot make a vendored file local."""
-        from tests.upstream.test_vendored import link_directory
+        """Tests that a link from recipe-bases/ cannot make a pinned copy local."""
+        from tests.upstream.test_pinned import link_directory
 
-        self._project(tmp_test_dir, recorded_text=_FOREIGN_PARENT + "# edited\n")
-        vendored_dir = (tmp_test_dir / "upstream" / Path(_VENDORED_PATH)).parent
-        link_directory(tmp_test_dir / "recipe-bases", vendored_dir)
+        self._project(tmp_test_dir, recorded_text=_PINNED_PARENT + "# edited\n")
+        pinned_dir = (tmp_test_dir / "upstream" / Path(_PINNED_COPY)).parent
+        link_directory(tmp_test_dir / "recipe-bases", pinned_dir)
         override = tmp_test_dir / "recipes" / "Google" / "linked.override.yaml"
         override.write_text(
             "apiVersion: napt/v1\nparent: ../../recipe-bases/chrome.yaml\n"
@@ -1045,20 +1045,20 @@ class TestForeignParents:
         with pytest.raises(ConfigError, match="differs from what"):
             load_effective_config(override)
 
-    def test_vendored_copy_run_directly_is_refused(self, tmp_test_dir):
-        """Tests that a command on the vendored file points at the override."""
+    def test_pinned_copy_run_directly_is_refused(self, tmp_test_dir):
+        """Tests that a command on the pinned copy points at the override."""
         self._project(tmp_test_dir)
-        vendored = tmp_test_dir / "upstream" / Path(_VENDORED_PATH)
+        pinned = tmp_test_dir / "upstream" / Path(_PINNED_COPY)
 
         with pytest.raises(ConfigError, match="Run the override"):
-            load_effective_config(vendored)
+            load_effective_config(pinned)
 
     def test_validate_reports_the_trust_failure(self, tmp_test_dir):
         """Tests that napt validate turns the hash check into an invalid result."""
         from napt.validation import validate_recipe
 
         override = self._project(
-            tmp_test_dir, recorded_text=_FOREIGN_PARENT + "# edited later\n"
+            tmp_test_dir, recorded_text=_PINNED_PARENT + "# edited later\n"
         )
 
         result = validate_recipe(override)
@@ -1066,9 +1066,9 @@ class TestForeignParents:
         assert not result.is_valid
         assert "differs from what" in result.errors[0]
 
-    def test_secrets_in_a_foreign_parent_never_reach_validation(self, tmp_test_dir):
+    def test_secrets_in_a_pinned_parent_never_reach_validation(self, tmp_test_dir):
         """Tests that a secrets block is dropped before the merge, not an error."""
-        parent = _FOREIGN_PARENT + "secrets:\n  TOKEN:\n    hosts: [evil.example]\n"
+        parent = _PINNED_PARENT + "secrets:\n  TOKEN:\n    hosts: [evil.example]\n"
         override = self._project(tmp_test_dir, parent)
 
         config = load_effective_config(override)

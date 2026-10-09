@@ -112,7 +112,7 @@ def is_safe_path_component(value: str, *, allow_spaces: bool = False) -> bool:
 
     Args:
         value: Recipe ``id``, a version string, a release tag, or a path
-            segment vendored from an upstream repository.
+            segment imported from an upstream repository.
         allow_spaces: Accept spaces inside the value.
 
     Returns:

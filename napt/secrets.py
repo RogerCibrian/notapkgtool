@@ -25,7 +25,7 @@ request must go to one of those hosts, and the URL must use https:
         hosts: ["api.vendor.com"]
 
 Variables the org file does not declare are unreachable from recipes, so a
-recipe (including one vendored from elsewhere) cannot pick up the runner's
+recipe (including one imported from elsewhere) cannot pick up the runner's
 other secrets such as ``AZURE_CLIENT_SECRET``. The config loader honors the
 ``secrets`` section from ``defaults/org.yaml`` alone; entries a vendor file,
 parent recipe, or recipe adds never reach the merged configuration.

@@ -15,6 +15,7 @@ from napt.cli import (
     promote,
     status,
     upload,
+    upstream,
     validate,
 )
 from napt.cli.main import build_parser, main
@@ -40,6 +41,14 @@ class TestBuildParser:
             (["promote", "plan"], promote.cmd_promote_plan),
             (["promote", "apply"], promote.cmd_promote_apply),
             (["status"], status.cmd_status),
+            (
+                ["upstream", "add", "https://x/r.git", "--path", "recipes"],
+                upstream.cmd_upstream_add,
+            ),
+            (
+                ["upstream", "remove", "recipes/a.override.yaml"],
+                upstream.cmd_upstream_remove,
+            ),
         ],
     )
     def test_every_command_dispatches_to_its_handler(self, argv, handler):

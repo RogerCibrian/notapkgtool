@@ -16,20 +16,23 @@
 
 ``upstream.yaml`` sits at the project root beside ``defaults/`` and is
 written by ``napt upstream`` alone. It lists every imported repository and,
-under each, the recipes vendored from it:
+under each, the recipes imported from it:
 
     apiVersion: napt/v1
     repos:
       - url: https://github.com/someorg/napt-recipes.git
         ref: main
-        commit: 4f2a9c1e0b7d3f8a2c6e1d9b5a4f7c3e8d2b6a1f
         recipes:
           - path: recipes/Google/chrome.yaml
             override: recipes/Google/chrome.override.yaml
+            commit: 4f2a9c1e0b7d3f8a2c6e1d9b5a4f7c3e8d2b6a1f
             blob: 9c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d
             sha256: 8e1b5f2c...
 
-The vendored location of a recipe is never stored; it is derived from the
+Each recipe carries its own ``commit``, so one repository's recipes can be
+pinned at different points and updated one at a time.
+
+The path of a recipe's pinned copy is never stored; it is derived from the
 repository URL and the recipe path, and it is the key the config loader
 looks an entry up by. ``sha256`` is over the file's bytes with CRLF line
 endings normalized to LF, so a checkout with ``autocrlf`` on Windows hashes
@@ -49,6 +52,7 @@ from urllib.parse import urlsplit
 import yaml
 
 from napt.exceptions import ConfigError
+from napt.files import write_text_atomic
 
 LOCKFILE_NAME = "upstream.yaml"
 """The lockfile's name; it lives beside the ``upstream/`` directory."""
@@ -73,7 +77,7 @@ def canonical_sha256(data: bytes) -> str:
 
 
 def repo_directory(url: str) -> PurePosixPath:
-    """Names the directory under ``upstream/`` a repository vendors into.
+    """Names the directory under ``upstream/`` that holds a repository's pinned copies.
 
     The directory is the host plus every path segment of the clone URL,
     with the user, port, ``.git`` suffix, and trailing slash removed, so
@@ -119,14 +123,21 @@ def repo_directory(url: str) -> PurePosixPath:
 
 @dataclass(frozen=True)
 class LockedRecipe:
-    """One vendored recipe as the lockfile records it.
+    """One imported recipe as the lockfile records it.
 
     Attributes:
-        path: The recipe's path inside its repository, forward slashes.
-        sha256: The canonical hash of the vendored copy.
+        path: The upstream recipe's path inside its repository, forward
+            slashes.
+        override: The override that runs it, relative to the project root.
+        commit: The commit the pinned copy was taken from.
+        blob: The git blob id of the upstream recipe's content.
+        sha256: The canonical hash of the pinned copy.
     """
 
     path: str
+    override: str
+    commit: str
+    blob: str
     sha256: str
 
 
@@ -136,11 +147,30 @@ class LockedRepo:
 
     Attributes:
         url: The clone URL as first given.
-        recipes: The recipes vendored from it.
+        ref: The branch or tag the recipes are taken from.
+        recipes: The recipes imported from it, each with its own commit.
     """
 
     url: str
+    ref: str
     recipes: tuple[LockedRecipe, ...]
+
+
+def same_repository(first: str, second: str) -> bool:
+    """Reports whether two clone URLs name one repository.
+
+    Args:
+        first: A clone URL.
+        second: Another clone URL, in any form git accepts.
+
+    Returns:
+        True when both map to the same directory under ``upstream/``, compared
+            case-insensitively.
+    """
+    a, b = repo_directory(first).parts, repo_directory(second).parts
+    return len(a) == len(b) and all(
+        x.lower() == y.lower() for x, y in zip(a, b, strict=True)
+    )
 
 
 @dataclass(frozen=True)
@@ -153,23 +183,57 @@ class Lockfile:
 
     repos: tuple[LockedRepo, ...]
 
-    def find(self, vendored: PurePosixPath) -> LockedRecipe | None:
-        """Looks a vendored file up by its path under ``upstream/``.
+    def find_repo(self, url: str) -> LockedRepo | None:
+        """Finds the entry for a repository by any form of its URL.
+
+        Args:
+            url: A clone URL.
+
+        Returns:
+            The entry, or None when the repository was never imported.
+        """
+        for repo in self.repos:
+            if same_repository(repo.url, url):
+                return repo
+        return None
+
+    def replace_repo(self, repo: LockedRepo | None, *, url: str) -> Lockfile:
+        """Returns a lockfile with one repository's entry replaced.
+
+        Args:
+            repo: The new entry, or None to drop the repository.
+            url: The URL identifying the repository to replace; a
+                repository not yet listed is appended.
+
+        Returns:
+            The new lockfile; this one is unchanged.
+        """
+        kept = [r for r in self.repos if not same_repository(r.url, url)]
+        if repo is not None:
+            position = next(
+                (i for i, r in enumerate(self.repos) if same_repository(r.url, url)),
+                len(kept),
+            )
+            kept.insert(position, repo)
+        return Lockfile(repos=tuple(kept))
+
+    def locate(self, pinned: PurePosixPath) -> tuple[LockedRepo, LockedRecipe] | None:
+        """Looks a pinned copy up by its path under ``upstream/``.
 
         The repository part of the path is compared case-insensitively,
         since GitHub names are and Windows directories collide anyway; the
         recipe path is compared exactly, as git recorded it.
 
         Args:
-            vendored: The file's path relative to the ``upstream/``
+            pinned: The file's path relative to the ``upstream/``
                 directory, for example
                 ``github.com/someorg/napt-recipes/recipes/Google/chrome.yaml``.
 
         Returns:
-            The matching entry, or None when no repository vendors that
-                file.
+            The repository and recipe entries, or None when no repository
+                entry tracks that pinned copy.
         """
-        parts = vendored.parts
+        parts = pinned.parts
         for repo in self.repos:
             directory = repo_directory(repo.url).parts
             head = parts[: len(directory)]
@@ -180,8 +244,21 @@ class Lockfile:
             recipe_path = "/".join(parts[len(directory) :])
             for recipe in repo.recipes:
                 if recipe.path == recipe_path:
-                    return recipe
+                    return repo, recipe
         return None
+
+    def find(self, pinned: PurePosixPath) -> LockedRecipe | None:
+        """Looks a pinned copy's recipe entry up by its path under ``upstream/``.
+
+        Args:
+            pinned: The file's path relative to the ``upstream/`` directory.
+
+        Returns:
+            The matching entry, or None; see
+                [locate][napt.upstream.lock.Lockfile.locate].
+        """
+        located = self.locate(pinned)
+        return located[1] if located is not None else None
 
 
 def _string(mapping: dict[str, Any], key: str, where: str, lockfile: Path) -> str:
@@ -208,20 +285,14 @@ def _parse_lockfile(data: bytes, lockfile: Path) -> Lockfile:
             f"file is written by napt upstream; restore it from git or run "
             f"'napt upstream add' again."
         )
-    # Every field napt upstream writes is required, so a malformed file is
-    # rejected whole, but only the fields the loader reads are kept; a later
-    # consumer that reads ref, commit, blob, or override adds it to the model.
     repos: list[LockedRepo] = []
     for index, repo in enumerate(parsed["repos"]):
         where = f"repos[{index}]"
         if not isinstance(repo, dict) or not isinstance(repo.get("recipes"), list):
             raise ConfigError(
-                f"Malformed {lockfile}: {where} needs 'url', 'ref', 'commit', "
-                f"and a 'recipes' list"
+                f"Malformed {lockfile}: {where} needs 'url', 'ref', and a "
+                f"'recipes' list"
             )
-        url = _string(repo, "url", where, lockfile)
-        for key in ("ref", "commit"):
-            _string(repo, key, where, lockfile)
         recipes: list[LockedRecipe] = []
         for position, entry in enumerate(repo["recipes"]):
             entry_where = f"{where}.recipes[{position}]"
@@ -229,16 +300,64 @@ def _parse_lockfile(data: bytes, lockfile: Path) -> Lockfile:
                 raise ConfigError(
                     f"Malformed {lockfile}: {entry_where} must be a mapping"
                 )
-            for key in ("override", "blob"):
-                _string(entry, key, entry_where, lockfile)
             recipes.append(
                 LockedRecipe(
                     path=_string(entry, "path", entry_where, lockfile),
+                    override=_string(entry, "override", entry_where, lockfile),
+                    commit=_string(entry, "commit", entry_where, lockfile),
+                    blob=_string(entry, "blob", entry_where, lockfile),
                     sha256=_string(entry, "sha256", entry_where, lockfile),
                 )
             )
-        repos.append(LockedRepo(url=url, recipes=tuple(recipes)))
+        repos.append(
+            LockedRepo(
+                url=_string(repo, "url", where, lockfile),
+                ref=_string(repo, "ref", where, lockfile),
+                recipes=tuple(recipes),
+            )
+        )
     return Lockfile(repos=tuple(repos))
+
+
+_HEADER = """\
+# Written by napt upstream. Do not edit by hand: it records, for every
+# pinned copy under upstream/, the commit it was taken from, its blob id,
+# and its sha256, and the config loader checks each pinned copy against it.
+"""
+
+
+def write_lockfile(path: Path, lock: Lockfile) -> None:
+    """Writes ``upstream.yaml`` atomically, after a fixed header comment.
+
+    Args:
+        path: The lockfile.
+        lock: What to write.
+
+    Raises:
+        OSError: When the file cannot be written.
+    """
+    document = {
+        "apiVersion": "napt/v1",
+        "repos": [
+            {
+                "url": repo.url,
+                "ref": repo.ref,
+                "recipes": [
+                    {
+                        "path": recipe.path,
+                        "override": recipe.override,
+                        "commit": recipe.commit,
+                        "blob": recipe.blob,
+                        "sha256": recipe.sha256,
+                    }
+                    for recipe in repo.recipes
+                ],
+            }
+            for repo in lock.repos
+        ],
+    }
+    body = yaml.safe_dump(document, sort_keys=False, allow_unicode=True)
+    write_text_atomic(path, _HEADER + body)
 
 
 @lru_cache(maxsize=8)

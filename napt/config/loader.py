@@ -39,9 +39,9 @@ Configuration Layers:
        - Another recipe merged beneath this one
        - Optional; a parent may not itself declare a parent
        - Wins over vendor defaults
-       - A parent under ``upstream/`` is foreign: it must match the hash
+       - A parent under ``upstream/`` is a pinned copy: it must match the hash
          ``upstream.yaml`` records, and only app-owned keys are merged
-         (see [napt.upstream.vendored][])
+         (see [napt.upstream.pinned][])
 
     5. **Recipe configuration** (recipes/{Vendor}/{app}.yaml)
        - App-specific configuration
@@ -76,7 +76,7 @@ Dynamic Injection:
 Error Handling:
     - ConfigError: A missing recipe or parent file, a YAML parse error, a
         file whose top level is not a mapping (in any layer), a parent
-        chain, a foreign parent that is untracked or edited, or a vendored
+        chain, a pinned parent that is untracked or edited, or a pinned
         copy run directly
     - All errors are chained with "from err" for better debugging
 
@@ -102,12 +102,12 @@ import yaml
 from napt.config.defaults import DEFAULT_CONFIG
 from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
-from napt.upstream.vendored import (
-    filter_foreign_parent,
-    is_vendored_recipe,
+from napt.upstream.pinned import (
+    filter_pinned_parent,
+    is_pinned_copy,
+    pinned_location,
     tracked_location,
-    vendored_location,
-    verify_vendored,
+    verify_pinned_copy,
 )
 
 
@@ -246,7 +246,7 @@ class LoadedParent:
     Attributes:
         path: The resolved parent file.
         data: Its parsed contents, filtered to the allowed keys when the
-            parent is foreign.
+            parent is a pinned copy.
         dropped: The dotted names of the keys the filter removed; empty
             for a local parent.
     """
@@ -264,10 +264,11 @@ def load_parent(recipe_path: Path, recipe_obj: dict[str, Any]) -> LoadedParent |
     declaring recipe by
     [merge_config_layers][napt.config.loader.merge_config_layers].
 
-    A parent under ``upstream/`` is foreign: its bytes must match the hash
+    A parent under ``upstream/`` is a pinned copy: its bytes must match the hash
     recorded in ``upstream.yaml``, and only the keys in
-    [ALLOWED_PARENT_KEYS][napt.upstream.vendored.ALLOWED_PARENT_KEYS] are
-    kept. See [napt.upstream.vendored][] for what makes a parent foreign.
+    [ALLOWED_PARENT_KEYS][napt.upstream.pinned.ALLOWED_PARENT_KEYS] are
+    kept. See [napt.upstream.pinned][] for what makes a parent a pinned
+    copy.
 
     Args:
         recipe_path: Path to the recipe that may declare ``parent``.
@@ -279,7 +280,7 @@ def load_parent(recipe_path: Path, recipe_obj: dict[str, Any]) -> LoadedParent |
     Raises:
         ConfigError: When ``parent`` is not a non-empty string, the parent
             file is missing or not a mapping, the parent itself declares a
-            parent (chains are not supported), or a foreign parent is not
+            parent (chains are not supported), or a pinned parent is not
             tracked in ``upstream.yaml`` or does not match its recorded
             hash.
     """
@@ -291,14 +292,12 @@ def load_parent(recipe_path: Path, recipe_obj: dict[str, Any]) -> LoadedParent |
 
     recipe_dir = recipe_path.resolve().parent
     parent_path = (recipe_dir / parent_ref).resolve()
-    # Foreign by the reference as written, or by where the file really is.
-    location = vendored_location(recipe_dir, parent_ref) or tracked_location(
-        parent_path
-    )
+    # Pinned by the reference as written, or by where the file really is.
+    location = pinned_location(recipe_dir, parent_ref) or tracked_location(parent_path)
 
     data = _read_yaml_bytes(parent_path, "Parent recipe")
     if location is not None:
-        verify_vendored(parent_path, location, data)
+        verify_pinned_copy(parent_path, location, data)
     parent_obj = _parse_yaml_mapping(data, parent_path)
     if "parent" in parent_obj:
         raise ConfigError(
@@ -307,7 +306,7 @@ def load_parent(recipe_path: Path, recipe_obj: dict[str, Any]) -> LoadedParent |
         )
     if location is None:
         return LoadedParent(path=parent_path, data=parent_obj)
-    kept, dropped = filter_foreign_parent(parent_obj)
+    kept, dropped = filter_pinned_parent(parent_obj)
     return LoadedParent(path=parent_path, data=kept, dropped=dropped)
 
 
@@ -531,9 +530,9 @@ def merge_effective_config(
 
     Reads the recipe and the parent it declares, then merges them with
     [merge_config_layers][napt.config.loader.merge_config_layers]. When
-    a foreign parent set keys the allow list dropped, one always-visible
+    a pinned parent set keys the allow list dropped, one always-visible
     line names them, because the effective configuration differs from
-    what the vendored file says.
+    what the pinned copy says.
 
     Args:
         recipe_path: Path to the recipe YAML file.
@@ -547,13 +546,13 @@ def merge_effective_config(
     Raises:
         ConfigError: On a missing recipe or parent file, a YAML parse error,
             a layer whose top level is not a mapping, a parent chain, a
-            recipe that is itself a vendored copy under ``upstream/``, or a
-            foreign parent that fails its hash check.
+            recipe that is itself a pinned copy under ``upstream/``, or a
+            pinned parent that fails its hash check.
     """
     logger = get_global_logger()
-    if is_vendored_recipe(recipe_path):
+    if is_pinned_copy(recipe_path):
         raise ConfigError(
-            f"{recipe_path} is a vendored copy under upstream/. Run the "
+            f"{recipe_path} is a pinned copy under upstream/. Run the "
             f"override in recipes/ that names it as parent instead."
         )
     recipe_path = recipe_path.resolve()
@@ -602,7 +601,7 @@ def merge_config_layers(
             defaults/org.yaml.
         recipe_obj: The parsed recipe.
         parent: The parent as [load_parent][napt.config.loader.load_parent]
-            returns it, already filtered when foreign, or None when the
+            returns it, already filtered when pinned, or None when the
             recipe declares no parent.
 
     Returns:
@@ -756,7 +755,7 @@ def load_effective_config(recipe_path: Path, *, quiet: bool = False) -> dict[str
     Raises:
         ConfigError: On a missing recipe or parent file, a YAML parse error,
             a layer whose top level is not a mapping, a parent chain, a
-            foreign parent that fails its hash check, or a configuration
+            pinned parent that fails its hash check, or a configuration
             that fails validation.
     """
     from napt.validation import validate_config

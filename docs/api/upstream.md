@@ -2,8 +2,12 @@
 
 ::: napt.upstream
 
+::: napt.upstream.add
+
+::: napt.upstream.remove
+
 ::: napt.upstream.git
 
 ::: napt.upstream.lock
 
-::: napt.upstream.vendored
+::: napt.upstream.pinned

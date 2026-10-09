@@ -861,8 +861,11 @@ It never creates duplicates.
 
 ## Automate NAPT with GitHub Actions
 
-NAPT performs no git or CI operations: it reads and writes files, and your
-pipeline commits them and opens pull requests.
+NAPT never commits, pushes, or opens pull requests: it reads and writes
+files, and your pipeline commits them and opens pull requests.
+(`napt upstream` fetches from other repositories read-only; it writes
+files into your working tree like any other command and never commits
+them.)
 The workflows below gate every change to Intune on a pull request.
 Adapt names, schedules, and branch rules to your org.
 They assume the default `directories.*` paths (`downloads/`, `state/`);
@@ -1448,10 +1451,85 @@ jobs:
   installed, since discover reads the version out of every MSI it
   downloads.
 
-## Share a base recipe between apps
+## Import recipes from another repository
 
-When several recipes differ only in a few fields, put the shared part in
-one file and name it as the `parent` of each app recipe.
+`napt upstream add` imports recipes from any git repository, pins each as
+a copy under `upstream/`, and writes the overrides that run them.
+How it fits together is in
+[Upstream recipes](user-guide.md#upstream-recipes); these are the steps.
+
+1. Import one recipe.
+   The default branch is used unless you pass `--ref`:
+   ```bash
+   napt upstream add https://github.com/someorg/napt-recipes.git \
+       --path recipes/Google/chrome.yaml
+   ```
+   Three files appear:
+   ```
+   upstream.yaml
+   upstream/github.com/someorg/napt-recipes/recipes/Google/chrome.yaml
+   recipes/Google/chrome.override.yaml
+   ```
+   Keys the recipe may not set are named once:
+   ```
+   [UPSTREAM] WARNING: recipes/Google/chrome.yaml: ignoring keys not allowed from upstream recipes: deployment, intune.build_types
+   ```
+
+2. Or import a directory, leaving some files out.
+   Run with `--dry-run` first to see every override path:
+   ```bash
+   napt upstream add https://github.com/someorg/napt-recipes.git \
+       --path recipes --exclude 'Beta/*' --dry-run
+   ```
+   Overrides mirror the path after the repository's `recipes/` segment.
+   Run the same command again later to pick up recipes the publisher
+   added; ones already imported are skipped (see
+   [Upstream recipes](user-guide.md#upstream-recipes)).
+   A repository without one needs `--dest`:
+   ```bash
+   napt upstream add https://gitlab.com/group/sub/recipes.git \
+       --path apps/tool.yaml --dest recipes/Tools
+   ```
+
+3. Customize in the override, never in the pinned copy:
+   ```yaml
+   # recipes/Google/chrome.override.yaml
+   apiVersion: napt/v1
+   parent: ../../upstream/github.com/someorg/napt-recipes/recipes/Google/chrome.yaml
+   name: "Google Chrome"
+   id: "google-chrome"
+   intune:
+     max_run_time_minutes: 120
+   ```
+   `add` copies the upstream `id`; pass `--id` when it collides with one you
+   already use, or to follow your own scheme.
+   Changing the `id` later creates a new app in Intune, so settle it at
+   import.
+
+4. Validate and run commands against the override as usual:
+   ```bash
+   napt validate recipes/Google/chrome.override.yaml
+   napt discover recipes/Google/chrome.override.yaml
+   ```
+   An edited pinned copy, or one not listed in `upstream.yaml`, fails
+   here with the fix named.
+
+5. Remove an import when you no longer want it:
+   ```bash
+   napt upstream remove recipes/Google/chrome.override.yaml --delete-override
+   ```
+   Without `--delete-override` the override stays for you to inline.
+
+Private repositories need credentials git can find from any directory; see
+[Credentials for private repositories](user-guide.md#credentials-for-private-repositories).
+
+## Share a local base recipe between apps
+
+When several of your own recipes differ only in a few fields, put the
+shared part in one file (a local parent) and name it as the `parent` of
+each app recipe.
+(An upstream recipe from another repository is imported instead; see the
+section above.)
 
 1. Write the base in a folder outside `recipes/`, so neither the workflows
    nor `napt promote` pick it up as an app.

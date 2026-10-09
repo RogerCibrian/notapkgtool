@@ -14,22 +14,23 @@
 
 """What the config loader does with a parent under ``upstream/``.
 
-A parent is foreign when the ``parent`` reference in the override, taken
+A parent is a pinned copy when the ``parent`` reference in the override, taken
 relative to the override's directory, passes through a directory named
 ``upstream`` (any case). Only the segments between the override and the
 parent count, so a project that itself lives under a folder called
 ``upstream`` is unaffected. A parent whose resolved path sits under a
 tracked ``upstream/`` directory (one with ``upstream.yaml`` beside it) is
-foreign as well, so a symlink from elsewhere cannot present a vendored
-file as local. A foreign parent must be listed in the
+a pinned copy as well, so a symlink from elsewhere cannot present one as
+local. A pinned parent must be listed in the
 ``upstream.yaml`` beside that directory with a matching hash, and only the
 app-owned keys in
-[ALLOWED_PARENT_KEYS][napt.upstream.vendored.ALLOWED_PARENT_KEYS]
+[ALLOWED_PARENT_KEYS][napt.upstream.pinned.ALLOWED_PARENT_KEYS]
 reach the merge; everything else is tenant policy that ``defaults/org.yaml``
 keeps owning without the override restating it.
 
-A recipe under ``upstream/`` is never run directly; commands run the
-override that names it.
+A pinned copy under ``upstream/`` is never run directly; commands run the
+override that names it as ``parent``. A "pinned parent" below is a parent
+that is a pinned copy, as opposed to a local parent.
 """
 
 from __future__ import annotations
@@ -75,7 +76,7 @@ ALLOWED_PARENT_KEYS: dict[str, frozenset[str] | None] = {
         }
     ),
 }
-"""The keys a foreign parent may set.
+"""The keys a pinned parent may set.
 
 A top-level key mapped to None is taken whole; one mapped to a set keeps
 only the named sub-keys. Any key not listed is dropped, so a field this
@@ -86,8 +87,8 @@ recipe-required, and absent-means-skip fields go on it.
 
 
 @dataclass(frozen=True)
-class VendoredLocation:
-    """Where a foreign parent sits relative to its ``upstream/`` directory.
+class PinnedLocation:
+    """Where a pinned copy sits relative to its ``upstream/`` directory.
 
     Attributes:
         upstream_dir: The ``upstream/`` directory the parent is under.
@@ -109,7 +110,7 @@ def _is_upstream_segment(name: str) -> bool:
     return name.lower() == UPSTREAM_DIR_NAME
 
 
-def vendored_location(recipe_dir: Path, parent_ref: str) -> VendoredLocation | None:
+def pinned_location(recipe_dir: Path, parent_ref: str) -> PinnedLocation | None:
     """Decides whether a ``parent`` reference points under ``upstream/``.
 
     Only the path between the override's directory and the parent is
@@ -122,8 +123,8 @@ def vendored_location(recipe_dir: Path, parent_ref: str) -> VendoredLocation | N
         parent_ref: The ``parent`` value as written in the override.
 
     Returns:
-        The parent's location when it is foreign, or None when it is a
-            local parent.
+        The parent's location when it is a pinned copy, or None when it is
+            a local parent.
     """
     target = os.path.normpath(os.path.join(recipe_dir, parent_ref))
     try:
@@ -136,14 +137,14 @@ def vendored_location(recipe_dir: Path, parent_ref: str) -> VendoredLocation | N
             upstream_dir = Path(
                 os.path.normpath(recipe_dir.joinpath(*parts[: index + 1]))
             )
-            return VendoredLocation(
+            return PinnedLocation(
                 upstream_dir=upstream_dir,
                 relative=PurePosixPath(*parts[index + 1 :]),
             )
     return None
 
 
-def tracked_location(path: Path) -> VendoredLocation | None:
+def tracked_location(path: Path) -> PinnedLocation | None:
     """Finds the tracked ``upstream/`` directory a file really sits under.
 
     The path is resolved, so a symlink or junction that points into
@@ -164,32 +165,34 @@ def tracked_location(path: Path) -> VendoredLocation | None:
             _is_upstream_segment(ancestor.name)
             and (ancestor.parent / LOCKFILE_NAME).is_file()
         ):
-            return VendoredLocation(
+            return PinnedLocation(
                 upstream_dir=ancestor,
                 relative=PurePosixPath(*resolved.relative_to(ancestor).parts),
             )
     return None
 
 
-def is_vendored_recipe(recipe_path: Path) -> bool:
+def is_pinned_copy(recipe_path: Path) -> bool:
     """Reports whether a recipe file itself sits under a tracked ``upstream/``.
 
     Args:
         recipe_path: The recipe a command was asked to run.
 
     Returns:
-        Whether the file is a vendored copy rather than an override.
+        Whether the file is a pinned copy rather than an override.
     """
     return tracked_location(recipe_path) is not None
 
 
-def verify_vendored(parent_path: Path, location: VendoredLocation, data: bytes) -> None:
-    """Checks a foreign parent against its lockfile entry.
+def verify_pinned_copy(
+    parent_path: Path, location: PinnedLocation, data: bytes
+) -> None:
+    """Checks a pinned parent against its lockfile entry.
 
     Args:
         parent_path: The parent file, for messages.
         location: Where the parent sits, from
-            [vendored_location][napt.upstream.vendored.vendored_location].
+            [pinned_location][napt.upstream.pinned.pinned_location].
         data: The parent's bytes as read from disk.
 
     Raises:
@@ -201,7 +204,7 @@ def verify_vendored(parent_path: Path, location: VendoredLocation, data: bytes) 
     if not lockfile.is_file():
         raise ConfigError(
             f"{parent_path} is under {location.upstream_dir} but there is no "
-            f"{lockfile} tracking it. Vendored recipes are written by 'napt "
+            f"{lockfile} tracking it. Pinned copies are written by 'napt "
             f"upstream add'; import the recipe with it, or keep a local parent "
             f"outside a directory named '{UPSTREAM_DIR_NAME}'."
         )
@@ -214,17 +217,17 @@ def verify_vendored(parent_path: Path, location: VendoredLocation, data: bytes) 
     actual = canonical_sha256(data)
     if actual != entry.sha256:
         raise ConfigError(
-            f"Vendored recipe {parent_path} differs from what {lockfile} "
+            f"Pinned copy {parent_path} differs from what {lockfile} "
             f"recorded (sha256 {actual[:12]}, expected {entry.sha256[:12]}). "
             f"Move local edits into the override, or run 'napt upstream update' "
-            f"to refresh the vendored copy."
+            f"to refresh the pinned copy."
         )
 
 
-def filter_foreign_parent(
+def filter_pinned_parent(
     data: dict[str, Any],
 ) -> tuple[dict[str, Any], tuple[str, ...]]:
-    """Keeps only the keys a foreign parent may set.
+    """Keeps only the keys a pinned parent may set.
 
     A section the allow list restricts is filtered key by key when it is a
     mapping; one of another shape (a list, null, a string) is dropped whole

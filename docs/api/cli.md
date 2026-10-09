@@ -22,4 +22,6 @@
 
 ::: napt.cli.upload
 
+::: napt.cli.upstream
+
 ::: napt.cli.validate

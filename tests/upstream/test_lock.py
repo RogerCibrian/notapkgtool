@@ -14,16 +14,17 @@ from napt.upstream.lock import (
     canonical_sha256,
     read_lockfile,
     repo_directory,
+    write_lockfile,
 )
 
 _LOCKFILE = """apiVersion: napt/v1
 repos:
   - url: https://github.com/SomeOrg/napt-recipes.git
     ref: main
-    commit: 4f2a9c1e0b7d3f8a2c6e1d9b5a4f7c3e8d2b6a1f
     recipes:
       - path: recipes/Google/chrome.yaml
         override: recipes/Google/chrome.override.yaml
+        commit: 4f2a9c1e0b7d3f8a2c6e1d9b5a4f7c3e8d2b6a1f
         blob: 9c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d
         sha256: abc123
 """
@@ -44,7 +45,7 @@ class TestCanonicalSha256:
 
 
 class TestRepoDirectory:
-    """Tests for the directory a clone URL vendors into."""
+    """Tests for the directory a repository's pinned copies land in."""
 
     @pytest.mark.parametrize(
         "url",
@@ -76,17 +77,48 @@ class TestRepoDirectory:
 
 
 class TestLockfileFind:
-    """Tests for looking an entry up by its vendored path."""
+    """Tests for looking an entry up by its pinned copy's path."""
 
     @staticmethod
     def _lockfile() -> Lockfile:
-        entry = LockedRecipe(path="recipes/Google/chrome.yaml", sha256="abc")
+        entry = LockedRecipe(
+            path="recipes/Google/chrome.yaml",
+            override="recipes/Google/chrome.override.yaml",
+            commit="4f2a",
+            blob="9c1d",
+            sha256="abc",
+        )
         repo = LockedRepo(
-            url="https://github.com/SomeOrg/napt-recipes.git", recipes=(entry,)
+            url="https://github.com/SomeOrg/napt-recipes.git",
+            ref="main",
+            recipes=(entry,),
         )
         return Lockfile(repos=(repo,))
 
-    def test_finds_by_vendored_path(self):
+    def test_finds_a_repository_by_any_url_form(self):
+        """Tests that scp-like and https forms find the same entry."""
+        lock = self._lockfile()
+
+        assert lock.find_repo("git@github.com:someorg/NAPT-recipes.git") is not None
+        assert lock.find_repo("https://gitlab.com/x/y.git") is None
+
+    def test_replace_repo_keeps_position_and_appends_new(self):
+        """Tests that replacing keeps order and None drops the entry."""
+        lock = self._lockfile()
+        other = LockedRepo(url="https://gitlab.com/x/y.git", ref="main", recipes=())
+
+        appended = lock.replace_repo(other, url=other.url)
+        replaced = appended.replace_repo(
+            LockedRepo(url=lock.repos[0].url, ref="v2", recipes=()),
+            url="git@github.com:SomeOrg/napt-recipes.git",
+        )
+        dropped = replaced.replace_repo(None, url=other.url)
+
+        assert [r.url for r in appended.repos] == [lock.repos[0].url, other.url]
+        assert replaced.repos[0].ref == "v2" and replaced.repos[1] == other
+        assert [r.url for r in dropped.repos] == [lock.repos[0].url]
+
+    def test_finds_by_pinned_copy_path(self):
         """Tests that the derived directory plus the recipe path is the key."""
         found = self._lockfile().find(
             PurePosixPath("github.com/SomeOrg/napt-recipes/recipes/Google/chrome.yaml")
@@ -130,9 +162,26 @@ class TestReadLockfile:
         lock = read_lockfile(lockfile)
 
         assert lock.repos[0].url == "https://github.com/SomeOrg/napt-recipes.git"
+        assert lock.repos[0].ref == "main"
         assert lock.repos[0].recipes[0] == LockedRecipe(
-            path="recipes/Google/chrome.yaml", sha256="abc123"
+            path="recipes/Google/chrome.yaml",
+            override="recipes/Google/chrome.override.yaml",
+            commit="4f2a9c1e0b7d3f8a2c6e1d9b5a4f7c3e8d2b6a1f",
+            blob="9c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d",
+            sha256="abc123",
         )
+
+    def test_round_trip_through_write(self, tmp_path):
+        """Tests that a written lockfile reads back equal, header included."""
+        lockfile = tmp_path / "upstream.yaml"
+        lockfile.write_text(_LOCKFILE)
+        lock = read_lockfile(lockfile)
+        target = tmp_path / "out" / "upstream.yaml"
+
+        write_lockfile(target, lock)
+
+        assert target.read_text().startswith("# Written by napt upstream.")
+        assert read_lockfile(target) == lock
 
     def test_missing_lockfile_is_a_config_error(self, tmp_path):
         """Tests that a lockfile that does not exist is reported, not raised raw."""

@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`napt upstream add` and `remove`** - Import recipes from any git
+    repository. `add` writes a pinned copy of each recipe, byte-identical, under
+    `upstream/<host>/<repo path>/`, writes `recipes/<Vendor>/<app>.override.yaml`
+    with `parent` pointing at the pinned copy and the recipe's `name` and
+    `id`, and records each recipe's commit and hashes in `upstream.yaml`.
+    Imports a file or a whole directory (`--exclude` globs, `--dry-run`;
+    re-running a directory import skips recipes already imported), pins a
+    branch or tag with `--ref`, and takes `--dest` and `--id`. Only app-owned keys
+    from an upstream recipe reach the merge; tenant policy stays with
+    `org.yaml`. Nothing is written unless every recipe validates. `remove`
+    deletes the pinned copy and its entry, keeping the override unless
+    `--delete-override`. Requires `git` on PATH
+
 - **Recommended `id` form** - `napt validate` warns when an `id` is outside
     `<vendor>-<app>[-<variant>]` in lowercase letters, digits, and single
     hyphens (`google-chrome`, `7zip-x64-msi`). Existing ids keep working;
@@ -24,10 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`upstream` is a reserved directory name for parent recipes** - A
     `parent` under a directory named `upstream` (any case) is treated as a
-    recipe vendored from another repository: it must be listed in
+    pinned copy written by `napt upstream add`: it must be listed in
     `upstream.yaml` with a matching hash, only its app-owned keys are
     merged (a visible line names any key that was ignored), and the
-    vendored file cannot be run directly. Keep local parents elsewhere,
+    pinned copy cannot be run directly. Keep local parents elsewhere,
     such as `recipe-bases/`
 
 ## [0.12.0] - 2026-10-05
@@ -37,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`secrets` section in `defaults/org.yaml`** - Declares the environment
     variables a recipe may send with its discovery request and the hosts
     each may go to. Only org.yaml can declare them: a vendor file, parent
-    recipe, or recipe that tries fails validation, so a vendored recipe can
+    recipe, or recipe that tries fails validation, so a pinned copy can
     neither reach the runner's other secrets nor send a declared one
     somewhere else
 - **`napt validate` checks a directory** - Every recipe under it is

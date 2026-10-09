@@ -34,6 +34,7 @@ from napt.cli import (
     promote,
     status,
     upload,
+    upstream,
     validate,
 )
 from napt.cli.common import run_handler, setup_logging
@@ -73,6 +74,7 @@ def build_parser() -> argparse.ArgumentParser:
     auth.register(subparsers)
     promote.register(subparsers)
     status.register(subparsers)
+    upstream.register(subparsers)
     return parser
 
 
