@@ -4,7 +4,7 @@
 
 **NAPT does:** Discovery, packaging, deployment, state management.
 
-**NAPT does not:** Git operations, PR creation, CI/CD workflow logic. Don't add `--create-pr` flags or git commands.
+**NAPT does not:** commit, branch, push, tag, or open PRs on the user's repository, and it contains no CI/CD workflow logic. Don't add `--create-pr` flags. Read-only `git ls-remote`, `git fetch`, and object reads against upstream recipe repositories are transport for `napt upstream` (`napt/upstream/git.py`) and are allowed; they run in a temporary directory and never touch the user's working tree or `.git`.
 
 **Audience — CLI tool, not a library:** NAPT is a CLI consumed via `napt <command>`. Write docstrings, examples, and architectural decisions for two audiences only:
 
@@ -325,7 +325,7 @@ Examples:
 - `"Copying file: PSAppDeployToolkit/"` → `verbose` (internal file operation)
 
 **Prefixes:** The prefix names the pipeline stage the message belongs to
-(`DISCOVERY`, `BUILD`, `PACKAGE`, `UPLOAD`, `PROMOTE`, `INIT`). Shared
+(`DISCOVERY`, `BUILD`, `PACKAGE`, `UPLOAD`, `PROMOTE`, `INIT`, `UPSTREAM`). Shared
 infrastructure modules log under their domain instead, so the same module
 reads consistently regardless of which stage called it: `HTTP` for
 transport (requests, retries), `AUTH`, `FILE`, `CACHE`, `CONFIG` (loading

@@ -114,3 +114,21 @@ class TestIsSafePathComponent:
     def test_unsafe_names_are_rejected(self, value: str):
         """Tests that separators, dot runs, and reserved names are rejected."""
         assert not is_safe_path_component(value)
+
+    def test_spaces_are_rejected_by_default(self):
+        """Tests that an id or version with a space is not a folder name."""
+        assert not is_safe_path_component("Visual Studio Code")
+
+    @pytest.mark.parametrize(
+        "value", ["Visual Studio Code", "Visual Studio Code.yaml", "7 Zip"]
+    )
+    def test_spaces_between_characters_are_accepted_when_allowed(self, value: str):
+        """Tests that a vendored file name may carry single spaces."""
+        assert is_safe_path_component(value, allow_spaces=True)
+
+    @pytest.mark.parametrize(
+        "value", [" leading", "trailing ", "double  space", "space .", "NUL"]
+    )
+    def test_edge_and_repeated_spaces_are_still_rejected(self, value: str):
+        """Tests that spaces Windows would strip, or runs of them, stay rejected."""
+        assert not is_safe_path_component(value, allow_spaces=True)

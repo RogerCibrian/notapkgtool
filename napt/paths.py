@@ -52,6 +52,11 @@ _POWERSHELL_ACTIVE_RE = re.compile("[$;`'\u2018\u2019\u201a\u201b\u201c\u201d\u2
 # digit, then letters, digits, dot, hyphen, underscore, or plus.
 _SAFE_COMPONENT_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._+-]*")
 
+# The same, with single spaces allowed between other characters.
+_SAFE_COMPONENT_WITH_SPACES_RE = re.compile(
+    r"[A-Za-z0-9][A-Za-z0-9._+-]*(?: [A-Za-z0-9._+-]+)*"
+)
+
 
 def _is_reserved(name: str) -> bool:
     """Reports whether Windows treats the name as a device, such as NUL.txt."""
@@ -94,22 +99,29 @@ def safe_filename(raw: str) -> str | None:
     return name
 
 
-def is_safe_path_component(value: str) -> bool:
+def is_safe_path_component(value: str, *, allow_spaces: bool = False) -> bool:
     """Reports whether a value can be used as a folder name as-is.
 
     Accepts letters, digits, dot, hyphen, underscore, and plus, starting with
     a letter or digit. Rejects anything containing a path separator or ``..``,
-    names ending in a dot, and reserved device names.
+    names ending in a dot, and reserved device names. With ``allow_spaces``,
+    single spaces may appear between other characters, for a file name
+    copied from another repository (``Visual Studio Code.yaml``); a leading
+    or trailing space is still rejected because Windows strips it, so two
+    names would collide.
 
     Args:
-        value: Recipe ``id``, a version string, or a release tag.
+        value: Recipe ``id``, a version string, a release tag, or a path
+            segment vendored from an upstream repository.
+        allow_spaces: Accept spaces inside the value.
 
     Returns:
         True when joining the value onto a directory stays inside it.
 
     """
+    pattern = _SAFE_COMPONENT_WITH_SPACES_RE if allow_spaces else _SAFE_COMPONENT_RE
     return (
-        _SAFE_COMPONENT_RE.fullmatch(value) is not None
+        pattern.fullmatch(value) is not None
         and ".." not in value
         and not value.endswith(".")
         and not _is_reserved(value)
