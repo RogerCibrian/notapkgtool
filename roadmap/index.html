@@ -1700,6 +1700,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Active work">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#upstream-recipes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upstream recipes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2014,6 +2031,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Active work">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#upstream-recipes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upstream recipes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2272,6 +2306,13 @@
 </thead>
 <tbody>
 <tr>
+<td>Upstream Recipes</td>
+<td>🚧 In Progress</td>
+<td>User-Facing</td>
+<td>Very High</td>
+<td>High</td>
+</tr>
+<tr>
 <td>Pre/Post Install/Uninstall Script Support</td>
 <td>💡 Idea</td>
 <td>User-Facing</td>
@@ -2353,12 +2394,38 @@
 <p><strong>Summary:</strong></p>
 <ul>
 <li>✅ <strong>Completed</strong> (since the last release): 0</li>
+<li>🚧 <strong>In progress</strong>: 1</li>
 <li>💡 <strong>Ideas</strong>: 11</li>
-<li><strong>Total</strong>: 11 features</li>
+<li><strong>Total</strong>: 12 features</li>
 </ul>
 <hr />
 <h2 id="active-work">Active work</h2>
-<p><em>Nothing currently in progress.</em></p>
+<h4 id="upstream-recipes">Upstream recipes</h4>
+<p><strong>Status</strong>: 🚧 In Progress
+<strong>Complexity</strong>: Very High (5-10 days)
+<strong>Value</strong>: High</p>
+<p><strong>Description</strong>: Import recipes from any git repository with
+<code>napt upstream</code>, pin each one to the exact content it was imported at, and
+customize it in an override without editing the imported file.
+A pinned copy lands under <code>upstream/</code>, the override in <code>recipes/</code> names
+it as <code>parent</code>, and <code>upstream.yaml</code> records each recipe's commit and hashes.
+Only app-owned keys from an upstream recipe reach the merge, so
+<code>defaults/org.yaml</code> keeps owning tenant policy.
+Shipped so far: the parent layer, the trust check and allow list in the
+loader, the read-only git transport, the <code>id</code> convention, and
+<code>napt upstream add</code> and <code>remove</code>.
+Remaining: <code>napt upstream check</code> and <code>update</code>, which detect upstream
+changes and rewrite the pinned copies so CI can open a pull request whose
+diff is the recipe diff.</p>
+<p><strong>Benefits</strong>:</p>
+<ul>
+<li>Share recipes between projects without copying files by hand</li>
+<li>Upstream changes arrive as reviewable diffs, never as silent updates</li>
+<li>A tenant's policy can never be overridden by a recipe it did not write</li>
+</ul>
+<p><strong>Related</strong>: The design is in <code>docs/plans/upstream-recipes.md</code>; the
+model is AutoPkg's override and trust-hash pattern with pinned copies in
+place of cloned repositories.</p>
 <hr />
 <h2 id="future-ideas-by-category">Future ideas (by category)</h2>
 <blockquote>

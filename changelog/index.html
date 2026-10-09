@@ -3046,11 +3046,27 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.12.0...HEAD">Unreleased</a></h2>
 <h3 id="added">Added</h3>
 <ul>
-<li><strong>Recommended <code>id</code> form</strong> - <code>napt validate</code> warns when an <code>id</code> is outside
+<li>
+<p><strong><code>napt upstream add</code> and <code>remove</code></strong> - Import recipes from any git
+    repository. <code>add</code> writes a pinned copy of each recipe, byte-identical, under
+    <code>upstream/&lt;host&gt;/&lt;repo path&gt;/</code>, writes <code>recipes/&lt;Vendor&gt;/&lt;app&gt;.override.yaml</code>
+    with <code>parent</code> pointing at the pinned copy and the recipe's <code>name</code> and
+    <code>id</code>, and records each recipe's commit and hashes in <code>upstream.yaml</code>.
+    Imports a file or a whole directory (<code>--exclude</code> globs, <code>--dry-run</code>;
+    re-running a directory import skips recipes already imported), pins a
+    branch or tag with <code>--ref</code>, and takes <code>--dest</code> and <code>--id</code>. Only app-owned keys
+    from an upstream recipe reach the merge; tenant policy stays with
+    <code>org.yaml</code>. Nothing is written unless every recipe validates. <code>remove</code>
+    deletes the pinned copy and its entry, keeping the override unless
+    <code>--delete-override</code>. Requires <code>git</code> on PATH</p>
+</li>
+<li>
+<p><strong>Recommended <code>id</code> form</strong> - <code>napt validate</code> warns when an <code>id</code> is outside
     <code>&lt;vendor&gt;-&lt;app&gt;[-&lt;variant&gt;]</code> in lowercase letters, digits, and single
     hyphens (<code>google-chrome</code>, <code>7zip-x64-msi</code>). Existing ids keep working;
     the convention keeps ids from different recipe repositories from
-    colliding and reads the same everywhere</li>
+    colliding and reads the same everywhere</p>
+</li>
 </ul>
 <h3 id="changed">Changed</h3>
 <ul>
@@ -3063,10 +3079,10 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li>
 <p><strong><code>upstream</code> is a reserved directory name for parent recipes</strong> - A
     <code>parent</code> under a directory named <code>upstream</code> (any case) is treated as a
-    recipe vendored from another repository: it must be listed in
+    pinned copy written by <code>napt upstream add</code>: it must be listed in
     <code>upstream.yaml</code> with a matching hash, only its app-owned keys are
     merged (a visible line names any key that was ignored), and the
-    vendored file cannot be run directly. Keep local parents elsewhere,
+    pinned copy cannot be run directly. Keep local parents elsewhere,
     such as <code>recipe-bases/</code></p>
 </li>
 </ul>
@@ -3076,7 +3092,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <li><strong><code>secrets</code> section in <code>defaults/org.yaml</code></strong> - Declares the environment
     variables a recipe may send with its discovery request and the hosts
     each may go to. Only org.yaml can declare them: a vendor file, parent
-    recipe, or recipe that tries fails validation, so a vendored recipe can
+    recipe, or recipe that tries fails validation, so a pinned copy can
     neither reach the runner's other secrets nor send a declared one
     somewhere else</li>
 <li><strong><code>napt validate</code> checks a directory</strong> - Every recipe under it is

@@ -937,10 +937,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#share-a-base-recipe-between-apps" class="md-nav__link">
+  <a href="#import-recipes-from-another-repository" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Share a base recipe between apps
+        Import recipes from another repository
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#share-a-local-base-recipe-between-apps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Share a local base recipe between apps
       
     </span>
   </a>
@@ -2608,10 +2619,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#share-a-base-recipe-between-apps" class="md-nav__link">
+  <a href="#import-recipes-from-another-repository" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Share a base recipe between apps
+        Import recipes from another repository
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#share-a-local-base-recipe-between-apps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Share a local base recipe between apps
       
     </span>
   </a>
@@ -3499,8 +3521,11 @@ there is no retry throttling to escape, and an in-place fix is faster
 content version together) and keeps the app IDs.
 It never creates duplicates.</p>
 <h2 id="automate-napt-with-github-actions">Automate NAPT with GitHub Actions</h2>
-<p>NAPT performs no git or CI operations: it reads and writes files, and your
-pipeline commits them and opens pull requests.
+<p>NAPT never commits, pushes, or opens pull requests: it reads and writes
+files, and your pipeline commits them and opens pull requests.
+(<code>napt upstream</code> fetches from other repositories read-only; it writes
+files into your working tree like any other command and never commits
+them.)
 The workflows below gate every change to Intune on a pull request.
 Adapt names, schedules, and branch rules to your org.
 They assume the default <code>directories.*</code> paths (<code>downloads/</code>, <code>state/</code>);
@@ -4064,41 +4089,112 @@ directory.</p>
   installed, since discover reads the version out of every MSI it
   downloads.</li>
 </ul>
-<h2 id="share-a-base-recipe-between-apps">Share a base recipe between apps</h2>
-<p>When several recipes differ only in a few fields, put the shared part in
-one file and name it as the <code>parent</code> of each app recipe.</p>
+<h2 id="import-recipes-from-another-repository">Import recipes from another repository</h2>
+<p><code>napt upstream add</code> imports recipes from any git repository, pins each as
+a copy under <code>upstream/</code>, and writes the overrides that run them.
+How it fits together is in
+<a href="../user-guide/#upstream-recipes">Upstream recipes</a>; these are the steps.</p>
+<ol>
+<li>
+<p>Import one recipe.
+   The default branch is used unless you pass <code>--ref</code>:
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-56-1"><a id="__codelineno-56-1" name="__codelineno-56-1" href="#__codelineno-56-1"></a>napt<span class="w"> </span>upstream<span class="w"> </span>add<span class="w"> </span>https://github.com/someorg/napt-recipes.git<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-56-2"><a id="__codelineno-56-2" name="__codelineno-56-2" href="#__codelineno-56-2"></a><span class="w">    </span>--path<span class="w"> </span>recipes/Google/chrome.yaml
+</span></code></pre></div>
+   Three files appear:
+   <div class="language-text highlight"><pre><span></span><code><span id="__span-57-1"><a id="__codelineno-57-1" name="__codelineno-57-1" href="#__codelineno-57-1"></a>upstream.yaml
+</span><span id="__span-57-2"><a id="__codelineno-57-2" name="__codelineno-57-2" href="#__codelineno-57-2"></a>upstream/github.com/someorg/napt-recipes/recipes/Google/chrome.yaml
+</span><span id="__span-57-3"><a id="__codelineno-57-3" name="__codelineno-57-3" href="#__codelineno-57-3"></a>recipes/Google/chrome.override.yaml
+</span></code></pre></div>
+   Keys the recipe may not set are named once:
+   <div class="language-text highlight"><pre><span></span><code><span id="__span-58-1"><a id="__codelineno-58-1" name="__codelineno-58-1" href="#__codelineno-58-1"></a>[UPSTREAM] WARNING: recipes/Google/chrome.yaml: ignoring keys not allowed from upstream recipes: deployment, intune.build_types
+</span></code></pre></div></p>
+</li>
+<li>
+<p>Or import a directory, leaving some files out.
+   Run with <code>--dry-run</code> first to see every override path:
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-59-1"><a id="__codelineno-59-1" name="__codelineno-59-1" href="#__codelineno-59-1"></a>napt<span class="w"> </span>upstream<span class="w"> </span>add<span class="w"> </span>https://github.com/someorg/napt-recipes.git<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-59-2"><a id="__codelineno-59-2" name="__codelineno-59-2" href="#__codelineno-59-2"></a><span class="w">    </span>--path<span class="w"> </span>recipes<span class="w"> </span>--exclude<span class="w"> </span><span class="s1">'Beta/*'</span><span class="w"> </span>--dry-run
+</span></code></pre></div>
+   Overrides mirror the path after the repository's <code>recipes/</code> segment.
+   Run the same command again later to pick up recipes the publisher
+   added; ones already imported are skipped (see
+   <a href="../user-guide/#upstream-recipes">Upstream recipes</a>).
+   A repository without one needs <code>--dest</code>:
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-60-1"><a id="__codelineno-60-1" name="__codelineno-60-1" href="#__codelineno-60-1"></a>napt<span class="w"> </span>upstream<span class="w"> </span>add<span class="w"> </span>https://gitlab.com/group/sub/recipes.git<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-60-2"><a id="__codelineno-60-2" name="__codelineno-60-2" href="#__codelineno-60-2"></a><span class="w">    </span>--path<span class="w"> </span>apps/tool.yaml<span class="w"> </span>--dest<span class="w"> </span>recipes/Tools
+</span></code></pre></div></p>
+</li>
+<li>
+<p>Customize in the override, never in the pinned copy:
+   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-61-1"><a id="__codelineno-61-1" name="__codelineno-61-1" href="#__codelineno-61-1"></a><span class="c1"># recipes/Google/chrome.override.yaml</span>
+</span><span id="__span-61-2"><a id="__codelineno-61-2" name="__codelineno-61-2" href="#__codelineno-61-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span>
+</span><span id="__span-61-3"><a id="__codelineno-61-3" name="__codelineno-61-3" href="#__codelineno-61-3"></a><span class="nt">parent</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../../upstream/github.com/someorg/napt-recipes/recipes/Google/chrome.yaml</span>
+</span><span id="__span-61-4"><a id="__codelineno-61-4" name="__codelineno-61-4" href="#__codelineno-61-4"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"Google</span><span class="nv"> </span><span class="s">Chrome"</span>
+</span><span id="__span-61-5"><a id="__codelineno-61-5" name="__codelineno-61-5" href="#__codelineno-61-5"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">"google-chrome"</span>
+</span><span id="__span-61-6"><a id="__codelineno-61-6" name="__codelineno-61-6" href="#__codelineno-61-6"></a><span class="nt">intune</span><span class="p">:</span>
+</span><span id="__span-61-7"><a id="__codelineno-61-7" name="__codelineno-61-7" href="#__codelineno-61-7"></a><span class="w">  </span><span class="nt">max_run_time_minutes</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">120</span>
+</span></code></pre></div>
+   <code>add</code> copies the upstream <code>id</code>; pass <code>--id</code> when it collides with one you
+   already use, or to follow your own scheme.
+   Changing the <code>id</code> later creates a new app in Intune, so settle it at
+   import.</p>
+</li>
+<li>
+<p>Validate and run commands against the override as usual:
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-62-1"><a id="__codelineno-62-1" name="__codelineno-62-1" href="#__codelineno-62-1"></a>napt<span class="w"> </span>validate<span class="w"> </span>recipes/Google/chrome.override.yaml
+</span><span id="__span-62-2"><a id="__codelineno-62-2" name="__codelineno-62-2" href="#__codelineno-62-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.override.yaml
+</span></code></pre></div>
+   An edited pinned copy, or one not listed in <code>upstream.yaml</code>, fails
+   here with the fix named.</p>
+</li>
+<li>
+<p>Remove an import when you no longer want it:
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-63-1"><a id="__codelineno-63-1" name="__codelineno-63-1" href="#__codelineno-63-1"></a>napt<span class="w"> </span>upstream<span class="w"> </span>remove<span class="w"> </span>recipes/Google/chrome.override.yaml<span class="w"> </span>--delete-override
+</span></code></pre></div>
+   Without <code>--delete-override</code> the override stays for you to inline.</p>
+</li>
+</ol>
+<p>Private repositories need credentials git can find from any directory; see
+<a href="../user-guide/#credentials-for-private-repositories">Credentials for private repositories</a>.</p>
+<h2 id="share-a-local-base-recipe-between-apps">Share a local base recipe between apps</h2>
+<p>When several of your own recipes differ only in a few fields, put the
+shared part in one file (a local parent) and name it as the <code>parent</code> of
+each app recipe.
+(An upstream recipe from another repository is imported instead; see the
+section above.)</p>
 <ol>
 <li>
 <p>Write the base in a folder outside <code>recipes/</code>, so neither the workflows
    nor <code>napt promote</code> pick it up as an app.
    It needs <code>apiVersion</code>, <code>name</code>, <code>id</code>, and a <code>discovery</code> block only
    because NAPT validates it as a recipe.
-   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-56-1"><a id="__codelineno-56-1" name="__codelineno-56-1" href="#__codelineno-56-1"></a><span class="c1"># recipe-bases/chromium-family.yaml</span>
-</span><span id="__span-56-2"><a id="__codelineno-56-2" name="__codelineno-56-2" href="#__codelineno-56-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span>
-</span><span id="__span-56-3"><a id="__codelineno-56-3" name="__codelineno-56-3" href="#__codelineno-56-3"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"Chromium</span><span class="nv"> </span><span class="s">base"</span>
-</span><span id="__span-56-4"><a id="__codelineno-56-4" name="__codelineno-56-4" href="#__codelineno-56-4"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">"chromium-base"</span>
-</span><span id="__span-56-5"><a id="__codelineno-56-5" name="__codelineno-56-5" href="#__codelineno-56-5"></a><span class="nt">discovery</span><span class="p">:</span>
-</span><span id="__span-56-6"><a id="__codelineno-56-6" name="__codelineno-56-6" href="#__codelineno-56-6"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">url_download</span>
-</span><span id="__span-56-7"><a id="__codelineno-56-7" name="__codelineno-56-7" href="#__codelineno-56-7"></a><span class="w">  </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">"https://example.com/placeholder.msi"</span>
-</span><span id="__span-56-8"><a id="__codelineno-56-8" name="__codelineno-56-8" href="#__codelineno-56-8"></a><span class="nt">psadt</span><span class="p">:</span>
-</span><span id="__span-56-9"><a id="__codelineno-56-9" name="__codelineno-56-9" href="#__codelineno-56-9"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
-</span><span id="__span-56-10"><a id="__codelineno-56-10" name="__codelineno-56-10" href="#__codelineno-56-10"></a><span class="w">    </span><span class="nt">AppProcessesToClose</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"chrome"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"msedge"</span><span class="p p-Indicator">]</span>
-</span><span id="__span-56-11"><a id="__codelineno-56-11" name="__codelineno-56-11" href="#__codelineno-56-11"></a><span class="nt">intune</span><span class="p">:</span>
-</span><span id="__span-56-12"><a id="__codelineno-56-12" name="__codelineno-56-12" href="#__codelineno-56-12"></a><span class="w">  </span><span class="nt">detection</span><span class="p">:</span>
-</span><span id="__span-56-13"><a id="__codelineno-56-13" name="__codelineno-56-13" href="#__codelineno-56-13"></a><span class="w">    </span><span class="nt">exact_match</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-64-1"><a id="__codelineno-64-1" name="__codelineno-64-1" href="#__codelineno-64-1"></a><span class="c1"># recipe-bases/chromium-family.yaml</span>
+</span><span id="__span-64-2"><a id="__codelineno-64-2" name="__codelineno-64-2" href="#__codelineno-64-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span>
+</span><span id="__span-64-3"><a id="__codelineno-64-3" name="__codelineno-64-3" href="#__codelineno-64-3"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"Chromium</span><span class="nv"> </span><span class="s">base"</span>
+</span><span id="__span-64-4"><a id="__codelineno-64-4" name="__codelineno-64-4" href="#__codelineno-64-4"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">"chromium-base"</span>
+</span><span id="__span-64-5"><a id="__codelineno-64-5" name="__codelineno-64-5" href="#__codelineno-64-5"></a><span class="nt">discovery</span><span class="p">:</span>
+</span><span id="__span-64-6"><a id="__codelineno-64-6" name="__codelineno-64-6" href="#__codelineno-64-6"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">url_download</span>
+</span><span id="__span-64-7"><a id="__codelineno-64-7" name="__codelineno-64-7" href="#__codelineno-64-7"></a><span class="w">  </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">"https://example.com/placeholder.msi"</span>
+</span><span id="__span-64-8"><a id="__codelineno-64-8" name="__codelineno-64-8" href="#__codelineno-64-8"></a><span class="nt">psadt</span><span class="p">:</span>
+</span><span id="__span-64-9"><a id="__codelineno-64-9" name="__codelineno-64-9" href="#__codelineno-64-9"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
+</span><span id="__span-64-10"><a id="__codelineno-64-10" name="__codelineno-64-10" href="#__codelineno-64-10"></a><span class="w">    </span><span class="nt">AppProcessesToClose</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"chrome"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"msedge"</span><span class="p p-Indicator">]</span>
+</span><span id="__span-64-11"><a id="__codelineno-64-11" name="__codelineno-64-11" href="#__codelineno-64-11"></a><span class="nt">intune</span><span class="p">:</span>
+</span><span id="__span-64-12"><a id="__codelineno-64-12" name="__codelineno-64-12" href="#__codelineno-64-12"></a><span class="w">  </span><span class="nt">detection</span><span class="p">:</span>
+</span><span id="__span-64-13"><a id="__codelineno-64-13" name="__codelineno-64-13" href="#__codelineno-64-13"></a><span class="w">    </span><span class="nt">exact_match</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
 </span></code></pre></div></p>
 </li>
 <li>
 <p>Write each app as a child named <code>&lt;app&gt;.override.yaml</code> that sets its own
    <code>name</code> and <code>id</code> and only what else differs.
    The <code>parent</code> path is relative to the child:
-   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-57-1"><a id="__codelineno-57-1" name="__codelineno-57-1" href="#__codelineno-57-1"></a><span class="c1"># recipes/Google/chrome.override.yaml</span>
-</span><span id="__span-57-2"><a id="__codelineno-57-2" name="__codelineno-57-2" href="#__codelineno-57-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span>
-</span><span id="__span-57-3"><a id="__codelineno-57-3" name="__codelineno-57-3" href="#__codelineno-57-3"></a><span class="nt">parent</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../../recipe-bases/chromium-family.yaml</span>
-</span><span id="__span-57-4"><a id="__codelineno-57-4" name="__codelineno-57-4" href="#__codelineno-57-4"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"Google</span><span class="nv"> </span><span class="s">Chrome"</span>
-</span><span id="__span-57-5"><a id="__codelineno-57-5" name="__codelineno-57-5" href="#__codelineno-57-5"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">"google-chrome"</span>
-</span><span id="__span-57-6"><a id="__codelineno-57-6" name="__codelineno-57-6" href="#__codelineno-57-6"></a><span class="nt">discovery</span><span class="p">:</span>
-</span><span id="__span-57-7"><a id="__codelineno-57-7" name="__codelineno-57-7" href="#__codelineno-57-7"></a><span class="w">  </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">"https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi"</span>
+   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-65-1"><a id="__codelineno-65-1" name="__codelineno-65-1" href="#__codelineno-65-1"></a><span class="c1"># recipes/Google/chrome.override.yaml</span>
+</span><span id="__span-65-2"><a id="__codelineno-65-2" name="__codelineno-65-2" href="#__codelineno-65-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span>
+</span><span id="__span-65-3"><a id="__codelineno-65-3" name="__codelineno-65-3" href="#__codelineno-65-3"></a><span class="nt">parent</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">../../recipe-bases/chromium-family.yaml</span>
+</span><span id="__span-65-4"><a id="__codelineno-65-4" name="__codelineno-65-4" href="#__codelineno-65-4"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"Google</span><span class="nv"> </span><span class="s">Chrome"</span>
+</span><span id="__span-65-5"><a id="__codelineno-65-5" name="__codelineno-65-5" href="#__codelineno-65-5"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">"google-chrome"</span>
+</span><span id="__span-65-6"><a id="__codelineno-65-6" name="__codelineno-65-6" href="#__codelineno-65-6"></a><span class="nt">discovery</span><span class="p">:</span>
+</span><span id="__span-65-7"><a id="__codelineno-65-7" name="__codelineno-65-7" href="#__codelineno-65-7"></a><span class="w">  </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">"https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi"</span>
 </span></code></pre></div>
    The child replaces the app's plain recipe: delete
    <code>recipes/Google/chrome.yaml</code> when you add it.
@@ -4107,7 +4203,7 @@ one file and name it as the <code>parent</code> of each app recipe.</p>
 <li>
 <p>Validate the child.
    The output names the parent it merged:
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-58-1"><a id="__codelineno-58-1" name="__codelineno-58-1" href="#__codelineno-58-1"></a>napt<span class="w"> </span>validate<span class="w"> </span>recipes/Google/chrome.override.yaml
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-66-1"><a id="__codelineno-66-1" name="__codelineno-66-1" href="#__codelineno-66-1"></a>napt<span class="w"> </span>validate<span class="w"> </span>recipes/Google/chrome.override.yaml
 </span></code></pre></div></p>
 </li>
 </ol>
@@ -4134,7 +4230,7 @@ response.</p>
 <ol>
 <li>Use <code>--debug</code> to see what NAPT is trying to parse:</li>
 </ol>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-59-1"><a id="__codelineno-59-1" name="__codelineno-59-1" href="#__codelineno-59-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/App/app.yaml<span class="w"> </span>--debug
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-67-1"><a id="__codelineno-67-1" name="__codelineno-67-1" href="#__codelineno-67-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/App/app.yaml<span class="w"> </span>--debug
 </span></code></pre></div>
 <ol>
 <li>
@@ -4169,10 +4265,10 @@ installer's metadata.</p>
 <ol>
 <li>Create a GitHub personal access token</li>
 <li>Add to recipe:
-   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-60-1"><a id="__codelineno-60-1" name="__codelineno-60-1" href="#__codelineno-60-1"></a><span class="nt">discovery</span><span class="p">:</span>
-</span><span id="__span-60-2"><a id="__codelineno-60-2" name="__codelineno-60-2" href="#__codelineno-60-2"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
-</span><span id="__span-60-3"><a id="__codelineno-60-3" name="__codelineno-60-3" href="#__codelineno-60-3"></a><span class="w">  </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="s">"owner/repo"</span>
-</span><span id="__span-60-4"><a id="__codelineno-60-4" name="__codelineno-60-4" href="#__codelineno-60-4"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">"${GITHUB_TOKEN}"</span>
+   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-68-1"><a id="__codelineno-68-1" name="__codelineno-68-1" href="#__codelineno-68-1"></a><span class="nt">discovery</span><span class="p">:</span>
+</span><span id="__span-68-2"><a id="__codelineno-68-2" name="__codelineno-68-2" href="#__codelineno-68-2"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
+</span><span id="__span-68-3"><a id="__codelineno-68-3" name="__codelineno-68-3" href="#__codelineno-68-3"></a><span class="w">  </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="s">"owner/repo"</span>
+</span><span id="__span-68-4"><a id="__codelineno-68-4" name="__codelineno-68-4" href="#__codelineno-68-4"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">"${GITHUB_TOKEN}"</span>
 </span></code></pre></div></li>
 <li>Declare <code>GITHUB_TOKEN</code> under <code>secrets</code> in <code>defaults/org.yaml</code> with
    <code>api.github.com</code> as its host and set it in your environment (see
@@ -4200,8 +4296,8 @@ installer's metadata.</p>
 <p>Delete the app's folder and rediscover.
 If a pending release is awaiting approval and the vendor no longer serves
 it, keep that version's folder: build needs that exact file.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-61-1"><a id="__codelineno-61-1" name="__codelineno-61-1" href="#__codelineno-61-1"></a>rm<span class="w"> </span>-r<span class="w"> </span>downloads/&lt;app_id&gt;
-</span><span id="__span-61-2"><a id="__codelineno-61-2" name="__codelineno-61-2" href="#__codelineno-61-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/app.yaml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-69-1"><a id="__codelineno-69-1" name="__codelineno-69-1" href="#__codelineno-69-1"></a>rm<span class="w"> </span>-r<span class="w"> </span>downloads/&lt;app_id&gt;
+</span><span id="__span-69-2"><a id="__codelineno-69-2" name="__codelineno-69-2" href="#__codelineno-69-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/app.yaml
 </span></code></pre></div>
 <h3 id="issue-corrupted-deployment-state-file">Issue: "Corrupted deployment state file"</h3>
 <p><strong>Problem:</strong> A file under <code>state/deployment/</code> has invalid JSON.</p>
@@ -4210,15 +4306,15 @@ it, keep that version's folder: build needs that exact file.</p>
 Fix the JSON or restore the file from version control.</p>
 <p>To run discovery once without reading or writing deployment state, use
 <code>--stateless</code>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-62-1"><a id="__codelineno-62-1" name="__codelineno-62-1" href="#__codelineno-62-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/app.yaml<span class="w"> </span>--stateless
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-70-1"><a id="__codelineno-70-1" name="__codelineno-70-1" href="#__codelineno-70-1"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/app.yaml<span class="w"> </span>--stateless
 </span></code></pre></div>
 <h3 id="issue-msi-version-extraction-fails-on-linuxmacos">Issue: MSI version extraction fails on Linux/macOS</h3>
 <p><strong>Problem:</strong> <code>napt discover</code> or <code>napt build</code> cannot read the MSI
 ProductVersion on a non-Windows machine.</p>
 <p><strong>Solution:</strong> Install <code>msitools</code>, which provides the <code>msiinfo</code> backend:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-63-1"><a id="__codelineno-63-1" name="__codelineno-63-1" href="#__codelineno-63-1"></a>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>msitools<span class="w">  </span><span class="c1"># Debian/Ubuntu</span>
-</span><span id="__span-63-2"><a id="__codelineno-63-2" name="__codelineno-63-2" href="#__codelineno-63-2"></a>sudo<span class="w"> </span>dnf<span class="w"> </span>install<span class="w"> </span>msitools<span class="w">      </span><span class="c1"># RHEL/Fedora</span>
-</span><span id="__span-63-3"><a id="__codelineno-63-3" name="__codelineno-63-3" href="#__codelineno-63-3"></a>brew<span class="w"> </span>install<span class="w"> </span>msitools<span class="w">          </span><span class="c1"># macOS</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-71-1"><a id="__codelineno-71-1" name="__codelineno-71-1" href="#__codelineno-71-1"></a>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>msitools<span class="w">  </span><span class="c1"># Debian/Ubuntu</span>
+</span><span id="__span-71-2"><a id="__codelineno-71-2" name="__codelineno-71-2" href="#__codelineno-71-2"></a>sudo<span class="w"> </span>dnf<span class="w"> </span>install<span class="w"> </span>msitools<span class="w">      </span><span class="c1"># RHEL/Fedora</span>
+</span><span id="__span-71-3"><a id="__codelineno-71-3" name="__codelineno-71-3" href="#__codelineno-71-3"></a>brew<span class="w"> </span>install<span class="w"> </span>msitools<span class="w">          </span><span class="c1"># macOS</span>
 </span></code></pre></div>
 <h2 id="related-pages">Related pages</h2>
 <ul>

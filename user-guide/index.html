@@ -783,6 +783,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#napt-upstream" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        napt upstream
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#output-modes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -970,6 +981,78 @@
     <span class="md-ellipsis">
       
         Directory flag defaults
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upstream-recipes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upstream recipes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Upstream recipes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-an-import-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How an import works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-the-override-controls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the override controls
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trust" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trust
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#removing-an-import" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removing an import
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#credentials-for-private-repositories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Credentials for private repositories
       
     </span>
   </a>
@@ -2517,6 +2600,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#napt-upstream" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        napt upstream
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#output-modes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2704,6 +2798,78 @@
     <span class="md-ellipsis">
       
         Directory flag defaults
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upstream-recipes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upstream recipes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Upstream recipes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-an-import-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How an import works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-the-override-controls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the override controls
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trust" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trust
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#removing-an-import" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Removing an import
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#credentials-for-private-repositories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Credentials for private repositories
       
     </span>
   </a>
@@ -3664,6 +3830,14 @@ See <a href="#authentication">Authentication</a>.</p>
 </span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>napt<span class="w"> </span>auth<span class="w"> </span>status
 </span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>napt<span class="w"> </span>auth<span class="w"> </span><span class="nb">logout</span><span class="w"> </span><span class="o">[</span>--all<span class="o">]</span>
 </span></code></pre></div>
+<h3 id="napt-upstream">napt upstream</h3>
+<p>Imports recipes from other git repositories as pinned copies, each with an
+override you edit.
+See <a href="#upstream-recipes">Upstream recipes</a>.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>napt<span class="w"> </span>upstream<span class="w"> </span>add<span class="w"> </span>URL<span class="w"> </span>--path<span class="w"> </span>PATH<span class="w"> </span><span class="o">[</span>--path<span class="w"> </span>PATH<span class="w"> </span>...<span class="o">]</span><span class="w"> </span><span class="o">[</span>--ref<span class="w"> </span>REF<span class="o">]</span><span class="w"> </span><span class="o">[</span>--dest<span class="w"> </span>DIR<span class="o">]</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">    </span><span class="o">[</span>--id<span class="w"> </span>ID<span class="o">]</span><span class="w"> </span><span class="o">[</span>--exclude<span class="w"> </span>GLOB<span class="w"> </span>...<span class="o">]</span><span class="w"> </span><span class="o">[</span>--dry-run<span class="o">]</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>napt<span class="w"> </span>upstream<span class="w"> </span>remove<span class="w"> </span>PATH<span class="w"> </span><span class="o">[</span>--delete-override<span class="o">]</span>
+</span></code></pre></div>
 <h3 id="output-modes">Output modes</h3>
 <table>
 <thead>
@@ -3939,26 +4113,26 @@ types, one per Intune entry: <code>promote</code> moves a release one ring forwa
 Every action opens with a plain-English <code>summary</code> and carries the
 details behind it (the entry touched, the version it displaces, bake
 timestamps) so the file diff reads on its own in review:</p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="p">{</span>
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span><span class="nt">"schemaVersion"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">  </span><span class="nt">"app_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"google-chrome"</span><span class="p">,</span>
-</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Google Chrome"</span><span class="p">,</span>
-</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">  </span><span class="nt">"actions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="w">    </span><span class="p">{</span>
-</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="w">      </span><span class="nt">"summary"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Promote 140.0.7339.128 from pilot to production, displacing 139.0.7258.155; it has held pilot since 2026-07-14 (threshold: 2 days)."</span><span class="p">,</span>
-</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"promote"</span><span class="p">,</span>
-</span><span id="__span-18-9"><a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a><span class="w">      </span><span class="nt">"entry"</span><span class="p">:</span><span class="w"> </span><span class="s2">"update"</span><span class="p">,</span>
-</span><span id="__span-18-10"><a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a><span class="w">      </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"140.0.7339.128"</span><span class="p">,</span>
-</span><span id="__span-18-11"><a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a><span class="w">      </span><span class="nt">"displaces"</span><span class="p">:</span><span class="w"> </span><span class="s2">"139.0.7258.155"</span><span class="p">,</span>
-</span><span id="__span-18-12"><a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a><span class="w">      </span><span class="nt">"from_ring"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pilot"</span><span class="p">,</span>
-</span><span id="__span-18-13"><a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a><span class="w">      </span><span class="nt">"from_ring_entered_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-07-14T07:12:03+00:00"</span><span class="p">,</span>
-</span><span id="__span-18-14"><a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a><span class="w">      </span><span class="nt">"promote_after_days"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
-</span><span id="__span-18-15"><a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a><span class="w">      </span><span class="nt">"ring"</span><span class="p">:</span><span class="w"> </span><span class="s2">"production"</span><span class="p">,</span>
-</span><span id="__span-18-16"><a id="__codelineno-18-16" name="__codelineno-18-16" href="#__codelineno-18-16"></a><span class="w">      </span><span class="nt">"groups"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"Production Devices"</span><span class="p">],</span>
-</span><span id="__span-18-17"><a id="__codelineno-18-17" name="__codelineno-18-17" href="#__codelineno-18-17"></a><span class="w">      </span><span class="nt">"sha256"</span><span class="p">:</span><span class="w"> </span><span class="s2">"6ff02fd8a4..."</span>
-</span><span id="__span-18-18"><a id="__codelineno-18-18" name="__codelineno-18-18" href="#__codelineno-18-18"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-18-19"><a id="__codelineno-18-19" name="__codelineno-18-19" href="#__codelineno-18-19"></a><span class="w">  </span><span class="p">]</span>
-</span><span id="__span-18-20"><a id="__codelineno-18-20" name="__codelineno-18-20" href="#__codelineno-18-20"></a><span class="p">}</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="p">{</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span><span class="nt">"schemaVersion"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">  </span><span class="nt">"app_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"google-chrome"</span><span class="p">,</span>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Google Chrome"</span><span class="p">,</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">  </span><span class="nt">"actions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="w">    </span><span class="p">{</span>
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="w">      </span><span class="nt">"summary"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Promote 140.0.7339.128 from pilot to production, displacing 139.0.7258.155; it has held pilot since 2026-07-14 (threshold: 2 days)."</span><span class="p">,</span>
+</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="w">      </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"promote"</span><span class="p">,</span>
+</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="w">      </span><span class="nt">"entry"</span><span class="p">:</span><span class="w"> </span><span class="s2">"update"</span><span class="p">,</span>
+</span><span id="__span-19-10"><a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a><span class="w">      </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"140.0.7339.128"</span><span class="p">,</span>
+</span><span id="__span-19-11"><a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a><span class="w">      </span><span class="nt">"displaces"</span><span class="p">:</span><span class="w"> </span><span class="s2">"139.0.7258.155"</span><span class="p">,</span>
+</span><span id="__span-19-12"><a id="__codelineno-19-12" name="__codelineno-19-12" href="#__codelineno-19-12"></a><span class="w">      </span><span class="nt">"from_ring"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pilot"</span><span class="p">,</span>
+</span><span id="__span-19-13"><a id="__codelineno-19-13" name="__codelineno-19-13" href="#__codelineno-19-13"></a><span class="w">      </span><span class="nt">"from_ring_entered_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-07-14T07:12:03+00:00"</span><span class="p">,</span>
+</span><span id="__span-19-14"><a id="__codelineno-19-14" name="__codelineno-19-14" href="#__codelineno-19-14"></a><span class="w">      </span><span class="nt">"promote_after_days"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+</span><span id="__span-19-15"><a id="__codelineno-19-15" name="__codelineno-19-15" href="#__codelineno-19-15"></a><span class="w">      </span><span class="nt">"ring"</span><span class="p">:</span><span class="w"> </span><span class="s2">"production"</span><span class="p">,</span>
+</span><span id="__span-19-16"><a id="__codelineno-19-16" name="__codelineno-19-16" href="#__codelineno-19-16"></a><span class="w">      </span><span class="nt">"groups"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"Production Devices"</span><span class="p">],</span>
+</span><span id="__span-19-17"><a id="__codelineno-19-17" name="__codelineno-19-17" href="#__codelineno-19-17"></a><span class="w">      </span><span class="nt">"sha256"</span><span class="p">:</span><span class="w"> </span><span class="s2">"6ff02fd8a4..."</span>
+</span><span id="__span-19-18"><a id="__codelineno-19-18" name="__codelineno-19-18" href="#__codelineno-19-18"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-19-19"><a id="__codelineno-19-19" name="__codelineno-19-19" href="#__codelineno-19-19"></a><span class="w">  </span><span class="p">]</span>
+</span><span id="__span-19-20"><a id="__codelineno-19-20" name="__codelineno-19-20" href="#__codelineno-19-20"></a><span class="p">}</span>
 </span></code></pre></div>
 <p>An app's plan file exists exactly when that app has eligible actions: a
 plan run that finds nothing for an app removes its stale plan file.
@@ -3985,15 +4159,15 @@ whatever is still eligible.</p>
 <p>NAPT layers configuration so you don't repeat settings across recipes.
 All defaults live in code; configuration files are optional layers on top.</p>
 <h3 id="how-configuration-works">How configuration works</h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>Code defaults (always complete)     &lt;- baseline, ships with napt
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>    |
-</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>defaults/org.yaml                   &lt;- organization defaults (optional; nearest
-</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>    |                                  one found walking up from the recipe)
-</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>defaults/vendors/&lt;Vendor&gt;.yaml      &lt;- vendor defaults (optional)
-</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>    |
-</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>parent recipe                       &lt;- named by the recipe's parent field (optional)
-</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>    |
-</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a>recipe.yaml                         &lt;- the app itself, wins over everything
+<div class="language-text highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>Code defaults (always complete)     &lt;- baseline, ships with napt
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>    |
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>defaults/org.yaml                   &lt;- organization defaults (optional; nearest
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>    |                                  one found walking up from the recipe)
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>defaults/vendors/&lt;Vendor&gt;.yaml      &lt;- vendor defaults (optional)
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>    |
+</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>parent recipe                       &lt;- named by the recipe's parent field (optional)
+</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a>    |
+</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a>recipe.yaml                         &lt;- the app itself, wins over everything
 </span></code></pre></div>
 <ul>
 <li>Missing fields always fall back to code defaults.</li>
@@ -4022,13 +4196,17 @@ All defaults live in code; configuration files are optional layers on top.</p>
 </li>
 <li>
 <p><strong>Parent recipe</strong> (the <code>parent</code> field) - Another recipe merged beneath this
-   one.
+   one: a local parent such as <code>recipe-bases/chromium-family.yaml</code>, or the
+   pinned copy that <code>napt upstream add</code> writes (see
+   <a href="#upstream-recipes">Upstream recipes</a>).
+   A recipe that declares <code>parent</code> is an override, whichever kind of
+   parent it names.
    Optional; lets several recipes share a base without repeating it.
    A parent cannot declare its own parent.
    The parent lives outside <code>recipes/</code> (for example in <code>recipe-bases/</code>), and
    each child sets its own <code>name</code> and <code>id</code> and replaces the app's plain
    recipe; see
-   <a href="../common-tasks/#share-a-base-recipe-between-apps">Share a base recipe between apps</a>.
+   <a href="../common-tasks/#share-a-local-base-recipe-between-apps">Share a local base recipe between apps</a>.
    See <a href="../recipe-reference/#parent">parent</a> for the field and the file naming
    convention.</p>
 </li>
@@ -4039,28 +4217,28 @@ All defaults live in code; configuration files are optional layers on top.</p>
 </li>
 </ol>
 <h3 id="example">Example</h3>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># defaults/org.yaml</span>
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span>
-</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="nt">psadt</span><span class="p">:</span>
-</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">  </span><span class="nt">release</span><span class="p">:</span><span class="w"> </span><span class="s">"latest"</span>
-</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
-</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="w">    </span><span class="nt">AppVendor</span><span class="p">:</span><span class="w"> </span><span class="s">"Unknown"</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1"># defaults/org.yaml</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="nt">psadt</span><span class="p">:</span>
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">  </span><span class="nt">release</span><span class="p">:</span><span class="w"> </span><span class="s">"latest"</span>
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
+</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="w">    </span><span class="nt">AppVendor</span><span class="p">:</span><span class="w"> </span><span class="s">"Unknown"</span>
 </span></code></pre></div>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1"># defaults/vendors/Google.yaml</span>
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="nt">psadt</span><span class="p">:</span>
-</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
-</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">    </span><span class="nt">AppVendor</span><span class="p">:</span><span class="w"> </span><span class="s">"Google</span><span class="nv"> </span><span class="s">LLC"</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1"># defaults/vendors/Google.yaml</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="nt">psadt</span><span class="p">:</span>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">  </span><span class="nt">app_vars</span><span class="p">:</span>
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">    </span><span class="nt">AppVendor</span><span class="p">:</span><span class="w"> </span><span class="s">"Google</span><span class="nv"> </span><span class="s">LLC"</span>
 </span></code></pre></div>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1"># recipes/Google/chrome.yaml</span>
-</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span>
-</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"Google</span><span class="nv"> </span><span class="s">Chrome"</span>
-</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">"google-chrome"</span>
-</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="nt">discovery</span><span class="p">:</span>
-</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">url_download</span>
-</span><span id="__span-22-7"><a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a><span class="w">  </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">"https://dl.google.com/..."</span>
-</span><span id="__span-22-8"><a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a><span class="nt">psadt</span><span class="p">:</span>
-</span><span id="__span-22-9"><a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a><span class="w">  </span><span class="nt">release</span><span class="p">:</span><span class="w"> </span><span class="s">"4.1.7"</span><span class="w">   </span><span class="c1"># overrides org default of "latest" for this recipe only</span>
-</span><span id="__span-22-10"><a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a><span class="c1"># AppVendor will be "Google LLC" (from vendor defaults)</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c1"># recipes/Google/chrome.yaml</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"Google</span><span class="nv"> </span><span class="s">Chrome"</span>
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">"google-chrome"</span>
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="nt">discovery</span><span class="p">:</span>
+</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">url_download</span>
+</span><span id="__span-23-7"><a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a><span class="w">  </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">"https://dl.google.com/..."</span>
+</span><span id="__span-23-8"><a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a><span class="nt">psadt</span><span class="p">:</span>
+</span><span id="__span-23-9"><a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a><span class="w">  </span><span class="nt">release</span><span class="p">:</span><span class="w"> </span><span class="s">"4.1.7"</span><span class="w">   </span><span class="c1"># overrides org default of "latest" for this recipe only</span>
+</span><span id="__span-23-10"><a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a><span class="c1"># AppVendor will be "Google LLC" (from vendor defaults)</span>
 </span></code></pre></div>
 <h3 id="directory-flag-defaults">Directory flag defaults</h3>
 <p>All directory flags follow the same pattern: CLI flag overrides config;
@@ -4175,22 +4353,132 @@ holds app icons written by <code>napt build</code> and read by <code>napt upload
 <a href="#app-icons">App icons</a>), and <code>directories.cache</code> (default <code>cache</code>) holds
 the downloaded PSADT releases and <code>IntuneWinAppUtil.exe</code> versions.</p>
 <p>To change the defaults org-wide, add to <code>defaults/org.yaml</code>:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="nt">directories</span><span class="p">:</span>
-</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">  </span><span class="nt">discover</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/downloads"</span><span class="w">  </span><span class="c1"># used by both discover and build</span>
-</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="w">  </span><span class="nt">build</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/builds"</span><span class="w">        </span><span class="c1"># used by both build and package</span>
-</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="w">  </span><span class="nt">package</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/packages"</span>
-</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="w">  </span><span class="nt">icons</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/icons"</span><span class="w">         </span><span class="c1"># written by build, read by upload</span>
-</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a><span class="w">  </span><span class="nt">state</span><span class="p">:</span><span class="w"> </span><span class="s">"deployment-state"</span><span class="w">        </span><span class="c1"># read by every command that touches state</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="nt">directories</span><span class="p">:</span>
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="w">  </span><span class="nt">discover</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/downloads"</span><span class="w">  </span><span class="c1"># used by both discover and build</span>
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="w">  </span><span class="nt">build</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/builds"</span><span class="w">        </span><span class="c1"># used by both build and package</span>
+</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="w">  </span><span class="nt">package</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/packages"</span>
+</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="w">  </span><span class="nt">icons</span><span class="p">:</span><span class="w"> </span><span class="s">"artifacts/icons"</span><span class="w">         </span><span class="c1"># written by build, read by upload</span>
+</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a><span class="w">  </span><span class="nt">state</span><span class="p">:</span><span class="w"> </span><span class="s">"deployment-state"</span><span class="w">        </span><span class="c1"># read by every command that touches state</span>
 </span></code></pre></div>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># Uses config default (or built-in if not configured)</span>
-</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
-</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>
-</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="c1"># Overrides for this run only</span>
-</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span>--output-dir<span class="w"> </span>/tmp/downloads
-</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span>--downloads-dir<span class="w"> </span>/tmp/downloads
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="c1"># Uses config default (or built-in if not configured)</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>
+</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="c1"># Overrides for this run only</span>
+</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span>--output-dir<span class="w"> </span>/tmp/downloads
+</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml<span class="w"> </span>--downloads-dir<span class="w"> </span>/tmp/downloads
 </span></code></pre></div>
 <p>To pin the <code>IntuneWinAppUtil.exe</code> release <code>napt package</code> uses, see
 <a href="../recipe-reference/#intunewinapputil-configuration"><code>intunewin.release</code></a>.</p>
+<h2 id="upstream-recipes">Upstream recipes</h2>
+<p><code>napt upstream</code> imports recipes from any git repository, pins each one as
+a byte-identical copy, and lets you customize it through an override
+without editing the pinned copy.
+NAPT never commits, pushes, or opens pull requests; it writes files, and
+your pipeline reviews them.</p>
+<h3 id="how-an-import-works">How an import works</h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>napt<span class="w"> </span>upstream<span class="w"> </span>add<span class="w"> </span>https://github.com/someorg/napt-recipes.git<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="w">    </span>--path<span class="w"> </span>recipes/Google/chrome.yaml
+</span></code></pre></div>
+<ol>
+<li>NAPT fetches the file from the repository's default branch (or <code>--ref</code>)
+   with the <code>git</code> binary, so any host git can reach works and
+   authentication is whatever git already has.</li>
+<li>The file lands byte-identical as the pinned copy under
+   <code>upstream/github.com/someorg/napt-recipes/recipes/Google/chrome.yaml</code>.
+   The directory is the host plus the repository path, so two repositories
+   that ship the same recipe path never collide.</li>
+<li>NAPT writes <code>recipes/Google/chrome.override.yaml</code>: a short recipe whose
+   <code>parent</code> is the pinned copy and which carries the recipe's <code>name</code> and
+   <code>id</code>.
+   This is the file every command runs, and the only one you edit.</li>
+<li><code>upstream.yaml</code> at the project root records the repository URL and ref,
+   and for each pinned copy the commit it was taken from, its git blob id,
+   and its sha256.
+   Each recipe has its own pin, so recipes from one repository can be
+   updated one at a time.
+   NAPT writes the file; do not edit it by hand.</li>
+</ol>
+<p>A directory import (<code>--path recipes</code>) takes every <code>.yaml</code> and <code>.yml</code>
+beneath it; <code>--exclude</code> globs, matched relative to that directory, leave
+files out.
+Each override mirrors the part of the upstream path after its last
+<code>recipes/</code> segment, so <code>recipes/Google/chrome.yaml</code> always lands at
+<code>recipes/Google/chrome.override.yaml</code> however it was selected.
+A repository with no <code>recipes/</code> folder needs <code>--dest</code> to say where the
+overrides go.
+Nothing is written until every selected recipe has passed validation as the
+configuration its override will produce, so one bad recipe aborts the
+import with the project untouched.</p>
+<p>Re-running a directory import picks up what the publisher added since:
+recipes already listed in <code>upstream.yaml</code> are skipped and keep their own
+pins, only new ones are written, and when nothing is new the lockfile is
+untouched and the command reports "Nothing new to import."
+Naming a tracked recipe directly is an error that points at
+<code>napt upstream update</code>, which is what refreshes an existing pinned copy.</p>
+<h3 id="what-the-override-controls">What the override controls</h3>
+<p>The override wins over the pinned copy on every key, the way a recipe
+wins over its parent.
+Set a different installer URL, a longer <code>max_run_time_minutes</code>, or your own
+detection there; the pinned copy stays identical to the upstream recipe
+so updates diff cleanly.</p>
+<p>Two things come from the override alone:</p>
+<ul>
+<li><strong>Identity.</strong> <code>add</code> copies the upstream recipe's <code>name</code> and <code>id</code> into
+  the override (<code>--id</code> picks a different id).
+  The pinned copy cannot change them later, so an upstream edit can never
+  move your deployment state or Intune apps.
+  <code>add</code> warns when the id is already used in the project; see
+  <a href="../recipe-reference/#id">id</a> for the convention.</li>
+<li><strong>Tenant policy.</strong> An upstream recipe may set only app-owned keys:
+  <code>discovery</code>, the PSADT install and uninstall blocks and app variables,
+  Intune detection and descriptive fields.
+  Everything else (<code>deployment</code>, <code>directories</code>, <code>intune.build_types</code>,
+  <code>logo_path</code>, and so on) is dropped before the merge, so <code>defaults/org.yaml</code>
+  keeps winning without the override restating it.
+  Every load prints one <code>[CONFIG] Ignoring from parent ...</code> line naming the
+  dropped keys, and <code>add</code> warns once per recipe.
+  The full list is in
+  <a href="../recipe-reference/#shareable-recipes">Shareable recipes</a>.</li>
+</ul>
+<h3 id="trust">Trust</h3>
+<p><code>upstream</code> is a reserved directory name.
+Every time a parent under it is loaded, NAPT checks the file against its
+<code>upstream.yaml</code> entry: an edited pinned copy, one copied in by hand, or a
+missing lockfile fails <code>napt validate</code> and every other command.
+Move local changes into the override instead.
+A pinned copy is never run directly; commands point at the override.</p>
+<p>The check detects drift, not tampering by someone who can edit both files
+in one pull request.
+Review changes under <code>upstream/</code> and to <code>upstream.yaml</code> like any other
+recipe change: install blocks are PowerShell that runs on your endpoints.
+A CODEOWNERS rule on <code>upstream/**</code> and <code>upstream.yaml</code> gives those diffs a
+named reviewer.</p>
+<h3 id="removing-an-import">Removing an import</h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>napt<span class="w"> </span>upstream<span class="w"> </span>remove<span class="w"> </span>recipes/Google/chrome.override.yaml
+</span></code></pre></div>
+<p>Deletes the pinned copy and its lockfile entry, the repository's entry
+and emptied directories once nothing of it remains, and <code>upstream.yaml</code>
+itself once no repository remains.
+The override is yours, so it stays with its <code>parent</code> now dangling; inline
+the recipe there or pass <code>--delete-override</code>.
+Either the override or the pinned copy's path identifies the recipe.</p>
+<h3 id="credentials-for-private-repositories">Credentials for private repositories</h3>
+<p>NAPT passes your environment to git and adds nothing of its own.
+A public repository needs nothing.
+A private HTTPS repository needs a credential helper or URL rewrite that
+git finds from any directory, because NAPT fetches into a temporary
+directory, not your checkout.
+On a GitHub-hosted runner, <code>gh auth setup-git</code> with a token in <code>GH_TOKEN</code>
+registers one; the environment form of a URL rewrite needs no file:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="nv">GIT_CONFIG_COUNT</span><span class="o">=</span><span class="m">1</span>
+</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a><span class="nv">GIT_CONFIG_KEY_0</span><span class="o">=</span>url.https://x-access-token:<span class="si">${</span><span class="nv">TOKEN</span><span class="si">}</span>@github.com/.insteadOf
+</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a><span class="nv">GIT_CONFIG_VALUE_0</span><span class="o">=</span>https://github.com/
+</span></code></pre></div>
+<p>A private SSH repository needs a deploy key and a pre-trusted host key;
+NAPT runs ssh in batch mode, so an untrusted host fails instead of
+prompting.
+Prompts are disabled everywhere, so a missing credential fails at once
+rather than hanging a job.</p>
 <h2 id="cross-platform-support">Cross-platform support</h2>
 <p><strong>NAPT is a Windows tool</strong> for Microsoft Intune packaging.
 Develop on any platform, package on Windows.</p>
@@ -4231,13 +4519,13 @@ Develop on any platform, package on Windows.</p>
 which is a Windows-only .NET application.</p>
 <h3 id="mixed-platform-workflow">Mixed platform workflow</h3>
 <p>To develop on Linux or macOS and package on Windows:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="c1"># On Linux/macOS: Discovery and build</span>
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
-</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
-</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>
-</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a><span class="c1"># Transfer build directory to Windows (e.g., via shared storage)</span>
-</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a><span class="c1"># On Windows: Package</span>
-</span><span id="__span-25-7"><a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a>napt<span class="w"> </span>package<span class="w"> </span>recipes/Google/chrome.yaml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="c1"># On Linux/macOS: Discovery and build</span>
+</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
+</span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
+</span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a>
+</span><span id="__span-29-5"><a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a><span class="c1"># Transfer build directory to Windows (e.g., via shared storage)</span>
+</span><span id="__span-29-6"><a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a><span class="c1"># On Windows: Package</span>
+</span><span id="__span-29-7"><a id="__codelineno-29-7" name="__codelineno-29-7" href="#__codelineno-29-7"></a>napt<span class="w"> </span>package<span class="w"> </span>recipes/Google/chrome.yaml
 </span></code></pre></div>
 <h2 id="best-practices">Best practices</h2>
 <h3 id="recipe-organization">Recipe organization</h3>
@@ -4247,9 +4535,9 @@ NAPT detects the vendor from the recipe's parent directory name and loads
 exists too (see <a href="#the-configuration-layers">The configuration layers</a>).</p>
 <h3 id="scripting">Scripting</h3>
 <p>Commands exit 0 on success, 1 on error, and 2 on a usage error:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="k">if</span><span class="w"> </span>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="w">    </span>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
-</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="k">fi</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="k">if</span><span class="w"> </span>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a><span class="w">    </span>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
+</span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a><span class="k">fi</span>
 </span></code></pre></div>
 <h2 id="troubleshooting">Troubleshooting</h2>
 <p>For discovery failures (unknown strategy, version extraction, rate limits,

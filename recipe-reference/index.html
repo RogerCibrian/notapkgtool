@@ -1448,6 +1448,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#shareable-recipes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shareable recipes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#variable-substitution" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3497,6 +3508,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#shareable-recipes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shareable recipes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#variable-substitution" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3669,9 +3691,12 @@ A parent is an ordinary recipe and cannot declare a <code>parent</code> of its o
 example, <code>recipe-bases/</code> next to <code>recipes/</code>):
 NAPT would otherwise load it as a recipe of its own.
 Do not keep a local parent under a directory named <code>upstream</code>, in any
-case: that name is reserved for recipes vendored from other repositories,
+case: that name is reserved for the pinned copies <code>napt upstream add</code> writes,
 which must be listed in <code>upstream.yaml</code> and are loaded with only their
-app-owned keys.
+app-owned keys (see <a href="#shareable-recipes">Shareable recipes</a>).
+A parent is either a local parent or, in an override written by
+<code>napt upstream add</code>, a pinned copy under <code>upstream/</code>; an override is any
+recipe that declares <code>parent</code>.
 Set <code>name</code> and <code>id</code> in the child, since they identify the app in Intune and
 in NAPT's state, and two files with one <code>id</code> stop <code>napt promote</code>.</p>
 <p><strong>Example (in <code>recipes/Google/chrome.override.yaml</code>):</strong>
@@ -3685,7 +3710,7 @@ direction, and reports the parent it merged.</p>
 this file's directory, not the parent's.
 See <a href="../user-guide/#configuration-layers">Configuration layers</a> for where the
 parent sits in the merge order and how lists merge, and
-<a href="../common-tasks/#share-a-base-recipe-between-apps">Share a base recipe between apps</a>
+<a href="../common-tasks/#share-a-local-base-recipe-between-apps">Share a local base recipe between apps</a>
 for the steps.</p>
 <h2 id="discovery-configuration">Discovery configuration</h2>
 <p><code>discovery</code> tells NAPT where to find the installer.
@@ -4694,7 +4719,7 @@ with its discovery request, and the hosts each may be sent to.
 It is org policy and is honored from <code>defaults/org.yaml</code> only: an entry in a
 vendor file, a parent recipe, or a recipe is a validation error, and the
 loader never merges it.
-A recipe, including one vendored from another repository, can therefore
+A recipe, including a pinned copy of an upstream recipe, can therefore
 reach only the variables listed here and only for the listed hosts, so the
 runner's other secrets (<code>AZURE_CLIENT_SECRET</code>, cloud keys) stay out of every
 discovery request.</p>
@@ -4716,6 +4741,52 @@ Matching is by exact hostname, case-insensitively, and the request must use
 https.
 A request that carries a declared secret follows a redirect only to a host in
 this list; a redirect elsewhere stops discovery with an error.</p>
+<h2 id="shareable-recipes">Shareable recipes</h2>
+<p>A recipe another project pins with <code>napt upstream add</code> is loaded there
+as a pinned copy, the <code>parent</code> of an override, and only its app-owned keys
+reach that project's configuration.
+Everything else is dropped before the merge, so the importing project's
+<code>defaults/org.yaml</code> keeps owning tenant policy without restating it, and a
+line names the dropped keys on every load.</p>
+<p>A recipe published for others may set:</p>
+<table>
+<thead>
+<tr>
+<th>Section</th>
+<th>Keys that are kept</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Top level</td>
+<td><code>apiVersion</code>, <code>name</code>, <code>id</code></td>
+</tr>
+<tr>
+<td><code>discovery</code></td>
+<td>every key</td>
+</tr>
+<tr>
+<td><code>psadt</code></td>
+<td><code>app_vars</code>, <code>install</code>, <code>uninstall</code>, <code>override_msi_commands</code>, <code>override_msix_commands</code></td>
+</tr>
+<tr>
+<td><code>intune</code></td>
+<td><code>detection</code>, <code>description</code>, <code>publisher</code>, <code>developer</code>, <code>privacy_url</code>, <code>info_url</code>, <code>run_as_account</code>, <code>run_as_32_bit</code>, <code>device_restart_behavior</code>, <code>max_run_time_minutes</code>, <code>minimum_supported_windows_release</code></td>
+</tr>
+</tbody>
+</table>
+<p>Dropped: <code>deployment</code>, <code>directories</code>, <code>logging</code>, <code>intunewin</code>, <code>secrets</code>,
+<code>psadt.release</code>, <code>psadt.brand_pack</code>, and <code>intune.build_types</code>,
+<code>update_name_prefix</code>, <code>install_command</code>, <code>uninstall_command</code>, <code>is_featured</code>,
+<code>allow_available_uninstall</code>, <code>enforce_signature_check</code>, <code>owner</code>,
+<code>logo_path</code>.
+A key this version of NAPT does not know is dropped too.</p>
+<p>A published recipe keeps its own <code>deployment</code> and <code>intune.build_types</code> for
+the publisher's project; projects that pin it never see them.
+A <code>${NAME}</code> secret reference works in an importing project only when its
+<code>org.yaml</code> declares the variable for that host, and <code>napt upstream add</code>
+fails with the variable named until it does.
+An upstream recipe that itself declares <code>parent</code> cannot be pinned.</p>
 <h2 id="variable-substitution">Variable substitution</h2>
 <h3 id="napt-build-time-variables">NAPT build-time variables: <code>{{...}}</code></h3>
 <p>NAPT substitutes these while generating the package (they are not PowerShell
