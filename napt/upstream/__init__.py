@@ -25,6 +25,7 @@ only app-owned keys reach the merge.
 Modules:
     add: The import engine behind ``napt upstream add``.
     remove: The removal engine behind ``napt upstream remove``.
+    refresh: The scan behind ``napt upstream check`` and ``update``.
     git: Read-only transport through the ``git`` binary: list refs, fetch
         a ref's trees, list and read files.
     lock: The ``upstream.yaml`` lockfile, canonical hashing, and the

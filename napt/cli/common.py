@@ -91,18 +91,28 @@ def setup_logging(args: argparse.Namespace) -> Logger:
     return logger
 
 
-def print_results(title: str, rows: Iterable[tuple[str, object]], success: str) -> None:
+def print_results(
+    title: str,
+    rows: Iterable[tuple[str, object]],
+    success: str,
+    *,
+    failure: str | None = None,
+) -> None:
     """Prints a command's results block.
 
     The block is a banner, the title, one aligned ``Label: value`` line per
     row, a closing banner, a blank line, and the success line. Labels pad to
     the longest label in the block. A row whose value is None is left out,
-    so an optional field needs no branch in the handler.
+    so an optional field needs no branch in the handler. A command that
+    finished with partial results and will exit non-zero passes ``failure``
+    and the block ends with ``[FAIL]`` instead.
 
     Args:
         title: Heading for the block (e.g., "BUILD RESULTS").
         rows: Label and value pairs in display order.
         success: What was accomplished, printed after ``[SUCCESS]``.
+        failure: What went wrong, printed after ``[FAIL]`` in place of the
+            success line.
     """
     shown = [(label, value) for label, value in rows if value is not None]
     width = max((len(label) for label, _ in shown), default=0) + 1
@@ -114,7 +124,10 @@ def print_results(title: str, rows: Iterable[tuple[str, object]], success: str) 
         print(f"{label + ':':<{width}} {value}")
     print(banner)
     print()
-    print(f"[SUCCESS] {success}")
+    if failure is not None:
+        print(f"[FAIL] {failure}")
+    else:
+        print(f"[SUCCESS] {success}")
 
 
 def run_handler(

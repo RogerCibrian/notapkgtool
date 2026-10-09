@@ -6,6 +6,8 @@
 
 ::: napt.upstream.remove
 
+::: napt.upstream.refresh
+
 ::: napt.upstream.git
 
 ::: napt.upstream.lock

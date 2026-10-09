@@ -1451,6 +1451,87 @@ jobs:
   installed, since discover reads the version out of every MSI it
   downloads.
 
+### Workflow 5: upstream update (opens one PR per changed recipe)
+
+Only needed when the project imports recipes with `napt upstream`.
+The job asks each upstream repository whether a pinned copy has changed,
+then refreshes one recipe per pull request so each can be reviewed and
+merged on its own.
+Nothing here needs Windows.
+
+```yaml
+name: upstream-update
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install napt
+      - name: Open one PR per recipe that changed upstream
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.NAPT_PR_TOKEN }}
+        run: |
+          git config user.name "napt-bot"
+          git config user.email "napt-bot@users.noreply.github.com"
+          napt upstream check --format json > check.json
+          jq -r '.[] | select(.status == "changed") | .override' check.json \
+            > changed.txt
+          # Read from the file, not a pipe, so git and napt cannot consume
+          # the loop's input.
+          while read -r override; do
+            name=$(basename "$override" .override.yaml)
+            branch="upstream/$name"
+            git checkout -q -B "$branch" main
+            napt upstream update "$override"
+            # A refused update (the pinned copy was edited by hand) exits 1
+            # and fails the job here, which is the right outcome.
+            git add upstream upstream.yaml
+            if git diff --cached --quiet; then
+              git checkout -q main
+              continue
+            fi
+            git commit -q -m "chore: Update $name from upstream"
+            git push -f origin "$branch"
+            # The branch is overwritten each run; reuse an open PR for it.
+            gh pr view "$branch" >/dev/null 2>&1 ||
+            gh pr create --head "$branch" --base main \
+              --title "chore: Update $name from upstream" \
+              --body "$(jq -r --arg o "$override" \
+                '.[] | select(.override == $o) |
+                 "Upstream \(.path) moved from \(.old_commit[0:12]) to \(.new_commit[0:12]).\n\nThe diff under upstream/ is the recipe change; upstream.yaml records the new pin."' \
+                check.json)"
+            git checkout -q main
+          done < changed.txt
+```
+
+Notes:
+
+- `napt upstream check --exit-code` is the same scan with exit 1 on any
+  change, for a job that should go red instead of opening PRs.
+- A recipe that disappeared upstream is reported `missing` and never
+  updated; decide by hand whether to `remove` it or point the override at
+  a replacement.
+- A pinned copy edited by hand is reported `modified-locally` and left
+  alone, with exit 1 from `update`; move the edit into the override, or
+  pass `--force` to overwrite it from upstream.
+- Never auto-merge these PRs: an upstream recipe's install block is
+  PowerShell that runs on your endpoints.
+  A PR opened with the default `GITHUB_TOKEN` does not trigger your
+  validate workflow, so use an App token or a PAT in `NAPT_PR_TOKEN`.
+- A private upstream needs credentials before the `check` step; see
+  [Credentials for private repositories](user-guide.md#credentials-for-private-repositories).
+
 ## Import recipes from another repository
 
 `napt upstream add` imports recipes from any git repository, pins each as
@@ -1514,7 +1595,18 @@ How it fits together is in
    An edited pinned copy, or one not listed in `upstream.yaml`, fails
    here with the fix named.
 
-5. Remove an import when you no longer want it:
+5. See what changed upstream, and take the change:
+   ```bash
+   napt upstream check
+   napt upstream update recipes/Google/chrome.override.yaml
+   ```
+   `check` writes nothing; `update` rewrites the pinned copy and its pin
+   in `upstream.yaml`, so the diff you commit is the recipe diff.
+   With no path, `update` refreshes every changed recipe.
+   [Workflow 5](#workflow-5-upstream-update-opens-one-pr-per-changed-recipe)
+   does this on a schedule, one pull request per recipe.
+
+6. Remove an import when you no longer want it:
    ```bash
    napt upstream remove recipes/Google/chrome.override.yaml --delete-override
    ```

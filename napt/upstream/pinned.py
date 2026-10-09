@@ -40,6 +40,8 @@ import os
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+import yaml
+
 from napt.exceptions import ConfigError
 from napt.upstream.lock import LOCKFILE_NAME, canonical_sha256, read_lockfile
 
@@ -170,6 +172,31 @@ def tracked_location(path: Path) -> PinnedLocation | None:
                 relative=PurePosixPath(*resolved.relative_to(ancestor).parts),
             )
     return None
+
+
+def pinned_copy_of_override(override: Path) -> Path:
+    """Resolves an override's ``parent`` to the pinned copy it names.
+
+    Args:
+        override: A recipe file that declares ``parent``.
+
+    Returns:
+        The resolved parent path.
+
+    Raises:
+        ConfigError: When the file cannot be read or declares no parent.
+    """
+    try:
+        data = yaml.safe_load(override.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, yaml.YAMLError) as err:
+        raise ConfigError(f"Cannot read {override}: {err}") from err
+    parent = data.get("parent") if isinstance(data, dict) else None
+    if not isinstance(parent, str) or not parent:
+        raise ConfigError(
+            f"{override} declares no parent, so it is not an imported recipe's "
+            f"override; pass the pinned copy under {UPSTREAM_DIR_NAME}/ instead"
+        )
+    return (override.resolve().parent / parent).resolve()
 
 
 def is_pinned_copy(recipe_path: Path) -> bool:

@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`napt upstream check` and `update`** - Find out which pinned copies
+    changed upstream and take the changes. `check` reports each recipe as
+    `unchanged`, `changed`, `missing`, or `modified-locally` without
+    writing anything (`--exit-code` fails the run on drift, `--format
+    json` carries the old and new pins for a PR body). `update` rewrites
+    each changed pinned copy from the upstream recipe and records its new
+    commit; pass overrides or pinned copies to refresh one recipe at a
+    time, so CI can open one pull request per recipe. Overrides are never
+    touched; a pinned copy edited by hand is left alone unless `--force`
+    overwrites it
 - **`napt upstream add` and `remove`** - Import recipes from any git
     repository. `add` writes a pinned copy of each recipe, byte-identical, under
     `upstream/<host>/<repo path>/`, writes `recipes/<Vendor>/<app>.override.yaml`

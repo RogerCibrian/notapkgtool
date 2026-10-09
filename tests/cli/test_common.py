@@ -183,3 +183,14 @@ class TestFlags:
 
         assert parser.parse_args([]).state_dir is None
         assert parser.parse_args(["--state-dir", "x"]).state_dir == Path("x")
+
+
+def test_failure_replaces_the_success_line(capsys):
+    """Tests that a failure line ends the block in place of [SUCCESS]."""
+    from napt.cli.common import print_results
+
+    print_results("T", [("A", "1")], "done", failure="half done")
+
+    out = capsys.readouterr().out
+    assert "[FAIL] half done" in out
+    assert "[SUCCESS]" not in out

@@ -49,6 +49,11 @@ class TestBuildParser:
                 ["upstream", "remove", "recipes/a.override.yaml"],
                 upstream.cmd_upstream_remove,
             ),
+            (["upstream", "check"], upstream.cmd_upstream_check),
+            (
+                ["upstream", "update", "recipes/a.override.yaml"],
+                upstream.cmd_upstream_update,
+            ),
         ],
     )
     def test_every_command_dispatches_to_its_handler(self, argv, handler):
