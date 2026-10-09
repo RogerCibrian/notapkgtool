@@ -16,17 +16,24 @@
 
 `napt upstream add` imports upstream recipes from a repository as pinned
 copies and writes the overrides that run them; `napt upstream remove` takes
-one out again. The
-engines live in [napt.upstream.add][] and [napt.upstream.remove][]; this
-module parses arguments and prints results.
+one out again; `napt upstream check` reports which pinned copies drifted
+from their upstream recipes and `napt upstream update` rewrites them. The
+engines live in [napt.upstream.add][], [napt.upstream.remove][], and
+[napt.upstream.refresh][]; this module parses arguments and prints results.
 """
 
 from __future__ import annotations
 
 import argparse
+from dataclasses import asdict
+import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from napt.cli.common import add_output_flags, print_results
+
+if TYPE_CHECKING:
+    from napt.upstream.refresh import RefreshResult
 
 
 def cmd_upstream_add(args: argparse.Namespace) -> int:
@@ -125,6 +132,109 @@ def cmd_upstream_remove(args: argparse.Namespace) -> int:
         "Removed the pinned copy.",
     )
     return 0
+
+
+def _print_refresh(result: RefreshResult, *, as_json: bool, title: str) -> None:
+    """Prints a check or update result as a table or as JSON."""
+    from napt.upstream.refresh import CHANGED, MISSING, MODIFIED_LOCALLY
+
+    if as_json:
+        print(json.dumps([asdict(r) for r in result.recipes], indent=2))
+        return
+    print()
+    for r in result.recipes:
+        tag = f"[{r.status.upper()}]"
+        note = ""
+        if r.status == CHANGED and r.new_commit:
+            note = f" ({r.old_commit[:12]} -> {r.new_commit[:12]})"
+        if r.updated:
+            note += " (updated)"
+        elif r.status == MODIFIED_LOCALLY and result.wrote:
+            note += " (left alone; pass --force to overwrite)"
+        print(f"{tag} {r.path} -> {r.override}{note}")
+    print()
+    counts = {}
+    for r in result.recipes:
+        counts[r.status] = counts.get(r.status, 0) + 1
+    updated = sum(1 for r in result.recipes if r.updated)
+    rows = [
+        ("Recipes", str(len(result.recipes))),
+        ("Changed", str(counts.get(CHANGED, 0))),
+        ("Missing", str(counts.get(MISSING, 0))),
+        ("Modified Locally", str(counts.get(MODIFIED_LOCALLY, 0))),
+        ("Updated", str(updated) if result.wrote else None),
+    ]
+    copies = f"{updated} pinned cop{'y' if updated == 1 else 'ies'}"
+    failure = None
+    if result.refused:
+        failure = (
+            f"Rewrote {copies}; {len(result.refused)} edited locally and left "
+            f"alone. Move the edits into the override, or pass --force to "
+            f"overwrite."
+        )
+    if result.wrote:
+        success = f"Rewrote {copies}."
+    elif result.drifted:
+        success = f"{len(result.drifted)} recipe(s) differ upstream."
+    else:
+        success = "Every pinned copy matches its upstream recipe."
+    print_results(title, rows, success, failure=failure)
+
+
+def cmd_upstream_check(args: argparse.Namespace) -> int:
+    """Handler for 'napt upstream check'.
+
+    Compares each pinned copy to the upstream recipe at the branch or tag
+    tip and to its own lockfile entry, writing nothing.
+
+    Args:
+        args: Parsed command-line arguments carrying optional paths, the
+            output format, and the exit-code flag.
+
+    Returns:
+        Exit code: 0 when the check completed; 1 with --exit-code when any
+        recipe is changed or missing upstream.
+
+    Note:
+        Failures raise NAPT errors for
+        [run_handler][napt.cli.common.run_handler] to report.
+    """
+    from napt.upstream.refresh import refresh
+
+    as_json = args.format == "json"
+    result = refresh(Path.cwd(), write=False, paths=args.path, quiet=as_json)
+    _print_refresh(result, as_json=as_json, title="UPSTREAM CHECK RESULTS")
+    if args.exit_code and result.drifted:
+        return 1
+    return 0
+
+
+def cmd_upstream_update(args: argparse.Namespace) -> int:
+    """Handler for 'napt upstream update'.
+
+    Rewrites the pinned copies whose upstream recipe changed, each with its
+    own new commit in upstream.yaml; other entries keep their pins.
+
+    Args:
+        args: Parsed command-line arguments carrying optional paths, the
+            output format, and the force flag.
+
+    Returns:
+        Exit code: 0 when every selected recipe was handled; 1 when a
+        locally modified pinned copy was left alone.
+
+    Note:
+        Failures raise NAPT errors for
+        [run_handler][napt.cli.common.run_handler] to report.
+    """
+    from napt.upstream.refresh import refresh
+
+    as_json = args.format == "json"
+    result = refresh(
+        Path.cwd(), write=True, paths=args.path, force=args.force, quiet=as_json
+    )
+    _print_refresh(result, as_json=as_json, title="UPSTREAM UPDATE RESULTS")
+    return 1 if result.refused else 0
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:
@@ -254,3 +364,73 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     )
     add_output_flags(parser_remove)
     parser_remove.set_defaults(func=cmd_upstream_remove)
+
+    parser_check = upstream_sub.add_parser(
+        "check",
+        help="Report pinned copies that differ from their upstream recipes",
+        description=(
+            "Compare each pinned copy to the upstream recipe at the branch or "
+            "tag tip (changed, missing) and to its upstream.yaml entry "
+            "(modified-locally). Writes nothing. Exits 0 when the check "
+            "completed; with --exit-code, exits 1 when anything is changed or "
+            "missing, like git diff --exit-code.\n\n"
+            "Examples:\n"
+            "  napt upstream check\n"
+            "  napt upstream check --format json\n"
+            "  napt upstream check recipes/Google/chrome.override.yaml --exit-code"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    _add_refresh_arguments(parser_check)
+    parser_check.add_argument(
+        "--exit-code",
+        action="store_true",
+        help="Exit 1 when any recipe is changed or missing upstream",
+    )
+    add_output_flags(parser_check)
+    parser_check.set_defaults(func=cmd_upstream_check)
+
+    parser_update = upstream_sub.add_parser(
+        "update",
+        help="Rewrite pinned copies whose upstream recipe changed",
+        description=(
+            "Run the same scan as check, then rewrite each changed pinned copy "
+            "from the upstream recipe at the tip and record its new commit in "
+            "upstream.yaml. Other entries keep their pins, so passing one "
+            "override or pinned copy refreshes that recipe alone. A pinned copy "
+            "edited locally is left alone and the command exits 1, unless "
+            "--force overwrites it. Overrides are never touched.\n\n"
+            "Examples:\n"
+            "  napt upstream update\n"
+            "  napt upstream update recipes/Google/chrome.override.yaml\n"
+            "  napt upstream update --format json"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    _add_refresh_arguments(parser_update)
+    parser_update.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite pinned copies that were edited locally",
+    )
+    add_output_flags(parser_update)
+    parser_update.set_defaults(func=cmd_upstream_update)
+
+
+def _add_refresh_arguments(parser: argparse.ArgumentParser) -> None:
+    """Adds the arguments check and update share."""
+    parser.add_argument(
+        "path",
+        nargs="*",
+        type=Path,
+        help=(
+            "Overrides or pinned copies to limit the run to (default: every "
+            "tracked recipe)"
+        ),
+    )
+    parser.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format (default: text)",
+    )

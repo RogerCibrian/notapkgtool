@@ -48,7 +48,7 @@ napt/
 │   ├── promote.py              # napt promote plan/apply
 │   ├── status.py               # napt status
 │   ├── upload.py               # napt upload
-│   ├── upstream.py             # napt upstream add/remove
+│   ├── upstream.py             # napt upstream add/remove/check/update
 │   └── validate.py             # napt validate
 │
 ├── config/                  # Configuration loading
@@ -93,6 +93,7 @@ napt/
 ├── upstream/                # Recipes imported from other git repositories
 │   ├── add.py                  # Import engine: fetch, validate, write pinned copy, override, lockfile
 │   ├── remove.py               # Removal engine: delete pinned copy and lockfile entry
+│   ├── refresh.py              # Check and update engine: compare pins to upstream, rewrite changed copies
 │   ├── git.py                  # Read-only git transport: ls-remote, trees-only fetch, file reads
 │   ├── lock.py                 # upstream.yaml lockfile, canonical hashing, repo directories
 │   └── pinned.py               # Pinned-copy detection, hash check, allowed keys

@@ -18,11 +18,12 @@ Entries here are ideas, not commitments. Priorities shift with user feedback, te
 
 | Feature | Status | Category | Complexity | Value |
 |---------|--------|----------|------------|-------|
-| Upstream Recipes | 🚧 In Progress | User-Facing | Very High | High |
+| Upstream Recipes | ✅ Completed | User-Facing | Very High | High |
 | Pre/Post Install/Uninstall Script Support | 💡 Idea | User-Facing | Low | Medium |
 | Enhanced CLI Help Menu | 💡 Idea | User-Facing | Low | Medium |
 | Intune App Categorization & Scope Tags | 💡 Idea | User-Facing | Medium | Medium |
 | Configurable Install-Entry Cutover Ring | 💡 Idea | User-Facing | Medium | Medium |
+| Workflow Scaffolding in napt init | 💡 Idea | User-Facing | Low | Medium |
 | PowerShell Validation | 💡 Idea | Code Quality | High | High |
 | Recipe Linting & Best Practices | 💡 Idea | Code Quality | High | Medium |
 | Prerelease Version Ranking in Detection Scripts | 💡 Idea | Code Quality | Medium | Low |
@@ -30,47 +31,19 @@ Entries here are ideas, not commitments. Priorities shift with user feedback, te
 | EXE Version Extraction | 💡 Idea | Technical | High | Medium |
 | Parallel Package Building | 💡 Idea | Technical | Medium | Medium |
 | Minify Scripts at Intune Upload | 💡 Idea | Technical | Medium | Medium |
+| Provenance-Based Path Resolution for Local Parents | 💡 Idea | Technical | Low | Low |
 
 **Summary:**
 
-- ✅ **Completed** (since the last release): 0
-- 🚧 **In progress**: 1
-- 💡 **Ideas**: 11
-- **Total**: 12 features
+- ✅ **Completed** (since the last release): 1
+- 💡 **Ideas**: 13
+- **Total**: 14 features
 
 ---
 
 ## Active work
 
-#### Upstream recipes
-
-**Status**: 🚧 In Progress
-**Complexity**: Very High (5-10 days)
-**Value**: High
-
-**Description**: Import recipes from any git repository with
-`napt upstream`, pin each one to the exact content it was imported at, and
-customize it in an override without editing the imported file.
-A pinned copy lands under `upstream/`, the override in `recipes/` names
-it as `parent`, and `upstream.yaml` records each recipe's commit and hashes.
-Only app-owned keys from an upstream recipe reach the merge, so
-`defaults/org.yaml` keeps owning tenant policy.
-Shipped so far: the parent layer, the trust check and allow list in the
-loader, the read-only git transport, the `id` convention, and
-`napt upstream add` and `remove`.
-Remaining: `napt upstream check` and `update`, which detect upstream
-changes and rewrite the pinned copies so CI can open a pull request whose
-diff is the recipe diff.
-
-**Benefits**:
-
-- Share recipes between projects without copying files by hand
-- Upstream changes arrive as reviewable diffs, never as silent updates
-- A tenant's policy can never be overridden by a recipe it did not write
-
-**Related**: The design is in `docs/plans/upstream-recipes.md`; the
-model is AutoPkg's override and trust-hash pattern with pinned copies in
-place of cloned repositories.
+_Nothing currently in progress._
 
 ---
 
@@ -167,6 +140,38 @@ device in a ring group that already carries the new release installs
 the old one and updates right away.
 Bounded by the bake time of rings before the cutover point, so small
 with a pilot-sized first ring.
+
+#### Workflow scaffolding in napt init
+
+**Status**: 💡 Idea
+**Complexity**: Low (few hours to 1 day)
+**Value**: Medium
+
+**Description**: Have `napt init` write the reference GitHub Actions
+workflows (discover, publish, promotion plan, promotion apply, upstream
+update) as templates, the way it already writes `defaults/org.yaml`.
+The workflows in common-tasks are copy-paste today, and every project
+starts by pasting the same five files and adjusting the same handful of
+names.
+NAPT still never commits or pushes; it writes files for the user's
+pipeline to carry.
+
+**Benefits**:
+
+- A new project is runnable in CI without hand-copying from the docs
+- The templates stay in step with the CLI they call, since they ship with
+  it
+
+**Dependencies**:
+
+- A decision on how much to parameterize (default branch, runner labels,
+  secret names) versus leaving placeholders to edit
+
+**Related**: Deferred from the upstream recipes design; the trigger was a
+second CI example needing the same boilerplate as the first, which
+workflow 5 in common-tasks now is.
+
+---
 
 ### Code quality & validation
 
@@ -308,6 +313,37 @@ Optional: PowerShell-invoked AST-based minifier for greater reduction.
 requirements scripts are ~40 KB per app (~70-100 apps depending on code
 signing)
 
+#### Provenance-based path resolution for local parents
+
+**Status**: 💡 Idea
+**Complexity**: Low (few hours to 1 day)
+**Value**: Low
+
+**Description**: Resolve a relative `intune.logo_path` against the
+directory of the layer that set it, using the provenance the merge
+already records: `parent` against the parent's directory, `recipe`
+against the override's, `org_yaml` against `defaults/`.
+Today every relative path resolves against the override's directory, so
+a local base in `recipe-bases/` that keeps `chromium.png` next to itself
+fails at build time unless the logo is copied beside each override or
+the path is written from the override's point of view.
+Pinned copies cannot set path fields at all, so this is local parents
+only.
+
+**Benefits**:
+
+- A shared base recipe can carry its shared logo
+- Path semantics match where the author wrote the value
+
+**Dependencies**:
+
+- `_resolve_known_paths` in `napt/config/loader.py` takes the provenance
+  dict it currently ignores
+
+**Related**: Deferred from the upstream recipes design; the trigger is
+someone keeping a shared logo next to a local base recipe.
+The current rule is documented under `parent` in the recipe reference.
+
 ---
 
 ## Declined / won't implement
@@ -316,7 +352,33 @@ signing)
 
 ## Recently completed
 
-_Nothing since the last release._
+#### Upstream recipes
+
+**Status**: ✅ Completed
+**Complexity**: Very High
+**Value**: High
+
+**Description**: Import recipes from any git repository with
+`napt upstream`, pin each one to the exact content it was imported at, and
+customize it in an override without editing the pinned copy.
+A pinned copy lands under `upstream/`, the override in `recipes/` names
+it as `parent`, and `upstream.yaml` records each recipe's commit and hashes.
+Only app-owned keys from an upstream recipe reach the merge, so
+`defaults/org.yaml` keeps owning tenant policy.
+
+**Changes**:
+
+- `parent` field and the parent layer in the config loader
+- Trust check and allow list for a parent under `upstream/`
+- Read-only git transport with argument and environment guards
+- `<vendor>-<app>` id convention as a validation warning
+- `napt upstream add` and `remove`
+- `napt upstream check` and `update`, with per-recipe pins so one
+  recipe can be refreshed at a time and CI opens one PR per recipe
+
+**Related**: The model is similar to AutoPkg's override and trust-hash
+pattern, with pinned copies in place of cloned repositories; how it works
+is in the user guide's Upstream recipes section.
 
 ---
 

@@ -879,6 +879,8 @@ See [Upstream recipes](#upstream-recipes).
 napt upstream add URL --path PATH [--path PATH ...] [--ref REF] [--dest DIR]
     [--id ID] [--exclude GLOB ...] [--dry-run]
 napt upstream remove PATH [--delete-override]
+napt upstream check [PATH ...] [--format text|json] [--exit-code]
+napt upstream update [PATH ...] [--format text|json] [--force]
 ```
 
 ### Output modes
@@ -1435,6 +1437,44 @@ Review changes under `upstream/` and to `upstream.yaml` like any other
 recipe change: install blocks are PowerShell that runs on your endpoints.
 A CODEOWNERS rule on `upstream/**` and `upstream.yaml` gives those diffs a
 named reviewer.
+
+### Checking for and taking upstream changes
+
+```bash
+napt upstream check
+napt upstream update recipes/Google/chrome.override.yaml
+```
+
+`check` asks each repository in `upstream.yaml` for the tip of its ref.
+When the tip equals every pinned copy's commit, nothing is fetched and only
+the local hashes are verified; otherwise the ref is fetched trees-only once
+and each recipe's recorded blob id is compared to the one at its path now.
+Each recipe reports one status:
+
+| Status | Meaning | What `update` does |
+|--------|---------|--------------------|
+| `unchanged` | Same content upstream | Nothing |
+| `changed` | Upstream edited the recipe | Rewrites the pinned copy and records its new commit, blob id, and sha256 |
+| `missing` | The path is gone upstream | Nothing; git cannot tell a rename from a delete, so you decide |
+| `modified-locally` | The pinned copy differs from its lockfile entry | Leaves it and exits 1, unless `--force` overwrites it from upstream |
+
+`update` with no path refreshes every changed recipe; with overrides or
+pinned copies as arguments it refreshes those alone, and every other entry
+keeps its pin.
+A commit elsewhere in the repository is not a change: a recipe's pin
+advances only when its own content did.
+The override is never touched, so your customizations survive every
+update, and the diff you commit is the upstream recipe diff plus one
+lockfile entry.
+`--format json` prints one object per recipe with the old and new commit
+and blob ids for a PR body.
+`check` exits 0 when it completed; `--exit-code` makes it exit 1 when
+anything is `changed` or `missing`, like `git diff --exit-code`.
+
+Review an update PR as you would any recipe change (see
+[Trust](#trust)).
+[Workflow 5](common-tasks.md#workflow-5-upstream-update-opens-one-pr-per-changed-recipe)
+runs this on a schedule and opens one pull request per changed recipe.
 
 ### Removing an import
 

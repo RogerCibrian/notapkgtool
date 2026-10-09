@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from unittest.mock import patch
 
 from napt.cli.common import run_handler
-from napt.cli.upstream import cmd_upstream_add, cmd_upstream_remove
+from napt.cli.upstream import (
+    cmd_upstream_add,
+    cmd_upstream_check,
+    cmd_upstream_remove,
+    cmd_upstream_update,
+)
 from napt.exceptions import ConfigError
 from napt.upstream.add import AddResult, PlannedRecipe
+from napt.upstream.refresh import RecipeStatus, RefreshResult
 from napt.upstream.remove import RemoveResult
 from tests.cli.conftest import _args
 
@@ -165,3 +172,126 @@ class TestCmdUpstreamRemove:
         out = capsys.readouterr().out
         assert "Override:" not in out
         assert "Override State:" not in out
+
+
+def _status(**overrides) -> RecipeStatus:
+    defaults = {
+        "url": "https://github.com/org/recipes.git",
+        "path": "recipes/Google/chrome.yaml",
+        "override": "recipes/Google/chrome.override.yaml",
+        "status": "changed",
+        "old_commit": "aaa",
+        "new_commit": "bbb",
+        "old_blob": "111",
+        "new_blob": "222",
+    }
+    defaults.update(overrides)
+    return RecipeStatus(**defaults)
+
+
+class TestCmdUpstreamCheck:
+    """Tests for the check handler."""
+
+    def test_prints_statuses_and_exits_zero_by_default(self, capsys):
+        """Tests that drift is listed and the exit code stays 0 without --exit-code."""
+        result = RefreshResult(
+            recipes=(_status(), _status(path="recipes/x.yaml", status="unchanged")),
+            wrote=False,
+        )
+        with patch("napt.upstream.refresh.refresh", return_value=result) as run:
+            code = cmd_upstream_check(_args(path=[], format="text", exit_code=False))
+
+        assert code == 0
+        run.assert_called_once_with(Path.cwd(), write=False, paths=[], quiet=False)
+        out = capsys.readouterr().out
+        assert (
+            "[CHANGED] recipes/Google/chrome.yaml -> "
+            "recipes/Google/chrome.override.yaml" in out
+        )
+        assert "[UNCHANGED] recipes/x.yaml" in out
+        assert "Changed:" in out and "1 recipe(s) differ upstream." in out
+
+    def test_exit_code_flag_fails_on_drift(self):
+        """Tests that --exit-code returns 1 on changed or missing, 0 otherwise."""
+        drifted = RefreshResult(recipes=(_status(status="missing"),), wrote=False)
+        clean = RefreshResult(recipes=(_status(status="unchanged"),), wrote=False)
+        with patch("napt.upstream.refresh.refresh", return_value=drifted):
+            assert (
+                cmd_upstream_check(_args(path=[], format="text", exit_code=True)) == 1
+            )
+        with patch("napt.upstream.refresh.refresh", return_value=clean):
+            assert (
+                cmd_upstream_check(_args(path=[], format="text", exit_code=True)) == 0
+            )
+
+    def test_modified_locally_is_not_a_failure_for_check(self, capsys):
+        """Tests that check reports a hand-edited copy without a [FAIL] block."""
+        result = RefreshResult(
+            recipes=(_status(status="modified-locally"),), wrote=False
+        )
+        with patch("napt.upstream.refresh.refresh", return_value=result):
+            code = cmd_upstream_check(_args(path=[], format="text", exit_code=True))
+
+        assert code == 0
+        out = capsys.readouterr().out
+        assert "[MODIFIED-LOCALLY] recipes/Google/chrome.yaml" in out
+        assert "[FAIL]" not in out and "[SUCCESS]" in out
+        assert "--force" not in out
+
+    def test_json_output_carries_every_field(self, capsys):
+        """Tests that --format json emits one object per recipe with the pins."""
+        result = RefreshResult(recipes=(_status(),), wrote=False)
+        with patch("napt.upstream.refresh.refresh", return_value=result):
+            cmd_upstream_check(_args(path=[], format="json", exit_code=False))
+
+        data = json.loads(capsys.readouterr().out)
+        assert data[0]["status"] == "changed"
+        assert data[0]["old_commit"] == "aaa" and data[0]["new_commit"] == "bbb"
+        assert data[0]["override"] == "recipes/Google/chrome.override.yaml"
+
+
+class TestCmdUpstreamUpdate:
+    """Tests for the update handler."""
+
+    def test_reports_rewrites_and_passes_paths_and_force(self, capsys):
+        """Tests that update prints what it rewrote and forwards its flags."""
+        result = RefreshResult(recipes=(_status(updated=True),), wrote=True)
+        with patch("napt.upstream.refresh.refresh", return_value=result) as run:
+            code = cmd_upstream_update(
+                _args(path=[Path("recipes/a.override.yaml")], format="text", force=True)
+            )
+
+        assert code == 0
+        run.assert_called_once_with(
+            Path.cwd(),
+            write=True,
+            paths=[Path("recipes/a.override.yaml")],
+            force=True,
+            quiet=False,
+        )
+        out = capsys.readouterr().out
+        assert "[CHANGED] recipes/Google/chrome.yaml" in out and "(updated)" in out
+        assert "Rewrote 1 pinned copy." in out
+
+    def test_refused_local_edit_exits_one(self, capsys):
+        """Tests that a left-alone modified copy fails the run with the fix named."""
+        result = RefreshResult(
+            recipes=(_status(status="modified-locally"),), wrote=True
+        )
+        with patch("napt.upstream.refresh.refresh", return_value=result):
+            code = cmd_upstream_update(_args(path=[], format="text", force=False))
+
+        assert code == 1
+        out = capsys.readouterr().out
+        assert "left alone; pass --force to overwrite" in out
+        assert "[FAIL] Rewrote 0 pinned copies; 1 edited locally" in out
+        assert "[SUCCESS]" not in out
+
+    def test_json_mode_runs_quietly(self, capsys):
+        """Tests that --format json asks the engine for no progress lines."""
+        result = RefreshResult(recipes=(_status(updated=True),), wrote=True)
+        with patch("napt.upstream.refresh.refresh", return_value=result) as run:
+            cmd_upstream_update(_args(path=[], format="json", force=False))
+
+        assert run.call_args.kwargs["quiet"] is True
+        assert json.loads(capsys.readouterr().out)[0]["updated"] is True

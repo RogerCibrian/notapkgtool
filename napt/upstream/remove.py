@@ -27,8 +27,6 @@ from dataclasses import dataclass
 import os
 from pathlib import Path, PurePosixPath
 
-import yaml
-
 from napt.exceptions import ConfigError
 from napt.logging import get_global_logger
 from napt.upstream.git import check_upstream_path
@@ -40,7 +38,11 @@ from napt.upstream.lock import (
     repo_directory,
     write_lockfile,
 )
-from napt.upstream.pinned import UPSTREAM_DIR_NAME, tracked_location
+from napt.upstream.pinned import (
+    UPSTREAM_DIR_NAME,
+    pinned_copy_of_override,
+    tracked_location,
+)
 
 
 @dataclass(frozen=True)
@@ -61,21 +63,6 @@ class RemoveResult:
     override: str | None
     override_deleted: bool
     repo_removed: bool
-
-
-def _pinned_from_override(project_root: Path, override: Path) -> Path:
-    """Resolves an override's ``parent`` to the pinned copy it names."""
-    try:
-        data = yaml.safe_load(override.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, yaml.YAMLError) as err:
-        raise ConfigError(f"Cannot read {override}: {err}") from err
-    parent = data.get("parent") if isinstance(data, dict) else None
-    if not isinstance(parent, str) or not parent:
-        raise ConfigError(
-            f"{override} declares no parent, so it is not an imported recipe's "
-            f"override; pass the pinned copy under {UPSTREAM_DIR_NAME}/ instead"
-        )
-    return (override.resolve().parent / parent).resolve()
 
 
 def _recorded_override(project_root: Path, recorded: str, pinned: Path) -> Path | None:
@@ -109,7 +96,7 @@ def _recorded_override(project_root: Path, recorded: str, pinned: Path) -> Path 
         )
     if not candidate.is_file():
         return None
-    if _pinned_from_override(project_root, candidate) != pinned:
+    if pinned_copy_of_override(candidate) != pinned:
         raise ConfigError(
             f"{candidate} does not name {pinned} as its parent, although "
             f"{LOCKFILE_NAME} records it as the override; fix the entry by hand"
@@ -154,7 +141,7 @@ def remove_recipe(
     override_path: Path | None = None
     if location is None:
         override_path = given
-        pinned = _pinned_from_override(project_root, given)
+        pinned = pinned_copy_of_override(given)
         location = tracked_location(pinned)
         if location is None:
             raise ConfigError(
