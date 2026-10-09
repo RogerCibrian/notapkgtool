@@ -3046,6 +3046,16 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 <h2 id="unreleased"><a href="https://github.com/RogerCibrian/notapkgtool/compare/0.12.0...HEAD">Unreleased</a></h2>
 <h3 id="added">Added</h3>
 <ul>
+<li><strong><code>napt upstream check</code> and <code>update</code></strong> - Find out which pinned copies
+    changed upstream and take the changes. <code>check</code> reports each recipe as
+    <code>unchanged</code>, <code>changed</code>, <code>missing</code>, or <code>modified-locally</code> without
+    writing anything (<code>--exit-code</code> fails the run on drift, <code>--format
+    json</code> carries the old and new pins for a PR body). <code>update</code> rewrites
+    each changed pinned copy from the upstream recipe and records its new
+    commit; pass overrides or pinned copies to refresh one recipe at a
+    time, so CI can open one pull request per recipe. Overrides are never
+    touched; a pinned copy edited by hand is left alone unless <code>--force</code>
+    overwrites it</li>
 <li>
 <p><strong><code>napt upstream add</code> and <code>remove</code></strong> - Import recipes from any git
     repository. <code>add</code> writes a pinned copy of each recipe, byte-identical, under

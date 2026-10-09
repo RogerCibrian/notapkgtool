@@ -1700,23 +1700,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Active work">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#upstream-recipes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Upstream recipes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -1781,6 +1764,17 @@
     <span class="md-ellipsis">
       
         Configurable install-entry cutover ring
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workflow-scaffolding-in-napt-init" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow scaffolding in napt init
       
     </span>
   </a>
@@ -1898,6 +1892,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#provenance-based-path-resolution-for-local-parents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Provenance-based path resolution for local parents
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1927,6 +1932,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Recently completed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#upstream-recipes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upstream recipes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2031,23 +2053,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Active work">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#upstream-recipes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Upstream recipes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -2112,6 +2117,17 @@
     <span class="md-ellipsis">
       
         Configurable install-entry cutover ring
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workflow-scaffolding-in-napt-init" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow scaffolding in napt init
       
     </span>
   </a>
@@ -2229,6 +2245,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#provenance-based-path-resolution-for-local-parents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Provenance-based path resolution for local parents
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2258,6 +2285,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Recently completed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#upstream-recipes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upstream recipes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2307,7 +2351,7 @@
 <tbody>
 <tr>
 <td>Upstream Recipes</td>
-<td>🚧 In Progress</td>
+<td>✅ Completed</td>
 <td>User-Facing</td>
 <td>Very High</td>
 <td>High</td>
@@ -2338,6 +2382,13 @@
 <td>💡 Idea</td>
 <td>User-Facing</td>
 <td>Medium</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>Workflow Scaffolding in napt init</td>
+<td>💡 Idea</td>
+<td>User-Facing</td>
+<td>Low</td>
 <td>Medium</td>
 </tr>
 <tr>
@@ -2389,43 +2440,24 @@
 <td>Medium</td>
 <td>Medium</td>
 </tr>
+<tr>
+<td>Provenance-Based Path Resolution for Local Parents</td>
+<td>💡 Idea</td>
+<td>Technical</td>
+<td>Low</td>
+<td>Low</td>
+</tr>
 </tbody>
 </table>
 <p><strong>Summary:</strong></p>
 <ul>
-<li>✅ <strong>Completed</strong> (since the last release): 0</li>
-<li>🚧 <strong>In progress</strong>: 1</li>
-<li>💡 <strong>Ideas</strong>: 11</li>
-<li><strong>Total</strong>: 12 features</li>
+<li>✅ <strong>Completed</strong> (since the last release): 1</li>
+<li>💡 <strong>Ideas</strong>: 13</li>
+<li><strong>Total</strong>: 14 features</li>
 </ul>
 <hr />
 <h2 id="active-work">Active work</h2>
-<h4 id="upstream-recipes">Upstream recipes</h4>
-<p><strong>Status</strong>: 🚧 In Progress
-<strong>Complexity</strong>: Very High (5-10 days)
-<strong>Value</strong>: High</p>
-<p><strong>Description</strong>: Import recipes from any git repository with
-<code>napt upstream</code>, pin each one to the exact content it was imported at, and
-customize it in an override without editing the imported file.
-A pinned copy lands under <code>upstream/</code>, the override in <code>recipes/</code> names
-it as <code>parent</code>, and <code>upstream.yaml</code> records each recipe's commit and hashes.
-Only app-owned keys from an upstream recipe reach the merge, so
-<code>defaults/org.yaml</code> keeps owning tenant policy.
-Shipped so far: the parent layer, the trust check and allow list in the
-loader, the read-only git transport, the <code>id</code> convention, and
-<code>napt upstream add</code> and <code>remove</code>.
-Remaining: <code>napt upstream check</code> and <code>update</code>, which detect upstream
-changes and rewrite the pinned copies so CI can open a pull request whose
-diff is the recipe diff.</p>
-<p><strong>Benefits</strong>:</p>
-<ul>
-<li>Share recipes between projects without copying files by hand</li>
-<li>Upstream changes arrive as reviewable diffs, never as silent updates</li>
-<li>A tenant's policy can never be overridden by a recipe it did not write</li>
-</ul>
-<p><strong>Related</strong>: The design is in <code>docs/plans/upstream-recipes.md</code>; the
-model is AutoPkg's override and trust-hash pattern with pinned copies in
-place of cloned repositories.</p>
+<p><em>Nothing currently in progress.</em></p>
 <hr />
 <h2 id="future-ideas-by-category">Future ideas (by category)</h2>
 <blockquote>
@@ -2507,6 +2539,33 @@ device in a ring group that already carries the new release installs
 the old one and updates right away.
 Bounded by the bake time of rings before the cutover point, so small
 with a pilot-sized first ring.</p>
+<h4 id="workflow-scaffolding-in-napt-init">Workflow scaffolding in napt init</h4>
+<p><strong>Status</strong>: 💡 Idea
+<strong>Complexity</strong>: Low (few hours to 1 day)
+<strong>Value</strong>: Medium</p>
+<p><strong>Description</strong>: Have <code>napt init</code> write the reference GitHub Actions
+workflows (discover, publish, promotion plan, promotion apply, upstream
+update) as templates, the way it already writes <code>defaults/org.yaml</code>.
+The workflows in common-tasks are copy-paste today, and every project
+starts by pasting the same five files and adjusting the same handful of
+names.
+NAPT still never commits or pushes; it writes files for the user's
+pipeline to carry.</p>
+<p><strong>Benefits</strong>:</p>
+<ul>
+<li>A new project is runnable in CI without hand-copying from the docs</li>
+<li>The templates stay in step with the CLI they call, since they ship with
+  it</li>
+</ul>
+<p><strong>Dependencies</strong>:</p>
+<ul>
+<li>A decision on how much to parameterize (default branch, runner labels,
+  secret names) versus leaving placeholders to edit</li>
+</ul>
+<p><strong>Related</strong>: Deferred from the upstream recipes design; the trigger was a
+second CI example needing the same boilerplate as the first, which
+workflow 5 in common-tasks now is.</p>
+<hr />
 <h3 id="code-quality-validation">Code quality &amp; validation</h3>
 <h4 id="powershell-validation">PowerShell validation</h4>
 <p><strong>Status</strong>: 💡 Idea
@@ -2620,11 +2679,61 @@ Optional: PowerShell-invoked AST-based minifier for greater reduction.</p>
 <p><strong>Related</strong>: Intune default policy limit is 4 MB total; NAPT detection +
 requirements scripts are ~40 KB per app (~70-100 apps depending on code
 signing)</p>
+<h4 id="provenance-based-path-resolution-for-local-parents">Provenance-based path resolution for local parents</h4>
+<p><strong>Status</strong>: 💡 Idea
+<strong>Complexity</strong>: Low (few hours to 1 day)
+<strong>Value</strong>: Low</p>
+<p><strong>Description</strong>: Resolve a relative <code>intune.logo_path</code> against the
+directory of the layer that set it, using the provenance the merge
+already records: <code>parent</code> against the parent's directory, <code>recipe</code>
+against the override's, <code>org_yaml</code> against <code>defaults/</code>.
+Today every relative path resolves against the override's directory, so
+a local base in <code>recipe-bases/</code> that keeps <code>chromium.png</code> next to itself
+fails at build time unless the logo is copied beside each override or
+the path is written from the override's point of view.
+Pinned copies cannot set path fields at all, so this is local parents
+only.</p>
+<p><strong>Benefits</strong>:</p>
+<ul>
+<li>A shared base recipe can carry its shared logo</li>
+<li>Path semantics match where the author wrote the value</li>
+</ul>
+<p><strong>Dependencies</strong>:</p>
+<ul>
+<li><code>_resolve_known_paths</code> in <code>napt/config/loader.py</code> takes the provenance
+  dict it currently ignores</li>
+</ul>
+<p><strong>Related</strong>: Deferred from the upstream recipes design; the trigger is
+someone keeping a shared logo next to a local base recipe.
+The current rule is documented under <code>parent</code> in the recipe reference.</p>
 <hr />
 <h2 id="declined-wont-implement">Declined / won't implement</h2>
 <hr />
 <h2 id="recently-completed">Recently completed</h2>
-<p><em>Nothing since the last release.</em></p>
+<h4 id="upstream-recipes">Upstream recipes</h4>
+<p><strong>Status</strong>: ✅ Completed
+<strong>Complexity</strong>: Very High
+<strong>Value</strong>: High</p>
+<p><strong>Description</strong>: Import recipes from any git repository with
+<code>napt upstream</code>, pin each one to the exact content it was imported at, and
+customize it in an override without editing the pinned copy.
+A pinned copy lands under <code>upstream/</code>, the override in <code>recipes/</code> names
+it as <code>parent</code>, and <code>upstream.yaml</code> records each recipe's commit and hashes.
+Only app-owned keys from an upstream recipe reach the merge, so
+<code>defaults/org.yaml</code> keeps owning tenant policy.</p>
+<p><strong>Changes</strong>:</p>
+<ul>
+<li><code>parent</code> field and the parent layer in the config loader</li>
+<li>Trust check and allow list for a parent under <code>upstream/</code></li>
+<li>Read-only git transport with argument and environment guards</li>
+<li><code>&lt;vendor&gt;-&lt;app&gt;</code> id convention as a validation warning</li>
+<li><code>napt upstream add</code> and <code>remove</code></li>
+<li><code>napt upstream check</code> and <code>update</code>, with per-recipe pins so one
+  recipe can be refreshed at a time and CI opens one PR per recipe</li>
+</ul>
+<p><strong>Related</strong>: The model is similar to AutoPkg's override and trust-hash
+pattern, with pinned copies in place of cloned repositories; how it works
+is in the user guide's Upstream recipes section.</p>
 <hr />
 <p>Everything shipped in earlier releases is in the <a href="../changelog/">changelog</a>.</p>
 

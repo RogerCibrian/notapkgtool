@@ -1038,6 +1038,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#checking-for-and-taking-upstream-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checking for and taking upstream changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#removing-an-import" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2855,6 +2866,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#checking-for-and-taking-upstream-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checking for and taking upstream changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#removing-an-import" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3837,6 +3859,8 @@ See <a href="#upstream-recipes">Upstream recipes</a>.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>napt<span class="w"> </span>upstream<span class="w"> </span>add<span class="w"> </span>URL<span class="w"> </span>--path<span class="w"> </span>PATH<span class="w"> </span><span class="o">[</span>--path<span class="w"> </span>PATH<span class="w"> </span>...<span class="o">]</span><span class="w"> </span><span class="o">[</span>--ref<span class="w"> </span>REF<span class="o">]</span><span class="w"> </span><span class="o">[</span>--dest<span class="w"> </span>DIR<span class="o">]</span>
 </span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">    </span><span class="o">[</span>--id<span class="w"> </span>ID<span class="o">]</span><span class="w"> </span><span class="o">[</span>--exclude<span class="w"> </span>GLOB<span class="w"> </span>...<span class="o">]</span><span class="w"> </span><span class="o">[</span>--dry-run<span class="o">]</span>
 </span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>napt<span class="w"> </span>upstream<span class="w"> </span>remove<span class="w"> </span>PATH<span class="w"> </span><span class="o">[</span>--delete-override<span class="o">]</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>napt<span class="w"> </span>upstream<span class="w"> </span>check<span class="w"> </span><span class="o">[</span>PATH<span class="w"> </span>...<span class="o">]</span><span class="w"> </span><span class="o">[</span>--format<span class="w"> </span>text<span class="p">|</span>json<span class="o">]</span><span class="w"> </span><span class="o">[</span>--exit-code<span class="o">]</span>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>napt<span class="w"> </span>upstream<span class="w"> </span>update<span class="w"> </span><span class="o">[</span>PATH<span class="w"> </span>...<span class="o">]</span><span class="w"> </span><span class="o">[</span>--format<span class="w"> </span>text<span class="p">|</span>json<span class="o">]</span><span class="w"> </span><span class="o">[</span>--force<span class="o">]</span>
 </span></code></pre></div>
 <h3 id="output-modes">Output modes</h3>
 <table>
@@ -4453,8 +4477,64 @@ Review changes under <code>upstream/</code> and to <code>upstream.yaml</code> li
 recipe change: install blocks are PowerShell that runs on your endpoints.
 A CODEOWNERS rule on <code>upstream/**</code> and <code>upstream.yaml</code> gives those diffs a
 named reviewer.</p>
+<h3 id="checking-for-and-taking-upstream-changes">Checking for and taking upstream changes</h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>napt<span class="w"> </span>upstream<span class="w"> </span>check
+</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>napt<span class="w"> </span>upstream<span class="w"> </span>update<span class="w"> </span>recipes/Google/chrome.override.yaml
+</span></code></pre></div>
+<p><code>check</code> asks each repository in <code>upstream.yaml</code> for the tip of its ref.
+When the tip equals every pinned copy's commit, nothing is fetched and only
+the local hashes are verified; otherwise the ref is fetched trees-only once
+and each recipe's recorded blob id is compared to the one at its path now.
+Each recipe reports one status:</p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Meaning</th>
+<th>What <code>update</code> does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>unchanged</code></td>
+<td>Same content upstream</td>
+<td>Nothing</td>
+</tr>
+<tr>
+<td><code>changed</code></td>
+<td>Upstream edited the recipe</td>
+<td>Rewrites the pinned copy and records its new commit, blob id, and sha256</td>
+</tr>
+<tr>
+<td><code>missing</code></td>
+<td>The path is gone upstream</td>
+<td>Nothing; git cannot tell a rename from a delete, so you decide</td>
+</tr>
+<tr>
+<td><code>modified-locally</code></td>
+<td>The pinned copy differs from its lockfile entry</td>
+<td>Leaves it and exits 1, unless <code>--force</code> overwrites it from upstream</td>
+</tr>
+</tbody>
+</table>
+<p><code>update</code> with no path refreshes every changed recipe; with overrides or
+pinned copies as arguments it refreshes those alone, and every other entry
+keeps its pin.
+A commit elsewhere in the repository is not a change: a recipe's pin
+advances only when its own content did.
+The override is never touched, so your customizations survive every
+update, and the diff you commit is the upstream recipe diff plus one
+lockfile entry.
+<code>--format json</code> prints one object per recipe with the old and new commit
+and blob ids for a PR body.
+<code>check</code> exits 0 when it completed; <code>--exit-code</code> makes it exit 1 when
+anything is <code>changed</code> or <code>missing</code>, like <code>git diff --exit-code</code>.</p>
+<p>Review an update PR as you would any recipe change (see
+<a href="#trust">Trust</a>).
+<a href="../common-tasks/#workflow-5-upstream-update-opens-one-pr-per-changed-recipe">Workflow 5</a>
+runs this on a schedule and opens one pull request per changed recipe.</p>
 <h3 id="removing-an-import">Removing an import</h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>napt<span class="w"> </span>upstream<span class="w"> </span>remove<span class="w"> </span>recipes/Google/chrome.override.yaml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>napt<span class="w"> </span>upstream<span class="w"> </span>remove<span class="w"> </span>recipes/Google/chrome.override.yaml
 </span></code></pre></div>
 <p>Deletes the pinned copy and its lockfile entry, the repository's entry
 and emptied directories once nothing of it remains, and <code>upstream.yaml</code>
@@ -4470,9 +4550,9 @@ git finds from any directory, because NAPT fetches into a temporary
 directory, not your checkout.
 On a GitHub-hosted runner, <code>gh auth setup-git</code> with a token in <code>GH_TOKEN</code>
 registers one; the environment form of a URL rewrite needs no file:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="nv">GIT_CONFIG_COUNT</span><span class="o">=</span><span class="m">1</span>
-</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a><span class="nv">GIT_CONFIG_KEY_0</span><span class="o">=</span>url.https://x-access-token:<span class="si">${</span><span class="nv">TOKEN</span><span class="si">}</span>@github.com/.insteadOf
-</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a><span class="nv">GIT_CONFIG_VALUE_0</span><span class="o">=</span>https://github.com/
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="nv">GIT_CONFIG_COUNT</span><span class="o">=</span><span class="m">1</span>
+</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a><span class="nv">GIT_CONFIG_KEY_0</span><span class="o">=</span>url.https://x-access-token:<span class="si">${</span><span class="nv">TOKEN</span><span class="si">}</span>@github.com/.insteadOf
+</span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a><span class="nv">GIT_CONFIG_VALUE_0</span><span class="o">=</span>https://github.com/
 </span></code></pre></div>
 <p>A private SSH repository needs a deploy key and a pre-trusted host key;
 NAPT runs ssh in batch mode, so an untrusted host fails instead of
@@ -4519,13 +4599,13 @@ Develop on any platform, package on Windows.</p>
 which is a Windows-only .NET application.</p>
 <h3 id="mixed-platform-workflow">Mixed platform workflow</h3>
 <p>To develop on Linux or macOS and package on Windows:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="c1"># On Linux/macOS: Discovery and build</span>
-</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
-</span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
-</span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a>
-</span><span id="__span-29-5"><a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a><span class="c1"># Transfer build directory to Windows (e.g., via shared storage)</span>
-</span><span id="__span-29-6"><a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a><span class="c1"># On Windows: Package</span>
-</span><span id="__span-29-7"><a id="__codelineno-29-7" name="__codelineno-29-7" href="#__codelineno-29-7"></a>napt<span class="w"> </span>package<span class="w"> </span>recipes/Google/chrome.yaml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="c1"># On Linux/macOS: Discovery and build</span>
+</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml
+</span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
+</span><span id="__span-30-4"><a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a>
+</span><span id="__span-30-5"><a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a><span class="c1"># Transfer build directory to Windows (e.g., via shared storage)</span>
+</span><span id="__span-30-6"><a id="__codelineno-30-6" name="__codelineno-30-6" href="#__codelineno-30-6"></a><span class="c1"># On Windows: Package</span>
+</span><span id="__span-30-7"><a id="__codelineno-30-7" name="__codelineno-30-7" href="#__codelineno-30-7"></a>napt<span class="w"> </span>package<span class="w"> </span>recipes/Google/chrome.yaml
 </span></code></pre></div>
 <h2 id="best-practices">Best practices</h2>
 <h3 id="recipe-organization">Recipe organization</h3>
@@ -4535,9 +4615,9 @@ NAPT detects the vendor from the recipe's parent directory name and loads
 exists too (see <a href="#the-configuration-layers">The configuration layers</a>).</p>
 <h3 id="scripting">Scripting</h3>
 <p>Commands exit 0 on success, 1 on error, and 2 on a usage error:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="k">if</span><span class="w"> </span>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="p">;</span><span class="w"> </span><span class="k">then</span>
-</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a><span class="w">    </span>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
-</span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a><span class="k">fi</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="k">if</span><span class="w"> </span>napt<span class="w"> </span>discover<span class="w"> </span>recipes/Google/chrome.yaml<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+</span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a><span class="w">    </span>napt<span class="w"> </span>build<span class="w"> </span>recipes/Google/chrome.yaml
+</span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a><span class="k">fi</span>
 </span></code></pre></div>
 <h2 id="troubleshooting">Troubleshooting</h2>
 <p>For discovery failures (unknown strategy, version extraction, rate limits,
