@@ -3598,7 +3598,7 @@ Requirements that depend on the installer, such as the EXE <code>install</code> 
 <h2 id="top-level-fields">Top-level fields</h2>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span><span class="w">          </span><span class="c1"># Required: recipe format version</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"Application</span><span class="nv"> </span><span class="s">Name"</span><span class="w">     </span><span class="c1"># Required: display name</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">"napt-app-id"</span><span class="w">            </span><span class="c1"># Required: identifier and folder name</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">"vendor-app"</span><span class="w">             </span><span class="c1"># Required: identifier and folder name</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nt">discovery</span><span class="p">:</span><span class="w">                   </span><span class="c1"># Required: how to find and download the installer</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="s">"owner/repository"</span>
@@ -3634,12 +3634,23 @@ PSADT dialogs show <code>psadt.app_vars.AppName</code>, which is not filled from
 <h3 id="id">id</h3>
 <p><strong>Type:</strong> <code>string</code>
 <strong>Required:</strong> Yes
-<strong>Convention:</strong> Lowercase, alphanumeric, hyphens (e.g., <code>napt-chrome</code>,
-<code>napt-git</code>)</p>
+<strong>Convention:</strong> <code>&lt;vendor&gt;-&lt;app&gt;[-&lt;variant&gt;]</code> in lowercase letters, digits,
+and single hyphens (<code>google-chrome</code>, <code>microsoft-vscode</code>, <code>7zip-x64-msi</code>)</p>
 <p>Names the app's folders, so it must work as a folder name as-is: letters,
 digits, <code>.</code>, <code>-</code>, <code>_</code>, and <code>+</code>, starting with a letter or digit.
 <code>napt validate</code> rejects anything else, including path separators and <code>..</code>.
-Two recipe files with the same <code>id</code> stop <code>napt promote</code>.
+Two recipe files with the same <code>id</code> stop <code>napt promote</code>.</p>
+<p>The <code>id</code> is the app's identity in NAPT's state and in the Intune notes
+stamp, so changing it later means a new app; pick it once.
+Follow the convention so ids from different recipe repositories rarely
+collide and read the same way everywhere: the vendor part matches the
+<code>recipes/&lt;Vendor&gt;/</code> folder, lowercased with spaces as hyphens, and a
+variant names the architecture or installer type.
+When the product is named after its vendor, omit the vendor part: <code>git</code>,
+<code>slack-msix</code>.
+An <code>id</code> outside this form still works; <code>napt validate</code> reports it as a
+warning.
+Do not encode where a recipe came from in its <code>id</code>.
 Used to generate:</p>
 <ul>
 <li>Download directory: <code>downloads/{id}/{version}/</code></li>
@@ -4761,7 +4772,7 @@ anything.</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">napt/v1</span>
 </span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>
 </span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"Example</span><span class="nv"> </span><span class="s">Application"</span>
-</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">"napt-example"</span>
+</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">"vendor-example"</span>
 </span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>
 </span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a><span class="nt">discovery</span><span class="p">:</span>
 </span><span id="__span-25-7"><a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api_github</span>

@@ -2100,7 +2100,7 @@ directory.</p>
             <td>
               <div class="doc-md-description">
                 <p>Path to the version directory produced by 'napt build'
-(e.g., builds/napt-chrome/144.0.7559.110/). Must contain a
+(e.g., builds/google-chrome/144.0.7559.110/). Must contain a
 packagefiles/ subdirectory with a valid PSADT structure.</p>
               </div>
             </td>
@@ -2260,10 +2260,10 @@ is missing, packaging fails, or build_dir is missing.</p>
   <summary>Example</summary>
   <p>Basic packaging:
     <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">result</span> <span class="o">=</span> <span class="n">create_intunewin</span><span class="p">(</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">Path</span><span class="p">(</span><span class="s2">"builds/napt-chrome/144.0.7559.110"</span><span class="p">),</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"cache"</span><span class="p">)</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">Path</span><span class="p">(</span><span class="s2">"builds/google-chrome/144.0.7559.110"</span><span class="p">),</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"cache"</span><span class="p">)</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="p">)</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">package_path</span><span class="p">)</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># packages/napt-chrome/144.0.7559.110/Invoke-AppDeployToolkit.intunewin</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># packages/google-chrome/144.0.7559.110/Invoke-AppDeployToolkit.intunewin</span>
 </span></code></pre></div></p>
 </details>
 
@@ -2439,7 +2439,7 @@ packages/{app_id}/{version}/Invoke-AppDeployToolkit.intunewin</p>
 </span><span id="__span-0-355"><a id="__codelineno-0-355" name="__codelineno-0-355"></a>
 </span><span id="__span-0-356"><a id="__codelineno-0-356" name="__codelineno-0-356"></a><span class="sd">    Args:</span>
 </span><span id="__span-0-357"><a id="__codelineno-0-357" name="__codelineno-0-357"></a><span class="sd">        build_dir: Path to the version directory produced by 'napt build'</span>
-</span><span id="__span-0-358"><a id="__codelineno-0-358" name="__codelineno-0-358"></a><span class="sd">            (e.g., builds/napt-chrome/144.0.7559.110/). Must contain a</span>
+</span><span id="__span-0-358"><a id="__codelineno-0-358" name="__codelineno-0-358"></a><span class="sd">            (e.g., builds/google-chrome/144.0.7559.110/). Must contain a</span>
 </span><span id="__span-0-359"><a id="__codelineno-0-359" name="__codelineno-0-359"></a><span class="sd">            packagefiles/ subdirectory with a valid PSADT structure.</span>
 </span><span id="__span-0-360"><a id="__codelineno-0-360" name="__codelineno-0-360"></a><span class="sd">        cache_dir: The cache root (directories.cache). IntuneWinAppUtil.exe</span>
 </span><span id="__span-0-361"><a id="__codelineno-0-361" name="__codelineno-0-361"></a><span class="sd">            releases live under its intunewin/ folder, one per version.</span>
@@ -2467,10 +2467,10 @@ packages/{app_id}/{version}/Invoke-AppDeployToolkit.intunewin</p>
 </span><span id="__span-0-383"><a id="__codelineno-0-383" name="__codelineno-0-383"></a><span class="sd">        Basic packaging:</span>
 </span><span id="__span-0-384"><a id="__codelineno-0-384" name="__codelineno-0-384"></a><span class="sd">            ```python</span>
 </span><span id="__span-0-385"><a id="__codelineno-0-385" name="__codelineno-0-385"></a><span class="sd">            result = create_intunewin(</span>
-</span><span id="__span-0-386"><a id="__codelineno-0-386" name="__codelineno-0-386"></a><span class="sd">                Path("builds/napt-chrome/144.0.7559.110"), Path("cache")</span>
+</span><span id="__span-0-386"><a id="__codelineno-0-386" name="__codelineno-0-386"></a><span class="sd">                Path("builds/google-chrome/144.0.7559.110"), Path("cache")</span>
 </span><span id="__span-0-387"><a id="__codelineno-0-387" name="__codelineno-0-387"></a><span class="sd">            )</span>
 </span><span id="__span-0-388"><a id="__codelineno-0-388" name="__codelineno-0-388"></a><span class="sd">            print(result.package_path)</span>
-</span><span id="__span-0-389"><a id="__codelineno-0-389" name="__codelineno-0-389"></a><span class="sd">            # packages/napt-chrome/144.0.7559.110/Invoke-AppDeployToolkit.intunewin</span>
+</span><span id="__span-0-389"><a id="__codelineno-0-389" name="__codelineno-0-389"></a><span class="sd">            # packages/google-chrome/144.0.7559.110/Invoke-AppDeployToolkit.intunewin</span>
 </span><span id="__span-0-390"><a id="__codelineno-0-390" name="__codelineno-0-390"></a><span class="sd">            ```</span>
 </span><span id="__span-0-391"><a id="__codelineno-0-391" name="__codelineno-0-391"></a>
 </span><span id="__span-0-392"><a id="__codelineno-0-392" name="__codelineno-0-392"></a><span class="sd">    Note:</span>
