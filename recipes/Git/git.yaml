@@ -1,7 +1,7 @@
 apiVersion: napt/v1
 
 name: "Git for Windows"
-id: "napt-git"
+id: "git"
 
 discovery:
   strategy: api_github

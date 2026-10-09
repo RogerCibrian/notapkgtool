@@ -1,7 +1,7 @@
 apiVersion: napt/v1
 
 name: "7-Zip (x86) MSI"
-id: "napt-7zip-x86-msi"
+id: "7zip-x86-msi"
 
 discovery:
   strategy: web_scrape

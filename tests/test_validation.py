@@ -256,6 +256,49 @@ discovery:
         assert not result.is_valid
         assert any("Field 'id' may contain only" in err for err in result.errors)
 
+    @pytest.mark.parametrize(
+        "app_id", ["google-chrome", "7zip-x64-msi", "git", "notepad-plus-plus"]
+    )
+    def test_recommended_id_form_passes_silently(self, tmp_path, app_id):
+        """Tests that a <vendor>-<app> id is valid with no warning."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(f"""
+apiVersion: napt/v1
+name: "Test"
+id: "{app_id}"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+""")
+
+        result = validate_recipe(recipe)
+
+        assert result.is_valid
+        assert not any("recommended form" in w for w in result.warnings)
+
+    @pytest.mark.parametrize(
+        "app_id", ["Google-Chrome", "google_chrome", "google.chrome", "a--b", "x+y"]
+    )
+    def test_id_outside_the_recommended_form_warns(self, tmp_path, app_id):
+        """Tests that a legal but unconventional id is a warning, not an error."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text(f"""
+apiVersion: napt/v1
+name: "Test"
+id: "{app_id}"
+discovery:
+  strategy: url_download
+  url: "https://example.com/app.msi"
+""")
+
+        result = validate_recipe(recipe)
+
+        assert result.is_valid
+        assert any(
+            f"id '{app_id}' works but does not follow the recommended form" in w
+            for w in result.warnings
+        )
+
     def test_missing_discovery(self, tmp_path):
         """Test that missing discovery section is detected."""
         recipe = tmp_path / "recipe.yaml"

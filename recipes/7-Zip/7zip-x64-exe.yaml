@@ -1,7 +1,7 @@
 apiVersion: napt/v1
 
 name: "7-Zip (x64) EXE"
-id: "napt-7zip-x64-exe"
+id: "7zip-x64-exe"
 
 discovery:
   strategy: web_scrape

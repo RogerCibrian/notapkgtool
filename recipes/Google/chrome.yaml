@@ -1,7 +1,7 @@
 apiVersion: napt/v1
 
 name: "Google Chrome"
-id: "napt-chrome"
+id: "google-chrome"
 
 discovery:
   strategy: url_download

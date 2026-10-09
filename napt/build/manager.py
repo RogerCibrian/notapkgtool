@@ -137,7 +137,7 @@ def build_package(
             ```python
             result = build_package(Path("recipes/Google/chrome.yaml"))
             print(result.build_dir)
-            # builds/napt-chrome/141.0.7390.123/packagefiles
+            # builds/google-chrome/141.0.7390.123/packagefiles
             ```
 
         Custom output directory:

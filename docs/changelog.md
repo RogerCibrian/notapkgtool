@@ -7,7 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Recommended `id` form** - `napt validate` warns when an `id` is outside
+    `<vendor>-<app>[-<variant>]` in lowercase letters, digits, and single
+    hyphens (`google-chrome`, `7zip-x64-msi`). Existing ids keep working;
+    the convention keeps ids from different recipe repositories from
+    colliding and reads the same everywhere
+
 ### Changed
+
+- **Sample recipe ids follow the convention** - `napt-chrome` is now
+    `google-chrome`, `napt-git` is `git`, and so on in the repository's
+    recipes and docs. A project that copied a sample keeps its own id;
+    changing an `id` creates a new app in NAPT's state and in Intune
 
 - **`upstream` is a reserved directory name for parent recipes** - A
     `parent` under a directory named `upstream` (any case) is treated as a

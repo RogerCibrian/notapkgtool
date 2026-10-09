@@ -28,7 +28,8 @@ Validation Checks:
 - Required top-level fields present (apiVersion, name, id, discovery)
 - apiVersion is present (a value other than napt/v1 is a warning)
 - id is usable as a folder name (letters, digits, '.', '-', '_', '+',
-  starting with a letter or digit)
+  starting with a letter or digit); an id outside the recommended
+  ``<vendor>-<app>`` form (lowercase, digits, single hyphens) is a warning
 - parent, when declared, is a string and the file carries the
   ``.override.yaml`` suffix (a mismatch either way is a warning)
 - discovery.strategy exists and is registered
@@ -212,6 +213,11 @@ _SECRET_ENTRY_FIELDS: _Schema = {
 
 # An environment variable name, as the secrets section keys them.
 _ENV_VAR_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
+# The recommended id form, <vendor>-<app>[-<variant>]: lowercase letters,
+# digits, and single hyphens. Advisory, so ids that predate it keep
+# working; the folder-name rule above is the only error.
+_RECOMMENDED_ID = re.compile(r"[a-z0-9]+(-[a-z0-9]+)*")
 
 # A bare hostname for a secrets entry: no scheme, path, port, or wildcard.
 _HOSTNAME = re.compile(r"[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9-]+)*")
@@ -955,6 +961,12 @@ def validate_config(
             errors.append(
                 "Field 'id' may contain only letters, digits, '.', '-', '_', "
                 "and '+', and must start with a letter or digit"
+            )
+        elif not _RECOMMENDED_ID.fullmatch(app_id):
+            warnings.append(
+                f"id '{app_id}' works but does not follow the recommended form: "
+                f"lowercase letters, digits, and single hyphens, as "
+                f"<vendor>-<app> (for example google-chrome or 7zip-x64-msi)"
             )
 
     _validate_parent_field(config, recipe_path, warnings)

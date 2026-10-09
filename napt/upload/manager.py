@@ -384,7 +384,7 @@ def _build_app_metadata(
         recipe_path: Path to the recipe file (used to infer vendor/publisher).
         version: Application version string (from package directory name).
         package_path: Path to the .intunewin file (e.g.,
-            packages/napt-chrome/<version>/Invoke-AppDeployToolkit.intunewin).
+            packages/google-chrome/<version>/Invoke-AppDeployToolkit.intunewin).
         entry: ``ENTRY_INSTALL`` (detection script only) or ``ENTRY_UPDATE``
             (detection and requirements scripts).
         manifest: Parsed build manifest from

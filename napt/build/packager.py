@@ -355,7 +355,7 @@ def create_intunewin(
 
     Args:
         build_dir: Path to the version directory produced by 'napt build'
-            (e.g., builds/napt-chrome/144.0.7559.110/). Must contain a
+            (e.g., builds/google-chrome/144.0.7559.110/). Must contain a
             packagefiles/ subdirectory with a valid PSADT structure.
         cache_dir: The cache root (directories.cache). IntuneWinAppUtil.exe
             releases live under its intunewin/ folder, one per version.
@@ -383,10 +383,10 @@ def create_intunewin(
         Basic packaging:
             ```python
             result = create_intunewin(
-                Path("builds/napt-chrome/144.0.7559.110"), Path("cache")
+                Path("builds/google-chrome/144.0.7559.110"), Path("cache")
             )
             print(result.package_path)
-            # packages/napt-chrome/144.0.7559.110/Invoke-AppDeployToolkit.intunewin
+            # packages/google-chrome/144.0.7559.110/Invoke-AppDeployToolkit.intunewin
             ```
 
     Note:
