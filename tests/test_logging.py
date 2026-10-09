@@ -29,6 +29,7 @@ DOCUMENTED_PREFIXES = {
     "PSADT",
     "MSI",
     "MSIX",
+    "UPSTREAM",
 }
 _LEVELS = {"info", "warning", "progress", "verbose", "debug"}
 

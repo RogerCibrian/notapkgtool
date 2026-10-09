@@ -90,6 +90,7 @@ napt/
 │   └── intunewin.py            # .intunewin package parser
 │
 ├── upstream/                # Recipes vendored from other git repositories
+│   ├── git.py                  # Read-only git transport: ls-remote, trees-only fetch, file reads
 │   ├── lock.py                 # upstream.yaml lockfile, canonical hashing, repo directories
 │   └── vendored.py             # Foreign-parent detection, hash check, allowed keys
 │

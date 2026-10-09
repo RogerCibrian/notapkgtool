@@ -22,6 +22,8 @@ loader treats every parent under ``upstream/`` as foreign: the file must
 match its recorded hash, and only app-owned keys reach the merge.
 
 Modules:
+    git: Read-only transport through the ``git`` binary: list refs, fetch
+        a ref's trees, list and read files.
     lock: The ``upstream.yaml`` lockfile, canonical hashing, and the
         directory a repository URL vendors into.
     vendored: What makes a parent foreign, the hash check, and the keys a
