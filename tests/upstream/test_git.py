@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -14,17 +13,17 @@ import pytest
 from napt.exceptions import ConfigError, NetworkError
 import napt.upstream.git as git_module
 from napt.upstream.git import (
-    _LOCAL_REPO_ENV,
     FetchedRef,
     RemoteRefs,
     TreeEntry,
     check_argument,
-    check_vendored_path,
+    check_upstream_path,
     find_git,
     ls_remote,
     redact_url,
     run_git,
 )
+from tests.upstream.conftest import Repo
 
 pytestmark = pytest.mark.skipif(
     shutil.which("git") is None, reason="git is not installed"
@@ -32,91 +31,6 @@ pytestmark = pytest.mark.skipif(
 
 _RECIPE = b"apiVersion: napt/v1\nname: Google Chrome\nid: chrome\n"
 _RECIPE_CRLF = _RECIPE.replace(b"\n", b"\r\n")
-
-
-class Repo:
-    """A throwaway git repository the tests push commits into.
-
-    Every git command runs with the developer's global and system
-    configuration hidden and a fixed identity, so commit signing, hooks,
-    and aliases configured on the machine never reach the fixture.
-    """
-
-    def __init__(self, path: Path, empty_config: Path) -> None:
-        self.path = path
-        self.env = {
-            **{k: v for k, v in os.environ.items() if k not in _LOCAL_REPO_ENV},
-            "GIT_CONFIG_GLOBAL": str(empty_config),
-            "GIT_CONFIG_SYSTEM": str(empty_config),
-            "GIT_CONFIG_NOSYSTEM": "1",
-            "GIT_AUTHOR_NAME": "Fixture",
-            "GIT_AUTHOR_EMAIL": "fixture@example.invalid",
-            "GIT_COMMITTER_NAME": "Fixture",
-            "GIT_COMMITTER_EMAIL": "fixture@example.invalid",
-        }
-        self.git("init", "-q", "-b", "main")
-        self.git("config", "uploadpack.allowFilter", "true")
-        self.git("config", "commit.gpgsign", "false")
-        self.git("config", "tag.gpgsign", "false")
-
-    @property
-    def url(self) -> str:
-        """The file:// URL git fetches this repository by."""
-        return self.path.resolve().as_uri()
-
-    def git(self, *args: str) -> str:
-        """Runs git in the repository and returns its stdout."""
-        return subprocess.run(
-            ["git", *args],
-            cwd=self.path,
-            env=self.env,
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout
-
-    def commit(self, files: dict[str, bytes], message: str = "Add files") -> str:
-        """Writes files, commits them, and returns the commit id."""
-        for name, data in files.items():
-            target = self.path / name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(data)
-            self.git("add", "--", name)
-        self.git("commit", "-q", "-m", message)
-        return self.git("rev-parse", "HEAD").strip()
-
-    def commit_path(self, path: str, data: bytes, mode: str = "100644") -> str:
-        """Commits an index entry directly: an odd path, or a symlink mode."""
-        blob = (
-            subprocess.run(
-                ["git", "hash-object", "-w", "--stdin"],
-                cwd=self.path,
-                env=self.env,
-                input=data,
-                capture_output=True,
-                check=True,
-            )
-            .stdout.decode()
-            .strip()
-        )
-        self.git("update-index", "--add", "--cacheinfo", f"{mode},{blob},{path}")
-        tree = self.git("write-tree").strip()
-        parent = self.git("rev-parse", "HEAD").strip()
-        commit = self.git("commit-tree", tree, "-p", parent, "-m", "Odd path").strip()
-        self.git("update-ref", "refs/heads/main", commit)
-        return commit
-
-
-@pytest.fixture
-def repo(tmp_path) -> Repo:
-    """A repository holding one recipe on main."""
-    empty_config = tmp_path / "empty-gitconfig"
-    empty_config.write_text("")
-    origin = tmp_path / "origin"
-    origin.mkdir()
-    fixture = Repo(origin, empty_config)
-    fixture.commit({"recipes/Google/chrome.yaml": _RECIPE, "README.md": b"# r\n"})
-    return fixture
 
 
 class TestGuards:
@@ -242,7 +156,7 @@ class TestGuards:
             run_git(["ls-remote", "--", "x"])
 
 
-class TestCheckVendoredPath:
+class TestCheckUpstreamPath:
     """Tests for the segment rule applied to upstream file paths."""
 
     @pytest.mark.parametrize(
@@ -255,7 +169,7 @@ class TestCheckVendoredPath:
     )
     def test_ordinary_paths_pass(self, path):
         """Tests that vendor folders with spaces and plus signs are accepted."""
-        assert check_vendored_path(path) == path
+        assert check_upstream_path(path) == path
 
     @pytest.mark.parametrize(
         ("path", "segment"),
@@ -272,7 +186,7 @@ class TestCheckVendoredPath:
     def test_unsafe_segment_is_named(self, path, segment):
         """Tests that each rejected segment is reported by name."""
         with pytest.raises(ConfigError, match=f"segment {segment!r}"):
-            check_vendored_path(path)
+            check_upstream_path(path)
 
 
 class TestLsRemote:
@@ -443,6 +357,26 @@ class TestFetchedRef:
         assert len(created) == 1
         assert not created[0].exists()
 
+    def test_symlink_cannot_be_read_as_a_recipe(self, repo):
+        """Tests that read_file refuses a tree entry that is not a regular file."""
+        repo.commit_path("recipes/Google/link.yaml", b"chrome.yaml", mode="120000")
+
+        with (
+            FetchedRef(repo.url, "main") as fetched,
+            pytest.raises(ConfigError, match="not a regular file"),
+        ):
+            fetched.read_file("recipes/Google/link.yaml")
+
+    def test_oversized_file_is_refused_before_fetching(self, repo, monkeypatch):
+        """Tests that a blob above the cap is reported from its listed size."""
+        monkeypatch.setattr(git_module, "MAX_RECIPE_BYTES", 10)
+
+        with (
+            FetchedRef(repo.url, "main") as fetched,
+            pytest.raises(ConfigError, match="larger than 10 bytes"),
+        ):
+            fetched.read_file("recipes/Google/chrome.yaml")
+
     def test_missing_file_is_a_config_error(self, repo):
         """Tests that a path absent at the commit is a lockfile problem, not network."""
         with (
@@ -462,7 +396,7 @@ class TestFetchedRef:
             fetched.list_recipe_files(["recipes"])
 
     def test_symlink_entries_are_skipped(self, repo):
-        """Tests that a .yaml symlink in the tree is not vendored as a recipe."""
+        """Tests that a .yaml symlink in the tree is not listed as a recipe."""
         repo.commit_path("recipes/Google/link.yaml", b"chrome.yaml", mode="120000")
 
         with FetchedRef(repo.url, "main") as fetched:

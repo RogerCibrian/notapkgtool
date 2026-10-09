@@ -60,6 +60,9 @@ ALLOWED_PROTOCOLS = "https:ssh:git:file"
 RECIPE_SUFFIXES = (".yaml", ".yml")
 """File name endings that make a tree entry a recipe."""
 
+MAX_RECIPE_BYTES = 1_000_000
+"""The largest file ``read_file`` fetches; a recipe is a few kilobytes."""
+
 # Seconds one git call may take before it is reported as a network failure.
 _TIMEOUT = 300
 
@@ -319,7 +322,7 @@ class TreeEntry:
     blob: str
 
 
-def check_vendored_path(path: str) -> str:
+def check_upstream_path(path: str) -> str:
     """Refuses a repository path that cannot become a directory tree here.
 
     Every segment must satisfy
@@ -339,7 +342,7 @@ def check_vendored_path(path: str) -> str:
     for segment in path.split("/"):
         if not is_safe_path_component(segment, allow_spaces=True):
             raise ConfigError(
-                f"Cannot vendor {path!r}: the path segment {segment!r} is not a "
+                f"Cannot import {path!r}: the path segment {segment!r} is not a "
                 f"safe directory or file name (letters, digits, spaces, '.', "
                 f"'-', '_', '+', starting with a letter or digit)"
             )
@@ -362,8 +365,8 @@ class FetchedRef:
             ```
 
     Attributes:
-        commit: The commit the ref resolved to when fetched; the value the
-            lockfile pins.
+        commit: The commit the ref resolved to when fetched; the value
+            recorded as each imported recipe's ``commit``.
     """
 
     def __init__(self, url: str, ref: str) -> None:
@@ -425,7 +428,7 @@ class FetchedRef:
 
         A directory lists every ``.yaml`` and ``.yml`` beneath it; a file
         lists itself. Each returned path has passed
-        [check_vendored_path][napt.upstream.git.check_vendored_path].
+        [check_upstream_path][napt.upstream.git.check_upstream_path].
 
         Args:
             paths: Files or directories relative to the repository root.
@@ -455,7 +458,7 @@ class FetchedRef:
                 continue
             if not name.endswith(RECIPE_SUFFIXES):
                 continue
-            entries.append(TreeEntry(path=check_vendored_path(name), blob=blob))
+            entries.append(TreeEntry(path=check_upstream_path(name), blob=blob))
         return entries
 
     def read_file(self, path: str) -> bytes:
@@ -471,18 +474,29 @@ class FetchedRef:
             The file's content as git stores it.
 
         Raises:
-            ConfigError: When the path starts with ``-`` or names no file
-                at the commit (a lockfile or command-line problem, not a
-                network one).
+            ConfigError: When the path starts with ``-``, names no regular
+                file at the commit (a lockfile or command-line problem, not
+                a network one), or the file is larger than a recipe can be.
             NetworkError: When the blob cannot be fetched.
         """
         check_argument(path, "path")
         # The trees are local, so this answers without touching the network
-        # and separates "no such file" from a failed blob fetch.
-        listed = run_git(["ls-tree", "-z", self.commit, "--", path], cwd=self._dir)
+        # and separates "no such file" from a failed blob fetch; the long
+        # format carries the size, so an oversized blob is never fetched.
+        listed = run_git(
+            ["ls-tree", "-z", "--long", self.commit, "--", path], cwd=self._dir
+        )
         if not listed:
             raise ConfigError(
                 f"{path!r} does not exist at commit {self.commit[:12]} of the "
                 f"fetched ref"
+            )
+        mode, kind, _blob, size = listed.split(b"\t", 1)[0].decode("ascii").split()
+        if mode not in _REGULAR_FILE_MODES or kind != "blob":
+            raise ConfigError(f"{path!r} is not a regular file at the fetched ref")
+        if int(size) > MAX_RECIPE_BYTES:
+            raise ConfigError(
+                f"{path!r} is {int(size):,} bytes; a recipe larger than "
+                f"{MAX_RECIPE_BYTES:,} bytes is not imported"
             )
         return run_git(["cat-file", "blob", f"{self.commit}:{path}"], cwd=self._dir)

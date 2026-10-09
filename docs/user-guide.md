@@ -869,6 +869,18 @@ napt auth status
 napt auth logout [--all]
 ```
 
+### napt upstream
+
+Imports recipes from other git repositories as pinned copies, each with an
+override you edit.
+See [Upstream recipes](#upstream-recipes).
+
+```bash
+napt upstream add URL --path PATH [--path PATH ...] [--ref REF] [--dest DIR]
+    [--id ID] [--exclude GLOB ...] [--dry-run]
+napt upstream remove PATH [--delete-override]
+```
+
 ### Output modes
 
 | Flag | What it shows |
@@ -1221,13 +1233,17 @@ recipe.yaml                         <- the app itself, wins over everything
    `apiVersion: napt/v1`); without it, vendor files are silently ignored.
 
 3. **Parent recipe** (the `parent` field) - Another recipe merged beneath this
-   one.
+   one: a local parent such as `recipe-bases/chromium-family.yaml`, or the
+   pinned copy that `napt upstream add` writes (see
+   [Upstream recipes](#upstream-recipes)).
+   A recipe that declares `parent` is an override, whichever kind of
+   parent it names.
    Optional; lets several recipes share a base without repeating it.
    A parent cannot declare its own parent.
    The parent lives outside `recipes/` (for example in `recipe-bases/`), and
    each child sets its own `name` and `id` and replaces the app's plain
    recipe; see
-   [Share a base recipe between apps](common-tasks.md#share-a-base-recipe-between-apps).
+   [Share a local base recipe between apps](common-tasks.md#share-a-local-base-recipe-between-apps).
    See [parent](recipe-reference.md#parent) for the field and the file naming
    convention.
 
@@ -1324,6 +1340,136 @@ napt build recipes/Google/chrome.yaml --downloads-dir /tmp/downloads
 
 To pin the `IntuneWinAppUtil.exe` release `napt package` uses, see
 [`intunewin.release`](recipe-reference.md#intunewinapputil-configuration).
+
+## Upstream recipes
+
+`napt upstream` imports recipes from any git repository, pins each one as
+a byte-identical copy, and lets you customize it through an override
+without editing the pinned copy.
+NAPT never commits, pushes, or opens pull requests; it writes files, and
+your pipeline reviews them.
+
+### How an import works
+
+```bash
+napt upstream add https://github.com/someorg/napt-recipes.git \
+    --path recipes/Google/chrome.yaml
+```
+
+1. NAPT fetches the file from the repository's default branch (or `--ref`)
+   with the `git` binary, so any host git can reach works and
+   authentication is whatever git already has.
+2. The file lands byte-identical as the pinned copy under
+   `upstream/github.com/someorg/napt-recipes/recipes/Google/chrome.yaml`.
+   The directory is the host plus the repository path, so two repositories
+   that ship the same recipe path never collide.
+3. NAPT writes `recipes/Google/chrome.override.yaml`: a short recipe whose
+   `parent` is the pinned copy and which carries the recipe's `name` and
+   `id`.
+   This is the file every command runs, and the only one you edit.
+4. `upstream.yaml` at the project root records the repository URL and ref,
+   and for each pinned copy the commit it was taken from, its git blob id,
+   and its sha256.
+   Each recipe has its own pin, so recipes from one repository can be
+   updated one at a time.
+   NAPT writes the file; do not edit it by hand.
+
+A directory import (`--path recipes`) takes every `.yaml` and `.yml`
+beneath it; `--exclude` globs, matched relative to that directory, leave
+files out.
+Each override mirrors the part of the upstream path after its last
+`recipes/` segment, so `recipes/Google/chrome.yaml` always lands at
+`recipes/Google/chrome.override.yaml` however it was selected.
+A repository with no `recipes/` folder needs `--dest` to say where the
+overrides go.
+Nothing is written until every selected recipe has passed validation as the
+configuration its override will produce, so one bad recipe aborts the
+import with the project untouched.
+
+Re-running a directory import picks up what the publisher added since:
+recipes already listed in `upstream.yaml` are skipped and keep their own
+pins, only new ones are written, and when nothing is new the lockfile is
+untouched and the command reports "Nothing new to import."
+Naming a tracked recipe directly is an error that points at
+`napt upstream update`, which is what refreshes an existing pinned copy.
+
+### What the override controls
+
+The override wins over the pinned copy on every key, the way a recipe
+wins over its parent.
+Set a different installer URL, a longer `max_run_time_minutes`, or your own
+detection there; the pinned copy stays identical to the upstream recipe
+so updates diff cleanly.
+
+Two things come from the override alone:
+
+- **Identity.** `add` copies the upstream recipe's `name` and `id` into
+  the override (`--id` picks a different id).
+  The pinned copy cannot change them later, so an upstream edit can never
+  move your deployment state or Intune apps.
+  `add` warns when the id is already used in the project; see
+  [id](recipe-reference.md#id) for the convention.
+- **Tenant policy.** An upstream recipe may set only app-owned keys:
+  `discovery`, the PSADT install and uninstall blocks and app variables,
+  Intune detection and descriptive fields.
+  Everything else (`deployment`, `directories`, `intune.build_types`,
+  `logo_path`, and so on) is dropped before the merge, so `defaults/org.yaml`
+  keeps winning without the override restating it.
+  Every load prints one `[CONFIG] Ignoring from parent ...` line naming the
+  dropped keys, and `add` warns once per recipe.
+  The full list is in
+  [Shareable recipes](recipe-reference.md#shareable-recipes).
+
+### Trust
+
+`upstream` is a reserved directory name.
+Every time a parent under it is loaded, NAPT checks the file against its
+`upstream.yaml` entry: an edited pinned copy, one copied in by hand, or a
+missing lockfile fails `napt validate` and every other command.
+Move local changes into the override instead.
+A pinned copy is never run directly; commands point at the override.
+
+The check detects drift, not tampering by someone who can edit both files
+in one pull request.
+Review changes under `upstream/` and to `upstream.yaml` like any other
+recipe change: install blocks are PowerShell that runs on your endpoints.
+A CODEOWNERS rule on `upstream/**` and `upstream.yaml` gives those diffs a
+named reviewer.
+
+### Removing an import
+
+```bash
+napt upstream remove recipes/Google/chrome.override.yaml
+```
+
+Deletes the pinned copy and its lockfile entry, the repository's entry
+and emptied directories once nothing of it remains, and `upstream.yaml`
+itself once no repository remains.
+The override is yours, so it stays with its `parent` now dangling; inline
+the recipe there or pass `--delete-override`.
+Either the override or the pinned copy's path identifies the recipe.
+
+### Credentials for private repositories
+
+NAPT passes your environment to git and adds nothing of its own.
+A public repository needs nothing.
+A private HTTPS repository needs a credential helper or URL rewrite that
+git finds from any directory, because NAPT fetches into a temporary
+directory, not your checkout.
+On a GitHub-hosted runner, `gh auth setup-git` with a token in `GH_TOKEN`
+registers one; the environment form of a URL rewrite needs no file:
+
+```bash
+GIT_CONFIG_COUNT=1
+GIT_CONFIG_KEY_0=url.https://x-access-token:${TOKEN}@github.com/.insteadOf
+GIT_CONFIG_VALUE_0=https://github.com/
+```
+
+A private SSH repository needs a deploy key and a pre-trusted host key;
+NAPT runs ssh in batch mode, so an untrusted host fails instead of
+prompting.
+Prompts are disabled everywhere, so a missing credential fails at once
+rather than hanging a job.
 
 ## Cross-platform support
 

@@ -14,18 +14,21 @@
 
 """Recipes imported from other git repositories.
 
-A project imports a recipe with ``napt upstream add``, which vendors a
-byte-identical copy under ``upstream/<host>/<repo path>/<path>``, writes an
-override in ``recipes/`` that names the copy as its ``parent``, and records
-the copy's hashes in ``upstream.yaml`` at the project root. The config
-loader treats every parent under ``upstream/`` as foreign: the file must
-match its recorded hash, and only app-owned keys reach the merge.
+A project imports a recipe with ``napt upstream add``, which writes a
+byte-identical pinned copy under ``upstream/<host>/<repo path>/<path>``,
+writes an override in ``recipes/`` that names the pinned copy as its
+``parent``, and records the recipe's commit and hashes in ``upstream.yaml``
+at the project root. The config loader treats every parent under
+``upstream/`` as a pinned copy: the file must match its recorded hash, and
+only app-owned keys reach the merge.
 
 Modules:
+    add: The import engine behind ``napt upstream add``.
+    remove: The removal engine behind ``napt upstream remove``.
     git: Read-only transport through the ``git`` binary: list refs, fetch
         a ref's trees, list and read files.
     lock: The ``upstream.yaml`` lockfile, canonical hashing, and the
-        directory a repository URL vendors into.
-    vendored: What makes a parent foreign, the hash check, and the keys a
-        foreign parent may set.
+        directory a repository URL maps to under ``upstream/``.
+    pinned: What makes a parent a pinned copy, the hash check, and the
+        keys a pinned parent may set.
 """

@@ -71,7 +71,7 @@ _INTUNE_FIELDS: _Schema = {
 
 Presence of a required field, and any rule the table cannot express, goes in the section's `_validate_*` function. Strategy-specific fields go in the strategy's `validate_config()` and in the strategy's `FIELDS` set, which drives the unknown-key check for `discovery`.
 
-**Foreign parents.** Decide whether a recipe vendored from another repository may set the field, and record it in `ALLOWED_PARENT_KEYS` in `napt/upstream/vendored.py`: org-policy fields stay off the list; strategy-specific, recipe-required, and absent-means-skip fields go on it. `discovery` is allowed whole. A `psadt` or `intune` field left unclassified fails `test_every_schema_key_is_classified` in `tests/upstream/test_vendored.py`, which also lists the dropped keys; update that list for an org-policy field.
+**Pinned parents.** Decide whether a pinned copy (the parent of an override) may set the field, and record it in `ALLOWED_PARENT_KEYS` in `napt/upstream/pinned.py`: org-policy fields stay off the list; strategy-specific, recipe-required, and absent-means-skip fields go on it. `discovery` is allowed whole. A `psadt` or `intune` field left unclassified fails `test_every_schema_key_is_classified` in `tests/upstream/test_pinned.py`, which also lists the dropped keys; update that list for an org-policy field.
 
 ## Step 3: Document in `docs/recipe-reference.md`
 

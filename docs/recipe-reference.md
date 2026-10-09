@@ -108,9 +108,12 @@ Keep the parent outside the recipe directory that commands scan (for
 example, `recipe-bases/` next to `recipes/`):
 NAPT would otherwise load it as a recipe of its own.
 Do not keep a local parent under a directory named `upstream`, in any
-case: that name is reserved for recipes vendored from other repositories,
+case: that name is reserved for the pinned copies `napt upstream add` writes,
 which must be listed in `upstream.yaml` and are loaded with only their
-app-owned keys.
+app-owned keys (see [Shareable recipes](#shareable-recipes)).
+A parent is either a local parent or, in an override written by
+`napt upstream add`, a pinned copy under `upstream/`; an override is any
+recipe that declares `parent`.
 Set `name` and `id` in the child, since they identify the app in Intune and
 in NAPT's state, and two files with one `id` stop `napt promote`.
 
@@ -128,7 +131,7 @@ Relative paths a parent sets, such as `intune.logo_path`, resolve against
 this file's directory, not the parent's.
 See [Configuration layers](user-guide.md#configuration-layers) for where the
 parent sits in the merge order and how lists merge, and
-[Share a base recipe between apps](common-tasks.md#share-a-base-recipe-between-apps)
+[Share a local base recipe between apps](common-tasks.md#share-a-local-base-recipe-between-apps)
 for the steps.
 
 ## Discovery configuration
@@ -1233,7 +1236,7 @@ with its discovery request, and the hosts each may be sent to.
 It is org policy and is honored from `defaults/org.yaml` only: an entry in a
 vendor file, a parent recipe, or a recipe is a validation error, and the
 loader never merges it.
-A recipe, including one vendored from another repository, can therefore
+A recipe, including a pinned copy of an upstream recipe, can therefore
 reach only the variables listed here and only for the listed hosts, so the
 runner's other secrets (`AZURE_CLIENT_SECRET`, cloud keys) stay out of every
 discovery request.
@@ -1261,6 +1264,38 @@ Matching is by exact hostname, case-insensitively, and the request must use
 https.
 A request that carries a declared secret follows a redirect only to a host in
 this list; a redirect elsewhere stops discovery with an error.
+
+## Shareable recipes
+
+A recipe another project pins with `napt upstream add` is loaded there
+as a pinned copy, the `parent` of an override, and only its app-owned keys
+reach that project's configuration.
+Everything else is dropped before the merge, so the importing project's
+`defaults/org.yaml` keeps owning tenant policy without restating it, and a
+line names the dropped keys on every load.
+
+A recipe published for others may set:
+
+| Section | Keys that are kept |
+|---------|--------------------|
+| Top level | `apiVersion`, `name`, `id` |
+| `discovery` | every key |
+| `psadt` | `app_vars`, `install`, `uninstall`, `override_msi_commands`, `override_msix_commands` |
+| `intune` | `detection`, `description`, `publisher`, `developer`, `privacy_url`, `info_url`, `run_as_account`, `run_as_32_bit`, `device_restart_behavior`, `max_run_time_minutes`, `minimum_supported_windows_release` |
+
+Dropped: `deployment`, `directories`, `logging`, `intunewin`, `secrets`,
+`psadt.release`, `psadt.brand_pack`, and `intune.build_types`,
+`update_name_prefix`, `install_command`, `uninstall_command`, `is_featured`,
+`allow_available_uninstall`, `enforce_signature_check`, `owner`,
+`logo_path`.
+A key this version of NAPT does not know is dropped too.
+
+A published recipe keeps its own `deployment` and `intune.build_types` for
+the publisher's project; projects that pin it never see them.
+A `${NAME}` secret reference works in an importing project only when its
+`org.yaml` declares the variable for that host, and `napt upstream add`
+fails with the variable named until it does.
+An upstream recipe that itself declares `parent` cannot be pinned.
 
 ## Variable substitution
 

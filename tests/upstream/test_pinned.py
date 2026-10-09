@@ -1,4 +1,4 @@
-"""Tests for napt.upstream.vendored: foreign parents, the hash check, the filter."""
+"""Tests for napt.upstream.pinned: pinned parents, the hash check, the filter."""
 
 from __future__ import annotations
 
@@ -10,17 +10,17 @@ import pytest
 
 from napt.exceptions import ConfigError
 from napt.upstream.lock import canonical_sha256
-from napt.upstream.vendored import (
+from napt.upstream.pinned import (
     ALLOWED_PARENT_KEYS,
-    VendoredLocation,
-    filter_foreign_parent,
-    is_vendored_recipe,
+    PinnedLocation,
+    filter_pinned_parent,
+    is_pinned_copy,
+    pinned_location,
     tracked_location,
-    vendored_location,
-    verify_vendored,
+    verify_pinned_copy,
 )
 
-_VENDORED = "github.com/someorg/napt-recipes/recipes/Google/chrome.yaml"
+_PINNED_COPY = "github.com/someorg/napt-recipes/recipes/Google/chrome.yaml"
 
 
 def link_directory(link: Path, target: Path) -> None:
@@ -52,100 +52,100 @@ def _lockfile_text(sha256: str) -> str:
         "repos:\n"
         "  - url: https://github.com/someorg/napt-recipes.git\n"
         "    ref: main\n"
-        "    commit: 4f2a9c1e\n"
         "    recipes:\n"
         "      - path: recipes/Google/chrome.yaml\n"
         "        override: recipes/Google/chrome.override.yaml\n"
+        "        commit: 4f2a9c1e\n"
         "        blob: 9c1d2e3f\n"
         f"        sha256: {sha256}\n"
     )
 
 
-class TestVendoredLocation:
-    """Tests for deciding whether a parent reference is foreign."""
+class TestPinnedLocation:
+    """Tests for deciding whether a parent reference points at a pinned copy."""
 
-    def test_reference_through_upstream_is_foreign(self, tmp_path):
+    def test_reference_through_upstream_is_a_pinned_copy(self, tmp_path):
         """Tests that the usual override points at the upstream directory."""
         recipe_dir = tmp_path / "recipes" / "Google"
 
-        location = vendored_location(recipe_dir, f"../../upstream/{_VENDORED}")
+        location = pinned_location(recipe_dir, f"../../upstream/{_PINNED_COPY}")
 
-        assert location == VendoredLocation(
-            upstream_dir=tmp_path / "upstream", relative=PurePosixPath(_VENDORED)
+        assert location == PinnedLocation(
+            upstream_dir=tmp_path / "upstream", relative=PurePosixPath(_PINNED_COPY)
         )
         assert location.lockfile == tmp_path / "upstream.yaml"
 
-    def test_local_base_is_not_foreign(self, tmp_path):
+    def test_local_base_is_not_a_pinned_copy(self, tmp_path):
         """Tests that a parent in recipe-bases/ gets no check."""
         recipe_dir = tmp_path / "recipes" / "Google"
 
-        assert vendored_location(recipe_dir, "../../recipe-bases/base.yaml") is None
+        assert pinned_location(recipe_dir, "../../recipe-bases/base.yaml") is None
 
     def test_directory_name_matches_any_case(self, tmp_path):
         """Tests that Upstream/ is the same reserved directory as upstream/."""
         recipe_dir = tmp_path / "recipes" / "Google"
 
-        location = vendored_location(recipe_dir, f"../../Upstream/{_VENDORED}")
+        location = pinned_location(recipe_dir, f"../../Upstream/{_PINNED_COPY}")
 
         assert location is not None
         assert location.upstream_dir == tmp_path / "Upstream"
 
     def test_absolute_reference_is_made_relative_first(self, tmp_path):
-        """Tests that an absolute parent path inside upstream/ is foreign."""
+        """Tests that an absolute parent path inside upstream/ is a pinned copy."""
         recipe_dir = tmp_path / "recipes" / "Google"
-        absolute = str(tmp_path / "upstream" / Path(_VENDORED))
+        absolute = str(tmp_path / "upstream" / Path(_PINNED_COPY))
 
-        location = vendored_location(recipe_dir, absolute)
+        location = pinned_location(recipe_dir, absolute)
 
         assert location is not None
-        assert location.relative == PurePosixPath(_VENDORED)
+        assert location.relative == PurePosixPath(_PINNED_COPY)
 
     def test_project_under_a_folder_named_upstream_is_unaffected(self, tmp_path):
         """Tests that only segments between override and parent are examined."""
         project = tmp_path / "upstream" / "myproject"
         recipe_dir = project / "recipes" / "Google"
 
-        assert vendored_location(recipe_dir, "../../recipe-bases/base.yaml") is None
+        assert pinned_location(recipe_dir, "../../recipe-bases/base.yaml") is None
 
     def test_parent_file_itself_named_upstream_is_not_a_directory(self, tmp_path):
         """Tests that a file called upstream.yaml beside the override is local."""
         recipe_dir = tmp_path / "recipes" / "Google"
 
-        assert vendored_location(recipe_dir, "upstream.yaml") is None
+        assert pinned_location(recipe_dir, "upstream.yaml") is None
 
     def test_a_path_on_another_drive_is_local(self, tmp_path, monkeypatch):
         """Tests that a reference relpath cannot express is treated as local."""
-        import napt.upstream.vendored as module
+        import napt.upstream.pinned as module
 
         def _cannot_relate(*_args):
             raise ValueError("different drives")
 
         monkeypatch.setattr(module.os.path, "relpath", _cannot_relate)
 
-        assert vendored_location(tmp_path, "../../upstream/x/y.yaml") is None
+        assert pinned_location(tmp_path, "../../upstream/x/y.yaml") is None
 
 
-class TestIsVendoredRecipe:
-    """Tests for refusing to run a vendored copy directly."""
+class TestIsPinnedCopy:
+    """Tests for recognizing a pinned copy by where it sits."""
 
-    def test_file_under_tracked_upstream_is_vendored(self, tmp_path):
-        """Tests that a file under upstream/ with a lockfile beside it is refused."""
-        vendored = tmp_path / "upstream" / Path(_VENDORED)
-        vendored.parent.mkdir(parents=True)
-        vendored.write_text("apiVersion: napt/v1\n")
+    def test_file_under_tracked_upstream_is_a_pinned_copy(self, tmp_path):
+        """Tests that a file under a tracked upstream/ is a pinned copy."""
+        pinned = tmp_path / "upstream" / Path(_PINNED_COPY)
+        pinned.parent.mkdir(parents=True)
+        pinned.write_text("apiVersion: napt/v1\n")
         (tmp_path / "upstream.yaml").write_text(_lockfile_text("x"))
 
-        assert is_vendored_recipe(vendored) is True
+        assert is_pinned_copy(pinned) is True
 
-    def test_upstream_folder_without_lockfile_is_not_vendored(self, tmp_path):
+    def test_upstream_folder_without_lockfile_is_not_pinned(self, tmp_path):
         """Tests that a project living under a folder named upstream is unaffected."""
         recipe = tmp_path / "upstream" / "myproject" / "recipes" / "app.yaml"
         recipe.parent.mkdir(parents=True)
         recipe.write_text("apiVersion: napt/v1\n")
 
-        assert is_vendored_recipe(recipe) is False
+        assert is_pinned_copy(recipe) is False
 
-    def test_override_is_not_vendored(self, tmp_path):
+    def test_override_is_not_pinned(self, tmp_path):
         """Tests that the override beside a tracked upstream/ runs normally."""
         (tmp_path / "upstream").mkdir()
         (tmp_path / "upstream.yaml").write_text(_lockfile_text("x"))
@@ -153,7 +153,7 @@ class TestIsVendoredRecipe:
         override.parent.mkdir(parents=True)
         override.write_text("apiVersion: napt/v1\n")
 
-        assert is_vendored_recipe(override) is False
+        assert is_pinned_copy(override) is False
 
 
 class TestTrackedLocation:
@@ -161,29 +161,29 @@ class TestTrackedLocation:
 
     def test_file_under_tracked_upstream_reports_its_location(self, tmp_path):
         """Tests that the lockfile and the relative key come from the real path."""
-        vendored = tmp_path / "upstream" / Path(_VENDORED)
-        vendored.parent.mkdir(parents=True)
-        vendored.write_text("a: 1\n")
+        pinned = tmp_path / "upstream" / Path(_PINNED_COPY)
+        pinned.parent.mkdir(parents=True)
+        pinned.write_text("a: 1\n")
         (tmp_path / "upstream.yaml").write_text(_lockfile_text("x"))
 
-        location = tracked_location(vendored)
+        location = tracked_location(pinned)
 
         assert location is not None
         assert location.upstream_dir == tmp_path.resolve() / "upstream"
-        assert location.relative == PurePosixPath(_VENDORED)
+        assert location.relative == PurePosixPath(_PINNED_COPY)
 
     def test_link_into_upstream_is_seen_through(self, tmp_path):
-        """Tests that a linked directory from recipe-bases/ is still foreign."""
-        vendored = tmp_path / "upstream" / Path(_VENDORED)
-        vendored.parent.mkdir(parents=True)
-        vendored.write_text("a: 1\n")
+        """Tests that a link from recipe-bases/ still resolves to the pinned copy."""
+        pinned = tmp_path / "upstream" / Path(_PINNED_COPY)
+        pinned.parent.mkdir(parents=True)
+        pinned.write_text("a: 1\n")
         (tmp_path / "upstream.yaml").write_text(_lockfile_text("x"))
-        link_directory(tmp_path / "recipe-bases", vendored.parent)
+        link_directory(tmp_path / "recipe-bases", pinned.parent)
 
         location = tracked_location(tmp_path / "recipe-bases" / "chrome.yaml")
 
         assert location is not None
-        assert location.relative == PurePosixPath(_VENDORED)
+        assert location.relative == PurePosixPath(_PINNED_COPY)
 
     def test_local_base_has_no_tracked_location(self, tmp_path):
         """Tests that a real file in recipe-bases/ is local."""
@@ -194,72 +194,72 @@ class TestTrackedLocation:
         assert tracked_location(base) is None
 
 
-class TestVerifyVendored:
+class TestVerifyPinnedCopy:
     """Tests for the hash check against upstream.yaml."""
 
     @staticmethod
     def _project(tmp_path, data: bytes, lockfile_text: str | None) -> tuple:
-        vendored = tmp_path / "upstream" / Path(_VENDORED)
-        vendored.parent.mkdir(parents=True)
-        vendored.write_bytes(data)
+        pinned = tmp_path / "upstream" / Path(_PINNED_COPY)
+        pinned.parent.mkdir(parents=True)
+        pinned.write_bytes(data)
         if lockfile_text is not None:
             (tmp_path / "upstream.yaml").write_text(lockfile_text)
-        location = VendoredLocation(
-            upstream_dir=tmp_path / "upstream", relative=PurePosixPath(_VENDORED)
+        location = PinnedLocation(
+            upstream_dir=tmp_path / "upstream", relative=PurePosixPath(_PINNED_COPY)
         )
-        return vendored, location
+        return pinned, location
 
     def test_matching_hash_passes(self, tmp_path):
-        """Tests that a vendored file equal to its record is accepted."""
+        """Tests that a pinned copy equal to its record is accepted."""
         data = b"apiVersion: napt/v1\nname: Chrome\n"
-        vendored, location = self._project(
+        pinned, location = self._project(
             tmp_path, data, _lockfile_text(canonical_sha256(data))
         )
 
-        verify_vendored(vendored, location, data)
+        verify_pinned_copy(pinned, location, data)
 
     def test_crlf_checkout_still_matches(self, tmp_path):
         """Tests that autocrlf on Windows does not produce false drift."""
         data = b"apiVersion: napt/v1\nname: Chrome\n"
         on_disk = data.replace(b"\n", b"\r\n")
-        vendored, location = self._project(
+        pinned, location = self._project(
             tmp_path, on_disk, _lockfile_text(canonical_sha256(data))
         )
 
-        verify_vendored(vendored, location, on_disk)
+        verify_pinned_copy(pinned, location, on_disk)
 
     def test_missing_lockfile_names_both_fixes(self, tmp_path):
         """Tests that upstream/ without upstream.yaml beside it is an error."""
-        vendored, location = self._project(tmp_path, b"a: 1\n", None)
+        pinned, location = self._project(tmp_path, b"a: 1\n", None)
 
         with pytest.raises(ConfigError, match="no .*upstream.yaml tracking it"):
-            verify_vendored(vendored, location, b"a: 1\n")
+            verify_pinned_copy(pinned, location, b"a: 1\n")
 
     def test_untracked_file_is_an_error(self, tmp_path):
         """Tests that a file under upstream/ with no lockfile entry is refused."""
-        vendored, location = self._project(tmp_path, b"a: 1\n", _lockfile_text("x"))
-        other = VendoredLocation(
+        pinned, location = self._project(tmp_path, b"a: 1\n", _lockfile_text("x"))
+        other = PinnedLocation(
             upstream_dir=location.upstream_dir,
             relative=PurePosixPath("github.com/someorg/napt-recipes/recipes/x.yaml"),
         )
 
         with pytest.raises(ConfigError, match="is not tracked in"):
-            verify_vendored(vendored, other, b"a: 1\n")
+            verify_pinned_copy(pinned, other, b"a: 1\n")
 
     def test_edited_file_names_the_two_fixes(self, tmp_path):
         """Tests that a hash mismatch says to move edits or run update."""
-        vendored, location = self._project(
+        pinned, location = self._project(
             tmp_path, b"edited\n", _lockfile_text(canonical_sha256(b"original\n"))
         )
 
         with pytest.raises(ConfigError, match="differs from what .* recorded") as err:
-            verify_vendored(vendored, location, b"edited\n")
+            verify_pinned_copy(pinned, location, b"edited\n")
 
         assert "napt upstream update" in str(err.value)
         assert "override" in str(err.value)
 
 
-class TestFilterForeignParent:
+class TestFilterPinnedParent:
     """Tests for the parent allow list."""
 
     def test_app_owned_keys_are_kept(self):
@@ -273,7 +273,7 @@ class TestFilterForeignParent:
             "intune": {"detection": {"exact_match": True}, "publisher": "Google"},
         }
 
-        kept, dropped = filter_foreign_parent(parent)
+        kept, dropped = filter_pinned_parent(parent)
 
         assert kept == parent
         assert dropped == ()
@@ -289,7 +289,7 @@ class TestFilterForeignParent:
             "secrets": {"TOKEN": {"hosts": ["evil.example"]}},
         }
 
-        kept, dropped = filter_foreign_parent(parent)
+        kept, dropped = filter_pinned_parent(parent)
 
         assert kept == {"name": "Chrome", "psadt": {"install": "Start-X"}}
         assert dropped == (
@@ -305,14 +305,14 @@ class TestFilterForeignParent:
     @pytest.mark.parametrize("value", [[], None, "not a mapping"])
     def test_restricted_section_of_the_wrong_shape_is_dropped(self, value):
         """Tests that a non-mapping psadt or intune cannot replace the tenant's."""
-        kept, dropped = filter_foreign_parent({"name": "X", "intune": value})
+        kept, dropped = filter_pinned_parent({"name": "X", "intune": value})
 
         assert kept == {"name": "X"}
         assert dropped == ("intune",)
 
     def test_whole_section_of_the_wrong_shape_passes_through(self):
         """Tests that validation, not the filter, reports a malformed discovery."""
-        kept, dropped = filter_foreign_parent({"discovery": "not a mapping"})
+        kept, dropped = filter_pinned_parent({"discovery": "not a mapping"})
 
         assert kept == {"discovery": "not a mapping"}
         assert dropped == ()

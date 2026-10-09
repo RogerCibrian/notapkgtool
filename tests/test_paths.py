@@ -123,7 +123,7 @@ class TestIsSafePathComponent:
         "value", ["Visual Studio Code", "Visual Studio Code.yaml", "7 Zip"]
     )
     def test_spaces_between_characters_are_accepted_when_allowed(self, value: str):
-        """Tests that a vendored file name may carry single spaces."""
+        """Tests that single spaces are accepted, as in an upstream folder name."""
         assert is_safe_path_component(value, allow_spaces=True)
 
     @pytest.mark.parametrize(

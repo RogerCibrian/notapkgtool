@@ -48,6 +48,7 @@ napt/
 │   ├── promote.py              # napt promote plan/apply
 │   ├── status.py               # napt status
 │   ├── upload.py               # napt upload
+│   ├── upstream.py             # napt upstream add/remove
 │   └── validate.py             # napt validate
 │
 ├── config/                  # Configuration loading
@@ -89,10 +90,12 @@ napt/
 │   ├── manager.py              # Upload orchestration
 │   └── intunewin.py            # .intunewin package parser
 │
-├── upstream/                # Recipes vendored from other git repositories
+├── upstream/                # Recipes imported from other git repositories
+│   ├── add.py                  # Import engine: fetch, validate, write pinned copy, override, lockfile
+│   ├── remove.py               # Removal engine: delete pinned copy and lockfile entry
 │   ├── git.py                  # Read-only git transport: ls-remote, trees-only fetch, file reads
 │   ├── lock.py                 # upstream.yaml lockfile, canonical hashing, repo directories
-│   └── vendored.py             # Foreign-parent detection, hash check, allowed keys
+│   └── pinned.py               # Pinned-copy detection, hash check, allowed keys
 │
 └── versioning/              # Version extraction and ordering
     ├── msi.py                  # MSI metadata extraction backends
