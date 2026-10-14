@@ -20,8 +20,8 @@ defaults are always applied first, then overridden by organization defaults
 
 The configuration hierarchy is:
     1. Code defaults (this module) - always present
-    2. Organization defaults (defaults/org.yaml) - optional overrides
-    3. Vendor defaults (defaults/vendors/{Vendor}.yaml) - optional overrides
+    2. Organization defaults (defaults/org.yaml) - optional
+    3. Vendor defaults (defaults/vendors/{Vendor}.yaml) - optional
     4. Parent recipe (the file named by `parent`) - optional
     5. Recipe configuration - required, app-specific settings
 
@@ -50,12 +50,13 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "package": "packages",
         "icons": "icons",
         "state": "state",
+        # Downloaded tools: cache/psadt/<version>/ and cache/intunewin/<version>/
+        "cache": "cache",
     },
     # PSADT (PowerShell App Deployment Toolkit) settings.
     # Merged with recipe psadt: section via the config loader.
     "psadt": {
         "release": "latest",
-        "cache_dir": "cache/psadt",
         # Brand pack is not set by default - users must configure their own
         "brand_pack": {
             "path": "",
@@ -70,7 +71,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "AppProcessesToClose": [],
             "AppScriptVersion": "1.0.0",
             "AppScriptAuthor": "napt",
-            "RequireAdmin": True,
+            # RequireAdmin is computed from intune.run_as_account at load
+            # time unless a config layer sets it.
         },
     },
     # Intune/Win32 settings.
@@ -136,9 +138,10 @@ ORG_YAML_TEMPLATE = """\
 #
 # Configuration hierarchy:
 #   1. NAPT built-in defaults (always present)
-#   2. This file (org.yaml) - your organization overrides
+#   2. This file (org.yaml) - your organization defaults
 #   3. Vendor defaults (defaults/vendors/<Vendor>.yaml)
-#   4. Recipe configuration (recipes/<Vendor>/<app>.yaml)
+#   4. Parent recipe (the file a recipe names in its parent field)
+#   5. Recipe configuration (recipes/<Vendor>/<app>.yaml)
 
 apiVersion: napt/v1
 
@@ -155,9 +158,17 @@ apiVersion: napt/v1
 #       - source: "Banner.Classic.*"
 #         target: "Assets/Banner.Classic"
 #
-#   # Default app variables injected into deployment scripts
+#   # App variables written into every Invoke-AppDeployToolkit.ps1. Any
+#   # PSADT variable can be added; these are the ones NAPT sets by default.
+#   # RequireAdmin is computed from intune.run_as_account unless set here.
 #   app_vars:
-#     AppScriptAuthor: "IT Team"
+#     AppLang: "EN"
+#     AppRevision: "01"
+#     AppSuccessExitCodes: [0]
+#     AppRebootExitCodes: [1641, 3010]
+#     AppProcessesToClose: []
+#     AppScriptVersion: "1.0.0"
+#     AppScriptAuthor: "napt"
 
 # intune:
 #   # Which app entries to create in Intune
@@ -211,6 +222,8 @@ apiVersion: napt/v1
 #   icons: "icons"
 #   # Authoritative deployment state
 #   state: "state"
+#   # Downloaded tools, kept per version: <cache>/psadt/ and <cache>/intunewin/
+#   cache: "cache"
 
 # intunewin:
 #   # IntuneWinAppUtil.exe release: "latest" or specific version (e.g., "1.8.6")

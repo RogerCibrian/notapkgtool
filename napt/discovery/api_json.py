@@ -15,15 +15,15 @@
 """JSON API discovery strategy.
 
 Queries a JSON API endpoint for the latest version and download URL.
-Both fields are extracted from the response using JSONPath expressions.
+Both fields are read from the response with dotted paths.
 
 Recipe Example:
     ```yaml
     discovery:
       strategy: api_json
       api_url: "https://vendor.example.com/api/latest"  # required
-      version_path: "version"                           # required, JSONPath
-      download_url_path: "download_url"                 # required, JSONPath
+      version_path: "version"                           # required, dotted path
+      download_url_path: "builds[0].url"                # required, dotted path
       version_pattern: "v?([0-9.]+)"                    # optional, regex
       headers:                                          # optional
         Authorization: "Bearer ${API_TOKEN}"            # declared in org.yaml
@@ -34,8 +34,9 @@ The [recipe reference](../recipe-reference.md#api_json-strategy) defines
 each field.
 
 Note:
-    JSONPath uses the ``jsonpath-ng`` library. ``${VAR}`` anywhere in a
-    header value is replaced with that environment variable, provided
+    A path is keys separated by dots, with ``[n]`` for a list index:
+    ``data.version``, ``builds[0].url``. ``${VAR}`` anywhere in a header
+    value is replaced with that environment variable, provided
     ``defaults/org.yaml`` declares it under ``secrets`` and binds it to the
     API host; see [napt.secrets][]. An undeclared or unset variable stops
     discovery before the request is sent.
@@ -46,30 +47,97 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any
+from typing import Any, ClassVar
 
-from jsonpath_ng import parse as jsonpath_parse
-import requests
-
-from napt.discovery.base import RemoteVersion, bounded, first_capture
-from napt.download.download import make_session
+from napt.discovery.base import RemoteVersion, bounded
+from napt.discovery.fields import (
+    check_regex,
+    extract_version,
+    fetch,
+    optional_str,
+    require_str,
+)
 from napt.exceptions import ConfigError, NetworkError
-from napt.secrets import bound_hosts, check_secret_use, expand_secrets, guarded_get
+from napt.logging import get_global_logger
+from napt.secrets import bound_hosts, check_secret_use, expand_secrets
+
+# One path segment: a key, followed by any number of list indexes. A key
+# cannot hold the characters that would make it a JSONPath operator.
+_SEGMENT = r"[^.\[\]$*?@]+(?:\[\d+\])*"
+_PATH = re.compile(rf"{_SEGMENT}(?:\.{_SEGMENT})*")
+_INDEX = re.compile(r"\[(\d+)\]")
+
+
+def _check_path(value: str, key: str, errors: list[str]) -> None:
+    """Checks that a field's value is a dotted path.
+
+    Args:
+        value: The path text.
+        key: The field name, for the message.
+        errors: List to append errors to.
+    """
+    if not _PATH.fullmatch(value):
+        errors.append(
+            f"discovery.{key}: Must be a dotted path such as data.version or "
+            f"builds[0].url"
+        )
+
+
+def _lookup(data: Any, path: str, key: str) -> Any:
+    """Reads the value at a dotted path in a JSON response.
+
+    Args:
+        data: The parsed response.
+        path: The path, already validated.
+        key: The field the path came from, for the message.
+
+    Returns:
+        The value at the path.
+
+    Raises:
+        ConfigError: If a key is absent, an index is out of range, or the
+            path descends into a value that is not an object or list.
+    """
+    current = data
+    for segment in path.split("."):
+        name, *indexes = re.split(r"(?=\[)", segment, maxsplit=1)
+        steps: list[str | int] = [name]
+        if indexes:
+            steps.extend(int(n) for n in _INDEX.findall(indexes[0]))
+        for step in steps:
+            if isinstance(step, str) and isinstance(current, dict) and step in current:
+                current = current[step]
+            elif (
+                isinstance(step, int)
+                and isinstance(current, list)
+                and 0 <= step < len(current)
+            ):
+                current = current[step]
+            else:
+                raise ConfigError(
+                    f"discovery.{key} {path!r} did not match anything in the "
+                    f"API response"
+                )
+    return current
 
 
 class ApiJsonStrategy:
     """Discovery strategy for JSON API endpoints."""
 
+    FIELDS: ClassVar[frozenset[str]] = frozenset(
+        {"api_url", "version_path", "download_url_path", "version_pattern", "headers"}
+    )
+
     def discover(self, app_config: dict[str, Any]) -> RemoteVersion:
         """Discovers version and download URL from a JSON API endpoint.
 
-        Sends a GET request to the configured ``api_url`` and extracts
-        the version and download URL using JSONPath expressions.
+        Sends a GET request to the configured ``api_url`` and reads the
+        version and download URL at the configured paths.
 
         Args:
-            app_config: Merged recipe configuration dict containing
-                ``discovery.api_url``, ``discovery.version_path``, and
-                ``discovery.download_url_path``, plus optional
+            app_config: Merged and validated recipe configuration dict
+                containing ``discovery.api_url``, ``discovery.version_path``,
+                and ``discovery.download_url_path``, plus optional
                 ``version_pattern`` and ``headers`` fields.
 
         Returns:
@@ -77,40 +145,20 @@ class ApiJsonStrategy:
             the source identifier.
 
         Raises:
-            ConfigError: On missing required configuration, a header
-                secret that org.yaml does not allow for the API host or
-                that is not set, when the JSONPath expressions do not
-                match the response, or when ``version_pattern`` is invalid
-                or does not match.
+            ConfigError: On a header secret that org.yaml does not allow for
+                the API host or that is not set, when a path does not match
+                the response or finds the wrong kind of value, or when
+                ``version_pattern`` does not match.
             NetworkError: On API request failure, a redirect that would
                 carry a secret off its bound hosts, or a version value too
                 long to match a pattern on.
 
         """
-        from napt.logging import get_global_logger
-
         logger = get_global_logger()
-        # Validate configuration
-        source = app_config.get("discovery", {})
-        api_url = source.get("api_url")
-        if not api_url:
-            raise ConfigError(
-                "api_json strategy requires 'discovery.api_url' in config"
-            )
-
-        version_path = source.get("version_path")
-        if not version_path:
-            raise ConfigError(
-                "api_json strategy requires 'discovery.version_path' in config"
-            )
-
-        download_url_path = source.get("download_url_path")
-        if not download_url_path:
-            raise ConfigError(
-                "api_json strategy requires 'discovery.download_url_path' in config"
-            )
-
-        # Optional configuration
+        source = app_config["discovery"]
+        api_url: str = source["api_url"]
+        version_path: str = source["version_path"]
+        download_url_path: str = source["download_url_path"]
         headers = {str(k): str(v) for k, v in (source.get("headers") or {}).items()}
 
         logger.verbose("DISCOVERY", "Strategy: api_json (version-first)")
@@ -128,24 +176,10 @@ class ApiJsonStrategy:
         }
         hosts = bound_hosts(app_config, headers.values())
 
-        # Make API request (the shared session retries transient failures)
         logger.verbose("DISCOVERY", f"Calling API: GET {api_url}")
-        try:
-            with make_session() as session:
-                response = guarded_get(
-                    session, api_url, expanded_headers, hosts=hosts, timeout=30
-                )
-        except requests.exceptions.RequestException as err:
-            raise NetworkError(f"Failed to call API: {err}") from err
-
-        if not response.ok:
-            raise NetworkError(
-                f"API request failed: {response.status_code} {response.reason}"
-            )
-
+        response = fetch(api_url, what="API", headers=expanded_headers, hosts=hosts)
         logger.verbose("DISCOVERY", f"API response: {response.status_code} OK")
 
-        # Parse JSON response
         try:
             json_data = response.json()
         except json.JSONDecodeError as err:
@@ -155,58 +189,32 @@ class ApiJsonStrategy:
 
         logger.debug("DISCOVERY", f"JSON response: {json.dumps(json_data, indent=2)}")
 
-        # Extract version using JSONPath
-        logger.verbose("DISCOVERY", f"Extracting version from path: {version_path}")
-        try:
-            version_expr = jsonpath_parse(version_path)
-            version_matches = version_expr.find(json_data)
-
-            if not version_matches:
-                raise ConfigError(
-                    f"Version path {version_path!r} did not match anything "
-                    f"in API response"
-                )
-
-            version_str = str(version_matches[0].value)
-        except Exception as err:
-            if isinstance(err, ConfigError):
-                raise
+        version_value = _lookup(json_data, version_path, "version_path")
+        if not isinstance(version_value, (str, int, float)) or isinstance(
+            version_value, bool
+        ):
             raise ConfigError(
-                f"Failed to extract version using path {version_path!r}: {err}"
-            ) from err
-        version_str = bounded(version_str, "The API's version value")
-
+                f"discovery.version_path {version_path!r} found "
+                f"{type(version_value).__name__} in the API response, not a "
+                f"version"
+            )
+        version_str = bounded(str(version_value), "The API's version value")
         logger.verbose("DISCOVERY", f"Extracted version: {version_str}")
 
         version_pattern = source.get("version_pattern")
-        if version_pattern:
+        if version_pattern is not None:
             logger.verbose("DISCOVERY", f"Version pattern: {version_pattern}")
-            version_str = _apply_version_pattern(version_pattern, version_str)
+            version_str = extract_version(
+                version_pattern, version_str, f"the API's version value {version_str!r}"
+            )
             logger.verbose("DISCOVERY", f"Version after pattern: {version_str}")
 
-        # Extract download URL using JSONPath
-        logger.verbose(
-            "DISCOVERY", f"Extracting download URL from path: {download_url_path}"
-        )
-        try:
-            url_expr = jsonpath_parse(download_url_path)
-            url_matches = url_expr.find(json_data)
-
-            if not url_matches:
-                raise ConfigError(
-                    f"Download URL path {download_url_path!r} did not match "
-                    f"anything in API response"
-                )
-
-            download_url = str(url_matches[0].value)
-        except Exception as err:
-            if isinstance(err, ConfigError):
-                raise
+        download_url = _lookup(json_data, download_url_path, "download_url_path")
+        if not isinstance(download_url, str) or not download_url:
             raise ConfigError(
-                f"Failed to extract download URL using path "
-                f"{download_url_path!r}: {err}"
-            ) from err
-
+                f"discovery.download_url_path {download_url_path!r} found "
+                f"{type(download_url).__name__} in the API response, not a URL"
+            )
         logger.verbose("DISCOVERY", f"Download URL: {download_url}")
 
         return RemoteVersion(
@@ -227,97 +235,30 @@ class ApiJsonStrategy:
             List of error messages (empty if valid).
 
         """
-        errors = []
+        errors: list[str] = []
         source = app_config.get("discovery", {})
 
-        # Check required fields
-        if "api_url" not in source:
-            errors.append("Missing required field: discovery.api_url")
-        elif not isinstance(source["api_url"], str):
-            errors.append("discovery.api_url must be a string")
-        elif not source["api_url"].strip():
-            errors.append("discovery.api_url cannot be empty")
+        api_url = require_str(source, "api_url", errors)
+        for key in ("version_path", "download_url_path"):
+            path = require_str(source, key, errors)
+            if path is not None:
+                _check_path(path, key, errors)
 
-        if "version_path" not in source:
-            errors.append("Missing required field: discovery.version_path")
-        elif not isinstance(source["version_path"], str):
-            errors.append("discovery.version_path must be a string")
-        elif not source["version_path"].strip():
-            errors.append("discovery.version_path cannot be empty")
-        else:
-            # Validate JSONPath syntax
-            from jsonpath_ng import parse as jsonpath_parse
-
-            try:
-                jsonpath_parse(source["version_path"])
-            except Exception as err:
-                errors.append(f"Invalid version_path JSONPath: {err}")
-
-        if "download_url_path" not in source:
-            errors.append("Missing required field: discovery.download_url_path")
-        elif not isinstance(source["download_url_path"], str):
-            errors.append("discovery.download_url_path must be a string")
-        elif not source["download_url_path"].strip():
-            errors.append("discovery.download_url_path cannot be empty")
-        else:
-            # Validate JSONPath syntax
-            from jsonpath_ng import parse as jsonpath_parse
-
-            try:
-                jsonpath_parse(source["download_url_path"])
-            except Exception as err:
-                errors.append(f"Invalid download_url_path JSONPath: {err}")
-
-        # Optional fields validation
         headers = source.get("headers")
         if "headers" in source and not isinstance(headers, dict):
-            errors.append("discovery.headers must be a dictionary")
+            errors.append("discovery.headers: Must be a dictionary")
         elif isinstance(headers, dict):
-            api_url = source.get("api_url")
-            api_url = api_url if isinstance(api_url, str) else ""
             for name, value in headers.items():
                 field_path = f"discovery.headers.{name}"
                 if not isinstance(value, str):
                     errors.append(f"{field_path}: Must be a string")
                     continue
-                errors.extend(check_secret_use(app_config, value, api_url, field_path))
+                errors.extend(
+                    check_secret_use(app_config, value, api_url or "", field_path)
+                )
 
-        if "version_pattern" in source:
-            if not isinstance(source["version_pattern"], str):
-                errors.append("discovery.version_pattern must be a string")
-            else:
-                try:
-                    re.compile(source["version_pattern"])
-                except re.error as err:
-                    errors.append(f"Invalid version_pattern regex: {err}")
+        version_pattern = optional_str(source, "version_pattern", errors)
+        if version_pattern is not None:
+            check_regex(version_pattern, "version_pattern", errors)
 
         return errors
-
-
-def _apply_version_pattern(version_pattern: str, value: str) -> str:
-    """Narrows the API's version value to the part the pattern captures.
-
-    Args:
-        version_pattern: Regex from ``discovery.version_pattern``.
-        value: The string found at ``discovery.version_path``.
-
-    Returns:
-        Capture group 1 when the pattern has one, otherwise the full match.
-
-    Raises:
-        ConfigError: If the pattern is not a valid regex or does not match.
-
-    """
-    try:
-        pattern = re.compile(version_pattern)
-    except re.error as err:
-        raise ConfigError(
-            f"Invalid version_pattern regex: {version_pattern!r}"
-        ) from err
-    captured = first_capture(pattern, value)
-    if captured is None:
-        raise ConfigError(
-            f"Version pattern {version_pattern!r} did not match the API's "
-            f"version value {value!r}"
-        )
-    return captured

@@ -50,6 +50,7 @@ non-group targets survive every apply.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 import json
 from pathlib import Path
@@ -66,17 +67,13 @@ from napt.graph.intune import (
     resolve_assignment_target,
 )
 from napt.logging import get_global_logger
-from napt.promote.drift import detect_drift
-from napt.promote.planner import (
-    PLAN_SCHEMA_VERSION,
-    load_recipe_configs,
-    plans_dir_for,
-)
+from napt.promote.drift import detect_drift, target_key
+from napt.promote.planner import PLAN_SCHEMA_VERSION, plans_dir_for
 from napt.promote.preflight import unresolvable_groups
 from napt.promote.reconcile import reconcile_publications
 from napt.state.deployment import (
     deployment_state_path,
-    load_deployment_state,
+    load_deployment_states,
     save_deployment_state,
 )
 from napt.state.stamp import ENTRY_INSTALL, ENTRY_UPDATE, find_stamped_app
@@ -124,11 +121,11 @@ def _check_action(action: Any, index: int, plan_path: Path) -> None:
     required = dict(_ACTION_FIELDS)
     key, kind = _ACTION_TYPE_FIELDS[action_type]
     required[key] = kind
-    for field, expected in required.items():
-        if not isinstance(action.get(field), expected):
+    for name, expected in required.items():
+        if not isinstance(action.get(name), expected):
             raise _corrupted(
                 plan_path,
-                f"action {index} is missing '{field}' or it is not "
+                f"action {index} is missing '{name}' or it is not "
                 f"{'a list' if expected is list else 'a string'}",
             )
     if not all(isinstance(group, str) for group in action["groups"]):
@@ -235,12 +232,6 @@ def _strip_assignment(assignment: dict[str, Any]) -> dict[str, Any]:
     return cleaned
 
 
-def _target_key(target: dict[str, Any] | None) -> tuple[str, str]:
-    """Returns a comparable identity for an assignment target."""
-    target = target or {}
-    return (target.get("@odata.type", ""), target.get("groupId", ""))
-
-
 def _add_assignments(
     access_token: str,
     app_id: str,
@@ -250,8 +241,8 @@ def _add_assignments(
     """Adds assignments for the given targets, preserving everything else.
 
     Existing assignments with the same targets are replaced (the intent
-    may have changed); all other assignments — admin-made groups, other
-    virtual targets, exclusions — pass through untouched.
+    may have changed); all other assignments (admin-made groups, other
+    virtual targets, exclusions) pass through untouched.
 
     Args:
         access_token: Bearer token for Graph API.
@@ -260,12 +251,10 @@ def _add_assignments(
         intent: Assignment intent for the added targets.
 
     """
-    keys = {_target_key(t) for t in targets}
+    keys = {target_key(t) for t in targets}
     current = get_app_assignments(access_token, app_id)
     kept = [
-        _strip_assignment(a)
-        for a in current
-        if _target_key(a.get("target")) not in keys
+        _strip_assignment(a) for a in current if target_key(a.get("target")) not in keys
     ]
     added = [build_assignment(t, intent) for t in targets]
     assign_app(access_token, app_id, kept + added)
@@ -284,12 +273,10 @@ def _remove_assignments(
         targets: Resolved assignment target dicts to unassign.
 
     """
-    keys = {_target_key(t) for t in targets}
+    keys = {target_key(t) for t in targets}
     current = get_app_assignments(access_token, app_id)
     kept = [
-        _strip_assignment(a)
-        for a in current
-        if _target_key(a.get("target")) not in keys
+        _strip_assignment(a) for a in current if target_key(a.get("target")) not in keys
     ]
     if len(kept) != len(current):
         assign_app(access_token, app_id, kept)
@@ -298,34 +285,32 @@ def _remove_assignments(
 class _ApplyRun:
     """Holds the shared context of one apply run.
 
-    Caches per-app deployment state (saved after every applied action),
-    resolved group IDs, recipe configurations, and the tenant app list.
+    Carries the run's recipe configurations and deployment states (saved
+    after every applied action), the resolved group IDs, and the tenant
+    app list.
     """
 
     def __init__(
         self,
         access_token: str,
         configs: dict[str, dict[str, Any]],
+        states: dict[str, dict[str, Any]],
         deployment_dir: Path,
         now: datetime,
     ):
         self.access_token = access_token
         self.configs = configs
+        self.states = states
         self.deployment_dir = deployment_dir
         self.now = now
         self.existing_apps = list_mobile_apps(access_token)
-        self._states: dict[str, dict[str, Any]] = {}
         self.group_id_cache: dict[str, str] = {}
         self.applied: list[dict[str, Any]] = []
         self.skipped: list[dict[str, Any]] = []
 
     def state_for(self, app_id: str) -> dict[str, Any]:
-        """Returns the cached deployment state for an app, loading once."""
-        if app_id not in self._states:
-            self._states[app_id] = load_deployment_state(
-                deployment_state_path(self.deployment_dir, app_id)
-            )
-        return self._states[app_id]
+        """Returns the deployment state the run holds for an app."""
+        return self.states[app_id]
 
     def save_state(self, app_id: str) -> None:
         """Persists an app's deployment state after an applied action.
@@ -338,7 +323,7 @@ class _ApplyRun:
                 works from a fresh tenant listing).
 
         """
-        state = self._states[app_id]
+        state = self.states[app_id]
         state["name"] = self.configs[app_id]["name"]
         state_path = deployment_state_path(self.deployment_dir, app_id)
         try:
@@ -580,12 +565,35 @@ def _apply_assign(run: _ApplyRun, action: dict[str, Any]) -> None:
     run.applied.append(action)
 
 
+@dataclass(frozen=True)
+class ApplyResult:
+    """Result from applying promotion plans against Intune.
+
+    Attributes:
+        applied: The actions that were executed, as planned.
+        skipped: Entries of ``action`` and ``reason`` for actions that were
+            stale or already applied.
+        failed: Entries of ``app_id`` and ``error`` for apps whose plan
+            could not be applied; their plan files are kept for retry.
+        drift: Assignment drift findings, reported and never corrected.
+        recovered: Publications whose lost state writeback was recovered
+            before applying.
+    """
+
+    applied: list[dict[str, Any]] = field(default_factory=list)
+    skipped: list[dict[str, Any]] = field(default_factory=list)
+    failed: list[dict[str, Any]] = field(default_factory=list)
+    drift: list[dict[str, Any]] = field(default_factory=list)
+    recovered: list[dict[str, Any]] = field(default_factory=list)
+
+
 def apply_plan(
-    recipes: Path,
+    configs: dict[str, dict[str, Any]],
     state_dir: Path,
     plan_file: Path | None = None,
     now: datetime | None = None,
-) -> dict[str, Any]:
+    report_unknown_apps: bool = True,
+) -> ApplyResult:
     """Executes promotion plans against Intune.
 
     Consumes the given recipes' plan files from ``<state_dir>/plans/``,
@@ -612,7 +620,8 @@ def apply_plan(
     plan files being applied were computed before the recovery.
 
     Args:
-        recipes: A recipe YAML file, or a directory scanned recursively.
+        configs: Effective configurations keyed by recipe id, from
+            [load_recipe_configs][napt.promote.planner.load_recipe_configs].
         state_dir: State directory holding ``deployment/`` and
             ``plans/``.
         plan_file: Explicit path to a single plan file to apply; its app
@@ -620,17 +629,18 @@ def apply_plan(
             files in the default plans directory are applied.
         now: Evaluation clock for ring timestamps. Defaults to the
             current UTC time.
+        report_unknown_apps: Whether the drift check reports a stamped app
+            whose recipe id is not in ``configs``. True when the configs
+            cover the whole fleet; a run over one recipe passes False.
 
     Returns:
-        A summary dict with "applied" and "skipped" action lists,
-            "failed" per-app failure records (app_id and error),
-            "drift" findings, and "recovered" reconciliation findings.
+        The applied and skipped actions, the per-app failures, the drift
+            findings, and the recovered publications.
 
     Raises:
         AuthError: If authentication fails, or Graph rejects the token
             during a run.
-        ConfigError: On invalid recipes, or a plan file for an app the
-            run has no recipe for.
+        ConfigError: On a plan file for an app the run has no recipe for.
         NetworkError: On Graph API failures outside a per-app unit
             (listing the tenant, reconciliation, the drift check).
         StateError: On corrupted deployment state, or an explicit
@@ -643,19 +653,18 @@ def apply_plan(
         now = datetime.now(UTC)
 
     deployment_dir = state_dir / "deployment"
-
-    configs = load_recipe_configs(recipes)
+    states = load_deployment_states(deployment_dir, configs)
 
     # Authenticate even when there is nothing to apply: the steady state
     # (no eligible promotions) is exactly when out-of-band assignment
     # changes accumulate, so drift is checked on every apply run.
     access_token = get_access_token()
-    run = _ApplyRun(access_token, configs, deployment_dir, now)
+    run = _ApplyRun(access_token, configs, states, deployment_dir, now)
 
     # Recover lost publication writebacks so state is right for the
     # actions below and for the next plan run.
     recovered = reconcile_publications(
-        access_token, configs, deployment_dir, run.existing_apps
+        access_token, configs, states, deployment_dir, run.existing_apps
     )
 
     # Each plan file is one app's unit of work. The filename is the app's
@@ -668,8 +677,9 @@ def apply_plan(
         if plan_file.stem not in configs:
             raise ConfigError(
                 f"Plan file {plan_file} is for app '{plan_file.stem}', which "
-                f"is not among the recipes given ({recipes}). Pass that "
-                "app's recipe, or the recipes directory."
+                f"is not among the recipes in this run "
+                f"({', '.join(sorted(configs))}). Pass that app's recipe, "
+                "or the recipes directory."
             )
         units = [plan_file]
         logger.info("PROMOTE", f"Applying plan file: {plan_file}")
@@ -754,16 +764,16 @@ def apply_plan(
     drift = detect_drift(
         access_token,
         configs,
-        deployment_dir,
+        states,
         run.existing_apps,
         group_id_cache=run.group_id_cache,
-        report_unknown_apps=recipes.is_dir(),
+        report_unknown_apps=report_unknown_apps,
     )
 
-    return {
-        "applied": run.applied,
-        "skipped": run.skipped,
-        "failed": failed,
-        "drift": drift,
-        "recovered": recovered,
-    }
+    return ApplyResult(
+        applied=run.applied,
+        skipped=run.skipped,
+        failed=failed,
+        drift=drift,
+        recovered=recovered,
+    )

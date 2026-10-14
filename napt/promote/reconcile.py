@@ -51,7 +51,6 @@ from napt.graph.intune import get_mobile_app
 from napt.logging import get_global_logger
 from napt.state.deployment import (
     deployment_state_path,
-    load_deployment_state,
     record_published,
     save_deployment_state,
 )
@@ -67,6 +66,7 @@ _REQUIRED_ENTRIES = {
 def reconcile_publications(
     access_token: str,
     configs: dict[str, dict[str, Any]],
+    states: dict[str, dict[str, Any]],
     deployment_dir: Path,
     existing_apps: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
@@ -86,6 +86,10 @@ def reconcile_publications(
     Args:
         access_token: Bearer token for Graph API.
         configs: Effective configurations keyed by recipe id.
+        states: Each app's deployment state keyed by recipe id, from
+            [load_deployment_states][napt.state.deployment.load_deployment_states].
+            A recovered publication is recorded into the dict as well as
+            the file, so the steps that follow see it.
         deployment_dir: Directory holding per-app deployment state files.
         existing_apps: Mobile app dicts from list_mobile_apps.
 
@@ -97,7 +101,6 @@ def reconcile_publications(
     Raises:
         AuthError: On 401 or 403.
         NetworkError: On Graph API failures.
-        StateError: On a corrupted deployment state file.
 
     """
     logger = get_global_logger()
@@ -105,7 +108,7 @@ def reconcile_publications(
 
     for app_id, config in configs.items():
         state_path = deployment_state_path(deployment_dir, app_id)
-        state = load_deployment_state(state_path)
+        state = states[app_id]
         pending = state.get("pending")
         if not pending:
             continue

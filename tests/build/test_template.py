@@ -23,6 +23,7 @@ from napt.build.template import (
     _warn_unrecognized_tokens,
     generate_invoke_script,
 )
+from napt.exceptions import PackagingError
 
 # Typographic single quote, which PowerShell accepts as a string delimiter.
 # Written as an escape because it is nearly indistinguishable from ' on screen.
@@ -162,17 +163,24 @@ class TestBuildAdtSessionVars:
         assert "{{discoverd_version}}" in captured.out
         assert "psadt.app_vars.AppVersion" in captured.out
 
-    def test_auto_generated_fields(self):
-        """Test auto-generated fields like AppScriptDate."""
-        from datetime import date
-
+    def test_psadt_version_and_architecture_are_set(self):
+        """Tests that the PSADT version and AppArch come from the build, and
+        that AppScriptDate is left to the config loader."""
         config = {"psadt": {"app_vars": {}}}
 
         result = _build_adtsession_vars(config, "1.0.0", "4.1.7", "x64", "app.msi")
 
-        assert "AppScriptDate" in result
-        assert result["AppScriptDate"] == date.today().strftime("%Y-%m-%d")
         assert result["DeployAppScriptVersion"] == "4.1.7"
+        assert result["AppArch"] == "x64"
+        assert "AppScriptDate" not in result
+
+    def test_any_architecture_leaves_apparch_unset(self):
+        """Tests that an architecture of any sets no AppArch."""
+        config = {"psadt": {"app_vars": {}}}
+
+        result = _build_adtsession_vars(config, "1.0.0", "4.1.7", "any", "app.msi")
+
+        assert "AppArch" not in result
 
 
 class TestReplaceSessionBlock:
@@ -282,6 +290,21 @@ Write-Host 'Done'
         result = _insert_recipe_code(script, None, None)
 
         assert result == script
+
+    def test_missing_install_marker_is_an_error(self):
+        """Tests that a template without the install marker cannot silently
+        drop the recipe's install code."""
+        script = "    ## <Perform Uninstallation tasks here>"
+
+        with pytest.raises(PackagingError, match="Perform Installation tasks here"):
+            _insert_recipe_code(script, "Install", None)
+
+    def test_missing_uninstall_marker_is_an_error(self):
+        """Tests that a template without the uninstall marker is refused."""
+        script = "    ## <Perform Installation tasks here>"
+
+        with pytest.raises(PackagingError, match="Perform Uninstallation tasks here"):
+            _insert_recipe_code(script, None, "Uninstall")
 
 
 class TestSubstituteVariables:

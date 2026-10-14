@@ -7,22 +7,23 @@ which share the schema.
 > For choosing a strategy, see
 > [Discovery strategies](user-guide.md#discovery-strategies).
 
-`napt validate` checks the recipe and its parent.
-Values from `defaults/` are checked when any other command loads the recipe.
-`napt validate` type-checks the `intune`, `logging`, and `deployment` sections,
-`psadt.app_vars`, the `psadt.override_*` flags, and each strategy's required
-fields and patterns, and warns on unknown keys in `intune`, `logging`, and
-`deployment`.
-Other keys are accepted as written: a wrong type in, for example,
-`prerelease`, `token`, `brand_pack`, or `install` surfaces only when a command
-uses the value.
+`napt validate` checks the effective configuration: the recipe, its parent,
+the vendor defaults, and `defaults/org.yaml` merged the way every other
+command loads them.
+Every field in this reference is checked for its type, its allowed values,
+and its range where one is stated, and each strategy's required fields and
+patterns are checked.
+A key this reference does not list is a warning naming the closest known key.
+Requirements that depend on the installer, such as the EXE `install` and
+`uninstall` commands and the EXE `intune.detection` fields, are checked by
+`napt build`.
 
 ## Top-level fields
 
 ```yaml
 apiVersion: napt/v1          # Required: recipe format version
 name: "Application Name"     # Required: display name
-id: "napt-app-id"            # Required: identifier and folder name
+id: "vendor-app"             # Required: identifier and folder name
 discovery:                   # Required: how to find and download the installer
   strategy: api_github
   repo: "owner/repository"
@@ -67,13 +68,25 @@ PSADT dialogs show `psadt.app_vars.AppName`, which is not filled from `name`.
 
 **Type:** `string`
 **Required:** Yes
-**Convention:** Lowercase, alphanumeric, hyphens (e.g., `napt-chrome`,
-`napt-git`)
+**Convention:** `<vendor>-<app>[-<variant>]` in lowercase letters, digits,
+and single hyphens (`google-chrome`, `microsoft-vscode`, `7zip-x64-msi`)
 
 Names the app's folders, so it must work as a folder name as-is: letters,
 digits, `.`, `-`, `_`, and `+`, starting with a letter or digit.
 `napt validate` rejects anything else, including path separators and `..`.
 Two recipe files with the same `id` stop `napt promote`.
+
+The `id` is the app's identity in NAPT's state and in the Intune notes
+stamp, so changing it later means a new app; pick it once.
+Follow the convention so ids from different recipe repositories rarely
+collide and read the same way everywhere: the vendor part matches the
+`recipes/<Vendor>/` folder, lowercased with spaces as hyphens, and a
+variant names the architecture or installer type.
+When the product is named after its vendor, omit the vendor part: `git`,
+`slack-msix`.
+An `id` outside this form still works; `napt validate` reports it as a
+warning.
+Do not encode where a recipe came from in its `id`.
 Used to generate:
 
 - Download directory: `downloads/{id}/{version}/`
@@ -94,6 +107,13 @@ A parent is an ordinary recipe and cannot declare a `parent` of its own.
 Keep the parent outside the recipe directory that commands scan (for
 example, `recipe-bases/` next to `recipes/`):
 NAPT would otherwise load it as a recipe of its own.
+Do not keep a local parent under a directory named `upstream`, in any
+case: that name is reserved for the pinned copies `napt upstream add` writes,
+which must be listed in `upstream.yaml` and are loaded with only their
+app-owned keys (see [Shareable recipes](#shareable-recipes)).
+A parent is either a local parent or, in an override written by
+`napt upstream add`, a pinned copy under `upstream/`; an override is any
+recipe that declares `parent`.
 Set `name` and `id` in the child, since they identify the app in Intune and
 in NAPT's state, and two files with one `id` stop `napt promote`.
 
@@ -111,7 +131,7 @@ Relative paths a parent sets, such as `intune.logo_path`, resolve against
 this file's directory, not the parent's.
 See [Configuration layers](user-guide.md#configuration-layers) for where the
 parent sits in the merge order and how lists merge, and
-[Share a base recipe between apps](common-tasks.md#share-a-base-recipe-between-apps)
+[Share a local base recipe between apps](common-tasks.md#share-a-local-base-recipe-between-apps)
 for the steps.
 
 ## Discovery configuration
@@ -146,7 +166,6 @@ discovery:
   asset_pattern: ".*\\.exe$"        # Required: regex for the installer filename
   version_pattern: "v?([0-9.]+)"    # Optional: regex for the version in the tag
   token: "${GITHUB_TOKEN}"          # Optional: GitHub personal access token
-  prerelease: false                 # Optional: currently has no effect
 ```
 
 #### repo
@@ -206,16 +225,6 @@ unset variable stops discovery with an error.
   authenticated)
 - Access private repositories
 
-#### prerelease
-
-**Type:** `boolean`
-**Required:** No
-**Default:** `false`
-
-Currently has no effect.
-NAPT reads GitHub's latest-release endpoint, which never returns a
-pre-release, so `true` never selects one and `false` never raises an error.
-
 ### api_json strategy
 
 **Configuration:**
@@ -224,8 +233,8 @@ pre-release, so `true` never selects one and `false` never raises an error.
 discovery:
   strategy: api_json
   api_url: "https://api.vendor.com/latest"   # Required: JSON API endpoint URL
-  version_path: "version"                    # Required: JSONPath to version field
-  download_url_path: "download_url"          # Required: JSONPath to download URL field
+  version_path: "version"                    # Required: dotted path to the version
+  download_url_path: "download_url"          # Required: dotted path to the download URL
   version_pattern: "v?([0-9.]+)"             # Optional: regex to narrow the version value
   headers:                                   # Optional: HTTP headers for authentication
     Authorization: "Bearer ${API_TOKEN}"     # API_TOKEN declared under secrets in org.yaml
@@ -240,25 +249,27 @@ JSON API endpoint URL that returns version and download URL information.
 
 #### version_path
 
-**Type:** `string` (JSONPath)
+**Type:** `string` (dotted path)
 **Required:** Yes
 
-JSONPath expression to extract the version field from the API response.
-Supports nested paths.
+Path to the version in the API response: keys separated by dots, with
+`[n]` to pick an entry of a list.
+The value must be a string or a number.
 
 **Examples:**
 - `"version"` - Direct field: `{"version": "1.2.3"}`
 - `"data.version"` - Nested field: `{"data": {"version": "1.2.3"}}`
-- `"release.latest.version"` - Deeply nested:
-  `{"release": {"latest": {"version": "1.2.3"}}}`
+- `"builds[0].version"` - First entry of a list:
+  `{"builds": [{"version": "1.2.3"}, ...]}`
 
 #### download_url_path
 
-**Type:** `string` (JSONPath)
+**Type:** `string` (dotted path)
 **Required:** Yes
 
-JSONPath expression to extract the download URL field from the API response.
-Supports nested paths (same format as `version_path`).
+Path to the download URL in the API response (same format as
+`version_path`).
+The value must be a non-empty string.
 
 #### version_pattern
 
@@ -349,7 +360,7 @@ URL of the vendor download page that contains links to installer files.
 
 CSS selector to find the download link on the page.
 Prefer it over `link_pattern` when the page's markup allows.
-If both are set, `link_selector` is used and `link_pattern` is ignored.
+Setting both is a validation error.
 
 **Examples:**
 - `'a[href$=".msi"]'` - Matches links ending in `.msi`
@@ -404,6 +415,7 @@ version.
 
 Format string to combine multiple capture groups from `version_pattern`.
 Uses Python format string syntax with `{0}`, `{1}`, etc. for capture groups.
+A format string that is malformed or names a field is a validation error.
 
 **Examples:**
 - `"{0}.{1}"` - Combines two groups: `"25"` + `"01"` → `"25.01"`
@@ -435,20 +447,14 @@ psadt:
 PSADT release version to use. Can be:
 
 - `"latest"` - Use the latest PSADT release from GitHub
-- Specific version: `"4.1.7"` - Use a specific PSADT version
+- Specific version: `"4.1.7"` - Use a specific PSADT version.
+  A leading `v` (`"v4.1.7"`) is accepted and names the same version.
+
+Downloaded releases are kept under the `psadt/` folder of
+[`directories.cache`](#directories-configuration), one per version.
 
 **Note:** Typically set in organization defaults (`defaults/org.yaml`) rather
 than per-recipe.
-
-### cache_dir
-
-**Type:** `string` (path)
-**Required:** No
-**Default:** `"cache/psadt"`
-
-Folder where `napt build` keeps downloaded PSADT releases.
-Relative to the working directory, not the recipe.
-Usually set in `defaults/org.yaml`.
 
 ### brand_pack
 
@@ -473,11 +479,13 @@ psadt:
 
 - `path` is resolved relative to the `defaults/` directory (next to
   `org.yaml`), or the recipe's directory when there is no `defaults/org.yaml`.
-  A path that does not exist is skipped with a verbose log line rather than
-  an error.
+  A path that does not exist fails the build, so a typo cannot ship a
+  package with PSADT's default assets.
 - Each mapping copies the first file matching `source` to `target`, appending
   the source file's extension.
   Mappings whose glob matches nothing are skipped.
+- `target` is a relative path inside the build, written with forward slashes;
+  a leading separator, a drive, or `..` is a validation error.
 
 ### app_vars
 
@@ -820,10 +828,13 @@ Controls how Intune handles device restarts after install:
 **Type:** `integer`
 **Required:** No
 **Default:** `60`
+**Allowed values:** `1` to `1440`
 
 Maximum time in minutes Intune waits for the installer to complete before
 marking the install as failed.
 Increase for apps with long installation times (e.g., large Office deployments).
+The upper limit is Intune's own (one day); see
+[Add and assign Win32 apps](https://learn.microsoft.com/en-us/intune/app-management/deployment/add-win32).
 
 ### enforce_signature_check
 
@@ -1061,9 +1072,11 @@ Which `IntuneWinAppUtil.exe` release to download and run. Can be:
 
 - `"latest"` - Use the latest release from Microsoft's GitHub repository
 - Specific version: `"1.8.6"` - Pin to a known-good release for reproducible
-  packaging
+  packaging.
+  A leading `v` (`"v1.8.6"`) is accepted and names the same version.
 
-Each release is cached independently under `cache/tools/{version}/`, so
+Each release is kept under the `intunewin/` folder of
+[`directories.cache`](#directories-configuration), one per version, so
 changing the pin never overwrites a previously downloaded tool.
 
 ## Logging configuration
@@ -1082,6 +1095,7 @@ logging:
 **Type:** `integer`
 **Required:** No
 **Default:** `3`
+**Allowed values:** `1` or more
 
 Maximum log file size in megabytes before rotation.
 Scripts use a 2-file rotation scheme (`.log` and `.log.old`).
@@ -1104,6 +1118,7 @@ directories:
   package: "packages"
   icons: "icons"
   state: "state"
+  cache: "cache"
 ```
 
 | Key | Default | Holds |
@@ -1113,6 +1128,10 @@ directories:
 | `package` | `"packages"` | Packages written by `napt package`, read by `napt upload` |
 | `icons` | `"icons"` | Icons extracted by `napt build`, read by `napt upload` |
 | `state` | `"state"` | Deployment state and promotion plan files |
+| `cache` | `"cache"` | Downloaded tools, one folder per version: `psadt/<version>/` for `napt build` and `intunewin/<version>/` for `napt package` |
+
+The cache is disposable: deleting it only causes the next build or package
+run to download its tool again.
 
 ## Deployment configuration
 
@@ -1204,6 +1223,7 @@ ring, before it has baked through the rings.
 **Type:** `integer`
 **Required:** No
 **Default:** `1`
+**Allowed values:** `0` or more
 
 How many superseded versions stay in Intune for rollback before deletion.
 `0` deletes a version as soon as it holds no rings.
@@ -1216,7 +1236,7 @@ with its discovery request, and the hosts each may be sent to.
 It is org policy and is honored from `defaults/org.yaml` only: an entry in a
 vendor file, a parent recipe, or a recipe is a validation error, and the
 loader never merges it.
-A recipe, including one vendored from another repository, can therefore
+A recipe, including a pinned copy of an upstream recipe, can therefore
 reach only the variables listed here and only for the listed hosts, so the
 runner's other secrets (`AZURE_CLIENT_SECRET`, cloud keys) stay out of every
 discovery request.
@@ -1244,6 +1264,38 @@ Matching is by exact hostname, case-insensitively, and the request must use
 https.
 A request that carries a declared secret follows a redirect only to a host in
 this list; a redirect elsewhere stops discovery with an error.
+
+## Shareable recipes
+
+A recipe another project pins with `napt upstream add` is loaded there
+as a pinned copy, the `parent` of an override, and only its app-owned keys
+reach that project's configuration.
+Everything else is dropped before the merge, so the importing project's
+`defaults/org.yaml` keeps owning tenant policy without restating it, and a
+line names the dropped keys on every load.
+
+A recipe published for others may set:
+
+| Section | Keys that are kept |
+|---------|--------------------|
+| Top level | `apiVersion`, `name`, `id` |
+| `discovery` | every key |
+| `psadt` | `app_vars`, `install`, `uninstall`, `override_msi_commands`, `override_msix_commands` |
+| `intune` | `detection`, `description`, `publisher`, `developer`, `privacy_url`, `info_url`, `run_as_account`, `run_as_32_bit`, `device_restart_behavior`, `max_run_time_minutes`, `minimum_supported_windows_release` |
+
+Dropped: `deployment`, `directories`, `logging`, `intunewin`, `secrets`,
+`psadt.release`, `psadt.brand_pack`, and `intune.build_types`,
+`update_name_prefix`, `install_command`, `uninstall_command`, `is_featured`,
+`allow_available_uninstall`, `enforce_signature_check`, `owner`,
+`logo_path`.
+A key this version of NAPT does not know is dropped too.
+
+A published recipe keeps its own `deployment` and `intune.build_types` for
+the publisher's project; projects that pin it never see them.
+A `${NAME}` secret reference works in an importing project only when its
+`org.yaml` declares the variable for that host, and `napt upstream add`
+fails with the variable named until it does.
+An upstream recipe that itself declares `parent` cannot be pinned.
 
 ## Variable substitution
 
@@ -1298,7 +1350,7 @@ For setting the variables locally and in CI/CD, see
 apiVersion: napt/v1
 
 name: "Example Application"
-id: "napt-example"
+id: "vendor-example"
 
 discovery:
   strategy: api_github

@@ -12,11 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""PowerShell string quoting and file encoding for generated scripts.
+"""PowerShell string quoting, file encoding, and the build-host script runner.
 
 Values written into PowerShell source (recipe fields, installer metadata,
 file paths) can be vendor-controlled, and a value that closes its string
 early runs as code on the endpoint or the build host.
+
+Scripts NAPT runs on the build host to read installer metadata hand their
+results back through a UTF-8 file rather than stdout; see
+[run_powershell_lines][napt.powershell.run_powershell_lines] for why.
 
 PowerShell treats typographic quotes as string delimiters too: U+2018 to
 U+201B close a single-quoted string, U+201C to U+201E a double-quoted one.
@@ -29,7 +33,13 @@ line breaks and the other control characters first.
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
 import re
+import subprocess
+import tempfile
+
+from napt.exceptions import PackagingError
 
 # Encoding for every .ps1 file NAPT writes: UTF-8 with a byte order mark.
 # Windows PowerShell 5.1 (which Intune uses for detection and requirements
@@ -53,6 +63,66 @@ _DOUBLE_QUOTED_SPECIAL_RE = re.compile(f"[`${_DOUBLE_QUOTES}]")
 # comment), DEL, and the Unicode line and paragraph separators, which do not
 # end a comment but are invisible and have no place in a name or filename.
 _CONTROL_RE = re.compile("[\x00-\x1f\x7f\u2028\u2029]+")
+
+
+def run_powershell_lines(
+    script: str, *, out_var: str, timeout: int, what: str
+) -> list[str]:
+    """Runs a PowerShell script that hands its results back through a file.
+
+    PowerShell writes captured stdout in the console's OEM code page (cp437
+    on English Windows), which Python would decode as the locale code page
+    (cp1252), mangling every non-ASCII character of a product name or an
+    icon name. Changing the console's code page from inside the script
+    would fix that but leaks into the user's terminal for the rest of the
+    session. So the script writes its values as UTF-8 with
+    ``[System.IO.File]::WriteAllLines`` to the file named by the environment
+    variable ``out_var``, and this function reads them back. The path
+    travels in the environment, keeping it out of the script text.
+
+    Args:
+        script: The PowerShell source. It writes its results to
+            ``$env:<out_var>`` and exits non-zero on failure.
+        out_var: Name of the environment variable that carries the output
+            file's path.
+        timeout: Seconds to wait for the script.
+        what: What the script does, for messages (``"PowerShell MSI
+            query"``).
+
+    Returns:
+        The lines of the output file.
+
+    Raises:
+        PackagingError: If the script exits non-zero (the message carries
+            its stderr), times out, or PowerShell cannot be launched.
+
+    """
+    with tempfile.NamedTemporaryFile(
+        prefix="napt-ps-", suffix=".txt", delete=False
+    ) as handle:
+        out_path = Path(handle.name)
+    try:
+        subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+            check=True,
+            capture_output=True,
+            text=True,
+            errors="replace",
+            timeout=timeout,
+            env={**os.environ, out_var: str(out_path)},
+        )
+        return out_path.read_text(encoding="utf-8-sig").splitlines()
+    except subprocess.CalledProcessError as err:
+        stderr = err.stderr if err.stderr else "No stderr captured"
+        raise PackagingError(
+            f"{what} failed (exit {err.returncode}). stderr: {stderr}"
+        ) from err
+    except subprocess.TimeoutExpired:
+        raise PackagingError(f"{what} timed out") from None
+    except OSError as err:
+        raise PackagingError(f"{what} failed: {err}") from err
+    finally:
+        out_path.unlink(missing_ok=True)
 
 
 def ps_single_quote(value: str) -> str:

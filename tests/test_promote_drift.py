@@ -13,6 +13,7 @@ from napt.promote.drift import detect_drift
 from napt.state.deployment import (
     create_default_deployment_state,
     deployment_state_path,
+    load_deployment_states,
     save_deployment_state,
 )
 
@@ -130,9 +131,9 @@ def _detect(
             ),
         ),
     ):
-        return detect_drift(
-            TOKEN, {config["id"]: config}, deployment_dir, existing_apps
-        )
+        configs = {config["id"]: config}
+        states = load_deployment_states(deployment_dir, configs)
+        return detect_drift(TOKEN, configs, states, existing_apps)
 
 
 class TestDetectDrift:
@@ -354,7 +355,7 @@ class TestDetectDrift:
             findings = detect_drift(
                 TOKEN,
                 {config["id"]: config},
-                deployment_dir,
+                load_deployment_states(deployment_dir, [config["id"]]),
                 [_stamped("other-app", "update", "a" * 64, "update-x")],
                 report_unknown_apps=False,
             )

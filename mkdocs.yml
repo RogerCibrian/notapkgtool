@@ -83,10 +83,10 @@ nav:
     - Overview: api/index.md
     - cli: api/cli.md
     - exceptions: api/exceptions.md
+    - github: api/github.md
     - logging: api/logging.md
     - paths: api/paths.md
     - powershell: api/powershell.md
-    - results: api/results.md
     - secrets: api/secrets.md
     - validation: api/validation.md
     - version: api/version.md
@@ -108,6 +108,7 @@ nav:
     - psadt: api/psadt.md
     - state: api/state.md
     - upload: api/upload.md
+    - upstream: api/upstream.md
     - versioning: api/versioning.md
   - About:
     - Changelog: changelog.md

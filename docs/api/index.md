@@ -8,31 +8,38 @@ How the `napt/` package is laid out.
 napt/
 ├── __init__.py              # Package overview docstring
 ├── exceptions.py            # Exception hierarchy
+├── github.py                # GitHub API access shared by discovery and the tool downloads
 ├── logging.py               # Logging configuration
 ├── paths.py                 # Safe filenames and folder names from external input
 ├── powershell.py            # PowerShell string quoting for generated scripts
-├── results.py               # Result dataclasses returned by napt commands
 ├── secrets.py               # Secrets a recipe may send, bound to hosts by org.yaml
 ├── validation.py            # Recipe validation logic
 ├── version.py               # NAPT's own version, read from package metadata
 │
 ├── auth/                    # Microsoft Entra ID authentication
 │   ├── credentials.py          # Token resolution and the napt auth login session
-│   └── registration.py         # App registration provisioning (napt auth setup)
+│   ├── registration.py         # App registration provisioning (napt auth setup)
+│   └── spec.py                 # Permissions and redirect URIs the registration needs
 │
 ├── build/                   # PSADT package building
-│   ├── _ps_templates.py        # Loads the .ps1 templates for generated scripts
+│   ├── _ps_templates.py        # Loads and writes the .ps1 templates for generated scripts
+│   ├── commands.py             # Install and uninstall commands for MSI and MSIX
 │   ├── icons.py                # App icon extraction from installers
+│   ├── installer.py            # Finding the installer to build and reading it once
+│   ├── layout.py               # Build folder, PSADT and installer copies, branding
 │   ├── manager.py              # Package building orchestration
+│   ├── manifest.py             # The build manifest written by build, read by package and upload
 │   ├── msix_scripts.py         # MSIX detection and requirements scripts
 │   ├── packager.py             # .intunewin package creation
 │   ├── registry_scripts.py     # Registry detection and requirements scripts
+│   ├── scripts.py              # Detection and requirements scripts written beside a build
 │   ├── template.py             # PSADT template generation
 │   └── templates/              # PowerShell templates for the generated scripts
 │
 ├── cli/                     # Command-line interface (one module per command)
 │   ├── __main__.py             # Runs the CLI as python -m napt.cli
 │   ├── main.py                 # Parser assembly and dispatch
+│   ├── common.py               # Shared flags, logger setup, and the error wrapper
 │   ├── auth.py                 # napt auth login/logout/status/setup
 │   ├── build.py                # napt build
 │   ├── discover.py             # napt discover
@@ -41,6 +48,7 @@ napt/
 │   ├── promote.py              # napt promote plan/apply
 │   ├── status.py               # napt status
 │   ├── upload.py               # napt upload
+│   ├── upstream.py             # napt upstream add/remove/check/update
 │   └── validate.py             # napt validate
 │
 ├── config/                  # Configuration loading
@@ -81,6 +89,14 @@ napt/
 ├── upload/                  # Intune upload pipeline
 │   ├── manager.py              # Upload orchestration
 │   └── intunewin.py            # .intunewin package parser
+│
+├── upstream/                # Recipes imported from other git repositories
+│   ├── add.py                  # Import engine: fetch, validate, write pinned copy, override, lockfile
+│   ├── remove.py               # Removal engine: delete pinned copy and lockfile entry
+│   ├── refresh.py              # Check and update engine: compare pins to upstream, rewrite changed copies
+│   ├── git.py                  # Read-only git transport: ls-remote, trees-only fetch, file reads
+│   ├── lock.py                 # upstream.yaml lockfile, canonical hashing, repo directories
+│   └── pinned.py               # Pinned-copy detection, hash check, allowed keys
 │
 └── versioning/              # Version extraction and ordering
     ├── msi.py                  # MSI metadata extraction backends
@@ -126,5 +142,6 @@ Recipe YAML
 - **Exceptions:** All NAPT domain errors use custom exceptions inheriting from
   `NAPTError` (ConfigError, NetworkError, PackagingError, StateError,
   AuthError)
-- **Return types:** Frozen dataclasses from `results.py`, one per napt
-  command's underlying operation
+- **Return types:** Each operation a command runs returns a frozen
+  dataclass defined beside it (`BuildResult` next to `build_package`, and
+  so on), holding only the fields the command prints

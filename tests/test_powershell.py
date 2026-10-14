@@ -12,12 +12,15 @@ import base64
 from pathlib import Path
 import shutil
 import subprocess
+from unittest import mock
 
 import pytest
 
+from napt.exceptions import PackagingError
 from napt.powershell import (
     ps_escape_double_quoted,
     ps_single_quote,
+    run_powershell_lines,
     strip_control_characters,
 )
 
@@ -165,3 +168,81 @@ def test_hostile_values_round_trip_through_powershell(executable: str, tmp_path:
     ]
     expected = [value for value in HOSTILE_VALUES for _ in range(2)]
     assert decoded == expected
+
+
+class TestRunPowershellLines:
+    """Tests for the shared script-to-UTF-8-file runner (mocked)."""
+
+    @staticmethod
+    def _run(lines, encoding="utf-8"):
+        """Stands in for powershell.exe: writes the values to the output file."""
+
+        def run(args, **kwargs):
+            out = Path(kwargs["env"]["NAPT_TEST_OUT"])
+            out.write_text("\n".join(lines) + "\n", encoding=encoding)
+            return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+        return run
+
+    def test_returns_the_lines_and_removes_the_file(self):
+        """Tests that the script's lines come back and the temp file is gone."""
+        with mock.patch(
+            "napt.powershell.subprocess.run", side_effect=self._run(["Café", "1.0"])
+        ) as run:
+            lines = run_powershell_lines(
+                "script", out_var="NAPT_TEST_OUT", timeout=5, what="Test query"
+            )
+
+        assert lines == ["Café", "1.0"]
+        args = run.call_args.args[0]
+        assert args[:4] == ["powershell", "-NoProfile", "-NonInteractive", "-Command"]
+        assert args[-1] == "script"
+        assert run.call_args.kwargs["timeout"] == 5
+        assert not Path(run.call_args.kwargs["env"]["NAPT_TEST_OUT"]).exists()
+
+    def test_bom_is_tolerated(self):
+        """Tests that a file PowerShell wrote with a BOM reads cleanly."""
+        with mock.patch(
+            "napt.powershell.subprocess.run",
+            side_effect=self._run(["x"], encoding="utf-8-sig"),
+        ):
+            assert run_powershell_lines(
+                "s", out_var="NAPT_TEST_OUT", timeout=5, what="Test query"
+            ) == ["x"]
+
+    def test_failure_names_the_step_exit_code_and_stderr(self):
+        """Tests that a non-zero exit is a PackagingError with the details."""
+        seen = {}
+
+        def failing(args, **kwargs):
+            seen["out"] = Path(kwargs["env"]["NAPT_TEST_OUT"])
+            raise subprocess.CalledProcessError(3, args, stderr="boom")
+
+        with mock.patch("napt.powershell.subprocess.run", side_effect=failing):
+            with pytest.raises(
+                PackagingError, match=r"Test query failed \(exit 3\). stderr: boom"
+            ):
+                run_powershell_lines(
+                    "s", out_var="NAPT_TEST_OUT", timeout=5, what="Test query"
+                )
+
+        assert not seen["out"].exists()
+
+    def test_timeout_and_launch_failure_are_packaging_errors(self):
+        """Tests that a timeout and a missing powershell are reported."""
+        with mock.patch(
+            "napt.powershell.subprocess.run",
+            side_effect=subprocess.TimeoutExpired(["powershell"], 5),
+        ):
+            with pytest.raises(PackagingError, match="Test query timed out"):
+                run_powershell_lines(
+                    "s", out_var="NAPT_TEST_OUT", timeout=5, what="Test query"
+                )
+        with mock.patch(
+            "napt.powershell.subprocess.run",
+            side_effect=FileNotFoundError(2, "No such file", "powershell"),
+        ):
+            with pytest.raises(PackagingError, match="Test query failed: "):
+                run_powershell_lines(
+                    "s", out_var="NAPT_TEST_OUT", timeout=5, what="Test query"
+                )

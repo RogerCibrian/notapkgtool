@@ -43,8 +43,8 @@ _FILE_POLL_URL = f"{_FILES_URL}/{FILE_ID}"
 _COMMIT_FILE_URL = f"{_FILE_POLL_URL}/commit"
 _APP_URL = f"{GRAPH_BASE}/deviceAppManagement/mobileApps/{APP_ID}"
 
-# Graph retry waits happen in the transport; polling and blob retry waits
-# happen in this module.
+# Graph and blob retry waits happen in the transport; polling waits happen
+# in this module.
 _CLIENT_SLEEP = "napt.graph.client.time.sleep"
 _INTUNE_SLEEP = "napt.graph.intune.time.sleep"
 
@@ -169,7 +169,7 @@ def test_upload_to_azure_blob_block_failure_raises_network_error(
 
     with req_mock.Mocker() as m:
         m.put(req_mock.ANY, status_code=500)
-        with patch(_INTUNE_SLEEP):
+        with patch(_CLIENT_SLEEP):
             with pytest.raises(NetworkError, match="block upload failed"):
                 upload_to_azure_blob(SAS_URI, payload)
 
@@ -191,7 +191,7 @@ def test_upload_to_azure_blob_retries_transient_403(tmp_path: Path) -> None:
                 {"status_code": 201},
             ],
         )
-        with patch(_INTUNE_SLEEP):
+        with patch(_CLIENT_SLEEP):
             upload_to_azure_blob(SAS_URI, payload)
 
     # One failed block PUT + its retry + the block list commit
@@ -217,7 +217,7 @@ def test_upload_to_azure_blob_connection_error_hides_the_sas_signature(
                 "exceeded with url: /c/f?sv=2020&sr=b&sig=SECRETSIGNATURE"
             ),
         )
-        with patch(_INTUNE_SLEEP):
+        with patch(_CLIENT_SLEEP):
             with pytest.raises(NetworkError) as exc:
                 upload_to_azure_blob(_SIGNED_SAS, payload)
 
@@ -239,7 +239,7 @@ def test_upload_to_azure_blob_response_body_hides_the_sas_signature(
             status_code=400,
             text="bad request for /c/f?sig=SECRETSIGNATURE&sr=b",
         )
-        with patch(_INTUNE_SLEEP):
+        with patch(_CLIENT_SLEEP):
             with pytest.raises(NetworkError) as exc:
                 upload_to_azure_blob(_SIGNED_SAS, payload)
 
@@ -264,8 +264,8 @@ def test_upload_to_azure_blob_retry_warning_hides_the_sas_signature(
             ],
         )
         with (
-            patch(_INTUNE_SLEEP),
-            patch("napt.logging.get_global_logger", return_value=logger),
+            patch(_CLIENT_SLEEP),
+            patch("napt.graph.client.get_global_logger", return_value=logger),
         ):
             upload_to_azure_blob(_SIGNED_SAS, payload)
 
@@ -284,7 +284,7 @@ def test_upload_to_azure_blob_non_retryable_status_fails_fast(
 
     with req_mock.Mocker() as m:
         m.put(req_mock.ANY, status_code=400)
-        with patch(_INTUNE_SLEEP):
+        with patch(_CLIENT_SLEEP):
             with pytest.raises(NetworkError, match="block upload failed"):
                 upload_to_azure_blob(SAS_URI, payload)
 
@@ -477,6 +477,51 @@ def test_assign_app_posts_full_set() -> None:
         assign_app(TOKEN, APP_ID, assignments)
         body = m.request_history[0].json()
     assert body == {"mobileAppAssignments": assignments}
+
+
+def test_get_app_assignments_follows_paging() -> None:
+    """Tests that a second page of assignments is read, like the app list."""
+    next_url = f"{_ASSIGNMENTS_URL}?$skiptoken=page2"
+    with req_mock.Mocker() as m:
+        m.get(
+            _ASSIGNMENTS_URL,
+            json={"value": [{"id": "a1"}], "@odata.nextLink": next_url},
+        )
+        m.get(next_url, json={"value": [{"id": "a2"}]})
+        result = get_app_assignments(TOKEN, APP_ID)
+
+    assert [a["id"] for a in result] == ["a1", "a2"]
+
+
+def test_block_upload_honors_retry_after(tmp_path: Path) -> None:
+    """Tests that a throttled block waits the time storage asked for."""
+    payload = tmp_path / "payload.intunewin"
+    payload.write_bytes(b"data")
+    with req_mock.Mocker() as m:
+        m.put(
+            req_mock.ANY,
+            [
+                {"status_code": 429, "headers": {"Retry-After": "7"}},
+                {"status_code": 201},
+                {"status_code": 201},
+            ],
+        )
+        with patch(_CLIENT_SLEEP) as sleep:
+            upload_to_azure_blob(SAS_URI, payload)
+
+    assert [c.args[0] for c in sleep.call_args_list] == [7.0]
+
+
+def test_block_upload_uses_the_shared_session(tmp_path: Path) -> None:
+    """Tests that blocks go through the pooled session, not bare requests."""
+    payload = tmp_path / "payload.intunewin"
+    payload.write_bytes(b"data")
+    with req_mock.Mocker() as m:
+        m.put(req_mock.ANY, status_code=201)
+        with patch("requests.put", side_effect=AssertionError("bare requests.put")):
+            upload_to_azure_blob(SAS_URI, payload)
+
+    assert len(m.request_history) == 2
 
 
 def test_build_assignment_shape() -> None:

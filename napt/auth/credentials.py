@@ -59,13 +59,14 @@ use). See the authentication documentation for setup instructions.
 from __future__ import annotations
 
 import base64
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 import json
 import logging
 import os
 from pathlib import Path
 import sys
+import time
 from typing import Any
 
 from azure.core.exceptions import ClientAuthenticationError
@@ -76,9 +77,12 @@ from azure.identity import (
 )
 import msal
 import msal_extensions
-import requests
 
-from napt.exceptions import AuthError, ConfigError
+from napt.auth.spec import REQUIRED_PERMISSIONS
+from napt.exceptions import AuthError, ConfigError, NAPTError
+from napt.files import write_text_atomic
+from napt.graph.client import GRAPH_BASE, auth_headers, graph_request
+from napt.logging import get_global_logger
 
 GRAPH_SCOPES = ["https://graph.microsoft.com/.default"]
 
@@ -87,13 +91,10 @@ GRAPH_SCOPES = ["https://graph.microsoft.com/.default"]
 # outcome itself, so keep the library quiet below ERROR.
 logging.getLogger("azure.identity").setLevel(logging.ERROR)
 
-# Graph permissions NAPT needs, whether granted as application permissions
-# (service principal, Azure CLI session) or delegated permissions (interactive).
-REQUIRED_PERMISSIONS = ("DeviceManagementApps.ReadWrite.All", "Group.Read.All")
-
 AUTHORITY_BASE = "https://login.microsoftonline.com"
-_GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 _AUTH_CONFIG_FILENAME = "auth.json"
+# Seconds the best-effort tenant name lookup may spend, retries included.
+_TENANT_LOOKUP_BUDGET = 15.0
 _TOKEN_CACHE_FILENAME = "token_cache.bin"
 
 # Seconds `napt auth login` waits for the browser round-trip before giving up.
@@ -148,7 +149,7 @@ _HINT_LOGIN_FAILED = (
     "    (and ms-appx-web://Microsoft.AAD.BrokerPlugin/<client-id> for the\n"
     "    Windows broker).\n"
     "  - Delegated permissions not consented: add the delegated\n"
-    "    DeviceManagementApps.ReadWrite.All and Group.Read.All permissions\n"
+    f"    {' and '.join(REQUIRED_PERMISSIONS)} permissions\n"
     "    and grant admin consent.\n"
     "  - Wrong client ID or tenant ID: check 'napt auth status'.\n"
     "  - Browser showed 'localhost refused to connect': the sign-in took\n"
@@ -323,7 +324,7 @@ def _save_auth_store(store: AuthStore) -> Path:
             for tenant_id, cfg in store.tenants.items()
         },
     }
-    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    write_text_atomic(path, json.dumps(payload, indent=2) + "\n")
     return path
 
 
@@ -580,14 +581,6 @@ def _acquire_silent(config: AuthConfig, *, use_broker: bool) -> str | None:
     return result["access_token"]
 
 
-def _interactive_config() -> AuthConfig | None:
-    """The active tenant's sign-in settings, or ``None`` when unconfigured."""
-    try:
-        return resolve_auth_config()
-    except ConfigError:
-        return None
-
-
 def _interactive_method(broker: bool) -> str:
     return "interactive (broker)" if broker else "interactive (browser)"
 
@@ -620,20 +613,20 @@ def _lookup_tenant(token: str) -> tuple[str | None, str | None]:
     Returns:
         ``(domain, display_name)`` with either element ``None`` when unknown.
     """
-    from napt.logging import get_global_logger
-
     logger = get_global_logger()
     try:
-        response = requests.get(
-            f"{_GRAPH_BASE}/organization?$select=displayName,verifiedDomains",
-            headers={"Authorization": f"Bearer {token}"},
-            timeout=15,
+        body = graph_request(
+            "GET",
+            f"{GRAPH_BASE}/organization?$select=displayName,verifiedDomains",
+            "tenant lookup",
+            auth_headers(token),
+            deadline=time.monotonic() + _TENANT_LOOKUP_BUDGET,
         )
-        response.raise_for_status()
-        orgs = response.json().get("value") or []
-    except (requests.RequestException, ValueError) as err:
+    except (NAPTError, ValueError) as err:
+        # ValueError: a 200 whose body is not JSON.
         logger.verbose("AUTH", f"Tenant name lookup skipped: {err}")
         return None, None
+    orgs = body.get("value") or []
     if not orgs:
         return None, None
     org = orgs[0]
@@ -647,13 +640,7 @@ def _with_tenant_label(config: AuthConfig, token: str) -> AuthConfig:
     if config.domain or config.display_name:
         return config
     domain, display_name = _lookup_tenant(token)
-    return AuthConfig(
-        client_id=config.client_id,
-        tenant_id=config.tenant_id,
-        username=config.username,
-        domain=domain,
-        display_name=display_name,
-    )
+    return replace(config, domain=domain, display_name=display_name)
 
 
 def login(
@@ -685,8 +672,6 @@ def login(
         AuthError: If no app registration is configured or the sign-in fails.
         ConfigError: If the saved auth config is malformed.
     """
-    from napt.logging import get_global_logger
-
     logger = get_global_logger()
 
     config = resolve_auth_config(tenant_id, client_id)
@@ -798,12 +783,7 @@ def logout(*, all_tenants: bool = False) -> list[str]:
         accounts = app.get_accounts(username=config.username)
         for account in accounts:
             app.remove_account(account)
-        store.tenants[config.tenant_id] = AuthConfig(
-            client_id=config.client_id,
-            tenant_id=config.tenant_id,
-            domain=config.domain,
-            display_name=config.display_name,
-        )
+        store.tenants[config.tenant_id] = replace(config, username=None)
         if accounts:
             signed_out.append(config.tenant_id)
     if targets:
@@ -811,12 +791,48 @@ def logout(*, all_tenants: bool = False) -> list[str]:
     return signed_out
 
 
+def _resolve_token() -> tuple[str, str] | None:
+    """Walks the credential chain once and returns the token with its source.
+
+    The order is the service principal from ``AZURE_*`` variables, then the
+    session saved by `napt auth login`, then an Azure CLI session. Both
+    [get_status][napt.auth.credentials.get_status] and
+    [get_access_token][napt.auth.credentials.get_access_token] use this
+    walk, so what status reports is what upload does.
+
+    Returns:
+        The access token and a human-readable name of the credential it
+            came from, or ``None`` when nothing is configured or signed in.
+
+    Raises:
+        AuthError: If a credential is configured but fails (a saved session
+            that can no longer be refreshed, ``AZURE_*`` variables that
+            Entra ID rejects, an Azure CLI session that cannot issue a token).
+        ConfigError: If the saved auth config file is malformed.
+    """
+    token = _service_principal_token()
+    if token is not None:
+        return token, _describe_noninteractive_method()
+
+    config = resolve_auth_config()
+    if config is not None:
+        broker = _broker_available()
+        token = _acquire_silent(config, use_broker=broker)
+        if token is not None:
+            return token, _interactive_method(broker)
+
+    token = _azure_cli_token()
+    if token is not None:
+        return token, "azure cli"
+    return None
+
+
 def get_status() -> AuthStatus | None:
     """Reports which credential NAPT would use right now, or ``None``.
 
     Resolves a token exactly as
-    [get_access_token][napt.auth.credentials.get_access_token] does -- so
-    the answer reflects what `napt upload` will do -- and decodes it for
+    [get_access_token][napt.auth.credentials.get_access_token] does, so
+    the answer reflects what `napt upload` will do, and decodes it for
     display.
 
     Returns:
@@ -827,22 +843,13 @@ def get_status() -> AuthStatus | None:
         AuthError: If a credential is configured but fails (for example, a
             saved session that can no longer be refreshed, or ``AZURE_*``
             variables that Entra ID rejects).
+        ConfigError: If the saved auth config file is malformed.
     """
-    token = _service_principal_token()
-    if token is not None:
-        return _status_from_token(token, _describe_noninteractive_method())
-
-    config = _interactive_config()
-    if config is not None:
-        broker = _broker_available()
-        token = _acquire_silent(config, use_broker=broker)
-        if token is not None:
-            return _status_from_token(token, _interactive_method(broker))
-
-    token = _azure_cli_token()
-    if token is not None:
-        return _status_from_token(token, "azure cli")
-    return None
+    resolved = _resolve_token()
+    if resolved is None:
+        return None
+    token, method = resolved
+    return _status_from_token(token, method)
 
 
 def get_access_token() -> str:
@@ -863,6 +870,7 @@ def get_access_token() -> str:
             Azure CLI session that cannot get a token), or the saved
             session can no longer be refreshed, with guidance on what to
             do.
+        ConfigError: If the saved auth config file is malformed.
 
     Example:
         Get a token and use it in a request:
@@ -874,18 +882,7 @@ def get_access_token() -> str:
             ```
 
     """
-    token = _service_principal_token()
-    if token is not None:
-        return token
-
-    config = _interactive_config()
-    if config is not None:
-        token = _acquire_silent(config, use_broker=_broker_available())
-        if token is not None:
-            return token
-
-    token = _azure_cli_token()
-    if token is not None:
-        return token
-
-    raise AuthError(_HINT_NOT_LOGGED_IN)
+    resolved = _resolve_token()
+    if resolved is None:
+        raise AuthError(_HINT_NOT_LOGGED_IN)
+    return resolved[0]

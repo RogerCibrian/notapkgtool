@@ -45,14 +45,33 @@ def write_text_atomic(path: Path, text: str, encoding: str = "utf-8") -> None:
             it was, and the temporary file is removed.
 
     """
+    write_bytes_atomic(path, text.encode(encoding))
+
+
+def write_bytes_atomic(path: Path, data: bytes) -> None:
+    """Writes bytes to a file so the file is never seen part-written.
+
+    The bytes go to a temporary file in the same directory, which is then
+    renamed over the target. Parent directories are created.
+
+    Args:
+        path: Destination file.
+        data: Content to write.
+
+    Raises:
+        OSError: If the directory cannot be created, the temporary file
+            cannot be written, or the rename fails. The target is left as
+            it was, and the temporary file is removed.
+
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(
         prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
     )
     tmp = Path(tmp_name)
     try:
-        with os.fdopen(fd, "w", encoding=encoding) as f:
-            f.write(text)
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
             f.flush()
             os.fsync(f.fileno())
         os.replace(tmp, path)

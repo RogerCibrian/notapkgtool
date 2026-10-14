@@ -183,7 +183,7 @@ test_downloads/
 
 # NAPT build and cache directories
 # - builds/: PSADT package builds (napt build output)
-# - cache/: Discovery cache, cached PSADT releases and tools (disposable)
+# - cache/: Downloaded PSADT releases and IntuneWinAppUtil.exe (disposable)
 # - packages/: .intunewin packages (napt package output)
 # - icons/: App icons extracted at build time (napt build output)
 builds/

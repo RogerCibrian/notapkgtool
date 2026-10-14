@@ -139,7 +139,7 @@ def parse_intunewin(intunewin_path: Path) -> IntunewinMetadata:
             from napt.upload.intunewin import parse_intunewin
 
             metadata = parse_intunewin(
-                Path("packages/napt-chrome/Invoke-AppDeployToolkit.intunewin")
+                Path("packages/google-chrome/Invoke-AppDeployToolkit.intunewin")
             )
             print(metadata.encryption_key)
             ```

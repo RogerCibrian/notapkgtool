@@ -24,13 +24,12 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from napt.config.loader import load_effective_config
-from napt.exceptions import NAPTError
-from napt.logging import get_logger, set_global_logger
-from napt.results import ValidationResult
-from napt.validation import validate_recipe, validate_recipes
+from napt.cli.common import add_output_flags
+
+if TYPE_CHECKING:
+    from napt.validation import ValidationResult
 
 
 def _print_provenance(
@@ -61,25 +60,21 @@ def _print_provenance(
             print(f"  {full_key}: {value_repr} ({prov_value})")
 
 
-def _print_provenance_block(recipe_path: Path) -> None:
-    """Prints the provenance of a recipe's effective configuration.
+def _print_provenance_block(result: ValidationResult) -> None:
+    """Prints the provenance of a validated recipe's effective configuration.
 
     Args:
-        recipe_path: The recipe whose configuration to describe.
+        result: The validation result; its configuration carries the
+            provenance when the recipe is valid.
     """
-    try:
-        config = load_effective_config(recipe_path)
-        provenance = config.get("_provenance")
-        if provenance:
-            print()
-            print("CONFIGURATION PROVENANCE")
-            print("-" * 70)
-            _print_provenance(config, provenance)
-            print("-" * 70)
-    except NAPTError as err:
-        # An invalid recipe cannot be merged; say so rather than hide it.
-        print()
-        print(f"Provenance unavailable: {err}")
+    print()
+    if result.config is None:
+        print("Provenance unavailable: the recipe is invalid")
+        return
+    print("CONFIGURATION PROVENANCE")
+    print("-" * 70)
+    _print_provenance(result.config, result.config["_provenance"])
+    print("-" * 70)
 
 
 def _print_single(result: ValidationResult) -> None:
@@ -94,8 +89,7 @@ def _print_single(result: ValidationResult) -> None:
     print(f"Recipe:      {result.recipe_path}")
     if result.parent_path:
         print(f"Parent:      {result.parent_path}")
-    print(f"Status:      {result.status.upper()}")
-    print(f"App Count:   {result.app_count}")
+    print(f"Status:      {'VALID' if result.is_valid else 'INVALID'}")
     print()
 
     # Show warnings if any
@@ -140,7 +134,7 @@ def _print_directory(results: list[ValidationResult], root: Path) -> None:
         root: The directory given on the command line.
     """
     for result in results:
-        tag = "[OK]  " if result.status == "valid" else "[FAIL]"
+        tag = "[OK]  " if result.is_valid else "[FAIL]"
         print(f"{tag} {_display_path(result, root)}")
         for error in result.errors:
             print(f"       [X] {error}")
@@ -166,11 +160,9 @@ def cmd_validate(args: argparse.Namespace) -> int:
         Prints validation results, errors, and warnings to stdout.
 
     """
-    # Configure global logger
-    logger = get_logger(verbose=args.verbose, debug=args.debug)
-    set_global_logger(logger)
+    from napt.validation import validate_recipe, validate_recipes
 
-    recipe_path = Path(args.recipe).resolve()
+    recipe_path = args.recipe.resolve()
 
     if recipe_path.is_dir():
         print(f"Validating recipes under: {recipe_path}")
@@ -179,11 +171,11 @@ def cmd_validate(args: argparse.Namespace) -> int:
         _print_directory(results, recipe_path)
         if args.debug:
             for result in results:
-                if result.status == "valid":
+                if result.is_valid:
                     print()
                     print(f"Recipe: {_display_path(result, recipe_path)}")
-                    _print_provenance_block(Path(result.recipe_path))
-        failed = sum(1 for result in results if result.status != "valid")
+                    _print_provenance_block(result)
+        failed = sum(1 for result in results if not result.is_valid)
         print()
         print("=" * 70)
         if failed:
@@ -198,11 +190,11 @@ def cmd_validate(args: argparse.Namespace) -> int:
     result = validate_recipe(recipe_path)
     _print_single(result)
 
-    # Show provenance in debug mode (useful for both valid and invalid recipes)
+    # Show provenance in debug mode, from the same merge that was validated.
     if args.debug:
-        _print_provenance_block(recipe_path)
+        _print_provenance_block(result)
 
-    if result.status == "valid":
+    if result.is_valid:
         print()
         print("[SUCCESS] Recipe is valid!")
         return 0
@@ -235,18 +227,8 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     )
     parser_validate.add_argument(
         "recipe",
+        type=Path,
         help="Path to a recipe YAML file, or a directory of recipes",
     )
-    parser_validate.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Show validation progress and details",
-    )
-    parser_validate.add_argument(
-        "-d",
-        "--debug",
-        action="store_true",
-        help="Show detailed debugging output (implies --verbose)",
-    )
+    add_output_flags(parser_validate)
     parser_validate.set_defaults(func=cmd_validate)

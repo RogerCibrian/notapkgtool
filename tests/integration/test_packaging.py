@@ -25,7 +25,7 @@ class TestIntuneWinToolDownload:
 
     def test_download_intunewin_tool_success(self, tmp_path: Path):
         """Test downloading IntuneWinAppUtil.exe from Microsoft."""
-        cache_dir = tmp_path / "cache" / "tools"
+        cache_dir = tmp_path / "cache" / "intunewin"
 
         tool_path = _get_intunewin_tool(cache_dir, "latest")
 
@@ -35,7 +35,7 @@ class TestIntuneWinToolDownload:
 
     def test_intunewin_tool_cached_on_second_call(self, tmp_path: Path):
         """Test that tool is reused from cache on second download."""
-        cache_dir = tmp_path / "cache" / "tools"
+        cache_dir = tmp_path / "cache" / "intunewin"
 
         # First download
         tool_path_1 = _get_intunewin_tool(cache_dir, "latest")
@@ -55,7 +55,7 @@ class TestBuildStructureValidation:
 
     def test_verify_valid_real_build(self, real_psadt_template: Path, tmp_path: Path):
         """Test validation passes for real PSADT build."""
-        from napt.build.manager import _copy_psadt_template
+        from napt.build.layout import copy_psadt_template as _copy_psadt_template
 
         build_dir = tmp_path / "build"
         build_dir.mkdir()
@@ -70,7 +70,7 @@ class TestBuildStructureValidation:
         self, real_psadt_template: Path, tmp_path: Path
     ):
         """Test validation fails when Invoke-AppDeployToolkit.exe missing."""
-        from napt.build.manager import _copy_psadt_template
+        from napt.build.layout import copy_psadt_template as _copy_psadt_template
 
         build_dir = tmp_path / "build"
         build_dir.mkdir()
@@ -91,7 +91,7 @@ class TestBuildStructureValidation:
         """Test validation fails when PSAppDeployToolkit directory missing."""
         import shutil
 
-        from napt.build.manager import _copy_psadt_template
+        from napt.build.layout import copy_psadt_template as _copy_psadt_template
 
         build_dir = tmp_path / "build"
         build_dir.mkdir()

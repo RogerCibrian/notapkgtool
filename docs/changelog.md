@@ -9,18 +9,124 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`napt upstream check` and `update`** - Find out which pinned copies
+    changed upstream and take the changes. `check` reports each recipe as
+    `unchanged`, `changed`, `missing`, or `modified-locally` without
+    writing anything (`--exit-code` fails the run on drift, `--format
+    json` carries the old and new pins for a PR body). `update` rewrites
+    each changed pinned copy from the upstream recipe and records its new
+    commit; pass overrides or pinned copies to refresh one recipe at a
+    time, so CI can open one pull request per recipe. Overrides are never
+    touched; a pinned copy edited by hand is left alone unless `--force`
+    overwrites it
+- **`napt upstream add` and `remove`** - Import recipes from any git
+    repository. `add` writes a pinned copy of each recipe, byte-identical, under
+    `upstream/<host>/<repo path>/`, writes `recipes/<Vendor>/<app>.override.yaml`
+    with `parent` pointing at the pinned copy and the recipe's `name` and
+    `id`, and records each recipe's commit and hashes in `upstream.yaml`.
+    Imports a file or a whole directory (`--exclude` globs, `--dry-run`;
+    re-running a directory import skips recipes already imported), pins a
+    branch or tag with `--ref`, and takes `--dest` and `--id`. Only app-owned keys
+    from an upstream recipe reach the merge; tenant policy stays with
+    `org.yaml`. Nothing is written unless every recipe validates. `remove`
+    deletes the pinned copy and its entry, keeping the override unless
+    `--delete-override`. Requires `git` on PATH
+
+- **Recommended `id` form** - `napt validate` warns when an `id` is outside
+    `<vendor>-<app>[-<variant>]` in lowercase letters, digits, and single
+    hyphens (`google-chrome`, `7zip-x64-msi`). Existing ids keep working;
+    the convention keeps ids from different recipe repositories from
+    colliding and reads the same everywhere
+
+### Changed
+
+- **Sample recipe ids follow the convention** - `napt-chrome` is now
+    `google-chrome`, `napt-git` is `git`, and so on in the repository's
+    recipes and docs. A project that copied a sample keeps its own id;
+    changing an `id` creates a new app in NAPT's state and in Intune
+
+- **`upstream` is a reserved directory name for parent recipes** - A
+    `parent` under a directory named `upstream` (any case) is treated as a
+    pinned copy written by `napt upstream add`: it must be listed in
+    `upstream.yaml` with a matching hash, only its app-owned keys are
+    merged (a visible line names any key that was ignored), and the
+    pinned copy cannot be run directly. Keep local parents elsewhere,
+    such as `recipe-bases/`
+
+## [0.12.0] - 2026-10-05
+
+### Added
+
 - **`secrets` section in `defaults/org.yaml`** - Declares the environment
     variables a recipe may send with its discovery request and the hosts
     each may go to. Only org.yaml can declare them: a vendor file, parent
-    recipe, or recipe that tries fails validation, so a vendored recipe can
+    recipe, or recipe that tries fails validation, so a pinned copy can
     neither reach the runner's other secrets nor send a declared one
     somewhere else
 - **`napt validate` checks a directory** - Every recipe under it is
     validated, and two files that resolve to the same id are reported, the
     same check `napt promote` makes
+- **`napt upload` takes `--state-dir` and `--packages-dir`** - The same
+    overrides `napt package` takes, so an upload can follow a package run
+    that used them instead of reading the configured directories
 
 ### Changed
 
+- **BREAKING: One cache root, `directories.cache`** - Replaces
+    `psadt.cache_dir`. `napt build` keeps PSADT releases under
+    `<cache>/psadt/<version>/` and `napt package` keeps `IntuneWinAppUtil.exe`
+    under `<cache>/intunewin/<version>/` (it was the fixed `cache/tools/`).
+    The default root is `cache`, so a project that never set `psadt.cache_dir`
+    only sees the tool download once more into the new folder; delete the old
+    `cache/tools/` by hand. A project that set `psadt.cache_dir` moves the
+    value to `directories.cache` (without the `/psadt` suffix); the old key
+    is reported as unknown by `napt validate`
+- **`napt init` shows every default** - The `defaults/org.yaml` template now
+    lists all seven `psadt.app_vars` NAPT sets, so the file shows every
+    setting an organization can override
+- **`napt status` reads `directories.state` from configuration** - Like
+    every other command, instead of a fixed `state` directory, so it
+    summarizes the state the pipeline wrote to. It takes an optional recipe
+    file or directory (default `recipes/`) to read the setting from;
+    `--state-dir` still overrides it
+- **Commands that never talk to a tenant start faster** - `validate`,
+    `discover`, `build`, `package`, `init`, and `status` no longer load the
+    Azure authentication libraries at startup; only `upload`, `promote`, and
+    `auth` do
+- **Ctrl-C ends a command cleanly** - Exit code 130 and an `Interrupted.`
+    line instead of a traceback
+- **Warnings are tagged** - A warning in the log prints as
+    `[PREFIX] WARNING: message`; it used to look exactly like an info line
+- **Result output drops lines that never changed** - `napt validate` no
+    longer prints `App Count` (always 1 for a valid recipe), and `discover`,
+    `build`, `package`, and `upload` no longer print `Status: success` (a
+    failure is an error, not a result)
+- **Configuration loads do less work** - Every command used to serialize
+    each configuration layer to YAML text on every load so a debug logger
+    could discard it; the dumps are now built only under `-d`
+- **Log lines use one prefix per stage or domain** - Validation logs under
+    `CONFIG` instead of `VALIDATION`; reusing a cached PSADT release,
+    replacing an earlier build, and backing up org.yaml on `init --force`
+    are reported at the same level as their counterparts
+- **BREAKING: A missing brand pack folder fails the build** - A configured
+    `psadt.brand_pack.path` that does not exist used to be skipped with a
+    verbose-only note, so a typo shipped a package with PSADT's default
+    assets. `napt build` now stops and names the path
+- **`napt build` checks the recipe before touching the build folder** - An
+    EXE recipe missing `display_name`, `architecture`, or its install
+    commands used to fail after that version's build folder had been
+    cleared and PSADT copied in; every such check now runs before anything
+    is written
+- **One metadata read per MSI build** - The MSI was opened twice (once for
+    its version, once for its architecture), and the detection settings
+    were resolved once per generated script, so each "will be ignored"
+    warning printed twice. Both now happen once
+- **Installer problems are reported as build errors** - An MSI for an
+    unsupported platform, an MSIX for an unsupported architecture, or an
+    MSI with no ProductName are faults in the installer, and are now
+    reported as such rather than as configuration errors. A machine with no
+    way to read an MSI (no PowerShell on Windows, no msitools elsewhere)
+    gets the same kind of error instead of a traceback
 - **BREAKING: `napt package` keeps other versions' packages** - The
     previous version's package folder used to be deleted before the new
     one was made (and before the packaging tool was even fetched), so a
@@ -77,9 +183,126 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     The publish and apply workflows also gain `workflow_dispatch`, since
     re-running a failed job checks out the old commit
 - **Reference workflows scan `.yml` recipes too**, matching `napt promote`
+- **`napt validate` checks every section against its schema** - Field
+    types, allowed values, and integer bounds are checked in every section,
+    including `psadt`, `directories`, and `intunewin`, which had no checks.
+    `intune.max_run_time_minutes` must be 1 to 1440 (Intune's limit) and
+    `logging.log_rotation_mb` at least 1; a YAML boolean no longer passes
+    as an integer; `psadt.brand_pack` and each of its mappings must have
+    the documented shape, and a mapping target must stay inside the build.
+    A key that is not a string is an error instead of a traceback.
+    An unknown key anywhere, including the top level
+    and the `discovery` section, is a warning that names the closest known
+    key, and the same typo always gets the same hint
+- **One GitHub client for discovery and the tool downloads** - The
+    `api_github` strategy, the PSADT download, and the IntuneWinAppUtil
+    download share one request path, so a rate limit, a missing release,
+    or a bad response reads the same from `napt discover`, `napt build`,
+    and `napt package`, and a rate limit is reported only when GitHub says
+    the limit is the cause. Every lookup sends one authorization scheme.
+    A release tag is read by one rule for both tools: a leading `v` is
+    accepted and any number of version parts, but never a suffix.
+    `psadt.release` and `intunewin.release` accept a leading `v` alike
+- **PSADT release without a Template_v4 archive is refused before
+    download**. The fallback that downloaded any PSADT zip is gone, since
+    the layout check refused the result anyway
+- **The PSADT cache check matches the download check** - A cache entry
+    holding only the module manifest is downloaded again instead of being
+    built from
+
+- **BREAKING: `api_json` paths are dotted paths** - `version_path` and
+    `download_url_path` are keys separated by dots, with `[n]` for a list
+    entry (`data.version`, `builds[0].url`). JSONPath operators such as
+    wildcards and filters are no longer accepted; every documented example
+    already used the dotted form. The value at `version_path` must be a
+    string or number and the value at `download_url_path` a non-empty
+    string, so a null in the response is reported by path instead of
+    becoming the URL `None`
+- **BREAKING: `web_scrape` refuses `link_selector` and `link_pattern`
+    together** - The selector used to win silently; a recipe that sets
+    both now fails validation
+- **Strategy validation is stricter** - A `version_format` that is
+    malformed or names a field, and an empty `version_pattern` in any
+    strategy, are validation errors; each strategy reports a missing or
+    mistyped field in the same form the other sections use
+    (`discovery: Missing required field: repo`, `discovery.repo: Must be a
+    string`)
+
+- **One Graph session and one retry policy** - Every Graph call, every
+    Azure Storage block upload, and the tenant lookup at `napt auth login`
+    go through one pooled connection, so an upload of many blocks reuses
+    its connection instead of opening one per block, and every call uses
+    the beta endpoint. Block uploads honor
+    `Retry-After` the way Graph calls already did. A 401, 403, or 400
+    names the call that failed and what Graph answered, without guessing
+    at an Intune role or at app metadata as the cause
+
+### Removed
+
+- **The `jsonpath-ng` dependency** - Replaced by the dotted-path reader
+- **BREAKING: `discovery.prerelease`** - The field never had an effect:
+    the latest-release endpoint never returns a pre-release. A recipe that
+    still sets it gets an unknown-key warning
 
 ### Fixed
 
+- A corrupt saved sign-in configuration (`auth.json` under NAPT's user data
+    folder) is now reported by `napt upload` and `napt auth status` with the
+    file's path and the remedy, as `napt auth login` and `logout` already
+    did; they used to read it as "Not authenticated" and point at
+    `napt auth login`, which could not fix it
+- A `web_scrape` recipe whose `page_url` points at a large file (an
+    installer instead of the download page) is refused as soon as the page
+    size cap is passed, instead of after the whole file was downloaded; the
+    error now says what to check
+- An MSI whose Template summary property leaves the platform empty builds
+    as x86 on Windows, as the Windows Installer documentation specifies and
+    as a Linux build already did; it used to fail with "Template not found"
+- The saved sign-in configuration (`auth.json` under NAPT's user data
+    folder) is written in one rename like every other file NAPT persists,
+    so a crash mid-write no longer leaves a half-written file that fails
+    every later `napt auth` command with a corrupt-config error
+- The sample recipes in this repository live under `recipes/Google/`, so
+    the loader looks for `defaults/vendors/Google.yaml`. The shipped file
+    was `google.yaml`, which matched only where the filesystem ignores
+    case; it is renamed to match the folder
+- A `defaults/org.yaml` or vendor defaults file whose top level was not a
+    mapping (a list, or a stray scalar) was skipped without a word, so the
+    recipe loaded with none of its settings; it is now the same error a
+    recipe gets
+- The `-d` dump headed "Final Merged Configuration" was taken before path
+    resolution and dynamic injection, so it was not the configuration the
+    command used; it now is, and `napt validate --debug` labels the
+    injected `AppScriptDate` and `RequireAdmin` values as `computed`
+    instead of reporting them as code defaults
+- A missing recipe, parent recipe, or recipe path is reported with one
+    wording naming the role and the path
+- A PSADT template without the install or uninstall marker made `napt
+    build` drop the recipe's commands silently; it now fails naming the
+    missing marker
+- `napt build` sends `GITHUB_TOKEN` on the PSADT release lookups, as its
+    documentation promised; the calls used to count against the shared
+    unauthenticated limit
+- Resolving `psadt.release: latest` makes one API call instead of two
+    when the release is not cached
+- A `napt package` run killed while writing IntuneWinAppUtil.exe no longer
+    leaves a partial executable that every later run accepts; the file is
+    written beside the cache and moved in only after its size and hash
+    are verified
+- A PSADT release tagged with a `v` prefix resolves and downloads; the
+    lookup used to strip the prefix and then miss the tag
+- A `web_scrape` recipe whose `version_format` could not take the captured
+    groups ended `napt discover` with a traceback; it is now reported as a
+    configuration error, and caught at `napt validate` first
+- A download that failed in transit (a dropped connection mid-file) is
+    reported as a network error from the downloader itself
+- `napt upload` with `build_types: both` decrypted and extracted the
+    package once per app entry; it now extracts it once, and not at all
+    when both entries are adopted
+- An app with more than one page of assignments had the later pages
+    dropped when its assignments were read; every page is read now
+- The wait for a new app registration to replicate recognized a 404 by
+    searching the error text; it now checks the status itself
 - Fixed a PSADT download interrupted part-way leaving a partial toolkit in
     the cache that every later build accepted, and the toolkit zip left in
     the cache folder shipping inside every later package. The toolkit is
@@ -981,7 +1204,8 @@ Initial internal release.
 - **Robust Downloads** - Retry logic, atomic writes, SHA-256 verification, and conditional requests
 
 
-[Unreleased]: https://github.com/RogerCibrian/notapkgtool/compare/0.11.0...HEAD
+[Unreleased]: https://github.com/RogerCibrian/notapkgtool/compare/0.12.0...HEAD
+[0.12.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.11.0...0.12.0
 [0.11.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.10.0...0.11.0
 [0.10.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.9.0...0.10.0
 [0.9.0]: https://github.com/RogerCibrian/notapkgtool/compare/0.8.0...0.9.0

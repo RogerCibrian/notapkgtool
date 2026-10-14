@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 import requests_mock
 
 from napt.download.download import download_file
@@ -159,6 +160,36 @@ def test_content_disposition_unknown_charset_falls_back(tmp_test_dir: Path) -> N
     assert result.file_path.name == "fallback.msi"
 
 
+def test_transport_failure_is_a_network_error(tmp_test_dir: Path) -> None:
+    """Tests that a connection failure is reported as NetworkError, not raw."""
+    url = "https://example.com/file.bin"
+
+    with requests_mock.Mocker() as m:
+        m.get(url, exc=requests.ConnectionError("reset by peer"))
+        with pytest.raises(NetworkError, match="download failed for"):
+            download_file(url, tmp_test_dir)
+
+
+def test_failure_mid_stream_is_a_network_error_and_removes_the_part_file(
+    tmp_test_dir: Path,
+) -> None:
+    """Tests that a connection dropped while the body streams is reported
+    and leaves no partial file behind."""
+    url = "https://example.com/file.bin"
+
+    def _drop(*args, **kwargs):
+        yield b"first chunk"
+        raise requests.exceptions.ChunkedEncodingError("connection broken")
+
+    with requests_mock.Mocker() as m:
+        m.get(url, content=b"first chunk and more", headers={"Content-Length": "20"})
+        with patch("requests.Response.iter_content", side_effect=_drop):
+            with pytest.raises(NetworkError, match="download failed for"):
+                download_file(url, tmp_test_dir)
+
+    assert list(tmp_test_dir.iterdir()) == []
+
+
 def test_download_logs_under_approved_prefixes(tmp_test_dir: Path) -> None:
     """Tests that download progress and completion use the transport and
     file prefixes, not one of their own."""
@@ -179,49 +210,6 @@ def test_download_logs_under_approved_prefixes(tmp_test_dir: Path) -> None:
     assert prefixes
     assert "DOWNLOAD" not in prefixes
     assert prefixes <= {"HTTP", "FILE"}
-
-
-def test_checksum_mismatch_raises_and_cleans_part_file(tmp_test_dir: Path) -> None:
-    """Tests that checksum mismatch raises NetworkError and removes .part file."""
-    url = "https://example.com/file.bin"
-
-    with requests_mock.Mocker() as m:
-        m.get(url, content=b"wrong", headers={"Content-Length": "5"})
-
-        with pytest.raises(NetworkError, match="sha256 mismatch"):
-            download_file(url, tmp_test_dir, expected_sha256="00" * 32)
-
-    # The .part file should be gone (mismatch cleans up before rename)
-    assert not list(tmp_test_dir.glob("*.part"))
-    # The final file should not exist either
-    assert not (tmp_test_dir / "file.bin").exists()
-
-
-def test_checksum_validation_success(tmp_test_dir: Path) -> None:
-    """Tests that correct checksum validation passes."""
-    url = "https://example.com/file.bin"
-    data = b"correct content"
-    expected_hash = _sha256(data)
-
-    with requests_mock.Mocker() as m:
-        m.get(url, content=data, headers={"Content-Length": str(len(data))})
-        result = download_file(url, tmp_test_dir, expected_sha256=expected_hash)
-
-    assert result.file_path.exists()
-    assert result.sha256 == expected_hash
-
-
-def test_rejects_html_when_validate_content_type(tmp_test_dir: Path) -> None:
-    """Tests that HTML is rejected when content type validation is enabled."""
-    from napt.exceptions import ConfigError
-
-    url = "https://example.com/file"
-
-    with requests_mock.Mocker() as m:
-        m.get(url, text="<html>oops</html>", headers={"Content-Type": "text/html"})
-
-        with pytest.raises(ConfigError, match="expected binary"):
-            download_file(url, tmp_test_dir, validate_content_type=True)
 
 
 def test_writes_atomically_no_part_leftovers(tmp_test_dir: Path) -> None:

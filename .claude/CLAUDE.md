@@ -4,7 +4,7 @@
 
 **NAPT does:** Discovery, packaging, deployment, state management.
 
-**NAPT does not:** Git operations, PR creation, CI/CD workflow logic. Don't add `--create-pr` flags or git commands.
+**NAPT does not:** commit, branch, push, tag, or open PRs on the user's repository, and it contains no CI/CD workflow logic. Don't add `--create-pr` flags. Read-only `git ls-remote`, `git fetch`, and object reads against upstream recipe repositories are transport for `napt upstream` (`napt/upstream/git.py`) and are allowed; they run in a temporary directory and never touch the user's working tree or `.git`.
 
 **Audience — CLI tool, not a library:** NAPT is a CLI consumed via `napt <command>`. Write docstrings, examples, and architectural decisions for two audiences only:
 
@@ -175,6 +175,7 @@ All `napt/**/*.py` files require before docstring:
 | `NetworkError` | HTTP failures, API errors, download issues |
 | `PackagingError` | PSADT errors, MSI extraction, build failures |
 | `StateError` | Corrupted or invalid persisted state (`state/`, `cache/`) |
+| `AuthError` | No usable credential, sign-in failure, Graph 401/403 |
 
 **User-facing errors (anything a napt command surfaces):** Use custom exceptions. **Private helpers / bugs:** Use built-in.
 
@@ -184,19 +185,30 @@ All `napt/**/*.py` files require before docstring:
 
 ---
 
-## results.py Scope
+## Result Types
 
-`napt/results.py` is for **the result types napt commands return** — one dataclass per command's underlying operation (`napt discover` → `DiscoverResult`, `napt build` → `BuildResult`, `napt package` → `PackageResult`, `napt upload` → `UploadResult`, `napt validate` → `ValidationResult`), plus `DownloadResult` from the shared download step.
+A result is what an operation hands back to the command that prints it, and it lives **beside the operation that returns it**: `BuildResult` next to `build_package` in `napt/build/manager.py`, `UploadResult` next to `upload_package`, `ValidationResult` in `napt/validation.py`, `ApplyResult` next to `apply_plan`. There is no central results module.
 
-Domain types and internal types stay co-located with their logic.
+Rules for a result:
+
+- A frozen dataclass.
+- Only fields a consumer (the command handler or a test) reads. A field nothing reads is deleted.
+- Derived values are properties (`ValidationResult.is_valid`), never stored alongside the data they come from.
+- No status field. A result exists only when the operation succeeded; a failure is an exception.
+
+Domain types and internal types also stay co-located with their logic. The CLI prints every result through `print_results` in `napt/cli/common.py`; the handler supplies the title, the rows, and the success line.
 
 ---
 
 ## CLI Structure
 
-**Strict one module per top-level command.** `napt/cli/<command>.py` owns everything about `napt <command>`: its `cmd_*` handler(s), its parser definition in a `register(subparsers)` hook, and any helpers only that command uses. `napt/cli/main.py` only assembles the top-level parser, calls each module's `register`, and dispatches — no command logic there.
+**Strict one module per top-level command.** `napt/cli/<command>.py` owns everything about `napt <command>`: its `cmd_*` handler(s), its parser definition in a `register(subparsers)` hook, and any helpers only that command uses. `napt/cli/main.py` only assembles the top-level parser, calls each module's `register`, and dispatches; no command logic there.
 
-**Adding a command:** create `napt/cli/<command>.py` with `cmd_<command>` and `register`, call `register` from `main()` in `napt/cli/main.py`, and add `tests/cli/test_<command>.py`. A command with subcommands (`auth`, `promote`) still gets exactly one module. Never combine two commands in one module.
+**Shared scaffolding lives in `napt/cli/common.py`:** `add_output_flags` (`-v`/`-d`), `add_state_dir`, `setup_logging`, and `run_handler`, the one place NAPT errors are caught and printed. A handler raises; it never catches `NAPTError` to print it, and never defines its own `-v`/`-d` flags.
+
+**Handlers import their subsystem inside the function.** A command module's top-level imports are argparse, `napt.cli.common`, `napt.exceptions`, and `napt.logging`; the subsystem it drives (`napt.build.manager`, `napt.upload.manager`, `napt.auth.credentials`) is imported inside `cmd_*`, so `napt --help` and the commands that never touch a tenant do not load the Azure or HTTP libraries. `tests/cli/test_imports.py` enforces this. Tests patch the subsystem at its defining module (`napt.build.manager.build_package`), not on the CLI module.
+
+**Adding a command:** create `napt/cli/<command>.py` with `cmd_<command>` and `register`, call `register` from `build_parser()` in `napt/cli/main.py`, add it to `tests/cli/test_main.py`, and add `tests/cli/test_<command>.py`. A command with subcommands (`auth`, `promote`) still gets exactly one module. Never combine two commands in one module.
 
 ---
 
@@ -313,12 +325,17 @@ Examples:
 - `"Copying file: PSAppDeployToolkit/"` → `verbose` (internal file operation)
 
 **Prefixes:** The prefix names the pipeline stage the message belongs to
-(`DISCOVERY`, `BUILD`, `PACKAGE`, `UPLOAD`, `PROMOTE`, `INIT`). Shared
-infrastructure modules log under their domain instead — `HTTP` for
-transport (requests, retries), `AUTH`, `FILE`, `CACHE`, `CONFIG`, `STATE`,
-`DETECTION` — so the same module reads consistently regardless of which
-stage called it. Don't invent a new prefix when a message fits an
-existing one.
+(`DISCOVERY`, `BUILD`, `PACKAGE`, `UPLOAD`, `PROMOTE`, `INIT`, `UPSTREAM`). Shared
+infrastructure modules log under their domain instead, so the same module
+reads consistently regardless of which stage called it: `HTTP` for
+transport (requests, retries), `AUTH`, `FILE`, `CACHE`, `CONFIG` (loading
+and validation), `STATE`, `DETECTION` and `REQUIREMENTS` (the two generated
+scripts), `PSADT` (the release cache), `MSI` and `MSIX` (installer
+metadata). Don't invent a new prefix when a message fits an existing one;
+`tests/test_logging.py` checks every call against this set.
+
+**Format:** every line is `[PREFIX] message`; a warning prints as
+`[PREFIX] WARNING: message` so it stands apart from the info lines around it.
 
 ---
 

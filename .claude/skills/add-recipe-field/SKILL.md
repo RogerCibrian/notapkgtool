@@ -6,7 +6,7 @@ allowed-tools: Read Edit Write Glob Grep Bash(*python* -m *)
 argument-hint: "field name (and optionally a brief description)"
 ---
 
-You are adding a new field to the NAPT recipe schema. Categorize first — the category determines where validation, defaults, and access logic live. Follow every step in order.
+You are adding a new field to the NAPT recipe schema. Categorize first: the category determines where validation, defaults, and access logic live. Follow every step in order.
 
 ## Step 1: Categorize the new field
 
@@ -37,7 +37,7 @@ Tell the user which category you've assigned and why before writing any code.
 - [ ] Access with `config["section"]["key"]` (no fallback)
 - [ ] Document in `docs/recipe-reference.md`
 
-A test (`test_org_yaml_template_covers_all_sections`) validates that all sections in `DEFAULT_CONFIG` are mentioned in `ORG_YAML_TEMPLATE`.
+A test (`test_org_yaml_template_covers_all_sections`) walks every key in `DEFAULT_CONFIG`, nested ones included, and fails when the key's section of `ORG_YAML_TEMPLATE` does not name it. The template is the menu `napt init` hands users, so every default is shown there with its value, commented out.
 
 **Strategy-specific** (e.g., `timeout`, `prerelease`, `method`):
 - [ ] Add module constant `_DEFAULT_X` at top of the strategy module
@@ -47,7 +47,7 @@ A test (`test_org_yaml_template_covers_all_sections`) validates that all section
 
 **Recipe-required** (e.g., `name`, `id`, `discovery.strategy`):
 - [ ] Add validation in `napt/validation.py` (error if missing)
-- [ ] Access with `config["key"]` (no fallback — KeyError = validation bug)
+- [ ] Access with `config["key"]` (no fallback; a KeyError is a validation bug)
 - [ ] Document as required in `docs/recipe-reference.md`
 
 **Absent-means-skip** (e.g., `description`, `logo_path`, `notes`):
@@ -60,16 +60,18 @@ A test (`test_org_yaml_template_covers_all_sections`) validates that all section
 - [ ] Use provenance to detect explicit overrides vs defaults
 - [ ] Document the computed behavior in `docs/recipe-reference.md`
 
-**Validation patterns.** For installed-check fields, use the `_INSTALLED_CHECK_FIELDS` pattern in `napt/validation.py`:
+**Validation patterns.** Every section has a schema table in `napt/validation.py` (`_TOP_LEVEL_FIELDS`, `_PSADT_FIELDS`, `_INTUNE_FIELDS`, `_INTUNE_DETECTION_FIELDS`, `_LOGGING_FIELDS`, `_DIRECTORIES_FIELDS`, `_INTUNEWIN_FIELDS`, `_DEPLOYMENT_FIELDS`, and so on). Add the field to its section's table; a key missing from the table is reported as unknown:
 
 ```python
-_INSTALLED_CHECK_FIELDS: dict[str, tuple[type, list[str] | None, str]] = {
-    "new_field": (str, ["value1", "value2"], "field description"),
-    # type, allowed_values (or None), description
+_INTUNE_FIELDS: _Schema = {
+    "new_field": _Field(str, ["value1", "value2"]),   # type, allowed values
+    "new_count": _Field(int, minimum=1, maximum=10),  # type, bounds
 }
 ```
 
-For other fields, add type/value validation in the appropriate `validate_*` function (or the strategy's `validate_config()` for strategy-specific fields).
+Presence of a required field, and any rule the table cannot express, goes in the section's `_validate_*` function. Strategy-specific fields go in the strategy's `validate_config()` and in the strategy's `FIELDS` set, which drives the unknown-key check for `discovery`.
+
+**Pinned parents.** Decide whether a pinned copy (the parent of an override) may set the field, and record it in `ALLOWED_PARENT_KEYS` in `napt/upstream/pinned.py`: org-policy fields stay off the list; strategy-specific, recipe-required, and absent-means-skip fields go on it. `discovery` is allowed whole. A `psadt` or `intune` field left unclassified fails `test_every_schema_key_is_classified` in `tests/upstream/test_pinned.py`, which also lists the dropped keys; update that list for an org-policy field.
 
 ## Step 3: Document in `docs/recipe-reference.md`
 
@@ -101,7 +103,7 @@ Recipe schema changes are user-facing. Add an entry under `[Unreleased]` in `doc
 Check these to ensure the field is actually used:
 - Search codebase: grep for the field name in `napt/`
 - Verify it's read from config in relevant modules
-- Check if field exists in defaults but isn't used (planned feature — flag this)
+- Check if field exists in defaults but isn't used (planned feature; flag this)
 
 ## Step 7: Add tests and run the suite
 

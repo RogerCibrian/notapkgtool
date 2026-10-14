@@ -34,7 +34,6 @@ class TestMSIXDetectionConfig:
         assert config.version == "4.49.81.0"
         assert config.log_rotation_mb == 3
         assert config.exact_match is False
-        assert config.app_id == ""
         assert config.install_scope == "system"
 
     def test_custom_values(self):
@@ -44,13 +43,11 @@ class TestMSIXDetectionConfig:
             app_name="Example",
             version="1.0.0.0",
             exact_match=True,
-            app_id="napt-example",
             install_scope="user",
         )
 
         assert config.identity_name == "com.example.app"
         assert config.exact_match is True
-        assert config.app_id == "napt-example"
         assert config.install_scope == "user"
 
 
@@ -69,7 +66,6 @@ class TestMSIXRequirementsConfig:
         assert config.app_name == "Slack"
         assert config.version == "4.49.81.0"
         assert config.log_rotation_mb == 3
-        assert config.app_id == ""
         assert config.install_scope == "system"
 
     def test_custom_install_scope(self):

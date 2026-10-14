@@ -24,34 +24,35 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-from napt.auth.credentials import get_access_token
-from napt.exceptions import (
-    AuthError,
-    ConfigError,
-    NAPTError,
-    NetworkError,
-    StateError,
-)
-from napt.graph.intune import list_mobile_apps
-from napt.logging import get_logger, set_global_logger
-from napt.promote.applier import apply_plan
-from napt.promote.drift import detect_drift
-from napt.promote.planner import (
-    load_recipe_configs,
-    plan_promotions,
-    plans_dir_for,
-    resolve_state_dir,
-    write_plan_files,
-)
-from napt.promote.preflight import unresolvable_groups
-from napt.promote.reconcile import reconcile_publications
+from napt.cli.common import add_output_flags, add_state_dir
+from napt.exceptions import ConfigError
+from napt.logging import get_global_logger
+
+
+def _state_dir(args: argparse.Namespace, configs: dict[str, dict[str, Any]]) -> Path:
+    """Returns the state directory for a run over the loaded recipes.
+
+    ``--state-dir`` wins; otherwise the first recipe's ``directories.state``
+    applies, since the setting is org policy and one value serves the fleet.
+
+    Args:
+        args: Parsed arguments carrying ``state_dir``.
+        configs: The run's effective configurations keyed by recipe id.
+
+    Returns:
+        The directory to use for this run's state files.
+    """
+    if args.state_dir is not None:
+        return args.state_dir
+    first = next(iter(configs.values()))
+    return Path(first["directories"]["state"])
 
 
 def _describe_action(action: dict[str, Any]) -> str:
     """Formats one planned promotion action as a summary line.
 
-    Reuses the action's ``summary`` — the same sentence written to the
-    plan file — so console output and plan files never disagree.
+    Reuses the action's ``summary``, the same sentence written to the
+    plan file, so console output and plan files never disagree.
 
     Args:
         action: A planned action dict from plan_promotions.
@@ -97,98 +98,94 @@ def cmd_promote_plan(args: argparse.Namespace) -> int:
     Computes promotion actions for all recipes (or one recipe) as a pure
     function of deployment state, configuration, and the clock, and
     writes one plan file per app with work. Read-only with respect to
-    Intune, and — unless --reconcile recovers a lost publication
-    writeback first — to deployment state; an app's stale plan file is
-    removed when none of its actions remain eligible.
+    Intune, and to deployment state unless --reconcile recovers a lost
+    publication writeback first; an app's stale plan file is removed when
+    none of its actions remain eligible.
 
     Args:
         args: Parsed command-line arguments containing the recipes path,
             state directory, and flags.
 
     Returns:
-        Exit code (0 for success — with or without planned actions,
-        1 for failure).
+        Exit code (0 for success, with or without planned actions).
+
+    Note:
+        Failures raise NAPT errors for
+        [run_handler][napt.cli.common.run_handler] to report.
 
     """
-    logger = get_logger(verbose=args.verbose, debug=args.debug)
-    set_global_logger(logger)
+    from napt.auth.credentials import get_access_token
+    from napt.graph.intune import list_mobile_apps
+    from napt.promote.drift import detect_drift
+    from napt.promote.planner import (
+        load_recipe_configs,
+        plan_promotions,
+        plans_dir_for,
+        write_plan_files,
+    )
+    from napt.promote.preflight import unresolvable_groups
+    from napt.promote.reconcile import reconcile_publications
+    from napt.state.deployment import load_deployment_states
 
-    recipes = Path(args.recipes)
+    logger = get_global_logger()
+    recipes = args.recipes
 
     print(f"Planning promotions for: {recipes}")
     print()
 
-    try:
-        state_dir = (
-            Path(args.state_dir)
-            if args.state_dir is not None
-            else resolve_state_dir(recipes)
-        )
-        configs = load_recipe_configs(recipes)
-        recovered: list[dict[str, Any]] = []
-        drift: list[dict[str, Any]] = []
-        if args.reconcile or args.check_drift:
-            # One authenticated session serves reconciliation, plan
-            # validation, and the drift check. Reconciliation runs
-            # before planning so recovered releases are promotable this
-            # run; drift runs after it so repaired state is compared.
-            access_token = get_access_token()
-            existing_apps = list_mobile_apps(access_token)
-            group_id_cache: dict[str, str] = {}
-            if args.reconcile:
-                recovered = reconcile_publications(
-                    access_token, configs, state_dir / "deployment", existing_apps
-                )
-            actions = plan_promotions(recipes, state_dir=state_dir / "deployment")
-            # A plan with an unresolvable group must never become a
-            # reviewable promotion PR: fail hard instead of writing it.
-            problems = unresolvable_groups(access_token, actions, group_id_cache)
-            if problems:
-                raise ConfigError(
-                    "Plan validation failed; no plan was written. "
-                    "Unresolvable groups:\n  "
-                    + "\n  ".join(problems)
-                    + "\nFix the group configuration and re-run."
-                )
-            if args.check_drift:
-                drift = detect_drift(
-                    access_token,
-                    configs,
-                    state_dir / "deployment",
-                    existing_apps,
-                    group_id_cache=group_id_cache,
-                    report_unknown_apps=recipes.is_dir(),
-                )
-        else:
-            actions = plan_promotions(recipes, state_dir=state_dir / "deployment")
-            if actions:
-                logger.warning(
-                    "PROMOTE",
-                    "Plan groups not validated against Entra ID (offline "
-                    "run); apply validates them before assigning.",
-                )
-        written = write_plan_files(actions, state_dir, configs)
-    except AuthError as err:
-        print(f"Authentication error: {err}")
-        if args.verbose or args.debug:
-            import traceback
+    # Each recipe and each state file is read once; every step below
+    # works from these two dicts.
+    configs = load_recipe_configs(recipes)
+    state_dir = _state_dir(args, configs)
+    deployment_dir = state_dir / "deployment"
+    states = load_deployment_states(deployment_dir, configs)
+    recovered: list[dict[str, Any]] = []
+    drift: list[dict[str, Any]] = []
+    existing_apps: list[dict[str, Any]] = []
+    group_id_cache: dict[str, str] = {}
 
-            traceback.print_exc()
-        return 1
-    except (ConfigError, StateError) as err:
-        print(f"Error: {err}")
-        if args.verbose or args.debug:
-            import traceback
+    # One authenticated session serves reconciliation, plan validation, and
+    # the drift check. Reconciliation runs before planning so recovered
+    # releases are promotable this run; drift runs after it so repaired
+    # state is compared.
+    access_token = get_access_token() if args.reconcile or args.check_drift else None
+    if access_token is not None:
+        existing_apps = list_mobile_apps(access_token)
+        if args.reconcile:
+            recovered = reconcile_publications(
+                access_token, configs, states, deployment_dir, existing_apps
+            )
 
-            traceback.print_exc()
-        return 1
-    except NAPTError as err:
-        print(f"Error: {err}")
-        if args.verbose or args.debug:
-            import traceback
+    actions = plan_promotions(configs, states)
 
-            traceback.print_exc()
-        return 1
+    if access_token is None:
+        if actions:
+            logger.warning(
+                "PROMOTE",
+                "Plan groups not validated against Entra ID (offline "
+                "run); apply validates them before assigning.",
+            )
+    else:
+        # A plan with an unresolvable group must never become a
+        # reviewable promotion PR: fail hard instead of writing it.
+        problems = unresolvable_groups(access_token, actions, group_id_cache)
+        if problems:
+            raise ConfigError(
+                "Plan validation failed; no plan was written. "
+                "Unresolvable groups:\n  "
+                + "\n  ".join(problems)
+                + "\nFix the group configuration and re-run."
+            )
+        if args.check_drift:
+            drift = detect_drift(
+                access_token,
+                configs,
+                states,
+                existing_apps,
+                group_id_cache=group_id_cache,
+                report_unknown_apps=recipes.is_dir(),
+            )
+    written = write_plan_files(actions, state_dir, configs)
 
     print("=" * 70)
     print("PROMOTION PLAN")
@@ -235,53 +232,32 @@ def cmd_promote_apply(args: argparse.Namespace) -> int:
 
     Returns:
         Exit code (0 for success, including nothing to apply;
-        1 for failure, including any app whose plan failed to apply).
+        1 when any app's plan failed to apply).
+
+    Note:
+        Failures raise NAPT errors for
+        [run_handler][napt.cli.common.run_handler] to report.
 
     """
-    logger = get_logger(verbose=args.verbose, debug=args.debug)
-    set_global_logger(logger)
+    from napt.promote.applier import apply_plan
+    from napt.promote.planner import load_recipe_configs
 
-    recipes = Path(args.recipes)
+    recipes = args.recipes
 
     print(f"Applying promotions for: {recipes}")
     print()
 
-    try:
-        state_dir = (
-            Path(args.state_dir)
-            if args.state_dir is not None
-            else resolve_state_dir(recipes)
-        )
-        summary = apply_plan(
-            recipes,
-            state_dir=state_dir,
-            plan_file=args.plan_file,
-        )
-    except AuthError as err:
-        print(f"Authentication error: {err}")
-        if args.verbose or args.debug:
-            import traceback
+    configs = load_recipe_configs(recipes)
+    summary = apply_plan(
+        configs,
+        state_dir=_state_dir(args, configs),
+        plan_file=args.plan_file,
+        report_unknown_apps=recipes.is_dir(),
+    )
 
-            traceback.print_exc()
-        return 1
-    except (ConfigError, NetworkError, StateError) as err:
-        print(f"Error: {err}")
-        if args.verbose or args.debug:
-            import traceback
-
-            traceback.print_exc()
-        return 1
-    except NAPTError as err:
-        print(f"Error: {err}")
-        if args.verbose or args.debug:
-            import traceback
-
-            traceback.print_exc()
-        return 1
-
-    applied = summary["applied"]
-    skipped = summary["skipped"]
-    failed = summary["failed"]
+    applied = summary.applied
+    skipped = summary.skipped
+    failed = summary.failed
 
     print("=" * 70)
     print("PROMOTION APPLY")
@@ -296,10 +272,10 @@ def cmd_promote_apply(args: argparse.Namespace) -> int:
         print(f"  [FAIL] {entry['app_id']}: {entry['error']}")
     print("=" * 70)
 
-    if summary.get("recovered"):
-        _print_recovered(summary["recovered"])
-    if summary.get("drift"):
-        _print_drift(summary["drift"])
+    if summary.recovered:
+        _print_recovered(summary.recovered)
+    if summary.drift:
+        _print_drift(summary.drift)
 
     print()
     if failed:
@@ -358,17 +334,14 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     parser_promote_plan.add_argument(
         "recipes",
         nargs="?",
-        default="recipes",
+        type=Path,
+        default=Path("recipes"),
         help="Recipe file or directory to plan for (default: recipes/)",
     )
-    parser_promote_plan.add_argument(
-        "--state-dir",
-        type=Path,
-        default=None,
-        help=(
-            "State directory holding deployment/ and plans/ "
-            "(default: directories.state from config)"
-        ),
+    add_state_dir(
+        parser_promote_plan,
+        "State directory holding deployment/ and plans/ "
+        "(default: directories.state from config)",
     )
     parser_promote_plan.add_argument(
         "--check-drift",
@@ -388,18 +361,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
             "writes deployment state)"
         ),
     )
-    parser_promote_plan.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Show progress and high-level status updates",
-    )
-    parser_promote_plan.add_argument(
-        "-d",
-        "--debug",
-        action="store_true",
-        help="Show detailed debugging output (implies --verbose)",
-    )
+    add_output_flags(parser_promote_plan)
     parser_promote_plan.set_defaults(func=cmd_promote_plan)
 
     parser_promote_apply = promote_sub.add_parser(
@@ -420,17 +382,14 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     parser_promote_apply.add_argument(
         "recipes",
         nargs="?",
-        default="recipes",
+        type=Path,
+        default=Path("recipes"),
         help="Recipe file or directory to apply for (default: recipes/)",
     )
-    parser_promote_apply.add_argument(
-        "--state-dir",
-        type=Path,
-        default=None,
-        help=(
-            "State directory holding deployment/ and plans/ "
-            "(default: directories.state from config)"
-        ),
+    add_state_dir(
+        parser_promote_apply,
+        "State directory holding deployment/ and plans/ "
+        "(default: directories.state from config)",
     )
     parser_promote_apply.add_argument(
         "--plan-file",
@@ -441,16 +400,5 @@ def register(subparsers: argparse._SubParsersAction) -> None:
             "files in <state-dir>/plans/; other apps' files are left alone)"
         ),
     )
-    parser_promote_apply.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Show progress and high-level status updates",
-    )
-    parser_promote_apply.add_argument(
-        "-d",
-        "--debug",
-        action="store_true",
-        help="Show detailed debugging output (implies --verbose)",
-    )
+    add_output_flags(parser_promote_apply)
     parser_promote_apply.set_defaults(func=cmd_promote_apply)

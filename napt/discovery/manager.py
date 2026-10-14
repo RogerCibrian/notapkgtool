@@ -18,7 +18,7 @@ This module owns the top-level [discover_recipe][napt.discovery.manager.discover
 entry point used by ``napt discover``. It loads the merged configuration,
 picks a flow based on the recipe's ``discovery.strategy`` value, records
 the release as a pending publication candidate in deployment state, and
-returns the public [DiscoverResult][napt.results.DiscoverResult].
+returns the public [DiscoverResult][napt.discovery.manager.DiscoverResult].
 
 Two Flows:
     Two flows feed into the same orchestration:
@@ -45,17 +45,15 @@ that this module unwraps into the pending release and the public result.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 from napt.config.loader import load_effective_config
 from napt.discovery.base import StrategyResult
 from napt.discovery.registry import get_strategy
 from napt.discovery.resolve import resolve_installer
 from napt.discovery.url_download import run_url_download
-from napt.exceptions import ConfigError
-from napt.logging import get_global_logger
-from napt.results import DiscoverResult
+from napt.logging import Logger, get_global_logger
 from napt.state.deployment import (
     deployment_state_path,
     load_deployment_state,
@@ -63,6 +61,29 @@ from napt.state.deployment import (
     save_deployment_state,
 )
 from napt.versioning.ordering import is_downgrade
+
+
+@dataclass(frozen=True)
+class DiscoverResult:
+    """Result from discovering a version and downloading an installer.
+
+    Attributes:
+        app_name: Application display name.
+        app_id: Unique application identifier.
+        strategy: Discovery strategy used (e.g., "web_scrape", "api_github").
+        version: Extracted version string.
+        version_source: How version was determined (e.g., "regex_in_url", "msi").
+        file_path: Path to the downloaded installer file.
+        sha256: SHA-256 hash of the downloaded file.
+    """
+
+    app_name: str
+    app_id: str
+    strategy: str
+    version: str
+    version_source: str
+    file_path: Path
+    sha256: str
 
 
 def discover_recipe(
@@ -97,10 +118,10 @@ def discover_recipe(
         file path, and SHA-256 hash.
 
     Raises:
-        ConfigError: On missing or invalid configuration, including
-            an unknown ``discovery.strategy`` value.
-        NetworkError: On download or version-extraction failures from
-            either flow.
+        ConfigError: On invalid configuration, or when the remote data
+            does not match the recipe's patterns.
+        NetworkError: On request or download failures from either flow.
+        PackagingError: If the installer's own version cannot be read.
         StateError: On a corrupted deployment state file.
 
     """
@@ -117,10 +138,7 @@ def discover_recipe(
     app_name = config["name"]
     app_id = config["id"]
 
-    discovery = config.get("discovery", {})
-    strategy_name = discovery.get("strategy")
-    if not strategy_name:
-        raise ConfigError(f"No 'discovery.strategy' defined for app: {app_name}")
+    strategy_name = config["discovery"]["strategy"]
 
     logger.step(2, 4, "Discovering version...")
     if strategy_name == "url_download":
@@ -150,7 +168,6 @@ def discover_recipe(
         version_source=result.version_source,
         file_path=result.file_path,
         sha256=result.sha256,
-        status="success",
     )
 
 
@@ -159,7 +176,7 @@ def _record_pending_release(
     app_id: str,
     name: str,
     result: StrategyResult,
-    logger: Any,
+    logger: Logger,
 ) -> None:
     """Records the discovered release as the app's pending candidate."""
     state_path = deployment_state_path(state_dir, app_id)

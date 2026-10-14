@@ -18,7 +18,8 @@ This module handles creating .intunewin packages from built PSADT directories
 using Microsoft's IntuneWinAppUtil.exe tool.
 
 Design Principles:
-    - IntuneWinAppUtil.exe is cached globally (not per-build)
+    - IntuneWinAppUtil.exe is cached per release under the cache root
+      (directories.cache), not per build
     - Package output is named by IntuneWinAppUtil.exe: Invoke-AppDeployToolkit.intunewin
     - Tool is downloaded from Microsoft's official GitHub repository
 
@@ -41,75 +42,36 @@ Filing:
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import hashlib
 import json
-import os
 from pathlib import Path
-import re
 import shutil
 import subprocess
 from typing import Any
 
-import requests
-
+from napt.build.manifest import MANIFEST_NAME, read_build_manifest
 from napt.download.download import make_session, sha256_file
 from napt.exceptions import ConfigError, NetworkError, PackagingError
-from napt.files import write_text_atomic
-from napt.paths import is_safe_path_component
-from napt.results import PackageResult
+from napt.files import write_bytes_atomic, write_text_atomic
+from napt.github import (
+    download,
+    env_token,
+    latest_release,
+    normalize_release_spec,
+    release_tag,
+    repo_file,
+    verify_size,
+    version_from_tag,
+)
+from napt.logging import get_global_logger
+from napt.psadt.release import missing_template_entries
 
 INTUNEWIN_REPO = "microsoft/Microsoft-Win32-Content-Prep-Tool"
-INTUNEWIN_GITHUB_API = f"https://api.github.com/repos/{INTUNEWIN_REPO}/releases/latest"
 # The tool's releases carry no assets; the executable lives in the
 # repository, and the contents API reports its size, git blob hash, and
 # download URL for a tag.
-INTUNEWIN_CONTENTS_API = (
-    f"https://api.github.com/repos/{INTUNEWIN_REPO}/contents/IntuneWinAppUtil.exe"
-)
-
-
-def _github_headers() -> dict[str, str]:
-    """Builds the headers for a GitHub API call.
-
-    Every call here counts against the API's unauthenticated limit of 60
-    requests per hour, so a ``GITHUB_TOKEN`` in the environment is sent
-    when present.
-
-    Returns:
-        The Accept header, plus Authorization when a token is set.
-    """
-    headers = {"Accept": "application/vnd.github+json"}
-    token = os.environ.get("GITHUB_TOKEN")
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-    return headers
-
-
-def _github_json(response: requests.Response, what: str) -> dict[str, Any]:
-    """Reads a GitHub API response body as a JSON object.
-
-    Args:
-        response: A successful API response.
-        what: What was asked for, for the error message.
-
-    Returns:
-        The parsed object.
-
-    Raises:
-        NetworkError: If the body is not JSON, or not an object.
-    """
-    try:
-        data = response.json()
-    except ValueError as err:
-        raise NetworkError(
-            f"Invalid JSON response from the GitHub API for {what}. Response: "
-            f"{response.text[:200]}"
-        ) from err
-    if not isinstance(data, dict):
-        raise NetworkError(
-            f"Unexpected GitHub API response for {what}: {response.text[:200]}"
-        )
-    return data
+INTUNEWIN_TOOL_PATH = "IntuneWinAppUtil.exe"
 
 
 def _git_blob_sha(content: bytes) -> str:
@@ -117,82 +79,16 @@ def _git_blob_sha(content: bytes) -> str:
     return hashlib.sha1(b"blob %d\0" % len(content) + content).hexdigest()
 
 
-def fetch_latest_intunewin_version() -> str:
-    """Fetch the latest IntuneWinAppUtil.exe release version from GitHub.
-
-    Queries the GitHub API for the latest release and extracts the version
-    number from the tag name (e.g., "1.8.6" from tag "v1.8.6").
-
-    Returns:
-        Version number without "v" prefix (e.g., "1.8.6").
-
-    Raises:
-        NetworkError: If the GitHub API request fails or the version cannot
-            be extracted from the response.
-
-    Example:
-        Get latest IntuneWinAppUtil version from GitHub:
-            ```python
-            version = fetch_latest_intunewin_version()
-            print(version)  # Output: "1.8.6"
-            ```
-
-    Note:
-        Uses GitHub's public API (60 requests/hour limit without auth).
-        Set GITHUB_TOKEN environment variable for higher rate limits.
-    """
-    from napt.logging import get_global_logger
-
-    logger = get_global_logger()
-    logger.verbose("PACKAGE", f"Querying GitHub API: {INTUNEWIN_GITHUB_API}")
-
-    try:
-        with make_session() as session:
-            response = session.get(
-                INTUNEWIN_GITHUB_API, headers=_github_headers(), timeout=30
-            )
-        response.raise_for_status()
-    except requests.RequestException as err:
-        raise NetworkError(
-            f"Failed to fetch latest IntuneWinAppUtil version: {err}"
-        ) from err
-    data = _github_json(response, "the latest IntuneWinAppUtil release")
-
-    # The whole tag must be the version: a suffix such as "-rc1" would
-    # otherwise be dropped and the download by tag would miss.
-    tag = data.get("tag_name", "")
-    match = re.fullmatch(r"v?(\d+(?:\.\d+)+)", tag)
-    if not match:
-        raise NetworkError(
-            f"Could not extract version from IntuneWinAppUtil release tag: {tag!r}"
-        )
-
-    version = match.group(1)
-    logger.verbose("PACKAGE", f"Latest IntuneWinAppUtil release: {version}")
-    return version
-
-
 def _verify_build_structure(build_dir: Path) -> None:
-    """Verify that the build directory has a valid PSADT structure.
+    """Verify that the build directory has the PSADT layout NAPT builds from.
 
     Args:
         build_dir: Build directory to verify.
 
     Raises:
-        ValueError: If required files/directories are missing.
+        ConfigError: If required files or directories are missing.
     """
-    required = [
-        "PSAppDeployToolkit",
-        "Files",
-        "Invoke-AppDeployToolkit.ps1",
-        "Invoke-AppDeployToolkit.exe",
-    ]
-
-    missing = []
-    for item in required:
-        if not (build_dir / item).exists():
-            missing.append(item)
-
+    missing = missing_template_entries(build_dir)
     if missing:
         raise ConfigError(
             f"Invalid PSADT build directory: {build_dir}\n"
@@ -223,59 +119,41 @@ def _get_intunewin_tool(cache_dir: Path, release: str) -> Path:
         NetworkError: If the GitHub API query or download fails, the tag
             does not exist, or the download does not match what the
             repository reports.
+        PackagingError: If the tool cannot be written to the cache.
     """
-    from napt.logging import get_global_logger
-
     logger = get_global_logger()
+    token = env_token()
 
-    if release == "latest":
-        logger.verbose("PACKAGE", "Resolving 'latest' IntuneWinAppUtil release...")
-        version = fetch_latest_intunewin_version()
-    else:
-        version = release.lstrip("v")
-
-    # The version names the cache folder, so it must be a plain folder name.
-    if not is_safe_path_component(version):
-        raise ConfigError(
-            f"Invalid intunewin.release {release!a}: use 'latest' or a version "
-            "such as '1.8.6'"
-        )
-
-    tool_path = cache_dir / version / "IntuneWinAppUtil.exe"
-
-    if tool_path.exists():
-        logger.info("PACKAGE", f"Using cached IntuneWinAppUtil.exe {version}")
-        return tool_path
-
-    logger.info("PACKAGE", f"Downloading IntuneWinAppUtil.exe {version}...")
-
-    # The repo uses inconsistent tag formats (e.g. "v1.8.6" and "1.8.3"),
-    # so look the file up under both and use whichever resolves.
-    headers = _github_headers()
-    entry: dict[str, Any] | None = None
     with make_session() as session:
-        for tag in [f"v{version}", version]:
-            try:
-                lookup = session.get(
-                    INTUNEWIN_CONTENTS_API,
-                    params={"ref": tag},
-                    headers=headers,
-                    timeout=30,
-                )
-                if lookup.status_code == 404:
-                    continue
-                lookup.raise_for_status()
-            except requests.RequestException as err:
-                raise NetworkError(
-                    f"Failed to look up IntuneWinAppUtil.exe {version}: {err}"
-                ) from err
-            entry = _github_json(lookup, f"IntuneWinAppUtil.exe at tag {tag}")
-            break
+        if release == "latest":
+            logger.verbose("PACKAGE", "Resolving 'latest' IntuneWinAppUtil release...")
+            tag = release_tag(latest_release(session, INTUNEWIN_REPO, token=token))
+            version = version_from_tag(tag)
+            logger.verbose("PACKAGE", f"Latest IntuneWinAppUtil release: {version}")
+            tags = [tag]
+        else:
+            version = normalize_release_spec(release, "intunewin.release", "1.8.6")
+            # The repo uses inconsistent tag formats (e.g. "v1.8.6" and
+            # "1.8.3"), so a pinned version is looked up under both.
+            tags = [f"v{version}", version]
 
+        tool_path = cache_dir / version / INTUNEWIN_TOOL_PATH
+        if tool_path.exists():
+            logger.info("PACKAGE", f"Using cached IntuneWinAppUtil.exe {version}")
+            return tool_path
+
+        logger.info("PACKAGE", f"Downloading IntuneWinAppUtil.exe {version}...")
+        entry: dict[str, Any] | None = None
+        for tag in tags:
+            entry = repo_file(
+                session, INTUNEWIN_REPO, INTUNEWIN_TOOL_PATH, tag, token=token
+            )
+            if entry is not None:
+                break
         if entry is None:
             raise NetworkError(
                 f"IntuneWinAppUtil.exe {version} not found "
-                f"(tried tags v{version} and {version})"
+                f"(tried tags {' and '.join(tags)})"
             )
         download_url = entry.get("download_url")
         if not isinstance(download_url, str) or not download_url:
@@ -283,23 +161,12 @@ def _get_intunewin_tool(cache_dir: Path, release: str) -> Path:
                 f"The GitHub API reports no download URL for IntuneWinAppUtil.exe "
                 f"{version}"
             )
-        try:
-            response = session.get(download_url, timeout=60)
-            response.raise_for_status()
-        except requests.RequestException as err:
-            raise NetworkError(
-                f"Failed to download IntuneWinAppUtil.exe {version}: {err}"
-            ) from err
+        content = download(
+            session, download_url, what=f"IntuneWinAppUtil.exe {version}", timeout=60
+        )
 
     # Check the download against what the repository reports for the file.
-    content = response.content
-    size = entry.get("size")
-    if isinstance(size, int) and len(content) != size:
-        raise NetworkError(
-            f"Downloaded IntuneWinAppUtil.exe {version} is {len(content)} bytes; "
-            f"the repository reports {size} bytes. The download was cut short; "
-            "try again."
-        )
+    verify_size(f"IntuneWinAppUtil.exe {version}", content, entry.get("size"))
     sha = entry.get("sha")
     if isinstance(sha, str) and _git_blob_sha(content) != sha.lower():
         raise NetworkError(
@@ -309,8 +176,12 @@ def _get_intunewin_tool(cache_dir: Path, release: str) -> Path:
         )
     logger.verbose("PACKAGE", "Download matches the repository's size and hash")
 
-    tool_path.parent.mkdir(parents=True, exist_ok=True)
-    tool_path.write_bytes(content)
+    # Land the file in one rename, so a run killed mid-write leaves no
+    # partial exe that the cache check above would accept.
+    try:
+        write_bytes_atomic(tool_path, content)
+    except OSError as err:
+        raise PackagingError(f"Cannot write {tool_path}: {err}") from err
 
     logger.info("PACKAGE", f"IntuneWinAppUtil.exe {version} cached successfully")
 
@@ -337,8 +208,6 @@ def _execute_packaging(
     Raises:
         PackagingError: If packaging fails.
     """
-    from napt.logging import get_global_logger
-
     logger = get_global_logger()
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -406,46 +275,6 @@ def _execute_packaging(
     return intunewin_path
 
 
-def _read_build_manifest(build_dir: Path) -> dict[str, Any]:
-    """Reads the manifest 'napt build' wrote beside the build.
-
-    Args:
-        build_dir: Build version directory (holds ``packagefiles/``).
-
-    Returns:
-        The parsed manifest.
-
-    Raises:
-        ConfigError: If the manifest is missing, not JSON, or lacks the
-            installer hash or the detection script name.
-    """
-    manifest_path = build_dir / "build-manifest.json"
-    if not manifest_path.is_file():
-        raise ConfigError(
-            f"Build manifest not found: {manifest_path}. Run 'napt build' to "
-            "create the build again."
-        )
-    try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as err:
-        raise ConfigError(
-            f"Cannot read build-manifest.json in {build_dir}: {err}. Run "
-            "'napt build' to create the build again."
-        ) from err
-    if not isinstance(manifest, dict):
-        raise ConfigError(
-            f"build-manifest.json in {build_dir} is not a JSON object. Run "
-            "'napt build' to create the build again."
-        )
-    for key in ("installer_sha256", "detection_script_path"):
-        if not isinstance(manifest.get(key), str) or not manifest[key]:
-            raise ConfigError(
-                f"build-manifest.json in {build_dir} has no {key}. Run "
-                "'napt build' to create the build again."
-            )
-    return manifest
-
-
 def _verify_installer(packagefiles_dir: Path, installer_sha256: str) -> None:
     """Checks that the installer inside the build is the one the manifest names.
 
@@ -478,8 +307,6 @@ def _copy_named_script(build_dir: Path, name: str, destination: Path) -> None:
     Raises:
         PackagingError: If the named script is not in the build.
     """
-    from napt.logging import get_global_logger
-
     source = build_dir / name
     if not source.is_file():
         raise PackagingError(
@@ -490,13 +317,31 @@ def _copy_named_script(build_dir: Path, name: str, destination: Path) -> None:
     get_global_logger().verbose("PACKAGE", f"Copied: {name}")
 
 
+@dataclass(frozen=True)
+class PackageResult:
+    """Result from creating a .intunewin package.
+
+    Attributes:
+        build_dir: Path to the build directory.
+        package_path: Path to the created .intunewin file.
+        app_id: Unique application identifier.
+        version: Application version.
+    """
+
+    build_dir: Path
+    package_path: Path
+    app_id: str
+    version: str
+
+
 def create_intunewin(
     build_dir: Path,
+    cache_dir: Path,
     output_dir: Path | None = None,
     tool_release: str = "latest",
     expected_sha256: str | None = None,
 ) -> PackageResult:
-    """Create a .intunewin package from a PSADT build version directory.
+    """Creates a .intunewin package from a PSADT build version directory.
 
     Uses Microsoft's IntuneWinAppUtil.exe tool to package the PSADT build
     into a .intunewin file for Intune deployment.
@@ -510,8 +355,10 @@ def create_intunewin(
 
     Args:
         build_dir: Path to the version directory produced by 'napt build'
-            (e.g., builds/napt-chrome/144.0.7559.110/). Must contain a
+            (e.g., builds/google-chrome/144.0.7559.110/). Must contain a
             packagefiles/ subdirectory with a valid PSADT structure.
+        cache_dir: The cache root (directories.cache). IntuneWinAppUtil.exe
+            releases live under its intunewin/ folder, one per version.
         output_dir: Parent directory for package output.
             Default: packages/ (configurable via directories.package in
             org.yaml).
@@ -536,10 +383,10 @@ def create_intunewin(
         Basic packaging:
             ```python
             result = create_intunewin(
-                build_dir=Path("builds/napt-chrome/144.0.7559.110")
+                Path("builds/google-chrome/144.0.7559.110"), Path("cache")
             )
             print(result.package_path)
-            # packages/napt-chrome/144.0.7559.110/Invoke-AppDeployToolkit.intunewin
+            # packages/google-chrome/144.0.7559.110/Invoke-AppDeployToolkit.intunewin
             ```
 
     Note:
@@ -548,8 +395,6 @@ def create_intunewin(
         "Invoke-AppDeployToolkit.exe". Output file is named by IntuneWinAppUtil.exe:
         packages/{app_id}/{version}/Invoke-AppDeployToolkit.intunewin
     """
-    from napt.logging import get_global_logger
-
     logger = get_global_logger()
 
     build_dir = build_dir.resolve()
@@ -568,7 +413,11 @@ def create_intunewin(
     # its manifest and the recorded release, before anything is written.
     logger.step(1, 5, "Verifying build...")
     _verify_build_structure(packagefiles_dir)
-    manifest = _read_build_manifest(build_dir)
+    manifest = read_build_manifest(
+        build_dir,
+        ("installer_sha256", "detection_script_path"),
+        "Run 'napt build' to create the build again.",
+    )
     installer_sha256: str = manifest["installer_sha256"]
     if expected_sha256 is not None and installer_sha256 != expected_sha256:
         raise PackagingError(
@@ -582,8 +431,7 @@ def create_intunewin(
 
     # Get IntuneWinAppUtil tool
     logger.step(2, 5, "Getting IntuneWinAppUtil tool...")
-    tool_cache = Path("cache/tools")
-    tool_path = _get_intunewin_tool(tool_cache, tool_release)
+    tool_path = _get_intunewin_tool(cache_dir / "intunewin", tool_release)
 
     # Versioned output directory: packages/{app_id}/{version}/. This run
     # replaces it wholesale; other versions' folders are never touched.
@@ -614,10 +462,10 @@ def create_intunewin(
     manifest["intunewin_filename"] = package_path.name
     manifest["intunewin_sha256"] = sha256_file(package_path)
     write_text_atomic(
-        version_output_dir / "build-manifest.json",
+        version_output_dir / MANIFEST_NAME,
         json.dumps(manifest, indent=2) + "\n",
     )
-    logger.verbose("PACKAGE", "Wrote: build-manifest.json")
+    logger.verbose("PACKAGE", f"Wrote: {MANIFEST_NAME}")
 
     logger.step(5, 5, "Package complete")
     logger.verbose("PACKAGE", f"[OK] Package created: {package_path}")
@@ -627,5 +475,4 @@ def create_intunewin(
         package_path=package_path,
         app_id=app_id,
         version=version,
-        status="success",
     )

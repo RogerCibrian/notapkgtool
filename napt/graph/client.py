@@ -15,10 +15,15 @@
 """Microsoft Graph HTTP transport shared by every Graph caller in NAPT.
 
 Provides [graph_request][napt.graph.client.graph_request], the single
-function through which Intune app management, assignment, and app
-registration calls reach Graph, along with the header builders callers
-pass to it. Endpoint-specific wrappers live in
-[napt.graph.intune][] and [napt.auth.registration][].
+function through which Intune app management, assignment, app
+registration, and tenant lookup calls reach Graph, along with the header
+builders callers pass to it and the retrying send loop that the Azure
+Blob upload in [napt.graph.intune][] shares. Endpoint-specific wrappers
+live in [napt.graph.intune][] and [napt.auth.registration][].
+
+Every request goes through one pooled session, so a run that makes
+hundreds of calls, or uploads a package in many blocks, reuses its
+connections instead of opening a new one per call.
 
 Graph calls retry transient failures (HTTP 429 honoring Retry-After,
 transient server errors, and connection drops) with bounded exponential
@@ -29,19 +34,46 @@ resubmitted as a duplicate.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import dataclass
+import functools
 import time
 import uuid
 
 import requests
+from requests.adapters import HTTPAdapter
 
 from napt.exceptions import AuthError, ConfigError, NetworkError
+from napt.logging import get_global_logger
 
 # The Intune app management API (mobileApps, Win32LobApp) has never fully
 # graduated to v1.0. Fields critical to Win32 app uploads (allowedArchitectures,
 # maxRunTimeInMinutes, displayVersion, allowAvailableUninstall) are beta-only.
 # The Intune portal, Intune PowerShell SDK, and Microsoft's own tooling all use
-# the beta endpoint. Do not change this to v1.0.
+# the beta endpoint. Do not change this to v1.0. The directory calls (app
+# registrations, service principals, the tenant's organization record) share
+# it, so every Graph URL in NAPT comes from one base; those resources have
+# the same shape on both versions.
 GRAPH_BASE = "https://graph.microsoft.com/beta"
+
+# Seconds allowed for a Graph request.
+_GRAPH_TIMEOUT = 30
+
+
+@functools.cache
+def session() -> requests.Session:
+    """Returns the pooled session every Graph and blob request is sent with.
+
+    The session keeps connections open between requests. It carries no
+    retry configuration of its own: retrying is decided per call by a
+    [RetryPolicy][napt.graph.client.RetryPolicy], since what is safe to
+    resend differs between a read, a create, and a blob block.
+    """
+    pooled = requests.Session()
+    adapter = HTTPAdapter(pool_connections=4, pool_maxsize=8)
+    pooled.mount("https://", adapter)
+    pooled.mount("http://", adapter)
+    return pooled
 
 
 def auth_headers(access_token: str) -> dict[str, str]:
@@ -58,13 +90,13 @@ def auth_headers(access_token: str) -> dict[str, str]:
 
 
 def json_headers(access_token: str) -> dict[str, str]:
-    """Returns the headers for a Graph request with a JSON body.
+    """Returns the headers for a Graph request that carries a JSON body.
 
     Args:
         access_token: Bearer token for Graph API.
 
     Returns:
-        Headers carrying the bearer token and a JSON content type.
+        Headers carrying the bearer token and the JSON content type.
 
     """
     return {
@@ -76,6 +108,10 @@ def json_headers(access_token: str) -> dict[str, str]:
 def _check_response(response: requests.Response, context: str) -> dict:
     """Checks an HTTP response and raises the appropriate NAPT exception.
 
+    The message names the call and what Graph answered. Which permission
+    the signed-in identity lacks depends on the call, so the message does
+    not guess; a caller that knows the role adds it.
+
     Args:
         response: The HTTP response to check.
         context: Short description of the operation for error messages.
@@ -85,31 +121,57 @@ def _check_response(response: requests.Response, context: str) -> dict:
 
     Raises:
         AuthError: On 401 or 403.
-        ConfigError: On 400 (bad request, likely a metadata problem).
-        NetworkError: On 5xx or any other non-2xx status.
+        ConfigError: On 400.
+        NetworkError: On 5xx or any other non-2xx status, carrying the
+            status code.
 
     """
-    if response.status_code in (401, 403):
+    status = response.status_code
+    if status in (401, 403):
         raise AuthError(
-            f"{context}: HTTP {response.status_code}: "
-            f"check that the authenticated account has Intune device "
-            f"administrator or app manager permissions.\n{response.text}"
+            f"{context}: HTTP {status} {response.reason}: the signed-in identity "
+            f"is not allowed to make this call.\n{response.text}"
         )
-    if response.status_code == 400:
+    if status == 400:
         raise ConfigError(
-            f"{context}: HTTP 400 Bad Request: the app metadata may be "
-            f"invalid.\n{response.text}"
-        )
-    if response.status_code >= 500:
-        raise NetworkError(
-            f"{context}: HTTP {response.status_code}: Graph API server error."
+            f"{context}: HTTP 400 Bad Request: Graph rejected the request."
             f"\n{response.text}"
         )
+    if status >= 500:
+        raise NetworkError(
+            f"{context}: HTTP {status}: Graph API server error.\n{response.text}",
+            status_code=status,
+        )
     if not response.ok:
-        raise NetworkError(f"{context}: HTTP {response.status_code}\n{response.text}")
-    if response.status_code == 204 or not response.text:
+        raise NetworkError(
+            f"{context}: HTTP {status}\n{response.text}", status_code=status
+        )
+    if status == 204 or not response.text:
         return {}
     return response.json()
+
+
+@dataclass(frozen=True)
+class RetryPolicy:
+    """What a send loop retries, and how long it waits between attempts.
+
+    Attributes:
+        statuses: Response statuses that are retried.
+        attempts: Attempts made before the last failure is surfaced.
+        initial_delay: Backoff before the second attempt, in seconds;
+            doubled after each retry.
+        retry_connection_errors: Whether a transport failure is retried.
+            False for a request whose reply may have been lost after the
+            server processed it.
+        redact: Applied to failure text before it is logged or raised,
+            for URLs that carry a secret.
+    """
+
+    statuses: tuple[int, ...]
+    attempts: int = 5
+    initial_delay: float = 2.0
+    retry_connection_errors: bool = True
+    redact: Callable[[str], str] | None = None
 
 
 # Microsoft Graph throttles the Intune endpoints (HTTP 429 with a
@@ -123,21 +185,22 @@ def _check_response(response: requests.Response, context: str) -> dict:
 # processing (429/503/509 per the Graph error contract). A surfaced
 # ambiguous failure converges on re-run through the upload flow's
 # provenance-stamp adoption.
-_GRAPH_RETRY_STATUS = (429, 500, 502, 503, 504, 509)
-_GRAPH_RETRY_STATUS_UNAMBIGUOUS = (429, 503, 509)
-_GRAPH_RETRY_ATTEMPTS = 5
-_GRAPH_RETRY_INITIAL_DELAY = 2.0
+GRAPH_POLICY = RetryPolicy(statuses=(429, 500, 502, 503, 504, 509))
+GRAPH_CREATE_POLICY = RetryPolicy(
+    statuses=(429, 503, 509), retry_connection_errors=False
+)
+
 # Ceiling for a wait taken from Retry-After; anything longer is served
 # by the normal failure path rather than a stalled run.
-_GRAPH_RETRY_MAX_WAIT = 300.0
+_RETRY_MAX_WAIT = 300.0
 
 
 def _retry_wait(response: requests.Response | None, fallback: float) -> float:
     """Returns the wait before the next retry attempt.
 
     Honors a numeric ``Retry-After`` header when the response carries one
-    (Graph throttling responses do), capped at a ceiling; otherwise the
-    exponential-backoff fallback applies.
+    (Graph and Azure Storage throttling responses do), capped at a
+    ceiling; otherwise the exponential-backoff fallback applies.
 
     Args:
         response: The throttled or failed response, or None for a
@@ -151,8 +214,91 @@ def _retry_wait(response: requests.Response | None, fallback: float) -> float:
     if response is not None:
         retry_after = response.headers.get("Retry-After", "")
         if retry_after.strip().isdigit():
-            return min(float(retry_after), _GRAPH_RETRY_MAX_WAIT)
+            return min(float(retry_after), _RETRY_MAX_WAIT)
     return fallback
+
+
+def send(
+    method: str,
+    url: str,
+    *,
+    context: str,
+    headers: dict[str, str],
+    policy: RetryPolicy,
+    data: bytes | None = None,
+    json: dict | None = None,
+    timeout: int = _GRAPH_TIMEOUT,
+    deadline: float | None = None,
+) -> requests.Response:
+    """Sends a request through the pooled session, retrying per the policy.
+
+    A response outside the policy's retry statuses is returned as is, so
+    the caller maps it. A retryable status or transport failure is retried
+    after a wait, honoring ``Retry-After``; once attempts run out, the last
+    response is returned, or the transport failure raised.
+
+    Args:
+        method: HTTP method name.
+        url: Full request URL.
+        context: Short description of the operation for log and error
+            messages.
+        headers: Request headers, including authorization.
+        policy: What to retry and how to wait.
+        data: Optional raw body.
+        json: Optional JSON body.
+        timeout: Seconds allowed for one attempt.
+        deadline: Optional ``time.monotonic()`` budget; a retry wait that
+            would run past it ends the retrying instead.
+
+    Returns:
+        The final response: a success, a status the policy does not retry,
+        or the last retried failure.
+
+    Raises:
+        NetworkError: On a transport failure the policy does not retry, or
+            one that persists through every attempt.
+
+    """
+    logger = get_global_logger()
+    redact = policy.redact or (lambda text: text)
+
+    def attempt() -> tuple[requests.Response | None, Exception | None, str]:
+        """Sends once; returns the response, or the transport failure."""
+        try:
+            resp = session().request(
+                method, url, headers=headers, data=data, json=json, timeout=timeout
+            )
+        except requests.RequestException as exc:
+            detail = redact(str(exc))
+            if not policy.retry_connection_errors:
+                raise NetworkError(f"{context}: {detail}") from exc
+            return None, exc, detail
+        return resp, None, f"HTTP {resp.status_code}"
+
+    delay = policy.initial_delay
+    for number in range(1, policy.attempts):
+        resp, err, detail = attempt()
+        if resp is not None and resp.status_code not in policy.statuses:
+            return resp
+        wait = _retry_wait(resp, delay)
+        if deadline is not None and time.monotonic() + wait >= deadline:
+            # No budget left for another attempt; surface this failure.
+            if resp is not None:
+                return resp
+            raise NetworkError(f"{context}: {detail}") from err
+        logger.warning(
+            "HTTP",
+            f"{context}: transient failure ({detail}); retrying in "
+            f"{wait:.0f}s (attempt {number}/{policy.attempts})",
+        )
+        time.sleep(wait)
+        delay *= 2
+
+    # The last attempt's outcome is the caller's, whatever it is.
+    resp, err, detail = attempt()
+    if resp is not None:
+        return resp
+    raise NetworkError(f"{context} after {policy.attempts} attempts: {detail}") from err
 
 
 def graph_request(
@@ -202,56 +348,20 @@ def graph_request(
             exhausted, or on a connection failure.
 
     """
-    from napt.logging import get_global_logger
-
-    logger = get_global_logger()
-    retry_statuses = (
-        _GRAPH_RETRY_STATUS if idempotent else _GRAPH_RETRY_STATUS_UNAMBIGUOUS
+    policy = GRAPH_POLICY if idempotent else GRAPH_CREATE_POLICY
+    retried = tuple(s for s in policy.statuses if s not in ok_statuses)
+    response = send(
+        method,
+        url,
+        context=context,
+        headers={**headers, "client-request-id": str(uuid.uuid4())},
+        policy=RetryPolicy(
+            statuses=retried,
+            retry_connection_errors=policy.retry_connection_errors,
+        ),
+        json=json,
+        deadline=deadline,
     )
-    delay = _GRAPH_RETRY_INITIAL_DELAY
-    for attempt in range(1, _GRAPH_RETRY_ATTEMPTS + 1):
-        err: Exception | None = None
-        resp: requests.Response | None = None
-        request_headers = {**headers, "client-request-id": str(uuid.uuid4())}
-        try:
-            resp = requests.request(
-                method, url, headers=request_headers, json=json, timeout=30
-            )
-        except requests.RequestException as exc:
-            if not idempotent:
-                # The request may have been processed before the
-                # connection died; resubmitting could duplicate the
-                # resource. Surface it; re-running converges through
-                # the flow-level stamp adoption.
-                raise NetworkError(f"{context}: {exc}") from exc
-            err = exc
-            detail = str(exc)
-        else:
-            if resp.status_code in ok_statuses:
-                return {}
-            if resp.status_code not in retry_statuses:
-                return _check_response(resp, context)
-            detail = f"HTTP {resp.status_code}"
-
-        if attempt == _GRAPH_RETRY_ATTEMPTS:
-            if resp is not None:
-                return _check_response(resp, context)
-            raise NetworkError(
-                f"{context} after {_GRAPH_RETRY_ATTEMPTS} attempts: {detail}"
-            ) from err
-
-        wait = _retry_wait(resp, delay)
-        if deadline is not None and time.monotonic() + wait >= deadline:
-            # No budget left for another attempt; surface this failure.
-            if resp is not None:
-                return _check_response(resp, context)
-            raise NetworkError(f"{context}: {detail}") from err
-        logger.warning(
-            "HTTP",
-            f"{context}: transient failure ({detail}); retrying in "
-            f"{wait:.0f}s (attempt {attempt}/{_GRAPH_RETRY_ATTEMPTS})",
-        )
-        time.sleep(wait)
-        delay *= 2
-
-    raise NetworkError(f"{context}: retry attempts exhausted")  # pragma: no cover
+    if response.status_code in ok_statuses:
+        return {}
+    return _check_response(response, context)

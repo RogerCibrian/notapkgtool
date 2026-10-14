@@ -52,11 +52,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from napt.exceptions import ConfigError
+from napt.discovery.base import StrategyResult
+from napt.discovery.fields import require_str
+from napt.discovery.resolve import resolve_installer
 from napt.logging import get_global_logger
 
-from .base import StrategyResult
-from .resolve import resolve_installer
+# The discovery fields this flow reads, besides ``strategy``.
+FIELDS = frozenset({"url"})
 
 
 def run_url_download(
@@ -67,25 +69,22 @@ def run_url_download(
 
     Args:
         app_config: Merged recipe configuration dict containing
-            ``discovery.url`` and ``id``.
+            ``discovery.url`` and ``id``, already validated.
         output_dir: Base directory to download into. The file lands
             in ``output_dir / app_id / version``.
 
     Returns:
-        Resolved version, file path, and SHA-256 hash. The ``cached``
-        field is True when HTTP 304 was used to reuse the previously
-        downloaded file.
+        Resolved version, file path, and SHA-256 hash.
 
     Raises:
-        ConfigError: If ``discovery.url`` is missing, or if the
-            downloaded file is not an MSI or MSIX.
-        NetworkError: On download or version-extraction failures.
+        ConfigError: If the downloaded file is not an MSI or MSIX, or its
+            version cannot name a folder.
+        NetworkError: On download failures.
+        PackagingError: If the installer's version cannot be read.
 
     """
     logger = get_global_logger()
-    url = app_config.get("discovery", {}).get("url")
-    if not url:
-        raise ConfigError("url_download strategy requires 'discovery.url' in config")
+    url = app_config["discovery"]["url"]
 
     logger.verbose("DISCOVERY", "Strategy: url_download (file-first)")
     logger.verbose("DISCOVERY", f"Source URL: {url}")
@@ -107,13 +106,5 @@ def validate_url_download_config(app_config: dict[str, Any]) -> list[str]:
 
     """
     errors: list[str] = []
-    source = app_config.get("discovery", {})
-
-    if "url" not in source:
-        errors.append("Missing required field: discovery.url")
-    elif not isinstance(source["url"], str):
-        errors.append("discovery.url must be a string")
-    elif not source["url"].strip():
-        errors.append("discovery.url cannot be empty")
-
+    require_str(app_config.get("discovery", {}), "url", errors)
     return errors

@@ -5,11 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
 from napt.cli.validate import _display_path, cmd_validate
-from napt.exceptions import ConfigError
-from napt.results import ValidationResult
+from napt.validation import ValidationResult
 from tests.cli.conftest import _args, _mock_result
 
 
@@ -21,31 +18,30 @@ class TestCmdValidate:
         recipe = tmp_path / "recipe.yaml"
         recipe.touch()
         mock_result = _mock_result(
-            status="valid",
-            app_count=1,
+            is_valid=True,
             errors=[],
             warnings=[],
             recipe_path=str(recipe),
         )
-        with patch("napt.cli.validate.validate_recipe", return_value=mock_result):
-            assert cmd_validate(_args(recipe=str(recipe))) == 0
+        with patch("napt.validation.validate_recipe", return_value=mock_result):
+            assert cmd_validate(_args(recipe=recipe)) == 0
         out = capsys.readouterr().out
         assert "[SUCCESS]" in out
-        assert "App Count:   1" in out
+        assert "Status:      VALID" in out
+        assert "App Count" not in out
 
     def test_invalid_recipe_returns_one(self, tmp_path, capsys):
         """Tests that an invalid recipe prints errors and returns 1."""
         recipe = tmp_path / "recipe.yaml"
         recipe.touch()
         mock_result = _mock_result(
-            status="invalid",
-            app_count=0,
+            is_valid=False,
             errors=["Missing required field: id"],
             warnings=[],
             recipe_path=str(recipe),
         )
-        with patch("napt.cli.validate.validate_recipe", return_value=mock_result):
-            assert cmd_validate(_args(recipe=str(recipe))) == 1
+        with patch("napt.validation.validate_recipe", return_value=mock_result):
+            assert cmd_validate(_args(recipe=recipe)) == 1
         out = capsys.readouterr().out
         assert "[FAILED]" in out
         assert "Missing required field: id" in out
@@ -56,14 +52,13 @@ class TestCmdValidate:
         recipe = tmp_path / "recipe.yaml"
         recipe.touch()
         mock_result = _mock_result(
-            status="valid",
-            app_count=1,
+            is_valid=True,
             errors=[],
             warnings=["Unknown field 'foo'"],
             recipe_path=str(recipe),
         )
-        with patch("napt.cli.validate.validate_recipe", return_value=mock_result):
-            assert cmd_validate(_args(recipe=str(recipe))) == 0
+        with patch("napt.validation.validate_recipe", return_value=mock_result):
+            assert cmd_validate(_args(recipe=recipe)) == 0
         out = capsys.readouterr().out
         assert "[WARNING]" in out
         assert "Unknown field 'foo'" in out
@@ -73,14 +68,13 @@ class TestCmdValidate:
         recipe = tmp_path / "recipe.yaml"
         recipe.touch()
         mock_result = _mock_result(
-            status="invalid",
-            app_count=0,
+            is_valid=False,
             errors=["Error one", "Error two", "Error three"],
             warnings=[],
             recipe_path=str(recipe),
         )
-        with patch("napt.cli.validate.validate_recipe", return_value=mock_result):
-            cmd_validate(_args(recipe=str(recipe)))
+        with patch("napt.validation.validate_recipe", return_value=mock_result):
+            cmd_validate(_args(recipe=recipe))
         out = capsys.readouterr().out
         assert "Error one" in out
         assert "Error two" in out
@@ -92,15 +86,13 @@ class TestCmdValidate:
         recipe = tmp_path / "app.override.yaml"
         recipe.touch()
         result = ValidationResult(
-            status="valid",
             errors=[],
             warnings=[],
-            app_count=1,
             recipe_path=str(recipe),
             parent_path=str(tmp_path / "base.yaml"),
         )
-        with patch("napt.cli.validate.validate_recipe", return_value=result):
-            assert cmd_validate(_args(recipe=str(recipe))) == 0
+        with patch("napt.validation.validate_recipe", return_value=result):
+            assert cmd_validate(_args(recipe=recipe)) == 0
         out = capsys.readouterr().out
         assert f"Parent:      {tmp_path / 'base.yaml'}" in out
 
@@ -109,14 +101,12 @@ class TestCmdValidate:
         recipe = tmp_path / "recipe.yaml"
         recipe.touch()
         result = ValidationResult(
-            status="valid",
             errors=[],
             warnings=[],
-            app_count=1,
             recipe_path=str(recipe),
         )
-        with patch("napt.cli.validate.validate_recipe", return_value=result):
-            cmd_validate(_args(recipe=str(recipe)))
+        with patch("napt.validation.validate_recipe", return_value=result):
+            cmd_validate(_args(recipe=recipe))
         out = capsys.readouterr().out
         assert "Parent:" not in out
 
@@ -133,29 +123,33 @@ class TestDebugProvenance:
         )
         return recipe
 
-    def test_load_failure_is_reported_not_hidden(self, tmp_path, capsys):
-        """Tests that a recipe that validates but cannot be merged says so."""
+    def test_provenance_comes_from_the_validated_merge(self, tmp_path, capsys):
+        """Tests that the block is printed from the configuration validation
+        produced, without merging the recipe a second time."""
         recipe = self._valid_recipe(tmp_path)
 
         with patch(
-            "napt.cli.validate.load_effective_config",
-            side_effect=ConfigError("merge failed"),
+            "napt.config.loader.load_effective_config",
+            side_effect=AssertionError("merged twice"),
         ):
-            code = cmd_validate(_args(recipe=str(recipe), debug=True))
+            code = cmd_validate(_args(recipe=recipe, debug=True))
 
         assert code == 0
-        assert "Provenance unavailable: merge failed" in capsys.readouterr().out
+        out = capsys.readouterr().out
+        assert "CONFIGURATION PROVENANCE" in out
+        assert "id: 'app' (recipe)" in out
 
-    def test_unexpected_error_is_not_swallowed(self, tmp_path):
-        """Tests that a bug in the loader surfaces instead of printing VALID."""
-        recipe = self._valid_recipe(tmp_path)
+    def test_invalid_recipe_says_provenance_unavailable(self, tmp_path, capsys):
+        """Tests that an invalid recipe gets no provenance block and says why."""
+        recipe = tmp_path / "recipe.yaml"
+        recipe.write_text("apiVersion: napt/v1\nname: App\n")
 
-        with patch(
-            "napt.cli.validate.load_effective_config",
-            side_effect=TypeError("bug"),
-        ):
-            with pytest.raises(TypeError):
-                cmd_validate(_args(recipe=str(recipe), debug=True))
+        code = cmd_validate(_args(recipe=recipe, debug=True))
+
+        assert code == 1
+        assert "Provenance unavailable: the recipe is invalid" in (
+            capsys.readouterr().out
+        )
 
 
 class TestDirectoryMode:
@@ -184,7 +178,7 @@ class TestDirectoryMode:
             "discovery:\n  strategy: url_download\n  url: https://x/b.msi\n",
         )
 
-        assert cmd_validate(_args(recipe=str(recipes))) == 0
+        assert cmd_validate(_args(recipe=recipes)) == 0
 
         out = capsys.readouterr().out
         assert "[OK]" in out
@@ -204,7 +198,7 @@ class TestDirectoryMode:
         )
         self._write(recipes, "two.yaml", "apiVersion: napt/v1\nname: Two\nid: two\n")
 
-        assert cmd_validate(_args(recipe=str(recipes))) == 1
+        assert cmd_validate(_args(recipe=recipes)) == 1
 
         out = capsys.readouterr().out
         assert "[OK]" in out
@@ -225,7 +219,7 @@ class TestDirectoryMode:
             recipes, "base.override.yaml", "apiVersion: napt/v1\nparent: base.yaml\n"
         )
 
-        assert cmd_validate(_args(recipe=str(recipes))) == 1
+        assert cmd_validate(_args(recipe=recipes)) == 1
 
         out = capsys.readouterr().out
         assert "Recipe id 'one' is declared by both" in out
@@ -241,7 +235,7 @@ class TestDirectoryMode:
             "intune:\n  colour: blue\n",
         )
 
-        assert cmd_validate(_args(recipe=str(recipes))) == 0
+        assert cmd_validate(_args(recipe=recipes)) == 0
 
         out = capsys.readouterr().out
         assert "[OK]" in out
@@ -263,7 +257,7 @@ class TestDirectoryMode:
             "discovery:\n  strategy: url_download\n  url: https://x/b.msi\n",
         )
 
-        assert cmd_validate(_args(recipe=str(recipes), debug=True)) == 0
+        assert cmd_validate(_args(recipe=recipes, debug=True)) == 0
 
         out = capsys.readouterr().out
         assert out.count("CONFIGURATION PROVENANCE") == 2
@@ -277,10 +271,8 @@ class TestDisplayPath:
     def test_recipe_under_the_root_is_shown_relative(self, tmp_path):
         """Tests that a recipe inside the scanned directory is shortened."""
         result = ValidationResult(
-            status="valid",
             errors=[],
             warnings=[],
-            app_count=1,
             recipe_path=str(tmp_path / "recipes" / "a" / "one.yaml"),
         )
 
@@ -292,10 +284,8 @@ class TestDisplayPath:
         """Tests that a path not under the root is printed unchanged."""
         elsewhere = str(tmp_path / "other" / "one.yaml")
         result = ValidationResult(
-            status="invalid",
             errors=["x"],
             warnings=[],
-            app_count=0,
             recipe_path=elsewhere,
         )
 

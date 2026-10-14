@@ -69,7 +69,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from napt.exceptions import PackagingError
+from napt.build._ps_templates import (
+    _TEMPLATES_DIR,
+    _load_ps_template,
+    substitute_ps_template,
+    write_ps_script,
+)
+from napt.powershell import ps_escape_double_quoted, strip_control_characters
+
+InstallScope = Literal["system", "user"]
 
 
 @dataclass(frozen=True)
@@ -85,7 +93,6 @@ class MSIXDetectionConfig:
         log_rotation_mb: Maximum log file size in MB before rotation.
         exact_match: If True, version must match exactly. If False,
             minimum version comparison (installed >= expected).
-        app_id: Application ID (used for fallback identification).
         install_scope: Whether to query per-user (``"user"``) or
             provisioned all-users (``"system"``) package store.
 
@@ -96,8 +103,7 @@ class MSIXDetectionConfig:
     version: str
     log_rotation_mb: int = 3
     exact_match: bool = False
-    app_id: str = ""
-    install_scope: Literal["system", "user"] = "system"
+    install_scope: InstallScope = "system"
 
 
 @dataclass(frozen=True)
@@ -112,7 +118,6 @@ class MSIXRequirementsConfig:
         version: Target version string (requirement met if
             installed < this).
         log_rotation_mb: Maximum log file size in MB before rotation.
-        app_id: Application ID (used for fallback identification).
         install_scope: Whether to query per-user (``"user"``) or
             provisioned all-users (``"system"``) package store.
 
@@ -122,8 +127,26 @@ class MSIXRequirementsConfig:
     app_name: str
     version: str
     log_rotation_mb: int = 3
-    app_id: str = ""
-    install_scope: Literal["system", "user"] = "system"
+    install_scope: InstallScope = "system"
+
+
+def _load_msix_template(name: str, install_scope: InstallScope) -> str:
+    """Loads an MSIX script template with the helper for the given scope.
+
+    The query helper differs between the provisioned and per-user package
+    stores, so it is spliced in by scope rather than by a fixed include.
+
+    Args:
+        name: Filename of the template.
+        install_scope: Which package store the script queries.
+
+    Returns:
+        Template text with the scope's helper in place.
+    """
+    helper = (_TEMPLATES_DIR / f"_msix_shared_{install_scope}.ps1").read_text(
+        encoding="utf-8"
+    )
+    return _load_ps_template(name).replace("$NaptMsixSharedHelper", helper)
 
 
 def generate_msix_detection_script(
@@ -131,9 +154,10 @@ def generate_msix_detection_script(
 ) -> Path:
     """Generates PowerShell detection script for MSIX Win32 app.
 
-    Creates a PowerShell script that queries ``Get-AppxPackage`` for the
-    package identity and compares installed version against expected
-    version.
+    Creates a PowerShell script that queries the AppX package store for the
+    package identity (``Get-AppxProvisionedPackage`` for system scope,
+    ``Get-AppxPackage`` for user scope) and compares the installed version
+    against the expected version.
 
     Args:
         config: MSIX detection configuration.
@@ -166,28 +190,8 @@ def generate_msix_detection_script(
             ```
 
     """
-    from napt.build._ps_templates import (
-        _TEMPLATES_DIR,
-        _load_ps_template,
-        substitute_ps_template,
-    )
-    from napt.logging import get_global_logger
-    from napt.powershell import (
-        PS_SCRIPT_ENCODING,
-        ps_escape_double_quoted,
-        strip_control_characters,
-    )
-
-    logger = get_global_logger()
-
-    logger.verbose("DETECTION", f"Generating MSIX detection script: {output_path.name}")
-
-    helper_name = f"_msix_shared_{config.install_scope}.ps1"
-    helper_content = (_TEMPLATES_DIR / helper_name).read_text(encoding="utf-8")
-
-    template = _load_ps_template("msix_detection_script.ps1")
-    template = template.replace("$NaptMsixSharedHelper", helper_content)
-    script_content = substitute_ps_template(
+    template = _load_msix_template("msix_detection_script.ps1", config.install_scope)
+    script = substitute_ps_template(
         template,
         {
             "$NaptPackageIdentityName": ps_escape_double_quoted(config.identity_name),
@@ -202,19 +206,7 @@ def generate_msix_detection_script(
             "$NaptFallbackScriptName": "detection.ps1",
         },
     )
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    try:
-        script_bytes = script_content.encode(PS_SCRIPT_ENCODING)
-        output_path.write_bytes(script_bytes)
-        logger.verbose("DETECTION", f"Detection script written to: {output_path}")
-    except OSError as err:
-        raise PackagingError(
-            f"Cannot write detection script {output_path}: {err}"
-        ) from err
-
-    return output_path
+    return write_ps_script(script, output_path, prefix="DETECTION", kind="detection")
 
 
 def generate_msix_requirements_script(
@@ -222,9 +214,11 @@ def generate_msix_requirements_script(
 ) -> Path:
     """Generates PowerShell requirements script for MSIX Win32 app.
 
-    Creates a PowerShell script that queries ``Get-AppxPackage`` for the
-    package identity and determines if an older version is installed.
-    Outputs "Required" if installed version < target, nothing otherwise.
+    Creates a PowerShell script that queries the AppX package store for the
+    package identity (``Get-AppxProvisionedPackage`` for system scope,
+    ``Get-AppxPackage`` for user scope) and determines if an older version
+    is installed. Outputs "Required" if installed version < target, nothing
+    otherwise.
 
     Args:
         config: MSIX requirements configuration.
@@ -257,31 +251,8 @@ def generate_msix_requirements_script(
             ```
 
     """
-    from napt.build._ps_templates import (
-        _TEMPLATES_DIR,
-        _load_ps_template,
-        substitute_ps_template,
-    )
-    from napt.logging import get_global_logger
-    from napt.powershell import (
-        PS_SCRIPT_ENCODING,
-        ps_escape_double_quoted,
-        strip_control_characters,
-    )
-
-    logger = get_global_logger()
-
-    logger.verbose(
-        "REQUIREMENTS",
-        f"Generating MSIX requirements script: {output_path.name}",
-    )
-
-    helper_name = f"_msix_shared_{config.install_scope}.ps1"
-    helper_content = (_TEMPLATES_DIR / helper_name).read_text(encoding="utf-8")
-
-    template = _load_ps_template("msix_requirements_script.ps1")
-    template = template.replace("$NaptMsixSharedHelper", helper_content)
-    script_content = substitute_ps_template(
+    template = _load_msix_template("msix_requirements_script.ps1", config.install_scope)
+    script = substitute_ps_template(
         template,
         {
             "$NaptPackageIdentityName": ps_escape_double_quoted(config.identity_name),
@@ -295,16 +266,6 @@ def generate_msix_requirements_script(
             "$NaptFallbackScriptName": "requirements.ps1",
         },
     )
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    try:
-        script_bytes = script_content.encode(PS_SCRIPT_ENCODING)
-        output_path.write_bytes(script_bytes)
-        logger.verbose("REQUIREMENTS", f"Requirements script written to: {output_path}")
-    except OSError as err:
-        raise PackagingError(
-            f"Cannot write requirements script {output_path}: {err}"
-        ) from err
-
-    return output_path
+    return write_ps_script(
+        script, output_path, prefix="REQUIREMENTS", kind="requirements"
+    )

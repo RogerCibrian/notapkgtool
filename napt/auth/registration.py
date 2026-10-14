@@ -61,11 +61,18 @@ from napt.auth.credentials import (
     msal_error,
     remember_tenant,
 )
+from napt.auth.spec import (
+    APPLICATION_PERMISSIONS,
+    BROKER_REDIRECT_TEMPLATE,
+    DELEGATED_PERMISSIONS,
+    FEDERATED_AUDIENCE_DEFAULT,
+    LOCALHOST_REDIRECT,
+    SPEC_VERSION,
+)
 from napt.exceptions import AuthError, ConfigError, NetworkError
-from napt.graph.client import graph_request, json_headers
+from napt.graph.client import GRAPH_BASE, auth_headers, graph_request, json_headers
+from napt.logging import get_global_logger
 from napt.version import get_version
-
-_GRAPH_V1 = "https://graph.microsoft.com/v1.0"
 
 # Microsoft Graph Command Line Tools: first-party public client with the
 # loopback redirect registered, used only to obtain the bootstrap token.
@@ -80,29 +87,9 @@ _BOOTSTRAP_SCOPES = [
     "https://graph.microsoft.com/DelegatedPermissionGrant.ReadWrite.All",
 ]
 
-LOCALHOST_REDIRECT = "http://localhost"
-BROKER_REDIRECT_TEMPLATE = "ms-appx-web://Microsoft.AAD.BrokerPlugin/{client_id}"
-
-# Application permissions (app roles) for CI/CD and the delegated scopes for
-# interactive sign-in. User.Read is what the portal adds to every new
-# registration; it lets `napt auth login` look up the tenant's name.
-APPLICATION_PERMISSIONS = ("DeviceManagementApps.ReadWrite.All", "Group.Read.All")
-DELEGATED_PERMISSIONS = (
-    "DeviceManagementApps.ReadWrite.All",
-    "Group.Read.All",
-    "User.Read",
-)
-
-# Audience Entra expects on federated tokens from any external issuer.
-FEDERATED_AUDIENCE_DEFAULT = "api://AzureADTokenExchange"
-
 # Provenance stamp written to the application's internal notes (the
 # "Internal notes" box under Branding & properties), mirroring the
-# ``napt/v1`` stamp on Intune apps. SPEC_VERSION describes what NAPT expects
-# of a registration -- bump it whenever APPLICATION_PERMISSIONS,
-# DELEGATED_PERMISSIONS, or the redirect URIs change, so a re-run of
-# `napt auth setup` reports the registration as out of date.
-SPEC_VERSION = 1
+# ``napt/v1`` stamp on Intune apps.
 _STAMP_PREFIX = "napt/v1"
 _STAMP_RE = re.compile(
     r"^napt/v1 spec=(?P<spec>\d+) version=(?P<version>\S+) provisioned=(?P<date>\S+)$"
@@ -176,7 +163,7 @@ class SetupSpec:
         return f"napt-{derived}"[:120]
 
 
-@dataclass
+@dataclass(frozen=True)
 class SetupResult:
     """What `napt auth setup` found or created.
 
@@ -184,13 +171,10 @@ class SetupResult:
         tenant_id: Tenant the registration lives in.
         client_id: Application (client) ID to use with NAPT.
         display_name: The registration's display name.
-        created: Whether the application object was created by this run.
         adopted: Whether this run took over a registration NAPT did not
             create.
         needs_adopt: The registration matched by name carries no NAPT stamp
             and ``adopt`` was not given; nothing was changed.
-        previous_spec: Spec version the registration was stamped with before
-            this run, or ``None`` if it had no stamp.
         changes: Human-readable list of what this run added; empty when the
             registration was already complete.
     """
@@ -198,10 +182,29 @@ class SetupResult:
     tenant_id: str
     client_id: str
     display_name: str
-    created: bool = False
     adopted: bool = False
     needs_adopt: bool = False
-    previous_spec: int | None = None
+    changes: list[str] = field(default_factory=list)
+
+
+@dataclass
+class _Progress:
+    """What a setup run has done so far.
+
+    The provisioning steps record here as they go; the frozen
+    [SetupResult][napt.auth.registration.SetupResult] is built from it once
+    the run is over.
+
+    Attributes:
+        adopted: Whether the run took over a registration NAPT did not
+            create.
+        needs_adopt: The registration matched by name carries no NAPT stamp
+            and ``adopt`` was not given.
+        changes: What the run has added so far.
+    """
+
+    adopted: bool = False
+    needs_adopt: bool = False
     changes: list[str] = field(default_factory=list)
 
 
@@ -276,13 +279,13 @@ def _bootstrap_token(tenant_id: str) -> str:
 
 
 def _get(token: str, path: str, context: str) -> dict:
-    return graph_request("GET", f"{_GRAPH_V1}{path}", context, json_headers(token))
+    return graph_request("GET", f"{GRAPH_BASE}{path}", context, auth_headers(token))
 
 
 def _post(token: str, path: str, body: dict, context: str) -> dict:
     return graph_request(
         "POST",
-        f"{_GRAPH_V1}{path}",
+        f"{GRAPH_BASE}{path}",
         context,
         json_headers(token),
         json=body,
@@ -291,19 +294,19 @@ def _post(token: str, path: str, body: dict, context: str) -> dict:
 
 
 def _patch(token: str, path: str, body: dict, context: str) -> None:
-    graph_request("PATCH", f"{_GRAPH_V1}{path}", context, json_headers(token), body)
+    graph_request("PATCH", f"{GRAPH_BASE}{path}", context, json_headers(token), body)
 
 
 def _post_after_replication(token: str, path: str, body: dict, context: str) -> dict:
     """POSTs, retrying a 404 that means the target has not replicated yet."""
-    for attempt in range(1, _REPLICATION_ATTEMPTS + 1):
+    for _ in range(1, _REPLICATION_ATTEMPTS):
         try:
             return _post(token, path, body, context)
         except NetworkError as err:
-            if "HTTP 404" not in str(err) or attempt == _REPLICATION_ATTEMPTS:
+            if err.status_code != 404:
                 raise
             time.sleep(_REPLICATION_WAIT)
-    raise NetworkError(f"{context}: retry attempts exhausted")  # pragma: no cover
+    return _post(token, path, body, context)
 
 
 def _graph_permission_ids(token: str) -> tuple[dict[str, str], dict[str, str], str]:
@@ -407,15 +410,13 @@ def _ensure_application(
     spec: SetupSpec,
     roles: dict[str, str],
     scopes: dict[str, str],
-    result: SetupResult,
+    progress: _Progress,
 ) -> dict:
     """Creates the application or patches a found one up to spec.
 
     Returns:
         The application object with at least ``id`` and ``appId``.
     """
-    from napt.logging import get_global_logger
-
     logger = get_global_logger()
     wanted_access = _required_resource_access(roles, scopes)
     app = _find_application(token, spec)
@@ -435,8 +436,7 @@ def _ensure_application(
             },
             "Creating app registration",
         )
-        result.created = True
-        result.changes.append(f"Created app registration '{spec.display_name}'")
+        progress.changes.append(f"Created app registration '{spec.display_name}'")
         # The broker redirect embeds the client ID, known only after creation.
         _patch(
             token,
@@ -451,26 +451,26 @@ def _ensure_application(
             },
             "Adding redirect URIs",
         )
-        result.changes.append("Added redirect URIs (browser and Windows broker)")
+        progress.changes.append("Added redirect URIs (browser and Windows broker)")
         return app
 
     stamp = _parse_stamp(app.get("notes"))
     if stamp is None:
         if not spec.client_id and not spec.adopt:
-            result.needs_adopt = True
+            progress.needs_adopt = True
             return app
-        result.adopted = True
+        progress.adopted = True
         logger.info(
             "AUTH",
             f"Adopting registration '{app.get('displayName')}' ({app['appId']}) "
             "that NAPT did not create",
         )
     else:
-        result.previous_spec = int(stamp["spec"])
-        if result.previous_spec < SPEC_VERSION:
+        previous_spec = int(stamp["spec"])
+        if previous_spec < SPEC_VERSION:
             logger.info(
                 "AUTH",
-                f"Registration is at spec {result.previous_spec}; NAPT "
+                f"Registration is at spec {previous_spec}; NAPT "
                 f"{get_version()} expects spec {SPEC_VERSION}. Updating.",
             )
 
@@ -483,13 +483,13 @@ def _ensure_application(
     missing_uris = [u for u in wanted_uris if u not in have_uris]
     if missing_uris:
         patch["publicClient"] = {"redirectUris": have_uris + missing_uris}
-        result.changes.append("Added redirect URIs: " + ", ".join(missing_uris))
+        progress.changes.append("Added redirect URIs: " + ", ".join(missing_uris))
 
     existing_access = app.get("requiredResourceAccess") or []
     merged_access = _merge_resource_access(existing_access, wanted_access)
     if merged_access != existing_access:
         patch["requiredResourceAccess"] = merged_access
-        result.changes.append("Added Microsoft Graph API permissions")
+        progress.changes.append("Added Microsoft Graph API permissions")
 
     if (
         stamp is None
@@ -497,7 +497,7 @@ def _ensure_application(
         or stamp["version"] != get_version()
     ):
         patch["notes"] = _with_stamp(app.get("notes"))
-        result.changes.append(
+        progress.changes.append(
             f"Stamped internal notes: {_STAMP_PREFIX} spec={SPEC_VERSION} "
             f"version={get_version()}"
         )
@@ -512,7 +512,7 @@ def _ensure_application(
 # ---------------------------------------------------------------------------
 
 
-def _ensure_service_principal(token: str, app: dict, result: SetupResult) -> str:
+def _ensure_service_principal(token: str, app: dict, progress: _Progress) -> str:
     """Returns the service principal object ID, creating it if needed."""
     data = _get(
         token,
@@ -528,7 +528,7 @@ def _ensure_service_principal(token: str, app: dict, result: SetupResult) -> str
         {"appId": app["appId"]},
         "Creating service principal",
     )
-    result.changes.append("Created service principal")
+    progress.changes.append("Created service principal")
     return sp["id"]
 
 
@@ -537,7 +537,7 @@ def _ensure_app_role_consent(
     sp_id: str,
     graph_sp_id: str,
     roles: dict[str, str],
-    result: SetupResult,
+    progress: _Progress,
 ) -> None:
     """Grants admin consent for application permissions (app role assignments)."""
     data = _get(
@@ -560,11 +560,11 @@ def _ensure_app_role_consent(
             {"principalId": sp_id, "resourceId": graph_sp_id, "appRoleId": role_id},
             f"Granting application permission {permission}",
         )
-        result.changes.append(f"Granted application permission {permission}")
+        progress.changes.append(f"Granted application permission {permission}")
 
 
 def _ensure_delegated_consent(
-    token: str, sp_id: str, graph_sp_id: str, result: SetupResult
+    token: str, sp_id: str, graph_sp_id: str, progress: _Progress
 ) -> None:
     """Grants tenant-wide admin consent for the delegated permissions."""
     data = _get(
@@ -587,7 +587,7 @@ def _ensure_delegated_consent(
             },
             "Granting delegated permissions",
         )
-        result.changes.append(
+        progress.changes.append(
             "Granted delegated permissions " + ", ".join(DELEGATED_PERMISSIONS)
         )
         return
@@ -602,7 +602,7 @@ def _ensure_delegated_consent(
         {"scope": " ".join(sorted(have | set(missing)))},
         "Updating delegated permission grant",
     )
-    result.changes.append("Granted delegated permissions " + ", ".join(missing))
+    progress.changes.append("Granted delegated permissions " + ", ".join(missing))
 
 
 # ---------------------------------------------------------------------------
@@ -611,7 +611,7 @@ def _ensure_delegated_consent(
 
 
 def _ensure_federated_credential(
-    token: str, app: dict, spec: SetupSpec, result: SetupResult
+    token: str, app: dict, spec: SetupSpec, progress: _Progress
 ) -> None:
     """Adds the OIDC federated credential when ``spec`` asks for one."""
     name = spec.federated_credential_name
@@ -639,7 +639,7 @@ def _ensure_federated_credential(
         },
         "Adding federated credential",
     )
-    result.changes.append(f"Added federated credential for {subject} ({issuer})")
+    progress.changes.append(f"Added federated credential for {subject} ({issuer})")
 
 
 # ---------------------------------------------------------------------------
@@ -685,35 +685,40 @@ def setup_app_registration(spec: SetupSpec) -> SetupResult:
             ```
 
     """
-    from napt.logging import get_global_logger
-
     logger = get_global_logger()
     token = _bootstrap_token(spec.tenant_id)
 
     roles, scopes, graph_sp_id = _graph_permission_ids(token)
-    result = SetupResult(
-        tenant_id=spec.tenant_id, client_id="", display_name=spec.display_name
-    )
+    progress = _Progress()
 
-    app = _ensure_application(token, spec, roles, scopes, result)
-    result.client_id = app["appId"]
-    result.display_name = app.get("displayName") or spec.display_name
-    if result.needs_adopt:
-        return result
-    logger.info("AUTH", f"App registration: {result.display_name} ({result.client_id})")
+    app = _ensure_application(token, spec, roles, scopes, progress)
+    client_id = app["appId"]
+    display_name = app.get("displayName") or spec.display_name
+    if progress.needs_adopt:
+        return SetupResult(
+            tenant_id=spec.tenant_id,
+            client_id=client_id,
+            display_name=display_name,
+            needs_adopt=True,
+        )
+    logger.info("AUTH", f"App registration: {display_name} ({client_id})")
 
-    sp_id = _ensure_service_principal(token, app, result)
-    _ensure_app_role_consent(token, sp_id, graph_sp_id, roles, result)
-    _ensure_delegated_consent(token, sp_id, graph_sp_id, result)
-    _ensure_federated_credential(token, app, spec, result)
+    sp_id = _ensure_service_principal(token, app, progress)
+    _ensure_app_role_consent(token, sp_id, graph_sp_id, roles, progress)
+    _ensure_delegated_consent(token, sp_id, graph_sp_id, progress)
+    _ensure_federated_credential(token, app, spec, progress)
 
     # Keep an existing session for this tenant when the client ID is unchanged.
     known = load_auth_store().tenants.get(spec.tenant_id)
-    if known is not None and known.client_id == result.client_id:
+    if known is not None and known.client_id == client_id:
         remember_tenant(known)
     else:
-        remember_tenant(
-            AuthConfig(client_id=result.client_id, tenant_id=spec.tenant_id)
-        )
+        remember_tenant(AuthConfig(client_id=client_id, tenant_id=spec.tenant_id))
     logger.verbose("AUTH", "Saved tenant and client ID for 'napt auth login'")
-    return result
+    return SetupResult(
+        tenant_id=spec.tenant_id,
+        client_id=client_id,
+        display_name=display_name,
+        adopted=progress.adopted,
+        changes=progress.changes,
+    )

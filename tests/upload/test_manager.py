@@ -109,7 +109,6 @@ def test_upload_package_both_creates_two_apps(
     assert result.app_id == "test-app"
     assert result.app_name == "Test App"
     assert result.version == "1.0.0"
-    assert result.status == "success"
 
 
 def test_upload_package_app_only_creates_one_app(
@@ -149,7 +148,6 @@ def test_upload_package_app_only_creates_one_app(
 
     assert result.intune_app_id == "intune-app-123"
     assert result.intune_update_app_id is None
-    assert result.status == "success"
 
 
 def test_upload_package_update_only_creates_one_app(
@@ -189,7 +187,6 @@ def test_upload_package_update_only_creates_one_app(
 
     assert result.intune_app_id is None
     assert result.intune_update_app_id == "intune-update-456"
-    assert result.status == "success"
 
 
 def test_upload_package_propagates_network_error(
@@ -265,7 +262,6 @@ def test_upload_package_honors_directories_package(
     ):
         result = upload_package(recipe_path)
 
-    assert result.status == "success"
     assert (
         Path(result.package_path)
         .resolve()
@@ -387,7 +383,7 @@ class TestResolveLargeIcon:
 
     def test_oversized_logo_path_warns_and_skips(self, tmp_path, monkeypatch, capsys):
         """Tests that a logo_path file over the size limit is skipped."""
-        from napt.build.icons import MAX_ICON_BYTES
+        from napt.graph.intune import MAX_ICON_BYTES
 
         monkeypatch.chdir(tmp_path)
         logo = tmp_path / "logo.png"
@@ -405,7 +401,7 @@ class TestResolveLargeIcon:
         self, tmp_path, monkeypatch, capsys
     ):
         """Tests that an oversized curated icon warns instead of uploading."""
-        from napt.build.icons import MAX_ICON_BYTES
+        from napt.graph.intune import MAX_ICON_BYTES
 
         monkeypatch.chdir(tmp_path)
         icon_path = tmp_path / "icons" / "test-app.png"
@@ -500,6 +496,8 @@ def _run_upload(
     full_app: dict[str, Any] | None = None,
     force: bool = False,
     config_overrides: dict[str, Any] | None = None,
+    state_dir: Path | None = None,
+    packages_dir: Path | None = None,
 ) -> tuple[Any, dict[str, MagicMock]]:
     """Run upload_package with all Graph calls mocked.
 
@@ -512,6 +510,8 @@ def _run_upload(
             app matches).
         force: Passed through to upload_package.
         config_overrides: Extra config merged over the fake defaults.
+        state_dir: Passed through to upload_package.
+        packages_dir: Passed through to upload_package.
 
     Returns:
         A tuple of (UploadResult, mocks) where mocks holds the
@@ -530,6 +530,7 @@ def _run_upload(
         "create_cv": MagicMock(side_effect=patches["create_content_version"]),
         "update_app": MagicMock(),
         "delete_app": MagicMock(),
+        "extract": MagicMock(return_value=tmp_path / "payload"),
     }
     create_app_mock = mocks["create_app"]
     create_cv_mock = mocks["create_cv"]
@@ -562,10 +563,7 @@ def _run_upload(
             )
         )
         stack.enter_context(
-            patch(
-                "napt.upload.manager.extract_encrypted_payload",
-                return_value=tmp_path / "payload",
-            )
+            patch("napt.upload.manager.extract_encrypted_payload", mocks["extract"])
         )
         stack.enter_context(
             patch("napt.upload.manager.create_win32_app", create_app_mock)
@@ -588,7 +586,12 @@ def _run_upload(
         stack.enter_context(patch("napt.upload.manager.upload_to_azure_blob"))
         stack.enter_context(patch("napt.upload.manager.commit_content_version_file"))
         stack.enter_context(patch("napt.upload.manager.commit_content_version"))
-        result = upload_package(recipe_path, force=force)
+        result = upload_package(
+            recipe_path,
+            force=force,
+            state_dir=state_dir,
+            packages_dir=packages_dir,
+        )
 
     return result, mocks
 
@@ -621,6 +624,62 @@ def test_upload_stamps_provenance_notes(
     update_notes = create_app_mock.call_args_list[1].args[1]["notes"]
     assert install_notes == f"napt/v1 id=test-app entry=install sha256={'c' * 64}"
     assert update_notes == f"napt/v1 id=test-app entry=update sha256={'c' * 64}"
+
+
+def test_upload_both_extracts_the_payload_once(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that one package is decrypted once for both app entries."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path)
+
+    _, mocks = _run_upload(tmp_path, fake_metadata, build_types="both")
+
+    assert mocks["create_app"].call_count == 2
+    assert mocks["extract"].call_count == 1
+
+
+def test_upload_reads_deployment_state_once(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that the recorded release comes from the state already loaded."""
+    import napt.state.deployment as deployment
+    import napt.upload.manager as manager
+
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path, installer_sha256="c" * 64)
+    _seed_pending(tmp_path, sha256="c" * 64, version="1.0.0")
+    real_load = deployment.load_deployment_state
+    loads = MagicMock(side_effect=real_load)
+    monkeypatch.setattr(deployment, "load_deployment_state", loads)
+    monkeypatch.setattr(manager, "load_deployment_state", loads)
+
+    _run_upload(tmp_path, fake_metadata)
+
+    assert loads.call_count == 1
+
+
+def test_upload_directory_overrides_replace_config(
+    tmp_path: Path, monkeypatch, fake_metadata
+) -> None:
+    """Tests that state_dir and packages_dir are read instead of the
+    configured directories, so upload can follow a package run that used
+    the same overrides."""
+    monkeypatch.chdir(tmp_path)
+    make_package_dir(tmp_path / "elsewhere", installer_sha256="c" * 64)
+    _seed_pending(tmp_path / "other", sha256="c" * 64, version="1.0.0")
+
+    result, _ = _run_upload(
+        tmp_path,
+        fake_metadata,
+        state_dir=tmp_path / "other" / "state",
+        packages_dir=tmp_path / "elsewhere" / "packages",
+    )
+
+    assert result.version == "1.0.0"
+    assert result.package_path.is_relative_to(tmp_path / "elsewhere")
+    assert not (tmp_path / "packages").exists()
+    assert not (tmp_path / "state").exists()
 
 
 def test_upload_hash_mismatch_aborts_before_graph(
@@ -892,8 +951,6 @@ def test_upload_require_pending_passes_with_matching_pending(
         config_overrides={"deployment": {"require_pending": True}},
     )
 
-    assert result.status == "success"
-
 
 def _seed_published(tmp_path: Path, sha256: str, version: str = "1.0.0") -> Path:
     """Writes a deployment state file with a published release and no pending."""
@@ -924,8 +981,6 @@ def test_upload_require_pending_accepts_the_published_release(
         force=True,
         config_overrides={"deployment": {"require_pending": True}},
     )
-
-    assert result.status == "success"
 
 
 def test_upload_require_pending_blocks_a_package_matching_nothing(
@@ -1035,7 +1090,7 @@ def test_upload_build_types_mismatch_aborts_before_graph(
     assert "napt build" in str(info.value)
 
 
-def test_upload_corrupt_manifest_is_a_config_error(
+def test_upload_corrupt_manifest_is_a_packaging_error(
     tmp_path: Path, monkeypatch, fake_metadata
 ) -> None:
     """Tests that a manifest that is not JSON is reported, not a traceback."""
@@ -1043,11 +1098,12 @@ def test_upload_corrupt_manifest_is_a_config_error(
     pkg_dir = make_package_dir(tmp_path, installer_sha256="a" * 64)
     (pkg_dir / "build-manifest.json").write_text("{not json", encoding="utf-8")
 
-    with pytest.raises(ConfigError, match="build-manifest.json"):
+    with pytest.raises(PackagingError, match="build-manifest.json") as info:
         _run_upload(tmp_path, fake_metadata)
+    assert "napt package" in str(info.value)
 
 
-def test_upload_manifest_that_is_not_an_object_is_a_config_error(
+def test_upload_manifest_that_is_not_an_object_is_a_packaging_error(
     tmp_path: Path, monkeypatch, fake_metadata
 ) -> None:
     """Tests that a manifest holding a JSON array is reported."""
@@ -1055,14 +1111,14 @@ def test_upload_manifest_that_is_not_an_object_is_a_config_error(
     pkg_dir = make_package_dir(tmp_path, installer_sha256="a" * 64)
     (pkg_dir / "build-manifest.json").write_text("[]", encoding="utf-8")
 
-    with pytest.raises(ConfigError, match="not a JSON object"):
+    with pytest.raises(PackagingError, match="not a JSON object"):
         _run_upload(tmp_path, fake_metadata)
 
 
 @pytest.mark.parametrize(
     "key", ["win32_build_types", "detection_script_path", "intunewin_sha256"]
 )
-def test_upload_manifest_missing_a_required_key_is_a_config_error(
+def test_upload_manifest_missing_a_required_key_is_a_packaging_error(
     tmp_path: Path, monkeypatch, fake_metadata, key
 ) -> None:
     """Tests that a manifest without a field upload relies on is reported."""
@@ -1073,7 +1129,7 @@ def test_upload_manifest_missing_a_required_key_is_a_config_error(
     del data[key]
     manifest_path.write_text(json.dumps(data), encoding="utf-8")
 
-    with pytest.raises(ConfigError, match=f"has no {key}"):
+    with pytest.raises(PackagingError, match=f"has no {key}"):
         _run_upload(tmp_path, fake_metadata)
 
 

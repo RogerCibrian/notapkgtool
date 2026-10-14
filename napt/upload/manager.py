@@ -29,17 +29,20 @@ before anything is sent.
 from __future__ import annotations
 
 import base64
-import json
+from collections.abc import Callable
+from dataclasses import dataclass
+import functools
 from pathlib import Path
 import tempfile
 from typing import Any
 
 from napt.auth.credentials import get_access_token
-from napt.build.icons import MAX_ICON_BYTES
+from napt.build.manifest import read_build_manifest
 from napt.config.loader import load_effective_config
 from napt.download.download import sha256_file
 from napt.exceptions import ConfigError, PackagingError
 from napt.graph.intune import (
+    MAX_ICON_BYTES,
     commit_content_version,
     commit_content_version_file,
     create_content_version,
@@ -51,14 +54,13 @@ from napt.graph.intune import (
     update_win32_app,
     upload_to_azure_blob,
 )
-from napt.logging import get_global_logger
-from napt.results import UploadResult
+from napt.logging import Logger, get_global_logger
 from napt.state.deployment import (
     deployment_state_path,
     load_deployment_state,
     record_published,
     save_deployment_state,
-    working_release,
+    working_release_of,
 )
 from napt.state.stamp import (
     ENTRY_INSTALL,
@@ -66,7 +68,11 @@ from napt.state.stamp import (
     build_stamp,
     find_stamped_app,
 )
-from napt.upload.intunewin import extract_encrypted_payload, parse_intunewin
+from napt.upload.intunewin import (
+    IntunewinMetadata,
+    extract_encrypted_payload,
+    parse_intunewin,
+)
 
 # Intune return codes for PSADT deployments.
 # 0    - success: clean install/uninstall
@@ -211,7 +217,7 @@ def _verify_package_file(package_dir: Path, manifest: dict[str, Any]) -> Path:
     return package_path
 
 
-def _load_icon_bytes(path: Path, logger: Any) -> bytes | None:
+def _load_icon_bytes(path: Path, logger: Logger) -> bytes | None:
     """Reads an icon file, warning instead of raising on failure.
 
     Args:
@@ -311,6 +317,9 @@ def _resolve_large_icon(config: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
+_MANIFEST_REMEDY = "Run 'napt build' and 'napt package' to recreate the package."
+
+
 def _read_build_manifest(package_dir: Path) -> dict[str, Any]:
     """Reads and validates the build manifest from a package directory.
 
@@ -322,61 +331,29 @@ def _read_build_manifest(package_dir: Path) -> dict[str, Any]:
         The parsed build manifest.
 
     Raises:
-        ConfigError: If the manifest is missing, not JSON, or lacks a field
-            upload relies on (architecture, installer hash, build types,
-            script and package names). Run 'napt build' and 'napt package'
-            to recreate the package.
+        PackagingError: If the manifest is missing, not JSON, or lacks a
+            field upload relies on (architecture, installer hash, build
+            types, script and package names).
 
     """
-    manifest_path = package_dir / "build-manifest.json"
-    if not manifest_path.exists():
-        raise ConfigError(
-            f"Build manifest not found in {package_dir}. "
-            "Run 'napt package' to recreate the package."
+    manifest = read_build_manifest(
+        package_dir,
+        (
+            "win32_build_types",
+            "detection_script_path",
+            "intunewin_filename",
+            "intunewin_sha256",
+            "architecture",
+            "installer_sha256",
+        ),
+        _MANIFEST_REMEDY,
+    )
+    if manifest["architecture"] not in _ARCH_MAP:
+        raise PackagingError(
+            f"Unrecognized architecture '{manifest['architecture']}' in the "
+            f"build manifest in {package_dir}. Expected one of: "
+            f"{', '.join(_ARCH_MAP)}. {_MANIFEST_REMEDY}"
         )
-    try:
-        manifest: dict[str, Any] = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as err:
-        raise ConfigError(
-            f"Cannot read build-manifest.json in {package_dir}: {err}. "
-            "Run 'napt package' to recreate the package."
-        ) from err
-    if not isinstance(manifest, dict):
-        raise ConfigError(
-            f"build-manifest.json in {package_dir} is not a JSON object. "
-            "Run 'napt package' to recreate the package."
-        )
-    for key in (
-        "win32_build_types",
-        "detection_script_path",
-        "intunewin_filename",
-        "intunewin_sha256",
-    ):
-        if not isinstance(manifest.get(key), str) or not manifest[key]:
-            raise ConfigError(
-                f"build-manifest.json in {package_dir} has no {key}. "
-                "Run 'napt build' and 'napt package' to recreate the package."
-            )
-
-    arch_raw: str = manifest.get("architecture") or ""
-    if not arch_raw:
-        raise ConfigError(
-            f"Architecture not found in build manifest {manifest_path}. "
-            "Run 'napt build' and 'napt package' to recreate the package."
-        )
-    if arch_raw not in _ARCH_MAP:
-        raise ConfigError(
-            f"Unrecognized architecture '{arch_raw}' in build manifest. "
-            f"Expected one of: {', '.join(_ARCH_MAP)}. "
-            "Run 'napt build' and 'napt package' to recreate the package."
-        )
-
-    if not manifest.get("installer_sha256"):
-        raise ConfigError(
-            f"installer_sha256 not found in build manifest {manifest_path}. "
-            "Run 'napt build' and 'napt package' to recreate the package."
-        )
-
     return manifest
 
 
@@ -385,7 +362,7 @@ def _build_app_metadata(
     recipe_path: Path,
     version: str,
     package_path: Path,
-    build_types: str,
+    entry: str,
     manifest: dict[str, Any],
     large_icon: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -407,9 +384,9 @@ def _build_app_metadata(
         recipe_path: Path to the recipe file (used to infer vendor/publisher).
         version: Application version string (from package directory name).
         package_path: Path to the .intunewin file (e.g.,
-            packages/napt-chrome/<version>/Invoke-AppDeployToolkit.intunewin).
-        build_types: Either "app_only" (install entry, detection script only) or
-            "update_only" (update entry, detection + requirements scripts).
+            packages/google-chrome/<version>/Invoke-AppDeployToolkit.intunewin).
+        entry: ``ENTRY_INSTALL`` (detection script only) or ``ENTRY_UPDATE``
+            (detection and requirements scripts).
         manifest: Parsed build manifest from
             [_read_build_manifest][napt.upload.manager._read_build_manifest].
         large_icon: Resolved largeIcon mimeContent from
@@ -430,7 +407,7 @@ def _build_app_metadata(
     intune: dict[str, Any] = config["intune"]
 
     base_name: str = config["name"]
-    if build_types == "update_only":
+    if entry == ENTRY_UPDATE:
         prefix: str = intune["update_name_prefix"]
         display_name = f"{prefix}{base_name}"
     else:
@@ -468,7 +445,7 @@ def _build_app_metadata(
     ]
 
     # Requirements script (update entries only), the one the manifest names
-    if build_types == "update_only":
+    if entry == ENTRY_UPDATE:
         req_name = manifest.get("requirements_script_path")
         req_script = package_dir / req_name if isinstance(req_name, str) else None
         if req_script is None or not req_script.is_file():
@@ -539,7 +516,6 @@ def _build_app_metadata(
 
     # Provenance stamp: marks the app as NAPT-managed and ties it to the
     # exact binary it was built from. The notes field is reserved for NAPT.
-    entry = ENTRY_UPDATE if build_types == "update_only" else ENTRY_INSTALL
     payload["notes"] = build_stamp(config["id"], entry, manifest["installer_sha256"])
 
     # Optional: app icon (largeIcon), resolved once per upload
@@ -552,8 +528,8 @@ def _build_app_metadata(
 def _upload_app_content(
     access_token: str,
     intune_app_id: str,
-    package_path: Path,
-    intunewin_metadata: Any,
+    payload: Callable[[], Path],
+    intunewin_metadata: IntunewinMetadata,
     step_upload: int,
     step_commit: int,
     total_steps: int,
@@ -563,7 +539,8 @@ def _upload_app_content(
     Args:
         access_token: Azure AD bearer token for Graph API calls.
         intune_app_id: Graph API object ID of the app record.
-        package_path: Path to the .intunewin file.
+        payload: Returns the extracted encrypted payload, extracting it on
+            first use so the install and update entries share one copy.
         intunewin_metadata: Parsed encryption metadata from parse_intunewin.
         step_upload: Step number to display when uploading to Blob Storage.
         step_commit: Step number to display when committing.
@@ -581,9 +558,7 @@ def _upload_app_content(
     logger.verbose("UPLOAD", f"File entry: {file_id}")
 
     logger.step(step_upload, total_steps, "Uploading to Azure Blob Storage...")
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        payload_path = extract_encrypted_payload(package_path, Path(tmp_dir))
-        upload_to_azure_blob(sas_uri, payload_path)
+    upload_to_azure_blob(sas_uri, payload())
 
     logger.step(step_commit, total_steps, "Committing content version...")
     commit_content_version_file(
@@ -595,8 +570,8 @@ def _upload_app_content(
 def _upload_single_app(
     access_token: str,
     app_metadata: dict[str, Any],
-    package_path: Path,
-    intunewin_metadata: Any,
+    payload: Callable[[], Path],
+    intunewin_metadata: IntunewinMetadata,
     existing_apps: list[dict[str, Any]],
     recipe_id: str,
     entry: str,
@@ -627,7 +602,8 @@ def _upload_single_app(
     Args:
         access_token: Azure AD bearer token for Graph API calls.
         app_metadata: Win32LobApp JSON payload from _build_app_metadata.
-        package_path: Path to the .intunewin file.
+        payload: Returns the extracted encrypted payload, extracting it on
+            first use; an adopted entry never calls it.
         intunewin_metadata: Parsed encryption metadata from parse_intunewin.
         existing_apps: Mobile app dicts from list_mobile_apps.
         recipe_id: Recipe identifier for stamp matching.
@@ -701,7 +677,7 @@ def _upload_single_app(
     _upload_app_content(
         access_token,
         intune_app_id,
-        package_path,
+        payload,
         intunewin_metadata,
         step_upload,
         step_commit,
@@ -718,7 +694,36 @@ def _upload_single_app(
     return intune_app_id
 
 
-def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
+@dataclass(frozen=True)
+class UploadResult:
+    """Result from uploading a .intunewin package to Microsoft Intune.
+
+    Attributes:
+        app_id: Unique application identifier (from recipe).
+        app_name: Application display name.
+        version: Application version uploaded.
+        intune_app_id: Graph API object ID of the install app entry.
+            None when build_types is "update_only".
+        intune_update_app_id: Graph API object ID of the update app entry.
+            None when build_types is "app_only".
+        package_path: Path to the uploaded .intunewin file.
+    """
+
+    app_id: str
+    app_name: str
+    version: str
+    package_path: Path
+    intune_app_id: str | None = None
+    intune_update_app_id: str | None = None
+
+
+def upload_package(
+    recipe_path: Path,
+    force: bool = False,
+    *,
+    state_dir: Path | None = None,
+    packages_dir: Path | None = None,
+) -> UploadResult:
     """Upload a packaged app to Microsoft Intune via the Graph API.
 
     Loads the recipe config, locates the package of the release deployment
@@ -767,6 +772,10 @@ def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
         force: When True, matched stamped apps are re-uploaded (metadata
             and content) instead of adopted as-is. Never creates
             duplicates.
+        state_dir: State root whose deployment/ folder records the
+            release. If None, reads from config directories.state.
+        packages_dir: Directory holding the packages. If None, reads from
+            config directories.package.
 
     Returns:
         Upload result including the Intune app ID(s), app name, version, and
@@ -817,11 +826,13 @@ def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
     # Step 1: Locate the package of the recorded release and verify it
     total_steps = 9 if build_types == "both" else 6
     logger.step(1, total_steps, "Locating .intunewin package...")
-    state_dir = Path(config["directories"]["state"])
+    if state_dir is None:
+        state_dir = Path(config["directories"]["state"])
+    if packages_dir is None:
+        packages_dir = Path(config["directories"]["package"])
     state_path = deployment_state_path(state_dir / "deployment", app_id)
     state = load_deployment_state(state_path)
-    release = working_release(state_dir, app_id)
-    packages_dir = Path(config["directories"]["package"])
+    release = working_release_of(state)
     package_dir = _locate_package_dir(packages_dir, app_id, release)
     version = package_dir.name
     manifest = _read_build_manifest(package_dir)
@@ -898,54 +909,68 @@ def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
     intune_app_id: str | None = None
     intune_update_app_id: str | None = None
 
-    if build_types in ("app_only", "both"):
-        # Install entry: steps 4-6
-        install_metadata = _build_app_metadata(
-            config, recipe_path, version, package_path, "app_only", manifest, large_icon
-        )
-        intune_app_id = _upload_single_app(
-            access_token,
-            install_metadata,
-            package_path,
-            intunewin_metadata,
-            existing_apps,
-            recipe_id=app_id,
-            entry=ENTRY_INSTALL,
-            installer_sha256=installer_sha256,
-            step_create=4,
-            step_upload=5,
-            step_commit=6,
-            total_steps=total_steps,
-            force=force,
-        )
+    # The install and update entries upload the same bytes, so the package
+    # is decrypted once, and only if an entry needs uploading at all.
+    with tempfile.TemporaryDirectory() as tmp_dir:
 
-    if build_types in ("update_only", "both"):
-        # Update entry: steps 4-6 (single) or 7-9 (both)
-        step_offset = 6 if build_types == "both" else 3
-        update_metadata = _build_app_metadata(
-            config,
-            recipe_path,
-            version,
-            package_path,
-            "update_only",
-            manifest,
-            large_icon,
-        )
-        intune_update_app_id = _upload_single_app(
-            access_token,
-            update_metadata,
-            package_path,
-            intunewin_metadata,
-            existing_apps,
-            recipe_id=app_id,
-            entry=ENTRY_UPDATE,
-            installer_sha256=installer_sha256,
-            step_create=step_offset + 1,
-            step_upload=step_offset + 2,
-            step_commit=step_offset + 3,
-            total_steps=total_steps,
-            force=force,
-        )
+        @functools.cache
+        def payload() -> Path:
+            return extract_encrypted_payload(package_path, Path(tmp_dir))
+
+        if build_types in ("app_only", "both"):
+            # Install entry: steps 4-6
+            install_metadata = _build_app_metadata(
+                config,
+                recipe_path,
+                version,
+                package_path,
+                ENTRY_INSTALL,
+                manifest,
+                large_icon,
+            )
+            intune_app_id = _upload_single_app(
+                access_token,
+                install_metadata,
+                payload,
+                intunewin_metadata,
+                existing_apps,
+                recipe_id=app_id,
+                entry=ENTRY_INSTALL,
+                installer_sha256=installer_sha256,
+                step_create=4,
+                step_upload=5,
+                step_commit=6,
+                total_steps=total_steps,
+                force=force,
+            )
+
+        if build_types in ("update_only", "both"):
+            # Update entry: steps 4-6 (single) or 7-9 (both)
+            step_offset = 6 if build_types == "both" else 3
+            update_metadata = _build_app_metadata(
+                config,
+                recipe_path,
+                version,
+                package_path,
+                ENTRY_UPDATE,
+                manifest,
+                large_icon,
+            )
+            intune_update_app_id = _upload_single_app(
+                access_token,
+                update_metadata,
+                payload,
+                intunewin_metadata,
+                existing_apps,
+                recipe_id=app_id,
+                entry=ENTRY_UPDATE,
+                installer_sha256=installer_sha256,
+                step_create=step_offset + 1,
+                step_upload=step_offset + 2,
+                step_commit=step_offset + 3,
+                total_steps=total_steps,
+                force=force,
+            )
 
     # Record the publication in deployment state: published version,
     # hash, and Intune app IDs; a matching pending slot is cleared.
@@ -969,5 +994,4 @@ def upload_package(recipe_path: Path, force: bool = False) -> UploadResult:
         intune_app_id=intune_app_id,
         intune_update_app_id=intune_update_app_id,
         package_path=package_path,
-        status="success",
     )

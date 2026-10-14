@@ -159,7 +159,7 @@ Use this when the application is hosted on GitHub with releases.
 apiVersion: napt/v1
 
 name: "Git for Windows"
-id: "napt-git"
+id: "git"
 
 discovery:
   strategy: api_github
@@ -214,7 +214,7 @@ available).
 apiVersion: napt/v1
 
 name: "7-Zip (x64) MSI"
-id: "napt-7zip-x64-msi"
+id: "7zip-x64-msi"
 
 discovery:
   strategy: web_scrape
@@ -270,12 +270,12 @@ Use this when the vendor provides a JSON API with version and download URL.
 apiVersion: napt/v1
 
 name: "Application Name"
-id: "napt-app"
+id: "vendor-app"
 
 discovery:
   strategy: api_json
   api_url: "https://api.vendor.com/latest"
-  version_path: "version"          # JSONPath to version field (e.g., "version" or "data.version")
+  version_path: "version"          # Dotted path to the version (e.g., "version" or "data.version")
   download_url_path: "download_url"
   version_pattern: "v?([0-9.]+)"   # Optional: narrow the version value with a regex
   headers:                         # Optional HTTP headers (e.g., for authentication)
@@ -310,8 +310,9 @@ napt discover recipes/Vendor/app.yaml --verbose
 **What to customize:**
 
 - `api_url`: JSON API endpoint URL
-- `version_path`: JSONPath to version field (e.g., "version" or "data.version")
-- `download_url_path`: JSONPath to download URL field
+- `version_path`: dotted path to the version (e.g., "version", "data.version",
+  or "builds[0].version")
+- `download_url_path`: dotted path to the download URL
 - `headers`: Optional authentication headers
 
 ## Create a recipe for an MSIX installer
@@ -327,7 +328,7 @@ Use this when the application distributes an `.msix` installer.
 apiVersion: napt/v1
 
 name: "Slack"
-id: "napt-slack"
+id: "slack-msix"
 
 discovery:
   strategy: api_json
@@ -373,7 +374,7 @@ strategy (`api_github`, `api_json`, or `web_scrape`).
 apiVersion: napt/v1
 
 name: "Google Chrome"
-id: "napt-chrome"
+id: "google-chrome"
 
 discovery:
   strategy: url_download
@@ -488,7 +489,7 @@ Run these checks on a new recipe, and again after editing one.
 3. **Verify downloaded file:**
    ```bash
    # Installers are filed as downloads/<id>/<version>/<file>
-   ls -lhR downloads/napt-app/
+   ls -lhR downloads/vendor-app/
    ```
 
 4. **Test build:**
@@ -499,7 +500,7 @@ Run these checks on a new recipe, and again after editing one.
 5. **Verify build structure:**
    ```bash
    # Check PSADT files are present
-   ls builds/napt-app/*/packagefiles/Invoke-AppDeployToolkit.ps1
+   ls builds/vendor-app/*/packagefiles/Invoke-AppDeployToolkit.ps1
    ```
 
 6. **Test packaging:**
@@ -510,7 +511,7 @@ Run these checks on a new recipe, and again after editing one.
 7. **Verify .intunewin file:**
    ```bash
    # Check versioned package directory was created
-   ls -lh packages/napt-app/
+   ls -lh packages/vendor-app/
    ```
 
 ## Deploy to Intune
@@ -592,13 +593,12 @@ Uploading package for recipe: /path/to/recipes/Google/chrome.yaml
 ======================================================================
 UPLOAD RESULTS
 ======================================================================
-App ID:          napt-chrome
-App Name:        Google Chrome
-Version:         <version>
+App ID:                 google-chrome
+App Name:               Google Chrome
+Version:                <version>
 Intune Win32 App ID:    <app id>
 Intune Win32 Update ID: <update id>
-Package:         /path/to/packages/napt-chrome/<version>/Invoke-AppDeployToolkit.intunewin
-Status:          success
+Package:                /path/to/packages/google-chrome/<version>/Invoke-AppDeployToolkit.intunewin
 ======================================================================
 
 [SUCCESS] Package uploaded to Intune successfully!
@@ -636,7 +636,7 @@ Override it per recipe in the `intune:` section:
 apiVersion: napt/v1
 
 name: "Google Chrome"
-id: "napt-chrome"
+id: "google-chrome"
 
 discovery:
   strategy: url_download
@@ -787,7 +787,7 @@ Use a 256x256 PNG or JPEG under 700KB for best results in Company Portal.
 
 ```bash
 # The file name must match the recipe id
-cp my-better-icon.png icons/napt-7zip-x64-msi.png
+cp my-better-icon.png icons/7zip-x64-msi.png
 ```
 
 NAPT never overwrites a file in `icons/`.
@@ -861,8 +861,11 @@ It never creates duplicates.
 
 ## Automate NAPT with GitHub Actions
 
-NAPT performs no git or CI operations: it reads and writes files, and your
-pipeline commits them and opens pull requests.
+NAPT never commits, pushes, or opens pull requests: it reads and writes
+files, and your pipeline commits them and opens pull requests.
+(`napt upstream` fetches from other repositories read-only; it writes
+files into your working tree like any other command and never commits
+them.)
 The workflows below gate every change to Intune on a pull request.
 Adapt names, schedules, and branch rules to your org.
 They assume the default `directories.*` paths (`downloads/`, `state/`);
@@ -1448,10 +1451,177 @@ jobs:
   installed, since discover reads the version out of every MSI it
   downloads.
 
-## Share a base recipe between apps
+### Workflow 5: upstream update (opens one PR per changed recipe)
 
-When several recipes differ only in a few fields, put the shared part in
-one file and name it as the `parent` of each app recipe.
+Only needed when the project imports recipes with `napt upstream`.
+The job asks each upstream repository whether a pinned copy has changed,
+then refreshes one recipe per pull request so each can be reviewed and
+merged on its own.
+Nothing here needs Windows.
+
+```yaml
+name: upstream-update
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install napt
+      - name: Open one PR per recipe that changed upstream
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.NAPT_PR_TOKEN }}
+        run: |
+          git config user.name "napt-bot"
+          git config user.email "napt-bot@users.noreply.github.com"
+          napt upstream check --format json > check.json
+          jq -r '.[] | select(.status == "changed") | .override' check.json \
+            > changed.txt
+          # Read from the file, not a pipe, so git and napt cannot consume
+          # the loop's input.
+          while read -r override; do
+            name=$(basename "$override" .override.yaml)
+            branch="upstream/$name"
+            git checkout -q -B "$branch" main
+            napt upstream update "$override"
+            # A refused update (the pinned copy was edited by hand) exits 1
+            # and fails the job here, which is the right outcome.
+            git add upstream upstream.yaml
+            if git diff --cached --quiet; then
+              git checkout -q main
+              continue
+            fi
+            git commit -q -m "chore: Update $name from upstream"
+            git push -f origin "$branch"
+            # The branch is overwritten each run; reuse an open PR for it.
+            gh pr view "$branch" >/dev/null 2>&1 ||
+            gh pr create --head "$branch" --base main \
+              --title "chore: Update $name from upstream" \
+              --body "$(jq -r --arg o "$override" \
+                '.[] | select(.override == $o) |
+                 "Upstream \(.path) moved from \(.old_commit[0:12]) to \(.new_commit[0:12]).\n\nThe diff under upstream/ is the recipe change; upstream.yaml records the new pin."' \
+                check.json)"
+            git checkout -q main
+          done < changed.txt
+```
+
+Notes:
+
+- `napt upstream check --exit-code` is the same scan with exit 1 on any
+  change, for a job that should go red instead of opening PRs.
+- A recipe that disappeared upstream is reported `missing` and never
+  updated; decide by hand whether to `remove` it or point the override at
+  a replacement.
+- A pinned copy edited by hand is reported `modified-locally` and left
+  alone, with exit 1 from `update`; move the edit into the override, or
+  pass `--force` to overwrite it from upstream.
+- Never auto-merge these PRs: an upstream recipe's install block is
+  PowerShell that runs on your endpoints.
+  A PR opened with the default `GITHUB_TOKEN` does not trigger your
+  validate workflow, so use an App token or a PAT in `NAPT_PR_TOKEN`.
+- A private upstream needs credentials before the `check` step; see
+  [Credentials for private repositories](user-guide.md#credentials-for-private-repositories).
+
+## Import recipes from another repository
+
+`napt upstream add` imports recipes from any git repository, pins each as
+a copy under `upstream/`, and writes the overrides that run them.
+How it fits together is in
+[Upstream recipes](user-guide.md#upstream-recipes); these are the steps.
+
+1. Import one recipe.
+   The default branch is used unless you pass `--ref`:
+   ```bash
+   napt upstream add https://github.com/someorg/napt-recipes.git \
+       --path recipes/Google/chrome.yaml
+   ```
+   Three files appear:
+   ```
+   upstream.yaml
+   upstream/github.com/someorg/napt-recipes/recipes/Google/chrome.yaml
+   recipes/Google/chrome.override.yaml
+   ```
+   Keys the recipe may not set are named once:
+   ```
+   [UPSTREAM] WARNING: recipes/Google/chrome.yaml: ignoring keys not allowed from upstream recipes: deployment, intune.build_types
+   ```
+
+2. Or import a directory, leaving some files out.
+   Run with `--dry-run` first to see every override path:
+   ```bash
+   napt upstream add https://github.com/someorg/napt-recipes.git \
+       --path recipes --exclude 'Beta/*' --dry-run
+   ```
+   Overrides mirror the path after the repository's `recipes/` segment.
+   Run the same command again later to pick up recipes the publisher
+   added; ones already imported are skipped (see
+   [Upstream recipes](user-guide.md#upstream-recipes)).
+   A repository without one needs `--dest`:
+   ```bash
+   napt upstream add https://gitlab.com/group/sub/recipes.git \
+       --path apps/tool.yaml --dest recipes/Tools
+   ```
+
+3. Customize in the override, never in the pinned copy:
+   ```yaml
+   # recipes/Google/chrome.override.yaml
+   apiVersion: napt/v1
+   parent: ../../upstream/github.com/someorg/napt-recipes/recipes/Google/chrome.yaml
+   name: "Google Chrome"
+   id: "google-chrome"
+   intune:
+     max_run_time_minutes: 120
+   ```
+   `add` copies the upstream `id`; pass `--id` when it collides with one you
+   already use, or to follow your own scheme.
+   Changing the `id` later creates a new app in Intune, so settle it at
+   import.
+
+4. Validate and run commands against the override as usual:
+   ```bash
+   napt validate recipes/Google/chrome.override.yaml
+   napt discover recipes/Google/chrome.override.yaml
+   ```
+   An edited pinned copy, or one not listed in `upstream.yaml`, fails
+   here with the fix named.
+
+5. See what changed upstream, and take the change:
+   ```bash
+   napt upstream check
+   napt upstream update recipes/Google/chrome.override.yaml
+   ```
+   `check` writes nothing; `update` rewrites the pinned copy and its pin
+   in `upstream.yaml`, so the diff you commit is the recipe diff.
+   With no path, `update` refreshes every changed recipe.
+   [Workflow 5](#workflow-5-upstream-update-opens-one-pr-per-changed-recipe)
+   does this on a schedule, one pull request per recipe.
+
+6. Remove an import when you no longer want it:
+   ```bash
+   napt upstream remove recipes/Google/chrome.override.yaml --delete-override
+   ```
+   Without `--delete-override` the override stays for you to inline.
+
+Private repositories need credentials git can find from any directory; see
+[Credentials for private repositories](user-guide.md#credentials-for-private-repositories).
+
+## Share a local base recipe between apps
+
+When several of your own recipes differ only in a few fields, put the
+shared part in one file (a local parent) and name it as the `parent` of
+each app recipe.
+(An upstream recipe from another repository is imported instead; see the
+section above.)
 
 1. Write the base in a folder outside `recipes/`, so neither the workflows
    nor `napt promote` pick it up as an app.
@@ -1481,7 +1651,7 @@ one file and name it as the `parent` of each app recipe.
    apiVersion: napt/v1
    parent: ../../recipe-bases/chromium-family.yaml
    name: "Google Chrome"
-   id: "napt-chrome"
+   id: "google-chrome"
    discovery:
      url: "https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi"
    ```

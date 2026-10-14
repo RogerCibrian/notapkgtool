@@ -4,6 +4,8 @@
 
 ::: napt.cli.main
 
+::: napt.cli.common
+
 ::: napt.cli.auth
 
 ::: napt.cli.build
@@ -19,5 +21,7 @@
 ::: napt.cli.status
 
 ::: napt.cli.upload
+
+::: napt.cli.upstream
 
 ::: napt.cli.validate

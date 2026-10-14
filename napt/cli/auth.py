@@ -21,26 +21,22 @@ Manages the credential NAPT uses for Intune through the `login`,
 from __future__ import annotations
 
 import argparse
+from typing import TYPE_CHECKING
 
-from napt.auth.credentials import (
-    AuthStatus,
-    get_status as auth_status,
-    load_auth_store,
-    login as auth_login,
-    logout as auth_logout,
-)
-from napt.auth.registration import (
+from napt.auth.spec import (
     APPLICATION_PERMISSIONS,
     BROKER_REDIRECT_TEMPLATE,
     DELEGATED_PERMISSIONS,
     FEDERATED_AUDIENCE_DEFAULT,
     LOCALHOST_REDIRECT,
     SPEC_VERSION,
-    SetupSpec,
-    setup_app_registration,
 )
-from napt.exceptions import AuthError, ConfigError, NetworkError
-from napt.logging import get_logger, set_global_logger
+from napt.cli.common import add_output_flags
+from napt.exceptions import ConfigError
+
+if TYPE_CHECKING:
+    from napt.auth.credentials import AuthStatus
+    from napt.auth.registration import SetupSpec
 
 
 def _print_auth_status(status: AuthStatus) -> None:
@@ -64,6 +60,8 @@ def _print_auth_status(status: AuthStatus) -> None:
 
 def _print_known_tenants() -> None:
     """Lists tenants remembered by 'napt auth login', marking the active one."""
+    from napt.auth.credentials import load_auth_store
+
     try:
         store = load_auth_store()
     except ConfigError:
@@ -92,25 +90,20 @@ def cmd_auth_login(args: argparse.Namespace) -> int:
             tenant IDs and the --no-broker flag.
 
     Returns:
-        Exit code (0 for success, 1 for failure).
+        Exit code (0 for success).
+
+    Note:
+        Failures raise NAPT errors for
+        [run_handler][napt.cli.common.run_handler] to report.
 
     """
-    logger = get_logger(verbose=args.verbose, debug=args.debug)
-    set_global_logger(logger)
+    from napt.auth.credentials import login
 
-    try:
-        status = auth_login(
-            client_id=args.client_id,
-            tenant_id=args.tenant_id,
-            use_broker=not args.no_broker,
-        )
-    except (AuthError, ConfigError) as err:
-        print(f"Authentication error: {err}")
-        if args.verbose or args.debug:
-            import traceback
-
-            traceback.print_exc()
-        return 1
+    status = login(
+        client_id=args.client_id,
+        tenant_id=args.tenant_id,
+        use_broker=not args.no_broker,
+    )
 
     print()
     print(f"[OK] Signed in as {status.account or '(unknown account)'}")
@@ -130,21 +123,16 @@ def cmd_auth_logout(args: argparse.Namespace) -> int:
             debug flags.
 
     Returns:
-        Exit code (0 for success, 1 for failure).
+        Exit code (0 for success).
+
+    Note:
+        Failures raise NAPT errors for
+        [run_handler][napt.cli.common.run_handler] to report.
 
     """
-    logger = get_logger(verbose=args.verbose, debug=args.debug)
-    set_global_logger(logger)
+    from napt.auth.credentials import logout
 
-    try:
-        removed = auth_logout(all_tenants=args.all)
-    except (AuthError, ConfigError) as err:
-        print(f"Authentication error: {err}")
-        if args.verbose or args.debug:
-            import traceback
-
-            traceback.print_exc()
-        return 1
+    removed = logout(all_tenants=args.all)
 
     if removed:
         print(
@@ -159,8 +147,8 @@ def cmd_auth_logout(args: argparse.Namespace) -> int:
 def cmd_auth_status(args: argparse.Namespace) -> int:
     """Handler for 'napt auth status' command.
 
-    Shows which credential NAPT would use right now -- the same resolution
-    'napt upload' performs -- and flags missing Graph permissions.
+    Shows which credential NAPT would use right now (the same resolution
+    'napt upload' performs) and flags missing Graph permissions.
 
     Args:
         args: Parsed command-line arguments containing debug flags.
@@ -168,19 +156,14 @@ def cmd_auth_status(args: argparse.Namespace) -> int:
     Returns:
         Exit code (0 when a credential is available, 1 otherwise).
 
+    Note:
+        Failures raise NAPT errors for
+        [run_handler][napt.cli.common.run_handler] to report.
+
     """
-    logger = get_logger(verbose=args.verbose, debug=args.debug)
-    set_global_logger(logger)
+    from napt.auth.credentials import get_status
 
-    try:
-        status = auth_status()
-    except (AuthError, ConfigError) as err:
-        print(f"Authentication error: {err}")
-        if args.verbose or args.debug:
-            import traceback
-
-            traceback.print_exc()
-        return 1
+    status = get_status()
 
     if status is None:
         print("Not authenticated.")
@@ -234,40 +217,32 @@ def cmd_auth_setup(args: argparse.Namespace) -> int:
             optional name, client ID, federated credential settings, and flags.
 
     Returns:
-        Exit code (0 for success, 1 for failure).
+        Exit code (0 for success, 1 when an existing registration needs
+        --adopt).
+
+    Note:
+        Failures raise NAPT errors for
+        [run_handler][napt.cli.common.run_handler] to report.
 
     """
-    logger = get_logger(verbose=args.verbose, debug=args.debug)
-    set_global_logger(logger)
+    from napt.auth.registration import SetupSpec, setup_app_registration
 
-    try:
-        spec = SetupSpec(
-            tenant_id=args.tenant_id,
-            display_name=args.name,
-            client_id=args.client_id,
-            federated_issuer=args.federated_issuer,
-            federated_subject=args.federated_subject,
-            federated_audience=args.federated_audience,
-            federated_name=args.federated_name,
-            adopt=args.adopt,
-        )
-    except ConfigError as err:
-        print(f"Error: {err}")
-        return 1
+    spec = SetupSpec(
+        tenant_id=args.tenant_id,
+        display_name=args.name,
+        client_id=args.client_id,
+        federated_issuer=args.federated_issuer,
+        federated_subject=args.federated_subject,
+        federated_audience=args.federated_audience,
+        federated_name=args.federated_name,
+        adopt=args.adopt,
+    )
 
     if args.print_only:
         _print_setup_checklist(spec)
         return 0
 
-    try:
-        result = setup_app_registration(spec)
-    except (AuthError, ConfigError, NetworkError) as err:
-        print(f"Error: {err}")
-        if args.verbose or args.debug:
-            import traceback
-
-            traceback.print_exc()
-        return 1
+    result = setup_app_registration(spec)
 
     print()
     if result.needs_adopt:
@@ -378,18 +353,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         action="store_true",
         help="Use the browser even when the OS broker is available",
     )
-    parser_auth_login.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Show progress and high-level status updates",
-    )
-    parser_auth_login.add_argument(
-        "-d",
-        "--debug",
-        action="store_true",
-        help="Show detailed debugging output (implies --verbose)",
-    )
+    add_output_flags(parser_auth_login)
     parser_auth_login.set_defaults(func=cmd_auth_login)
 
     parser_auth_logout = auth_sub.add_parser(
@@ -405,18 +369,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         action="store_true",
         help="Sign out of every remembered tenant",
     )
-    parser_auth_logout.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Show progress and high-level status updates",
-    )
-    parser_auth_logout.add_argument(
-        "-d",
-        "--debug",
-        action="store_true",
-        help="Show detailed debugging output (implies --verbose)",
-    )
+    add_output_flags(parser_auth_logout)
     parser_auth_logout.set_defaults(func=cmd_auth_logout)
 
     parser_auth_status = auth_sub.add_parser(
@@ -430,18 +383,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser_auth_status.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Show progress and high-level status updates",
-    )
-    parser_auth_status.add_argument(
-        "-d",
-        "--debug",
-        action="store_true",
-        help="Show detailed debugging output (implies --verbose)",
-    )
+    add_output_flags(parser_auth_status)
     parser_auth_status.set_defaults(func=cmd_auth_status)
 
     parser_auth_setup = auth_sub.add_parser(
@@ -525,16 +467,5 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         action="store_true",
         help="Print the portal checklist instead of changing anything",
     )
-    parser_auth_setup.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Show progress and high-level status updates",
-    )
-    parser_auth_setup.add_argument(
-        "-d",
-        "--debug",
-        action="store_true",
-        help="Show detailed debugging output (implies --verbose)",
-    )
+    add_output_flags(parser_auth_setup)
     parser_auth_setup.set_defaults(func=cmd_auth_setup)

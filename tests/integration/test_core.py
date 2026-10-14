@@ -33,7 +33,7 @@ class TestEndToEndWorkflow:
         # Create org defaults
         org_defaults = {
             "apiVersion": "napt/v1",
-            "psadt": {"release": "latest", "cache_dir": "cache/psadt"},
+            "psadt": {"release": "latest"},
         }
         org_path = defaults_dir / "org.yaml"
         import yaml
@@ -81,7 +81,6 @@ class TestEndToEndWorkflow:
         assert result.app_name == "Test App"
         assert result.version == "1.2.3"
         assert result.strategy == "url_download"
-        assert result.status == "success"
 
         # Verify file was downloaded into the app's version folder
         downloaded_file = output_dir / "test-app" / "1.2.3" / "installer.msi"

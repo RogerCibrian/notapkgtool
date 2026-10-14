@@ -58,13 +58,12 @@ from typing import Any
 
 from napt.config.loader import (
     collect_recipe_paths,
-    duplicate_recipe_id_message,
     load_effective_config,
+    register_recipe_id,
 )
 from napt.exceptions import ConfigError, StateError
 from napt.files import write_text_atomic
 from napt.logging import get_global_logger
-from napt.state.deployment import deployment_state_path, load_deployment_state
 
 # Deterministic ordering of action types within one app's actions.
 _ACTION_ORDER = {"assign": 0, "promote": 1}
@@ -317,54 +316,28 @@ def load_recipe_configs(recipes: Path) -> dict[str, dict[str, Any]]:
     for path in collect_recipe_paths(recipes):
         config = load_effective_config(path)
         app_id: str = config["id"]
-        if app_id in sources:
-            raise ConfigError(
-                duplicate_recipe_id_message(app_id, sources[app_id], path)
-            )
-        sources[app_id] = path
+        duplicate = register_recipe_id(sources, app_id, path)
+        if duplicate is not None:
+            raise ConfigError(duplicate)
         configs[app_id] = config
     return configs
 
 
-def resolve_state_dir(recipes: Path) -> Path:
-    """Resolves the configured state directory for a plan run.
-
-    ``directories.state`` is org policy (consistent across a project),
-    so the first recipe's effective configuration determines it for a
-    fleet-wide run.
-
-    Args:
-        recipes: A recipe YAML file, or a directory scanned recursively.
-
-    Returns:
-        The configured state directory.
-
-    Raises:
-        ConfigError: If the recipes path is invalid or the first recipe
-            cannot be loaded.
-
-    """
-    first = collect_recipe_paths(recipes)[0]
-    config = load_effective_config(first)
-    return Path(config["directories"]["state"])
-
-
 def plan_promotions(
-    recipes: Path,
-    state_dir: Path | None = None,
+    configs: dict[str, dict[str, Any]],
+    states: dict[str, dict[str, Any]],
     now: datetime | None = None,
 ) -> list[dict[str, Any]]:
-    """Computes promotion actions for a recipe or a directory of recipes.
+    """Computes promotion actions for the apps in a run.
 
-    Loads each recipe's effective configuration, reads its deployment
-    state, and evaluates ring eligibility against the clock. Read-only:
-    neither Intune nor the state files are modified.
+    Evaluates each app's ring eligibility against its deployment state
+    and the clock. Read-only: neither Intune nor the states are modified.
 
     Args:
-        recipes: A recipe YAML file, or a directory scanned recursively.
-        state_dir: Directory holding per-app deployment state files.
-            When omitted, each recipe's ``directories.state`` setting is
-            used (``<state>/deployment``).
+        configs: Effective configurations keyed by recipe id, from
+            [load_recipe_configs][napt.promote.planner.load_recipe_configs].
+        states: Each app's deployment state keyed by recipe id, from
+            [load_deployment_states][napt.state.deployment.load_deployment_states].
         now: Evaluation clock. Defaults to the current UTC time; tests
             pass a fixed value for determinism.
 
@@ -372,9 +345,7 @@ def plan_promotions(
         Action dicts sorted by app id and action type.
 
     Raises:
-        ConfigError: On invalid recipes or an invalid recipes path.
-        StateError: On a corrupted deployment state file or an invalid
-            ring timestamp.
+        StateError: On an invalid ring timestamp.
 
     """
     logger = get_global_logger()
@@ -382,16 +353,8 @@ def plan_promotions(
         now = datetime.now(UTC)
 
     actions: list[dict[str, Any]] = []
-    for config in load_recipe_configs(recipes).values():
-        app_state_dir = (
-            state_dir
-            if state_dir is not None
-            else Path(config["directories"]["state"]) / "deployment"
-        )
-        state = load_deployment_state(
-            deployment_state_path(app_state_dir, config["id"])
-        )
-        app_actions = _plan_app_actions(config, state, now)
+    for config in configs.values():
+        app_actions = _plan_app_actions(config, states[config["id"]], now)
         if app_actions:
             logger.verbose(
                 "PROMOTE",

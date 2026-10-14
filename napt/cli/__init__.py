@@ -28,15 +28,22 @@ Commands:
 
 Each command lives in its own module named after it (`napt/cli/validate.py`
 owns `napt validate`), holding the command's `cmd_*` handlers and a
-`register(subparsers)` hook that adds its parser. `napt/cli/main.py`
-assembles the top-level parser, calls each command's `register`, and
-dispatches to the selected handler.
+`register(subparsers)` hook that adds its parser. `napt/cli/common.py`
+holds what every command shares: the output flags, the logger setup, and
+the one error wrapper. `napt/cli/main.py` assembles the top-level parser,
+calls each command's `register`, and dispatches to the selected handler
+through that wrapper.
+
+A command module imports the subsystem it drives inside its handler, not at
+the top of the module, so building the parser for `napt --help` or
+`napt validate` never loads the Azure or HTTP libraries.
 
 Exit Codes:
 
 - 0: Success
 - 1: Error (configuration, download, or validation failure)
 - 2: Usage error (unknown flag, missing argument)
+- 130: Interrupted with Ctrl-C
 
 Note:
     The CLI uses argparse for command parsing (stdlib, zero dependencies).

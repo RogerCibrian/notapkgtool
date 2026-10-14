@@ -16,16 +16,23 @@ from napt.promote.planner import (
     load_recipe_configs,
     plan_path_for,
     plan_promotions,
-    resolve_state_dir,
     write_plan_files,
 )
 from napt.state.deployment import (
     create_default_deployment_state,
     deployment_state_path,
+    load_deployment_states,
     save_deployment_state,
 )
 
 NOW = datetime(2026, 7, 8, 12, 0, 0, tzinfo=UTC)
+
+
+def _plan(recipes: Path, deployment_dir: Path) -> list[dict[str, Any]]:
+    """Loads the recipes and their state once, then plans, as the command does."""
+    configs = load_recipe_configs(recipes)
+    states = load_deployment_states(deployment_dir, configs)
+    return plan_promotions(configs, states, now=NOW)
 
 
 @pytest.fixture(autouse=True)
@@ -123,7 +130,7 @@ class TestPlanPromotions:
         recipe = _write_recipe(tmp_path, rings=_RINGS)
         state_dir = _write_state(tmp_path, published=None)
 
-        actions = plan_promotions(recipe, state_dir=state_dir, now=NOW)
+        actions = _plan(recipe, state_dir)
 
         assert actions == []
 
@@ -132,7 +139,7 @@ class TestPlanPromotions:
         recipe = _write_recipe(tmp_path, rings=_RINGS)
         state_dir = _write_state(tmp_path, published=_published())
 
-        actions = plan_promotions(recipe, state_dir=state_dir, now=NOW)
+        actions = _plan(recipe, state_dir)
 
         assert actions == [
             {
@@ -160,7 +167,7 @@ class TestPlanPromotions:
         recipe = _write_recipe(tmp_path, install_groups=["All Users"])
         state_dir = _write_state(tmp_path, published=_published())
 
-        actions = plan_promotions(recipe, state_dir=state_dir, now=NOW)
+        actions = _plan(recipe, state_dir)
 
         assert actions == [
             {
@@ -183,14 +190,14 @@ class TestPlanPromotions:
         state_dir = _write_state(
             tmp_path, published=_published(), install_assigned="a" * 64
         )
-        assert plan_promotions(recipe, state_dir=state_dir, now=NOW) == []
+        assert _plan(recipe, state_dir) == []
 
     def test_no_install_groups_plans_no_install_assignment(self, tmp_path):
         """Tests that NAPT assigns nothing unless groups are configured."""
         recipe = _write_recipe(tmp_path)  # no deployment section at all
         state_dir = _write_state(tmp_path, published=_published())
 
-        actions = plan_promotions(recipe, state_dir=state_dir, now=NOW)
+        actions = _plan(recipe, state_dir)
 
         assert actions == []
 
@@ -203,7 +210,7 @@ class TestPlanPromotions:
             install_assigned="a" * 64,  # previous release's assignment
         )
 
-        actions = plan_promotions(recipe, state_dir=state_dir, now=NOW)
+        actions = _plan(recipe, state_dir)
 
         assert [a["type"] for a in actions] == ["assign"]
         assert actions[0]["sha256"] == "b" * 64
@@ -225,7 +232,7 @@ class TestPlanPromotions:
             },
         )
 
-        actions = plan_promotions(recipe, state_dir=state_dir, now=NOW)
+        actions = _plan(recipe, state_dir)
 
         assert actions == []
 
@@ -244,7 +251,7 @@ class TestPlanPromotions:
             },
         )
 
-        actions = plan_promotions(recipe, state_dir=state_dir, now=NOW)
+        actions = _plan(recipe, state_dir)
 
         assert actions == [
             {
@@ -282,7 +289,7 @@ class TestPlanPromotions:
             },
         )
 
-        actions = plan_promotions(recipe, state_dir=state_dir, now=NOW)
+        actions = _plan(recipe, state_dir)
 
         assert actions == []
 
@@ -305,7 +312,7 @@ class TestPlanPromotions:
             },
         )
 
-        actions = plan_promotions(recipe, state_dir=state_dir, now=NOW)
+        actions = _plan(recipe, state_dir)
 
         assert actions == []
 
@@ -324,7 +331,7 @@ class TestPlanPromotions:
             },
         )
 
-        actions = plan_promotions(recipe, state_dir=state_dir, now=NOW)
+        actions = _plan(recipe, state_dir)
 
         assert len(actions) == 1
         assert actions[0]["type"] == "promote"
@@ -337,7 +344,7 @@ class TestPlanPromotions:
         recipe = _write_recipe(tmp_path, rings=_RINGS, install_groups=["All Users"])
         state_dir = _write_state(tmp_path, published=_published(update_id=None))
 
-        actions = plan_promotions(recipe, state_dir=state_dir, now=NOW)
+        actions = _plan(recipe, state_dir)
 
         assert [a["type"] for a in actions] == ["assign"]
 
@@ -348,7 +355,7 @@ class TestPlanPromotions:
         _write_state(tmp_path, app_id="zeta-app", published=_published())
         state_dir = _write_state(tmp_path, app_id="alpha-app", published=_published())
 
-        actions = plan_promotions(tmp_path / "recipes", state_dir=state_dir, now=NOW)
+        actions = _plan(tmp_path / "recipes", state_dir)
 
         assert [a["app_id"] for a in actions] == ["alpha-app", "zeta-app"]
 
@@ -368,31 +375,28 @@ class TestPlanPromotions:
         )
 
         with pytest.raises(StateError, match="entered_at"):
-            plan_promotions(recipe, state_dir=state_dir, now=NOW)
+            _plan(recipe, state_dir)
 
     def test_missing_recipes_path_raises(self, tmp_path):
         """Tests that a nonexistent recipes path raises ConfigError."""
         with pytest.raises(ConfigError, match="not found"):
-            plan_promotions(tmp_path / "nope", state_dir=tmp_path, now=NOW)
+            _plan(tmp_path / "nope", tmp_path)
 
-    def test_omitted_state_dir_uses_recipe_config(self, tmp_path, monkeypatch):
-        """Tests that directories.state from config applies without a flag."""
-        monkeypatch.chdir(tmp_path)
+    def test_plans_from_the_states_given_without_reading_disk(self, tmp_path):
+        """Tests that the planner works from the loaded states alone, so a
+        run shares one read of each state file with the other steps."""
         recipe = _write_recipe(tmp_path, rings=_RINGS)
-        # Point the recipe's directories.state at a custom location
-        data = yaml.safe_load(recipe.read_text(encoding="utf-8"))
-        data["directories"] = {"state": "customstate"}
-        recipe.write_text(yaml.dump(data), encoding="utf-8")
-
-        deployment_dir = tmp_path / "customstate" / "deployment"
+        configs = load_recipe_configs(recipe)
         state = create_default_deployment_state()
         state["published"] = _published()
-        save_deployment_state(state, deployment_state_path(deployment_dir, "test-app"))
 
-        actions = plan_promotions(recipe, state_dir=None, now=NOW)
+        with patch(
+            "napt.state.deployment.load_deployment_state",
+            side_effect=AssertionError("state read from disk"),
+        ):
+            actions = plan_promotions(configs, {"test-app": state}, now=NOW)
 
-        assert len(actions) == 1
-        assert actions[0]["type"] == "promote"
+        assert [a["type"] for a in actions] == ["promote"]
 
 
 class TestLoadRecipeConfigs:
@@ -433,26 +437,7 @@ class TestLoadRecipeConfigs:
         _write_state(tmp_path, published=_published())
 
         with pytest.raises(ConfigError, match="test-app"):
-            plan_promotions(tmp_path / "recipes", now=NOW)
-
-
-class TestResolveStateDir:
-    """Tests for state directory resolution from configuration."""
-
-    def test_resolves_configured_state_dir(self, tmp_path):
-        """Tests that directories.state is read from the first recipe."""
-        recipe = _write_recipe(tmp_path)
-        data = yaml.safe_load(recipe.read_text(encoding="utf-8"))
-        data["directories"] = {"state": "customstate"}
-        recipe.write_text(yaml.dump(data), encoding="utf-8")
-
-        assert resolve_state_dir(recipe) == Path("customstate")
-
-    def test_default_state_dir(self, tmp_path):
-        """Tests that the built-in default resolves to state."""
-        recipe = _write_recipe(tmp_path)
-
-        assert resolve_state_dir(recipe) == Path("state")
+            _plan(tmp_path / "recipes", tmp_path / "state" / "deployment")
 
 
 def _action(app_id: str = "a") -> dict[str, Any]:

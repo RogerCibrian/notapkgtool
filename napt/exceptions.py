@@ -38,13 +38,13 @@ class ConfigError(NAPTError):
     This exception is raised when there are problems with:
 
     - YAML parse errors (syntax errors, invalid structure)
-    - Missing required configuration fields (e.g., no apps defined, missing
-        'discovery.strategy' field)
+    - Missing required configuration fields (e.g., no 'name', no
+        'discovery.strategy')
     - Invalid strategy configuration (unknown strategy name, invalid strategy
         parameters)
     - Missing recipe files (file not found)
-    - Recipe validation failures (invalid recipe structure, missing required
-        app fields)
+    - Recipe validation failures (wrong field types, values out of range)
+    - A configured path that does not exist (e.g., the brand pack folder)
 
     Example:
         Catching configuration errors:
@@ -73,6 +73,10 @@ class NetworkError(NAPTError):
     - Network-related version extraction errors (API response parsing
         failures)
 
+    Attributes:
+        status_code: The HTTP status of the failed response, when the error
+            came from one; None for a transport failure or any other cause.
+
     Example:
         Catching network errors:
             ```python
@@ -85,7 +89,15 @@ class NetworkError(NAPTError):
             ```
     """
 
-    pass
+    def __init__(self, message: str, *, status_code: int | None = None) -> None:
+        """Creates the error with its message and, when known, the HTTP status.
+
+        Args:
+            message: What failed, for the user.
+            status_code: The HTTP status of the failed response, if any.
+        """
+        super().__init__(message)
+        self.status_code = status_code
 
 
 class PackagingError(NAPTError):
@@ -123,11 +135,13 @@ class StateError(NAPTError):
     """Raised for persisted-state integrity errors.
 
     This exception is raised when NAPT's own persisted state (the
-    deployment state files under ``state/``) is unreadable or invalid:
+    deployment state and plan files under ``state/``) is unreadable or
+    invalid:
 
-    - Corrupted deployment state files (invalid JSON)
+    - Corrupted deployment state or plan files (invalid JSON, wrong shape)
     - Invalid deployment state fields (e.g., an unparseable ring
-        ``entered_at`` timestamp)
+        ``entered_at`` timestamp, or a recorded version that cannot be used
+        as a folder name)
 
     Deployment state is authoritative and never auto-replaced; the error
     message says how to recover.

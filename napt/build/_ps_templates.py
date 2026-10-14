@@ -15,8 +15,9 @@
 """PowerShell template loader for build script generation.
 
 Loads .ps1 template files from the templates/ directory, resolves
-# <include filename> directives, then substitutes $Napt* PowerShell
-variables with caller-supplied values via string replacement.
+# <include filename> directives, substitutes $Napt* PowerShell variables
+with caller-supplied values via string replacement, and writes the result
+with the encoding Intune expects.
 
 Templates are written as valid PowerShell with $Napt*-prefixed variables
 as placeholders. Python replaces these with concrete values at build time.
@@ -26,6 +27,10 @@ from __future__ import annotations
 
 from pathlib import Path
 import re
+
+from napt.exceptions import PackagingError
+from napt.logging import get_global_logger
+from napt.powershell import PS_SCRIPT_ENCODING
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
 _INCLUDE_RE = re.compile(r"^# <include (.+)>$", re.MULTILINE)
@@ -91,3 +96,32 @@ def substitute_ps_template(template: str, substitutions: dict[str, str]) -> str:
         )
 
     return result
+
+
+def write_ps_script(script: str, output_path: Path, *, prefix: str, kind: str) -> Path:
+    """Writes a rendered script with the encoding Intune's script runner expects.
+
+    Args:
+        script: The rendered script text.
+        output_path: Where to write it; parent folders are created.
+        prefix: Log prefix for the stage ("DETECTION" or "REQUIREMENTS").
+        kind: The script's role, for the error message ("detection" or
+            "requirements").
+
+    Returns:
+        The written path.
+
+    Raises:
+        PackagingError: If the script file cannot be written.
+    """
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_bytes(script.encode(PS_SCRIPT_ENCODING))
+    except OSError as err:
+        raise PackagingError(
+            f"Cannot write {kind} script {output_path}: {err}"
+        ) from err
+    get_global_logger().verbose(
+        prefix, f"{kind.capitalize()} script written to: {output_path}"
+    )
+    return output_path

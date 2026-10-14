@@ -21,7 +21,16 @@ import yaml
 
 from napt.config.defaults import DEFAULT_CONFIG
 from napt.config.loader import _deep_merge_dicts
+from napt.logging import get_global_logger, set_global_logger
 from napt.upload.intunewin import IntunewinMetadata
+
+
+@pytest.fixture(autouse=True)
+def _restore_global_logger():
+    """Puts back whatever logger a test replaced, so verbosity never leaks."""
+    previous = get_global_logger()
+    yield
+    set_global_logger(previous)
 
 
 @pytest.fixture

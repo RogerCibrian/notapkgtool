@@ -38,7 +38,8 @@ Note:
     Icon extraction is best-effort by design. The public entry point
     [extract_icon_png][napt.build.icons.extract_icon_png] never raises; a
     failure is reported through the returned result so the build can warn
-    and continue.
+    and continue. [ensure_app_icon][napt.build.icons.ensure_app_icon] is the
+    build step that keeps one icon per app in the icons directory.
 
 """
 
@@ -46,31 +47,33 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass
-import os
 from pathlib import Path
 import shutil
 import struct
 import subprocess
 import sys
 import tempfile
+from typing import Any
 import xml.etree.ElementTree as ET
 import zipfile
 
 from napt.exceptions import PackagingError
-from napt.powershell import ps_single_quote
+from napt.graph.intune import MAX_ICON_BYTES
+from napt.logging import get_global_logger
+from napt.powershell import ps_single_quote, run_powershell_lines
+from napt.versioning.msix import MANIFEST_NS
 
 # Frame selection policy: PNG-encoded frames only, at least MIN_ICON_PX wide,
-# at most MAX_ICON_BYTES on disk (Intune rejects icons over 750KB), preferring
-# the frame closest to PREFERRED_ICON_PX from above.
+# at most MAX_ICON_BYTES on disk (Intune's limit), preferring the frame
+# closest to PREFERRED_ICON_PX from above.
 MIN_ICON_PX = 128
 PREFERRED_ICON_PX = 256
-MAX_ICON_BYTES = 700_000
 
 _PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 _ICO_MAGIC = b"\x00\x00\x01\x00"
 
-# MSIX manifest XML namespaces
-_MANIFEST_NS = "http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+# MSIX manifest XML namespace for the uap-prefixed elements; the foundation
+# namespace is MANIFEST_NS from napt.versioning.msix.
 _UAP_NS = "http://schemas.microsoft.com/appx/manifest/uap/windows10"
 
 # PE resource type IDs
@@ -98,13 +101,6 @@ class IconExtraction:
     detail: str
 
 
-def _get_logger():
-    """Returns the global logger via lazy import."""
-    from napt.logging import get_global_logger
-
-    return get_global_logger()
-
-
 def extract_icon_png(installer_path: str | Path) -> IconExtraction:
     """Extracts the best available PNG icon from an installer file.
 
@@ -128,7 +124,7 @@ def extract_icon_png(installer_path: str | Path) -> IconExtraction:
             ```
 
     """
-    logger = _get_logger()
+    logger = get_global_logger()
     path = Path(installer_path)
     suffix = path.suffix.lower()
     logger.verbose("BUILD", f"Extracting icon from: {path.name}")
@@ -498,8 +494,8 @@ def _extract_from_msi(msi_path: Path) -> IconExtraction:
     """Extracts an icon from an MSI, trying the Icon table then the contents.
 
     Tier A reads the MSI Icon table (preferring the ARPPRODUCTICON row).
-    If that yields no qualifying frame — including when the Icon table
-    backend itself fails — tier B performs an administrative extract of
+    If that yields no qualifying frame, including when the Icon table
+    backend itself fails, tier B performs an administrative extract of
     the MSI and scans the contained executables.
 
     Args:
@@ -509,13 +505,13 @@ def _extract_from_msi(msi_path: Path) -> IconExtraction:
         Extraction outcome; on failure the detail combines both tiers'
             causes.
     """
-    logger = _get_logger()
+    logger = get_global_logger()
     tier_a_detail = "no Icon table in MSI"
     arp_icon = ""
     blobs: dict[str, bytes] = {}
     try:
         arp_icon, blobs = _msi_icon_blobs(msi_path)
-    except (PackagingError, NotImplementedError) as err:
+    except PackagingError as err:
         logger.debug("BUILD", f"Icon table read failed: {err!r}")
         tier_a_detail = f"Icon table read failed ({err})"
     largest = 0
@@ -550,19 +546,17 @@ def _msi_icon_blobs(msi_path: Path) -> tuple[str, dict[str, bytes]]:
             the MSI has no Icon table).
 
     Raises:
-        PackagingError: If the backend subprocess fails.
-        NotImplementedError: If no extraction backend is available on this
-            system.
+        PackagingError: If the backend subprocess fails, or no backend is
+            available on this host.
     """
     if sys.platform.startswith("win"):
         with tempfile.TemporaryDirectory(prefix="napt-icon-") as tmp:
             return _msi_icon_blobs_windows(msi_path, Path(tmp))
     if shutil.which("msiinfo"):
         return _msi_icon_blobs_msiinfo(msi_path)
-    raise NotImplementedError(
-        "MSI icon extraction is not available on this host. "
-        "On Windows, ensure PowerShell is available. "
-        "On Linux/macOS, install 'msitools'."
+    raise PackagingError(
+        "MSI icon extraction needs msitools on this host; install the "
+        "'msitools' package."
     )
 
 
@@ -587,7 +581,7 @@ def _msi_icon_blobs_windows(
     Raises:
         PackagingError: If the PowerShell subprocess fails or times out.
     """
-    logger = _get_logger()
+    logger = get_global_logger()
     logger.debug("BUILD", "Trying backend: PowerShell COM (Database.Export)...")
     quoted_msi = ps_single_quote(str(msi_path))
     quoted_dir = ps_single_quote(str(export_dir))
@@ -614,40 +608,17 @@ $utf8 = New-Object System.Text.UTF8Encoding $false
     $env:NAPT_ICON_OUT, [string[]]@($arpIcon, $marker), $utf8
 )
 """
-    # PowerShell writes captured stdout in the console's OEM code page,
-    # which Python would decode as the locale code page and mangle every
-    # non-ASCII character of the icon name, so the values go through a
-    # UTF-8 file instead. Its path travels in an environment variable.
-    with tempfile.NamedTemporaryFile(
-        prefix="napt-icon-", suffix=".txt", delete=False
-    ) as handle:
-        out_path = Path(handle.name)
-    try:
-        subprocess.run(
-            ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_script],
-            check=True,
-            capture_output=True,
-            text=True,
-            errors="replace",
+    # The icon name comes back through a UTF-8 file, never stdout (see
+    # run_powershell_lines). The script always writes two lines.
+    arp_icon, marker = (
+        line.strip()
+        for line in run_powershell_lines(
+            ps_script,
+            out_var="NAPT_ICON_OUT",
             timeout=30,
-            env={**os.environ, "NAPT_ICON_OUT": str(out_path)},
-        )
-        lines = out_path.read_text(encoding="utf-8-sig").splitlines()
-    except subprocess.CalledProcessError as err:
-        stderr_output = err.stderr if err.stderr else "No stderr captured"
-        raise PackagingError(
-            f"PowerShell MSI icon export failed (exit {err.returncode}). "
-            f"stderr: {stderr_output}"
-        ) from err
-    except subprocess.TimeoutExpired:
-        raise PackagingError("PowerShell MSI icon export timed out") from None
-    except OSError as err:
-        raise PackagingError(f"PowerShell MSI icon export failed: {err}") from err
-    finally:
-        out_path.unlink(missing_ok=True)
-
-    arp_icon = lines[0].strip() if lines else ""
-    marker = lines[1].strip() if len(lines) > 1 else ""
+            what="PowerShell MSI icon export",
+        )[:2]
+    )
     if marker == _NO_ICON_TABLE_MARKER:
         return arp_icon, {}
 
@@ -711,7 +682,7 @@ def _msi_icon_blobs_msiinfo(msi_path: Path) -> tuple[str, dict[str, bytes]]:
     Raises:
         PackagingError: If reading the Property table or a stream fails.
     """
-    logger = _get_logger()
+    logger = get_global_logger()
     logger.debug("BUILD", "Trying backend: msiinfo (msitools)...")
     msiinfo_bin = shutil.which("msiinfo")
     if not msiinfo_bin:
@@ -802,7 +773,7 @@ def _msi_cab_icons(msi_path: Path) -> IconExtraction:
     Returns:
         Extraction outcome; failures report the extraction or scan cause.
     """
-    logger = _get_logger()
+    logger = get_global_logger()
     with tempfile.TemporaryDirectory(prefix="napt-msiadmin-") as tmp:
         extract_dir = Path(tmp)
         try:
@@ -933,9 +904,9 @@ def _msix_logo_candidates(root: ET.Element) -> list[str]:
         Zip-relative logo paths, deduplicated, in priority order.
     """
     candidates: list[str] = []
-    applications = root.find(f"{{{_MANIFEST_NS}}}Applications")
+    applications = root.find(f"{{{MANIFEST_NS}}}Applications")
     if applications is not None:
-        for application in applications.findall(f"{{{_MANIFEST_NS}}}Application"):
+        for application in applications.findall(f"{{{MANIFEST_NS}}}Application"):
             visual = application.find(f"{{{_UAP_NS}}}VisualElements")
             if visual is None:
                 continue
@@ -944,9 +915,9 @@ def _msix_logo_candidates(root: ET.Element) -> list[str]:
                 if value and not value.startswith("ms-resource:"):
                     candidates.append(value.replace("\\", "/"))
             break
-    properties = root.find(f"{{{_MANIFEST_NS}}}Properties")
+    properties = root.find(f"{{{MANIFEST_NS}}}Properties")
     if properties is not None:
-        logo = properties.find(f"{{{_MANIFEST_NS}}}Logo")
+        logo = properties.find(f"{{{MANIFEST_NS}}}Logo")
         if logo is not None and logo.text and not logo.text.startswith("ms-resource:"):
             candidates.append(logo.text.strip().replace("\\", "/"))
     return list(dict.fromkeys(candidates))
@@ -983,3 +954,80 @@ def _msix_asset_variants(
         if width:
             triples.append((data, width, entry_name))
     return triples
+
+
+def ensure_app_icon(config: dict[str, Any], installer_file: Path, app_id: str) -> None:
+    """Extracts the app icon from the installer into the icons directory.
+
+    Best-effort side task that never raises: a failed extraction warns and
+    the build continues. Skipped when intune.logo_path is set (the explicit
+    icon wins at upload) or when the icon file already exists (users may
+    drop curated replacements into the icons directory; NAPT never
+    overwrites them).
+
+    A failed extraction is recorded in a ``{app_id}.no-icon`` marker so
+    expensive MSI extraction is not repeated every build. The marker
+    invalidates itself when the installer file changes and is removed on a
+    successful extraction.
+
+    Args:
+        config: Merged effective configuration.
+        installer_file: Path to the downloaded installer.
+        app_id: Recipe id; the icon is written to
+            ``{directories.icons}/{app_id}.png``.
+    """
+    logger = get_global_logger()
+
+    if config["intune"].get("logo_path"):
+        logger.info("BUILD", "Skipping icon extraction: intune.logo_path is set")
+        return
+
+    icons_dir = Path(config["directories"]["icons"])
+    icon_path = icons_dir / f"{app_id}.png"
+    if icon_path.exists():
+        logger.info("BUILD", f"Skipping icon extraction: {icon_path} already exists")
+        return
+
+    marker_path = icons_dir / f"{app_id}.no-icon"
+    stat = installer_file.stat()
+    fingerprint = f"{installer_file.name}|{stat.st_size}|{stat.st_mtime_ns}"
+    if marker_path.exists():
+        try:
+            marker_matches = (
+                marker_path.read_text(encoding="utf-8").strip() == fingerprint
+            )
+        except OSError:
+            marker_matches = False
+        if marker_matches:
+            logger.info(
+                "BUILD",
+                "Skipping icon extraction: no icon was found in this "
+                "installer previously",
+            )
+            return
+
+    result = extract_icon_png(installer_file)
+    if result.png is None:
+        try:
+            icons_dir.mkdir(parents=True, exist_ok=True)
+            marker_path.write_text(fingerprint, encoding="utf-8")
+        except OSError:
+            pass
+        logger.warning(
+            "BUILD",
+            f"No app icon extracted from {installer_file.name}: {result.detail}. "
+            f"The Intune app entry will be created without a logo. Place a PNG "
+            f"at {icon_path} or set intune.logo_path to provide an icon "
+            f"manually.",
+        )
+        return
+
+    try:
+        icon_path.parent.mkdir(parents=True, exist_ok=True)
+        icon_path.write_bytes(result.png)
+        marker_path.unlink(missing_ok=True)
+    except OSError as err:
+        logger.warning("BUILD", f"Could not write app icon to {icon_path}: {err}")
+        return
+    logger.info("BUILD", f"Extracted app icon ({result.width}px): {icon_path}")
+    logger.verbose("BUILD", f"Icon source: {result.detail}")

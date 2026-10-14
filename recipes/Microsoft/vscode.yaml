@@ -1,7 +1,7 @@
 apiVersion: napt/v1
 
 name: "Visual Studio Code"
-id: "napt-vscode"
+id: "microsoft-vscode"
 
 # VS Code publishes a JSON endpoint for each update channel and platform.
 # The endpoint returns productVersion (e.g., "1.97.0") and a direct

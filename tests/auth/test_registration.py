@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import FrozenInstanceError
 import importlib.metadata
 from unittest.mock import patch
 
@@ -11,6 +12,7 @@ from napt.auth import credentials, registration
 from napt.auth.credentials import AuthConfig, AuthStore
 from napt.auth.registration import SetupSpec, setup_app_registration
 from napt.exceptions import AuthError, ConfigError, NetworkError
+from napt.graph.client import GRAPH_BASE
 
 GRAPH_SP_ID = "graph-sp"
 ROLE_IDS = {"DeviceManagementApps.ReadWrite.All": "role-dm", "Group.Read.All": "role-g"}
@@ -73,13 +75,13 @@ class FakeGraph:
     """Routes graph_request calls to canned responses and records writes."""
 
     def __init__(self, responses: dict[tuple[str, str], dict | list[dict]]):
-        # Keys are (method, path-after-v1.0 up to '?'); values are a dict, or a
-        # list of dicts returned in sequence for repeated calls.
+        # Keys are (method, path after the Graph base up to '?'); values are a
+        # dict, or a list of dicts returned in sequence for repeated calls.
         self.responses = responses
         self.calls: list[tuple[str, str, dict | None]] = []
 
     def __call__(self, method, url, context, headers, json=None, **kwargs):
-        path = url.replace(registration._GRAPH_V1, "").split("?")[0]
+        path = url.replace(GRAPH_BASE, "").split("?")[0]
         self.calls.append((method, path, json))
         key = (method, path)
         if key not in self.responses:
@@ -173,7 +175,7 @@ def test_setup_creates_everything_in_a_fresh_tenant(user_dir, bootstrap) -> None
 
     result = _run(graph, SetupSpec(tenant_id="tid"))
 
-    assert result.created is True
+    assert result.changes[0].startswith("Created app registration")
     assert result.client_id == "new-cid"
     bootstrap.assert_called_once_with("tid")
 
@@ -258,7 +260,6 @@ def test_setup_is_a_no_op_on_a_complete_registration(user_dir, bootstrap) -> Non
 
     result = _run(graph, SetupSpec(tenant_id="tid"))
 
-    assert result.created is False
     assert result.changes == []
     assert graph.writes() == []
 
@@ -470,6 +471,38 @@ def test_bootstrap_failure_is_an_auth_error(user_dir) -> None:
 # ---------------------------------------------------------------------------
 
 
+def test_replication_wait_raises_other_errors_at_once() -> None:
+    """Tests that a failure other than 404 is not retried as replication lag."""
+    with (
+        patch(
+            "napt.auth.registration._post",
+            side_effect=NetworkError("ctx: HTTP 500", status_code=500),
+        ) as post,
+        patch("napt.auth.registration.time.sleep") as sleep,
+        pytest.raises(NetworkError, match="HTTP 500"),
+    ):
+        registration._post_after_replication("t", "/x", {}, "ctx")
+
+    assert post.call_count == 1
+    sleep.assert_not_called()
+
+
+def test_replication_wait_gives_up_after_the_last_attempt() -> None:
+    """Tests that a 404 on every attempt surfaces after the final try."""
+    with (
+        patch(
+            "napt.auth.registration._post",
+            side_effect=NetworkError("ctx: HTTP 404", status_code=404),
+        ) as post,
+        patch("napt.auth.registration.time.sleep") as sleep,
+        pytest.raises(NetworkError, match="HTTP 404"),
+    ):
+        registration._post_after_replication("t", "/x", {}, "ctx")
+
+    assert post.call_count == registration._REPLICATION_ATTEMPTS
+    assert sleep.call_count == registration._REPLICATION_ATTEMPTS - 1
+
+
 def test_consent_retries_until_service_principal_replicates(
     user_dir, bootstrap
 ) -> None:
@@ -477,11 +510,11 @@ def test_consent_retries_until_service_principal_replicates(
     attempts = {"n": 0}
 
     def flaky_graph(method, url, context, headers, json=None, **kwargs):
-        path = url.replace(registration._GRAPH_V1, "").split("?")[0]
+        path = url.replace(GRAPH_BASE, "").split("?")[0]
         if (method, path) == ("POST", "/servicePrincipals/sp/appRoleAssignments"):
             attempts["n"] += 1
             if attempts["n"] == 1:
-                raise NetworkError(f"{context}: HTTP 404\nnot found")
+                raise NetworkError(f"{context}: HTTP 404\nnot found", status_code=404)
             return {}
         return FakeGraph(
             {
@@ -504,7 +537,7 @@ def test_consent_retries_until_service_principal_replicates(
     # Second /servicePrincipals GET must return the NAPT SP; FakeGraph above is
     # rebuilt per call, so answer it explicitly.
     def graph(method, url, context, headers, json=None, **kwargs):
-        path = url.replace(registration._GRAPH_V1, "").split("?")[0]
+        path = url.replace(GRAPH_BASE, "").split("?")[0]
         if (method, path) == ("GET", "/servicePrincipals") and "appId eq 'cid'" in url:
             return {"value": [{"id": "sp"}]}
         return flaky_graph(method, url, context, headers, json, **kwargs)
@@ -719,10 +752,20 @@ def test_setup_restamps_outdated_spec(user_dir, bootstrap) -> None:
 
     result = _run(graph, SetupSpec(tenant_id="tid"))
 
-    assert result.previous_spec == 0
     assert result.adopted is False
+    assert any(c.startswith("Stamped internal notes") for c in result.changes)
     patch = next(
         j for m, p, j in graph.writes() if (m, p) == ("PATCH", "/applications/obj")
     )
     assert patch is not None and list(patch) == ["notes"]
     assert f"spec={registration.SPEC_VERSION}" in patch["notes"]
+
+
+def test_setup_result_is_frozen(user_dir, bootstrap) -> None:
+    """Tests that the result is built once, after the run, and cannot change."""
+    graph = FakeGraph(_existing_tenant_responses(_complete_app()))
+
+    result = _run(graph, SetupSpec(tenant_id="tid"))
+
+    with pytest.raises(FrozenInstanceError):
+        result.client_id = "other"  # type: ignore[misc]

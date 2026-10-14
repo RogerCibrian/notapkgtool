@@ -69,12 +69,21 @@ recipes whose pattern (or `api_json` value) keeps a prefix.
    single installer found in a version folder (`downloads/{app_id}/{version}/`)
    is used; more than one stops the build, and a file placed directly in
    `downloads/{app_id}/` is not found.
-3. **Confirm version** - The version is the name of the download folder.
-   For an MSI or MSIX, build reads the installer's own version and refuses to
-   continue if it differs from the folder, since that means a file was moved
-   by hand.
+3. **Inspect installer** - The version is the name of the download folder.
+   For an MSI or MSIX, build reads the installer's metadata once and refuses
+   to continue if its version differs from the folder, since that means a
+   file was moved by hand; the metadata also supplies the detection name and
+   architecture.
+   For an EXE, the recipe must supply `intune.detection.display_name`,
+   `intune.detection.architecture`, and both `psadt.install` and
+   `psadt.uninstall`.
+   Every one of these checks runs before anything is written, so a failing
+   recipe leaves an existing build of that version untouched.
 4. **Get PSADT release** - Downloads PSADT Template_v4 from GitHub into
-   `cache/psadt/{version}/` if not already cached.
+   `cache/psadt/{version}/` (under `directories.cache`) if not already
+   cached.
+   The GitHub API calls send `GITHUB_TOKEN` from the environment when it is
+   set, since unauthenticated calls share a limit of 60 per hour per address.
 5. **Create build directory** - Creates `builds/{app_id}/{version}/`.
 6. **Copy PSADT template** - Copies the cached template into `packagefiles/`
    unchanged (see [Directory structure](#directory-structure)).
@@ -99,6 +108,7 @@ recipes whose pattern (or `api_json` value) keeps a prefix.
    (if configured):
     - Reads `psadt.brand_pack` (usually set in `org.yaml`; a relative path
       resolves against `defaults/`).
+      A configured path that does not exist fails the build.
     - Replaces files in `Assets/` (AppIcon.png, Banner.Classic.png, and so
       on).
     - Uses pattern matching to find source files in the brand pack directory.
@@ -235,7 +245,7 @@ Scripts are saved as siblings to the `packagefiles/` directory and are not
 included in the `.intunewin` package:
 
 ```
-builds/napt-chrome/144.0.7559.110/
+builds/google-chrome/144.0.7559.110/
   ├── packagefiles/                                 # PSADT package (packaged into .intunewin)
   │   └── ...
   ├── Google-Chrome_144.0.7559.110-Detection.ps1    # Detection script
@@ -305,8 +315,8 @@ To replace or pin an icon, see
    Microsoft's GitHub repository if not already cached.
    The release is controlled by `intunewin.release` in `defaults/org.yaml`
    (default: `"latest"`).
-   The tool is cached under `cache/tools/{version}/`, so each pinned release
-   is stored independently.
+   The tool is cached under `cache/intunewin/{version}/` (under
+   `directories.cache`), so each pinned release is stored independently.
 4. **Create package** - Replaces `packages/{app_id}/{version}/` and runs
    `IntuneWinAppUtil.exe` into it:
     - Input: the build's `packagefiles/` subdirectory (PSADT structure)
@@ -627,20 +637,20 @@ After a complete workflow, the project holds:
 cache/
   ├── psadt/
   │   └── 4.1.7/                           # PSADT template, downloaded by napt build
-  └── tools/
+  └── intunewin/
       └── <version>/                       # IntuneWinAppUtil.exe, downloaded by napt package
 
 icons/
-  └── napt-chrome.png                      # Extracted by napt build, read by napt upload
+  └── google-chrome.png                   # Extracted by napt build, read by napt upload
 
 downloads/
-  └── napt-chrome/
+  └── google-chrome/
       ├── .download.json                   # What the last discover run resolved
       └── 142.0.7444.163/
           └── googlechromestandaloneenterprise64.msi
 
 builds/
-  └── napt-chrome/
+  └── google-chrome/
       └── 142.0.7444.163/
           ├── packagefiles/                # PSADT package contents
           │   ├── PSAppDeployToolkit/      # PSADT module (from template)
@@ -658,7 +668,7 @@ builds/
           └── build-manifest.json              # Installer hash and metadata
 
 packages/
-  └── napt-chrome/
+  └── google-chrome/
       └── 142.0.7444.163/                              # One version kept at a time
           ├── Invoke-AppDeployToolkit.intunewin        # Encrypted package
           ├── Google-Chrome_142.0.7444.163-Detection.ps1    # Copied by napt package
@@ -667,9 +677,9 @@ packages/
 
 state/
   ├── deployment/
-  │   └── napt-chrome.json                 # Deployment state (authoritative)
+  │   └── google-chrome.json              # Deployment state (authoritative)
   └── plans/
-      └── napt-chrome.json                 # Promotion plan, written by napt promote plan
+      └── google-chrome.json              # Promotion plan, written by napt promote plan
 ```
 
 ## Commands reference
@@ -693,9 +703,12 @@ napt init [DIRECTORY] [OPTIONS]
 
 Validates recipe syntax and configuration without making network calls.
 Checks the effective configuration (`defaults/org.yaml`, vendor defaults,
-parent, recipe): YAML syntax, required fields, strategy configuration, and
-that every `${VAR}` a recipe sends is declared under `secrets` and bound to
-the request host.
+parent, recipe): YAML syntax, required fields, strategy configuration, the
+type, allowed values, and range of every documented field, and that every
+`${VAR}` a recipe sends is declared under `secrets` and bound to the request
+host.
+A key that no section documents is a warning naming the closest known key,
+so a misspelled field is reported instead of silently taking its default.
 Given a directory, checks every recipe under it and reports two files that
 resolve to the same id.
 Build-time requirements such as the EXE `intune.detection` fields surface at
@@ -821,9 +834,11 @@ writeback commits) see
 Shows deployment state across all apps: published version, pending
 release, and which version holds each ring.
 `--format json` for scripting.
+The state directory comes from the recipes' `directories.state` setting,
+the same one the pipeline wrote to; `--state-dir` overrides it.
 
 ```bash
-napt status [OPTIONS]
+napt status [RECIPE_OR_DIR] [OPTIONS]
 ```
 
 A pending release whose version is lower than the published one is marked
@@ -852,6 +867,20 @@ napt auth setup --tenant-id ID [OPTIONS]
 napt auth login [--tenant-id ID] [--client-id ID] [--no-broker]
 napt auth status
 napt auth logout [--all]
+```
+
+### napt upstream
+
+Imports recipes from other git repositories as pinned copies, each with an
+override you edit.
+See [Upstream recipes](#upstream-recipes).
+
+```bash
+napt upstream add URL --path PATH [--path PATH ...] [--ref REF] [--dest DIR]
+    [--id ID] [--exclude GLOB ...] [--dry-run]
+napt upstream remove PATH [--delete-override]
+napt upstream check [PATH ...] [--format text|json] [--exit-code]
+napt upstream update [PATH ...] [--format text|json] [--force]
 ```
 
 ### Output modes
@@ -1122,7 +1151,7 @@ timestamps) so the file diff reads on its own in review:
 ```json
 {
   "schemaVersion": 1,
-  "app_id": "napt-chrome",
+  "app_id": "google-chrome",
   "name": "Google Chrome",
   "actions": [
     {
@@ -1206,13 +1235,17 @@ recipe.yaml                         <- the app itself, wins over everything
    `apiVersion: napt/v1`); without it, vendor files are silently ignored.
 
 3. **Parent recipe** (the `parent` field) - Another recipe merged beneath this
-   one.
+   one: a local parent such as `recipe-bases/chromium-family.yaml`, or the
+   pinned copy that `napt upstream add` writes (see
+   [Upstream recipes](#upstream-recipes)).
+   A recipe that declares `parent` is an override, whichever kind of
+   parent it names.
    Optional; lets several recipes share a base without repeating it.
    A parent cannot declare its own parent.
    The parent lives outside `recipes/` (for example in `recipe-bases/`), and
    each child sets its own `name` and `id` and replaces the app's plain
    recipe; see
-   [Share a base recipe between apps](common-tasks.md#share-a-base-recipe-between-apps).
+   [Share a local base recipe between apps](common-tasks.md#share-a-local-base-recipe-between-apps).
    See [parent](recipe-reference.md#parent) for the field and the file naming
    convention.
 
@@ -1242,7 +1275,7 @@ psadt:
 # recipes/Google/chrome.yaml
 apiVersion: napt/v1
 name: "Google Chrome"
-id: "napt-chrome"
+id: "google-chrome"
 discovery:
   strategy: url_download
   url: "https://dl.google.com/..."
@@ -1265,25 +1298,27 @@ to its own:
 | `napt discover` | `--state-dir` | Per-app deployment state (`<dir>/deployment/`) | `directories.state` | `state` |
 | `napt build` | `--state-dir` | Where to read the release to build (`<dir>/deployment/`) | `directories.state` | `state` |
 | `napt package` | `--state-dir` | Where to read the release to package (`<dir>/deployment/`) | `directories.state` | `state` |
+| `napt upload` | `--state-dir` | Where to read the release to upload (`<dir>/deployment/`) | `directories.state` | `state` |
 | `napt promote` | `--state-dir` | Deployment state and plan files | `directories.state` | `state` |
-| `napt status` | `--state-dir` | Deployment state to summarize (no config lookup) | - | `state` |
+| `napt status` | `--state-dir` | Deployment state to summarize | `directories.state` | `state` |
 | `napt build` | `--downloads-dir` | Where to find the installer | `directories.discover` | `downloads` |
 | `napt build` | `--output-dir` | Where to save builds | `directories.build` | `builds` |
 | `napt package` | `--builds-dir` | Where to find the build | `directories.build` | `builds` |
 | `napt package` | `--output-dir` | Where to save packages | `directories.package` | `packages` |
-| `napt upload` | (none) | Reads the package, state, and icons from config | `directories.package`, `directories.state`, `directories.icons` | `packages`, `state`, `icons` |
+| `napt upload` | `--packages-dir` | Where to find the package | `directories.package` | `packages` |
 
-Upload has no directory flags, so when you upload, set directory overrides in
-config rather than per run.
+`napt status` has no recipe of its own, so it reads `directories.state` from
+the first recipe under `recipes/` (or the file or directory you pass it).
 
 Input and output share a config key across adjacent commands:
 `discover --output-dir` and `build --downloads-dir` both read from
 `directories.discover`, so the output of one is automatically
 the input of the next without extra configuration.
 
-One additional directory has no CLI flag: `directories.icons` (default
-`icons`) holds app icons written by `napt build` and read by `napt upload`.
-See [App icons](#app-icons).
+Two directories have no CLI flag: `directories.icons` (default `icons`)
+holds app icons written by `napt build` and read by `napt upload` (see
+[App icons](#app-icons)), and `directories.cache` (default `cache`) holds
+the downloaded PSADT releases and `IntuneWinAppUtil.exe` versions.
 
 To change the defaults org-wide, add to `defaults/org.yaml`:
 
@@ -1293,7 +1328,7 @@ directories:
   build: "artifacts/builds"        # used by both build and package
   package: "artifacts/packages"
   icons: "artifacts/icons"         # written by build, read by upload
-  state: "deployment-state"        # napt status then needs --state-dir deployment-state
+  state: "deployment-state"        # read by every command that touches state
 ```
 
 ```bash
@@ -1307,6 +1342,174 @@ napt build recipes/Google/chrome.yaml --downloads-dir /tmp/downloads
 
 To pin the `IntuneWinAppUtil.exe` release `napt package` uses, see
 [`intunewin.release`](recipe-reference.md#intunewinapputil-configuration).
+
+## Upstream recipes
+
+`napt upstream` imports recipes from any git repository, pins each one as
+a byte-identical copy, and lets you customize it through an override
+without editing the pinned copy.
+NAPT never commits, pushes, or opens pull requests; it writes files, and
+your pipeline reviews them.
+
+### How an import works
+
+```bash
+napt upstream add https://github.com/someorg/napt-recipes.git \
+    --path recipes/Google/chrome.yaml
+```
+
+1. NAPT fetches the file from the repository's default branch (or `--ref`)
+   with the `git` binary, so any host git can reach works and
+   authentication is whatever git already has.
+2. The file lands byte-identical as the pinned copy under
+   `upstream/github.com/someorg/napt-recipes/recipes/Google/chrome.yaml`.
+   The directory is the host plus the repository path, so two repositories
+   that ship the same recipe path never collide.
+3. NAPT writes `recipes/Google/chrome.override.yaml`: a short recipe whose
+   `parent` is the pinned copy and which carries the recipe's `name` and
+   `id`.
+   This is the file every command runs, and the only one you edit.
+4. `upstream.yaml` at the project root records the repository URL and ref,
+   and for each pinned copy the commit it was taken from, its git blob id,
+   and its sha256.
+   Each recipe has its own pin, so recipes from one repository can be
+   updated one at a time.
+   NAPT writes the file; do not edit it by hand.
+
+A directory import (`--path recipes`) takes every `.yaml` and `.yml`
+beneath it; `--exclude` globs, matched relative to that directory, leave
+files out.
+Each override mirrors the part of the upstream path after its last
+`recipes/` segment, so `recipes/Google/chrome.yaml` always lands at
+`recipes/Google/chrome.override.yaml` however it was selected.
+A repository with no `recipes/` folder needs `--dest` to say where the
+overrides go.
+Nothing is written until every selected recipe has passed validation as the
+configuration its override will produce, so one bad recipe aborts the
+import with the project untouched.
+
+Re-running a directory import picks up what the publisher added since:
+recipes already listed in `upstream.yaml` are skipped and keep their own
+pins, only new ones are written, and when nothing is new the lockfile is
+untouched and the command reports "Nothing new to import."
+Naming a tracked recipe directly is an error that points at
+`napt upstream update`, which is what refreshes an existing pinned copy.
+
+### What the override controls
+
+The override wins over the pinned copy on every key, the way a recipe
+wins over its parent.
+Set a different installer URL, a longer `max_run_time_minutes`, or your own
+detection there; the pinned copy stays identical to the upstream recipe
+so updates diff cleanly.
+
+Two things come from the override alone:
+
+- **Identity.** `add` copies the upstream recipe's `name` and `id` into
+  the override (`--id` picks a different id).
+  The pinned copy cannot change them later, so an upstream edit can never
+  move your deployment state or Intune apps.
+  `add` warns when the id is already used in the project; see
+  [id](recipe-reference.md#id) for the convention.
+- **Tenant policy.** An upstream recipe may set only app-owned keys:
+  `discovery`, the PSADT install and uninstall blocks and app variables,
+  Intune detection and descriptive fields.
+  Everything else (`deployment`, `directories`, `intune.build_types`,
+  `logo_path`, and so on) is dropped before the merge, so `defaults/org.yaml`
+  keeps winning without the override restating it.
+  Every load prints one `[CONFIG] Ignoring from parent ...` line naming the
+  dropped keys, and `add` warns once per recipe.
+  The full list is in
+  [Shareable recipes](recipe-reference.md#shareable-recipes).
+
+### Trust
+
+`upstream` is a reserved directory name.
+Every time a parent under it is loaded, NAPT checks the file against its
+`upstream.yaml` entry: an edited pinned copy, one copied in by hand, or a
+missing lockfile fails `napt validate` and every other command.
+Move local changes into the override instead.
+A pinned copy is never run directly; commands point at the override.
+
+The check detects drift, not tampering by someone who can edit both files
+in one pull request.
+Review changes under `upstream/` and to `upstream.yaml` like any other
+recipe change: install blocks are PowerShell that runs on your endpoints.
+A CODEOWNERS rule on `upstream/**` and `upstream.yaml` gives those diffs a
+named reviewer.
+
+### Checking for and taking upstream changes
+
+```bash
+napt upstream check
+napt upstream update recipes/Google/chrome.override.yaml
+```
+
+`check` asks each repository in `upstream.yaml` for the tip of its ref.
+When the tip equals every pinned copy's commit, nothing is fetched and only
+the local hashes are verified; otherwise the ref is fetched trees-only once
+and each recipe's recorded blob id is compared to the one at its path now.
+Each recipe reports one status:
+
+| Status | Meaning | What `update` does |
+|--------|---------|--------------------|
+| `unchanged` | Same content upstream | Nothing |
+| `changed` | Upstream edited the recipe | Rewrites the pinned copy and records its new commit, blob id, and sha256 |
+| `missing` | The path is gone upstream | Nothing; git cannot tell a rename from a delete, so you decide |
+| `modified-locally` | The pinned copy differs from its lockfile entry | Leaves it and exits 1, unless `--force` overwrites it from upstream |
+
+`update` with no path refreshes every changed recipe; with overrides or
+pinned copies as arguments it refreshes those alone, and every other entry
+keeps its pin.
+A commit elsewhere in the repository is not a change: a recipe's pin
+advances only when its own content did.
+The override is never touched, so your customizations survive every
+update, and the diff you commit is the upstream recipe diff plus one
+lockfile entry.
+`--format json` prints one object per recipe with the old and new commit
+and blob ids for a PR body.
+`check` exits 0 when it completed; `--exit-code` makes it exit 1 when
+anything is `changed` or `missing`, like `git diff --exit-code`.
+
+Review an update PR as you would any recipe change (see
+[Trust](#trust)).
+[Workflow 5](common-tasks.md#workflow-5-upstream-update-opens-one-pr-per-changed-recipe)
+runs this on a schedule and opens one pull request per changed recipe.
+
+### Removing an import
+
+```bash
+napt upstream remove recipes/Google/chrome.override.yaml
+```
+
+Deletes the pinned copy and its lockfile entry, the repository's entry
+and emptied directories once nothing of it remains, and `upstream.yaml`
+itself once no repository remains.
+The override is yours, so it stays with its `parent` now dangling; inline
+the recipe there or pass `--delete-override`.
+Either the override or the pinned copy's path identifies the recipe.
+
+### Credentials for private repositories
+
+NAPT passes your environment to git and adds nothing of its own.
+A public repository needs nothing.
+A private HTTPS repository needs a credential helper or URL rewrite that
+git finds from any directory, because NAPT fetches into a temporary
+directory, not your checkout.
+On a GitHub-hosted runner, `gh auth setup-git` with a token in `GH_TOKEN`
+registers one; the environment form of a URL rewrite needs no file:
+
+```bash
+GIT_CONFIG_COUNT=1
+GIT_CONFIG_KEY_0=url.https://x-access-token:${TOKEN}@github.com/.insteadOf
+GIT_CONFIG_VALUE_0=https://github.com/
+```
+
+A private SSH repository needs a deploy key and a pre-trusted host key;
+NAPT runs ssh in batch mode, so an untrusted host fails instead of
+prompting.
+Prompts are disabled everywhere, so a missing credential fails at once
+rather than hanging a job.
 
 ## Cross-platform support
 

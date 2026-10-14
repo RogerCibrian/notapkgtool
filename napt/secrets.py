@@ -25,7 +25,7 @@ request must go to one of those hosts, and the URL must use https:
         hosts: ["api.vendor.com"]
 
 Variables the org file does not declare are unreachable from recipes, so a
-recipe (including one vendored from elsewhere) cannot pick up the runner's
+recipe (including one imported from elsewhere) cannot pick up the runner's
 other secrets such as ``AZURE_CLIENT_SECRET``. The config loader honors the
 ``secrets`` section from ``defaults/org.yaml`` alone; entries a vendor file,
 parent recipe, or recipe adds never reach the merged configuration.
@@ -276,6 +276,7 @@ def guarded_get(
     *,
     hosts: set[str] | None,
     timeout: int,
+    stream: bool = False,
 ) -> requests.Response:
     """Sends a GET whose headers may carry secrets.
 
@@ -291,6 +292,8 @@ def guarded_get(
         hosts: The bound hosts from
             [bound_hosts][napt.secrets.bound_hosts], or None.
         timeout: Per-request timeout in seconds.
+        stream: Whether to leave the final response's body unread, for a
+            caller that reads it in bounded pieces.
 
     Returns:
         The final response.
@@ -303,14 +306,19 @@ def guarded_get(
             wrap with its own context.
     """
     if hosts is None:
-        return session.get(url, headers=headers, timeout=timeout)
+        return session.get(url, headers=headers, timeout=timeout, stream=stream)
     current = url
     for _ in range(_MAX_REDIRECTS + 1):
         response = session.get(
-            current, headers=headers, timeout=timeout, allow_redirects=False
+            current,
+            headers=headers,
+            timeout=timeout,
+            allow_redirects=False,
+            stream=stream,
         )
         if not response.is_redirect:
             return response
+        response.close()  # A redirect's body is never read.
         target = urljoin(current, response.headers["Location"])
         scheme, host, ambiguity = _split(target)
         if ambiguity or scheme != "https" or host not in hosts:

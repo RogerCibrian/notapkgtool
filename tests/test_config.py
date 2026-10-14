@@ -10,12 +10,24 @@ Tests configuration loading and merging including:
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import pytest
+import yaml
 
 from napt.config.defaults import DEFAULT_CONFIG, ORG_YAML_TEMPLATE
-from napt.config.loader import collect_recipe_paths, load_effective_config
+from napt.config.loader import (
+    LoadedParent,
+    collect_recipe_paths,
+    load_effective_config,
+    load_parent,
+    merge_config_layers,
+    merge_effective_config,
+    register_recipe_id,
+    resolve_state_dir,
+)
 from napt.exceptions import ConfigError
 
 
@@ -54,10 +66,10 @@ class TestConfigLoading:
         assert config["psadt"]["release"] == "4.0.0"
 
     def test_missing_recipe_file_raises(self, tmp_test_dir):
-        """Test that missing recipe file raises FileNotFoundError."""
+        """Tests that a missing recipe is a ConfigError naming the role and path."""
         nonexistent = tmp_test_dir / "nonexistent.yaml"
 
-        with pytest.raises(ConfigError):
+        with pytest.raises(ConfigError, match=r"Recipe not found: .*nonexistent"):
             load_effective_config(nonexistent)
 
 
@@ -74,7 +86,6 @@ class TestConfigMerging:
 apiVersion: napt/v1
 psadt:
   release: "latest"
-  cache_dir: "cache/psadt"
   app_vars:
     AppLang: "EN"
 """)
@@ -205,62 +216,71 @@ class TestDynamicInjection:
     """Tests for dynamic value injection."""
 
     def test_appscriptdate_injection(self, create_yaml_file, sample_recipe_data):
-        """Test that AppScriptDate is injected with today's date."""
+        """Tests that AppScriptDate is injected with today's date and labelled
+        as computed in the provenance."""
         from datetime import date
 
         recipe_path = create_yaml_file("recipe.yaml", sample_recipe_data)
         config = load_effective_config(recipe_path)
 
         today = date.today().strftime("%Y-%m-%d")
-        app_vars = config.get("psadt", {}).get("app_vars", {})
-        if "AppScriptDate" in app_vars:
-            assert app_vars["AppScriptDate"] == today
+        assert config["psadt"]["app_vars"]["AppScriptDate"] == today
+        assert config["_provenance"]["psadt"]["app_vars"]["AppScriptDate"] == "computed"
 
-    def test_require_admin_defaults_true_for_system_scope(self):
-        """Tests that RequireAdmin defaults to true for system scope."""
+    @staticmethod
+    def _inject(run_as_account: str, **app_vars):
+        """Runs the injector on a config whose given app_vars came from org.yaml."""
         from napt.config.loader import _inject_dynamic_values
 
-        cfg = {"psadt": {"app_vars": {}}, "intune": {"run_as_account": "system"}}
-        _inject_dynamic_values(cfg)
+        cfg = {
+            "psadt": {"app_vars": dict(app_vars)},
+            "intune": {"run_as_account": run_as_account},
+        }
+        provenance = {
+            "psadt": {"app_vars": {key: "org_yaml" for key in app_vars}},
+            "intune": {"run_as_account": "recipe"},
+        }
+        _inject_dynamic_values(cfg, provenance)
+        return cfg, provenance
+
+    def test_require_admin_is_computed_true_for_system_scope(self):
+        """Tests that RequireAdmin is true for a system install and says so."""
+        cfg, provenance = self._inject("system")
 
         assert cfg["psadt"]["app_vars"]["RequireAdmin"] is True
+        assert provenance["psadt"]["app_vars"]["RequireAdmin"] == "computed"
 
-    def test_require_admin_defaults_false_for_user_scope(self):
-        """Tests that RequireAdmin defaults to false for user scope."""
-        from napt.config.loader import _inject_dynamic_values
-
-        cfg = {"psadt": {"app_vars": {}}, "intune": {"run_as_account": "user"}}
-        _inject_dynamic_values(cfg)
+    def test_require_admin_is_computed_false_for_user_scope(self):
+        """Tests that RequireAdmin is false for a per-user install."""
+        cfg, _ = self._inject("user")
 
         assert cfg["psadt"]["app_vars"]["RequireAdmin"] is False
 
-    def test_require_admin_explicit_recipe_value_not_overridden(self):
-        """Tests that an explicit RequireAdmin from recipe is not overridden."""
-        from napt.config.loader import _inject_dynamic_values
+    def test_appscriptdate_set_in_a_layer_is_kept(self):
+        """Tests that a pinned AppScriptDate is neither replaced nor relabeled."""
+        cfg, provenance = self._inject("system", AppScriptDate="2026-01-01")
 
-        cfg = {
-            "psadt": {"app_vars": {"RequireAdmin": True}},
-            "intune": {"run_as_account": "user"},
-        }
-        provenance = {
-            "psadt": {"app_vars": {"RequireAdmin": "recipe"}},
-            "intune": {"run_as_account": "code_default"},
-        }
-        _inject_dynamic_values(cfg, provenance)
+        assert cfg["psadt"]["app_vars"]["AppScriptDate"] == "2026-01-01"
+        assert provenance["psadt"]["app_vars"]["AppScriptDate"] == "org_yaml"
+
+    def test_require_admin_set_in_a_layer_is_kept(self):
+        """Tests that a RequireAdmin written in org.yaml wins over the computed
+        value, which is why the repo's org.yaml must not set it."""
+        cfg, provenance = self._inject("user", RequireAdmin=True)
 
         assert cfg["psadt"]["app_vars"]["RequireAdmin"] is True
+        assert provenance["psadt"]["app_vars"]["RequireAdmin"] == "org_yaml"
 
-    def test_require_admin_defaults_true_for_default_run_as_account(self):
-        """Tests that RequireAdmin defaults to true with default run_as_account."""
+    def test_wrong_shape_sections_are_left_for_validation(self):
+        """Tests that an app_vars that is not a mapping injects nothing and
+        raises nothing; validation reports the shape."""
         from napt.config.loader import _inject_dynamic_values
 
-        cfg = {
-            "psadt": {"app_vars": {}},
-            "intune": {"run_as_account": "system"},
-        }
-        _inject_dynamic_values(cfg)
+        cfg = {"psadt": {"app_vars": ["x"]}, "intune": {"run_as_account": "system"}}
 
-        assert cfg["psadt"]["app_vars"]["RequireAdmin"] is True
+        _inject_dynamic_values(cfg, {"psadt": {}, "intune": {}})
+
+        assert cfg["psadt"]["app_vars"] == ["x"]
 
 
 class TestErrorHandling:
@@ -287,8 +307,108 @@ class TestErrorHandling:
         recipe_path = tmp_test_dir / "list.yaml"
         recipe_path.write_text("- item1\n- item2\n")
 
-        with pytest.raises(ConfigError):
+        with pytest.raises(ConfigError, match="must be a mapping"):
             load_effective_config(recipe_path)
+
+    @staticmethod
+    def _project(tmp_test_dir, org_yaml: str, vendor_yaml: str | None = None):
+        """Writes a project with one recipe under recipes/Vendor/."""
+        (tmp_test_dir / "defaults" / "vendors").mkdir(parents=True)
+        (tmp_test_dir / "defaults" / "org.yaml").write_text(org_yaml, encoding="utf-8")
+        if vendor_yaml is not None:
+            (tmp_test_dir / "defaults" / "vendors" / "Vendor.yaml").write_text(
+                vendor_yaml, encoding="utf-8"
+            )
+        recipe = tmp_test_dir / "recipes" / "Vendor" / "app.yaml"
+        recipe.parent.mkdir(parents=True)
+        recipe.write_text(
+            "apiVersion: napt/v1\nname: App\nid: app\n"
+            "discovery:\n  strategy: url_download\n  url: https://x/a.msi\n",
+            encoding="utf-8",
+        )
+        return recipe
+
+    def test_non_mapping_org_yaml_is_an_error(self, tmp_test_dir):
+        """Tests that an org.yaml whose top level is a list is refused like a
+        recipe would be, instead of being skipped without a word."""
+        recipe = self._project(tmp_test_dir, "- psadt\n- intune\n")
+
+        with pytest.raises(ConfigError, match=r"must be a mapping.*org\.yaml"):
+            load_effective_config(recipe)
+
+    def test_non_mapping_vendor_file_is_an_error(self, tmp_test_dir):
+        """Tests that a vendor file whose top level is a scalar is refused."""
+        recipe = self._project(tmp_test_dir, "apiVersion: napt/v1\n", "just text\n")
+
+        with pytest.raises(ConfigError, match=r"must be a mapping.*Vendor\.yaml"):
+            load_effective_config(recipe)
+
+    def test_debug_dump_is_not_built_when_debug_is_off(self, tmp_test_dir):
+        """Tests that a load does not serialize every layer to YAML text that
+        the logger then discards."""
+        recipe = self._project(tmp_test_dir, "apiVersion: napt/v1\n")
+
+        with patch("napt.config.loader.yaml.dump") as dump:
+            load_effective_config(recipe)
+
+        dump.assert_not_called()
+
+    def test_debug_dump_shows_the_final_configuration(self, tmp_test_dir, capsys):
+        """Tests that the final dump is taken after injection, so it shows the
+        configuration the command actually uses."""
+        from napt.logging import get_logger, set_global_logger
+
+        recipe = self._project(tmp_test_dir, "apiVersion: napt/v1\n")
+        set_global_logger(get_logger(debug=True))
+
+        load_effective_config(recipe)
+
+        out = capsys.readouterr().out
+        final = out.index("--- Final Merged Configuration ---")
+        assert "AppScriptDate" in out[final:]
+        assert "RequireAdmin: true" in out[final:]
+
+
+def _default_config_leaves() -> list[tuple[str, str]]:
+    """Lists every (section, key) a value sits under in DEFAULT_CONFIG.
+
+    Keys nested deeper than the section (``psadt.app_vars.AppLang``) are
+    reported with their top-level section, since the template is checked
+    per section.
+    """
+
+    def walk(node: Any) -> list[str]:
+        keys: list[str] = []
+        for key, value in node.items():
+            keys.append(key)
+            if isinstance(value, dict) and value:
+                keys.extend(walk(value))
+        return keys
+
+    return [
+        (section, key)
+        for section, value in DEFAULT_CONFIG.items()
+        if isinstance(value, dict)
+        for key in walk(value)
+    ]
+
+
+def _template_sections() -> dict[str, str]:
+    """Splits ORG_YAML_TEMPLATE into its top-level sections.
+
+    A section starts at a line that is a top-level key, commented out or
+    not (``# psadt:`` or ``apiVersion:``), and runs to the next such line.
+    """
+    sections: dict[str, str] = {}
+    current: str | None = None
+    for line in ORG_YAML_TEMPLATE.splitlines():
+        stripped = line[2:] if line.startswith("# ") else line
+        if stripped and not stripped.startswith((" ", "#")) and stripped.endswith(":"):
+            current = stripped[:-1]
+            sections[current] = ""
+        elif current is not None:
+            sections[current] += line + "\n"
+    return sections
 
 
 class TestCodeDefaults:
@@ -358,37 +478,39 @@ discovery:
         assert "log_rotation_mb" in DEFAULT_CONFIG["logging"]
 
     def test_org_yaml_template_covers_all_sections(self):
-        """Tests that ORG_YAML_TEMPLATE mentions all DEFAULT_CONFIG sections.
+        """Tests that ORG_YAML_TEMPLATE names every key in DEFAULT_CONFIG.
 
-        This test catches drift between the code defaults and the template
-        shown to users via `napt init`. If a new section is added to
-        DEFAULT_CONFIG but not to the template, this test will fail.
+        The template is what `napt init` shows users as the menu of
+        settings, so a default added to DEFAULT_CONFIG without a line in
+        the template fails here, whether it is a new section or a new key
+        inside an existing one.
         """
+        sections = _template_sections()
         for section in DEFAULT_CONFIG.keys():
-            assert section in ORG_YAML_TEMPLATE, (
+            assert section in sections, (
                 f"Section '{section}' exists in DEFAULT_CONFIG but is not "
                 f"mentioned in ORG_YAML_TEMPLATE. Update the template in "
                 f"napt/config/defaults.py to include this section."
             )
 
-        nested_checks = [
-            ("psadt", "release"),
-            ("psadt", "brand_pack"),
-            ("psadt", "app_vars"),
-            ("directories", "build"),
-            ("directories", "icons"),
-            ("intune", "build_types"),
-            ("intune", "detection"),
-            ("logging", "log_rotation_mb"),
-            ("intunewin", "release"),
-            ("secrets", "hosts"),
-        ]
-
-        for parent, key in nested_checks:
-            assert key in ORG_YAML_TEMPLATE, (
+        for parent, key in _default_config_leaves():
+            assert f"{key}:" in sections[parent], (
                 f"Key '{parent}.{key}' exists in DEFAULT_CONFIG but is not "
-                f"mentioned in ORG_YAML_TEMPLATE. Update the template."
+                f"mentioned in the '{parent}' section of ORG_YAML_TEMPLATE. "
+                "Update the template."
             )
+
+    def test_org_yaml_template_drops_the_old_cache_key(self):
+        """Tests that the template shows directories.cache, not psadt.cache_dir."""
+        sections = _template_sections()
+        assert "cache_dir" not in ORG_YAML_TEMPLATE
+        assert "cache:" in sections["directories"]
+        assert "cache_dir" not in DEFAULT_CONFIG["psadt"]
+        assert DEFAULT_CONFIG["directories"]["cache"] == "cache"
+
+    def test_org_yaml_template_names_every_layer(self):
+        """Tests that the hierarchy comment lists the parent recipe layer."""
+        assert "Parent recipe" in ORG_YAML_TEMPLATE
 
 
 class TestLogoPathResolution:
@@ -476,10 +598,14 @@ class TestLogoPathResolution:
 
 
 class TestValidationInLoader:
-    """Tests that load_effective_config enforces validation."""
+    """Tests that load_effective_config enforces validation.
 
-    def test_missing_name_raises_config_error(self, tmp_test_dir):
-        """Tests that a recipe missing 'name' raises ConfigError."""
+    The validation rules themselves are tested in test_validation.py; these
+    cover the loader path: an error raises, a warning does not.
+    """
+
+    def test_validation_error_raises_config_error(self, tmp_test_dir):
+        """Tests that a recipe failing validation cannot be loaded."""
         recipe_path = tmp_test_dir / "recipe.yaml"
         recipe_path.write_text(
             "apiVersion: napt/v1\nid: test\n"
@@ -488,37 +614,6 @@ class TestValidationInLoader:
         )
 
         with pytest.raises(ConfigError, match="name"):
-            load_effective_config(recipe_path)
-
-    def test_missing_id_raises_config_error(self, tmp_test_dir):
-        """Tests that a recipe missing 'id' raises ConfigError."""
-        recipe_path = tmp_test_dir / "recipe.yaml"
-        recipe_path.write_text(
-            "apiVersion: napt/v1\nname: Test\n"
-            "discovery:\n  strategy: url_download\n"
-            "  url: https://example.com/app.msi\n"
-        )
-
-        with pytest.raises(ConfigError, match="id"):
-            load_effective_config(recipe_path)
-
-    def test_missing_discovery_raises_config_error(self, tmp_test_dir):
-        """Tests that a recipe missing 'discovery' raises ConfigError."""
-        recipe_path = tmp_test_dir / "recipe.yaml"
-        recipe_path.write_text("apiVersion: napt/v1\nname: Test\nid: test\n")
-
-        with pytest.raises(ConfigError, match="discovery"):
-            load_effective_config(recipe_path)
-
-    def test_invalid_strategy_raises_config_error(self, tmp_test_dir):
-        """Tests that an unknown strategy raises ConfigError."""
-        recipe_path = tmp_test_dir / "recipe.yaml"
-        recipe_path.write_text(
-            "apiVersion: napt/v1\nname: Test\nid: test\n"
-            "discovery:\n  strategy: nonexistent\n"
-        )
-
-        with pytest.raises(ConfigError):
             load_effective_config(recipe_path)
 
     def test_valid_recipe_returns_config_with_required_fields(
@@ -556,60 +651,6 @@ class TestValidationInLoader:
         config = load_effective_config(recipe_path)
 
         assert config["name"] == "Test"
-
-    def test_validate_config_and_validate_recipe_agree(self, tmp_test_dir):
-        """Tests that validate_config and validate_recipe report the same errors."""
-        from napt.validation import validate_recipe
-
-        recipe_path = tmp_test_dir / "recipe.yaml"
-        recipe_path.write_text(
-            "apiVersion: napt/v1\nid: test\n"
-            "discovery:\n  strategy: url_download\n"
-            "  url: https://example.com/app.msi\n"
-        )
-
-        recipe_result = validate_recipe(recipe_path)
-
-        assert recipe_result.status == "invalid"
-        assert any("name" in err for err in recipe_result.errors)
-
-    def test_all_required_fields_validated(self):
-        """Tests that every required field produces a validation error when missing."""
-        from napt.validation import validate_config
-
-        # A complete valid config to selectively remove fields from
-        valid_config: dict[str, Any] = {
-            "apiVersion": "napt/v1",
-            "name": "Test App",
-            "id": "test-app",
-            "discovery": {
-                "strategy": "url_download",
-                "url": "https://example.com/app.msi",
-            },
-        }
-
-        # Top-level required fields
-        for field in ["apiVersion", "name", "id", "discovery"]:
-            incomplete = dict(valid_config)
-            del incomplete[field]
-            result = validate_config(incomplete)
-            assert (
-                result.status == "invalid"
-            ), f"Removing '{field}' should produce a validation error"
-            assert any(
-                field in err for err in result.errors
-            ), f"Error message should mention '{field}'"
-
-        # Nested required: discovery.strategy
-        no_strategy = dict(valid_config)
-        no_strategy["discovery"] = {"url": "https://example.com/app.msi"}
-        result = validate_config(no_strategy)
-        assert (
-            result.status == "invalid"
-        ), "Removing 'discovery.strategy' should produce a validation error"
-        assert any(
-            "strategy" in err for err in result.errors
-        ), "Error message should mention 'strategy'"
 
 
 _PARENT_RECIPE = """apiVersion: napt/v1
@@ -788,6 +829,326 @@ class TestParentRecipes:
         assert provenance["url"] == "recipe"
         assert provenance["strategy"] == "parent"
 
+    def test_utf16_parent_names_the_encoding(self, tmp_test_dir):
+        """Tests that a parent saved as UTF-16 is reported like a recipe."""
+        override = self._project(tmp_test_dir)
+        base = tmp_test_dir / "recipes" / "_base" / "base.yaml"
+        base.write_text(_PARENT_RECIPE, encoding="utf-16")
+
+        with pytest.raises(ConfigError, match="not UTF-8"):
+            load_effective_config(override)
+
+
+_PINNED_COPY = "github.com/someorg/napt-recipes/recipes/Google/chrome.yaml"
+
+_PINNED_PARENT = """apiVersion: napt/v1
+name: Google Chrome
+id: chrome
+discovery:
+  strategy: url_download
+  url: https://example.com/chrome.msi
+psadt:
+  release: "4.0.0"
+  app_vars:
+    AppLang: FR
+intune:
+  build_types: update_only
+  description: From upstream
+deployment:
+  rings:
+    - name: theirs
+      groups: ["their-group"]
+"""
+
+
+class TestPinnedParents:
+    """Tests for a parent under upstream/: the hash check and the allow list."""
+
+    @staticmethod
+    def _project(
+        tmp_test_dir,
+        parent_text: str = _PINNED_PARENT,
+        *,
+        tracked: bool = True,
+        recorded_text: str | None = None,
+        org_text: str = "apiVersion: napt/v1\n",
+    ) -> Any:
+        """Writes a pinned copy as the parent, its lockfile entry, and an override."""
+        from napt.upstream.lock import canonical_sha256
+
+        pinned = tmp_test_dir / "upstream" / Path(_PINNED_COPY)
+        pinned.parent.mkdir(parents=True)
+        pinned.write_text(parent_text)
+        if tracked:
+            recorded = (recorded_text or parent_text).encode()
+            (tmp_test_dir / "upstream.yaml").write_text(
+                "apiVersion: napt/v1\n"
+                "repos:\n"
+                "  - url: https://github.com/someorg/napt-recipes.git\n"
+                "    ref: main\n"
+                "    recipes:\n"
+                "      - path: recipes/Google/chrome.yaml\n"
+                "        override: recipes/Google/chrome.override.yaml\n"
+                "        commit: 4f2a9c1e\n"
+                "        blob: 9c1d2e3f\n"
+                f"        sha256: {canonical_sha256(recorded)}\n"
+            )
+        defaults = tmp_test_dir / "defaults"
+        defaults.mkdir()
+        (defaults / "org.yaml").write_text(org_text)
+        override = tmp_test_dir / "recipes" / "Google" / "chrome.override.yaml"
+        override.parent.mkdir(parents=True)
+        override.write_text(
+            "apiVersion: napt/v1\n"
+            f"parent: ../../upstream/{_PINNED_COPY}\n"
+            "name: Google Chrome\nid: napt-chrome\n"
+        )
+        return override
+
+    def test_tenant_keys_from_a_pinned_parent_are_dropped(self, tmp_test_dir):
+        """Tests that org.yaml wins on keys the parent is not allowed to set."""
+        override = self._project(
+            tmp_test_dir,
+            org_text=(
+                "apiVersion: napt/v1\n"
+                "deployment:\n  rings:\n    - name: ours\n      groups: [our-group]\n"
+                "intune:\n  build_types: both\n"
+            ),
+        )
+
+        config = load_effective_config(override)
+
+        assert config["deployment"]["rings"][0]["name"] == "ours"
+        assert config["intune"]["build_types"] == "both"
+        assert config["psadt"]["release"] == "latest"
+        assert config["psadt"]["app_vars"]["AppLang"] == "FR"
+        assert config["intune"]["description"] == "From upstream"
+        assert config["_provenance"]["deployment"]["rings"] == "org_yaml"
+
+    def test_dropped_keys_are_logged_once_without_verbose(self, tmp_test_dir, capsys):
+        """Tests that one always-visible line names every dropped key."""
+        override = self._project(tmp_test_dir)
+
+        load_effective_config(override)
+
+        lines = [
+            line for line in capsys.readouterr().out.splitlines() if "Ignoring" in line
+        ]
+        assert lines == [
+            "[CONFIG] Ignoring from parent (not allowed from upstream recipes): "
+            "psadt.release, intune.build_types, deployment"
+        ]
+
+    def test_nothing_dropped_prints_nothing(self, tmp_test_dir, capsys):
+        """Tests that a parent setting only allowed keys is silent."""
+        parent = _PINNED_PARENT.replace('  release: "4.0.0"\n', "").replace(
+            "  build_types: update_only\n", ""
+        )
+        parent = parent[: parent.index("deployment:")]
+        override = self._project(tmp_test_dir, parent)
+
+        load_effective_config(override)
+
+        assert "Ignoring" not in capsys.readouterr().out
+
+    def test_non_mapping_section_cannot_erase_org_policy(self, tmp_test_dir):
+        """Tests that intune: [] in a pinned parent leaves org.yaml's intune intact."""
+        parent = _PINNED_PARENT.replace(
+            "intune:\n  build_types: update_only\n  description: From upstream\n",
+            "intune: []\n",
+        )
+        override = self._project(
+            tmp_test_dir,
+            parent,
+            org_text="apiVersion: napt/v1\nintune:\n  enforce_signature_check: true\n",
+        )
+        override.write_text(override.read_text() + "intune:\n  description: Ours\n")
+
+        config = load_effective_config(override)
+
+        assert config["intune"]["enforce_signature_check"] is True
+        assert config["intune"]["build_types"] == "both"
+        assert config["intune"]["description"] == "Ours"
+
+    def test_local_parent_is_not_filtered(self, tmp_test_dir):
+        """Tests that a base in recipe-bases/ keeps its tenant keys."""
+        base = tmp_test_dir / "recipe-bases" / "base.yaml"
+        base.parent.mkdir()
+        base.write_text(_PINNED_PARENT)
+        override = tmp_test_dir / "recipes" / "Google" / "chrome.override.yaml"
+        override.parent.mkdir(parents=True)
+        override.write_text(
+            "apiVersion: napt/v1\nparent: ../../recipe-bases/base.yaml\n"
+            "name: Google Chrome\nid: napt-chrome\n"
+        )
+
+        config = load_effective_config(override)
+
+        assert config["deployment"]["rings"][0]["name"] == "theirs"
+        assert config["psadt"]["release"] == "4.0.0"
+
+    def test_edited_pinned_copy_is_refused(self, tmp_test_dir):
+        """Tests that a pinned copy that drifted from its record fails to load."""
+        override = self._project(
+            tmp_test_dir, recorded_text=_PINNED_PARENT + "# edited later\n"
+        )
+
+        with pytest.raises(ConfigError, match="differs from what .* recorded"):
+            load_effective_config(override)
+
+    def test_untracked_file_under_upstream_is_refused(self, tmp_test_dir):
+        """Tests that a hand-copied file under upstream/ fails to load."""
+        override = self._project(tmp_test_dir, tracked=False)
+
+        with pytest.raises(ConfigError, match="no .*upstream.yaml tracking it"):
+            load_effective_config(override)
+
+    def test_check_keys_on_the_parent_location_not_the_override(self, tmp_test_dir):
+        """Tests that an override placed elsewhere still gets the check."""
+        self._project(tmp_test_dir, tracked=False)
+        elsewhere = tmp_test_dir / "apps" / "chrome.yaml"
+        elsewhere.parent.mkdir()
+        elsewhere.write_text(
+            "apiVersion: napt/v1\n"
+            f"parent: ../upstream/{_PINNED_COPY}\n"
+            "name: Google Chrome\nid: napt-chrome\n"
+        )
+
+        with pytest.raises(ConfigError, match="no .*upstream.yaml tracking it"):
+            load_effective_config(elsewhere)
+
+    def test_two_overrides_sharing_a_parent_are_both_checked(self, tmp_test_dir):
+        """Tests that the check runs for every override, not the first only."""
+        override = self._project(
+            tmp_test_dir, recorded_text=_PINNED_PARENT + "# edited later\n"
+        )
+        second = override.with_name("chrome-beta.override.yaml")
+        second.write_text(override.read_text().replace("napt-chrome", "beta"))
+
+        for path in (override, second):
+            with pytest.raises(ConfigError, match="differs from what"):
+                load_effective_config(path)
+
+    def test_linked_parent_into_upstream_is_still_checked(self, tmp_test_dir):
+        """Tests that a link from recipe-bases/ cannot make a pinned copy local."""
+        from tests.upstream.test_pinned import link_directory
+
+        self._project(tmp_test_dir, recorded_text=_PINNED_PARENT + "# edited\n")
+        pinned_dir = (tmp_test_dir / "upstream" / Path(_PINNED_COPY)).parent
+        link_directory(tmp_test_dir / "recipe-bases", pinned_dir)
+        override = tmp_test_dir / "recipes" / "Google" / "linked.override.yaml"
+        override.write_text(
+            "apiVersion: napt/v1\nparent: ../../recipe-bases/chrome.yaml\n"
+            "name: Linked\nid: linked\n"
+        )
+
+        with pytest.raises(ConfigError, match="differs from what"):
+            load_effective_config(override)
+
+    def test_pinned_copy_run_directly_is_refused(self, tmp_test_dir):
+        """Tests that a command on the pinned copy points at the override."""
+        self._project(tmp_test_dir)
+        pinned = tmp_test_dir / "upstream" / Path(_PINNED_COPY)
+
+        with pytest.raises(ConfigError, match="Run the override"):
+            load_effective_config(pinned)
+
+    def test_validate_reports_the_trust_failure(self, tmp_test_dir):
+        """Tests that napt validate turns the hash check into an invalid result."""
+        from napt.validation import validate_recipe
+
+        override = self._project(
+            tmp_test_dir, recorded_text=_PINNED_PARENT + "# edited later\n"
+        )
+
+        result = validate_recipe(override)
+
+        assert not result.is_valid
+        assert "differs from what" in result.errors[0]
+
+    def test_secrets_in_a_pinned_parent_never_reach_validation(self, tmp_test_dir):
+        """Tests that a secrets block is dropped before the merge, not an error."""
+        parent = _PINNED_PARENT + "secrets:\n  TOKEN:\n    hosts: [evil.example]\n"
+        override = self._project(tmp_test_dir, parent)
+
+        config = load_effective_config(override)
+
+        assert config["secrets"] == {}
+
+    def test_state_dir_lookup_is_quiet(self, tmp_test_dir, capsys):
+        """Tests that resolve_state_dir prints no recipe diagnostics."""
+        override = self._project(tmp_test_dir)
+
+        state_dir = resolve_state_dir(override)
+
+        assert state_dir == Path("state")
+        assert capsys.readouterr().out == ""
+
+
+class TestMergeConfigLayers:
+    """Tests that merging parsed layers matches merging the same files from disk."""
+
+    @staticmethod
+    def _same_config(from_disk: dict, in_memory: dict) -> None:
+        """Compares two merged configs, ignoring the date injected at load time."""
+        for config in (from_disk, in_memory):
+            config["psadt"]["app_vars"].pop("AppScriptDate")
+        assert in_memory == from_disk
+
+    def test_matches_disk_merge_with_parent_org_and_vendor(self, tmp_test_dir):
+        """Tests that parsed recipe and parent objects merge as the files do."""
+        override = TestParentRecipes._project(
+            tmp_test_dir,
+            override_body="intune:\n  description: Child\n",
+            org_text="apiVersion: napt/v1\npsadt:\n  app_vars:\n    AppLang: DE\n",
+            vendor_text="psadt:\n  app_vars:\n    AppRevision: '02'\n",
+        )
+        from_disk, parent_path = merge_effective_config(override)
+        recipe_obj = yaml.safe_load(override.read_text())
+        parent = load_parent(override, recipe_obj)
+
+        in_memory = merge_config_layers(override, recipe_obj, parent)
+
+        assert parent is not None and parent.path == parent_path
+        self._same_config(from_disk, in_memory)
+        assert in_memory["_provenance"]["psadt"]["app_vars"]["AppLang"] == "parent"
+        assert in_memory["psadt"]["app_vars"]["AppRevision"] == "02"
+
+    def test_matches_disk_merge_without_parent(self, tmp_test_dir):
+        """Tests that a plain recipe merges the same from an object."""
+        recipe = tmp_test_dir / "recipes" / "Google" / "app.yaml"
+        recipe.parent.mkdir(parents=True)
+        recipe.write_text(_PARENT_RECIPE)
+        from_disk, parent_path = merge_effective_config(recipe)
+
+        in_memory = merge_config_layers(recipe, yaml.safe_load(recipe.read_text()))
+
+        assert parent_path is None
+        self._same_config(from_disk, in_memory)
+
+    def test_does_not_read_the_recipe_from_disk(self, tmp_test_dir):
+        """Tests that the recipe object is used even when no file exists yet."""
+        recipe = tmp_test_dir / "recipes" / "Google" / "app.override.yaml"
+        recipe.parent.mkdir(parents=True)
+        base = tmp_test_dir / "recipe-bases" / "base.yaml"
+        base.parent.mkdir()
+        base.write_text(_PARENT_RECIPE)
+        recipe_obj = {
+            "apiVersion": "napt/v1",
+            "parent": "../../recipe-bases/base.yaml",
+            "name": "Unwritten",
+            "id": "unwritten",
+        }
+
+        merged = merge_config_layers(
+            recipe, recipe_obj, LoadedParent(base, yaml.safe_load(base.read_text()))
+        )
+
+        assert not recipe.exists()
+        assert merged["name"] == "Unwritten"
+        assert merged["discovery"]["url"] == "https://example.com/base.msi"
+        assert merged["_provenance"]["discovery"] == "parent"
+
 
 class TestUnreadableRecipeFiles:
     """Tests that a recipe file that cannot be read is a ConfigError."""
@@ -926,3 +1287,55 @@ class TestCollectRecipePaths:
         """Tests that a directory without recipes is a ConfigError."""
         with pytest.raises(ConfigError, match="No recipe files"):
             collect_recipe_paths(tmp_test_dir)
+
+
+class TestRegisterRecipeId:
+    """Tests for the one id-collision check validate and promote share."""
+
+    def test_first_declaration_is_recorded(self, tmp_test_dir):
+        """Tests that a new id is recorded and nothing is reported."""
+        sources: dict[str, Path] = {}
+
+        assert register_recipe_id(sources, "app", tmp_test_dir / "a.yaml") is None
+        assert sources == {"app": tmp_test_dir / "a.yaml"}
+
+    def test_second_declaration_names_both_files(self, tmp_test_dir):
+        """Tests that a repeated id returns the message naming both files."""
+        sources: dict[str, Path] = {}
+        register_recipe_id(sources, "app", tmp_test_dir / "a.yaml")
+
+        message = register_recipe_id(sources, "app", tmp_test_dir / "b.yaml")
+
+        assert message is not None
+        assert "a.yaml" in message and "b.yaml" in message
+        assert sources["app"] == tmp_test_dir / "a.yaml"
+
+
+class TestResolveStateDir:
+    """Tests for the state directory a command reads from configuration."""
+
+    @staticmethod
+    def _recipe(tmp_test_dir, extra: str = "") -> Path:
+        recipes = tmp_test_dir / "recipes"
+        recipes.mkdir()
+        recipe = recipes / "app.yaml"
+        recipe.write_text(
+            "apiVersion: napt/v1\nname: App\nid: app\n"
+            "discovery:\n  strategy: url_download\n"
+            "  url: https://example.com/app.msi\n" + extra,
+            encoding="utf-8",
+        )
+        return recipe
+
+    def test_resolves_configured_state_dir(self, tmp_test_dir):
+        """Tests that directories.state is read from the first recipe."""
+        recipe = self._recipe(tmp_test_dir, "directories:\n  state: customstate\n")
+
+        assert resolve_state_dir(recipe) == Path("customstate")
+        assert resolve_state_dir(recipe.parent) == Path("customstate")
+
+    def test_default_state_dir(self, tmp_test_dir):
+        """Tests that the built-in default resolves to state."""
+        recipe = self._recipe(tmp_test_dir)
+
+        assert resolve_state_dir(recipe) == Path("state")
