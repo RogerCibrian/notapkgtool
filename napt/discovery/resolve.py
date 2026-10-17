@@ -44,7 +44,9 @@ Skipping Downloads:
         the server instead, as ``url_download`` does.
     - ``url_download`` has no version to compare, so it sends the
         ``ETag`` / ``Last-Modified`` back as a conditional request and
-        reuses the installer when the server answers HTTP 304.
+        reuses the installer when the server answers HTTP 304, or answers
+        200 with the same validator (a server that ignores conditional
+        requests; the body is not read).
 
     The sidecar is a hint, not a record. Anything wrong with it, including
     an installer on disk that no longer matches the recorded hash, means
@@ -200,9 +202,9 @@ def _refresh(
     """Downloads again unless the server confirms the previous file is current.
 
     Sends the sidecar's ``ETag`` / ``Last-Modified`` as a conditional
-    request. HTTP 304 reuses the previous download; anything else is a
-    fresh download. A sidecar with neither value cannot ask, so the file
-    is simply downloaded again.
+    request. HTTP 304, or a 200 that repeats the validator sent, reuses the
+    previous download; anything else is a fresh download. A sidecar with
+    neither value cannot ask, so the file is simply downloaded again.
 
     Args:
         previous: The app's last download, as recorded in its sidecar.
@@ -236,10 +238,10 @@ def _refresh(
             etag=previous.etag,
             last_modified=previous.last_modified,
         )
-    except NotModifiedError:
+    except NotModifiedError as err:
         logger.info(
             "DISCOVERY",
-            f"File not modified (HTTP 304), using {previous.file_path}",
+            f"File not modified ({err}), using {previous.file_path}",
         )
         return _reuse(previous, url, source)
 
@@ -306,7 +308,8 @@ def _download_and_file(
         Resolved version, the file's final path, and its hash.
 
     Raises:
-        NotModifiedError: If the server answers HTTP 304.
+        NotModifiedError: On HTTP 304, or a 200 repeating the validator
+            sent.
         NetworkError: On download failure.
         PackagingError: If the installer's version cannot be read.
         ConfigError: If the version cannot be used as a folder name, or

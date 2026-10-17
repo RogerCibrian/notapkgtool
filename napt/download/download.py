@@ -39,6 +39,7 @@ Note:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 import hashlib
 from pathlib import Path
@@ -220,6 +221,43 @@ class DownloadResult:
     headers: dict
 
 
+def _unchanged_validator(
+    headers: Mapping[str, str], etag: str | None, last_modified: str | None
+) -> str | None:
+    """Names the validator a 200 response echoes back unchanged, if any.
+
+    ETags compare weakly (a ``W/`` prefix is ignored on either side), which
+    is the comparison ``If-None-Match`` itself uses. Last-Modified is only
+    consulted when no ETag was sent, matching which header the request
+    carried.
+
+    Args:
+        headers: Response headers.
+        etag: ETag sent as ``If-None-Match``, if any.
+        last_modified: Last-Modified sent as ``If-Modified-Since``, if any.
+
+    Returns:
+        ``"ETag"`` or ``"Last-Modified"`` when the response repeats the value
+            that was sent, otherwise None.
+    """
+    if etag:
+        received = headers.get("ETag")
+        if received and _weak_etag(received) == _weak_etag(etag):
+            return "ETag"
+        return None
+    if last_modified:
+        received = headers.get("Last-Modified")
+        if received and received.strip() == last_modified.strip():
+            return "Last-Modified"
+    return None
+
+
+def _weak_etag(value: str) -> str:
+    """Strips the weak-validator prefix so two ETags compare by opaque tag."""
+    value = value.strip()
+    return value[2:] if value.startswith("W/") else value
+
+
 def download_file(
     url: str,
     destination_folder: Path,
@@ -231,7 +269,9 @@ def download_file(
 
     Follows redirects and retries transient failures. Writes to a .part file
     then renames to the final filename on success. Sends conditional headers
-    if etag or last_modified is provided.
+    if etag or last_modified is provided. A server that ignores them and
+    answers 200 with the same validator is treated as not modified too, and
+    the body is never read.
 
     Args:
         url: Source URL.
@@ -245,8 +285,9 @@ def download_file(
             headers.
 
     Raises:
-        NotModifiedError: On HTTP 304, when the server confirms the content
-            has not changed since the last request.
+        NotModifiedError: On HTTP 304, or on a 200 whose ETag (or
+            Last-Modified, when no ETag was sent) equals the one sent; either
+            way the content has not changed since the last request.
         NetworkError: On transport failure, a non-2xx response (after
             retries), or an incomplete download (Content-Length mismatch).
 
@@ -295,7 +336,7 @@ def download_file(
         # Conditional request satisfied: nothing changed since last time.
         if resp.status_code == 304:
             logger.verbose("HTTP", "Response: 304 Not Modified")
-            raise NotModifiedError("Remote content not modified (HTTP 304).")
+            raise NotModifiedError("HTTP 304")
 
         # Raise for other HTTP errors after retries.
         try:
@@ -304,6 +345,17 @@ def download_file(
             raise NetworkError(f"download failed for {url}: {err}") from err
 
         logger.verbose("HTTP", f"Response: {resp.status_code} {resp.reason}")
+
+        # A server that ignores conditional requests answers 200 with the
+        # validator it was sent. Treat that as not modified before reading
+        # the body, so the run costs one connection instead of a download.
+        unchanged = _unchanged_validator(resp.headers, etag, last_modified)
+        if unchanged:
+            resp.close()
+            logger.verbose(
+                "HTTP", f"Response carries the {unchanged} that was sent; not modified"
+            )
+            raise NotModifiedError(f"unchanged {unchanged}")
 
         # Content-Disposition beats URL when naming the file.
         cd_name = _filename_from_cd(resp.headers.get("Content-Disposition", ""))

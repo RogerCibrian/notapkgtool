@@ -56,6 +56,7 @@ import tempfile
 from typing import Any
 import xml.etree.ElementTree as ET
 import zipfile
+import zlib
 
 from napt.exceptions import PackagingError
 from napt.graph.intune import MAX_ICON_BYTES
@@ -147,21 +148,51 @@ def extract_icon_png(installer_path: str | Path) -> IconExtraction:
 
 
 def _png_width(data: bytes) -> int | None:
-    """Reads the pixel width from a PNG byte stream's IHDR chunk.
+    """Reads the pixel width of a structurally valid PNG byte stream.
+
+    Walks every chunk from the signature to IEND and checks each CRC, so a
+    frame an installer ships with a corrupt header or truncated data is
+    rejected here instead of being handed to Intune. Zoom's MSI, for
+    example, carries a 256px frame whose IHDR declares a height of zero
+    and fails its CRC.
 
     Args:
         data: Candidate PNG file bytes.
 
     Returns:
-        The image width in pixels, or None if the data is not a valid PNG
-            header (IHDR is mandated to be the first chunk, so a fixed
-            offset read is safe).
+        The image width in pixels, or None if the data is not a complete
+            PNG: wrong signature, IHDR not first, zero width or height, a
+            chunk CRC mismatch, no IDAT, or no IEND.
     """
-    if len(data) < 24 or not data.startswith(_PNG_MAGIC):
+    if not data.startswith(_PNG_MAGIC):
         return None
-    if data[12:16] != b"IHDR":
-        return None
-    return struct.unpack_from(">I", data, 16)[0]
+    width = 0
+    seen_idat = False
+    offset = len(_PNG_MAGIC)
+    first = True
+    while offset + 12 <= len(data):
+        (length,) = struct.unpack_from(">I", data, offset)
+        chunk_type = data[offset + 4 : offset + 8]
+        body_start = offset + 8
+        body_end = body_start + length
+        if body_end + 4 > len(data):
+            return None
+        (crc,) = struct.unpack_from(">I", data, body_end)
+        if zlib.crc32(data[offset + 4 : body_end]) != crc:
+            return None
+        if first:
+            if chunk_type != b"IHDR" or length != 13:
+                return None
+            width, height = struct.unpack_from(">II", data, body_start)
+            if not width or not height:
+                return None
+            first = False
+        elif chunk_type == b"IDAT":
+            seen_idat = True
+        elif chunk_type == b"IEND":
+            return width if seen_idat else None
+        offset = body_end + 4
+    return None
 
 
 def _select_png_frame(

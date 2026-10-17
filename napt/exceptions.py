@@ -188,16 +188,19 @@ class AuthError(NAPTError):
 
 
 class NotModifiedError(Exception):
-    """Raised when a conditional HTTP request returns 304 Not Modified.
+    """Raised when a conditional HTTP request finds the content unchanged.
 
-    This exception is raised when download_file() receives HTTP 304, meaning
-    the server has confirmed that the remote content has not changed since the
-    last request. The function is expected to return a file on disk, and with
-    a 304 response there is no file to return, so it raises instead.
+    This exception is raised when download_file() receives HTTP 304, or a
+    200 that repeats the ETag or Last-Modified it was sent (a server that
+    ignores conditional requests), meaning the remote content has not
+    changed since the last request. The function is expected to return a
+    file on disk, and there is no new file to return, so it raises instead.
+    The message names which it was: ``HTTP 304``, ``unchanged ETag``, or
+    ``unchanged Last-Modified``.
 
     Inherits from Exception (not NAPTError) so that broad catches of all NAPT
-    errors do not suppress 304 responses. Callers that supply an ETag must
-    handle this explicitly.
+    errors do not suppress it. Callers that supply an ETag must handle this
+    explicitly.
 
     Example:
         Handling a conditional download:
