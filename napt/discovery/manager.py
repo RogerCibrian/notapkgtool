@@ -32,7 +32,8 @@ Two Flows:
     - **url_download** (handled by
         [run_url_download][napt.discovery.url_download.run_url_download]):
         has no version to compare, so it sends HTTP conditional headers
-        (``ETag`` / ``Last-Modified``) and reuses the file on HTTP 304.
+        (``ETag`` / ``Last-Modified``) and reuses the file on HTTP 304 or
+        when a 200 repeats the validator sent.
         Not a registered strategy because it cannot determine the
         version without the file.
 

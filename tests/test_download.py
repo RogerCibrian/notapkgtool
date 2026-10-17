@@ -272,6 +272,83 @@ def test_conditional_request_modified_downloads(tmp_test_dir: Path) -> None:
     assert result.headers.get("ETag") == '"new_etag"'
 
 
+def test_etag_echoed_on_200_is_not_modified(tmp_test_dir: Path) -> None:
+    """Tests that a 200 repeating the sent ETag raises without writing a file."""
+    url = "https://example.com/file.bin"
+    etag = '"same"'
+
+    with requests_mock.Mocker() as m:
+        m.get(
+            url,
+            content=b"x" * 64,
+            headers={"Content-Length": "64", "ETag": etag},
+        )
+        with pytest.raises(NotModifiedError, match="unchanged ETag"):
+            download_file(url, tmp_test_dir, etag=etag)
+
+    assert list(tmp_test_dir.iterdir()) == []
+
+
+def test_etag_compares_weakly(tmp_test_dir: Path) -> None:
+    """Tests that a W/ prefix on either side does not defeat the comparison."""
+    url = "https://example.com/file.bin"
+
+    with requests_mock.Mocker() as m:
+        m.get(url, content=b"x", headers={"ETag": 'W/"same"'})
+        with pytest.raises(NotModifiedError, match="unchanged ETag"):
+            download_file(url, tmp_test_dir, etag='"same"')
+
+
+def test_last_modified_echoed_on_200_is_not_modified(tmp_test_dir: Path) -> None:
+    """Tests that a 200 repeating the sent Last-Modified raises."""
+    url = "https://example.com/file.bin"
+    last_modified = "Mon, 01 Jan 2024 00:00:00 GMT"
+
+    with requests_mock.Mocker() as m:
+        m.get(url, content=b"x", headers={"Last-Modified": last_modified})
+        with pytest.raises(NotModifiedError, match="unchanged Last-Modified"):
+            download_file(url, tmp_test_dir, last_modified=last_modified)
+
+    assert list(tmp_test_dir.iterdir()) == []
+
+
+def test_changed_last_modified_downloads(tmp_test_dir: Path) -> None:
+    """Tests that a different Last-Modified falls through to a download."""
+    url = "https://example.com/file.bin"
+    data = b"new content"
+
+    with requests_mock.Mocker() as m:
+        m.get(
+            url,
+            content=data,
+            headers={"Last-Modified": "Tue, 02 Jan 2024 00:00:00 GMT"},
+        )
+        result = download_file(
+            url, tmp_test_dir, last_modified="Mon, 01 Jan 2024 00:00:00 GMT"
+        )
+
+    assert result.file_path.read_bytes() == data
+
+
+def test_last_modified_ignored_when_etag_was_sent(tmp_test_dir: Path) -> None:
+    """Tests that a new ETag downloads even if Last-Modified is unchanged."""
+    url = "https://example.com/file.bin"
+    last_modified = "Mon, 01 Jan 2024 00:00:00 GMT"
+    data = b"new content"
+
+    with requests_mock.Mocker() as m:
+        m.get(
+            url,
+            content=data,
+            headers={"ETag": '"new"', "Last-Modified": last_modified},
+        )
+        result = download_file(
+            url, tmp_test_dir, etag='"old"', last_modified=last_modified
+        )
+
+    assert result.file_path.read_bytes() == data
+
+
 def test_creates_destination_folder(tmp_test_dir: Path) -> None:
     """Tests that destination folder is created if it doesn't exist."""
     url = "https://example.com/file.bin"
