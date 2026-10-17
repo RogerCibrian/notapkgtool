@@ -276,8 +276,9 @@ Extraction sources per installer type:
 
 Extraction rules:
 
-- Only icon frames that are already PNG-encoded are used; NAPT does not
-  re-encode or upscale images
+- Only icon frames that are already PNG-encoded and structurally complete
+  are used; NAPT does not re-encode or upscale images, and a frame with a
+  corrupt header or checksum is skipped as if it were not there
 - Frames must be at least 128px wide and at most 700KB (Intune rejects
   icons over 750KB)
 - Among qualifying frames, the one closest to Intune's recommended 256px
@@ -1009,6 +1010,9 @@ server whether the file changed.
 The next run sends the recorded `ETag` (or `Last-Modified` when there is
 none) back as a conditional request; a `304 Not Modified` answer reuses the
 installer.
+Some servers ignore conditional requests and answer `200` carrying the same
+`ETag` they were sent (Zoom's download CDN does); NAPT treats that as not
+modified too and closes the connection before reading the body.
 The values are only sent while the URL is unchanged and that installer is
 still on disk; a changed URL means a full download.
 

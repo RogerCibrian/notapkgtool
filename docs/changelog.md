@@ -53,6 +53,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     pinned copy cannot be run directly. Keep local parents elsewhere,
     such as `recipe-bases/`
 
+### Fixed
+
+- Corrupt icon frames are no longer extracted. `napt build` now checks
+    every chunk and checksum of a PNG frame before using it, so an
+    installer that ships a broken frame (Zoom's MSI declares a 256px icon
+    with a height of zero) falls through to the next source instead of
+    sending Intune an unusable icon
+- `url_download` no longer re-downloads from servers that ignore
+    conditional requests. A `200` that repeats the `ETag` (or
+    `Last-Modified`) NAPT sent is treated as `304 Not Modified`; the
+    connection is closed before the body is read
+
 ## [0.12.0] - 2026-10-05
 
 ### Added
