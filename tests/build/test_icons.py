@@ -17,6 +17,7 @@ import struct
 import subprocess
 from unittest import mock
 import zipfile
+import zlib
 
 import pytest
 
@@ -50,13 +51,22 @@ RSQUO = "\u2019"  # right single quotation mark
 # ---------------------------------------------------------------------------
 
 
+def _chunk(chunk_type: bytes, body: bytes) -> bytes:
+    """Builds one PNG chunk with its length and CRC."""
+    crc = zlib.crc32(chunk_type + body) & 0xFFFFFFFF
+    return struct.pack(">I", len(body)) + chunk_type + body + struct.pack(">I", crc)
+
+
 def _png(width: int, height: int | None = None) -> bytes:
-    """Builds a minimal PNG byte stream with a valid signature and IHDR."""
+    """Builds a minimal structurally valid PNG byte stream."""
     height = height if height is not None else width
     ihdr_body = struct.pack(">II", width, height) + b"\x08\x06\x00\x00\x00"
-    ihdr = struct.pack(">I", 13) + b"IHDR" + ihdr_body + b"\x00\x00\x00\x00"
-    iend = struct.pack(">I", 0) + b"IEND" + b"\x00\x00\x00\x00"
-    return b"\x89PNG\r\n\x1a\n" + ihdr + iend
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + _chunk(b"IHDR", ihdr_body)
+        + _chunk(b"IDAT", zlib.compress(b"\x00"))
+        + _chunk(b"IEND", b"")
+    )
 
 
 def _bmp_frame(size: int = 744) -> bytes:
@@ -247,6 +257,76 @@ class TestPngWidth:
     def test_truncated_data_returns_none(self):
         """Tests that truncated PNG data returns None."""
         assert _png_width(_png(256)[:20]) is None
+
+    def test_missing_iend_returns_none(self):
+        """Tests that a PNG cut off before IEND returns None."""
+        png = _png(256)
+        assert _png_width(png[: len(png) - 12]) is None
+
+    def test_bad_ihdr_crc_returns_none(self):
+        """Tests that a corrupt IHDR checksum, as in Zoom's MSI, returns None."""
+        png = bytearray(_png(256))
+        png[32] ^= 0xFF  # last CRC byte of the IHDR chunk
+        assert _png_width(bytes(png)) is None
+
+    def test_bad_idat_crc_returns_none(self):
+        """Tests that a corrupt data chunk checksum returns None."""
+        png = bytearray(_png(256))
+        png[-1 - 12] ^= 0xFF  # last CRC byte of IDAT, just before IEND
+        assert _png_width(bytes(png)) is None
+
+    def test_zero_height_returns_none(self):
+        """Tests that an IHDR declaring a zero height returns None."""
+        assert _png_width(_png(256, 0)) is None
+
+    def test_zero_width_returns_none(self):
+        """Tests that an IHDR declaring a zero width returns None."""
+        assert _png_width(_png(0, 256)) is None
+
+    def test_missing_idat_returns_none(self):
+        """Tests that a PNG with no image data chunk returns None."""
+        ihdr_body = struct.pack(">II", 256, 256) + b"\x08\x06\x00\x00\x00"
+        png = b"\x89PNG\r\n\x1a\n" + _chunk(b"IHDR", ihdr_body) + _chunk(b"IEND", b"")
+        assert _png_width(png) is None
+
+    def test_ihdr_not_first_returns_none(self):
+        """Tests that a PNG whose first chunk is not IHDR returns None."""
+        png = _png(256)
+        body = png[8:]
+        assert _png_width(png[:8] + _chunk(b"tEXt", b"k\x00v") + body) is None
+
+    def test_trailing_bytes_after_iend_ignored(self):
+        """Tests that data after IEND does not invalidate the PNG."""
+        assert _png_width(_png(256) + b"\x00" * 16) == 256
+
+    def test_ancillary_chunk_between_ihdr_and_idat_accepted(self):
+        """Tests that ancillary chunks, as real PNGs carry, are walked over."""
+        png = _png(256)
+        ihdr_end = 8 + 12 + 13  # signature, chunk framing, IHDR body
+        phys = _chunk(b"pHYs", struct.pack(">IIB", 2835, 2835, 1))
+        assert _png_width(png[:ihdr_end] + phys + png[ihdr_end:]) == 256
+
+
+class TestCorruptFrameFallsThrough:
+    """Tests that a corrupt PNG frame is skipped rather than selected."""
+
+    def test_ico_with_corrupt_frame_yields_no_png_frames(self):
+        """Tests that an ICO whose only PNG frame fails its CRC is unusable."""
+        corrupt = bytearray(_png(256))
+        corrupt[32] ^= 0xFF
+        frames, largest = _png_frames_from_ico(_ico([(bytes(corrupt), 256)]))
+        assert frames == []
+        assert largest == 256
+
+    def test_corrupt_frame_skipped_in_favor_of_valid_one(self):
+        """Tests that a valid smaller frame wins over a corrupt larger one."""
+        corrupt = bytearray(_png(256))
+        corrupt[32] ^= 0xFF
+        ico = _ico([(bytes(corrupt), 256), (_png(200), 200)])
+        selected, largest = _best_frame_from_blob(ico)
+        assert selected is not None
+        assert selected[1] == 200
+        assert largest == 256
 
 
 class TestSelectPngFrame:
